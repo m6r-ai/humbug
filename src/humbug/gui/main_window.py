@@ -5,6 +5,7 @@ from PySide6.QtGui import QTextCharFormat, QColor, QKeyEvent, QTextCursor
 import asyncio
 import qasync
 from typing import List, Optional
+from datetime import datetime
 
 class MessageHistoryWidget(QTextEdit):
     """Widget for displaying message history with styled text."""
@@ -80,6 +81,12 @@ class InputWidget(QTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle key press events."""
+        if event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
+            if self._main_window:
+                self._main_window.cancel_current_request()
+                # Don't pass to parent - we don't want to copy text
+                return
+
         # Ctrl+J for submit
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
             if self._main_window:
@@ -105,6 +112,7 @@ class HumbugMainWindow(QMainWindow):
         self.transcript_writer = transcript_writer
         self.current_response = ""
         self.token_counts = {"input": 0, "output": 0}
+        self._current_task = None  # Track current AI task
 
         self.setup_ui()
 
@@ -157,6 +165,37 @@ class HumbugMainWindow(QMainWindow):
             }
         """)
 
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle main window key events."""
+        # Check for Ctrl+C
+        if event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
+            self.cancel_current_request()
+        else:
+            super().keyPressEvent(event)
+
+    def cancel_current_request(self):
+        """Cancel the current AI request if one is in progress."""
+        if self._current_task and not self._current_task.done():
+            self._current_task.cancel()
+            self.history_view.add_message("System: Request cancelled by user", "system")
+            self.history_view.finish_ai_response()
+            asyncio.create_task(self.write_cancellation_to_transcript())
+
+    async def write_cancellation_to_transcript(self):
+        """Write cancellation message to transcript."""
+        await self.transcript_writer.write([{
+            "type": "system_message",
+            "content": "Request cancelled by user",
+            "error": {
+                "code": "cancelled",
+                "message": "Request cancelled by user",
+                "details": {
+                    "cancelled_response": self.current_response if self.current_response else "",
+                    "time": datetime.utcnow().isoformat()
+                }
+            }
+        }])
+
     def submit_message(self):
         """Handle message submission."""
         message = self.input_area.toPlainText().strip()
@@ -174,8 +213,8 @@ class HumbugMainWindow(QMainWindow):
         # Add user message to history
         self.history_view.add_message(f"You: {message}", "user")
 
-        # Start AI response
-        asyncio.create_task(self.process_ai_response(message))
+        # Start AI response and track the task
+        self._current_task = asyncio.create_task(self.process_ai_response(message))
 
     async def process_ai_response(self, message: str):
         """Process AI response with streaming."""
@@ -207,9 +246,15 @@ class HumbugMainWindow(QMainWindow):
                     # Mark AI response as complete since we got usage info
                     self.history_view.finish_ai_response()
 
+        except asyncio.CancelledError:
+            # Handle cancellation gracefully
+            self.history_view.finish_ai_response()
+            raise
         except Exception as e:
             self.history_view.add_message(f"Error: {str(e)}", "error")
             self.history_view.finish_ai_response()  # Ensure we reset on error
+        finally:
+            self._current_task = None
 
     def get_conversation_history(self) -> List[str]:
         """Extract conversation history from display."""
