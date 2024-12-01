@@ -1,0 +1,543 @@
+Role:
+    You are a world-class python programmer with a flair for building brilliant software
+
+Context: humbug application
+    humbug is a terminal-based application that allows a user to interact with one or more AI backends.
+
+    Context: Version
+        This is version 0.1 of the application.
+
+    Context: Application invocation
+        Context: Command line tool
+            The tool will be run from the command line with appropriate arguments.
+
+        Context: No config file
+            The tool does not need a configuration file.
+
+        Context: "--help" argument
+            If the user specifies a "-h" or "--help" argument then display a help message with all valid arguments,
+            any parameters they may have, and their usage, then exit.
+
+            Take care that this may be automatically handled by the command line argument parser.
+
+        Context: "--version" argument
+            If the user specifies a "-v" or "--version" argument then display the application version number, then exit.
+
+            The version is a semantic version but only shows a patch number if this is non-zero.
+
+        Context: Check all arguments
+            Unknown arguments trigger error: "Unknown argument: [arg]. Use --help for usage."
+
+        Context: Check all argument parameters
+            The tool must check that the form of all parameters correctly matches what is expected for each
+            command line argument.
+
+            If the tool is invoked with invalid parameters, display correct usage information:
+            "Invalid value for [arg]: [value]. Expected: [format]"
+
+    Context: Application logic
+        Context: Interactive terminal
+            Once started, the application will run in a terminal window.
+
+            The application comprises a chat between the terminal operator and an AI backends.  The terminal display
+            will be split into 3 sections with horizontal dividers between each.
+
+    Context: User interactions
+        The normal form of user interaction is to be able to type messages to the AI.
+
+        As well as using the keyboard, a mouse may also be used to interact with the application.
+
+        If the user starts a message with "/" this indicates a command to the application rather than a message
+        for the AI.  The application must process commands as they are presented, stripping the "/" before
+        processing..
+
+        Interactions occur in a turn-by-turn fashion, where the user edits a message, until they hit "Ctrl+J".  On
+        hitting "Ctrl+J" the application will add the user's message to the conversation transcript and process the
+        message.  If the message is for the AI then the application will attempt to send the message to the AI
+        and await a response.  If there is an error or exception then the application will report the details to
+        the user.
+
+        Context: Multi-line input
+            When editing messages, pressing "Enter" inserts a newline within the message.
+
+        Context: Screen navigation
+            In both the edit and history windows there is a cursor that is active when that window has focus.
+            The user can use standard keyboard shortcuts or the mouse to highlight content in the focus window and
+            then copy it to the clipboard so it can be pasted into the edit window.
+
+    Context: Screen display
+        On startup the terminal display will be cleared.
+
+        The top line of the display is a status.  It will show the current numbers of input and output tokens
+        that have been used since the start of the application.
+
+        The middle part of the display will show a history of everything that has happened, including messages and
+        commands from the user, responses from the application, and responses from the AI.  This history section
+        must dynamically resize based on input box size.
+
+        The bottom part of the display is a user input editor.  This input box is fixed at bottom, expanding up
+        to 10 lines
+
+        When input exceeds 10 lines, scroll within the fixed height
+
+        Context: Screen colours
+            The status line background is light grey with black text.
+
+            Messages typed by the user will have white text.
+
+            Responses from the AI will have yellow text.
+
+            Responses from application will have green text.
+
+            The focus area will have a dark grey background.  The non-focus area will have a black background.
+
+    Context: Message history
+        A message history of up to 100000 lines will be supported in the history window.
+
+    Context: UI navigation
+        The application can switch between focus areas via Tab or mouse click.
+
+        Context: Keyboard
+            Input Box Navigation:
+
+            - Empty input or cursor at line start/end: Up/Down navigate history.
+            - Cursor within text: Up/Down move cursor between lines.
+            - Left/Right: Move cursor within line.
+            - Page Up/Down: Scroll multi-line input.
+
+            History Navigation:
+
+            - Up/Down: Scroll line by line.
+            - Page Up/Down: Scroll page by page.
+            - Current position preserved when switching focus.
+
+        Context: Mouse handling
+            The application should support mouse use for editing and scrolling.  It can also switch the focus between
+            the message history and edit boxes by clicking in either one.
+
+            Mouse operations:
+
+            - Selection: Click and drag highlights text.
+            - Copy: System clipboard integration via terminal.
+            - Paste: Right-click or Ctrl+V at cursor position.
+            - Focus: Single click in section changes focus.
+
+        Context: UI focus management
+            Focus transitions:
+
+            - Tab: Toggle between states.
+            - Mouse: Click sets focus.
+            - Startup: Focus in the input aread.
+
+            State persistence:
+
+            - Save scroll position per state.
+            - Restore position on focus change.
+            - Reset positions on new message.
+
+    Context: Input state management
+        Application maintains:
+
+        - Current input text and cursor position.
+        - Previous input history.
+        - Partial input state when navigating history.
+
+        When navigating history:
+
+        - Save current incomplete input.
+        - Allow viewing previous inputs.
+        - Restore incomplete input when returning.
+        - Clear navigation state after submitting input.
+
+    Context: Conversation transcript file
+        The application will record a transcript of the conversation between the user and the AI, storing each turn
+        in a JSON data structure.  The JSON data structure will be written to a transcript file called
+        "transcript-yyyy-mm-dd-hh-mm-ss.json", substituting the application start date and time (in GMT) for yyyy,
+        mm, dd, hh, mm, and ss (year, numeric month, day-of-month, hours, minutes, and seconds respectively).
+
+        On exiting the application this file must be fully closed.
+
+        Context: Transcript JSON schema
+            Use the following JSON schema:
+
+            ```json
+            {
+             "$schema": "http://json-schema.org/draft-07/schema#",
+             "type": "object",
+             "properties": {
+               "metadata": {
+                 "type": "object",
+                 "properties": {
+                   "timestamp": { "type": "string", "format": "date-time" },
+                   "model": { "type": "string" },
+                   "version": { "type": "string" }
+                 },
+                 "required": ["timestamp", "model", "version"]
+               },
+               "conversation": {
+                 "type": "array",
+                 "items": {
+                   "type": "object",
+                   "properties": {
+                     "id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+                     "timestamp": { "type": "string", "format": "date-time" },
+                     "type": { "enum": ["user_message", "ai_response", "command", "system_message"] },
+                     "content": { "type": "string" },
+                     "usage": {
+                       "type": "object",
+                       "properties": {
+                         "prompt_tokens": { "type": "integer" },
+                         "completion_tokens": { "type": "integer" },
+                         "total_tokens": { "type": "integer" }
+                       }
+                     },
+                     "error": {
+                       "type": "object",
+                       "properties": {
+                         "code": { "type": "string" },
+                         "message": { "type": "string" },
+                         "details": { "type": "object" }
+                       }
+                     }
+                   },
+                   "required": ["id", "timestamp", "type", "content"]
+                 }
+               }
+             },
+             "required": ["metadata", "conversation"]
+            }
+            ```
+
+    Context: Transcript file management
+        Context: Transcript Rotation
+            - Max file size: 50MB.
+            - On size limit: Create new file with incremented suffix.
+            - Keep last 5 transcript files.
+            - Delete oldest when limit reached.
+
+        Context: Error recovery
+            - Write to temp file first.
+            - Atomic rename on successful write.
+            - On write failure:
+                1. Log error to stderr.
+                2. Create backup file.
+                3. Continue with new file.
+
+    Context: Commands
+        The following are commands the application must support (commands are case sensitive):
+
+        Context: "exit":
+            On receiving the "exit" command the application will exit.
+
+        Context: Unknown commands
+            If the user types and unknown command then the application will respond that it does not know the
+            command.
+
+    Context: State handling
+        No state is preserved between different invocations of the application.
+
+    Context: AI interactions
+        The AI backend supports streaming responses that arrive incrementally.  These should be displayed
+        as they arrive with content continuing to be added as more arrives.
+
+        Context: Streaming responses
+            The backend provides chunks containing:
+
+            - Content so far
+            - Usage statistics (in final chunk only)
+
+            Streaming requires that the display:
+
+            - Shows content immediately as it arrives
+            - Maintains proper cursor position in terminal
+            - Updates transcript periodically during streaming
+            - Writes final response when stream completes
+            - Updates token count after stream completes
+
+            During streaming, if the user hits Ctrl+C then this will terminate the current streaming response and cancel
+            any ongoing request with the AI.  A message "Request cancelled by user" will be added to the history.
+
+        Context: UI handling of streaming
+            The display must handle streaming responses by:
+
+            - Tracking where the streamed response starts in history
+            - Updating display incrementally as content arrives
+            - Removing previous content before adding updates
+            - Maintaining newline format and text wrapping
+
+    Context: Communication with the AI
+        Communication with the AI is via a REST API.
+
+        The initial implementation solely supports OpenAI.
+
+        Context: OpenAI REST endpoint
+            Messages are sent via a POST message.
+            The API to use is the "continuations" API.  The endpoint is "https://api.openai.com/v1/chat/completions".
+            This needs two headers to be provided:
+            "Content-Type": "application/json"
+            "Authorization": {key}"
+            {key} must be replaced with the API key found in the environment variable `OPENAI_API_KEY`.
+
+            The data for the POST is of this form:
+
+            ```json
+            {
+            "model": "gpt-4o-mini",
+            "messages": [{"role": "user", "content": "Say this is a test!"}],
+            "temperature": 0.7,
+            "stream": true,
+            "stream_options": {"include_usage": true}
+            }
+            ```
+
+            The "content" section of a message should be replaced with the user's message to the AI.
+            With streaming enabled, responses will arrive as chunks. Each chunk begins with "data: " followed
+            by a JSON object. This repeats until a chunk containing "data: [DONE]" arrives.  Each JSON chunk
+            takes this form:
+
+            ```json
+            {
+                "id": "chatcmpl-abc123",
+                "object": "chat.completion.chunk",
+                "created": 1677858242,
+                "model": "gpt-4o-mini",
+                "choices": [
+                    {
+                        "delta": {
+                            "content": "chunk of text"
+                        },
+                        "finish_reason": null,
+                        "index": 0
+                    }
+                ]
+            }
+            ```
+
+            The final chunk includes usage information:
+
+            ```json
+            {
+                "id": "chatcmpl-abc123",
+                "object": "chat.completion.chunk",
+                "created": 1677858242,
+                "model": "gpt-4o-mini",
+                "usage": {
+                    "prompt_tokens": 13,
+                    "completion_tokens": 7,
+                    "total_tokens": 20
+                },
+                "choices": [
+                    {
+                        "delta": {},
+                        "finish_reason": "stop",
+                        "index": 0
+                    }
+                ]
+            }
+            ```
+
+            In this message, the content is what should be captured as the AI response, but capture the usage information
+            in the JSON transcript.
+
+    Context: Message history
+        Maintain conversation context by including all previous messages in the session.
+
+    Context: AI interactions
+        The AI temperature should be set to 0.7.  It is not user-configurable at this time.
+
+        The AI model is also not user configurable.  It it set to "gpt-4o-mini".
+
+    Context: Error handling and recovery
+        Context: Handling other network errors
+            If there are any API errors, such as invalid API keys then the application should report these to the user
+            so they are aware these need to be corrected.
+
+    Context: Error handling and recovery
+        Context: Error Categories
+            The application handles these error types:
+
+            - Network: Connection, timeout, DNS failures
+            - API: Authentication, rate limits, invalid requests
+            - Application: Input validation, state corruption
+            - System: File IO, memory, permissions
+
+        Context: Network timeouts
+            If the AI does not respond within 20 seconds of being sent a request, then the application should treat this as
+            a timeout and retry up to 3 times.  Each time it retries, it should report that it is retrying.
+
+        Context: Error response strategy
+            For each error:
+
+            - Log full details to transcript
+            - Display user-friendly message as an application response.  For example:
+
+                429: "Rate limit exceeded.  Retrying in [X] seconds..."
+                500: "OpenAI service error.  Retrying in [X] seconds..."
+                timeout: "Request timed out.  Retrying in [X] seconds..."
+
+            - Implement appropriate recovery
+
+            Recovery approach:
+
+            - Network errors: Retry with exponential backoff.  Initial delay 2 seconds, doubling each retry.  Max 3 retries.
+            - API errors: Handle rate limits, refresh credentials
+            - Application errors: Reset to known good state
+            - System errors: Graceful degradation
+
+            During retries, preserve the message in the input box.
+
+        Context: Error display format
+            Errors appear in message history with:
+
+            - Red text on dark background
+            - Severity indicator: [ERROR], [WARNING], [INFO]
+            - Clear action message if user intervention needed
+            - Technical details in expandable section
+
+        Context: Recovery automation
+            Context: Rate Limiting
+                Track API calls with sliding 60-second window.
+
+                Pause requests when approaching limits.
+
+            Context: Retry strategy
+                Maximum 3 retries for recoverable errors.
+
+                Exponential backoff: 2, 4, 8 seconds.
+
+                Preserve conversation context between retries.
+
+    Context: Terminal UI
+        The terminal UI must be built without use of any third party libraries.
+
+        Context: Platform support
+            The terminal UI must work on MacOS X (any version since 2020), Linux (any version since 2020), and Microsoft
+            Windows 10 or 11.
+
+        Context: Asynchronous design
+            The UI must be asynchronous to ensure the application can remain reactive.
+
+        Context: Display hierarchy
+            The terminal UI will support the concept of a top-level screen (the terminal display) and a series of
+            tiled windows (panes).  It also supports popup windows that can overlay on top of the tiled display.
+
+            Context: Screen (root container)
+                - Manages terminal size and raw input.
+                - Houses single WindowManager instance.
+                - Maintains global status line.
+                - Handles global keyboard shortcuts.
+
+            Context: WindowManager
+                - Manages tile layout - splits and panes (panes are tiled windows).
+                - Handles focused pane tracking.
+                - Coordinates overlays and popups.
+
+                Context: Splits
+                    The window manager can support both horizontal and vertical splits.  These split a window into
+                    two contained windows.
+
+                Context: Pane constraints
+                    - Minimum pane size of 3 lines height and 20 columns width.
+                    - Maximum nesting depth of 3 levels for splits.
+
+            Context: Layout manager
+                - Manages split calculations.
+                - Handles pane resizing.
+                - Stores/restores layout configurations.
+                - Manages focus traversal.
+
+        Context: Scrolling support
+            Any window that has contents larger than the window itself must support veritical and/or horizontal scrolling.
+
+            Vertical scroll bars appear on the right hand column of any window that requires them, while horizontal
+            scroll bars appear at the bottomow of any window that requires them.  Scroll bars do not have up/down or
+            left/right arrows but instead have scroll handles that can be dragged with a mouse.  There are no keyboard
+            shortcuts for manipulating scroll bars as scrolling can be done using keys within the appropriate window.
+
+        Context: Dynamic adaptability
+            The UI will automatically respond to changes in the terminal being resized.
+
+            Context: Size constraints
+                - Minimum terminal size of 80x24 characters
+                - Warning display for insufficient dimensions
+                - Layout state preservation for size restoration
+
+        Context: Performance guidelines
+            Context: Scrolling performance
+                - 60 FPS target for scroll operations
+
+    Context: Security
+        Context: Outputs
+            Ensure that no sensitive data is either logged or displayed on the screen.
+
+            For example, API keys must never be revealled this way - replace with "[redacted API key]".
+
+        Context: Inputs
+            Ensure that all input control characters except for newlines are stripped from any input prior to processing.
+
+    Context: Python implementation and dependencies
+        As an engineer working with the application, I want the application to be easy to use and understand,
+        so I can maintain and enhance it over time.
+
+        Context: Implement in Python 3
+            The application will be written in the latest version of Python 3.
+
+        Context: Indentation of code
+            Code must be indented by 4 spaces.
+
+        Context: Use docstrings
+            Use docstrings to describe all modules, classes, and functions.  This should follow PEP 257 guidelines.
+
+        Context: Use type hints
+            Use type hints for function arguments and return values.
+
+        Context: Use comments
+            Use additional comments to describe any complex logic.
+
+        Context: PEP 8 imports
+            The import list in any module should follow PEP 8 guidelines, including the ordering of imports.
+
+        Context: Avoid unnecessary elif and else statements
+            To improve readability, do not use elif or else statements if the preceding statement returns.
+
+            For example, do this:
+
+            ```
+            if condition:
+                return
+
+            next_statement()
+            ```
+            instead of this:
+            ```
+            if condition:
+                return;
+            else:
+                next_statement()
+            ```
+
+        Context: Dependencies
+            Leverage standard library tools before custom solutions, unless specifically instructed.
+
+            Context: HTTP interations
+                Use the aiohttp library for HTTP interactions (e.g. the REST API).
+
+        Context: Exception handling
+            Use specific exceptions instead of bare except.
+
+Action: Build the software
+    Please review the requirements provided in the Context section and check if they are met by the software.  Do not
+    make modifications to the software at this point, unless asked to do so.
+#    Please review the requirements provided in the Context section and build the software described.  Take care to
+#    address all the behaviours asked for and do not omit anything.
+#
+#    Do not produce any other commentary other than the code.
+#
+#    If the software should be structured into multiple files then please provide each file separately and identify the
+#    name of each one as you produce it.
+
+    An earlier version of the application is provided here.  Please use this as a template.  This version may not meet
+    all the requirements provided in the Context section, so you may need to add or remove code to meet the full set of
+    requirements specified.
+
+    Embed: src/humbug/**/*.py

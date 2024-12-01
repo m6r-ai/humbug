@@ -1,0 +1,23 @@
+# Ignore temp files
+*~
+*.swp
+
+# Ignore generated prompts
+*.lcp
+
+# Ignore build files
+dist
+
+# Ignore python cache files
+**/__pycache__
+
+# Ignore code coverage reports
+.coverage
+htmlcol
+
+# Ignore virtual environment
+venv
+
+# Ignore transcript and log files
+transcript-*
+logs
