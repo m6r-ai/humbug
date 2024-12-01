@@ -168,6 +168,7 @@ class InputWidget(QTextEdit):
 
         super().keyPressEvent(event)
 
+
 class HumbugMainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
@@ -230,6 +231,14 @@ class HumbugMainWindow(QMainWindow):
             }
         """)
 
+    async def write_to_transcript(self, messages: List[dict]):
+        """Write messages to transcript with error handling."""
+        try:
+            await self.transcript_writer.write(messages)
+        except Exception as e:
+            self.history_view.add_message(
+                f"[ERROR] Failed to write to transcript: {str(e)}", "error")
+
     def keyPressEvent(self, event: QKeyEvent):
         """Handle main window key events."""
         # Check for Ctrl+C
@@ -248,7 +257,7 @@ class HumbugMainWindow(QMainWindow):
 
     async def write_cancellation_to_transcript(self):
         """Write cancellation message to transcript."""
-        await self.transcript_writer.write([{
+        await self.write_to_transcript([{
             "type": "system_message",
             "content": "Request cancelled by user",
             "error": {
@@ -275,8 +284,13 @@ class HumbugMainWindow(QMainWindow):
             asyncio.create_task(self.handle_command(message[1:]))
             return
 
-        # Add user message to history
+        # Add user message to history and transcript
         self.history_view.add_message(f"You: {message}", "user")
+        asyncio.create_task(self.write_to_transcript([{
+            "type": "user_message",
+            "content": message,
+            "timestamp": datetime.utcnow().isoformat()
+        }]))
 
         # Start AI response and track the task
         self._current_task = asyncio.create_task(self.process_ai_response(message))
@@ -289,7 +303,14 @@ class HumbugMainWindow(QMainWindow):
 
             async for response in self.ai_backend.stream_message(message, self.get_conversation_history()):
                 if response.error:
-                    self.history_view.add_message(f"Error: {response.error['message']}", "error")
+                    error_msg = f"Error: {response.error['message']}"
+                    self.history_view.add_message(error_msg, "error")
+                    await self.write_to_transcript([{
+                        "type": "error",
+                        "content": error_msg,
+                        "error": response.error,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }])
                     return
 
                 # Update response
@@ -308,6 +329,13 @@ class HumbugMainWindow(QMainWindow):
                     self.token_counts["input"] += response.usage.prompt_tokens
                     self.token_counts["output"] += response.usage.completion_tokens
                     self.update_status()
+                    # Write final response to transcript
+                    await self.write_to_transcript([{
+                        "type": "ai_response",
+                        "content": self.current_response,
+                        "usage": response.usage.to_dict(),
+                        "timestamp": datetime.utcnow().isoformat()
+                    }])
                     # Mark AI response as complete since we got usage info
                     self.history_view.finish_ai_response()
 
@@ -316,7 +344,18 @@ class HumbugMainWindow(QMainWindow):
             self.history_view.finish_ai_response()
             raise
         except Exception as e:
-            self.history_view.add_message(f"Error: {str(e)}", "error")
+            error_msg = f"Error: {str(e)}"
+            self.history_view.add_message(error_msg, "error")
+            await self.write_to_transcript([{
+                "type": "error",
+                "content": error_msg,
+                "error": {
+                    "code": "process_error",
+                    "message": str(e),
+                    "details": {"type": type(e).__name__}
+                },
+                "timestamp": datetime.utcnow().isoformat()
+            }])
             self.history_view.finish_ai_response()  # Ensure we reset on error
         finally:
             self._current_task = None

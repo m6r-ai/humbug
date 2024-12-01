@@ -1,5 +1,3 @@
-"""Transcript writer implementation."""
-
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -11,14 +9,14 @@ from typing import List, Dict, Optional
 import uuid
 
 class TranscriptWriter:
-    """Handles writing conversation transcripts to files."""
+    """Handles writing conversation transcripts to files with rotation."""
 
-    def __init__(self):
-        """Initialize the transcript writer."""
+    def __init__(self, max_size_mb: int = 50, max_files: int = 5):
+        """Initialize transcript writer with configurable limits."""
         self.filename = self._get_filename()
         self.file_size = 0
-        self.max_size = 50 * 1024 * 1024  # 50MB
-        self.max_files = 5
+        self.max_size = max_size_mb * 1024 * 1024  # Convert MB to bytes
+        self.max_files = max_files
         self.backup_suffix = ".backup"
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._initialize_file()
@@ -101,25 +99,29 @@ class TranscriptWriter:
     async def _rotate_file(self):
         """Rotate transcript file if size limit reached."""
         if self.file_size >= self.max_size:
-            # List all transcript files
-            files = [f for f in os.listdir('.') 
-                    if f.startswith('transcript-') and 
-                    f.endswith('.json') and 
-                    not f.endswith(f'{self.backup_suffix}.json')]
-            files.sort(key=lambda f: os.path.getctime(f))
+            try:
+                # List all transcript files
+                transcript_dir = os.path.dirname(self.filename) or '.'
+                files = [f for f in os.listdir(transcript_dir)
+                        if f.startswith('transcript-') and
+                        f.endswith('.json') and
+                        not f.endswith(f'{self.backup_suffix}.json')]
+                files.sort(key=lambda f: os.path.getctime(os.path.join(transcript_dir, f)))
 
-            # Remove oldest files if we have too many
-            while len(files) >= self.max_files:
-                try:
-                    oldest = files.pop(0)
-                    os.unlink(oldest)
-                except Exception as e:
-                    print(f"Error removing old transcript {oldest}: {e}", file=sys.stderr)
+                # Remove oldest files if we have too many
+                while len(files) >= self.max_files:
+                    try:
+                        oldest = files.pop(0)
+                        os.unlink(os.path.join(transcript_dir, oldest))
+                    except Exception as e:
+                        print(f"Error removing old transcript {oldest}: {e}", file=sys.stderr)
 
-            # Start new file
-            self.filename = self._get_filename()
-            self.file_size = 0
-            self._initialize_file()
+                # Start new file
+                self.filename = os.path.join(transcript_dir, self._get_filename())
+                self.file_size = 0
+                self._initialize_file()
+            except Exception as e:
+                print(f"Error during transcript rotation: {e}", file=sys.stderr)
 
     def _create_backup(self) -> str:
         """Create a backup of the current transcript file."""
