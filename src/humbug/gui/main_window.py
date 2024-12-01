@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QTextEdit,
-                             QLabel, QSplitter, QApplication)
+                             QLabel, QSplitter, QApplication, QMenu)
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QTextCharFormat, QColor, QKeyEvent, QTextCursor
+from PySide6.QtGui import QTextCharFormat, QColor, QKeyEvent, QTextCursor, QAction
 import asyncio
 import qasync
 from typing import List, Optional
@@ -28,6 +28,22 @@ class MessageHistoryWidget(QTextEdit):
             }
         """)
         self.current_ai_response_start = None  # Track start position of current AI response
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def show_context_menu(self, position):
+        """Show custom context menu."""
+        menu = QMenu(self)
+
+        # Add copy action if text is selected
+        if self.textCursor().hasSelection():
+            copy_action = QAction("Copy", self)
+            copy_action.triggered.connect(self.copy)
+            copy_action.setShortcut("Ctrl+C")
+            menu.addAction(copy_action)
+
+        if menu.actions():
+            menu.exec_(self.mapToGlobal(position))
 
     def add_message(self, message: str, style: str):
         """Add a styled message to the history."""
@@ -37,23 +53,32 @@ class MessageHistoryWidget(QTextEdit):
         cursor = self.textCursor()
 
         if style == 'ai' and self.current_ai_response_start is not None:
-            # Move to start of current AI response
             cursor.setPosition(self.current_ai_response_start)
-            # Select to end of document
             cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-            # Replace selection with new message
             cursor.insertText(f"{message}\n", format)
         else:
-            # For new messages, move to end and insert
             cursor.movePosition(QTextCursor.End)
             cursor.insertText(f"{message}\n", format)
 
-            # If this is the start of a new AI response, store its position
             if style == 'ai':
                 self.current_ai_response_start = cursor.position() - len(message) - 1
 
         self.setTextCursor(cursor)
         self.ensureCursorVisible()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle key press events."""
+        # Handle copy (Ctrl+C) when text is selected
+        if event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
+            if self.textCursor().hasSelection():
+                self.copy()
+                return
+            # If no text is selected, let the main window handle it (for cancellation)
+            elif self.parent() and hasattr(self.parent(), 'cancel_current_request'):
+                self.parent().cancel_current_request()
+                return
+
+        super().keyPressEvent(event)
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
@@ -73,7 +98,34 @@ class InputWidget(QTextEdit):
                 border: none;
             }
         """)
-        self._main_window = None  # Store reference to main window
+        self._main_window = None
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def show_context_menu(self, position):
+        """Show custom context menu."""
+        menu = QMenu(self)
+
+        # Add cut action if text is selected
+        if self.textCursor().hasSelection():
+            cut_action = QAction("Cut", self)
+            cut_action.triggered.connect(self.cut)
+            cut_action.setShortcut("Ctrl+X")
+            menu.addAction(cut_action)
+
+            copy_action = QAction("Copy", self)
+            copy_action.triggered.connect(self.copy)
+            copy_action.setShortcut("Ctrl+C")
+            menu.addAction(copy_action)
+
+        # Always show paste option
+        paste_action = QAction("Paste", self)
+        paste_action.triggered.connect(self.paste)
+        paste_action.setShortcut("Ctrl+V")
+        menu.addAction(paste_action)
+
+        if menu.actions():
+            menu.exec_(self.mapToGlobal(position))
 
     def set_main_window(self, window):
         """Set the main window reference."""
@@ -81,16 +133,29 @@ class InputWidget(QTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle key press events."""
+        # Ctrl+C for cancel or copy
         if event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
-            if self._main_window:
+            if self.textCursor().hasSelection():
+                self.copy()
+            elif self._main_window:
                 self._main_window.cancel_current_request()
-                # Don't pass to parent - we don't want to copy text
-                return
+            return
 
         # Ctrl+J for submit
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
             if self._main_window:
                 self._main_window.submit_message()
+            return
+
+        # Handle cut (Ctrl+X)
+        if event.key() == Qt.Key_X and event.modifiers() == Qt.ControlModifier:
+            if self.textCursor().hasSelection():
+                self.cut()
+                return
+
+        # Handle paste (Ctrl+V)
+        if event.key() == Qt.Key_V and event.modifiers() == Qt.ControlModifier:
+            self.paste()
             return
 
         # Enter for newline
