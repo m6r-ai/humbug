@@ -1,72 +1,33 @@
-"""Main window implementation with menu support."""
+"""Main window implementation for Humbug application."""
 
 import asyncio
 import logging
-from typing import List
+from typing import List, Optional, Dict
 from datetime import datetime
 
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QLabel,
-                             QApplication, QMenu, QMenuBar, QDialog, QTextEdit)
-from PySide6.QtCore import Qt
+                             QApplication, QMenu, QMenuBar, QDialog, QTextEdit,
+                             QScrollArea, QScrollBar, QFrame)
+from PySide6.QtCore import Qt, Signal, QSize, QEvent
 from PySide6.QtGui import (QTextCursor, QColor, QKeyEvent, QAction, QKeySequence,
-                          QTextCharFormat, QTextDocument, QPainter)
+                          QTextCharFormat, QTextDocument, QPainter, QResizeEvent,
+                          QWheelEvent)
 
 from humbug.gui.about_dialog import AboutDialog
 
 
-class ProtectedTextEdit(QTextEdit):
-    """Text edit widget that protects history from modification while allowing streaming updates."""
+class HistoryView(QTextEdit):
+    """Read-only view for chat history."""
 
     def __init__(self, parent=None):
+        """Initialize the history view."""
         super().__init__(parent)
-        self._protected_position = 0
-        self.debug_id = id(self)
-        self.logger = logging.getLogger(f"ProtectedTextEdit_{self.debug_id}")
+        self.setReadOnly(True)
+        self.setFrameStyle(QFrame.NoFrame)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-    def get_user_input(self) -> str:
-        """Get the current user input text."""
-        cursor = QTextCursor(self.document())
-        cursor.setPosition(self._protected_position)
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        return cursor.selectedText()
-
-    def set_protected_position(self, position: int):
-        """Set the position before which text cannot be modified."""
-        doc_length = self.document().characterCount()
-        self.logger.debug(f"Setting protected position to {position} (doc length: {doc_length})")
-        self._protected_position = position
-
-
-class UnifiedChatView(QWidget):
-    """A unified view combining message history and input area."""
-
-    def __init__(self, parent=None):
-        """Initialize the unified chat view."""
-        super().__init__(parent)
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
-        self.debug_id = id(self)
-        self.logger = logging.getLogger(f"UnifiedChatView_{self.debug_id}")
-
-        self.text_edit = ProtectedTextEdit()
-        self.text_edit.setStyleSheet("""
-            QTextEdit {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: none;
-            }
-        """)
-
-        # Initialize document
-        self.text_edit.document().setDocumentMargin(10)
-
-        # Track the separation point between history and input
-        self._input_start_position = 0
-        self._input_format = QTextCharFormat()
-        self._input_format.setBackground(QColor("#2d2d2d"))
-
-        # Style map for different message types
+        # Style for different message types
         self.STYLE_COLORS = {
             'user': QColor('white'),
             'ai': QColor('yellow'),
@@ -74,210 +35,237 @@ class UnifiedChatView(QWidget):
             'error': QColor('red')
         }
 
-        self.layout.addWidget(self.text_edit)
+        # Set dark theme
+        self.setStyleSheet("""
+            QTextEdit {
+                background-color: #1e1e1e;
+                color: #ffffff;
+                border: none;
+            }
+        """)
 
-        # Track AI response state
-        self.current_ai_response_start = None
+        # Initialize AI response tracking
         self._ai_response_start = None
         self._ai_response_length = 0
 
-        # Initialize with empty input block
-        self._ensure_input_block()
-
-    def _ensure_input_block(self):
-        """Ensure the input block exists and is properly formatted."""
-        cursor = QTextCursor(self.text_edit.document())
+    def append_message(self, message: str, style: str):
+        """Append a message with the specified style."""
+        cursor = QTextCursor(self.document())
         cursor.movePosition(QTextCursor.End)
 
-        # If we're not at the start of a block, add a new block
-        if not cursor.atBlockStart():
+        # Add newline if not at start of document
+        if not cursor.atStart():
             cursor.insertBlock()
 
-        # Mark the start of the input area and ensure protected position matches
-        self._input_start_position = cursor.position()
-        self.text_edit.set_protected_position(self._input_start_position)
+        # Create format with specified color
+        format = QTextCharFormat()
+        format.setForeground(self.STYLE_COLORS.get(style, QColor('white')))
+        cursor.insertText(message, format)
 
-        # Apply input area format
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        cursor.mergeCharFormat(self._input_format)
-
-        cursor.setPosition(self._input_start_position)
-        self.text_edit.setTextCursor(cursor)
-
-    def update_ai_response(self, new_content: str):
-        """Update the AI response by only inserting new content."""
-        self.logger.debug("\n=== Starting update_ai_response ===")
-        self.logger.debug(f"Updating with new content: {repr(new_content)}")
-
-        # Save cursor state relative to user input
-        current_input = self.text_edit.get_user_input()
-        cursor = self.text_edit.textCursor()
-        relative_cursor = cursor.position() - self.text_edit._protected_position
-
-        try:
-            # Only initialize if we don't have a current response
-            if self._ai_response_start is None:
-                cursor = QTextCursor(self.text_edit.document())
-                cursor.setPosition(self.text_edit._protected_position)
-
-                if self.text_edit._protected_position > 0:
-                    cursor.insertBlock()
-                self._ai_response_start = cursor.position()
-                self._ai_response_length = 0
-                self.logger.debug(f"Initialized new AI response at position {self._ai_response_start}")
-
-            # Replace existing response content
-            cursor = QTextCursor(self.text_edit.document())
-            cursor.setPosition(self._ai_response_start)
-
-            # Select and replace existing content
-            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, self._ai_response_length)
-
-            # Insert new content
-            format = QTextCharFormat()
-            format.setForeground(QColor('yellow'))
-            cursor.insertText(new_content, format)
-
-            # Update tracking
-            self._ai_response_length = len(new_content)
-            self.text_edit._protected_position = self._ai_response_start + self._ai_response_length
-
-            # Reposition user input
-            cursor = QTextCursor(self.text_edit.document())
-            cursor.setPosition(self.text_edit._protected_position)
-
-            # Clear everything after protected position
-            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-            cursor.removeSelectedText()
-
-            # Ensure new block for user input
-            if not cursor.atBlockStart():
-                cursor.insertBlock()
-                self.text_edit._protected_position = cursor.position()
-
-            # Restore user input
-            if current_input:
-                format = QTextCharFormat()
-                format.setBackground(QColor("#2d2d2d"))
-                cursor.insertText(current_input, format)
-
-                # Restore cursor position relative to input
-                new_cursor_pos = self.text_edit._protected_position + max(0, min(relative_cursor, len(current_input)))
-                cursor.setPosition(new_cursor_pos)
-                self.text_edit.setTextCursor(cursor)
-                self.text_edit.ensureCursorVisible()
-
-        except Exception as e:
-            self.logger.error(f"Error in update_ai_response: {e}")
-            import traceback
-            self.logger.error(traceback.format_exc())
-
-    def add_message(self, message: str, style: str):
-        """Add a message to the history area."""
-        self.log_operation(f"add_message - start ({style})")
-
-        self.logger.debug(f"Document state before add_message:")
-        self.logger.debug(f"  Document length: {self.text_edit.document().characterCount()}")
-        self.logger.debug(f"  Protected position: {self.text_edit._protected_position}")
-        self.logger.debug(f"  Input start position: {self._input_start_position}")
-
+        # For AI messages, track position for updates
         if style == 'ai':
-            # Update existing AI response
-            self.update_ai_response(message[4:])  # Skip 'AI: ' prefix
+            self._ai_response_start = cursor.position() - len(message)
+            self._ai_response_length = len(message)
         else:
-            # For non-AI messages, add at the protected position
-            cursor = QTextCursor(self.text_edit.document())
-            cursor.setPosition(self.text_edit._protected_position)
+            self._ai_response_start = None
+            self._ai_response_length = 0
 
-            if self.text_edit._protected_position > 0:
-                cursor.insertBlock()
+        # Ensure new message is visible
+        self.ensureCursorVisible()
 
-            format = QTextCharFormat()
-            format.setForeground(self.STYLE_COLORS.get(style, QColor('white')))
-            cursor.insertText(message, format)
-            cursor.insertBlock()
+    def update_last_ai_response(self, content: str) -> None:
+        """Update the last AI response in the history."""
+        if self._ai_response_start is None:
+            # No AI response to update - append as new
+            self.append_message(f"AI: {content}", 'ai')
+            return
 
-            # Update protected position to end of inserted message
-            self.text_edit.set_protected_position(cursor.position())
+        cursor = QTextCursor(self.document())
+        cursor.setPosition(self._ai_response_start)
+        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor,
+                          self._ai_response_length)
 
-            # Update input start position to match
-            self._input_start_position = self.text_edit._protected_position
+        format = QTextCharFormat()
+        format.setForeground(self.STYLE_COLORS['ai'])
+        cursor.insertText(f"AI: {content}", format)
 
-            # Clear any content after protected position
-#            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-#            cursor.removeSelectedText()
-
-        self.logger.debug(f"Document state after add_message:")
-        self.logger.debug(f"  Document length: {self.text_edit.document().characterCount()}")
-        self.logger.debug(f"  Protected position: {self.text_edit._protected_position}")
-        self.logger.debug(f"  Input start position: {self._input_start_position}")
-
-        self.log_operation(f"add_message - end ({style})")
-
-    def get_input_text(self) -> str:
-        """Get the current input text."""
-        return self.text_edit.get_user_input()
-
-    def set_input_text(self, text: str):
-        """Set the input text."""
-        cursor = QTextCursor(self.text_edit.document())
-        cursor.setPosition(self._input_start_position)
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        cursor.insertText(text, self._input_format)
-        self.text_edit.setTextCursor(cursor)
-
-    def clear_input(self):
-        """Clear the input area."""
-        self.set_input_text("")
-
-    def log_operation(self, operation: str):
-        """Log an operation for debugging."""
-        self.logger.debug(f"Operation: {operation}")
-        self.logger.debug(f"  Input start position: {self._input_start_position}")
-        self.logger.debug(f"  AI response start: {self.current_ai_response_start}")
-
-    def _finish_ai_response(self):
-        """Mark the current AI response as complete."""
-        if self._ai_response_start is not None:
-            # Calculate the end position of the response
-            response_end = self._ai_response_start + self._ai_response_length
-
-            # Move to the end of the response
-            cursor = QTextCursor(self.text_edit.document())
-            cursor.setPosition(response_end)
-
-            # Ensure we end with a new block
-            if not cursor.atBlockStart():
-                cursor.insertBlock()
-
-            # Set the protected position to the new block start
-            self._protected_position = cursor.position()
-
-            # Clear everything after the protected position
-#            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-#            cursor.removeSelectedText()
-
-            self.logger.debug(f"Finishing AI response:")
-            self.logger.debug(f"  Response start: {self._ai_response_start}")
-            self.logger.debug(f"  Response length: {self._ai_response_length}")
-            self.logger.debug(f"  Response end: {response_end}")
-            self.logger.debug(f"  New protected position: {self._protected_position}")
-            self.logger.debug(f"  Document length: {self.text_edit.document().characterCount()}")
-
-        # Reset AI response tracking
-        self._ai_response_start = None
-        self._ai_response_length = 0
+        self._ai_response_length = len(f"AI: {content}")
+        self.ensureCursorVisible()
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
-        self._finish_ai_response()
-        self.current_ai_response_start = None
+        self._ai_response_start = None
+        self._ai_response_length = 0
+
+
+class InputEdit(QTextEdit):
+    """Editable input area for user messages."""
+
+    submitted = Signal(str)  # Signal emitted when message is submitted
+
+    def __init__(self, parent=None):
+        """Initialize the input edit area."""
+        super().__init__(parent)
+        self.setFrameStyle(QFrame.NoFrame)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setMinimumHeight(40)
+
+        policy = self.sizePolicy()
+        policy.setVerticalPolicy(policy.Policy.Minimum)
+        self.setSizePolicy(policy)
+
+        # Style for input area
+        self.setStyleSheet("""
+            QTextEdit {
+                background-color: #2d2d2d;
+                color: #ffffff;
+                border: none;
+            }
+        """)
+
+        # History of user inputs
+        self.input_history = []
+        self.history_index = -1
+        self.current_input = ""
+
+    def keyPressEvent(self, event):
+        """Handle special key events."""
+        # Check for submit shortcut (Ctrl+J)
+        if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
+            text = self.toPlainText().strip()
+            if text:
+                self.submitted.emit(text)
+                if text not in self.input_history:
+                    self.input_history.append(text)
+                self.history_index = -1
+                self.clear()
+            return
+
+        # Handle up/down history navigation when cursor at start
+        if self.textCursor().atStart() and not self.textCursor().hasSelection():
+            if event.key() == Qt.Key_Up and self.input_history:
+                if self.history_index == -1:
+                    self.current_input = self.toPlainText()
+                self.history_index = min(len(self.input_history) - 1,
+                                       self.history_index + 1)
+                self.setPlainText(self.input_history[-self.history_index - 1])
+                return
+
+            if event.key() == Qt.Key_Down:
+                if self.history_index > 0:
+                    self.history_index -= 1
+                    self.setPlainText(self.input_history[-self.history_index - 1])
+                elif self.history_index == 0:
+                    self.history_index = -1
+                    self.setPlainText(self.current_input)
+                return
+
+        super().keyPressEvent(event)
+
+    def resizeEvent(self, event: QResizeEvent):
+        """Adjust height based on content."""
+        super().resizeEvent(event)
+        # Calculate required height for content
+        doc_height = self.document().size().height()
+        # Add margins
+        content_height = doc_height + 2 * self.document().documentMargin()
+        # Constrain between minimum and maximum
+        new_height = max(40, min(200, content_height))
+        if new_height != self.height():
+            self.setFixedHeight(new_height)
+
+
+class UnifiedChatView(QFrame):
+    """Widget combining history view and input edit with unified scrolling."""
+
+    def __init__(self, parent=None):
+        """Initialize the unified chat view."""
+        super().__init__(parent)
+        self.logger = logging.getLogger("UnifiedChatView")
+
+        # Main layout
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+
+        # Create scroll area to contain both widgets
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setFrameStyle(QFrame.NoFrame)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+        # Container widget for history and input
+        self.container = QWidget(self.scroll_area)
+        self.container_layout = QVBoxLayout(self.container)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
+        self.container_layout.setSpacing(0)
+
+        # Create history and input widgets
+        self.history = HistoryView(self.container)
+        self.input = InputEdit(self.container)
+
+        # Connect input submitted signal to parent's submit handler
+        self.input.submitted.connect(lambda msg: self.parent().submit_message())
+
+        # Add widgets to container
+        self.container_layout.addWidget(self.history, 1)  # 1 = stretch factor
+        self.container_layout.addWidget(self.input, 0)    # 0 = no stretch
+
+        # Set container as scroll area widget
+        self.scroll_area.setWidget(self.container)
+
+        # Add scroll area to main layout
+        self.layout.addWidget(self.scroll_area)
+
+        # Connect input height changes to scroll adjustment
+        self.input.document().contentsChanged.connect(self._adjust_scroll)
+
+    def _adjust_scroll(self):
+        """Adjust scroll position when input height changes."""
+        scrollbar = self.scroll_area.verticalScrollBar()
+        if scrollbar.value() == scrollbar.maximum():
+            # We were at bottom - stay there
+            self.scroll_area.verticalScrollBar().setValue(
+                self.scroll_area.verticalScrollBar().maximum()
+            )
+
+    def add_message(self, message: str, style: str):
+        """Add a message to the history area."""
+        if style == 'ai' and message.startswith("AI: "):
+            self.history.update_last_ai_response(message[4:])
+        else:
+            self.history.append_message(message, style)
+
+    def get_input_text(self) -> str:
+        """Get the current input text."""
+        return self.input.toPlainText()
+
+    def set_input_text(self, text: str):
+        """Set the input text."""
+        self.input.setPlainText(text)
+
+    def clear_input(self):
+        """Clear the input area."""
+        self.input.clear()
+
+    def wheelEvent(self, event: QWheelEvent):
+        """Handle wheel events for smooth scrolling."""
+        # Only handle vertical scrolling
+        if event.angleDelta().y() != 0:
+            scrollbar = self.scroll_area.verticalScrollBar()
+            scrollbar.setValue(scrollbar.value() - event.angleDelta().y() / 2)
+
+    def finish_ai_response(self):
+        """Mark the current AI response as complete."""
+        self.history.finish_ai_response()
 
 
 class HumbugMainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
     def __init__(self, ai_backend, transcript_writer):
+        """Initialize the main window."""
         super().__init__()
         self.ai_backend = ai_backend
         self.transcript_writer = transcript_writer
@@ -311,23 +299,30 @@ class HumbugMainWindow(QMainWindow):
 
         self.undo_action = QAction("Undo", self)
         self.undo_action.setShortcut(QKeySequence("Ctrl+Z"))
-        self.undo_action.triggered.connect(lambda: self.chat_view.text_edit.undo())
+        self.undo_action.triggered.connect(lambda: self.chat_view.input.undo())
 
         self.redo_action = QAction("Redo", self)
         self.redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
-        self.redo_action.triggered.connect(lambda: self.chat_view.text_edit.redo())
+        self.redo_action.triggered.connect(lambda: self.chat_view.input.redo())
 
         self.cut_action = QAction("Cut", self)
         self.cut_action.setShortcut(QKeySequence("Ctrl+X"))
-        self.cut_action.triggered.connect(lambda: self.chat_view.text_edit.cut())
+        self.cut_action.triggered.connect(lambda: self.chat_view.input.cut())
 
         self.copy_action = QAction("Copy", self)
         self.copy_action.setShortcut(QKeySequence("Ctrl+C"))
-        self.copy_action.triggered.connect(lambda: self.chat_view.text_edit.copy())
+        self.copy_action.triggered.connect(self._handle_copy)
 
         self.paste_action = QAction("Paste", self)
         self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
-        self.paste_action.triggered.connect(lambda: self.chat_view.text_edit.paste())
+        self.paste_action.triggered.connect(lambda: self.chat_view.input.paste())
+
+    def _handle_copy(self):
+        """Handle copy action based on focus."""
+        if self.chat_view.input.hasFocus():
+            self.chat_view.input.copy()
+        elif self.chat_view.history.hasFocus():
+            self.chat_view.history.copy()
 
     def _create_menus(self):
         """Create the menu bar and all menus."""
@@ -358,17 +353,19 @@ class HumbugMainWindow(QMainWindow):
 
     def _update_menu_states(self):
         """Update enabled/disabled state of menu items."""
-        cursor = self.chat_view.text_edit.textCursor()
-        has_selection = cursor.hasSelection()
+        has_input_selection = self.chat_view.input.textCursor().hasSelection()
+        has_history_selection = self.chat_view.history.textCursor().hasSelection()
         has_text = bool(self.chat_view.get_input_text())
-        can_undo = self.chat_view.text_edit.document().isUndoAvailable()
-        can_redo = self.chat_view.text_edit.document().isRedoAvailable()
+        can_undo = self.chat_view.input.document().isUndoAvailable()
+        can_redo = self.chat_view.input.document().isRedoAvailable()
+        input_focused = self.chat_view.input.hasFocus()
 
         self.submit_action.setEnabled(has_text)
-        self.undo_action.setEnabled(can_undo)
-        self.redo_action.setEnabled(can_redo)
-        self.cut_action.setEnabled(has_selection)
-        self.copy_action.setEnabled(has_selection)
+        self.undo_action.setEnabled(can_undo and input_focused)
+        self.redo_action.setEnabled(can_redo and input_focused)
+        self.cut_action.setEnabled(has_input_selection and input_focused)
+        self.copy_action.setEnabled(has_input_selection or has_history_selection)
+        self.paste_action.setEnabled(input_focused)
 
     def setup_ui(self):
         """Set up the user interface."""
@@ -386,8 +383,8 @@ class HumbugMainWindow(QMainWindow):
         self.chat_view = UnifiedChatView(self)
         layout.addWidget(self.chat_view)
 
-        # Connect text changed signal
-        self.chat_view.text_edit.textChanged.connect(self._update_menu_states)
+        # Connect text changed signals
+        self.chat_view.input.textChanged.connect(self._update_menu_states)
 
         # Status bar
         self.status_label = QLabel("Input tokens: 0 | Output tokens: 0")
@@ -495,32 +492,20 @@ class HumbugMainWindow(QMainWindow):
                         "error": response.error,
                         "timestamp": datetime.utcnow().isoformat()
                     }])
-                    # Make sure to reset AI response state on error
-                    self.chat_view.text_edit._ai_response_start = None
-                    self.chat_view.text_edit._ai_response_length = 0
                     return
 
-                # Update response - this is the complete response up to this point
+                # Update response
                 self.current_response = response.content
-                self.logger.debug(f"Received chunk, first_response={first_response}")
-                self.logger.debug(f"Current response content: {repr(self.current_response)}")
-                self.logger.debug(f"AI response start: {self.chat_view._ai_response_start}")
-                self.logger.debug(f"AI response length: {self.chat_view._ai_response_length}")
 
                 # For first chunk, add new message with prefix
                 if first_response:
-                    self.logger.debug("Processing first response chunk")
                     self.chat_view.add_message(f"AI: {self.current_response}", "ai")
                     first_response = False
                 else:
-                    # For subsequent chunks, update the existing message content
-                    self.logger.debug("Processing subsequent response chunk")
-                    # Note: update_ai_response expects content without the "AI: " prefix
-                    self.chat_view.update_ai_response(self.current_response)
+                    self.chat_view.add_message(f"AI: {self.current_response}", "ai")
 
                 # Update token counts and handle completion
                 if response.usage:
-                    self.logger.debug(f"Received usage info: {response.usage}")
                     self.token_counts["input"] += response.usage.prompt_tokens
                     self.token_counts["output"] += response.usage.completion_tokens
                     self.update_status()
@@ -531,18 +516,13 @@ class HumbugMainWindow(QMainWindow):
                         "usage": response.usage.to_dict(),
                         "timestamp": datetime.utcnow().isoformat()
                     }])
-                    # Mark AI response as complete and reset state
-                    self.logger.debug("Completing AI response with usage info")
+                    # Mark AI response as complete
                     self.chat_view.finish_ai_response()
-                    self.chat_view.text_edit._ai_response_start = None
-                    self.chat_view.text_edit._ai_response_length = 0
 
         except asyncio.CancelledError:
             self.logger.debug("AI response cancelled")
             # Handle cancellation gracefully
             self.chat_view.finish_ai_response()
-            self.chat_view.text_edit._ai_response_start = None
-            self.chat_view.text_edit._ai_response_length = 0
             raise
 
         except Exception as e:
@@ -559,9 +539,6 @@ class HumbugMainWindow(QMainWindow):
                 },
                 "timestamp": datetime.utcnow().isoformat()
             }])
-            # Make sure to reset AI response state on error
-            self.chat_view.text_edit._ai_response_start = None
-            self.chat_view.text_edit._ai_response_length = 0
 
         finally:
             self.logger.debug("=== Finished AI response processing ===")
@@ -570,6 +547,7 @@ class HumbugMainWindow(QMainWindow):
     def get_conversation_history(self) -> List[str]:
         """Extract conversation history from display."""
         # This is a simplified version - would need to be enhanced
+        # to properly parse the history content
         return []
 
     async def handle_command(self, command: str):
@@ -586,3 +564,10 @@ class HumbugMainWindow(QMainWindow):
             f"Input tokens: {self.token_counts['input']} | "
             f"Output tokens: {self.token_counts['output']}"
         )
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle global key events."""
+        if event.key() == Qt.Key_Escape:
+            self.cancel_current_request()
+        else:
+            super().keyPressEvent(event)
