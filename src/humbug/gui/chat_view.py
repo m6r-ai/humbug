@@ -3,7 +3,7 @@
 from typing import Optional
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QWidget, QScrollArea,
                              QTextEdit, QLabel, QSizePolicy)
-from PySide6.QtCore import Qt, Signal, QEvent, QSize, QRect
+from PySide6.QtCore import Qt, Signal, QEvent, QSize, QRect, QTimer
 from PySide6.QtGui import (QTextCursor, QColor, QTextCharFormat, QKeyEvent,
                           QResizeEvent, QWheelEvent, QPalette, QTextDocument)
 
@@ -356,12 +356,30 @@ class ChatView(QFrame):
                 """)
         return super().eventFilter(obj, event)
 
+    def isScrolledToBottom(self) -> bool:
+        """Check if scroll area is at the bottom."""
+        scrollbar = self.scroll_area.verticalScrollBar()
+        return scrollbar.value() >= scrollbar.maximum() - 10  # Small threshold for "close to bottom"
+
+    def scrollToBottom(self):
+        """Scroll to the bottom of the content."""
+        scrollbar = self.scroll_area.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
     def add_message(self, message: str, style: str):
         """Add a message to history with appropriate styling."""
+        # Check if we're at bottom before adding content
+        was_at_bottom = self.isScrolledToBottom()
+
         if style == 'ai' and message.startswith("AI: "):
             self.history.update_last_ai_response(message[4:])
         else:
             self.history.append_message(message, style)
+
+        # If we were at bottom before, scroll to bottom after new content
+        if was_at_bottom:
+            # Use a small delay to ensure layout is updated
+            QTimer.singleShot(0, self.scrollToBottom)
 
     def get_input_text(self) -> str:
         """Get the current input text."""
