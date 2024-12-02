@@ -255,7 +255,7 @@ class UnifiedChatView(QWidget):
         if not cursor.atBlockStart():
             cursor.insertBlock()
 
-        # Mark the start of the input area
+        # Mark the start of the input area and ensure protected position matches
         self._input_start_position = cursor.position()
         self.text_edit.set_protected_position(self._input_start_position)
 
@@ -289,6 +289,9 @@ class UnifiedChatView(QWidget):
             # Update protected position
             self.text_edit._protected_position = cursor.position()
             self.text_edit.set_protected_position(self.text_edit._protected_position)
+
+            # Update input start position to match - this was missing
+            self._input_start_position = self.text_edit._protected_position
 
         self.log_operation(f"add_message - end ({style})")
 
