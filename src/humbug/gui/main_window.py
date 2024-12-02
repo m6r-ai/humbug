@@ -15,45 +15,171 @@ from humbug.gui.about_dialog import AboutDialog
 
 logger = logging.getLogger(__name__)
 
+
 class ProtectedTextEdit(QTextEdit):
-    """Text edit widget that protects history from modification."""
+    """Text edit widget that protects history from modification while allowing streaming updates."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._protected_position = 0
+        self._ai_response_start = None
+        self._ai_response_length = 0
+        self._user_input = ""
         self.debug_id = id(self)
+        self.logger = logging.getLogger(f"ProtectedTextEdit_{self.debug_id}")
 
-    def keyPressEvent(self, event: QKeyEvent):
-        """Handle key press events."""
+    def debug_cursor_state(self, cursor: QTextCursor, label: str):
+        """Log detailed cursor state information."""
+        doc_length = self.document().characterCount()
+        self.logger.debug(f"=== {label} ===")
+        self.logger.debug(f"Document length: {doc_length}")
+        self.logger.debug(f"Cursor position: {cursor.position()}")
+        self.logger.debug(f"Selection start: {cursor.selectionStart()}")
+        self.logger.debug(f"Selection end: {cursor.selectionEnd()}")
+        self.logger.debug(f"At block start: {cursor.atBlockStart()}")
+        self.logger.debug(f"Protected position: {self._protected_position}")
+        self.logger.debug(f"AI response start: {self._ai_response_start}")
+        self.logger.debug(f"AI response length: {self._ai_response_length}")
+
+        # Log the actual text content at key positions
+        try:
+            cursor.setPosition(self._protected_position)
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+            self.logger.debug(f"Text at protected position: {repr(cursor.selectedText())}")
+        except Exception as e:
+            self.logger.error(f"Error getting text at protected position: {e}")
+
+        if self._ai_response_start is not None:
+            try:
+                cursor.setPosition(self._ai_response_start)
+                cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                self.logger.debug(f"Text at AI response start: {repr(cursor.selectedText())}")
+            except Exception as e:
+                self.logger.error(f"Error getting text at AI response start: {e}")
+
+    def validate_position(self, position: int, operation: str) -> bool:
+        """Validate if a position is within document bounds."""
+        doc_length = self.document().characterCount()
+        valid = 0 <= position <= doc_length
+        if not valid:
+            self.logger.error(
+                f"Invalid position in {operation}: pos={position}, "
+                f"doc_length={doc_length}, "
+                f"protected_pos={self._protected_position}, "
+                f"ai_start={self._ai_response_start}, "
+                f"ai_length={self._ai_response_length}"
+            )
+        return valid
+
+    def safe_set_cursor_position(self, cursor: QTextCursor, position: int, operation: str) -> bool:
+        """Safely set cursor position with validation."""
+        if self.validate_position(position, operation):
+            try:
+                cursor.setPosition(position)
+                return True
+            except Exception as e:
+                self.logger.error(f"Error setting cursor position in {operation}: {e}")
+                return False
+        return False
+
+    def update_ai_response(self, new_content: str):
+        """Update the AI response by only inserting new content."""
+        self.logger.debug("\n=== Starting update_ai_response ===")
+
+        # Save cursor state relative to user input
+        current_input = self.get_user_input()
         cursor = self.textCursor()
+        relative_cursor = cursor.position() - self._protected_position
+        self.logger.debug(f"Cursor position relative to input: {relative_cursor}")
+        self.logger.debug(f"Current input: {repr(current_input)}")
 
-        # Log before state
-        self.log_state(f"KeyPress: {event.key()}")
+        try:
+            if self._ai_response_start is None:
+                # Initialize new AI response
+                cursor = QTextCursor(self.document())
+                if not self.safe_set_cursor_position(cursor, self._protected_position, "initial AI response"):
+                    return
 
-        # Block modification before protected position, but allow at protected position
-        if cursor.position() < self._protected_position or (
-            cursor.hasSelection() and cursor.selectionStart() < self._protected_position
-        ):
-            # Allow navigation and copy
-            if event.key() in (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down,
-                             Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown):
-                super().keyPressEvent(event)
-            elif event.matches(QKeySequence.Copy):
-                super().keyPressEvent(event)
-            # Ignore all other keys
-            event.ignore()
-            return
+                if self._protected_position > 0:
+                    cursor.insertBlock()
+                self._ai_response_start = cursor.position()
+                self._ai_response_length = 0
 
-        # If at protected position and backspace/delete, ignore
-        if cursor.position() == self._protected_position and event.key() in (Qt.Key_Backspace, Qt.Key_Delete):
-            event.ignore()
-            return
+            # Insert new AI content
+            content_to_insert = new_content[self._ai_response_length:]
+            if not content_to_insert:
+                return
 
-        # Normal handling for input area
-        super().keyPressEvent(event)
+            cursor = QTextCursor(self.document())
+            insert_position = self._ai_response_start + self._ai_response_length
+            if not self.safe_set_cursor_position(cursor, insert_position, "content insertion"):
+                return
 
-        # Log after state
-        self.log_state("After KeyPress")
+            format = QTextCharFormat()
+            format.setForeground(QColor('yellow'))
+            cursor.insertText(content_to_insert, format)
+
+            # Update tracking
+            self._ai_response_length += len(content_to_insert)
+            self._protected_position = self._ai_response_start + self._ai_response_length
+
+            # Reposition user input
+            cursor = QTextCursor(self.document())
+            if not self.safe_set_cursor_position(cursor, self._protected_position, "user input restoration"):
+                return
+
+            # Clear everything after protected position
+            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
+
+            # Ensure new block for user input
+            if not cursor.atBlockStart():
+                cursor.insertBlock()
+                self._protected_position = cursor.position()
+
+            # Restore user input
+            if current_input:
+                format = QTextCharFormat()
+                format.setBackground(QColor("#2d2d2d"))
+                cursor.insertText(current_input, format)
+
+                # Restore cursor position relative to input
+                new_cursor_pos = self._protected_position + max(0, min(relative_cursor, len(current_input)))
+                self.logger.debug(f"Restoring cursor to position {new_cursor_pos} "
+                                f"(protected_pos: {self._protected_position}, "
+                                f"relative: {relative_cursor})")
+
+                if self.safe_set_cursor_position(cursor, new_cursor_pos, "cursor restoration"):
+                    self.setTextCursor(cursor)
+                    self.ensureCursorVisible()
+
+        except Exception as e:
+            self.logger.error(f"Error in update_ai_response: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
+
+        finally:
+            self.debug_cursor_state(self.textCursor(), "Final state")
+
+    def finish_ai_response(self):
+        """Mark the current AI response as complete."""
+        if self._ai_response_start is not None:
+            self._protected_position = self._ai_response_start + self._ai_response_length
+            # Ensure we end with a new block for next input
+            cursor = QTextCursor(self.document())
+            cursor.setPosition(self._protected_position)
+            if not cursor.atBlockStart():
+                cursor.insertBlock()
+                self._protected_position = cursor.position()
+        self._ai_response_start = None
+        self._ai_response_length = 0
+
+    def get_user_input(self) -> str:
+        """Get the current user input text."""
+        cursor = QTextCursor(self.document())
+        cursor.setPosition(self._protected_position)
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        return cursor.selectedText()
 
     def log_state(self, operation: str):
         """Log current state for debugging."""
@@ -62,6 +188,9 @@ class ProtectedTextEdit(QTextEdit):
         logger.debug(f"[{self.debug_id}] {operation}:")
         logger.debug(f"  Document length: {doc_length}")
         logger.debug(f"  Protected position: {self._protected_position}")
+        logger.debug(f"  AI response start: {self._ai_response_start}")
+        logger.debug(f"  AI response length: {self._ai_response_length}")
+        logger.debug(f"  Current user input: {repr(self.get_user_input())}")
         logger.debug(f"  Cursor position: {cursor.position()}")
         logger.debug(f"  Selection: {cursor.hasSelection()}, "
                     f"start: {cursor.selectionStart()}, "
@@ -141,33 +270,15 @@ class UnifiedChatView(QWidget):
         """Add a message to the history area."""
         self.log_operation(f"add_message - start ({style})")
 
-        # Save current input text and cursor position
-        input_text = self.get_input_text()
-        relative_cursor_pos = self.text_edit.textCursor().position() - self._input_start_position
-
-        cursor = QTextCursor(self.text_edit.document())
-
-        if style == 'ai' and self.current_ai_response_start is not None:
-            # For AI updates, calculate how much the response has grown
-            cursor.setPosition(self.current_ai_response_start)
-            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-            old_length = len(cursor.selectedText())
-
-            # Update the AI response
-            cursor.removeSelectedText()
-            format = QTextCharFormat()
-            format.setForeground(self.STYLE_COLORS.get(style, QColor('white')))
-            cursor.insertText(message, format)
-
-            # Calculate growth and adjust positions
-            growth = len(message) - old_length
-            self._input_start_position += growth
-
+        if style == 'ai':
+            # Update existing AI response
+            self.text_edit.update_ai_response(message[4:])  # Skip 'AI: ' prefix
         else:
-            # For new messages, insert at current input position
-            cursor.setPosition(self._input_start_position)
+            # For non-AI messages, add at the protected position
+            cursor = QTextCursor(self.text_edit.document())
+            cursor.setPosition(self.text_edit._protected_position)
 
-            if self._input_start_position > 0:
+            if self.text_edit._protected_position > 0:
                 cursor.insertBlock()
 
             format = QTextCharFormat()
@@ -175,24 +286,9 @@ class UnifiedChatView(QWidget):
             cursor.insertText(message, format)
             cursor.insertBlock()
 
-            if style == 'ai':
-                self.current_ai_response_start = self._input_start_position
-                # Move input position forward by message length plus newlines
-                self._input_start_position = cursor.position()
-
-        # Update protected position
-        self.text_edit.set_protected_position(self._input_start_position)
-
-        # Restore input text at new position if any
-        if input_text:
-            cursor.setPosition(self._input_start_position)
-            cursor.insertText(input_text, self._input_format)
-
-        # Restore cursor relative to input position
-        new_cursor_pos = self._input_start_position + relative_cursor_pos
-        cursor.setPosition(new_cursor_pos)
-        self.text_edit.setTextCursor(cursor)
-        self.text_edit.ensureCursorVisible()
+            # Update protected position
+            self.text_edit._protected_position = cursor.position()
+            self.text_edit.set_protected_position(self.text_edit._protected_position)
 
         self.log_operation(f"add_message - end ({style})")
 
