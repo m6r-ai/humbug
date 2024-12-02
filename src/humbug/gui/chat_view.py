@@ -54,9 +54,11 @@ class HistoryView(QTextEdit):
         cursor = QTextCursor(self.document())
         cursor.movePosition(QTextCursor.End)
 
+        # Insert a block before new content if we're not at the start
         if not cursor.atStart():
             cursor.insertBlock()
 
+        # Insert the new message
         cursor.insertText(message, self.formats.get(style, self.formats['user']))
 
         if style == 'ai':
@@ -66,8 +68,14 @@ class HistoryView(QTextEdit):
             self._ai_response_start = None
             self._ai_response_length = 0
 
+        # Move cursor to new content
         self.setTextCursor(cursor)
-        self.ensureCursorVisible()
+
+        # Find the ChatView instance and its scroll area
+        chat_view = self.parent().parent()
+        if hasattr(chat_view, 'scroll_area'):
+            sb = chat_view.scroll_area.verticalScrollBar()
+            sb.setValue(sb.maximum())
 
     def update_last_ai_response(self, content: str):
         """Update the last AI response in the history."""
@@ -78,10 +86,18 @@ class HistoryView(QTextEdit):
         cursor = QTextCursor(self.document())
         cursor.setPosition(self._ai_response_start)
         cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor,
-                          self._ai_response_length)
+                        self._ai_response_length)
         cursor.insertText(f"AI: {content}", self.formats['ai'])
         self._ai_response_length = len(f"AI: {content}")
-        self.ensureCursorVisible()
+
+        # Move cursor to updated content
+        self.setTextCursor(cursor)
+
+        # Find the ChatView instance and its scroll area
+        chat_view = self.parent().parent()
+        if hasattr(chat_view, 'scroll_area'):
+            sb = chat_view.scroll_area.verticalScrollBar()
+            sb.setValue(sb.maximum())
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
@@ -101,19 +117,17 @@ class InputEdit(QTextEdit):
         self.setFrameStyle(QFrame.NoFrame)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        # Only set minimum height, no maximum
-        self.setMinimumHeight(40)
-
-        self.document().documentLayout().documentSizeChanged.connect(
-            self._on_document_size_changed)
-
-        self._current_height = 40
+        self.setFixedHeight(40)  # Initial height
 
         # Input history
         self.input_history = []
         self.history_index = -1
         self.current_input = ""
+
+        self.document().documentLayout().documentSizeChanged.connect(
+            self._on_document_size_changed)
+
+        self._current_height = 40
 
         self.setStyleSheet("""
             QTextEdit {
@@ -191,8 +205,18 @@ class ChatView(QFrame):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Create content widget that will be inside the scroll area
+        # Create scroll area first
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setFrameStyle(QFrame.NoFrame)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll_area.setWidgetResizable(True)
+
+        # Create the content widget that will be inside the scroll area
         self.content_widget = QWidget()
+        self.content_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        # Content layout
         content_layout = QVBoxLayout(self.content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
@@ -201,24 +225,31 @@ class ChatView(QFrame):
         self.history = HistoryView()
         self.input = InputEdit()
 
-        # Set proper size policies
-        self.history.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # Set size policies
+        self.history.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        # Set initial height for input
-        self.input.setFixedHeight(40)
 
         # Add widgets to content layout
         content_layout.addWidget(self.history, 1)
         content_layout.addWidget(self.input, 0)
 
-        # Create scroll area
-        self.scroll_area = QScrollArea()
+        # Set the content widget in the scroll area
         self.scroll_area.setWidget(self.content_widget)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setFrameStyle(QFrame.NoFrame)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+        # Style the scroll area
+        self.scroll_area.setStyleSheet("""
+            QScrollBar:vertical {
+                background: #2d2d2d;
+                width: 12px;
+            }
+            QScrollBar::handle:vertical {
+                background: #404040;
+                min-height: 20px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        """)
 
         # Add scroll area to main layout
         layout.addWidget(self.scroll_area)
@@ -242,16 +273,13 @@ class ChatView(QFrame):
         # Update input height
         self.input.setFixedHeight(new_height)
 
-        # After layout updates, adjust scroll position to maintain relative position
-        self.scroll_area.verticalScrollBar().setValue(
-            self.scroll_area.verticalScrollBar().maximum() - distance_from_bottom
-        )
-
-        # If we're near bottom, scroll to show new content
-        if height_diff > 0 and distance_from_bottom < height_diff:
-            self.scroll_area.verticalScrollBar().setValue(
-                self.scroll_area.verticalScrollBar().maximum()
-            )
+        # After layout updates, maintain relative scroll position
+        if distance_from_bottom < height_diff:
+            # If we're near the bottom, scroll to show new content
+            scrollbar.setValue(scrollbar.maximum())
+        else:
+            # Otherwise maintain relative position
+            scrollbar.setValue(scrollbar.maximum() - distance_from_bottom)
 
     def eventFilter(self, obj: QWidget, event: QEvent) -> bool:
         """Handle focus changes for proper background colors."""
@@ -308,6 +336,5 @@ class ChatView(QFrame):
 
     def update_status(self, input_tokens: int, output_tokens: int):
         """Update the status bar with token counts."""
-        # Emit a signal that the main window will handle
         self.parent().parent().statusBar().showMessage(
             f"Input tokens: {input_tokens} | Output tokens: {output_tokens}")
