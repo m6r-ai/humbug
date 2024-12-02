@@ -1,11 +1,58 @@
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QTextEdit,
-                             QLabel, QSplitter, QApplication, QMenu)
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QTextCharFormat, QColor, QKeyEvent, QTextCursor, QAction
+"""Main window implementation with menu support."""
+
 import asyncio
-import qasync
-from typing import List, Optional
+import platform
+from typing import List
 from datetime import datetime
+
+from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QTextEdit,
+                             QLabel, QSplitter, QApplication, QMenu, QMenuBar, QDialog,
+                             QPushButton)
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QTextCharFormat, QColor, QKeyEvent, QTextCursor, QAction, QKeySequence
+
+from humbug import format_version
+
+
+class AboutDialog(QDialog):
+    """About dialog for Humbug application."""
+
+    def __init__(self, parent=None):
+        """Initialize the About dialog."""
+        super().__init__(parent)
+        self.setWindowTitle("About Humbug")
+        self.setFixedSize(QSize(400, 200))
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Set up the About dialog UI."""
+        layout = QVBoxLayout()
+
+        # Title with version
+        title_label = QLabel(f"Humbug v{format_version()}")
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin: 10px;")
+        layout.addWidget(title_label)
+
+        # Description
+        desc_label = QLabel(
+            "Humbug is a GUI-based application that allows users to "
+            "interact with AI backends through a simple chat interface."
+        )
+        desc_label.setWordWrap(True)
+        desc_label.setAlignment(Qt.AlignCenter)
+        desc_label.setStyleSheet("margin: 10px;")
+        layout.addWidget(desc_label)
+
+        # Close button
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.accept)
+        close_button.setStyleSheet("margin: 10px;")
+        layout.addWidget(close_button)
+
+        layout.addStretch()
+        self.setLayout(layout)
+
 
 class MessageHistoryWidget(QTextEdit):
     """Widget for displaying message history with styled text."""
@@ -73,7 +120,7 @@ class MessageHistoryWidget(QTextEdit):
             if self.textCursor().hasSelection():
                 self.copy()
                 return
-            # If no text is selected, let the main window handle it (for cancellation)
+            # If no text is selected, let the main window handle it
             elif self.parent() and hasattr(self.parent(), 'cancel_current_request'):
                 self.parent().cancel_current_request()
                 return
@@ -83,6 +130,7 @@ class MessageHistoryWidget(QTextEdit):
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
         self.current_ai_response_start = None
+
 
 class InputWidget(QTextEdit):
     """Widget for user input with line limit."""
@@ -178,9 +226,101 @@ class HumbugMainWindow(QMainWindow):
         self.transcript_writer = transcript_writer
         self.current_response = ""
         self.token_counts = {"input": 0, "output": 0}
-        self._current_task = None  # Track current AI task
+        self._current_task = None
 
+        # Create actions first
+        self._create_actions()
+        # Create menus using the actions
+        self._create_menus()
+        # Then set up the rest of the UI
         self.setup_ui()
+
+    def _create_actions(self):
+        """Create all menu actions."""
+        # Humbug menu actions
+        self.about_action = QAction("About Humbug", self)
+        self.about_action.triggered.connect(self._show_about_dialog)
+
+        self.quit_action = QAction("Quit Humbug", self)
+        self.quit_action.setShortcut(QKeySequence("Ctrl+Q"))
+        self.quit_action.triggered.connect(self.close)
+
+        # Edit menu actions
+        self.submit_action = QAction("Submit", self)
+        self.submit_action.setShortcut(QKeySequence("Ctrl+J"))
+        self.submit_action.triggered.connect(self.submit_message)
+
+        self.undo_action = QAction("Undo", self)
+        self.undo_action.setShortcut(QKeySequence("Ctrl+Z"))
+        self.undo_action.triggered.connect(lambda: self.input_area.undo())
+
+        self.redo_action = QAction("Redo", self)
+        self.redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
+        self.redo_action.triggered.connect(lambda: self.input_area.redo())
+
+        self.cut_action = QAction("Cut", self)
+        self.cut_action.setShortcut(QKeySequence("Ctrl+X"))
+        self.cut_action.triggered.connect(lambda: self.input_area.cut())
+
+        self.copy_action = QAction("Copy", self)
+        self.copy_action.setShortcut(QKeySequence("Ctrl+C"))
+        self.copy_action.triggered.connect(lambda: self.input_area.copy())
+
+        self.paste_action = QAction("Paste", self)
+        self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
+        self.paste_action.triggered.connect(lambda: self.input_area.paste())
+
+    def _create_menus(self):
+        """Create the menu bar and all menus."""
+        self._menu_bar = QMenuBar(self)
+        self.setMenuBar(self._menu_bar)
+
+        # Humbug menu
+        humbug_menu = self._menu_bar.addMenu("&Humbug")
+        humbug_menu.addAction(self.about_action)
+        humbug_menu.addSeparator()
+        humbug_menu.addAction(self.quit_action)
+        humbug_menu.setWindowFlags(
+            humbug_menu.windowFlags()
+            | Qt.FramelessWindowHint
+            | Qt.NoDropShadowWindowHint
+        )
+        humbug_menu.setAttribute(Qt.WA_TranslucentBackground)
+
+        # Edit menu
+        edit_menu = self._menu_bar.addMenu("&Edit")
+        edit_menu.addAction(self.submit_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(self.undo_action)
+        edit_menu.addAction(self.redo_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(self.cut_action)
+        edit_menu.addAction(self.copy_action)
+        edit_menu.addAction(self.paste_action)
+        edit_menu.setWindowFlags(
+            edit_menu.windowFlags()
+            | Qt.FramelessWindowHint
+            | Qt.NoDropShadowWindowHint
+        )
+        edit_menu.setAttribute(Qt.WA_TranslucentBackground)
+
+    def _show_about_dialog(self):
+        """Show the About dialog."""
+        dialog = AboutDialog(self)
+        dialog.exec()
+
+    def _update_menu_states(self):
+        """Update enabled/disabled state of menu items."""
+        has_selection = self.input_area.textCursor().hasSelection()
+        has_text = bool(self.input_area.toPlainText())
+        can_undo = self.input_area.document().isUndoAvailable()
+        can_redo = self.input_area.document().isRedoAvailable()
+
+        self.submit_action.setEnabled(has_text)
+        self.undo_action.setEnabled(can_undo)
+        self.redo_action.setEnabled(can_redo)
+        self.cut_action.setEnabled(has_selection)
+        self.copy_action.setEnabled(has_selection)
 
     def setup_ui(self):
         """Set up the user interface."""
@@ -203,8 +343,11 @@ class HumbugMainWindow(QMainWindow):
 
         # Input area
         self.input_area = InputWidget()
-        self.input_area.set_main_window(self)  # Set main window reference
+        self.input_area.set_main_window(self)
         splitter.addWidget(self.input_area)
+
+        # Connect the input area's text changed signal to update menu states
+        self.input_area.textChanged.connect(self._update_menu_states)
 
         # Set splitter properties
         splitter.setStretchFactor(0, 3)  # History gets more space
@@ -216,18 +359,31 @@ class HumbugMainWindow(QMainWindow):
         self.status_label = QLabel("Input tokens: 0 | Output tokens: 0")
         self.statusBar().addWidget(self.status_label)
 
-        # Dark theme for status bar
-        self.statusBar().setStyleSheet("""
-            QStatusBar {
+        # Set dark theme
+        self.setStyleSheet("""
+            QMainWindow, QMenu, QDialog {
+                background-color: #1e1e1e;
+                color: #ffffff;
+            }
+            QMenuBar {
                 background-color: #2d2d2d;
                 color: #ffffff;
             }
-        """)
-
-        # Set dark theme for main window
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1e1e1e;
+            QMenuBar::item {
+                background-color: transparent;
+            }
+            QMenuBar::item:selected {
+                background-color: #3d3d3d;
+            }
+            QMenu {
+                background-color: #2d2d2d;
+                border: 1px solid #3d3d3d;
+            }
+            QMenu::item:selected {
+                background-color: #3d3d3d;
+            }
+            QStatusBar {
+                background-color: #2d2d2d;
             }
         """)
 

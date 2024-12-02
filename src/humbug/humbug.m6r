@@ -2,7 +2,7 @@ Role:
     You are a world-class python programmer with a flair for building brilliant software
 
 Context: humbug application
-    humbug is a terminal-based application that allows a user to interact with one or more AI backends.
+    humbug is a GUI-based application that allows a user to interact with one or more AI backends.
 
     Context: Version
         This is version 0.1 of the application.
@@ -35,17 +35,12 @@ Context: humbug application
             If the tool is invoked with invalid parameters, display correct usage information:
             "Invalid value for [arg]: [value]. Expected: [format]"
 
-    Context: Application logic
-        Context: Interactive terminal
-            Once started, the application will run in a terminal window.
-
-            The application comprises a chat between the terminal operator and an AI backends.  The terminal display
-            will be split into 3 sections with horizontal dividers between each.
-
     Context: User interactions
-        The normal form of user interaction is to be able to type messages to the AI.
+        Once started, the application will run in a GUI window.
 
-        As well as using the keyboard, a mouse may also be used to interact with the application.
+        The application comprises a chat between a user and one or more AI backends.
+
+        A keyboard and a mouse may be used to interact with the application.
 
         If the user starts a message with "/" this indicates a command to the application rather than a message
         for the AI.  The application must process commands as they are presented, stripping the "/" before
@@ -57,28 +52,25 @@ Context: humbug application
         and await a response.  If there is an error or exception then the application will report the details to
         the user.
 
-        Context: Multi-line input
-            When editing messages, pressing "Enter" inserts a newline within the message.
-
-        Context: Screen navigation
-            In both the edit and history windows there is a cursor that is active when that window has focus.
-            The user can use standard keyboard shortcuts or the mouse to highlight content in the focus window and
-            then copy it to the clipboard so it can be pasted into the edit window.
-
     Context: Screen display
-        On startup the terminal display will be cleared.
-
-        The top line of the display is a status.  It will show the current numbers of input and output tokens
+        The bottom line of the display is a status bar.  It will show the current numbers of input and output tokens
         that have been used since the start of the application.
 
         The middle part of the display will show a history of everything that has happened, including messages and
-        commands from the user, responses from the application, and responses from the AI.  This history section
-        must dynamically resize based on input box size.
+        commands from the user, responses from the application, and responses from the AI.  Historical messages cannot
+        be edited
 
-        The bottom part of the display is a user input editor.  This input box is fixed at bottom, expanding up
-        to 10 lines
+        At the bottom of the display is a user input editor.  This input box will increase in size upwards as the
+        user adds more content.  This editable region can be arbitrarily large.
 
-        When input exceeds 10 lines, scroll within the fixed height
+        To the user, the historical details and the editable region must feel like they're one window.  Where they
+        are required, there is only one vertical and one horizontal scroll bar to cover both the history and
+        editable area.
+
+        Context: Highlighting operations
+            While the editable and non-editable regions must feel like they're one thing, if the user wants to
+            interact with them they will behave differently.  For example, highlighting of text cannot span
+            between the editable and non-editable regions.
 
         Context: Screen colours
             The status line background is light grey with black text.
@@ -91,63 +83,76 @@ Context: humbug application
 
             The focus area will have a dark grey background.  The non-focus area will have a black background.
 
-    Context: Message history
-        A message history of up to 100000 lines will be supported in the history window.
-
     Context: UI navigation
-        The application can switch between focus areas via Tab or mouse click.
+        Context: Input box navigation
+            If the input area has not yet been edited and the cursor is at the top left of the input area, then
+            the user can pull up previous historical messages to the AI by using the up and down keys.
 
-        Context: Keyboard
-            Input Box Navigation:
+    Context: Menus
+        The application will have a series of top-level Menus
 
-            - Empty input or cursor at line start/end: Up/Down navigate history.
-            - Cursor within text: Up/Down move cursor between lines.
-            - Left/Right: Move cursor within line.
-            - Page Up/Down: Scroll multi-line input.
+        Context: Humbug
+            The "Humbug" menu is the main application menu.  When clicked it contains the following:
 
-            History Navigation:
+            Context: About Humbug
+                The "About Humbug" menu item will deliver a modal pop-up dialogue box that gives details of the
+                application and version information.
 
-            - Up/Down: Scroll line by line.
-            - Page Up/Down: Scroll page by page.
-            - Current position preserved when switching focus.
+            Context: Separator
+                There will be a horizontal Separator
 
-        Context: Mouse handling
-            The application should support mouse use for editing and scrolling.  It can also switch the focus between
-            the message history and edit boxes by clicking in either one.
+            Context: Quit Humbug
+                The "Quit Humbug" menu item will allow the user to exit the application.
 
-            Mouse operations:
+        Context: edit
+            The "Edit" menu handles edit capabilities.  When clicked it contains the following:
 
-            - Selection: Click and drag highlights text.
-            - Copy: System clipboard integration via terminal.
-            - Paste: Right-click or Ctrl+V at cursor position.
-            - Focus: Single click in section changes focus.
+            Context: Submit
+                The "Submit" menu item will submit the current user input message to the AI, where there is
+                an input message to be submitted.
 
-        Context: UI focus management
-            Focus transitions:
+                This will be matched with a keyboard shortcut, "Ctrl+J".  Where this action cannot be taken,
+                the menu item will be greyed out.
 
-            - Tab: Toggle between states.
-            - Mouse: Click sets focus.
-            - Startup: Focus in the input aread.
+            Context: Separator
+                There will be a horizontal Separator
 
-            State persistence:
+            Context: Undo
+                The "Undo" menu item will all the last user input action that has not yet been committed (e.g.
+                sent to the AI) to be undone.
 
-            - Save scroll position per state.
-            - Restore position on focus change.
-            - Reset positions on new message.
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Z" for Windows).  Where
+                this action cannot be taken, the menu item will be greyed out.
 
-    Context: Input state management
-        Application maintains:
+            Context: Redo
+                The "Redo" menu item will restore previos undo operations, where the last user input action has
+                not yet been committed (e.g. sent to the AI) to be undone.
 
-        - Current input text and cursor position.
-        - Previous input history.
-        - Partial input state when navigating history.
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Shift+Z" for Windows).
+                Where this action cannot be taken, the menu item will be greyed out.
 
-        When navigating history:
+            Context: Separator
+                There will be a horizontal Separator
 
-        - Save current incomplete input.
-        - Allow viewing previous inputs.
-        - Restore incomplete input when returning.
-        - Clear navigation state after submitting input.
+            Context: Cut
+                The "Cut" menu item will support the cutting of input text from a highlighted area where such
+                text can be removed.
+
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+X" for Windows).  Where
+                this action cannot be taken, the menu item will be greyed out.
+
+            Context: Copy
+                The "Copy" menu item will support the copying of text from a highlighted area.
+
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+C" for Windows).  Where
+                this action cannot be taken, the menu item will be greyed out.
+
+            Context: Paste
+                The "Paste" menu item will support the pasting of text at the current input cursor, where
+                new text can be added.
+
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+V" for Windows).
+                Where this action cannot be taken, the menu item will be greyed out.
 
     Context: Conversation transcript file
         The application will record a transcript of the conversation between the user and the AI, storing each turn
@@ -249,12 +254,11 @@ Context: humbug application
             Streaming requires that the display:
 
             - Shows content immediately as it arrives
-            - Maintains proper cursor position in terminal
             - Updates transcript periodically during streaming
             - Writes final response when stream completes
             - Updates token count after stream completes
 
-            During streaming, if the user hits Ctrl+C then this will terminate the current streaming response and cancel
+            During streaming, if the user hits "Esc" then this will terminate the current streaming response and cancel
             any ongoing request with the AI.  A message "Request cancelled by user" will be added to the history.
 
         Context: UI handling of streaming
@@ -407,60 +411,16 @@ Context: humbug application
 
                 Preserve conversation context between retries.
 
-    Context: Terminal UI
-        The terminal UI must be built without use of any third party libraries.
+    Context: GUI
+        The GUI must be built using hte latest version of PySide6, and with qasync to support the integration of this
+        and async IO operations.
 
         Context: Platform support
-            The terminal UI must work on MacOS X (any version since 2020), Linux (any version since 2020), and Microsoft
+            The GUI must work on MacOS X (any version since 2020), Linux (any version since 2020), and Microsoft
             Windows 10 or 11.
 
         Context: Asynchronous design
             The UI must be asynchronous to ensure the application can remain reactive.
-
-        Context: Display hierarchy
-            The terminal UI will support the concept of a top-level screen (the terminal display) and a series of
-            tiled windows (panes).  It also supports popup windows that can overlay on top of the tiled display.
-
-            Context: Screen (root container)
-                - Manages terminal size and raw input.
-                - Houses single WindowManager instance.
-                - Maintains global status line.
-                - Handles global keyboard shortcuts.
-
-            Context: WindowManager
-                - Manages tile layout - splits and panes (panes are tiled windows).
-                - Handles focused pane tracking.
-                - Coordinates overlays and popups.
-
-                Context: Splits
-                    The window manager can support both horizontal and vertical splits.  These split a window into
-                    two contained windows.
-
-                Context: Pane constraints
-                    - Minimum pane size of 3 lines height and 20 columns width.
-                    - Maximum nesting depth of 3 levels for splits.
-
-            Context: Layout manager
-                - Manages split calculations.
-                - Handles pane resizing.
-                - Stores/restores layout configurations.
-                - Manages focus traversal.
-
-        Context: Scrolling support
-            Any window that has contents larger than the window itself must support veritical and/or horizontal scrolling.
-
-            Vertical scroll bars appear on the right hand column of any window that requires them, while horizontal
-            scroll bars appear at the bottomow of any window that requires them.  Scroll bars do not have up/down or
-            left/right arrows but instead have scroll handles that can be dragged with a mouse.  There are no keyboard
-            shortcuts for manipulating scroll bars as scrolling can be done using keys within the appropriate window.
-
-        Context: Dynamic adaptability
-            The UI will automatically respond to changes in the terminal being resized.
-
-            Context: Size constraints
-                - Minimum terminal size of 80x24 characters
-                - Warning display for insufficient dimensions
-                - Layout state preservation for size restoration
 
         Context: Performance guidelines
             Context: Scrolling performance
