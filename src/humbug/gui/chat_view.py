@@ -193,21 +193,24 @@ class ChatView(QFrame):
 
         # Create content widget that will be inside the scroll area
         self.content_widget = QWidget()
-        self.content_layout = QVBoxLayout(self.content_widget)
-        self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(0)
+        content_layout = QVBoxLayout(self.content_widget)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         # Create history and input
         self.history = HistoryView()
         self.input = InputEdit()
 
-        # Set size policies to allow proper expansion
+        # Set proper size policies
         self.history.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        # Set initial height for input
+        self.input.setFixedHeight(40)
 
         # Add widgets to content layout
-        self.content_layout.addWidget(self.history, 1)
-        self.content_layout.addWidget(self.input, 0)
+        content_layout.addWidget(self.history, 1)
+        content_layout.addWidget(self.input, 0)
 
         # Create scroll area
         self.scroll_area = QScrollArea()
@@ -217,19 +220,8 @@ class ChatView(QFrame):
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
-        # Status bar
-        self.status_bar = QLabel()
-        self.status_bar.setStyleSheet("""
-            QLabel {
-                background-color: #d3d3d3;
-                color: black;
-                padding: 2px 5px;
-            }
-        """)
-
-        # Add to main layout
+        # Add scroll area to main layout
         layout.addWidget(self.scroll_area)
-        layout.addWidget(self.status_bar)
 
         # Connect signals
         self.input.height_changed.connect(self._handle_input_height_change)
@@ -316,5 +308,6 @@ class ChatView(QFrame):
 
     def update_status(self, input_tokens: int, output_tokens: int):
         """Update the status bar with token counts."""
-        self.status_bar.setText(
+        # Emit a signal that the main window will handle
+        self.parent().parent().statusBar().showMessage(
             f"Input tokens: {input_tokens} | Output tokens: {output_tokens}")
