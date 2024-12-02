@@ -85,17 +85,16 @@ class ProtectedTextEdit(QTextEdit):
     def update_ai_response(self, new_content: str):
         """Update the AI response by only inserting new content."""
         self.logger.debug("\n=== Starting update_ai_response ===")
+        self.logger.debug(f"Updating with new content: {repr(new_content)}")
 
         # Save cursor state relative to user input
         current_input = self.get_user_input()
         cursor = self.textCursor()
         relative_cursor = cursor.position() - self._protected_position
-        self.logger.debug(f"Cursor position relative to input: {relative_cursor}")
-        self.logger.debug(f"Current input: {repr(current_input)}")
 
         try:
+            # Only initialize if we don't have a current response
             if self._ai_response_start is None:
-                # Initialize new AI response
                 cursor = QTextCursor(self.document())
                 if not self.safe_set_cursor_position(cursor, self._protected_position, "initial AI response"):
                     return
@@ -104,23 +103,23 @@ class ProtectedTextEdit(QTextEdit):
                     cursor.insertBlock()
                 self._ai_response_start = cursor.position()
                 self._ai_response_length = 0
+                self.logger.debug(f"Initialized new AI response at position {self._ai_response_start}")
 
-            # Insert new AI content
-            content_to_insert = new_content[self._ai_response_length:]
-            if not content_to_insert:
-                return
-
+            # Replace existing response content
             cursor = QTextCursor(self.document())
-            insert_position = self._ai_response_start + self._ai_response_length
-            if not self.safe_set_cursor_position(cursor, insert_position, "content insertion"):
+            if not self.safe_set_cursor_position(cursor, self._ai_response_start, "content update"):
                 return
 
+            # Select and replace existing content
+            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, self._ai_response_length)
+
+            # Insert new content
             format = QTextCharFormat()
             format.setForeground(QColor('yellow'))
-            cursor.insertText(content_to_insert, format)
+            cursor.insertText(new_content, format)
 
             # Update tracking
-            self._ai_response_length += len(content_to_insert)
+            self._ai_response_length = len(new_content)
             self._protected_position = self._ai_response_start + self._ai_response_length
 
             # Reposition user input
@@ -145,10 +144,6 @@ class ProtectedTextEdit(QTextEdit):
 
                 # Restore cursor position relative to input
                 new_cursor_pos = self._protected_position + max(0, min(relative_cursor, len(current_input)))
-                self.logger.debug(f"Restoring cursor to position {new_cursor_pos} "
-                                f"(protected_pos: {self._protected_position}, "
-                                f"relative: {relative_cursor})")
-
                 if self.safe_set_cursor_position(cursor, new_cursor_pos, "cursor restoration"):
                     self.setTextCursor(cursor)
                     self.ensureCursorVisible()
@@ -290,17 +285,14 @@ class UnifiedChatView(QWidget):
             self.text_edit._protected_position = cursor.position()
             self.text_edit.set_protected_position(self.text_edit._protected_position)
 
-            # Update input start position to match - this was missing
+            # Update input start position to match
             self._input_start_position = self.text_edit._protected_position
 
         self.log_operation(f"add_message - end ({style})")
 
     def get_input_text(self) -> str:
         """Get the current input text."""
-        cursor = QTextCursor(self.text_edit.document())
-        cursor.setPosition(self._input_start_position)
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        return cursor.selectedText()
+        return self.text_edit.get_user_input()
 
     def set_input_text(self, text: str):
         """Set the input text."""
@@ -323,6 +315,7 @@ class UnifiedChatView(QWidget):
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
+        self.text_edit.finish_ai_response()
         self.current_ai_response_start = None
 
 
@@ -464,7 +457,7 @@ class HumbugMainWindow(QMainWindow):
                 border: 1px solid #3d3d3d;
             }
             QMenu::item:selected {
-                background-color: #3d3d3
+                background-color: #3d3d3d
             }
             QStatusBar {
                 background-color: #2d2d2d;
@@ -532,9 +525,11 @@ class HumbugMainWindow(QMainWindow):
         try:
             self.current_response = ""
             first_response = True
+            logger.debug("\n=== Starting new AI response processing ===")
 
             async for response in self.ai_backend.stream_message(message, self.get_conversation_history()):
                 if response.error:
+                    logger.debug(f"Received error response: {response.error}")
                     error_msg = f"Error: {response.error['message']}"
                     self.chat_view.add_message(error_msg, "error")
                     await self.write_to_transcript([{
@@ -543,21 +538,32 @@ class HumbugMainWindow(QMainWindow):
                         "error": response.error,
                         "timestamp": datetime.utcnow().isoformat()
                     }])
+                    # Make sure to reset AI response state on error
+                    self.chat_view.text_edit._ai_response_start = None
+                    self.chat_view.text_edit._ai_response_length = 0
                     return
 
-                # Update response
+                # Update response - this is the complete response up to this point
                 self.current_response = response.content
+                logger.debug(f"Received chunk, first_response={first_response}")
+                logger.debug(f"Current response content: {repr(self.current_response)}")
+                logger.debug(f"AI response start: {self.chat_view.text_edit._ai_response_start}")
+                logger.debug(f"AI response length: {self.chat_view.text_edit._ai_response_length}")
 
-                # For first response chunk, add new message
+                # For first chunk, add new message with prefix
                 if first_response:
+                    logger.debug("Processing first response chunk")
                     self.chat_view.add_message(f"AI: {self.current_response}", "ai")
                     first_response = False
                 else:
-                    # For subsequent chunks, update existing message
-                    self.chat_view.add_message(f"AI: {self.current_response}", "ai")
+                    # For subsequent chunks, update the existing message content
+                    logger.debug("Processing subsequent response chunk")
+                    # Note: update_ai_response expects content without the "AI: " prefix
+                    self.chat_view.text_edit.update_ai_response(self.current_response)
 
-                # Update token counts if available
+                # Update token counts and handle completion
                 if response.usage:
+                    logger.debug(f"Received usage info: {response.usage}")
                     self.token_counts["input"] += response.usage.prompt_tokens
                     self.token_counts["output"] += response.usage.completion_tokens
                     self.update_status()
@@ -568,14 +574,22 @@ class HumbugMainWindow(QMainWindow):
                         "usage": response.usage.to_dict(),
                         "timestamp": datetime.utcnow().isoformat()
                     }])
-                    # Mark AI response as complete since we got usage info
+                    # Mark AI response as complete and reset state
+                    logger.debug("Completing AI response with usage info")
                     self.chat_view.finish_ai_response()
+                    self.chat_view.text_edit._ai_response_start = None
+                    self.chat_view.text_edit._ai_response_length = 0
 
         except asyncio.CancelledError:
+            logger.debug("AI response cancelled")
             # Handle cancellation gracefully
             self.chat_view.finish_ai_response()
+            self.chat_view.text_edit._ai_response_start = None
+            self.chat_view.text_edit._ai_response_length = 0
             raise
+
         except Exception as e:
+            logger.exception("Error processing AI response")
             error_msg = f"Error: {str(e)}"
             self.chat_view.add_message(error_msg, "error")
             await self.write_to_transcript([{
@@ -588,8 +602,12 @@ class HumbugMainWindow(QMainWindow):
                 },
                 "timestamp": datetime.utcnow().isoformat()
             }])
-            self.chat_view.finish_ai_response()  # Ensure we reset on error
+            # Make sure to reset AI response state on error
+            self.chat_view.text_edit._ai_response_start = None
+            self.chat_view.text_edit._ai_response_length = 0
+
         finally:
+            logger.debug("=== Finished AI response processing ===")
             self._current_task = None
 
     def get_conversation_history(self) -> List[str]:
