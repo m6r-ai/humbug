@@ -158,6 +158,7 @@ class InputEdit(QTextEdit):
             print("\n=== After Input Content Change ===")
             print(f"Content length: {len(self.toPlainText())}")
             self.parent().debug_sizes("Input content changed")
+            self.parent().handle_input_change()
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
@@ -214,6 +215,20 @@ class ChatContainer(QWidget):
     def updateContainerGeometry(self):
         """Update container geometry based on content size."""
         self.updateGeometry()  # This will trigger parent layouts to re-layout
+
+    def handle_input_change(self):
+        """Handle input changes and ensure visibility."""
+        # Update container geometry
+        self.updateContainerGeometry()
+
+        # Find the ChatView parent
+        chat_view = self.parent()
+        while chat_view and not isinstance(chat_view, ChatView):
+            chat_view = chat_view.parent()
+
+        # If we found the ChatView and it's scrolled near bottom, scroll to bottom
+        if chat_view and chat_view.isScrolledToBottom():
+            QTimer.singleShot(0, chat_view.scrollToBottom)
 
     def resizeEvent(self, event: QResizeEvent):
         """Handle resize events to position children correctly."""
