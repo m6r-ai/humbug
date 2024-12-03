@@ -134,6 +134,9 @@ class InputEdit(QTextEdit):
         # Watch for document changes
         self.document().contentsChanged.connect(self._on_content_changed)
 
+        # Watch of cursor position changes
+        self.cursorPositionChanged.connect(self._ensure_cursor_visible)
+
         self.setStyleSheet("""
             QTextEdit {
                 background-color: black;
@@ -154,6 +157,31 @@ class InputEdit(QTextEdit):
         # Debug sizes after content change
         if isinstance(self.parent(), ChatContainer):
             self.parent().handle_input_change()
+
+    def _ensure_cursor_visible(self):
+        """Ensure the cursor remains visible when it moves."""
+        cursor = self.textCursor()
+        self.ensureCursorVisible()
+
+        # Find the chat view to handle container scrolling if needed
+        chat_view = self.parent()
+        while chat_view and not isinstance(chat_view, ChatView):
+            chat_view = chat_view.parent()
+
+        if chat_view:
+            # Calculate cursor position in viewport coordinates
+            cursor_rect = self.cursorRect()
+            global_pos = self.mapTo(chat_view, cursor_rect.center())
+
+            # Get the visible area of the chat view
+            scroll_area = chat_view.scroll_area
+            visible_rect = scroll_area.viewport().rect()
+
+            # If cursor would be outside visible area, scroll to make it visible
+            if global_pos.y() < visible_rect.top() or global_pos.y() > visible_rect.bottom():
+                # Convert cursor position to scroll area coordinates
+                scroll_pos = scroll_area.widget().mapFrom(chat_view, global_pos)
+                scroll_area.ensureVisible(scroll_pos.x(), scroll_pos.y(), 0, 50)
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
