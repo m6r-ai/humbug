@@ -4,7 +4,7 @@ import asyncio
 from qasync import QEventLoop, QApplication
 from humbug.ai.openai import OpenAIBackend
 from humbug.transcript.writer import TranscriptWriter
-from humbug.gui.main_window import HumbugMainWindow
+from humbug.gui.main_window import MainWindow
 
 async def main():
     # Check for API key
@@ -18,7 +18,7 @@ async def main():
     transcript = TranscriptWriter()
 
     # Create and show main window
-    window = HumbugMainWindow(ai_backend, transcript)
+    window = MainWindow(ai_backend, transcript)
     window.show()
 
     return 0

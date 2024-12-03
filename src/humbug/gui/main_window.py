@@ -17,7 +17,7 @@ from humbug.gui.chat_view import ChatView
 from humbug.gui.about_dialog import AboutDialog
 
 
-class HumbugMainWindow(QMainWindow):
+class MainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
     def __init__(self, ai_backend, transcript_writer):
@@ -29,7 +29,7 @@ class HumbugMainWindow(QMainWindow):
         self.token_counts = {"input": 0, "output": 0}
         self._current_task = None
         self.debug_id = id(self)
-        self.logger = logging.getLogger(f"HumbugMainWindow_{self.debug_id}")
+        self.logger = logging.getLogger(f"MainWindow_{self.debug_id}")
 
         # Create actions first
         self._create_actions()
