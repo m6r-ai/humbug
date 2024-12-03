@@ -335,6 +335,22 @@ class ChatView(QFrame):
         self.container.history.installEventFilter(self)
         self.container.input.installEventFilter(self)
 
+        # Set initial focus to input area
+        QTimer.singleShot(0, self._set_initial_focus)
+
+    def _set_initial_focus(self):
+        """Set initial focus to input area."""
+        self.container.input.setFocus()
+        # Explicitly set the focused style
+        self.container.input.setStyleSheet("""
+            QTextEdit {
+                background-color: #404040;
+                color: white;
+                selection-background-color: #606060;
+                border: none;
+            }
+        """)
+
     def eventFilter(self, obj: QWidget, event: QEvent) -> bool:
         """Handle focus changes for proper background colors."""
         if event.type() == QEvent.FocusIn:
