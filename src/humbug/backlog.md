@@ -1,9 +1,5 @@
 # Backlog
 
-## Cut/copy/paste support
-
-We need cut/copy/paste support for the system clipboard.
-
 ## Resolve problem with histories
 
 The current histories rely on the "AI:" or "User:" prefix on the text displayed to be provide history back to the LLM.  This
