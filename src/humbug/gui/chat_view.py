@@ -24,7 +24,7 @@ class HistoryView(QTextEdit):
 
         # Set minimum height and size policy
         self.setMinimumHeight(100)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
 
         # Style formats for different message types
         self.formats = {
@@ -49,6 +49,18 @@ class HistoryView(QTextEdit):
                 background-color: #404040;
             }
         """)
+
+        # Watch for document changes
+        self.document().contentsChanged.connect(self._on_content_changed)
+
+    def _on_content_changed(self):
+        """Handle document content changes."""
+        height = max(int(self.document().size().height()), 100)
+        self.setMinimumHeight(height)
+
+        # Debug sizes after content change
+        if isinstance(self.parent(), ChatContainer):
+            self.parent().handle_input_change()
 
     def _create_format(self, color: str) -> QTextCharFormat:
         """Create a text format with the specified color."""
@@ -75,17 +87,6 @@ class HistoryView(QTextEdit):
 
         self.setTextCursor(cursor)
 
-        # Ensure geometry updates
-        if isinstance(self.parent(), ChatContainer):
-            self.parent().updateGeometry()
-
-        # Debug sizes after content change
-        if isinstance(self.parent(), ChatContainer):
-            print("\n=== After History Content Change ===")
-            print(f"Message length: {len(message)}")
-            self.parent().debug_sizes("History append_message")
-
-
     def update_last_ai_response(self, content: str):
         """Update the last AI response in the history."""
         if self._ai_response_start is None:
@@ -100,12 +101,6 @@ class HistoryView(QTextEdit):
         self._ai_response_length = len(f"AI: {content}")
 
         self.setTextCursor(cursor)
-
-        # Debug sizes after content change
-        if isinstance(self.parent(), ChatContainer):
-            print("\n=== After History AI Update ===")
-            print(f"Content length: {len(content)}")
-            self.parent().debug_sizes("History update_last_ai_response")
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
@@ -153,11 +148,11 @@ class InputEdit(QTextEdit):
 
     def _on_content_changed(self):
         """Handle document content changes."""
+        height = max(int(self.document().size().height()), 40)
+        self.setMinimumHeight(height)
+
         # Debug sizes after content change
         if isinstance(self.parent(), ChatContainer):
-            print("\n=== After Input Content Change ===")
-            print(f"Content length: {len(self.toPlainText())}")
-            self.parent().debug_sizes("Input content changed")
             self.parent().handle_input_change()
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -208,40 +203,22 @@ class ChatContainer(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.setMinimumWidth(200)
 
-        # Connect document changes to geometry updates
-        self.history.document().contentsChanged.connect(self.updateContainerGeometry)
-        self.input.document().contentsChanged.connect(self.updateContainerGeometry)
-
-    def updateContainerGeometry(self):
-        """Update container geometry based on content size."""
-        self.updateGeometry()  # This will trigger parent layouts to re-layout
-
     def handle_input_change(self):
         """Handle input changes and ensure visibility."""
-        # Update container geometry
-        self.updateContainerGeometry()
-
-        # Find the ChatView parent
+        was_at_bottom = False
         chat_view = self.parent()
         while chat_view and not isinstance(chat_view, ChatView):
             chat_view = chat_view.parent()
 
-        # If we found the ChatView and it's scrolled near bottom, scroll to bottom
         if chat_view and chat_view.isScrolledToBottom():
-            QTimer.singleShot(0, chat_view.scrollToBottom)
+            was_at_bottom = True
 
-    def resizeEvent(self, event: QResizeEvent):
-        """Handle resize events to position children correctly."""
-        super().resizeEvent(event)
-
-        # Get total available width
-        width = event.size().width()
+        # Update container geometry
+        width = self.width() if self.width() > 0 else self.minimumWidth()
 
         # Get current height of each widget based on document size
-        history_height = max(int(self.history.document().size().height()),
-                           self.history.minimumHeight())
-        input_height = max(int(self.input.document().size().height()),
-                          self.input.minimumHeight())
+        history_height = self.history.minimumHeight()
+        input_height = self.input.minimumHeight()
 
         # Position and size history
         self.history.setGeometry(0, 0, width, history_height)
@@ -249,44 +226,21 @@ class ChatContainer(QWidget):
         # Position and size input directly below history
         self.input.setGeometry(0, history_height, width, input_height)
 
+        self.adjustSize()
+
+        # If we found the ChatView and it's scrolled near bottom, scroll to bottom
+        if chat_view and was_at_bottom:
+            QTimer.singleShot(0, chat_view.scrollToBottom)
+
     def sizeHint(self) -> QSize:
         """Calculate the total size needed for both widgets."""
-        history_height = max(int(self.history.document().size().height()),
-                           self.history.minimumHeight())
-        input_height = max(int(self.input.document().size().height()),
-                          self.input.minimumHeight())
+        history_height = self.history.minimumHeight()
+        input_height = self.input.minimumHeight()
 
         # Use parent width if available, otherwise minimum width
         width = self.width() if self.width() > 0 else self.minimumWidth()
 
         return QSize(width, history_height + input_height)
-
-    def minimumSizeHint(self) -> QSize:
-        """Calculate the minimum size needed."""
-        width = self.minimumWidth()
-        height = self.history.minimumHeight() + self.input.minimumHeight()
-        return QSize(width, height)
-
-    def debug_sizes(self, event_name: str):
-        """Print debug information about widget sizes."""
-        print(f"\n=== {event_name} ===")
-        print(f"Container size: {self.size()}")
-        print(f"Container minimum size: {self.minimumSize()}")
-        print(f"Container size hint: {self.sizeHint()}")
-
-        print("\nHistory:")
-        print(f"  Widget size: {self.history.size()}")
-        print(f"  Document size: {self.history.document().size()}")
-        print(f"  Size hint: {self.history.sizeHint()}")
-        print(f"  Minimum height: {self.history.minimumHeight()}")
-        print(f"  Geometry: {self.history.geometry()}")
-
-        print("\nInput:")
-        print(f"  Widget size: {self.input.size()}")
-        print(f"  Document size: {self.input.document().size()}")
-        print(f"  Size hint: {self.input.sizeHint()}")
-        print(f"  Minimum height: {self.input.minimumHeight()}")
-        print(f"  Geometry: {self.input.geometry()}")
 
 
 class ChatView(QFrame):
@@ -316,14 +270,13 @@ class ChatView(QFrame):
 
         # Create scroll area
         self.scroll_area = QScrollArea(self)
-        self.scroll_area.setFrameStyle(QFrame.NoFrame)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scroll_area.setWidgetResizable(True)
+#        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+#        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         # Create and set the container widget
         self.container = ChatContainer()
         self.scroll_area.setWidget(self.container)
+        self.scroll_area.setWidgetResizable(True)
 
         # Set size policy for scroll area
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -345,10 +298,6 @@ class ChatView(QFrame):
 
         # Add scroll area to main layout
         layout.addWidget(self.scroll_area)
-
-        # Install event filters
-        self.container.history.installEventFilter(self)
-        self.container.input.installEventFilter(self)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
@@ -393,6 +342,7 @@ class ChatView(QFrame):
     def isScrolledToBottom(self) -> bool:
         """Check if scroll area is at the bottom."""
         scrollbar = self.scroll_area.verticalScrollBar()
+        print(f"scrollbar {scrollbar.value()} out of {scrollbar.maximum()}")
         return scrollbar.value() >= scrollbar.maximum() - 10  # Small threshold for "close to bottom"
 
     def scrollToBottom(self):
@@ -402,18 +352,10 @@ class ChatView(QFrame):
 
     def add_message(self, message: str, style: str):
         """Add a message to history with appropriate styling."""
-        # Check if we're at bottom before adding content
-        was_at_bottom = self.isScrolledToBottom()
-
         if style == 'ai' and message.startswith("AI: "):
             self.history.update_last_ai_response(message[4:])
         else:
             self.history.append_message(message, style)
-
-        # If we were at bottom before, scroll to bottom after new content
-        if was_at_bottom:
-            # Use a small delay to ensure layout is updated
-            QTimer.singleShot(0, self.scrollToBottom)
 
     def get_input_text(self) -> str:
         """Get the current input text."""
