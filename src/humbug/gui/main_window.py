@@ -211,21 +211,21 @@ class MainWindow(QMainWindow):
         if not message:
             return
 
-        # Clear input area
+        # Clear input area and add the message
         self.chat_view.clear_input()
-
-        # Handle commands
-        if message.startswith('/'):
-            asyncio.create_task(self.handle_command(message[1:]))
-            return
+        self.chat_view.add_message(f"You: {message}", "user")
 
         # Add user message to history and transcript
-        self.chat_view.add_message(f"You: {message}", "user")
         asyncio.create_task(self.write_to_transcript([{
             "type": "user_message",
             "content": message,
             "timestamp": datetime.utcnow().isoformat()
         }]))
+
+        # Handle commands
+        if message.startswith('/'):
+            asyncio.create_task(self.handle_command(message[1:]))
+            return
 
         # Start AI response and track the task
         self._current_task = asyncio.create_task(self.process_ai_response(message))

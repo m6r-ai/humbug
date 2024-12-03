@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import QEvent, QSize, QTimer
+from PySide6.QtGui import QResizeEvent
 
 from humbug.gui.history_view import HistoryView
 from humbug.gui.input_edit import InputEdit
@@ -33,34 +34,27 @@ class ChatContainer(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         self.setMinimumWidth(200)
 
-    def handle_input_change(self):
-        """Handle input changes and ensure visibility."""
+    def resizeEvent(self, event: QResizeEvent):
+        """Handle widget resize events."""
+        # Get the old and new sizes
+        old_size: QSize = event.oldSize()
+        new_size: QSize = event.size()
+        print(f"resize: {old_size}, {new_size}")
+
+        # Do whatever you need with the size information
         was_at_bottom = False
         chat_view = self.parent()
         while chat_view and not isinstance(chat_view, ChatView):
             chat_view = chat_view.parent()
 
-        if chat_view and chat_view.isScrolledToBottom():
+        if chat_view and chat_view.is_scrolled_to_bottom(old_size.height() - chat_view.scroll_area.viewport().height()):
             was_at_bottom = True
 
-        # Update container geometry
-        width = self.width() if self.width() > 0 else self.minimumWidth()
-
-        # Get current height of each widget based on document size
-        history_height = self.history.minimumHeight()
-        input_height = self.input.minimumHeight()
-
-        # Position and size history
-        self.history.setGeometry(0, 0, width, history_height)
-
-        # Position and size input directly below history
-        self.input.setGeometry(0, history_height, width, input_height)
-
-        self.adjustSize()
-
-        # If we found the ChatView and it's scrolled near bottom, scroll to bottom
         if chat_view and was_at_bottom:
-            QTimer.singleShot(0, chat_view.scrollToBottom)
+            QTimer.singleShot(0, chat_view.scroll_to_bottom)
+
+        # Don't forget to call the parent class's resizeEvent
+        super().resizeEvent(event)
 
 
 class ChatView(QFrame):
@@ -90,8 +84,6 @@ class ChatView(QFrame):
 
         # Create scroll area
         self.scroll_area = QScrollArea(self)
-#        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-#        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         # Create and set the container widget
         self.container = ChatContainer()
@@ -162,13 +154,13 @@ class ChatView(QFrame):
                 """)
         return super().eventFilter(obj, event)
 
-    def isScrolledToBottom(self) -> bool:
+    def is_scrolled_to_bottom(self, oldMaximum) -> bool:
         """Check if scroll area is at the bottom."""
         scrollbar = self.scroll_area.verticalScrollBar()
-        print(f"scrollbar {scrollbar.value()} out of {scrollbar.maximum()}")
-        return scrollbar.value() >= scrollbar.maximum() - 10  # Small threshold for "close to bottom"
+        print(f"scrollbar {scrollbar.value()} out of {oldMaximum}")
+        return scrollbar.value() >= oldMaximum - 20  # Small threshold for "close to bottom"
 
-    def scrollToBottom(self):
+    def scroll_to_bottom(self):
         """Scroll to the bottom of the content."""
         scrollbar = self.scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
@@ -179,6 +171,8 @@ class ChatView(QFrame):
             self.history.update_last_ai_response(message[4:])
         else:
             self.history.append_message(message, style)
+
+        QTimer.singleShot(0, self.scroll_to_bottom)
 
     def get_input_text(self) -> str:
         """Get the current input text."""

@@ -44,14 +44,6 @@ class InputEdit(QTextEdit):
         """)
 
     def _on_content_changed(self):
-        """Handle document content changes."""
-#        height = max(int(self.document().size().height()), 40)
-#        self.setMinimumHeight(height)
-
-        # Debug sizes after content change
-#        if isinstance(self.parent(), ChatContainer):
-#            self.parent().handle_input_change()
-#        self.adjustSize()
         self.updateGeometry()
 
     def minimumSizeHint(self) -> QSize:
