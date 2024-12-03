@@ -1,11 +1,14 @@
 """Unified chat view implementation with correct scrolling and input expansion."""
 
 from typing import Optional
-from PySide6.QtWidgets import (QFrame, QVBoxLayout, QWidget, QScrollArea,
-                             QTextEdit, QLabel, QSizePolicy)
-from PySide6.QtCore import Qt, Signal, QEvent, QSize, QRect, QTimer
-from PySide6.QtGui import (QTextCursor, QColor, QTextCharFormat, QKeyEvent,
-                          QResizeEvent, QWheelEvent, QPalette, QTextDocument)
+
+from PySide6.QtWidgets import (
+    QFrame, QVBoxLayout, QWidget, QScrollArea, QTextEdit, QSizePolicy
+)
+from PySide6.QtCore import Qt, Signal, QEvent, QSize, QTimer
+from PySide6.QtGui import (
+    QTextCursor, QColor, QTextCharFormat, QKeyEvent, QResizeEvent
+)
 
 
 class HistoryView(QTextEdit):

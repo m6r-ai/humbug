@@ -1,17 +1,17 @@
 """Main window implementation for Humbug application."""
 
 import asyncio
-import logging
-from typing import List, Optional, Dict
 from datetime import datetime
+import logging
+from typing import List
 
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QLabel,
-                             QApplication, QMenu, QMenuBar, QDialog, QTextEdit,
-                             QScrollArea, QScrollBar, QFrame)
-from PySide6.QtCore import Qt, Signal, QSize, QEvent
-from PySide6.QtGui import (QTextCursor, QColor, QKeyEvent, QAction, QKeySequence,
-                          QTextCharFormat, QTextDocument, QPainter, QResizeEvent,
-                          QWheelEvent)
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QLabel, QApplication, QMenuBar
+)
+from PySide6.QtCore import Qt
+from PySide6.QtGui import (
+    QKeyEvent, QAction, QKeySequence
+)
 
 from humbug.gui.chat_view import ChatView
 from humbug.gui.about_dialog import AboutDialog
