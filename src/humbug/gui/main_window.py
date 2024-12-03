@@ -8,7 +8,7 @@ from typing import List
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QLabel, QApplication, QMenuBar
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import (
     QKeyEvent, QAction, QKeySequence
 )
@@ -63,7 +63,7 @@ class MainWindow(QMainWindow):
 
         self.cut_action = QAction("Cut", self)
         self.cut_action.setShortcut(QKeySequence("Ctrl+X"))
-        self.cut_action.triggered.connect(lambda: self.chat_view.input.cut())
+        self.cut_action.triggered.connect(self._handle_cut)
 
         self.copy_action = QAction("Copy", self)
         self.copy_action.setShortcut(QKeySequence("Ctrl+C"))
@@ -72,6 +72,11 @@ class MainWindow(QMainWindow):
         self.paste_action = QAction("Paste", self)
         self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
         self.paste_action.triggered.connect(lambda: self.chat_view.input.paste())
+
+    def _handle_cut(self):
+        """Handle cut action based on focus."""
+        if self.chat_view.input.hasFocus():
+            self.chat_view.input.cut()
 
     def _handle_copy(self):
         """Handle copy action based on focus."""
@@ -115,12 +120,15 @@ class MainWindow(QMainWindow):
         can_undo = self.chat_view.input.document().isUndoAvailable()
         can_redo = self.chat_view.input.document().isRedoAvailable()
         input_focused = self.chat_view.input.hasFocus()
+        history_focused = self.chat_view.history.hasFocus()
 
         self.submit_action.setEnabled(has_text)
         self.undo_action.setEnabled(can_undo and input_focused)
         self.redo_action.setEnabled(can_redo and input_focused)
         self.cut_action.setEnabled(has_input_selection and input_focused)
-        self.copy_action.setEnabled(has_input_selection or has_history_selection)
+        self.copy_action.setEnabled(
+            (input_focused and has_input_selection) or (history_focused and has_history_selection)
+        )
         self.paste_action.setEnabled(input_focused)
 
     def setup_ui(self):
@@ -139,8 +147,14 @@ class MainWindow(QMainWindow):
         self.chat_view = ChatView(self)
         layout.addWidget(self.chat_view)
 
-        # Connect text changed signals
+        # Connect signals for menu state updates
         self.chat_view.input.textChanged.connect(self._update_menu_states)
+        self.chat_view.input.selectionChanged.connect(self._update_menu_states)
+        self.chat_view.history.selectionChanged.connect(self._update_menu_states)
+
+        # Install event filter to catch focus changes
+        self.chat_view.input.installEventFilter(self)
+        self.chat_view.history.installEventFilter(self)
 
         # Status bar
         self.status_label = QLabel("Input tokens: 0 | Output tokens: 0")
@@ -173,6 +187,12 @@ class MainWindow(QMainWindow):
                 background-color: #2d2d2d;
             }
         """)
+
+    def eventFilter(self, obj, event):
+        """Handle focus events for menu state updates."""
+        if event.type() in (QEvent.FocusIn, QEvent.FocusOut):
+            self._update_menu_states()
+        return super().eventFilter(obj, event)
 
     async def write_to_transcript(self, messages: List[dict]):
         """Write messages to transcript with error handling."""

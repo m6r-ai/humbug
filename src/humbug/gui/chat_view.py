@@ -39,7 +39,6 @@ class ChatContainer(QWidget):
         # Get the old and new sizes
         old_size: QSize = event.oldSize()
         new_size: QSize = event.size()
-        print(f"resize: {old_size}, {new_size}")
 
         # Do whatever you need with the size information
         was_at_bottom = False
@@ -157,8 +156,7 @@ class ChatView(QFrame):
     def is_scrolled_to_bottom(self, oldMaximum) -> bool:
         """Check if scroll area is at the bottom."""
         scrollbar = self.scroll_area.verticalScrollBar()
-        print(f"scrollbar {scrollbar.value()} out of {oldMaximum}")
-        return scrollbar.value() >= oldMaximum - 20  # Small threshold for "close to bottom"
+        return scrollbar.value() >= oldMaximum - 20
 
     def scroll_to_bottom(self):
         """Scroll to the bottom of the content."""
