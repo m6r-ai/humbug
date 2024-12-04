@@ -6,7 +6,7 @@ import logging
 from typing import List
 
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QLabel, QApplication, QMenuBar
+    QMainWindow, QWidget, QVBoxLayout, QApplication, QMenuBar
 )
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import (
