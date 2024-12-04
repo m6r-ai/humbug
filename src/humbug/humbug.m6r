@@ -4,64 +4,26 @@ Role:
 Context: humbug application
     humbug is a GUI-based application that allows a user to interact with one or more AI backends.
 
+    Navigation is done using a keyboard and mouse.
+
     Context: Version
         This is version 0.1 of the application.
 
-    Context: User interactions
-        Once started, the application will run in a GUI window.
-
-        The application comprises a chat between a user and one or more AI backends.
-
-        A keyboard and a mouse may be used to interact with the application.
-
-        If the user starts a message with "/" this indicates a command to the application rather than a message
-        for the AI.  The application must process commands as they are presented, stripping the "/" before
-        processing..
-
-        Interactions occur in a turn-by-turn fashion, where the user edits a message, until they hit "Ctrl+J".  On
-        hitting "Ctrl+J" the application will add the user's message to the conversation transcript and process the
-        message.  If the message is for the AI then the application will attempt to send the message to the AI
-        and await a response.  If there is an error or exception then the application will report the details to
-        the user.
-
     Context: Screen display
-        The bottom line of the display is a status bar.  It will show the current numbers of input and output tokens
-        that have been used since the start of the application.
+        The primary screen display is a tabbed interface, where the tabs correspond to different conversations being
+        had with one or more AI backends.
 
-        The middle part of the display will show a history of everything that has happened, including messages and
-        commands from the user, responses from the application, and responses from the AI.  Historical messages cannot
-        be edited
+        Selecting a tab brings that conversation to the front of the tab group.
 
-        At the bottom of the display is a user input editor.  This input box will increase in size upwards as the
-        user adds more content.  This editable region can be arbitrarily large.
+        Context: Conversation tabs
+            Each tab will be named with a conversation name.  This will default to "Conv <num>" where <num> is the
+            conversation number.  This number will be unique for each run of the application.
 
-        To the user, the historical details and the editable region must feel like they're one window.  Where they
-        are required, there is only one vertical and one horizontal scroll bar to cover both the history and
-        editable area.
-
-        Context: Highlighting operations
-            While the editable and non-editable regions must feel like they're one thing, if the user wants to
-            interact with them they will behave differently.  For example, highlighting of text cannot span
-            between the editable and non-editable regions.
-
-        Context: Screen colours
-            The status line background is light grey with black text.
-
-            Messages typed by the user will have white text.
-
-            Responses from the AI will have yellow text.
-
-            Responses from application will have green text.
-
-            The focus area will have a dark grey background.  The non-focus area will have a black background.
-
-    Context: UI navigation
-        Context: Input box navigation
-            If the input area has not yet been edited and the cursor is at the top left of the input area, then
-            the user can pull up previous historical messages to the AI by using the up and down keys.
+            Each tab will also contain an "x" after the name of the conversation.  Clicking this "x" will close the
+            tab in the same way as clicking the "Close Conversation" menu item.
 
     Context: Menus
-        The application will have a series of top-level Menus
+        The application will have a series of top-level Menus.
 
         Context: Humbug
             The "Humbug" menu is the main application menu.  When clicked it contains the following:
@@ -76,7 +38,16 @@ Context: humbug application
             Context: Quit Humbug
                 The "Quit Humbug" menu item will allow the user to exit the application.
 
-        Context: edit
+        Context: File
+            The "File" menu handles new files and tabs.  When clicked it contains the following:
+
+            Context: New Conversation
+                The "New Conversation" menu item will create a new conversation tab.
+
+            Context: Close Conversation
+                The "Close Conversation" menu item with close the current conversation, if a conversation is active.
+
+        Context: Edit
             The "Edit" menu handles edit capabilities.  When clicked it contains the following:
 
             Context: Submit
@@ -126,8 +97,57 @@ Context: humbug application
                 This will be matched with a standard keyboard shortcut (e.g. "Ctrl+V" for Windows).
                 Where this action cannot be taken, the menu item will be greyed out.
 
+    Context: User/AI interactions
+        Each conversation comprises a chat between a user and one or more AI backends.
+
+        If the user starts a message with "/" this indicates a command to the application rather than a message
+        for the AI.  The application must process commands as they are presented, stripping the "/" before
+        processing..
+
+        Interactions occur in a turn-by-turn fashion, where the user edits a message, until they hit "Ctrl+J".  On
+        hitting "Ctrl+J" the application will add the user's message to the conversation transcript and process the
+        message.  If the message is for the AI then the application will attempt to send the message to the AI
+        and await a response.  If there is an error or exception then the application will report the details to
+        the user.
+
+    Context: Conversations
+        The bottom line of each conversation window has a status bar.  It will show the current numbers of input and
+        output tokens that have been used since the start of the application.
+
+        The top part of the conversation window will show a history of everything that has happened, including
+        messages and commands from the user, responses from the application, and responses from the AI.  Historical
+        messages cannot be edited
+
+        Below the conversation history and above the status bar is a user input editor.  This input area will increase
+        in size upwards as the user adds more content.  This editable region can be arbitrarily large.
+
+        To the user, the historical details and the editable region must feel like they're one window.  Where they
+        are required, there is only one vertical and one horizontal scroll bar to cover both the history and
+        editable area.
+
+        Context: Highlighting operations
+            While the editable and non-editable regions must feel like they're one thing, if the user wants to
+            interact with them they will behave differently.  For example, highlighting of text cannot span
+            between the editable and non-editable regions.
+
+        Context: Screen colours
+            The status line background is light grey with black text.
+
+            Messages typed by the user will have white text.
+
+            Responses from the AI will have yellow text.
+
+            Responses from application will have green text.
+
+            The focus area will have a dark grey background.  The non-focus area will have a black background.
+
+    Context: UI navigation
+        Context: Input box navigation
+            If the input area has not yet been edited and the cursor is at the top left of the input area, then
+            the user can pull up previous historical messages to the AI by using the up and down keys.
+
     Context: Conversation transcript file
-        The application will record a transcript of the conversation between the user and the AI, storing each turn
+        The application will record a transcript of all conversations between the user and the AI, storing each turn
         in a JSON data structure.  The JSON data structure will be written to a transcript file called
         "transcript-yyyy-mm-dd-hh-mm-ss.json", substituting the application start date and time (in GMT) for yyyy,
         mm, dd, hh, mm, and ss (year, numeric month, day-of-month, hours, minutes, and seconds respectively).
@@ -139,49 +159,50 @@ Context: humbug application
 
             ```json
             {
-             "$schema": "http://json-schema.org/draft-07/schema#",
-             "type": "object",
-             "properties": {
-               "metadata": {
-                 "type": "object",
-                 "properties": {
-                   "timestamp": { "type": "string", "format": "date-time" },
-                   "model": { "type": "string" },
-                   "version": { "type": "string" }
-                 },
-                 "required": ["timestamp", "model", "version"]
-               },
-               "conversation": {
-                 "type": "array",
-                 "items": {
-                   "type": "object",
-                   "properties": {
-                     "id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
-                     "timestamp": { "type": "string", "format": "date-time" },
-                     "type": { "enum": ["user_message", "ai_response", "command", "system_message"] },
-                     "content": { "type": "string" },
-                     "usage": {
-                       "type": "object",
-                       "properties": {
-                         "prompt_tokens": { "type": "integer" },
-                         "completion_tokens": { "type": "integer" },
-                         "total_tokens": { "type": "integer" }
-                       }
-                     },
-                     "error": {
-                       "type": "object",
-                       "properties": {
-                         "code": { "type": "string" },
-                         "message": { "type": "string" },
-                         "details": { "type": "object" }
-                       }
-                     }
-                   },
-                   "required": ["id", "timestamp", "type", "content"]
-                 }
-               }
-             },
-             "required": ["metadata", "conversation"]
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "model": { "type": "string" },
+                    "version": { "type": "string" },
+                    "conversation_number": { "type": "integer" }
+                  },
+                  "required": ["timestamp", "model", "version", "conversation_number"]
+                },
+                "conversation": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+                      "timestamp": { "type": "string", "format": "date-time" },
+                      "type": { "enum": ["user_message", "ai_response", "command", "system_message"] },
+                      "content": { "type": "string" },
+                      "usage": {
+                        "type": "object",
+                        "properties": {
+                          "prompt_tokens": { "type": "integer" },
+                          "completion_tokens": { "type": "integer" },
+                          "total_tokens": { "type": "integer" }
+                        }
+                      },
+                      "error": {
+                        "type": "object",
+                        "properties": {
+                          "code": { "type": "string" },
+                          "message": { "type": "string" },
+                          "details": { "type": "object" }
+                        }
+                      }
+                    },
+                    "required": ["id", "timestamp", "type", "content"]
+                  }
+                }
+              },
+              "required": ["metadata", "conversation"]
             }
             ```
 
@@ -386,6 +407,9 @@ Context: humbug application
     Context: GUI
         The GUI must be built using hte latest version of PySide6, and with qasync to support the integration of this
         and async IO operations.
+
+        Note that PySide6 correctly translates the keyboard shortcuts described into appropriate platform-specific
+        shortcuts and no extra logic is required for these.
 
         Context: Platform support
             The GUI must work on MacOS X (any version since 2020), Linux (any version since 2020), and Microsoft
