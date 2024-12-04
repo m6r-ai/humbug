@@ -37,11 +37,12 @@ class Message:
     source: MessageSource
     content: str
     timestamp: datetime
+    conversation_id: str
     usage: Optional[Usage] = None
     error: Optional[Dict] = None
 
     @classmethod
-    def create(cls, source: MessageSource, content: str, 
+    def create(cls, conversation_id: str, source: MessageSource, content: str, 
                usage: Optional[Usage] = None, error: Optional[Dict] = None) -> 'Message':
         """Create a new message with generated ID and current timestamp."""
         return cls(
@@ -49,6 +50,7 @@ class Message:
             source=source,
             content=content,
             timestamp=datetime.utcnow(),
+            conversation_id=conversation_id,
             usage=usage,
             error=error
         )
@@ -59,7 +61,8 @@ class Message:
             "id": self.id,
             "timestamp": self.timestamp.isoformat(),
             "type": self._get_transcript_type(),
-            "content": self.content
+            "content": self.content,
+            "conversation_id": self.conversation_id
         }
         if self.usage:
             message["usage"] = self.usage.to_dict()
@@ -79,8 +82,9 @@ class Message:
 class ConversationHistory:
     """Manages the conversation history and state."""
 
-    def __init__(self):
+    def __init__(self, conversation_id: str):
         """Initialize empty conversation history."""
+        self.conversation_id = conversation_id
         self.messages: List[Message] = []
         self.total_input_tokens: int = 0
         self.total_output_tokens: int = 0

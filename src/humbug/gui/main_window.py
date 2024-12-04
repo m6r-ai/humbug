@@ -3,7 +3,8 @@
 import asyncio
 from datetime import datetime
 import logging
-from typing import List
+from typing import Dict, List
+import uuid
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QApplication, QMenuBar
@@ -13,7 +14,7 @@ from PySide6.QtGui import (
     QKeyEvent, QAction, QKeySequence
 )
 
-from humbug.conversation import ConversationHistory, Message, MessageSource, Usage
+from humbug.conversation import Message, MessageSource, Usage
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.utils import sanitize_input
@@ -27,12 +28,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ai_backend = ai_backend
         self.transcript_writer = transcript_writer
-        self.conversation = ConversationHistory()
-        self.current_response = ""
-        self._current_task = None
-        self.debug_id = id(self)
-        self.logger = logging.getLogger(f"MainWindow_{self.debug_id}")
         self.conversation_count = 0
+        self.chat_views = {}  # conversation_id -> ChatView
+        self._current_tasks: Dict[str, List[asyncio.Task]] = {}
+        self.logger = logging.getLogger("MainWindow")
 
         # Create actions first
         self._create_actions()
@@ -51,6 +50,13 @@ class MainWindow(QMainWindow):
         self.quit_action.setShortcut(QKeySequence("Ctrl+Q"))
         self.quit_action.triggered.connect(self.close)
 
+        # File menu actions
+        self.new_conv_action = QAction("New Conversation", self)
+        self.new_conv_action.triggered.connect(self.create_conversation_tab)
+
+        self.close_conv_action = QAction("Close Conversation", self)
+        self.close_conv_action.triggered.connect(self._close_current_conversation)
+
         # Edit menu actions
         self.submit_action = QAction("Submit", self)
         self.submit_action.setShortcut(QKeySequence("Ctrl+J"))
@@ -58,11 +64,11 @@ class MainWindow(QMainWindow):
 
         self.undo_action = QAction("Undo", self)
         self.undo_action.setShortcut(QKeySequence("Ctrl+Z"))
-        self.undo_action.triggered.connect(lambda: self.chat_view.input.undo())
+        self.undo_action.triggered.connect(lambda: self.current_chat_view.input.undo())
 
         self.redo_action = QAction("Redo", self)
         self.redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
-        self.redo_action.triggered.connect(lambda: self.chat_view.input.redo())
+        self.redo_action.triggered.connect(lambda: self.current_chat_view.input.redo())
 
         self.cut_action = QAction("Cut", self)
         self.cut_action.setShortcut(QKeySequence("Ctrl+X"))
@@ -74,7 +80,7 @@ class MainWindow(QMainWindow):
 
         self.paste_action = QAction("Paste", self)
         self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
-        self.paste_action.triggered.connect(lambda: self.chat_view.input.paste())
+        self.paste_action.triggered.connect(lambda: self.current_chat_view.input.paste())
 
     def _handle_cut(self):
         """Handle cut action based on focus."""
@@ -107,6 +113,11 @@ class MainWindow(QMainWindow):
         humbug_menu.addSeparator()
         humbug_menu.addAction(self.quit_action)
 
+        # File menu
+        file_menu = self._menu_bar.addMenu("&File")
+        file_menu.addAction(self.new_conv_action)
+        file_menu.addAction(self.close_conv_action)
+
         # Edit menu
         edit_menu = self._menu_bar.addMenu("&Edit")
         edit_menu.addAction(self.submit_action)
@@ -134,6 +145,7 @@ class MainWindow(QMainWindow):
             self.cut_action.setEnabled(False)
             self.copy_action.setEnabled(False)
             self.paste_action.setEnabled(False)
+            self.close_conv_action.setEnabled(False)
             return
 
         has_input_selection = chat_view.input.textCursor().hasSelection()
@@ -152,6 +164,7 @@ class MainWindow(QMainWindow):
             (input_focused and has_input_selection) or (history_focused and has_history_selection)
         )
         self.paste_action.setEnabled(input_focused)
+        self.close_conv_action.setEnabled(True)
 
     def setup_ui(self):
         """Set up the user interface."""
@@ -197,21 +210,22 @@ class MainWindow(QMainWindow):
             }
         """)
 
-    def create_conversation_tab(self):
-        """Create a new conversation tab."""
+    def create_conversation_tab(self) -> str:
+        """Create a new conversation tab and return its ID."""
         self.conversation_count += 1
-        chat_view = self.tab_manager.create_tab(f"Conv {self.conversation_count}")
+        conversation_id = str(uuid.uuid4())
+        chat_view = self.tab_manager.create_conversation(
+            conversation_id,
+            f"Conv {self.conversation_count}"
+        )
+        self.chat_views[conversation_id] = chat_view
+        return conversation_id
 
-        # Connect signals for menu state updates
-        chat_view.input.textChanged.connect(self._update_menu_states)
-        chat_view.input.selectionChanged.connect(self._update_menu_states)
-        chat_view.history.selectionChanged.connect(self._update_menu_states)
-
-        # Install event filter to catch focus changes
-        chat_view.input.installEventFilter(self)
-        chat_view.history.installEventFilter(self)
-
-        return chat_view
+    def _close_current_conversation(self):
+        """Close the current conversation tab."""
+        chat_view = self.current_chat_view
+        if chat_view:
+            self.tab_manager._handle_conversation_close(chat_view.conversation_id)
 
     def eventFilter(self, obj, event):
         """Handle focus events for menu state updates."""
@@ -236,60 +250,87 @@ class MainWindow(QMainWindow):
 
         # Clear input area and add the message
         chat_view.clear_input()
+        conversation_id = chat_view.conversation_id
         chat_view.add_message(f"You: {message}", "user")
 
         # Create and store message
-        user_message = Message.create(MessageSource.USER, message)
-        self.conversation.add_message(user_message)
+        user_message = Message.create(
+            conversation_id,
+            MessageSource.USER,
+            message
+        )
+        chat_view.conversation.add_message(user_message)
 
         # Write to transcript
-        asyncio.create_task(self.transcript_writer.write([user_message.to_transcript_dict()]))
+        asyncio.create_task(
+            self.transcript_writer.write([user_message.to_transcript_dict()])
+        )
 
         # Handle commands
         if message.startswith('/'):
-            asyncio.create_task(self.handle_command(message[1:]))
+            asyncio.create_task(self.handle_command(message[1:], conversation_id))
             return
 
         # Start AI response and track the task
-        self._current_task = asyncio.create_task(self.process_ai_response(message))
+        task = asyncio.create_task(
+            self.process_ai_response(message, conversation_id)
+        )
 
-    async def process_ai_response(self, message: str):
+        if conversation_id not in self._current_tasks:
+            self._current_tasks[conversation_id] = []
+        self._current_tasks[conversation_id].append(task)
+
+        def task_done_callback(task):
+            if conversation_id in self._current_tasks:
+                try:
+                    self._current_tasks[conversation_id].remove(task)
+                except ValueError:
+                    pass  # Task already removed
+
+        task.add_done_callback(task_done_callback)
+
+    async def process_ai_response(self, message: str, conversation_id: str):
         """Process AI response with streaming."""
+        chat_view = self.chat_views.get(conversation_id)
+        if not chat_view:
+            self.logger.error(f"No chat view found for conversation {conversation_id}")
+            return
+
         try:
-            self.current_response = ""
+            self.logger.debug(f"\n=== Starting new AI response for conv {conversation_id} ===")
+            current_response = ""
             first_response = True
-            self.logger.debug("\n=== Starting new AI response processing ===")
 
             async for response in self.ai_backend.stream_message(
-                message, self.conversation.get_messages_for_context()
+                message, chat_view.conversation.get_messages_for_context()
             ):
                 if response.error:
                     self.logger.debug(f"Received error response: {response.error}")
                     error_msg = f"Error: {response.error['message']}"
-                    self.chat_view.add_message(error_msg, "error")
+                    chat_view.add_message(error_msg, "error")
 
                     error_message = Message.create(
+                        conversation_id,
                         MessageSource.SYSTEM,
                         error_msg,
                         error=response.error
                     )
-                    self.conversation.add_message(error_message)
+                    chat_view.conversation.add_message(error_message)
                     await self.transcript_writer.write([error_message.to_transcript_dict()])
 
-                    # Only return for non-retryable errors
                     if response.error['code'] not in ['network_error', 'timeout']:
                         return
                     continue
 
                 # Update response
-                self.current_response = response.content
+                current_response = response.content
 
                 # For first chunk, add new message with prefix
                 if first_response:
-                    self.chat_view.add_message(f"AI: {self.current_response}", "ai")
+                    chat_view.add_message(f"AI: {current_response}", "ai")
                     first_response = False
                 else:
-                    self.chat_view.add_message(f"AI: {self.current_response}", "ai")
+                    chat_view.add_message(f"AI: {current_response}", "ai")
 
                 # Update token counts and handle completion
                 if response.usage:
@@ -299,94 +340,108 @@ class MainWindow(QMainWindow):
                         total_tokens=response.usage.total_tokens
                     )
                     ai_message = Message.create(
+                        conversation_id,
                         MessageSource.AI,
-                        self.current_response,
+                        current_response,
                         usage=usage
                     )
-                    self.conversation.add_message(ai_message)
-                    self.update_status()
+                    chat_view.conversation.add_message(ai_message)
+                    self.update_status(chat_view)
                     # Write final response to transcript
                     await self.transcript_writer.write([ai_message.to_transcript_dict()])
                     # Mark AI response as complete
-                    self.chat_view.finish_ai_response()
+                    chat_view.finish_ai_response()
 
         except asyncio.CancelledError:
-            self.logger.debug("AI response cancelled")
-            # Handle cancellation gracefully
-            self.chat_view.finish_ai_response()
+            self.logger.debug(f"AI response cancelled for conv {conversation_id}")
+            if chat_view:
+                chat_view.finish_ai_response()
             raise
 
         except Exception as e:
-            self.logger.exception("Error processing AI response")
-            error_msg = f"Error: {str(e)}"
-            self.chat_view.add_message(error_msg, "error")
-            error_message = Message.create(
-                MessageSource.SYSTEM,
-                error_msg,
-                error={
-                    "code": "process_error",
-                    "message": str(e),
-                    "details": {"type": type(e).__name__}
-                }
+            self.logger.exception(
+                f"Error processing AI response for conv {conversation_id}"
             )
-            self.conversation.add_message(error_message)
-            await self.transcript_writer.write([error_message.to_transcript_dict()])
+            if chat_view:
+                error_msg = f"Error: {str(e)}"
+                chat_view.add_message(error_msg, "error")
+                error_message = Message.create(
+                    conversation_id,
+                    MessageSource.SYSTEM,
+                    error_msg,
+                    error={
+                        "code": "process_error",
+                        "message": str(e),
+                        "details": {"type": type(e).__name__}
+                    }
+                )
+                chat_view.conversation.add_message(error_message)
+                await self.transcript_writer.write([error_message.to_transcript_dict()])
 
         finally:
-            self.logger.debug("=== Finished AI response processing ===")
-            self._current_task = None
+            self.logger.debug(
+                f"=== Finished AI response for conv {conversation_id} ==="
+            )
 
-    def get_conversation_history(self) -> List[str]:
-        """Get conversation history for AI context."""
-        return self.conversation.get_messages_for_context()
-
-    async def handle_command(self, command: str):
+    async def handle_command(self, command: str, conversation_id: str):
         """Handle application commands."""
+        chat_view = self.chat_views.get(conversation_id)
+        if not chat_view:
+            return
+
         if command.strip().lower() == "exit":
             QApplication.quit()
             return
 
         response = Message.create(
+            conversation_id,
             MessageSource.SYSTEM,
             f"Unknown command: {command}"
         )
-        self.conversation.add_message(response)
-        self.chat_view.add_message(response.content, "system")
+        chat_view.conversation.add_message(response)
+        chat_view.add_message(response.content, "system")
         await self.transcript_writer.write([response.to_transcript_dict()])
 
-    def update_status(self):
+    def update_status(self, chat_view):
         """Update the status bar with current token counts."""
-        counts = self.conversation.get_token_counts()
-        self.chat_view.update_status(counts['input'], counts['output'])
+        counts = chat_view.conversation.get_token_counts()
+        chat_view.update_status(counts['input'], counts['output'])
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
         if event.key() == Qt.Key_Escape:
-            self.cancel_current_request()
+            chat_view = self.current_chat_view
+            if chat_view:
+                conversation_id = chat_view.conversation_id
+                if conversation_id in self._current_tasks:
+                    for task in self._current_tasks[conversation_id]:
+                        if not task.done():
+                            task.cancel()
+                    chat_view.add_message("System: Request cancelled by user", "system")
+                    chat_view.finish_ai_response()
+                    asyncio.create_task(
+                        self.write_cancellation_to_transcript(conversation_id)
+                    )
         else:
             super().keyPressEvent(event)
 
-    def cancel_current_request(self):
-        """Cancel the current AI request if one is in progress."""
-        if self._current_task and not self._current_task.done():
-            self._current_task.cancel()
-            self.chat_view.add_message("System: Request cancelled by user", "system")
-            self.chat_view.finish_ai_response()
-            asyncio.create_task(self.write_cancellation_to_transcript())
-
-    async def write_cancellation_to_transcript(self):
+    async def write_cancellation_to_transcript(self, conversation_id: str):
         """Write cancellation message to transcript."""
+        chat_view = self.chat_views.get(conversation_id)
+        if not chat_view:
+            return
+
         cancel_message = Message.create(
+            conversation_id,
             MessageSource.SYSTEM,
             "Request cancelled by user",
             error={
                 "code": "cancelled",
                 "message": "Request cancelled by user",
                 "details": {
-                    "cancelled_response": self.current_response if self.current_response else "",
                     "time": datetime.utcnow().isoformat()
                 }
             }
         )
-        self.conversation.add_message(cancel_message)
+        chat_view.conversation.add_message(cancel_message)
         await self.transcript_writer.write([cancel_message.to_transcript_dict()])

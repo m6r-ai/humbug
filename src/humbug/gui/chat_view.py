@@ -3,9 +3,10 @@
 from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
-from PySide6.QtCore import QEvent, QSize, QTimer
+from PySide6.QtCore import QEvent, QSize, QTimer, Signal
 from PySide6.QtGui import QResizeEvent
 
+from humbug.conversation import ConversationHistory
 from humbug.gui.history_view import HistoryView
 from humbug.gui.input_edit import InputEdit
 
@@ -56,9 +57,14 @@ class ChatContainer(QWidget):
 class ChatView(QFrame):
     """Unified chat view implementing single-window feel with distinct regions."""
 
-    def __init__(self, parent=None):
+    # Signal emitted when the tab should be closed
+    close_requested = Signal(str)  # Emits conversation_id
+
+    def __init__(self, conversation_id: str, parent=None):
         """Initialize the unified chat view."""
         super().__init__(parent)
+        self.conversation_id = conversation_id
+        self.conversation = ConversationHistory(conversation_id)
         self.setup_ui()
 
     @property
@@ -120,7 +126,7 @@ class ChatView(QFrame):
 
         self.update_status(0, 0)
 
-        # Watch of cursor position changes
+        # Watch for cursor position changes
         self.container.input.cursorPositionChanged.connect(self._ensure_cursor_visible)
 
         # Set initial focus to input area
@@ -205,5 +211,9 @@ class ChatView(QFrame):
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""
         cursor_rect = self.container.input.cursorRect()
-
-        self.scroll_area.ensureVisible(cursor_rect.left(), cursor_rect.top() + self.container.history.height(), 0, 50)
+        self.scroll_area.ensureVisible(
+            cursor_rect.left(),
+            cursor_rect.top() + self.container.history.height(),
+            0,
+            50
+        )
