@@ -13,8 +13,10 @@ from PySide6.QtGui import (
     QKeyEvent, QAction, QKeySequence
 )
 
+from humbug.conversation import ConversationHistory, Message, MessageSource, Usage
 from humbug.gui.chat_view import ChatView
 from humbug.gui.about_dialog import AboutDialog
+from humbug.utils import sanitize_input
 
 
 class MainWindow(QMainWindow):
@@ -25,8 +27,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ai_backend = ai_backend
         self.transcript_writer = transcript_writer
+        self.conversation = ConversationHistory()
         self.current_response = ""
-        self.token_counts = {"input": 0, "output": 0}
         self._current_task = None
         self.debug_id = id(self)
         self.logger = logging.getLogger(f"MainWindow_{self.debug_id}")
@@ -194,40 +196,9 @@ class MainWindow(QMainWindow):
             self._update_menu_states()
         return super().eventFilter(obj, event)
 
-    async def write_to_transcript(self, messages: List[dict]):
-        """Write messages to transcript with error handling."""
-        try:
-            await self.transcript_writer.write(messages)
-        except Exception as e:
-            self.chat_view.add_message(
-                f"[ERROR] Failed to write to transcript: {str(e)}", "error")
-
-    def cancel_current_request(self):
-        """Cancel the current AI request if one is in progress."""
-        if self._current_task and not self._current_task.done():
-            self._current_task.cancel()
-            self.chat_view.add_message("System: Request cancelled by user", "system")
-            self.chat_view.finish_ai_response()
-            asyncio.create_task(self.write_cancellation_to_transcript())
-
-    async def write_cancellation_to_transcript(self):
-        """Write cancellation message to transcript."""
-        await self.write_to_transcript([{
-            "type": "system_message",
-            "content": "Request cancelled by user",
-            "error": {
-                "code": "cancelled",
-                "message": "Request cancelled by user",
-                "details": {
-                    "cancelled_response": self.current_response if self.current_response else "",
-                    "time": datetime.utcnow().isoformat()
-                }
-            }
-        }])
-
     def submit_message(self):
         """Handle message submission."""
-        message = self.chat_view.get_input_text().strip()
+        message = sanitize_input(self.chat_view.get_input_text().strip())
         if not message:
             return
 
@@ -235,12 +206,12 @@ class MainWindow(QMainWindow):
         self.chat_view.clear_input()
         self.chat_view.add_message(f"You: {message}", "user")
 
-        # Add user message to history and transcript
-        asyncio.create_task(self.write_to_transcript([{
-            "type": "user_message",
-            "content": message,
-            "timestamp": datetime.utcnow().isoformat()
-        }]))
+        # Create and store message
+        user_message = Message.create(MessageSource.USER, message)
+        self.conversation.add_message(user_message)
+
+        # Write to transcript
+        asyncio.create_task(self.transcript_writer.write([user_message.to_transcript_dict()]))
 
         # Handle commands
         if message.startswith('/'):
@@ -257,17 +228,21 @@ class MainWindow(QMainWindow):
             first_response = True
             self.logger.debug("\n=== Starting new AI response processing ===")
 
-            async for response in self.ai_backend.stream_message(message, self.get_conversation_history()):
+            async for response in self.ai_backend.stream_message(
+                message, self.conversation.get_messages_for_context()
+            ):
                 if response.error:
                     self.logger.debug(f"Received error response: {response.error}")
                     error_msg = f"Error: {response.error['message']}"
                     self.chat_view.add_message(error_msg, "error")
-                    await self.write_to_transcript([{
-                        "type": "error",
-                        "content": error_msg,
-                        "error": response.error,
-                        "timestamp": datetime.utcnow().isoformat()
-                    }])
+
+                    error_message = Message.create(
+                        MessageSource.SYSTEM,
+                        error_msg,
+                        error=response.error
+                    )
+                    self.conversation.add_message(error_message)
+                    await self.transcript_writer.write([error_message.to_transcript_dict()])
                     return
 
                 # Update response
@@ -282,16 +257,20 @@ class MainWindow(QMainWindow):
 
                 # Update token counts and handle completion
                 if response.usage:
-                    self.token_counts["input"] += response.usage.prompt_tokens
-                    self.token_counts["output"] += response.usage.completion_tokens
+                    usage = Usage(
+                        prompt_tokens=response.usage.prompt_tokens,
+                        completion_tokens=response.usage.completion_tokens,
+                        total_tokens=response.usage.total_tokens
+                    )
+                    ai_message = Message.create(
+                        MessageSource.AI,
+                        self.current_response,
+                        usage=usage
+                    )
+                    self.conversation.add_message(ai_message)
                     self.update_status()
                     # Write final response to transcript
-                    await self.write_to_transcript([{
-                        "type": "ai_response",
-                        "content": self.current_response,
-                        "usage": response.usage.to_dict(),
-                        "timestamp": datetime.utcnow().isoformat()
-                    }])
+                    await self.transcript_writer.write([ai_message.to_transcript_dict()])
                     # Mark AI response as complete
                     self.chat_view.finish_ai_response()
 
@@ -305,26 +284,25 @@ class MainWindow(QMainWindow):
             self.logger.exception("Error processing AI response")
             error_msg = f"Error: {str(e)}"
             self.chat_view.add_message(error_msg, "error")
-            await self.write_to_transcript([{
-                "type": "error",
-                "content": error_msg,
-                "error": {
+            error_message = Message.create(
+                MessageSource.SYSTEM,
+                error_msg,
+                error={
                     "code": "process_error",
                     "message": str(e),
                     "details": {"type": type(e).__name__}
-                },
-                "timestamp": datetime.utcnow().isoformat()
-            }])
+                }
+            )
+            self.conversation.add_message(error_message)
+            await self.transcript_writer.write([error_message.to_transcript_dict()])
 
         finally:
             self.logger.debug("=== Finished AI response processing ===")
             self._current_task = None
 
     def get_conversation_history(self) -> List[str]:
-        """Extract conversation history from display."""
-        # This is a simplified version - would need to be enhanced
-        # to properly parse the history content
-        return []
+        """Get conversation history for AI context."""
+        return self.conversation.get_messages_for_context()
 
     async def handle_command(self, command: str):
         """Handle application commands."""
@@ -332,13 +310,20 @@ class MainWindow(QMainWindow):
             QApplication.quit()
             return
 
-        self.chat_view.add_message(f"Unknown command: {command}", "system")
+        response = Message.create(
+            MessageSource.SYSTEM,
+            f"Unknown command: {command}"
+        )
+        self.conversation.add_message(response)
+        self.chat_view.add_message(response.content, "system")
+        await self.transcript_writer.write([response.to_transcript_dict()])
 
     def update_status(self):
         """Update the status bar with current token counts."""
+        counts = self.conversation.get_token_counts()
         self.status_label.setText(
-            f"Input tokens: {self.token_counts['input']} | "
-            f"Output tokens: {self.token_counts['output']}"
+            f"Input tokens: {counts['input']} | "
+            f"Output tokens: {counts['output']}"
         )
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -347,3 +332,28 @@ class MainWindow(QMainWindow):
             self.cancel_current_request()
         else:
             super().keyPressEvent(event)
+
+    def cancel_current_request(self):
+        """Cancel the current AI request if one is in progress."""
+        if self._current_task and not self._current_task.done():
+            self._current_task.cancel()
+            self.chat_view.add_message("System: Request cancelled by user", "system")
+            self.chat_view.finish_ai_response()
+            asyncio.create_task(self.write_cancellation_to_transcript())
+
+    async def write_cancellation_to_transcript(self):
+        """Write cancellation message to transcript."""
+        cancel_message = Message.create(
+            MessageSource.SYSTEM,
+            "Request cancelled by user",
+            error={
+                "code": "cancelled",
+                "message": "Request cancelled by user",
+                "details": {
+                    "cancelled_response": self.current_response if self.current_response else "",
+                    "time": datetime.utcnow().isoformat()
+                }
+            }
+        )
+        self.conversation.add_message(cancel_message)
+        await self.transcript_writer.write([cancel_message.to_transcript_dict()])

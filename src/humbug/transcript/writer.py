@@ -1,3 +1,5 @@
+"""Transcript writer implementation for Humbug application."""
+
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -7,6 +9,7 @@ import shutil
 import sys
 from typing import List, Dict, Optional
 import uuid
+
 
 class TranscriptWriter:
     """Handles writing conversation transcripts to files with rotation."""
@@ -144,37 +147,9 @@ class TranscriptWriter:
                     self._initialize_file()
                     data = await self._read_json(self.filename)
 
-                # Process messages with schema validation
+                # Process messages
                 for message in messages:
-                    if "type" not in message:
-                        continue
-                        
-                    entry = {
-                        "id": str(uuid.uuid4()),
-                        "timestamp": datetime.utcnow().isoformat(),
-                        "type": message["type"],
-                        "content": message["content"]
-                    }
-                    
-                    if "usage" in message:
-                        entry["usage"] = message["usage"]
-                    if "error" in message:
-                        entry["error"] = message["error"]
-                        
-                    # Sanitize sensitive data in errors
-                    if "error" in entry and "details" in entry["error"]:
-                        details = entry["error"]["details"]
-                        if isinstance(details, dict):
-                            sanitized = {}
-                            for k, v in details.items():
-                                if any(sensitive in k.lower()
-                                        for sensitive in ['key', 'token', 'secret', 'password']):
-                                    sanitized[k] = '[redacted]'
-                                else:
-                                    sanitized[k] = v
-                            entry["error"]["details"] = sanitized
-                            
-                    data["conversation"].append(entry)
+                    data["conversation"].append(message)
 
                 await self._write_json(data)
                 await self._rotate_file()
@@ -204,9 +179,7 @@ class TranscriptWriter:
                 try:
                     data = await self._read_json(self.filename)
                     for message in messages:
-                        message_copy = message.copy()
-                        message_copy["id"] = str(uuid.uuid4())
-                        data["conversation"].append(message_copy)
+                        data["conversation"].append(message)
                     await self._write_json(data)
                 except Exception as e2:
                     print(f"Failed to recover transcript: {str(e2)}", file=sys.stderr)
