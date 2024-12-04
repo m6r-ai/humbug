@@ -16,8 +16,10 @@ Context: humbug application
         Selecting a tab brings that conversation to the front of the tab group.
 
         Context: Conversation tabs
-            Each tab will be named with a conversation name.  This will default to "Conv <num>" where <num> is the
-            conversation number.  This number will be unique for each run of the application.
+            Each tab will be named with a conversation name.  This will default to "Conv <num>" where <num> is a
+            simple incrementing number starting from 1 for each conversation created during the current run of the
+            application (e.g., "Conv 1", "Conv 2", "Conv 3", etc.).  These numbers do not need to persist between
+            different runs of the application.
 
             Each tab will also contain an "x" after the name of the conversation.  Clicking this "x" will close the
             tab in the same way as clicking the "Close Conversation" menu item.
