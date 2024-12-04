@@ -14,7 +14,7 @@ from PySide6.QtGui import (
 )
 
 from humbug.conversation import ConversationHistory, Message, MessageSource, Usage
-from humbug.gui.chat_view import ChatView
+from humbug.gui.tab_manager import TabManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.utils import sanitize_input
 
@@ -32,6 +32,7 @@ class MainWindow(QMainWindow):
         self._current_task = None
         self.debug_id = id(self)
         self.logger = logging.getLogger(f"MainWindow_{self.debug_id}")
+        self.conversation_count = 0
 
         # Create actions first
         self._create_actions()
@@ -77,15 +78,23 @@ class MainWindow(QMainWindow):
 
     def _handle_cut(self):
         """Handle cut action based on focus."""
-        if self.chat_view.input.hasFocus():
-            self.chat_view.input.cut()
+        chat_view = self.current_chat_view
+        if not chat_view:
+            return
+
+        if chat_view.input.hasFocus():
+            chat_view.input.cut()
 
     def _handle_copy(self):
         """Handle copy action based on focus."""
-        if self.chat_view.input.hasFocus():
-            self.chat_view.input.copy()
-        elif self.chat_view.history.hasFocus():
-            self.chat_view.history.copy()
+        chat_view = self.current_chat_view
+        if not chat_view:
+            return
+
+        if chat_view.input.hasFocus():
+            chat_view.input.copy()
+        elif chat_view.history.hasFocus():
+            chat_view.history.copy()
 
     def _create_menus(self):
         """Create the menu bar and all menus."""
@@ -116,13 +125,24 @@ class MainWindow(QMainWindow):
 
     def _update_menu_states(self):
         """Update enabled/disabled state of menu items."""
-        has_input_selection = self.chat_view.input.textCursor().hasSelection()
-        has_history_selection = self.chat_view.history.textCursor().hasSelection()
-        has_text = bool(self.chat_view.get_input_text())
-        can_undo = self.chat_view.input.document().isUndoAvailable()
-        can_redo = self.chat_view.input.document().isRedoAvailable()
-        input_focused = self.chat_view.input.hasFocus()
-        history_focused = self.chat_view.history.hasFocus()
+        chat_view = self.current_chat_view
+        if not chat_view:
+            # Disable all editing actions if no chat view is available
+            self.submit_action.setEnabled(False)
+            self.undo_action.setEnabled(False)
+            self.redo_action.setEnabled(False)
+            self.cut_action.setEnabled(False)
+            self.copy_action.setEnabled(False)
+            self.paste_action.setEnabled(False)
+            return
+
+        has_input_selection = chat_view.input.textCursor().hasSelection()
+        has_history_selection = chat_view.history.textCursor().hasSelection()
+        has_text = bool(chat_view.get_input_text())
+        can_undo = chat_view.input.document().isUndoAvailable()
+        can_redo = chat_view.input.document().isRedoAvailable()
+        input_focused = chat_view.input.hasFocus()
+        history_focused = chat_view.history.hasFocus()
 
         self.submit_action.setEnabled(has_text)
         self.undo_action.setEnabled(can_undo and input_focused)
@@ -145,18 +165,12 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Chat view
-        self.chat_view = ChatView(self)
-        layout.addWidget(self.chat_view)
+        # Create tab manager
+        self.tab_manager = TabManager(self)
+        layout.addWidget(self.tab_manager)
 
-        # Connect signals for menu state updates
-        self.chat_view.input.textChanged.connect(self._update_menu_states)
-        self.chat_view.input.selectionChanged.connect(self._update_menu_states)
-        self.chat_view.history.selectionChanged.connect(self._update_menu_states)
-
-        # Install event filter to catch focus changes
-        self.chat_view.input.installEventFilter(self)
-        self.chat_view.history.installEventFilter(self)
+        # Create initial conversation tab
+        self.create_conversation_tab()
 
         # Set dark theme
         self.setStyleSheet("""
@@ -183,21 +197,46 @@ class MainWindow(QMainWindow):
             }
         """)
 
+    def create_conversation_tab(self):
+        """Create a new conversation tab."""
+        self.conversation_count += 1
+        chat_view = self.tab_manager.create_tab(f"Conv {self.conversation_count}")
+
+        # Connect signals for menu state updates
+        chat_view.input.textChanged.connect(self._update_menu_states)
+        chat_view.input.selectionChanged.connect(self._update_menu_states)
+        chat_view.history.selectionChanged.connect(self._update_menu_states)
+
+        # Install event filter to catch focus changes
+        chat_view.input.installEventFilter(self)
+        chat_view.history.installEventFilter(self)
+
+        return chat_view
+
     def eventFilter(self, obj, event):
         """Handle focus events for menu state updates."""
         if event.type() in (QEvent.FocusIn, QEvent.FocusOut):
             self._update_menu_states()
         return super().eventFilter(obj, event)
 
+    @property
+    def current_chat_view(self):
+        """Get the currently active chat view."""
+        return self.tab_manager.get_current_chat()
+
     def submit_message(self):
         """Handle message submission."""
-        message = sanitize_input(self.chat_view.get_input_text().strip())
+        chat_view = self.current_chat_view
+        if not chat_view:
+            return
+
+        message = sanitize_input(chat_view.get_input_text().strip())
         if not message:
             return
 
         # Clear input area and add the message
-        self.chat_view.clear_input()
-        self.chat_view.add_message(f"You: {message}", "user")
+        chat_view.clear_input()
+        chat_view.add_message(f"You: {message}", "user")
 
         # Create and store message
         user_message = Message.create(MessageSource.USER, message)
