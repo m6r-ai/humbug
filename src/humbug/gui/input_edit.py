@@ -16,11 +16,6 @@ class InputEdit(QTextEdit):
         self.setFrameStyle(QFrame.NoFrame)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        # Set minimum height for input area
-#        self.setMinimumHeight(40)
-
-        # Set size policy to expand horizontally but be minimum vertically
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         # Input history

@@ -1,11 +1,10 @@
 """Menu implementation for Humbug application."""
 
-from PySide6.QtWidgets import (QMainWindow, QMenuBar, QMenu, QDialog,
-                             QVBoxLayout, QLabel, QPushButton)
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, QSize
 
 from humbug import format_version
+
 
 class AboutDialog(QDialog):
     """About dialog for Humbug application."""
@@ -45,4 +44,3 @@ class AboutDialog(QDialog):
 
         layout.addStretch()
         self.setLayout(layout)
-

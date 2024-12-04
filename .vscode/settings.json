@@ -1,0 +1,18 @@
+{
+    "qtForPython.designer.path": "c:\\users\\dave\\appdata\\local\\packages\\pythonsoftwarefoundation.python.3.10_qbz5n2kfra8p0\\localcache\\local-packages\\python310\\site-packages\\PySide6\\designer.exe",
+    "qtForPython.rcc.path": "c:\\users\\dave\\appdata\\local\\packages\\pythonsoftwarefoundation.python.3.10_qbz5n2kfra8p0\\localcache\\local-packages\\python310\\site-packages\\PySide6\\rcc.exe",
+    "qtForPython.uic.path": "c:\\users\\dave\\appdata\\local\\packages\\pythonsoftwarefoundation.python.3.10_qbz5n2kfra8p0\\localcache\\local-packages\\python310\\site-packages\\PySide6\\uic.exe",
+    "files.eol": "\n",
+    "security.workspace.trust.untrustedFiles": "open",
+    "[python]": {
+        "editor.formatOnType": true
+    },
+    "pylint.importStrategy": "fromEnvironment",
+    "python.analysis.refactoring.allowMovingSymbols": false,
+    "editor.detectIndentation": false,
+    "eslint.rules.customizations": [],
+    "makefile.configureOnOpen": true,
+    "pylint.args": [
+        "--extension-pkg-whitelist=PySide6"
+    ]
+}

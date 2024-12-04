@@ -1,10 +1,13 @@
-import sys
-import os
 import asyncio
+import os
+import sys
+
 from qasync import QEventLoop, QApplication
+
 from humbug.ai.openai import OpenAIBackend
 from humbug.transcript.writer import TranscriptWriter
 from humbug.gui.main_window import MainWindow
+
 
 async def main():
     # Check for API key

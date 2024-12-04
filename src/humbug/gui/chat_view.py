@@ -1,7 +1,5 @@
 """Unified chat view implementation with correct scrolling and input expansion."""
 
-from typing import Optional
-
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
@@ -38,7 +36,6 @@ class ChatContainer(QWidget):
         """Handle widget resize events."""
         # Get the old and new sizes
         old_size: QSize = event.oldSize()
-        new_size: QSize = event.size()
 
         # Do whatever you need with the size information
         was_at_bottom = False
@@ -153,10 +150,10 @@ class ChatView(QFrame):
                 """)
         return super().eventFilter(obj, event)
 
-    def is_scrolled_to_bottom(self, oldMaximum) -> bool:
+    def is_scrolled_to_bottom(self, old_maximum) -> bool:
         """Check if scroll area is at the bottom."""
         scrollbar = self.scroll_area.verticalScrollBar()
-        return scrollbar.value() >= oldMaximum - 20
+        return scrollbar.value() >= old_maximum - 20
 
     def scroll_to_bottom(self):
         """Scroll to the bottom of the content."""

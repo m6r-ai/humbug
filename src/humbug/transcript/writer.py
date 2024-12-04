@@ -8,7 +8,6 @@ import os
 import shutil
 import sys
 from typing import List, Dict, Optional
-import uuid
 
 
 class TranscriptWriter:
