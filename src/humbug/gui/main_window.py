@@ -158,10 +158,6 @@ class MainWindow(QMainWindow):
         self.chat_view.input.installEventFilter(self)
         self.chat_view.history.installEventFilter(self)
 
-        # Status bar
-        self.status_label = QLabel("Input tokens: 0 | Output tokens: 0")
-        self.statusBar().addWidget(self.status_label)
-
         # Set dark theme
         self.setStyleSheet("""
             QMainWindow {
@@ -184,9 +180,6 @@ class MainWindow(QMainWindow):
             }
             QMenu::item:selected {
                 background-color: #3d3d3d
-            }
-            QStatusBar {
-                background-color: #2d2d2d;
             }
         """)
 
@@ -325,10 +318,7 @@ class MainWindow(QMainWindow):
     def update_status(self):
         """Update the status bar with current token counts."""
         counts = self.conversation.get_token_counts()
-        self.status_label.setText(
-            f"Input tokens: {counts['input']} | "
-            f"Output tokens: {counts['output']}"
-        )
+        self.chat_view.update_status(counts['input'], counts['output'])
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""

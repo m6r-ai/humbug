@@ -30,7 +30,7 @@ class InputEdit(QTextEdit):
             QTextEdit {
                 background-color: black;
                 color: white;
-                selection-background-color: #404040;
+                selection-background-color: #606060;
                 border: none;
             }
             QTextEdit:focus {

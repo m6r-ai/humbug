@@ -1,7 +1,7 @@
 """Unified chat view implementation with correct scrolling and input expansion."""
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
+    QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import QEvent, QSize, QTimer
 from PySide6.QtGui import QResizeEvent
@@ -107,6 +107,19 @@ class ChatView(QFrame):
         # Add scroll area to main layout
         layout.addWidget(self.scroll_area)
 
+        # Add status bar
+        self.status_bar = QLabel()
+        self.status_bar.setStyleSheet("""
+            QLabel {
+                background-color: #d3d3d3;
+                color: black;
+                padding: 2px 2px;
+            }
+        """)
+        layout.addWidget(self.status_bar)
+
+        self.update_status(0, 0)
+
         # Watch of cursor position changes
         self.container.input.cursorPositionChanged.connect(self._ensure_cursor_visible)
 
@@ -187,8 +200,7 @@ class ChatView(QFrame):
 
     def update_status(self, input_tokens: int, output_tokens: int):
         """Update the status bar with token counts."""
-        self.parent().parent().statusBar().showMessage(
-            f"Input tokens: {input_tokens} | Output tokens: {output_tokens}")
+        self.status_bar.setText(f"Input tokens: {input_tokens} | Output tokens: {output_tokens}")
 
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""
