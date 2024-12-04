@@ -95,6 +95,7 @@ class OpenAIBackend(AIBackend):
         self.logger = logging.getLogger("OpenAIBackend")
 
     async def stream_message(self, message: str, conversation_history: List[str]) -> AsyncGenerator[AIResponse, None]:
+        """Send a message to the AI backend and stream the response."""
         messages = [{"role": "user", "content": msg} for msg in conversation_history]
         messages.append({"role": "user", "content": message})
 
@@ -192,49 +193,58 @@ class OpenAIBackend(AIBackend):
 
             except asyncio.TimeoutError:
                 delay = self.base_delay * (2 ** attempt)
+                self.logger.debug(f"Timeout on attempt {attempt + 1}/{self.max_retries}")
                 if attempt < self.max_retries - 1:
                     yield AIResponse(
                         content="",
                         error={
                             "code": "timeout",
-                            "message": f"Request timed out. Retrying in {delay} seconds...",
+                            "message": f"Request timed out (attempt {attempt + 1}/{self.max_retries}). Retrying in {delay} seconds...",
                             "details": {"attempt": attempt + 1}
                         }
                     )
                     await asyncio.sleep(delay)
+                    self.logger.debug(f"Retrying after timeout (attempt {attempt + 2}/{self.max_retries})")
                     continue
+
                 yield AIResponse(
                     content="",
                     error={
                         "code": "timeout",
-                        "message": "Request timed out after all retries",
+                        "message": f"Request timed out after {self.max_retries} attempts",
                         "details": {"attempt": attempt + 1}
                     }
                 )
+                return
 
             except aiohttp.ClientError as e:
                 delay = self.base_delay * (2 ** attempt)
+                self.logger.debug(f"Network error on attempt {attempt + 1}/{self.max_retries}: {str(e)}")
                 if attempt < self.max_retries - 1:
                     yield AIResponse(
                         content="",
                         error={
                             "code": "network_error",
-                            "message": f"Network error. Retrying in {delay} seconds...",
+                            "message": f"Network error (attempt {attempt + 1}/{self.max_retries}): {str(e)}. Retrying in {delay} seconds...",
                             "details": {"type": type(e).__name__, "attempt": attempt + 1}
                         }
                     )
                     await asyncio.sleep(delay)
+                    self.logger.debug(f"Retrying after network error (attempt {attempt + 2}/{self.max_retries})")
                     continue
+
                 yield AIResponse(
                     content="",
                     error={
                         "code": "network_error",
-                        "message": f"Network error after all retries: {str(e)}",
+                        "message": f"Network error after {self.max_retries} attempts: {str(e)}",
                         "details": {"type": type(e).__name__, "attempt": attempt + 1}
                     }
                 )
+                return
 
             except Exception as e:
+                self.logger.debug(f"Unexpected error: {e}")
                 yield AIResponse(
                     content="",
                     error={

@@ -243,7 +243,11 @@ class MainWindow(QMainWindow):
                     )
                     self.conversation.add_message(error_message)
                     await self.transcript_writer.write([error_message.to_transcript_dict()])
-                    return
+
+                    # Only return for non-retryable errors
+                    if response.error['code'] not in ['network_error', 'timeout']:
+                        return
+                    continue
 
                 # Update response
                 self.current_response = response.content
