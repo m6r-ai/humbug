@@ -7,34 +7,6 @@ Context: humbug application
     Context: Version
         This is version 0.1 of the application.
 
-    Context: Application invocation
-        Context: Command line tool
-            The tool will be run from the command line with appropriate arguments.
-
-        Context: No config file
-            The tool does not need a configuration file.
-
-        Context: "--help" argument
-            If the user specifies a "-h" or "--help" argument then display a help message with all valid arguments,
-            any parameters they may have, and their usage, then exit.
-
-            Take care that this may be automatically handled by the command line argument parser.
-
-        Context: "--version" argument
-            If the user specifies a "-v" or "--version" argument then display the application version number, then exit.
-
-            The version is a semantic version but only shows a patch number if this is non-zero.
-
-        Context: Check all arguments
-            Unknown arguments trigger error: "Unknown argument: [arg]. Use --help for usage."
-
-        Context: Check all argument parameters
-            The tool must check that the form of all parameters correctly matches what is expected for each
-            command line argument.
-
-            If the tool is invoked with invalid parameters, display correct usage information:
-            "Invalid value for [arg]: [value]. Expected: [format]"
-
     Context: User interactions
         Once started, the application will run in a GUI window.
 
