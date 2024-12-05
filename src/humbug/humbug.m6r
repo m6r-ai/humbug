@@ -21,8 +21,15 @@ Context: humbug application
             application (e.g., "Conv 1", "Conv 2", "Conv 3", etc.).  These numbers do not need to persist between
             different runs of the application.
 
-            Each tab will also contain an "x" after the name of the conversation.  Clicking this "x" will close the
-            tab in the same way as clicking the "Close Conversation" menu item.
+            Each tab will have a close button (typically rendered as an "x" icon) that appears after the conversation
+            name.  Clicking this close button will close the tab in the same way as clicking the "Close Conversation"
+            menu item.
+
+            The close button will be:
+
+            - Always visible but not highlighted on the currently selected tab.
+            - Hidden by default on non-selected tabs, appearing only when the tab is hovered over.
+            - Highlighted in red when the mouse hovers over the close button itself.
 
     Context: Menus
         The application will have a series of top-level Menus.
