@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QEvent, QSize, QTimer, Signal
 from PySide6.QtGui import QResizeEvent
 
+from humbug.ai.conversation_settings import ConversationSettings
 from humbug.conversation import ConversationHistory
 from humbug.gui.history_view import HistoryView
 from humbug.gui.input_edit import InputEdit
@@ -65,6 +66,7 @@ class ChatView(QFrame):
         super().__init__(parent)
         self.conversation_id = conversation_id
         self.conversation = ConversationHistory(conversation_id)
+        self.settings = ConversationSettings()
         self.setup_ui()
 
     @property
@@ -76,6 +78,19 @@ class ChatView(QFrame):
     def history(self):
         """Provide access to history widget."""
         return self.container.history
+
+    def get_settings(self) -> ConversationSettings:
+        """Get current conversation settings."""
+        return ConversationSettings(
+            model=self.settings.model,
+            temperature=self.settings.temperature
+        )
+
+    def update_settings(self, settings: ConversationSettings):
+        """Update conversation settings."""
+        self.settings = settings
+        # Update the status bar to reflect new settings
+        self._update_status_display()
 
     def setup_ui(self):
         """Set up the user interface."""
@@ -204,9 +219,22 @@ class ChatView(QFrame):
         """Mark the current AI response as complete."""
         self.history.finish_ai_response()
 
+    def _update_status_display(self):
+        """Update status bar with current settings and token counts."""
+        counts = self.conversation.get_token_counts()
+        self.update_status(
+            counts['input'],
+            counts['output']
+        )
+
     def update_status(self, input_tokens: int, output_tokens: int):
-        """Update the status bar with token counts."""
-        self.status_bar.setText(f"Input tokens: {input_tokens} | Output tokens: {output_tokens}")
+        """Update the status bar with token counts and settings."""
+        self.status_bar.setText(
+            f"Model: {self.settings.model} | "
+            f"Temp: {self.settings.temperature:.1f} | "
+            f"Input tokens: {input_tokens} | "
+            f"Output tokens: {output_tokens}"
+        )
 
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""

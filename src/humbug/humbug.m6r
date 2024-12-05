@@ -34,6 +34,8 @@ Context: humbug application
     Context: Menus
         The application will have a series of top-level Menus.
 
+        Where any action cannot be performed at the current time it will be greyed out.
+
         Context: Humbug
             The "Humbug" menu is the main application menu.  When clicked it contains the following:
 
@@ -63,8 +65,7 @@ Context: humbug application
                 The "Submit" menu item will submit the current user input message to the AI, where there is
                 an input message to be submitted.
 
-                This will be matched with a keyboard shortcut, "Ctrl+J".  Where this action cannot be taken,
-                the menu item will be greyed out.
+                This will be matched with a keyboard shortcut, "Ctrl+J".
 
             Context: Separator
                 There will be a horizontal Separator
@@ -73,15 +74,13 @@ Context: humbug application
                 The "Undo" menu item will all the last user input action that has not yet been committed (e.g.
                 sent to the AI) to be undone.
 
-                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Z" for Windows).  Where
-                this action cannot be taken, the menu item will be greyed out.
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Z" for Windows).
 
             Context: Redo
                 The "Redo" menu item will restore previos undo operations, where the last user input action has
                 not yet been committed (e.g. sent to the AI) to be undone.
 
                 This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Shift+Z" for Windows).
-                Where this action cannot be taken, the menu item will be greyed out.
 
             Context: Separator
                 There will be a horizontal Separator
@@ -90,21 +89,27 @@ Context: humbug application
                 The "Cut" menu item will support the cutting of input text from a highlighted area where such
                 text can be removed.
 
-                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+X" for Windows).  Where
-                this action cannot be taken, the menu item will be greyed out.
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+X" for Windows).
 
             Context: Copy
                 The "Copy" menu item will support the copying of text from a highlighted area.
 
-                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+C" for Windows).  Where
-                this action cannot be taken, the menu item will be greyed out.
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+C" for Windows).
 
             Context: Paste
                 The "Paste" menu item will support the pasting of text at the current input cursor, where
                 new text can be added.
 
                 This will be matched with a standard keyboard shortcut (e.g. "Ctrl+V" for Windows).
-                Where this action cannot be taken, the menu item will be greyed out.
+
+            Context: Separator
+                There will be a horizontal Separator
+
+            Context: Conversation Settings
+                The "Conversation Settings" menu item will support setting the conversation settings of
+                the currently focused conversation tab (if there is one).
+
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+," for Windows).
 
     Context: User/AI interactions
         Each conversation comprises a chat between a user and one or more AI backends.
@@ -150,6 +155,39 @@ Context: humbug application
 
             The focus area will have a dark grey background.  The non-focus area will have a black background.
 
+        Context: Conversation Settings
+            Each conversation can have its own AI model and temperature settings that affect how the AI responds.
+
+            Context: Settings Dialog
+                A "Settings" dialog can be accessed for each conversation via a menu or keyboard shortcut (see
+                "Conversation Settings" menu item)
+
+                The dialog shows the current settings for the active conversation tab.
+
+                Context: Model Selection
+                    The AI model is selected via a dropdown menu.
+                    Available models should be configurable at application startup.
+                    The default model is "gpt-4o-mini".
+                    Any change to the model selection takes effect on the next message sent to the AI.
+
+                Context: Temperature Setting
+                    The temperature is set via a numeric input field that:
+
+                    - Accepts values between 0.0 and 1.0
+                    - Shows one decimal place
+                    - Has spinner arrows for adjustment
+                    - Default value is 0.7
+                    - Changes take effect on the next message sent to the AI
+
+                Context: Dialog Controls
+                    The dialog has:
+
+                    - "OK" button to save changes and close
+                    - "Cancel" button to discard changes and close
+                    - "Apply" button to save changes without closing
+
+                    The dialog is modal, preventing interaction with the main window while open.
+
     Context: UI navigation
         Context: Input box navigation
             If the input area has not yet been edited and the cursor is at the top left of the input area, then
@@ -176,10 +214,11 @@ Context: humbug application
                   "properties": {
                     "timestamp": { "type": "string", "format": "date-time" },
                     "model": { "type": "string" },
+                    "temperature": { "type": "number", "minimum": 0, "maximum": 1 },
                     "version": { "type": "string" },
                     "conversation_number": { "type": "integer" }
                   },
-                  "required": ["timestamp", "model", "version", "conversation_number"]
+                  "required": ["timestamp", "model", "temperature", "version", "conversation_number"]
                 },
                 "conversation": {
                   "type": "array",
@@ -288,13 +327,16 @@ Context: humbug application
 
             ```json
             {
-            "model": "gpt-4o-mini",
+            "model": "selected-model",
             "messages": [{"role": "user", "content": "Say this is a test!"}],
-            "temperature": 0.7,
+            "temperature": temp-setting,
             "stream": true,
             "stream_options": {"include_usage": true}
             }
             ```
+
+            In this, "selected-model" is name of the selected AI model, and "temp-setting" is the numeric temperature
+            setting defined by the user.
 
             The "content" section of a message should be replaced with the user's message to the AI.
             With streaming enabled, responses will arrive as chunks. Each chunk begins with "data: " followed

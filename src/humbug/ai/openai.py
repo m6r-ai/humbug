@@ -10,6 +10,7 @@ from typing import AsyncGenerator, List, Optional
 import aiohttp
 
 from humbug.ai.base import AIBackend, AIResponse, AIUsage
+from humbug.ai.conversation_settings import ConversationSettings
 
 
 class RateLimiter:
@@ -85,24 +86,40 @@ class OpenAIBackend(AIBackend):
 
     def __init__(self, api_key: str):
         """Initialize the OpenAI backend."""
+        super().__init__()
         self.api_key = api_key
         self.api_url = "https://api.openai.com/v1/chat/completions"
-        self.model = "gpt-4o-mini"
-        self.temperature = 0.7
+        self.conversation_settings: Dict[str, ConversationSettings] = {}
+        self.default_settings = ConversationSettings()
         self.max_retries = 3
         self.base_delay = 2
         self.rate_limiter = RateLimiter()
         self.logger = logging.getLogger("OpenAIBackend")
 
-    async def stream_message(self, message: str, conversation_history: List[str]) -> AsyncGenerator[AIResponse, None]:
+    def update_conversation_settings(self, conversation_id: str, settings: ConversationSettings):
+        """Update settings for a specific conversation."""
+        self.conversation_settings[conversation_id] = settings
+
+    def get_conversation_settings(self, conversation_id: str) -> ConversationSettings:
+        """Get settings for a specific conversation."""
+        return self.conversation_settings.get(conversation_id, self.default_settings)
+
+    async def stream_message(
+        self,
+        message: str,
+        conversation_history: List[str],
+        conversation_id: str = None
+    ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""
+        settings = self.get_conversation_settings(conversation_id) if conversation_id else self.default_settings
+
         messages = [{"role": "user", "content": msg} for msg in conversation_history]
         messages.append({"role": "user", "content": message})
 
         data = {
-            "model": self.model,
+            "model": settings.model,
             "messages": messages,
-            "temperature": self.temperature,
+            "temperature": settings.temperature,
             "stream": True,
             "stream_options": {"include_usage": True}
         }

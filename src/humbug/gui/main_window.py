@@ -7,7 +7,7 @@ from typing import Dict, List
 import uuid
 
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QApplication, QMenuBar
+    QMainWindow, QDialog, QWidget, QVBoxLayout, QApplication, QMenuBar
 )
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import (
@@ -17,6 +17,7 @@ from PySide6.QtGui import (
 from humbug.conversation import Message, MessageSource, Usage
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.about_dialog import AboutDialog
+from humbug.gui.settings_dialog import SettingsDialog
 from humbug.utils import sanitize_input
 
 
@@ -82,6 +83,10 @@ class MainWindow(QMainWindow):
         self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
         self.paste_action.triggered.connect(lambda: self.current_chat_view.input.paste())
 
+        self.settings_action = QAction("Conversation Settings", self)
+        self.settings_action.setShortcut(QKeySequence("Ctrl+,"))
+        self.settings_action.triggered.connect(self._show_settings_dialog)
+
     def _handle_cut(self):
         """Handle cut action based on focus."""
         chat_view = self.current_chat_view
@@ -128,6 +133,8 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self.cut_action)
         edit_menu.addAction(self.copy_action)
         edit_menu.addAction(self.paste_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(self.settings_action)
 
     def _show_about_dialog(self):
         """Show the About dialog."""
@@ -165,6 +172,7 @@ class MainWindow(QMainWindow):
         )
         self.paste_action.setEnabled(input_focused)
         self.close_conv_action.setEnabled(True)
+        self.settings_action.setEnabled(chat_view is not None)
 
     def setup_ui(self):
         """Set up the user interface."""
@@ -289,6 +297,24 @@ class MainWindow(QMainWindow):
 
         task.add_done_callback(task_done_callback)
 
+    def _show_settings_dialog(self):
+        """Show the conversation settings dialog."""
+        chat_view = self.current_chat_view
+        if not chat_view:
+            return
+
+        dialog = SettingsDialog(self)
+        dialog.set_settings(chat_view.get_settings())
+
+        if dialog.exec() == QDialog.Accepted:
+            new_settings = dialog.get_settings()
+            chat_view.update_settings(new_settings)
+            # Update AI backend settings for this conversation
+            self.ai_backend.update_conversation_settings(
+                chat_view.conversation_id,
+                new_settings
+            )
+
     async def process_ai_response(self, message: str, conversation_id: str):
         """Process AI response with streaming."""
         chat_view = self.chat_views.get(conversation_id)
@@ -302,7 +328,9 @@ class MainWindow(QMainWindow):
             first_response = True
 
             async for response in self.ai_backend.stream_message(
-                message, chat_view.conversation.get_messages_for_context()
+                message,
+                chat_view.conversation.get_messages_for_context(),
+                conversation_id
             ):
                 if response.error:
                     self.logger.debug(f"Received error response: {response.error}")
