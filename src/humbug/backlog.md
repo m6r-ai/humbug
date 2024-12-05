@@ -146,6 +146,6 @@ Support M6R backend server-based services that can perform custom or optimized o
 
 All user and AI message folding to make it easier to scroll the history.
 
-## Menus
+## Look at estimating token usage for cancelled responses
 
-Look at where drop down menus need to be added.
+If the user cancels a response, try to estimate how many tokens were sent in each direction.
