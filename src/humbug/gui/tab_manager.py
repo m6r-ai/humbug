@@ -4,10 +4,9 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QTabWidget, QWidget, QLabel, QPushButton, QHBoxLayout,
-    QTabBar, QStyle, QStyleOption
+    QTabBar, QSizePolicy
 )
-from PySide6.QtCore import Signal, Qt, QSize, QEvent
-from PySide6.QtGui import QPainter, QColor
+from PySide6.QtCore import Signal, QSize
 
 from humbug.gui.chat_view import ChatView
 
@@ -25,53 +24,126 @@ class TabLabel(QWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
+        self.label_text = text
 
-        # Create layout
+        # Set size policy to ensure proper expansion
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+
+        # Create layout with proper spacing
         layout = QHBoxLayout()
-        layout.setSpacing(4)  # Space between label and button
-        layout.setContentsMargins(8, 4, 4, 4)  # Left, top, right, bottom margins
+        layout.setSpacing(6)  # Increased spacing between items
+        layout.setContentsMargins(8, 4, 8, 4)  # Added right margin
 
-        # Add label
+        # Add label with size policy
         self.label = QLabel(text)
         self.label.setStyleSheet("color: white;")
+        self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        self.label.setMinimumWidth(50)  # Ensure minimum space for text
         layout.addWidget(self.label)
 
+        # Add stretching space to push close button right
+        layout.addStretch(1)
+
         # Add close button
-        self.close_button = QPushButton()
-        self.close_button.setFixedSize(10, 10)
+        self.close_button = QPushButton(parent=self)
+        self.close_button.setFixedSize(16, 16)  # Slightly larger for better visibility
         self.close_button.clicked.connect(self.close_clicked)
+        self.close_button.setText("×")  # Use proper multiplication symbol
         self.close_button.setStyleSheet("""
             QPushButton {
+                color: white;
                 border: 1px solid transparent;
                 border-radius: 2px;
-                background: transparent;
+                background: #404040;
+                margin: 0px;
+                padding: 0px;
             }
             QPushButton:hover {
                 border: 1px solid #ff4444;
                 background: #ff4444;
             }
         """)
+        # Set size policy for close button
+        self.close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         layout.addWidget(self.close_button)
 
         self.setLayout(layout)
 
-    def showCloseButton(self, show: bool):
-        """Update close button border based on tab state.
+        # Track states
+        self.is_current = False
+        self.is_hovered = False
 
-        Args:
-            show: Whether to show the white border around the close button
-        """
-        self.close_button.setStyleSheet("""
+        # Enable mouse tracking
+        self.setMouseTracking(True)
+
+    def sizeHint(self) -> QSize:
+        """Provide size hint for the tab."""
+        width = (
+            self.label.sizeHint().width() +  # Label width
+            self.close_button.sizeHint().width() +  # Button width
+            20 +  # Layout spacing and margins
+            16   # Extra padding
+        )
+        height = max(
+            self.label.sizeHint().height(),
+            self.close_button.sizeHint().height()
+        ) + 8  # Vertical padding
+        return QSize(width, height)
+
+    def minimumSizeHint(self) -> QSize:
+        """Provide minimum size hint for the tab."""
+        return QSize(
+            self.label.minimumWidth() + self.close_button.width() + 24,
+            max(self.label.minimumHeight(), self.close_button.height()) + 8
+        )
+
+    def enterEvent(self, event):
+        """Handle mouse entering the tab label."""
+        super().enterEvent(event)
+        self.is_hovered = True
+        self._update_close_button()
+
+    def leaveEvent(self, event):
+        """Handle mouse leaving the tab label."""
+        super().leaveEvent(event)
+        self.is_hovered = False
+        self._update_close_button()
+
+    def _update_close_button(self):
+        """Update close button visibility and style based on current state."""
+        visible = self.is_current or self.is_hovered
+
+        # Try both show/hide and setVisible
+        if visible:
+            self.close_button.show()
+        else:
+            self.close_button.hide()
+
+        self.close_button.setVisible(visible)
+
+        # Force immediate update
+        self.close_button.update()
+
+        style = """
             QPushButton {
+                color: white;
                 border: 1px solid %s;
                 border-radius: 2px;
-                background: transparent;
+                background: #404040;
+                margin: 0px;
+                padding: 0px;
             }
             QPushButton:hover {
                 border: 1px solid #ff4444;
                 background: #ff4444;
             }
-        """ % ("white" if show else "transparent"))
+        """ % ("white" if self.is_current else "transparent")
+        self.close_button.setStyleSheet(style)
+
+    def set_current(self, is_current: bool):
+        """Update the current state of the tab."""
+        self.is_current = is_current
+        self._update_close_button()
 
     def setText(self, text: str):
         """Update the tab text.
@@ -79,6 +151,8 @@ class TabLabel(QWidget):
         Args:
             text: The new text to display
         """
+        old_text = self.label_text
+        self.label_text = text
         self.label.setText(text)
 
 
@@ -146,9 +220,9 @@ class TabManager(QTabWidget):
         self.setTabText(index, "")  # Clear default text
         self.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
 
-        # Show close button for initial tab if it's the only one
-        if self.count() == 1:
-            tab_label.showCloseButton(True)
+        # Set initial state for new tab
+        if self.count() == 1:  # If this is the first tab
+            tab_label.set_current(True)
 
         self.setCurrentWidget(chat_view)
         return chat_view
@@ -171,16 +245,6 @@ class TabManager(QTabWidget):
             The current ChatView instance or None if no tabs exist
         """
         return self.currentWidget()
-
-    def _handle_tab_close(self, index: int):
-        """Handle tab close button clicks.
-
-        Args:
-            index: Index of the tab being closed
-        """
-        widget = self.widget(index)
-        if isinstance(widget, ChatView):
-            self._handle_conversation_close(widget.conversation_id)
 
     def _handle_conversation_close(self, conversation_id: str):
         """Handle conversation closure.
@@ -205,39 +269,11 @@ class TabManager(QTabWidget):
         Args:
             index: Index of the newly selected tab
         """
-        # Hide close button border on all tabs
-        for label in self._tab_labels.values():
-            label.showCloseButton(False)
-
-        # Show close button border on current tab
-        if index >= 0:
-            current_widget = self.widget(index)
-            for conv_id, widget in self._conversations.items():
-                if widget == current_widget:
-                    self._tab_labels[conv_id].showCloseButton(True)
-                    break
-
-    def enterEvent(self, event):
-        """Handle mouse entering the tab widget."""
-        super().enterEvent(event)
-        # Ensure current tab shows close button
-        current = self.currentWidget()
-        if current:
-            for conv_id, widget in self._conversations.items():
-                if widget == current:
-                    self._tab_labels[conv_id].showCloseButton(True)
-                    break
-
-    def leaveEvent(self, event):
-        """Handle mouse leaving the tab widget."""
-        super().leaveEvent(event)
-        # Only keep close button visible on current tab
-        current = self.currentWidget()
-        for conv_id, widget in self._conversations.items():
-            if widget == current:
-                self._tab_labels[conv_id].showCloseButton(True)
-            else:
-                self._tab_labels[conv_id].showCloseButton(False)
+        # Update current states for all tabs
+        for conv_id, label in self._tab_labels.items():
+            widget = self._conversations[conv_id]
+            is_current = (widget == self.widget(index))
+            label.set_current(is_current)
 
     def tabInserted(self, index: int):
         """Handle tab insertion.
@@ -246,7 +282,7 @@ class TabManager(QTabWidget):
             index: Index where the tab was inserted
         """
         super().tabInserted(index)
-        self._update_tab_close_buttons()
+        self._update_all_tab_states()
 
     def tabRemoved(self, index: int):
         """Handle tab removal.
@@ -255,10 +291,11 @@ class TabManager(QTabWidget):
             index: Index where the tab was removed
         """
         super().tabRemoved(index)
-        self._update_tab_close_buttons()
+        self._update_all_tab_states()
 
-    def _update_tab_close_buttons(self):
-        """Update close button visibility based on current state."""
+    def _update_all_tab_states(self):
+        """Update states for all tab labels."""
         current = self.currentWidget()
-        for conv_id, widget in self._conversations.items():
-            self._tab_labels[conv_id].showCloseButton(widget == current)
+        for conv_id, label in self._tab_labels.items():
+            widget = self._conversations[conv_id]
+            label.set_current(widget == current)
