@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QTabBar, QSizePolicy
 )
 from PySide6.QtCore import Signal, QSize
+from PySide6.QtGui import QIcon, QPixmap
 
 from humbug.gui.chat_view import ChatView
 
@@ -26,6 +27,11 @@ class TabLabel(QWidget):
         super().__init__(parent)
         self.label_text = text
 
+        # Create SVG close icon
+        self.close_icon_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+            <path fill="currentColor" d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+        </svg>"""
+
         # Set size policy to ensure proper expansion
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
 
@@ -44,11 +50,27 @@ class TabLabel(QWidget):
         # Add stretching space to push close button right
         layout.addStretch(1)
 
-        # Add close button
+        # Create close button with icon
         self.close_button = QPushButton(parent=self)
-        self.close_button.setFixedSize(16, 16)  # Slightly larger for better visibility
+        self.close_button.setFixedSize(16, 16)
         self.close_button.clicked.connect(self.close_clicked)
-        self.close_button.setText("×")  # Use proper multiplication symbol
+
+        # Create and set the icon
+        icon = QIcon()
+        for mode, color in [("Normal", "#ffffff"), ("Selected", "#ffffff"), ("Active", "#ffffff")]:
+            # Replace currentColor with specific color
+            colored_svg = self.close_icon_svg.replace('currentColor', color)
+            # Convert SVG string to bytes
+            svg_bytes = colored_svg.encode('utf-8')
+            # Create pixmap from SVG bytes
+            pixmap = QPixmap()
+            pixmap.loadFromData(svg_bytes)
+            # Add to icon with specific mode
+            icon.addPixmap(pixmap, getattr(QIcon, mode))
+
+        self.close_button.setIcon(icon)
+        self.close_button.setIconSize(QSize(10, 10))  # Slightly smaller than button for padding
+
         self.close_button.setStyleSheet("""
             QPushButton {
                 color: white;
@@ -56,12 +78,13 @@ class TabLabel(QWidget):
                 border-radius: 2px;
                 background: #404040;
                 margin: 0px;
-                padding: 0px;
+                padding: 3px;
             }
             QPushButton:hover {
                 background: #ff4444;
             }
         """)
+
         # Set size policy for close button
         self.close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         layout.addWidget(self.close_button)
