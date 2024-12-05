@@ -384,7 +384,7 @@ class MainWindow(QMainWindow):
             self.logger.debug(f"AI response cancelled for conv {conversation_id}")
             if chat_view:
                 chat_view.finish_ai_response()
-            raise
+            return
 
         except Exception as e:
             self.logger.exception(
