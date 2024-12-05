@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
-from PySide6.QtCore import QEvent, QSize, QTimer, Signal
+from PySide6.QtCore import QSize, QTimer, Signal
 from PySide6.QtGui import QResizeEvent
 
 from humbug.ai.conversation_settings import ConversationSettings
@@ -159,30 +159,6 @@ class ChatView(QFrame):
                 border: none;
             }
         """)
-
-    def eventFilter(self, obj: QWidget, event: QEvent) -> bool:
-        """Handle focus changes for proper background colors."""
-        if event.type() == QEvent.FocusIn:
-            if isinstance(obj, (HistoryView, InputEdit)):
-                obj.setStyleSheet("""
-                    QTextEdit {
-                        background-color: #404040;
-                        color: white;
-                        selection-background-color: #606060;
-                        border: none;
-                    }
-                """)
-        elif event.type() == QEvent.FocusOut:
-            if isinstance(obj, (HistoryView, InputEdit)):
-                obj.setStyleSheet("""
-                    QTextEdit {
-                        background-color: black;
-                        color: white;
-                        selection-background-color: #404040;
-                        border: none;
-                    }
-                """)
-        return super().eventFilter(obj, event)
 
     def is_scrolled_to_bottom(self, old_maximum) -> bool:
         """Check if scroll area is at the bottom."""

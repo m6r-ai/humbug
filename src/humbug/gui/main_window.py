@@ -9,15 +9,14 @@ import uuid
 from PySide6.QtWidgets import (
     QMainWindow, QDialog, QWidget, QVBoxLayout, QApplication, QMenuBar
 )
-from PySide6.QtCore import QEvent, Qt
-from PySide6.QtGui import (
-    QKeyEvent, QAction, QKeySequence
-)
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
 from humbug.conversation import Message, MessageSource, Usage
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.settings_dialog import SettingsDialog
+from humbug.gui.event_bus import EventBus
 from humbug.utils import sanitize_input
 
 
@@ -40,6 +39,9 @@ class MainWindow(QMainWindow):
         self._create_menus()
         # Then set up the rest of the UI
         self.setup_ui()
+
+        # Connect to the global event bus
+        EventBus.instance().menuNeedsUpdate.connect(self._on_update_menu)
 
     def _create_actions(self):
         """Create all menu actions."""
@@ -141,8 +143,10 @@ class MainWindow(QMainWindow):
         dialog = AboutDialog(self)
         dialog.exec()
 
-    def _update_menu_states(self):
+    @Slot()
+    def _on_update_menu(self):
         """Update enabled/disabled state of menu items."""
+        print("update menu states")
         chat_view = self.current_chat_view
         if not chat_view:
             # Disable all editing actions if no chat view is available
@@ -153,6 +157,7 @@ class MainWindow(QMainWindow):
             self.copy_action.setEnabled(False)
             self.paste_action.setEnabled(False)
             self.close_conv_action.setEnabled(False)
+            self.settings_action.setEnabled(False)
             return
 
         has_input_selection = chat_view.input.textCursor().hasSelection()
@@ -172,7 +177,7 @@ class MainWindow(QMainWindow):
         )
         self.paste_action.setEnabled(input_focused)
         self.close_conv_action.setEnabled(True)
-        self.settings_action.setEnabled(chat_view is not None)
+        self.settings_action.setEnabled(True)
 
     def setup_ui(self):
         """Set up the user interface."""
@@ -234,12 +239,6 @@ class MainWindow(QMainWindow):
         chat_view = self.current_chat_view
         if chat_view:
             self.tab_manager._handle_conversation_close(chat_view.conversation_id)
-
-    def eventFilter(self, obj, event):
-        """Handle focus events for menu state updates."""
-        if event.type() in (QEvent.FocusIn, QEvent.FocusOut):
-            self._update_menu_states()
-        return super().eventFilter(obj, event)
 
     @property
     def current_chat_view(self):

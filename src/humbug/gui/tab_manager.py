@@ -10,6 +10,7 @@ from PySide6.QtCore import Signal, QSize
 from PySide6.QtGui import QIcon, QPixmap
 
 from humbug.gui.chat_view import ChatView
+from humbug.gui.event_bus import EventBus
 
 
 class TabLabel(QWidget):
@@ -214,7 +215,7 @@ class TabManager(QTabWidget):
         """)
 
         # Connect tab change signals
-        self.currentChanged.connect(self._handle_tab_changed)
+        self.currentChanged.connect(self._on_tab_changed)
         self.tabBar().setDrawBase(False)  # Remove line under tabs
 
     def create_conversation(self, conversation_id: str, title: str) -> 'ChatView':
@@ -283,7 +284,7 @@ class TabManager(QTabWidget):
             self.conversation_closed.emit(conversation_id)
             chat_view.deleteLater()
 
-    def _handle_tab_changed(self, index: int):
+    def _on_tab_changed(self, index: int):
         """Handle tab selection changes.
 
         Args:
@@ -294,6 +295,9 @@ class TabManager(QTabWidget):
             widget = self._conversations[conv_id]
             is_current = (widget == self.widget(index))
             label.set_current(is_current)
+
+        # Tell our top-level window to update menus as a result of this change
+        EventBus.instance().menuNeedsUpdate.emit()
 
     def tabInserted(self, index: int):
         """Handle tab insertion.
