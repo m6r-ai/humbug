@@ -10,6 +10,14 @@ import sys
 from typing import List, Dict, Optional
 
 
+class FloatOneDecimalEncoder(json.JSONEncoder):
+    """JSON encoder that formats floats to one decimal place."""
+    def default(self, obj):
+        if isinstance(obj, float):
+            return round(obj, 1)
+        return super().default(obj)
+
+
 class TranscriptWriter:
     """Handles writing conversation transcripts to files with rotation."""
 
@@ -46,7 +54,7 @@ class TranscriptWriter:
     def _write_json_sync(self, data: Dict):
         """Synchronous JSON write for initialization only."""
         with open(self.filename, 'w') as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, cls=FloatOneDecimalEncoder)
         self.file_size = os.path.getsize(self.filename)
 
     async def _write_json(self, data: Dict):
@@ -88,7 +96,7 @@ class TranscriptWriter:
     def _write_json_sync_atomic(self, filename: str, data: Dict):
         """Atomic write operation for JSON data."""
         with open(filename, 'w') as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, cls=FloatOneDecimalEncoder)
 
     async def _read_json(self, filename: str) -> Dict:
         """Read JSON data asynchronously."""
