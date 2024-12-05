@@ -325,7 +325,6 @@ class MainWindow(QMainWindow):
         try:
             self.logger.debug(f"\n=== Starting new AI response for conv {conversation_id} ===")
             current_response = ""
-            first_response = True
 
             stream = self.ai_backend.stream_message(
                 message,
@@ -333,71 +332,57 @@ class MainWindow(QMainWindow):
                 conversation_id
             )
 
-            try:
-                async for response in stream:
-                    try:
-                        if response.error:
-                            self.logger.debug(f"Received error response: {response.error}")
-                            error_msg = f"Error: {response.error['message']}"
-                            chat_view.add_message(error_msg, "error")
+            async for response in stream:
+                try:
+                    if response.error:
+                        self.logger.debug(f"Received error response: {response.error}")
+                        error_msg = f"Error: {response.error['message']}"
+                        chat_view.add_message(error_msg, "error")
 
-                            error_message = Message.create(
-                                conversation_id,
-                                MessageSource.SYSTEM,
-                                error_msg,
-                                error=response.error
-                            )
-                            chat_view.conversation.add_message(error_message)
-                            await self.transcript_writer.write([error_message.to_transcript_dict()])
+                        error_message = Message.create(
+                            conversation_id,
+                            MessageSource.SYSTEM,
+                            error_msg,
+                            error=response.error
+                        )
+                        chat_view.conversation.add_message(error_message)
+                        await self.transcript_writer.write([error_message.to_transcript_dict()])
 
-                            if response.error['code'] not in ['network_error', 'timeout']:
-                                return
-                            continue
+                        if response.error['code'] not in ['network_error', 'timeout']:
+                            return
+                        continue
 
-                        # Update response
-                        current_response = response.content
+                    # Update response
+                    current_response = response.content
 
-                        # For first chunk, add new message with prefix
-                        if first_response:
-                            chat_view.add_message(f"AI: {current_response}", "ai")
-                            first_response = False
-                        else:
-                            chat_view.add_message(f"AI: {current_response}", "ai")
+                    # Start or update message
+                    chat_view.add_message(f"AI: {current_response}", "ai")
 
-                        # Update token counts and handle completion
-                        if response.usage:
-                            usage = Usage(
-                                prompt_tokens=response.usage.prompt_tokens,
-                                completion_tokens=response.usage.completion_tokens,
-                                total_tokens=response.usage.total_tokens
-                            )
-                            ai_message = Message.create(
-                                conversation_id,
-                                MessageSource.AI,
-                                current_response,
-                                usage=usage
-                            )
-                            chat_view.conversation.add_message(ai_message)
-                            chat_view.update_status(
-                                chat_view.conversation.total_input_tokens,
-                                chat_view.conversation.total_output_tokens
-                            )
-                            # Write final response to transcript
-                            await self.transcript_writer.write([ai_message.to_transcript_dict()])
-                            # Mark AI response as complete
-                            chat_view.finish_ai_response()
+                    # Handle completion when we get usage info
+                    if response.usage:
+                        usage = Usage(
+                            prompt_tokens=response.usage.prompt_tokens,
+                            completion_tokens=response.usage.completion_tokens,
+                            total_tokens=response.usage.total_tokens
+                        )
+                        ai_message = Message.create(
+                            conversation_id,
+                            MessageSource.AI,
+                            current_response,
+                            usage=usage
+                        )
+                        chat_view.conversation.add_message(ai_message)
+                        chat_view.update_status(
+                            chat_view.conversation.total_input_tokens,
+                            chat_view.conversation.total_output_tokens
+                        )
+                        # Write final response to transcript
+                        await self.transcript_writer.write([ai_message.to_transcript_dict()])
+                        # Mark AI response as complete
+                        chat_view.finish_ai_response()
 
-                    except StopAsyncIteration:
-                        self.logger.debug("StopAsyncIteration caught in inner loop")
-                        if chat_view:
-                            chat_view.finish_ai_response()
-                        return
-
-            except StopAsyncIteration:
-                self.logger.debug("StopAsyncIteration caught in outer loop")
-                if chat_view:
-                    chat_view.finish_ai_response()
-                return
+                except StopAsyncIteration:
+                    break
 
         except (asyncio.CancelledError, GeneratorExit):
             self.logger.debug(f"AI response cancelled for conv {conversation_id}")
