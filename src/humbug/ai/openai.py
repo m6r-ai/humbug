@@ -52,7 +52,7 @@ class OpenAIStreamResponse:
     def update_from_chunk(self, chunk: dict) -> None:
         """Update from a response chunk and return new content if any."""
         if "error" in chunk:
-            self.logger.debug(f"Got error message: {chunk["error"]}")
+            self.logger.debug("Got error message: %s", chunk["error"])
             self.error = {
                 "code": "stream_error",
                 "message": chunk["error"].get("message", "Unknown error"),
@@ -125,7 +125,7 @@ class OpenAIBackend(AIBackend):
             "stream_options": {"include_usage": True}
         }
 
-        self.logger.debug(f"stream message {data}")
+        self.logger.debug("stream message %s", data)
 
         try:
             for attempt in range(self.max_retries):
@@ -200,11 +200,11 @@ class OpenAIBackend(AIBackend):
                                         return
 
                                     except json.JSONDecodeError as e:
-                                        self.logger.exception(f"JSON exception: {e}")
+                                        self.logger.exception("JSON exception: %s", e)
                                         continue
 
                                     except Exception as e:
-                                        self.logger.exception(f"unexpected exception: {e}")
+                                        self.logger.exception("unexpected exception: %s", e)
                                         break
 
                                 # Successfully processed response, exit retry loop
