@@ -322,6 +322,7 @@ class MainWindow(QMainWindow):
             self.logger.error(f"No chat view found for conversation {conversation_id}")
             return
 
+        ai_message = None  # Track the AI message for completion status
         try:
             self.logger.debug(f"\n=== Starting new AI response for conv {conversation_id} ===")
             current_response = ""
@@ -348,6 +349,10 @@ class MainWindow(QMainWindow):
                         chat_view.conversation.add_message(error_message)
                         await self.transcript_writer.write([error_message.to_transcript_dict()])
 
+                        if ai_message:
+                            ai_message.completed = False
+                            await self.transcript_writer.write([ai_message.to_transcript_dict()])
+
                         if response.error['code'] not in ['network_error', 'timeout']:
                             return
                         continue
@@ -358,23 +363,29 @@ class MainWindow(QMainWindow):
                     # Start or update message
                     chat_view.add_message(f"AI: {current_response}", "ai")
 
-                    # Handle completion when we get usage info
-                    if response.usage:
+                    # Create or update AI message on each chunk
+                    if not ai_message:
                         settings = chat_view.get_settings()
-                        usage = Usage(
-                            prompt_tokens=response.usage.prompt_tokens,
-                            completion_tokens=response.usage.completion_tokens,
-                            total_tokens=response.usage.total_tokens
-                        )
                         ai_message = Message.create(
                             conversation_id,
                             MessageSource.AI,
                             current_response,
-                            usage=usage,
                             model=settings.model,
-                            temperature=settings.temperature
+                            temperature=settings.temperature,
+                            completed=False  # Start as incomplete
                         )
                         chat_view.conversation.add_message(ai_message)
+                    else:
+                        ai_message.content = current_response
+
+                    # Handle completion when we get usage info
+                    if response.usage:
+                        ai_message.usage = Usage(
+                            prompt_tokens=response.usage.prompt_tokens,
+                            completion_tokens=response.usage.completion_tokens,
+                            total_tokens=response.usage.total_tokens
+                        )
+                        ai_message.completed = True  # Mark as complete only when we get usage
                         chat_view.update_status(
                             chat_view.conversation.total_input_tokens,
                             chat_view.conversation.total_output_tokens
@@ -391,6 +402,21 @@ class MainWindow(QMainWindow):
             self.logger.debug(f"AI response cancelled for conv {conversation_id}")
             if chat_view:
                 chat_view.finish_ai_response()
+                # Ensure we have an AI message for the cancelled response
+                if not ai_message:
+                    settings = chat_view.get_settings()
+                    ai_message = Message.create(
+                        conversation_id,
+                        MessageSource.AI,
+                        current_response,
+                        model=settings.model,
+                        temperature=settings.temperature,
+                        completed=False
+                    )
+                    chat_view.conversation.add_message(ai_message)
+                else:
+                    ai_message.completed = False
+                await self.transcript_writer.write([ai_message.to_transcript_dict()])
             return
 
         except Exception as e:
@@ -409,6 +435,9 @@ class MainWindow(QMainWindow):
                     }
                 )
                 chat_view.conversation.add_message(error_message)
+                if ai_message:
+                    ai_message.completed = False
+                    await self.transcript_writer.write([ai_message.to_transcript_dict()])
                 await self.transcript_writer.write([error_message.to_transcript_dict()])
 
         finally:

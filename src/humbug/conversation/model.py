@@ -42,11 +42,13 @@ class Message:
     error: Optional[Dict] = None
     model: Optional[str] = None
     temperature: Optional[float] = None
+    completed: bool = True
 
     @classmethod
     def create(cls, conversation_id: str, source: MessageSource, content: str,
                usage: Optional[Usage] = None, error: Optional[Dict] = None,
-               model: Optional[str] = None, temperature: Optional[float] = None) -> 'Message':
+               model: Optional[str] = None, temperature: Optional[float] = None,
+               completed: bool = True) -> 'Message':
         """Create a new message with generated ID and current timestamp."""
         return cls(
             id=str(uuid.uuid4()),
@@ -57,7 +59,8 @@ class Message:
             usage=usage,
             error=error,
             model=model,
-            temperature=temperature
+            temperature=temperature,
+            completed=completed
         )
 
     def to_transcript_dict(self) -> Dict:
@@ -67,7 +70,8 @@ class Message:
             "timestamp": self.timestamp.isoformat(),
             "type": self._get_transcript_type(),
             "content": self.content,
-            "conversation_id": self.conversation_id
+            "conversation_id": self.conversation_id,
+            "completed": self.completed
         }
 
         if self.usage:
@@ -112,8 +116,28 @@ class ConversationHistory:
 
     def get_messages_for_context(self) -> List[str]:
         """Get messages formatted for AI context."""
-        return [msg.content for msg in self.messages 
-                if msg.source in (MessageSource.USER, MessageSource.AI)]
+        result = []
+        i = 0
+        while i < len(self.messages):
+            if self.messages[i].source == MessageSource.USER:
+                # Found a user message, look for corresponding AI response
+                user_msg = self.messages[i]
+                ai_msg = None
+                if i + 1 < len(self.messages) and self.messages[i + 1].source == MessageSource.AI:
+                    ai_msg = self.messages[i + 1]
+
+                # Only include the exchange if:
+                # 1. It's a user message without an AI response yet (current exchange)
+                # 2. Or it's a completed exchange without errors
+                if (ai_msg is None) or (ai_msg.completed and not ai_msg.error):
+                    result.append(user_msg.content)
+                    if ai_msg:
+                        result.append(ai_msg.content)
+                        i += 1  # Skip the AI message since we've handled it
+
+            i += 1  # Move to next message
+
+        return result
 
     def get_messages_for_transcript(self) -> List[Dict]:
         """Get messages formatted for transcript writing."""

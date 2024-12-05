@@ -35,6 +35,8 @@ Remove old log files at the start of each new run.
 
 Put transcript files in a directory.
 
+Each message needs to identify the conversation to which it belongs!
+
 ## Page up/down in input area
 
 These are currently going to the top and bottom of the input area rather than paging up/down correctly.
