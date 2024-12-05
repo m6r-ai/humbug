@@ -52,7 +52,7 @@ class TabLabel(QWidget):
 
         # Create close button with icon
         self.close_button = QPushButton(parent=self)
-        self.close_button.setFixedSize(16, 16)
+        self.close_button.setFixedSize(18, 18)
         self.close_button.clicked.connect(self.close_clicked)
 
         # Create and set the icon
@@ -69,7 +69,7 @@ class TabLabel(QWidget):
             icon.addPixmap(pixmap, getattr(QIcon, mode))
 
         self.close_button.setIcon(icon)
-        self.close_button.setIconSize(QSize(10, 10))  # Slightly smaller than button for padding
+        self.close_button.setIconSize(QSize(18, 18))
 
         self.close_button.setStyleSheet("""
             QPushButton {
@@ -78,7 +78,7 @@ class TabLabel(QWidget):
                 border-radius: 2px;
                 background: #404040;
                 margin: 0px;
-                padding: 3px;
+                padding: 0px;
             }
             QPushButton:hover {
                 background: #ff4444;
@@ -172,7 +172,6 @@ class TabLabel(QWidget):
         Args:
             text: The new text to display
         """
-        old_text = self.label_text
         self.label_text = text
         self.label.setText(text)
 
