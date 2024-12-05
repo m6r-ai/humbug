@@ -4,13 +4,16 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QDoubleSpinBox, QWidget
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, Signal
 
 from humbug.ai.conversation_settings import ConversationSettings
 
 
 class SettingsDialog(QDialog):
     """Dialog for editing conversation settings."""
+
+    # Add a signal for settings changes
+    settings_changed = Signal(ConversationSettings)
 
     def __init__(self, parent=None, available_models=None):
         """Initialize the settings dialog.
@@ -70,9 +73,13 @@ class SettingsDialog(QDialog):
         self.apply_button = QPushButton("Apply")
 
         # Connect signals
-        self.ok_button.clicked.connect(self.accept)
+        self.ok_button.clicked.connect(self._handle_ok)
         self.cancel_button.clicked.connect(self.reject)
-        self.apply_button.clicked.connect(self.apply_settings)
+        self.apply_button.clicked.connect(self._handle_apply)
+
+        # Connect value change signals
+        self.model_combo.currentTextChanged.connect(self._handle_value_change)
+        self.temp_spin.valueChanged.connect(self._handle_value_change)
 
         # Add buttons to layout
         button_layout.addStretch()
@@ -135,6 +142,10 @@ class SettingsDialog(QDialog):
             QPushButton:pressed {
                 background-color: #3d3d3d;
             }
+            QPushButton:disabled {
+                background-color: #2d2d2d;
+                color: #808080;
+            }
         """)
 
     def set_settings(self, settings: ConversationSettings):
@@ -161,16 +172,15 @@ class SettingsDialog(QDialog):
         # Disable Apply button initially
         self.apply_button.setEnabled(False)
 
-        # Connect value change signals after setting initial values
-        self.model_combo.currentTextChanged.connect(self._handle_value_change)
-        self.temp_spin.valueChanged.connect(self._handle_value_change)
-
     def _handle_value_change(self):
-        """Handle changes to settings values."""
-        # Enable Apply button if values differ from current settings
+        """Handle changes to any setting value."""
+        if not self.current_settings:
+            return
+
         current_model = self.model_combo.currentText()
         current_temp = self.temp_spin.value()
 
+        # Enable Apply button if values differ from current settings
         self.apply_button.setEnabled(
             current_model != self.current_settings.model or
             current_temp != self.current_settings.temperature
@@ -187,19 +197,21 @@ class SettingsDialog(QDialog):
             temperature=self.temp_spin.value()
         )
 
-    def apply_settings(self):
-        """Apply the current settings."""
-        self.current_settings = self.get_settings()
+    def _handle_apply(self):
+        """Handle Apply button click."""
+        settings = self.get_settings()
+        self.current_settings = settings
+        self.settings_changed.emit(settings)
         self.apply_button.setEnabled(False)
 
-    def accept(self):
+    def _handle_ok(self):
         """Handle OK button click."""
-        self.apply_settings()
-        super().accept()
+        self._handle_apply()
+        self.accept()
 
     def reject(self):
         """Handle Cancel button click."""
-        # Restore initial settings
+        # Restore initial settings if they exist
         if self.initial_settings:
-            self.set_settings(self.initial_settings)
+            self.settings_changed.emit(self.initial_settings)
         super().reject()
