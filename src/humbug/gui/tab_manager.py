@@ -10,7 +10,6 @@ from PySide6.QtCore import Signal, QSize
 from PySide6.QtGui import QIcon, QPixmap
 
 from humbug.gui.chat_view import ChatView
-from humbug.gui.event_bus import EventBus
 
 
 class TabLabel(QWidget):
@@ -295,9 +294,6 @@ class TabManager(QTabWidget):
             widget = self._conversations[conv_id]
             is_current = (widget == self.widget(index))
             label.set_current(is_current)
-
-        # Tell our top-level window to update menus as a result of this change
-        EventBus.instance().menuNeedsUpdate.emit()
 
     def tabInserted(self, index: int):
         """Handle tab insertion.

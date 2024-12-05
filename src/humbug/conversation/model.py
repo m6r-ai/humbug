@@ -40,10 +40,13 @@ class Message:
     conversation_id: str
     usage: Optional[Usage] = None
     error: Optional[Dict] = None
+    model: Optional[str] = None
+    temperature: Optional[float] = None
 
     @classmethod
-    def create(cls, conversation_id: str, source: MessageSource, content: str, 
-               usage: Optional[Usage] = None, error: Optional[Dict] = None) -> 'Message':
+    def create(cls, conversation_id: str, source: MessageSource, content: str,
+               usage: Optional[Usage] = None, error: Optional[Dict] = None,
+               model: Optional[str] = None, temperature: Optional[float] = None) -> 'Message':
         """Create a new message with generated ID and current timestamp."""
         return cls(
             id=str(uuid.uuid4()),
@@ -52,7 +55,9 @@ class Message:
             timestamp=datetime.utcnow(),
             conversation_id=conversation_id,
             usage=usage,
-            error=error
+            error=error,
+            model=model,
+            temperature=temperature
         )
 
     def to_transcript_dict(self) -> Dict:
@@ -64,10 +69,19 @@ class Message:
             "content": self.content,
             "conversation_id": self.conversation_id
         }
+
         if self.usage:
             message["usage"] = self.usage.to_dict()
         if self.error:
             message["error"] = self.error
+
+        # Add AI-specific fields only for AI responses
+        if self.source == MessageSource.AI:
+            if self.model is not None:
+                message["model"] = self.model
+            if self.temperature is not None:
+                message["temperature"] = self.temperature
+
         return message
 
     def _get_transcript_type(self) -> str:

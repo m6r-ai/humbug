@@ -37,7 +37,6 @@ class TranscriptWriter:
             metadata = {
                 "metadata": {
                     "timestamp": datetime.utcnow().isoformat(),
-                    "model": "gpt-4o-mini",
                     "version": "0.1"
                 },
                 "conversation": []

@@ -206,51 +206,59 @@ Context: humbug application
 
             ```json
             {
-              "$schema": "http://json-schema.org/draft-07/schema#",
-              "type": "object",
-              "properties": {
-                "metadata": {
-                  "type": "object",
-                  "properties": {
-                    "timestamp": { "type": "string", "format": "date-time" },
-                    "model": { "type": "string" },
-                    "temperature": { "type": "number", "minimum": 0, "maximum": 1 },
-                    "version": { "type": "string" },
-                    "conversation_number": { "type": "integer" }
-                  },
-                  "required": ["timestamp", "model", "temperature", "version", "conversation_number"]
-                },
-                "conversation": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
-                      "timestamp": { "type": "string", "format": "date-time" },
-                      "type": { "enum": ["user_message", "ai_response", "command", "system_message"] },
-                      "content": { "type": "string" },
-                      "usage": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "properties": {
+                    "metadata": {
                         "type": "object",
                         "properties": {
-                          "prompt_tokens": { "type": "integer" },
-                          "completion_tokens": { "type": "integer" },
-                          "total_tokens": { "type": "integer" }
-                        }
-                      },
-                      "error": {
-                        "type": "object",
-                        "properties": {
-                          "code": { "type": "string" },
-                          "message": { "type": "string" },
-                          "details": { "type": "object" }
-                        }
-                      }
+                            "timestamp": { "type": "string", "format": "date-time" },
+                            "version": { "type": "string" },
+                            "conversation_number": { "type": "integer" }
+                        },
+                        "required": ["timestamp", "version", "conversation_number"]
                     },
-                    "required": ["id", "timestamp", "type", "content"]
-                  }
-                }
-              },
-              "required": ["metadata", "conversation"]
+                    "conversation": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+                                "timestamp": { "type": "string", "format": "date-time" },
+                                "type": { "enum": ["user_message", "ai_response", "command", "system_message"] },
+                                "content": { "type": "string" },
+                                "model": {
+                                    "type": "string",
+                                    "description": "AI model used (only present for ai_response type)"
+                                },
+                                "temperature": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1,
+                                    "description": "Temperature setting used (only present for ai_response type)"
+                                },
+                                "usage": {
+                                    "type": "object",
+                                    "properties": {
+                                        "prompt_tokens": { "type": "integer" },
+                                        "completion_tokens": { "type": "integer" },
+                                        "total_tokens": { "type": "integer" }
+                                    }
+                                },
+                                "error": {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": { "type": "string" },
+                                        "message": { "type": "string" },
+                                        "details": { "type": "object" }
+                                    }
+                                }
+                            },
+                            "required": ["id", "timestamp", "type", "content"]
+                        }
+                    }
+                },
+                "required": ["metadata", "conversation"]
             }
             ```
 
@@ -327,11 +335,11 @@ Context: humbug application
 
             ```json
             {
-            "model": "selected-model",
-            "messages": [{"role": "user", "content": "Say this is a test!"}],
-            "temperature": temp-setting,
-            "stream": true,
-            "stream_options": {"include_usage": true}
+                "model": "selected-model",
+                "messages": [{"role": "user", "content": "Say this is a test!"}],
+                "temperature": temp-setting,
+                "stream": true,
+                "stream_options": {"include_usage": true}
             }
             ```
 

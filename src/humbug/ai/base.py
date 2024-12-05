@@ -23,6 +23,8 @@ class AIResponse:
     content: str
     usage: Optional[AIUsage] = None
     error: Optional[Dict] = None
+    model: Optional[str] = None
+    temperature: Optional[float] = None
 
 
 class AIBackend(ABC):

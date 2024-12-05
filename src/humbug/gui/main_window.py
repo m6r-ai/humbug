@@ -9,14 +9,13 @@ import uuid
 from PySide6.QtWidgets import (
     QMainWindow, QDialog, QWidget, QVBoxLayout, QApplication, QMenuBar
 )
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
 from humbug.conversation import Message, MessageSource, Usage
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.settings_dialog import SettingsDialog
-from humbug.gui.event_bus import EventBus
 from humbug.utils import sanitize_input
 
 
@@ -40,8 +39,11 @@ class MainWindow(QMainWindow):
         # Then set up the rest of the UI
         self.setup_ui()
 
-        # Connect to the global event bus
-        EventBus.instance().menuNeedsUpdate.connect(self._on_update_menu)
+        # Create a timer that fires every 50ms to keep our menu states correct
+        self.menu_timer = QTimer()
+        self.menu_timer.setInterval(50)
+        self.menu_timer.timeout.connect(self._update_menu_state)
+        self.menu_timer.start()
 
     def _create_actions(self):
         """Create all menu actions."""
@@ -144,9 +146,8 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     @Slot()
-    def _on_update_menu(self):
+    def _update_menu_state(self):
         """Update enabled/disabled state of menu items."""
-        print("update menu states")
         chat_view = self.current_chat_view
         if not chat_view:
             # Disable all editing actions if no chat view is available
@@ -359,6 +360,7 @@ class MainWindow(QMainWindow):
 
                     # Handle completion when we get usage info
                     if response.usage:
+                        settings = chat_view.get_settings()
                         usage = Usage(
                             prompt_tokens=response.usage.prompt_tokens,
                             completion_tokens=response.usage.completion_tokens,
@@ -368,7 +370,9 @@ class MainWindow(QMainWindow):
                             conversation_id,
                             MessageSource.AI,
                             current_response,
-                            usage=usage
+                            usage=usage,
+                            model=settings.model,
+                            temperature=settings.temperature
                         )
                         chat_view.conversation.add_message(ai_message)
                         chat_view.update_status(
