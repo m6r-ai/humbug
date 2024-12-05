@@ -52,14 +52,13 @@ class TabLabel(QWidget):
         self.close_button.setStyleSheet("""
             QPushButton {
                 color: white;
-                border: 1px solid transparent;
+                border: none;
                 border-radius: 2px;
                 background: #404040;
                 margin: 0px;
                 padding: 0px;
             }
             QPushButton:hover {
-                border: 1px solid #ff4444;
                 background: #ff4444;
             }
         """)
@@ -127,17 +126,16 @@ class TabLabel(QWidget):
         style = """
             QPushButton {
                 color: white;
-                border: 1px solid %s;
+                border: none;
                 border-radius: 2px;
                 background: #404040;
                 margin: 0px;
                 padding: 0px;
             }
             QPushButton:hover {
-                border: 1px solid #ff4444;
                 background: #ff4444;
             }
-        """ % ("white" if self.is_current else "transparent")
+        """
         self.close_button.setStyleSheet(style)
 
     def set_current(self, is_current: bool):
