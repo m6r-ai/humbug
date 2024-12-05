@@ -1,16 +1,5 @@
 # Backlog
 
-## Resolve problem with histories
-
-The current histories rely on the "AI:" or "User:" prefix on the text displayed to be provide history back to the LLM.  This
-is completely broken!  We should have the concept of a history including metadata.  The metadata must be able to be displayed
-to the user on-demand.  Timestamp, model, temperature, etc.
-
-## Input buffer limitations
-
-The current input buffer only supports up to 10 lines of text.  It's supposed to handle arbitrary amounds of text and support
-scrolling if the display region is too small.
-
 ## Signal handlers
 
 Review the current signal handlers.  Almost certainly don't want them apart from SIGWINCH and SIGTERM?
@@ -22,6 +11,13 @@ Need to support interactions with Claude as well as ChatGPT.
 ## Add unit tests
 
 Add unit tests to improve maintainability.
+
+## Visuals on the conversation tabs
+
+We should not change the colour of the focused history area.  It should remain the same colour as its tab so this
+looks like a seamless window including the tab.
+
+The text is a little too close to the left and right edge of the conversation window.
 
 ## Eliminate use of blanket "Exception" handlers
 
@@ -38,6 +34,26 @@ Remove old log files at the start of each new run.
 ## Improve transcript file processing
 
 Put transcript files in a directory.
+
+## Page up/down in input area
+
+These are currently going to the top and bottom of the input area rather than paging up/down correctly.
+
+## Keyboard navigation in the history area
+
+We should be able to use cursor keys, page up and page down in the history area of a conversation.
+
+## Cost warnings
+
+We want to be able to estimate the cost of a chat and the cost of the next prompt!
+
+## Persist conversations
+
+Ideally we should be able to persist conversations from their transcripts.
+
+## Light mode
+
+Not everyone likes dark mode, so we should have a light mode too.
 
 ## Improve network message validation
 
