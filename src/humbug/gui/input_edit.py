@@ -1,7 +1,7 @@
 """Input edit widget."""
 
 from PySide6.QtWidgets import QFrame, QTextEdit, QSizePolicy
-from PySide6.QtCore import Qt, QSize, Signal
+from PySide6.QtCore import Qt, QSize, Signal, QMimeData
 from PySide6.QtGui import QKeyEvent
 
 
@@ -83,3 +83,10 @@ class InputEdit(QTextEdit):
                 return
 
         super().keyPressEvent(event)
+
+    def insertFromMimeData(self, source: QMimeData) -> None:
+        """Override default paste behavior to insert only plain text."""
+        if source.hasText():
+            # Insert only plain text, stripping any formatting
+            cursor = self.textCursor()
+            cursor.insertText(source.text())

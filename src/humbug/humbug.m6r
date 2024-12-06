@@ -102,6 +102,12 @@ Context: humbug application
 
                 This will be matched with a standard keyboard shortcut (e.g. "Ctrl+V" for Windows).
 
+            Context: Paste behavior
+                When text is pasted into the input area via any method (menu, keyboard shortcuts, or right-click),
+                only the plain text content is transferred.  All formatting from the source text (including fonts,
+                colors, and text styling) is removed, ensuring the pasted content matches the default input area
+                styling.
+
             Context: Separator
                 There will be a horizontal Separator
 
