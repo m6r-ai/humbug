@@ -153,8 +153,8 @@ class SettingsDialog(QDialog):
             else:
                 # If we haven't stored a temperature for this model yet,
                 # use the initial setting if it exists, otherwise default to 0.7
-                if (self.initial_settings and 
-                    self.initial_settings.model == model and 
+                if (self.initial_settings and
+                    self.initial_settings.model == model and
                     self.initial_settings.temperature is not None):
                     self.temp_spin.setValue(self.initial_settings.temperature)
                 else:
