@@ -15,7 +15,7 @@ class ConversationSettings:
         "o1-preview": False
     }
 
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
+    def __init__(self, model: str = "o1-mini", temperature: float = 0.7):
         """Initialize conversation settings with defaults."""
         self.model = model
         self.temperature = temperature if self.supports_temperature(model) else None
