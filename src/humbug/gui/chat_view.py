@@ -205,9 +205,10 @@ class ChatView(QFrame):
 
     def update_status(self, input_tokens: int, output_tokens: int):
         """Update the status bar with token counts and settings."""
+        temp_display = f"Temp: {self.settings.temperature:.1f}" if self.settings.temperature is not None else "Temp: N/A"
         self.status_bar.setText(
             f"Model: {self.settings.model} | "
-            f"Temp: {self.settings.temperature:.1f} | "
+            f"{temp_display} | "
             f"Input tokens: {input_tokens} | "
             f"Output tokens: {output_tokens}"
         )

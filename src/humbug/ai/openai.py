@@ -120,10 +120,13 @@ class OpenAIBackend(AIBackend):
         data = {
             "model": settings.model,
             "messages": messages,
-            "temperature": settings.temperature,
             "stream": True,
             "stream_options": {"include_usage": True}
         }
+
+        # Only include temperature if supported by model
+        if ConversationSettings.supports_temperature(settings.model):
+            data["temperature"] = settings.temperature
 
         self.logger.debug("stream message %s", data)
 

@@ -2,9 +2,9 @@
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QComboBox, QDoubleSpinBox, QWidget
+    QComboBox, QDoubleSpinBox
 )
-from PySide6.QtCore import Qt, QSize, Signal
+from PySide6.QtCore import QSize, Signal
 
 from humbug.ai.conversation_settings import ConversationSettings
 
@@ -12,25 +12,19 @@ from humbug.ai.conversation_settings import ConversationSettings
 class SettingsDialog(QDialog):
     """Dialog for editing conversation settings."""
 
-    # Add a signal for settings changes
     settings_changed = Signal(ConversationSettings)
 
-    def __init__(self, parent=None, available_models=None):
-        """Initialize the settings dialog.
-
-        Args:
-            parent: Parent widget
-            available_models: List of available AI models
-        """
+    def __init__(self, parent=None):
+        """Initialize the settings dialog."""
         super().__init__(parent)
         self.setWindowTitle("Conversation Settings")
         self.setFixedSize(QSize(400, 200))
         self.setModal(True)
 
-        # Store initial settings in case of cancel
-        self.available_models = available_models or ["gpt-4o-mini"]
+        self.available_models = ConversationSettings.get_available_models()
         self.initial_settings = None
         self.current_settings = None
+        self.model_temperatures = {}
 
         self.setup_ui()
 
@@ -45,6 +39,7 @@ class SettingsDialog(QDialog):
         model_label = QLabel("AI Model:")
         self.model_combo = QComboBox()
         self.model_combo.addItems(self.available_models)
+        self.model_combo.currentTextChanged.connect(self._handle_model_change)
         model_layout.addWidget(model_label)
         model_layout.addWidget(self.model_combo)
         layout.addLayout(model_layout)
@@ -60,28 +55,23 @@ class SettingsDialog(QDialog):
         temp_layout.addWidget(self.temp_spin)
         layout.addLayout(temp_layout)
 
-        # Add stretching space before buttons
         layout.addStretch()
 
         # Button row
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
 
-        # Create buttons
         self.ok_button = QPushButton("OK")
         self.cancel_button = QPushButton("Cancel")
         self.apply_button = QPushButton("Apply")
 
-        # Connect signals
         self.ok_button.clicked.connect(self._handle_ok)
         self.cancel_button.clicked.connect(self.reject)
         self.apply_button.clicked.connect(self._handle_apply)
 
-        # Connect value change signals
         self.model_combo.currentTextChanged.connect(self._handle_value_change)
         self.temp_spin.valueChanged.connect(self._handle_value_change)
 
-        # Add buttons to layout
         button_layout.addStretch()
         button_layout.addWidget(self.ok_button)
         button_layout.addWidget(self.cancel_button)
@@ -90,7 +80,6 @@ class SettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-        # Style the dialog
         self.setStyleSheet("""
             QDialog {
                 background-color: #2d2d2d;
@@ -128,6 +117,11 @@ class SettingsDialog(QDialog):
                 padding: 5px;
                 min-width: 200px;
             }
+            QDoubleSpinBox:disabled {
+                background-color: #2d2d2d;
+                color: #808080;
+                border: 1px solid #3d3d3d;
+            }
             QPushButton {
                 background-color: #4d4d4d;
                 color: white;
@@ -148,12 +142,53 @@ class SettingsDialog(QDialog):
             }
         """)
 
-    def set_settings(self, settings: ConversationSettings):
-        """Set the current settings in the dialog.
+    def _handle_model_change(self, model: str):
+        """Handle model selection changes."""
+        supports_temp = ConversationSettings.supports_temperature(model)
+        self.temp_spin.setEnabled(supports_temp)
 
-        Args:
-            settings: ConversationSettings object containing current settings
-        """
+        if supports_temp:
+            if model in self.model_temperatures:
+                self.temp_spin.setValue(self.model_temperatures[model])
+            else:
+                # If we haven't stored a temperature for this model yet,
+                # use the initial setting if it exists, otherwise default to 0.7
+                if (self.initial_settings and 
+                    self.initial_settings.model == model and 
+                    self.initial_settings.temperature is not None):
+                    self.temp_spin.setValue(self.initial_settings.temperature)
+                else:
+                    self.temp_spin.setValue(0.7)
+        else:
+            self.temp_spin.setValue(0.0)
+
+        # Store the temperature for the current model if it supports it
+        if supports_temp:
+            self.model_temperatures[model] = self.temp_spin.value()
+
+        self._handle_value_change()
+
+    def _handle_value_change(self):
+        """Handle changes to any setting value."""
+        if not self.current_settings:
+            return
+
+        current_model = self.model_combo.currentText()
+        current_temp = self.temp_spin.value() if ConversationSettings.supports_temperature(current_model) else None
+
+        self.apply_button.setEnabled(
+            current_model != self.current_settings.model or
+            current_temp != self.current_settings.temperature
+        )
+
+    def get_settings(self) -> ConversationSettings:
+        """Get the current settings from the dialog."""
+        model = self.model_combo.currentText()
+        temperature = self.temp_spin.value() if ConversationSettings.supports_temperature(model) else None
+        return ConversationSettings(model=model, temperature=temperature)
+
+    def set_settings(self, settings: ConversationSettings):
+        """Set the current settings in the dialog."""
         self.initial_settings = ConversationSettings(
             model=settings.model,
             temperature=settings.temperature
@@ -163,42 +198,30 @@ class SettingsDialog(QDialog):
             temperature=settings.temperature
         )
 
-        # Update UI elements
+        # Initialize temperature tracking for this dialog session
+        self.model_temperatures = {
+            settings.model: settings.temperature if settings.temperature is not None else 0.7
+        }
+
         model_index = self.model_combo.findText(settings.model)
         if model_index >= 0:
             self.model_combo.setCurrentIndex(model_index)
-        self.temp_spin.setValue(settings.temperature)
 
-        # Disable Apply button initially
+        supports_temp = ConversationSettings.supports_temperature(settings.model)
+        self.temp_spin.setEnabled(supports_temp)
+        if supports_temp and settings.temperature is not None:
+            self.temp_spin.setValue(settings.temperature)
+        else:
+            self.temp_spin.setValue(0.0)
+
         self.apply_button.setEnabled(False)
-
-    def _handle_value_change(self):
-        """Handle changes to any setting value."""
-        if not self.current_settings:
-            return
-
-        current_model = self.model_combo.currentText()
-        current_temp = self.temp_spin.value()
-
-        # Enable Apply button if values differ from current settings
-        self.apply_button.setEnabled(
-            current_model != self.current_settings.model or
-            current_temp != self.current_settings.temperature
-        )
-
-    def get_settings(self) -> ConversationSettings:
-        """Get the current settings from the dialog.
-
-        Returns:
-            ConversationSettings object with current values
-        """
-        return ConversationSettings(
-            model=self.model_combo.currentText(),
-            temperature=self.temp_spin.value()
-        )
 
     def _handle_apply(self):
         """Handle Apply button click."""
+        current_model = self.model_combo.currentText()
+        if ConversationSettings.supports_temperature(current_model):
+            self.model_temperatures[current_model] = self.temp_spin.value()
+
         settings = self.get_settings()
         self.current_settings = settings
         self.settings_changed.emit(settings)
@@ -211,7 +234,6 @@ class SettingsDialog(QDialog):
 
     def reject(self):
         """Handle Cancel button click."""
-        # Restore initial settings if they exist
         if self.initial_settings:
             self.settings_changed.emit(self.initial_settings)
         super().reject()

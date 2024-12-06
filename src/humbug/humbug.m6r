@@ -40,7 +40,7 @@ Context: humbug application
             The "Humbug" menu is the main application menu.  When clicked it contains the following:
 
             Context: About Humbug
-                The "About Humbug" menu item will deliver a modal pop-up dialogue box that gives details of the
+                The "About Humbug" menu item will deliver a modal pop-up dialog box that gives details of the
                 application and version information.
 
             Context: Separator
@@ -399,9 +399,34 @@ Context: humbug application
         Maintain conversation context by including all previous messages in the session.
 
     Context: AI interactions
-        The AI temperature should be set to 0.7.  It is not user-configurable at this time.
+        The AI model is configurable via the settings dialog.  It it set to "o1-mini" by default.
 
-        The AI model is also not user configurable.  It it set to "gpt-4o-mini".
+        Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
+
+        Context: Available models
+            The following AI models are available:
+
+            - "gpt-4o-mini"
+            - "gpt-4o"
+            - "o1-mini"
+            - "o1-preview"
+
+    Context: Temperature settings
+        Temperature controls how deterministic or creative the AI's responses are.
+
+        GPT-4o models support temperature adjustment:
+
+        - gpt-4o-mini: Supports temperature 0.0-1.0.
+        - gpt-4o: Supports temperature 0.0-1.0.
+        - o1-mini: No temperature setting.
+        - o1-preview: No temperature setting.
+
+        The temperature control in the Settings dialog is automatically:
+
+        - Enabled and set to 0.7 by default for GPT-4o models.
+        - Disabled for models that do not support a temperature setting.
+        - Preserves previous temperature when switching between models that support temperatures.
+        - Reverts to default when switching from models that do not support temperatures to a model that does.
 
     Context: Error handling and recovery
         Context: Handling other network errors
