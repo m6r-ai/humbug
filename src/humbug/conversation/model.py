@@ -108,11 +108,34 @@ class ConversationHistory:
         self.total_output_tokens: int = 0
 
     def add_message(self, message: Message) -> None:
-        """Add a message to the history and update token counts."""
+        """Add a message to the history."""
         self.messages.append(message)
-        if message.usage:
-            self.total_input_tokens += message.usage.prompt_tokens
-            self.total_output_tokens += message.usage.completion_tokens
+
+    def update_message(self, message_id: str, content: str, usage: Optional[Usage] = None, completed: bool = None) -> Optional[Message]:
+        """Update an existing message and return the updated message."""
+        for message in self.messages:
+            if message.id == message_id:
+                message.content = content
+                if usage is not None:
+                    old_usage = message.usage
+                    message.usage = usage
+                    # Only update token counts if we didn't have usage before
+                    if old_usage is None:
+                        self.total_input_tokens += usage.prompt_tokens
+                        self.total_output_tokens += usage.completion_tokens
+                if completed is not None:
+                    message.completed = completed
+                return message
+        return None
+
+    def recalculate_token_counts(self) -> None:
+        """Recalculate total token counts from all messages."""
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        for message in self.messages:
+            if message.usage:
+                self.total_input_tokens += message.usage.prompt_tokens
+                self.total_output_tokens += message.usage.completion_tokens
 
     def get_messages_for_context(self) -> List[str]:
         """Get messages formatted for AI context."""

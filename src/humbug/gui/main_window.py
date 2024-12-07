@@ -326,7 +326,7 @@ class MainWindow(QMainWindow):
 
             async for response in stream:
                 try:
-                    message = chat_view.update_streaming_response(
+                    message = await chat_view.update_streaming_response(
                         content=response.content,
                         usage=response.usage,
                         error=response.error

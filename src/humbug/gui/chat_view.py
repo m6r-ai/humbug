@@ -154,12 +154,12 @@ class ChatView(QFrame):
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
 
-    def update_streaming_response(self, content: str, usage: Optional[Usage] = None,
-                                error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
+    async def update_streaming_response(self, content: str, usage: Optional[Usage] = None,
+                                    error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
         """Update the current AI response in the conversation."""
         if error:
             error_msg = f"Error: {error['message']}"
-            self.add_message(error_msg, "error")
+            self.history.update_last_ai_response(error_msg)
             error_message = Message.create(
                 self.conversation_id,
                 MessageSource.SYSTEM,
@@ -175,7 +175,8 @@ class ChatView(QFrame):
         # Update or create AI message in conversation
         settings = self.get_settings()
         if not self._current_ai_message:
-            self._current_ai_message = Message.create(
+            # Create and add initial message
+            message = Message.create(
                 self.conversation_id,
                 MessageSource.AI,
                 content,
@@ -183,25 +184,30 @@ class ChatView(QFrame):
                 temperature=settings.temperature,
                 completed=False
             )
-            self.conversation.add_message(self._current_ai_message)
+            self.conversation.add_message(message)
+            self._current_ai_message = message
         else:
-            self._current_ai_message.content = content
+            # Update existing message
+            message = self.conversation.update_message(
+                self._current_ai_message.id,
+                content,
+                usage=usage,
+                completed=(usage is not None or completed)
+            )
+            if not message:
+                return None
 
         if usage:
-            self._current_ai_message.usage = usage
-            self._current_ai_message.completed = True
             self._update_status_display()
-            completed_message = self._current_ai_message
-            self._current_ai_message = None  # Clear for next response
-            return completed_message
+            self._current_ai_message = None
+            return message
 
         if completed:
             self.finish_ai_response()
-            completed_message = self._current_ai_message
             self._current_ai_message = None
-            return completed_message
+            return message
 
-        return self._current_ai_message
+        return message
 
     def add_user_message(self, content: str) -> Message:
         """Add a user message to the conversation and return the message object."""
