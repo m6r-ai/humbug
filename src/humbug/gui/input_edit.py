@@ -19,14 +19,18 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
         """Initialize the highlighter."""
         super().__init__(parent)
+
+        # Consistent font family fallback sequence for all code formats
+        self.code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
+
+        # For inline code
         self.code_format = QTextCharFormat()
-        # Use a monospace font for code, with fallbacks
-        self.code_format.setFontFamilies(["Menlo", "Monaco", "Courier New", "monospace"])
+        self.code_format.setFontFamilies(self.code_font_families)
         self.code_format.setFontFixedPitch(True)
 
-        # For code blocks and fences, use monospace and background
+        # For code blocks and fences
         self.block_format = QTextCharFormat()
-        self.block_format.setFontFamilies(["Menlo", "Monaco", "Courier New", "monospace"])
+        self.block_format.setFontFamilies(self.code_font_families)
         self.block_format.setFontFixedPitch(True)
         self.block_format.setBackground(QColor("#2d2d2d"))
 
