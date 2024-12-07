@@ -158,6 +158,9 @@ class ChatView(QFrame):
                 selection-background-color: #606060;
                 border: none;
             }
+            QTextEdit:focus {
+                background-color: #404040;
+            }
         """)
 
     def is_scrolled_to_bottom(self, old_maximum) -> bool:

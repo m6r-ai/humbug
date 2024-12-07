@@ -194,10 +194,29 @@ Context: humbug application
 
                     The dialog is modal, preventing interaction with the main window while open.
 
-    Context: UI navigation
-        Context: Input box navigation
-            If the input area has not yet been edited and the cursor is at the top left of the input area, then
-            the user can pull up previous historical messages to the AI by using the up and down keys.
+        Context: UI navigation
+            Context: Input box navigation
+                If the input area has not yet been edited and the cursor is at the top left of the input area, then
+                the user can pull up previous historical messages to the AI by using the up and down keys.
+
+        Context: Input formatting
+            The input box supports Markdown-style code formatting:
+
+            Context: Code blocks
+                Text between matching triple backticks (```) is displayed as a code block.
+                Code blocks use a monospace font (set as a family fallback: Menlo, Monaco, Courier New, monospace).
+                The background color for code blocks is dark grey (#2d2d2d) and extends across the full width of the input box.
+                The code block formatting applies to both the triple backtick lines and all content between them.
+
+            Context: Inline code
+                Text between single backticks (`) is displayed as inline code.
+                Inline code uses the same monospace font as code blocks.
+                Inline code has no background color.
+
+            Context: Formatting updates
+                The formatting is updated in real-time as the user types.
+                When inside a code block, each new line is automatically formatted with the monospace font and background.
+                The full width background for code blocks is applied immediately, and not just when a newline is entered.
 
     Context: Conversation transcript file
         The application will record a transcript of all conversations between the user and the AI, storing each turn
@@ -495,7 +514,7 @@ Context: humbug application
                 Preserve conversation context between retries.
 
     Context: GUI
-        The GUI must be built using hte latest version of PySide6, and with qasync to support the integration of this
+        The GUI must be built using the latest version of PySide6, and with qasync to support the integration of this
         and async IO operations.
 
         Note that PySide6 correctly translates the keyboard shortcuts described into appropriate platform-specific
