@@ -320,7 +320,7 @@ class MainWindow(QMainWindow):
 
             stream = self.ai_backend.stream_message(
                 message,
-                chat_view.conversation.get_messages_for_context(),
+                chat_view.get_message_context(),
                 conversation_id
             )
 
@@ -331,7 +331,9 @@ class MainWindow(QMainWindow):
                         usage=response.usage,
                         error=response.error
                     )
-                    if message:  # New or updated message to write
+
+                    # Only write AI messages that are complete (have usage info)
+                    if message and (response.usage or response.error):
                         await self.transcript_writer.write([message.to_transcript_dict()])
 
                     # Handle retryable errors by adding them to transcript
@@ -391,14 +393,8 @@ class MainWindow(QMainWindow):
             QApplication.quit()
             return
 
-        response = Message.create(
-            conversation_id,
-            MessageSource.SYSTEM,
-            f"Unknown command: {command}"
-        )
-        chat_view.conversation.add_message(response)
-        chat_view.add_message(response.content, "system")
-        await self.transcript_writer.write([response.to_transcript_dict()])
+        system_message = chat_view.add_system_message(f"Unknown command: {command}")
+        await self.transcript_writer.write([system_message.to_transcript_dict()])
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
@@ -424,9 +420,7 @@ class MainWindow(QMainWindow):
         if not chat_view:
             return
 
-        cancel_message = Message.create(
-            conversation_id,
-            MessageSource.SYSTEM,
+        cancel_message = chat_view.add_system_message(
             "Request cancelled by user",
             error={
                 "code": "cancelled",
@@ -436,5 +430,4 @@ class MainWindow(QMainWindow):
                 }
             }
         )
-        chat_view.conversation.add_message(cancel_message)
         await self.transcript_writer.write([cancel_message.to_transcript_dict()])

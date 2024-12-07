@@ -1,6 +1,6 @@
 """Unified chat view implementation with correct scrolling and input expansion."""
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
@@ -88,6 +88,10 @@ class ChatView(QFrame):
             model=self.settings.model,
             temperature=self.settings.temperature
         )
+
+    def get_message_context(self) -> List[str]:
+        """Get messages formatted for AI context."""
+        return self.conversation.get_messages_for_context()
 
     def update_settings(self, settings: ConversationSettings):
         """Update conversation settings."""
