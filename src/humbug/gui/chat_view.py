@@ -1,5 +1,7 @@
 """Unified chat view implementation with correct scrolling and input expansion."""
 
+from typing import Dict, Optional
+
 from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
@@ -7,7 +9,7 @@ from PySide6.QtCore import QSize, QTimer, Signal
 from PySide6.QtGui import QResizeEvent
 
 from humbug.ai.conversation_settings import ConversationSettings
-from humbug.conversation import ConversationHistory
+from humbug.conversation import ConversationHistory, Message, MessageSource, Usage
 from humbug.gui.history_view import HistoryView
 from humbug.gui.input_edit import InputEdit
 
@@ -67,6 +69,7 @@ class ChatView(QFrame):
         self.conversation_id = conversation_id
         self.conversation = ConversationHistory(conversation_id)
         self.settings = ConversationSettings()
+        self._current_ai_message = None
         self.setup_ui()
 
     @property
@@ -146,6 +149,78 @@ class ChatView(QFrame):
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
+
+    def update_streaming_response(self, content: str, usage: Optional[Usage] = None,
+                                error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
+        """Update the current AI response in the conversation."""
+        if error:
+            error_msg = f"Error: {error['message']}"
+            self.add_message(error_msg, "error")
+            error_message = Message.create(
+                self.conversation_id,
+                MessageSource.SYSTEM,
+                error_msg,
+                error=error
+            )
+            self.conversation.add_message(error_message)
+            return error_message
+
+        # Update display
+        self.history.update_last_ai_response(content)
+
+        # Update or create AI message in conversation
+        settings = self.get_settings()
+        if not self._current_ai_message:
+            self._current_ai_message = Message.create(
+                self.conversation_id,
+                MessageSource.AI,
+                content,
+                model=settings.model,
+                temperature=settings.temperature,
+                completed=False
+            )
+            self.conversation.add_message(self._current_ai_message)
+        else:
+            self._current_ai_message.content = content
+
+        if usage:
+            self._current_ai_message.usage = usage
+            self._current_ai_message.completed = True
+            self._update_status_display()
+            completed_message = self._current_ai_message
+            self._current_ai_message = None  # Clear for next response
+            return completed_message
+
+        if completed:
+            self.finish_ai_response()
+            completed_message = self._current_ai_message
+            self._current_ai_message = None
+            return completed_message
+
+        return self._current_ai_message
+
+    def add_user_message(self, content: str) -> Message:
+        """Add a user message to the conversation and return the message object."""
+        self.add_message(f"You: {content}", "user")
+        message = Message.create(
+            self.conversation_id,
+            MessageSource.USER,
+            content
+        )
+        self.conversation.add_message(message)
+        return message
+
+    def add_system_message(self, content: str, error: Optional[Dict] = None) -> Message:
+        """Add a system message to the conversation and return the message object."""
+        self.add_message(content, "system")
+        message = Message.create(
+            self.conversation_id,
+            MessageSource.SYSTEM,
+            content,
+            error=error
+        )
+        self.conversation.add_message(message)
+        return message
 
     def _set_initial_focus(self):
         """Set initial focus to input area."""

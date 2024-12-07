@@ -256,18 +256,11 @@ class MainWindow(QMainWindow):
         if not message:
             return
 
-        # Clear input area and add the message
+        # Clear input area
         chat_view.clear_input()
-        conversation_id = chat_view.conversation_id
-        chat_view.add_message(f"You: {message}", "user")
 
-        # Create and store message
-        user_message = Message.create(
-            conversation_id,
-            MessageSource.USER,
-            message
-        )
-        chat_view.conversation.add_message(user_message)
+        # Add user message and get the message object
+        user_message = chat_view.add_user_message(message)
 
         # Write to transcript
         asyncio.create_task(
@@ -276,24 +269,24 @@ class MainWindow(QMainWindow):
 
         # Handle commands
         if message.startswith('/'):
-            asyncio.create_task(self.handle_command(message[1:], conversation_id))
+            asyncio.create_task(self.handle_command(message[1:], chat_view.conversation_id))
             return
 
-        # Start AI response and track the task
+        # Start AI response
         task = asyncio.create_task(
-            self.process_ai_response(message, conversation_id)
+            self.process_ai_response(message, chat_view.conversation_id)
         )
 
-        if conversation_id not in self._current_tasks:
-            self._current_tasks[conversation_id] = []
-        self._current_tasks[conversation_id].append(task)
+        if chat_view.conversation_id not in self._current_tasks:
+            self._current_tasks[chat_view.conversation_id] = []
+        self._current_tasks[chat_view.conversation_id].append(task)
 
         def task_done_callback(task):
-            if conversation_id in self._current_tasks:
+            if chat_view.conversation_id in self._current_tasks:
                 try:
-                    self._current_tasks[conversation_id].remove(task)
+                    self._current_tasks[chat_view.conversation_id].remove(task)
                 except ValueError:
-                    pass  # Task already removed
+                    pass
 
         task.add_done_callback(task_done_callback)
 
@@ -322,10 +315,8 @@ class MainWindow(QMainWindow):
             self.logger.error(f"No chat view found for conversation {conversation_id}")
             return
 
-        ai_message = None  # Track the AI message for completion status
         try:
             self.logger.debug(f"\n=== Starting new AI response for conv {conversation_id} ===")
-            current_response = ""
 
             stream = self.ai_backend.stream_message(
                 message,
@@ -335,65 +326,24 @@ class MainWindow(QMainWindow):
 
             async for response in stream:
                 try:
+                    message = chat_view.update_streaming_response(
+                        content=response.content,
+                        usage=response.usage,
+                        error=response.error
+                    )
+                    if message:  # New or updated message to write
+                        await self.transcript_writer.write([message.to_transcript_dict()])
+
+                    # Handle retryable errors by adding them to transcript
                     if response.error:
-                        self.logger.debug(f"Received error response: {response.error}")
-                        error_msg = f"Error: {response.error['message']}"
-                        chat_view.add_message(error_msg, "error")
-
-                        error_message = Message.create(
-                            conversation_id,
-                            MessageSource.SYSTEM,
-                            error_msg,
-                            error=response.error
-                        )
-                        chat_view.conversation.add_message(error_message)
-                        await self.transcript_writer.write([error_message.to_transcript_dict()])
-
-                        if ai_message:
-                            ai_message.completed = False
-                            await self.transcript_writer.write([ai_message.to_transcript_dict()])
-
-                        if response.error['code'] not in ['network_error', 'timeout']:
+                        if response.error['code'] in ['network_error', 'timeout']:
+                            retry_message = chat_view.add_system_message(
+                                response.error['message'],
+                                error=response.error
+                            )
+                            await self.transcript_writer.write([retry_message.to_transcript_dict()])
+                        else:
                             return
-                        continue
-
-                    # Update response
-                    current_response = response.content
-
-                    # Start or update message
-                    chat_view.add_message(f"AI: {current_response}", "ai")
-
-                    # Create or update AI message on each chunk
-                    if not ai_message:
-                        settings = chat_view.get_settings()
-                        ai_message = Message.create(
-                            conversation_id,
-                            MessageSource.AI,
-                            current_response,
-                            model=settings.model,
-                            temperature=settings.temperature,
-                            completed=False  # Start as incomplete
-                        )
-                        chat_view.conversation.add_message(ai_message)
-                    else:
-                        ai_message.content = current_response
-
-                    # Handle completion when we get usage info
-                    if response.usage:
-                        ai_message.usage = Usage(
-                            prompt_tokens=response.usage.prompt_tokens,
-                            completion_tokens=response.usage.completion_tokens,
-                            total_tokens=response.usage.total_tokens
-                        )
-                        ai_message.completed = True  # Mark as complete only when we get usage
-                        chat_view.update_status(
-                            chat_view.conversation.total_input_tokens,
-                            chat_view.conversation.total_output_tokens
-                        )
-                        # Write final response to transcript
-                        await self.transcript_writer.write([ai_message.to_transcript_dict()])
-                        # Mark AI response as complete
-                        chat_view.finish_ai_response()
 
                 except StopAsyncIteration:
                     break
@@ -401,44 +351,32 @@ class MainWindow(QMainWindow):
         except (asyncio.CancelledError, GeneratorExit):
             self.logger.debug(f"AI response cancelled for conv {conversation_id}")
             if chat_view:
-                chat_view.finish_ai_response()
-                # Ensure we have an AI message for the cancelled response
-                if not ai_message:
-                    settings = chat_view.get_settings()
-                    ai_message = Message.create(
-                        conversation_id,
-                        MessageSource.AI,
-                        current_response,
-                        model=settings.model,
-                        temperature=settings.temperature,
-                        completed=False
-                    )
-                    chat_view.conversation.add_message(ai_message)
-                else:
-                    ai_message.completed = False
-                await self.transcript_writer.write([ai_message.to_transcript_dict()])
+                message = chat_view.update_streaming_response(
+                    content="",
+                    completed=True
+                )
+                if message:
+                    await self.transcript_writer.write([message.to_transcript_dict()])
+
+                cancel_message = chat_view.add_system_message("Request cancelled by user")
+                await self.transcript_writer.write([cancel_message.to_transcript_dict()])
             return
 
         except Exception as e:
             self.logger.exception(f"Error processing AI response for conv {conversation_id}")
             if chat_view:
-                error_msg = f"Error: {str(e)}"
-                chat_view.add_message(error_msg, "error")
-                error_message = Message.create(
-                    conversation_id,
-                    MessageSource.SYSTEM,
-                    error_msg,
-                    error={
-                        "code": "process_error",
-                        "message": str(e),
-                        "details": {"type": type(e).__name__}
-                    }
+                error = {
+                    "code": "process_error",
+                    "message": str(e),
+                    "details": {"type": type(e).__name__}
+                }
+                message = chat_view.update_streaming_response(
+                    content="",
+                    error=error,
+                    completed=True
                 )
-                chat_view.conversation.add_message(error_message)
-                if ai_message:
-                    ai_message.completed = False
-                    await self.transcript_writer.write([ai_message.to_transcript_dict()])
-                await self.transcript_writer.write([error_message.to_transcript_dict()])
+                if message:
+                    await self.transcript_writer.write([message.to_transcript_dict()])
 
         finally:
             self.logger.debug(f"=== Finished AI response for conv {conversation_id} ===")
