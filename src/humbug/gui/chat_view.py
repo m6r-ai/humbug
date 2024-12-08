@@ -66,11 +66,16 @@ class ChatView(QFrame):
     def __init__(self, conversation_id: str, parent: Optional[QWidget] = None) -> None:
         """Initialize the unified chat view."""
         super().__init__(parent)
-        self.conversation_id = conversation_id
+        self._conversation_id = conversation_id
         self._conversation = ConversationHistory(conversation_id)
-        self.settings = ConversationSettings()
+        self._settings = ConversationSettings()
         self._current_ai_message = None
-        self.setup_ui()
+        self._setup_ui()
+
+    @property
+    def conversation_id(self) -> str:
+        """Get the conversation ID for this view."""
+        return self._conversation_id
 
     @property
     def input(self) -> InputEdit:
@@ -85,8 +90,8 @@ class ChatView(QFrame):
     def get_settings(self) -> ConversationSettings:
         """Get current conversation settings."""
         return ConversationSettings(
-            model=self.settings.model,
-            temperature=self.settings.temperature
+            model=self._settings.model,
+            temperature=self._settings.temperature
         )
 
     def get_message_context(self) -> List[str]:
@@ -95,11 +100,11 @@ class ChatView(QFrame):
 
     def update_settings(self, settings: ConversationSettings) -> None:
         """Update conversation settings."""
-        self.settings = settings
+        self._settings = settings
         # Update the status bar to reflect new settings
         self._update_status_display()
 
-    def setup_ui(self):
+    def _setup_ui(self):
         """Set up the user interface."""
         # Main layout
         layout = QVBoxLayout(self)
@@ -161,7 +166,7 @@ class ChatView(QFrame):
             error_msg = f"Error: {error['message']}"
             self.history.update_last_ai_response(error_msg)
             error_message = Message.create(
-                self.conversation_id,
+                self._conversation_id,
                 MessageSource.SYSTEM,
                 error_msg,
                 error=error
@@ -177,7 +182,7 @@ class ChatView(QFrame):
         if not self._current_ai_message:
             # Create and add initial message
             message = Message.create(
-                self.conversation_id,
+                self._conversation_id,
                 MessageSource.AI,
                 content,
                 model=settings.model,
@@ -213,7 +218,7 @@ class ChatView(QFrame):
         """Add a user message to the conversation and return the message object."""
         self.add_message(f"You: {content}", "user")
         message = Message.create(
-            self.conversation_id,
+            self._conversation_id,
             MessageSource.USER,
             content
         )
@@ -224,7 +229,7 @@ class ChatView(QFrame):
         """Add a system message to the conversation and return the message object."""
         self.add_message(content, "system")
         message = Message.create(
-            self.conversation_id,
+            self._conversation_id,
             MessageSource.SYSTEM,
             content,
             error=error
@@ -293,9 +298,9 @@ class ChatView(QFrame):
 
     def update_status(self, input_tokens: int, output_tokens: int):
         """Update the status bar with token counts and settings."""
-        temp_display = f"Temp: {self.settings.temperature:.1f}" if self.settings.temperature is not None else "Temp: N/A"
+        temp_display = f"Temp: {self._settings.temperature:.1f}" if self._settings.temperature is not None else "Temp: N/A"
         self.status_bar.setText(
-            f"Model: {self.settings.model} | "
+            f"Model: {self._settings.model} | "
             f"{temp_display} | "
             f"Input tokens: {input_tokens} | "
             f"Output tokens: {output_tokens}"
