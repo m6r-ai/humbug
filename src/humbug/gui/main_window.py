@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
-from humbug.conversation import Message, MessageSource, Usage
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.settings_dialog import SettingsDialog
@@ -406,15 +405,14 @@ class MainWindow(QMainWindow):
                     for task in self._current_tasks[conversation_id]:
                         if not task.done():
                             task.cancel()
-                    chat_view.add_message("System: Request cancelled by user", "system")
                     chat_view.finish_ai_response()
                     asyncio.create_task(
-                        self.write_cancellation_to_transcript(conversation_id)
+                        self._handle_cancellation(conversation_id)
                     )
         else:
             super().keyPressEvent(event)
 
-    async def write_cancellation_to_transcript(self, conversation_id: str):
+    async def _handle_cancellation(self, conversation_id: str):
         """Write cancellation message to transcript."""
         chat_view = self.chat_views.get(conversation_id)
         if not chat_view:

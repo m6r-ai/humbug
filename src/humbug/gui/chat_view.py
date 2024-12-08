@@ -67,7 +67,7 @@ class ChatView(QFrame):
         """Initialize the unified chat view."""
         super().__init__(parent)
         self.conversation_id = conversation_id
-        self.conversation = ConversationHistory(conversation_id)
+        self._conversation = ConversationHistory(conversation_id)
         self.settings = ConversationSettings()
         self._current_ai_message = None
         self.setup_ui()
@@ -91,7 +91,7 @@ class ChatView(QFrame):
 
     def get_message_context(self) -> List[str]:
         """Get messages formatted for AI context."""
-        return self.conversation.get_messages_for_context()
+        return self._conversation.get_messages_for_context()
 
     def update_settings(self, settings: ConversationSettings) -> None:
         """Update conversation settings."""
@@ -166,7 +166,7 @@ class ChatView(QFrame):
                 error_msg,
                 error=error
             )
-            self.conversation.add_message(error_message)
+            self._conversation.add_message(error_message)
             return error_message
 
         # Update display
@@ -184,11 +184,11 @@ class ChatView(QFrame):
                 temperature=settings.temperature,
                 completed=False
             )
-            self.conversation.add_message(message)
+            self._conversation.add_message(message)
             self._current_ai_message = message
         else:
             # Update existing message
-            message = self.conversation.update_message(
+            message = self._conversation.update_message(
                 self._current_ai_message.id,
                 content,
                 usage=usage,
@@ -217,7 +217,7 @@ class ChatView(QFrame):
             MessageSource.USER,
             content
         )
-        self.conversation.add_message(message)
+        self._conversation.add_message(message)
         return message
 
     def add_system_message(self, content: str, error: Optional[Dict] = None) -> Message:
@@ -229,7 +229,7 @@ class ChatView(QFrame):
             content,
             error=error
         )
-        self.conversation.add_message(message)
+        self._conversation.add_message(message)
         return message
 
     def _set_initial_focus(self):
@@ -285,7 +285,7 @@ class ChatView(QFrame):
 
     def _update_status_display(self):
         """Update status bar with current settings and token counts."""
-        counts = self.conversation.get_token_counts()
+        counts = self._conversation.get_token_counts()
         self.update_status(
             counts['input'],
             counts['output']
