@@ -1,11 +1,13 @@
 """Input edit widget with Markdown code highlighting."""
 
 import logging
+from typing import Optional
+
 from PySide6.QtWidgets import QFrame, QTextEdit, QSizePolicy
 from PySide6.QtCore import Qt, QSize, Signal, QMimeData
 from PySide6.QtGui import (
     QKeyEvent, QTextCharFormat, QSyntaxHighlighter, QColor,
-    QTextCursor, QTextBlockFormat
+    QTextCursor, QTextBlockFormat, QTextDocument
 )
 
 # Set up logging
@@ -16,7 +18,7 @@ logger.setLevel(logging.DEBUG)
 class MarkdownHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for Markdown code blocks."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QTextDocument] = None) -> None:
         """Initialize the highlighter."""
         super().__init__(parent)
 

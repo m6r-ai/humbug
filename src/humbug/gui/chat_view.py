@@ -17,7 +17,7 @@ from humbug.gui.input_edit import InputEdit
 class ChatContainer(QWidget):
     """Container widget that manages the history and input views."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
         """Initialize the container widget."""
         super().__init__(parent)
 
@@ -36,7 +36,7 @@ class ChatContainer(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         self.setMinimumWidth(200)
 
-    def resizeEvent(self, event: QResizeEvent):
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle widget resize events."""
         # Get the old and new sizes
         old_size: QSize = event.oldSize()
@@ -63,7 +63,7 @@ class ChatView(QFrame):
     # Signal emitted when the tab should be closed
     close_requested = Signal(str)  # Emits conversation_id
 
-    def __init__(self, conversation_id: str, parent=None):
+    def __init__(self, conversation_id: str, parent: Optional[QWidget] = None) -> None:
         """Initialize the unified chat view."""
         super().__init__(parent)
         self.conversation_id = conversation_id
@@ -73,12 +73,12 @@ class ChatView(QFrame):
         self.setup_ui()
 
     @property
-    def input(self):
+    def input(self) -> InputEdit:
         """Provide access to input widget."""
         return self.container.input
 
     @property
-    def history(self):
+    def history(self) -> HistoryView:
         """Provide access to history widget."""
         return self.container.history
 
@@ -93,7 +93,7 @@ class ChatView(QFrame):
         """Get messages formatted for AI context."""
         return self.conversation.get_messages_for_context()
 
-    def update_settings(self, settings: ConversationSettings):
+    def update_settings(self, settings: ConversationSettings) -> None:
         """Update conversation settings."""
         self.settings = settings
         # Update the status bar to reflect new settings
@@ -253,12 +253,12 @@ class ChatView(QFrame):
         scrollbar = self.scroll_area.verticalScrollBar()
         return scrollbar.value() >= old_maximum - 20
 
-    def scroll_to_bottom(self):
+    def scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
         scrollbar = self.scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
-    def add_message(self, message: str, style: str):
+    def add_message(self, message: str, style: str) -> None:
         """Add a message to history with appropriate styling."""
         if style == 'ai' and message.startswith("AI: "):
             self.history.update_last_ai_response(message[4:])
