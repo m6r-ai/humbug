@@ -20,7 +20,6 @@ class TabLabel(QWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self._label_text = text
 
         # Create SVG close icon
         self.close_icon_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
@@ -160,12 +159,3 @@ class TabLabel(QWidget):
         """Update the current state of the tab."""
         self.is_current = is_current
         self._update_close_button()
-
-    def setText(self, text: str):
-        """Update the tab text.
-
-        Args:
-            text: The new text to display
-        """
-        self._label_text = text
-        self.label.setText(text)
