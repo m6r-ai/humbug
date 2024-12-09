@@ -7,7 +7,8 @@ from typing import AsyncGenerator, List, Dict
 
 import aiohttp
 
-from humbug.ai.base import AIBackend, AIResponse
+from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_response import AIResponse
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.openai_stream_response import OpenAIStreamResponse
 from humbug.ai.rate_limiter import RateLimiter

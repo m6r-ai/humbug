@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 
-from humbug.ai.base import AIUsage
+from humbug.ai.ai_usage import AIUsage
 
 
 class OpenAIStreamResponse:
