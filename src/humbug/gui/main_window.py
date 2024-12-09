@@ -15,7 +15,6 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.settings_dialog import SettingsDialog
-from humbug.utils import sanitize_input
 
 
 class MainWindow(QMainWindow):
@@ -245,13 +244,17 @@ class MainWindow(QMainWindow):
         """Get the currently active chat view."""
         return self.tab_manager.get_current_chat()
 
+    def _sanitize_input(self, text: str) -> str:
+        """Strip control characters from input text, preserving newlines."""
+        return ''.join(char for char in text if char == '\n' or (ord(char) >= 32 and ord(char) != 127))
+
     def submit_message(self):
         """Handle message submission."""
         chat_view = self.current_chat_view
         if not chat_view:
             return
 
-        message = sanitize_input(chat_view.get_input_text().strip())
+        message = self._sanitize_input(chat_view.get_input_text().strip())
         if not message:
             return
 
