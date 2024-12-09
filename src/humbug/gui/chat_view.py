@@ -235,7 +235,7 @@ class ChatView(QFrame):
         else:
             self.history.append_message(message, style)
 
-        QTimer.singleShot(0, self.scroll_to_bottom)
+        QTimer.singleShot(0, self._scroll_to_bottom)
 
     def get_input_text(self) -> str:
         """Get the current input text."""
