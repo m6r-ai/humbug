@@ -5,56 +5,13 @@ from typing import Dict, List, Optional
 from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
-from PySide6.QtCore import QSize, QTimer, Signal
-from PySide6.QtGui import QResizeEvent
+from PySide6.QtCore import QTimer, Signal, QSize
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.conversation import ConversationHistory, Message, MessageSource, Usage
 from humbug.gui.history_view import HistoryView
 from humbug.gui.input_edit import InputEdit
-
-
-class ChatContainer(QWidget):
-    """Container widget that manages the history and input views."""
-
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
-        """Initialize the container widget."""
-        super().__init__(parent)
-
-        # Create child widgets
-        self.history = HistoryView(self)
-        self.input = InputEdit(self)
-
-        vbox = QVBoxLayout()
-        vbox.setSpacing(0)
-        vbox.setContentsMargins(0, 0, 0, 0)
-        vbox.addWidget(self.history)
-        vbox.addWidget(self.input)
-        self.setLayout(vbox)
-
-        # Set size policy for container
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
-        self.setMinimumWidth(200)
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        """Handle widget resize events."""
-        # Get the old and new sizes
-        old_size: QSize = event.oldSize()
-
-        # Do whatever you need with the size information
-        was_at_bottom = False
-        chat_view = self.parent()
-        while chat_view and not isinstance(chat_view, ChatView):
-            chat_view = chat_view.parent()
-
-        if chat_view and chat_view.is_scrolled_to_bottom(old_size.height() - chat_view.scroll_area.viewport().height()):
-            was_at_bottom = True
-
-        if chat_view and was_at_bottom:
-            QTimer.singleShot(0, chat_view.scroll_to_bottom)
-
-        # Don't forget to call the parent class's resizeEvent
-        super().resizeEvent(event)
+from humbug.gui.chat_container import ChatContainer
 
 
 class ChatView(QFrame):
@@ -118,6 +75,9 @@ class ChatView(QFrame):
         self.container = ChatContainer()
         self.scroll_area.setWidget(self.container)
         self.scroll_area.setWidgetResizable(True)
+
+        # Connect the scroll request signal
+        self.container.scroll_requested.connect(self._handle_scroll_request)
 
         # Set size policy for scroll area
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -253,15 +213,20 @@ class ChatView(QFrame):
             }
         """)
 
-    def is_scrolled_to_bottom(self, old_maximum) -> bool:
+    def _is_scrolled_to_bottom(self, old_maximum) -> bool:
         """Check if scroll area is at the bottom."""
         scrollbar = self.scroll_area.verticalScrollBar()
         return scrollbar.value() >= old_maximum - 20
 
-    def scroll_to_bottom(self) -> None:
+    def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
         scrollbar = self.scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+
+    def _handle_scroll_request(self, old_size: QSize) -> None:
+        # Do whatever you need with the size information
+        if self._is_scrolled_to_bottom(old_size.height() - self.scroll_area.viewport().height()):
+            QTimer.singleShot(0, self._scroll_to_bottom)
 
     def add_message(self, message: str, style: str) -> None:
         """Add a message to history with appropriate styling."""
