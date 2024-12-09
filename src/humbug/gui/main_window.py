@@ -224,10 +224,11 @@ class MainWindow(QMainWindow):
 
     def _update_styles(self) -> None:
         zoom_factor = self.style_manager.zoom_factor
+        base_font_size = self.style_manager.base_font_size
 
         self.setStyleSheet(f"""
             * {{
-                font-size: {13 * zoom_factor}pt;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QMainWindow {{
                 background-color: #1e1e1e;
@@ -237,7 +238,7 @@ class MainWindow(QMainWindow):
                 background-color: #2d2d2d;
                 color: #ffffff;
                 padding: {4 * zoom_factor}px;
-                font-size: {13 * zoom_factor}pt;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QMenuBar::item {{
                 background-color: transparent;
