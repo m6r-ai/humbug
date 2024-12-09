@@ -65,7 +65,7 @@ class TabManager(QTabWidget):
 
         # Create custom tab label
         tab_label = TabLabel(title)
-        tab_label._close_clicked.connect(lambda: self._handle_conversation_close(conversation_id))
+        tab_label._close_clicked.connect(lambda: self.close_conversation(conversation_id))
         self._tab_labels[conversation_id] = tab_label
 
         # Add tab with custom label widget

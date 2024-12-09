@@ -22,23 +22,22 @@ class TabLabel(QWidget):
         super().__init__(parent)
 
         # Create SVG close icon
-        self.close_icon_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-            <path fill="currentColor" d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-        </svg>"""
+        self.close_icon_svg = """<?xml version="1.0" encoding="UTF-8"?>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+                <path fill="#ffffff" d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+            </svg>"""
 
-        # Set size policy to ensure proper expansion
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
 
-        # Create layout with proper spacing
         layout = QHBoxLayout()
-        layout.setSpacing(6)  # Increased spacing between items
-        layout.setContentsMargins(8, 4, 8, 4)  # Added right margin
+        layout.setSpacing(6)
+        layout.setContentsMargins(8, 4, 8, 4)
 
         # Add label with size policy
         self.label = QLabel(text)
         self.label.setStyleSheet("color: white;")
         self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        self.label.setMinimumWidth(50)  # Ensure minimum space for text
+        self.label.setMinimumWidth(50)
         layout.addWidget(self.label)
 
         # Add stretching space to push close button right
@@ -49,28 +48,26 @@ class TabLabel(QWidget):
         self.close_button.setFixedSize(18, 18)
         self.close_button.clicked.connect(self._close_clicked)
 
-        # Create and set the icon
+        # Create icon with explicit color for each state
         icon = QIcon()
-        for mode, color in [("Normal", "#ffffff"), ("Selected", "#ffffff"), ("Active", "#ffffff")]:
-            # Replace currentColor with specific color
-            colored_svg = self.close_icon_svg.replace('currentColor', color)
-            # Convert SVG string to bytes
-            svg_bytes = colored_svg.encode('utf-8')
-            # Create pixmap from SVG bytes
+        for state in ["Normal", "Selected", "Active"]:
+            svg_bytes = self.close_icon_svg.encode('utf-8')
             pixmap = QPixmap()
             pixmap.loadFromData(svg_bytes)
-            # Add to icon with specific mode
-            icon.addPixmap(pixmap, getattr(QIcon, mode))
+            if pixmap.isNull():
+                self.logger.error(f"Failed to load SVG for state: {state}")
+
+            icon.addPixmap(pixmap, getattr(QIcon, state))
 
         self.close_button.setIcon(icon)
-        self.close_button.setIconSize(QSize(18, 18))
+        self.close_button.setIconSize(QSize(16, 16))
 
         self.close_button.setStyleSheet("""
             QPushButton {
                 color: white;
                 border: none;
                 border-radius: 2px;
-                background: #404040;
+                background: transparent;
                 margin: 0px;
                 padding: 0px;
             }
@@ -79,18 +76,14 @@ class TabLabel(QWidget):
             }
         """)
 
-        # Set size policy for close button
         self.close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         layout.addWidget(self.close_button)
-
         self.setLayout(layout)
 
-        # Track states
         self.is_current = False
         self.is_hovered = False
-
-        # Enable mouse tracking
         self.setMouseTracking(True)
+
 
     def sizeHint(self) -> QSize:
         """Provide size hint for the tab."""
