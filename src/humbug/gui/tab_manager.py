@@ -15,7 +15,7 @@ from humbug.gui.chat_view import ChatView
 class TabLabel(QWidget):
     """Custom widget for tab labels with close button."""
 
-    close_clicked = Signal()
+    _close_clicked = Signal()
 
     def __init__(self, text: str, parent=None):
         """Initialize the tab label widget.
@@ -25,7 +25,7 @@ class TabLabel(QWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self.label_text = text
+        self._label_text = text
 
         # Create SVG close icon
         self.close_icon_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
@@ -53,7 +53,7 @@ class TabLabel(QWidget):
         # Create close button with icon
         self.close_button = QPushButton(parent=self)
         self.close_button.setFixedSize(18, 18)
-        self.close_button.clicked.connect(self.close_clicked)
+        self.close_button.clicked.connect(self._close_clicked)
 
         # Create and set the icon
         icon = QIcon()
@@ -172,7 +172,7 @@ class TabLabel(QWidget):
         Args:
             text: The new text to display
         """
-        self.label_text = text
+        self._label_text = text
         self.label.setText(text)
 
 
@@ -232,7 +232,7 @@ class TabManager(QTabWidget):
 
         # Create custom tab label
         tab_label = TabLabel(title)
-        tab_label.close_clicked.connect(lambda: self._handle_conversation_close(conversation_id))
+        tab_label._close_clicked.connect(lambda: self._handle_conversation_close(conversation_id))
         self._tab_labels[conversation_id] = tab_label
 
         # Add tab with custom label widget
