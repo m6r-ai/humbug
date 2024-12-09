@@ -1,85 +1,16 @@
 """OpenAI backend implementation."""
 
 import asyncio
-from collections import deque
 import json
 import logging
-import time
-from typing import AsyncGenerator, List, Dict, Optional
+from typing import AsyncGenerator, List, Dict
 
 import aiohttp
 
-from humbug.ai.base import AIBackend, AIResponse, AIUsage
+from humbug.ai.base import AIBackend, AIResponse
 from humbug.ai.conversation_settings import ConversationSettings
-
-
-class RateLimiter:
-    """Implements a sliding window rate limiter."""
-
-    def __init__(self, window_size: int = 60, max_requests: int = 50):
-        """Initialize rate limiter with window size in seconds."""
-        self.window_size = window_size
-        self.max_requests = max_requests
-        self.requests = deque()
-
-    async def acquire(self):
-        """Wait until a request can be made within rate limits."""
-        now = time.time()
-
-        # Remove expired timestamps
-        while self.requests and self.requests[0] <= now - self.window_size:
-            self.requests.popleft()
-
-        if len(self.requests) >= self.max_requests:
-            # Calculate sleep time
-            sleep_time = self.requests[0] + self.window_size - now
-            if sleep_time > 0:
-                await asyncio.sleep(sleep_time)
-
-        self.requests.append(now)
-
-
-class OpenAIStreamResponse:
-    """Handles streaming response from OpenAI API."""
-
-    def __init__(self):
-        """Initialize stream response handler."""
-        self.content = ""
-        self.usage: Optional[AIUsage] = None
-        self.error = None
-        self.logger = logging.getLogger("OpenAIStreamResponse")
-
-    def update_from_chunk(self, chunk: dict) -> None:
-        """Update from a response chunk and return new content if any."""
-        if "error" in chunk:
-            self.logger.debug("Got error message: %s", chunk["error"])
-            self.error = {
-                "code": "stream_error",
-                "message": chunk["error"].get("message", "Unknown error"),
-                "details": chunk["error"]
-            }
-            return
-
-        if "usage" in chunk:
-            usage = chunk["usage"]
-            if usage:
-                self.usage = AIUsage(
-                    prompt_tokens=usage.get("prompt_tokens", 0),
-                    completion_tokens=usage.get("completion_tokens", 0),
-                    total_tokens=usage.get("total_tokens", 0)
-                )
-
-        if "choices" not in chunk:
-            return
-
-        choices = chunk["choices"]
-        if not choices:
-            return
-
-        delta = choices[0].get("delta", {})
-        if "content" in delta:
-            new_content = delta["content"]
-            self.content += new_content
+from humbug.ai.openai_stream_response import OpenAIStreamResponse
+from humbug.ai.rate_limiter import RateLimiter
 
 
 class OpenAIBackend(AIBackend):
