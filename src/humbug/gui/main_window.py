@@ -211,7 +211,7 @@ class MainWindow(QMainWindow):
             QMenuBar::item {
                 background-color: transparent;
                 border-radius: 4px;
-                padding: 4px, 8px, 4px, 8px;
+                padding: 4px 8px 4px 8px;
             }
             QMenuBar::item:selected {
                 background-color: #3d3d3d;
