@@ -424,7 +424,7 @@ Context: humbug application
         Maintain conversation context by including all previous messages in the session.
 
     Context: AI interactions
-        The AI model is configurable via the settings dialog.  It it set to "o1-mini" by default.
+        The AI model is configurable via the settings dialog.  It it set to "gpt-4o-mini" by default.
 
         Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
 
