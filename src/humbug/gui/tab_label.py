@@ -3,8 +3,8 @@
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QHBoxLayout, QSizePolicy
 )
-from PySide6.QtCore import Signal, QSize
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import Signal, QSize, Qt
+from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 
 
 class TabLabel(QWidget):
@@ -20,13 +20,6 @@ class TabLabel(QWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
-
-        # Create SVG close icon
-        self.close_icon_svg = """<?xml version="1.0" encoding="UTF-8"?>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-                <path fill="#ffffff" d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-            </svg>"""
-
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
 
         layout = QHBoxLayout()
@@ -43,21 +36,36 @@ class TabLabel(QWidget):
         # Add stretching space to push close button right
         layout.addStretch(1)
 
-        # Create close button with icon
         self.close_button = QPushButton(parent=self)
         self.close_button.setFixedSize(18, 18)
         self.close_button.clicked.connect(self._close_clicked)
 
-        # Create icon with explicit color for each state
+        # Create a close icon
         icon = QIcon()
-        for state in ["Normal", "Selected", "Active"]:
-            svg_bytes = self.close_icon_svg.encode('utf-8')
-            pixmap = QPixmap()
-            pixmap.loadFromData(svg_bytes)
-            if pixmap.isNull():
-                self.logger.error(f"Failed to load SVG for state: {state}")
+        for state in ["normal", "hover"]:
+            base_size = 64  # Work at 4x resolution
+            pixmap = QPixmap(base_size, base_size)
+            pixmap.fill(Qt.transparent)
 
-            icon.addPixmap(pixmap, getattr(QIcon, state))
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.Antialiasing)
+
+            # Set up pen
+            pen = painter.pen()
+            pen.setWidth(4)  # Thicker line for scaling
+            pen.setColor(QColor("white"))
+            painter.setPen(pen)
+
+            # Draw at larger size
+            margin = base_size // 4
+            painter.drawLine(margin, margin, base_size-margin, base_size-margin)
+            painter.drawLine(base_size-margin, margin, margin, base_size-margin)
+
+            painter.end()
+
+            # Scale down to target size for smoother lines
+            scaled_pixmap = pixmap.scaled(16, 16, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            icon.addPixmap(scaled_pixmap, QIcon.Normal if state == "normal" else QIcon.Active)
 
         self.close_button.setIcon(icon)
         self.close_button.setIconSize(QSize(16, 16))
@@ -83,7 +91,6 @@ class TabLabel(QWidget):
         self.is_current = False
         self.is_hovered = False
         self.setMouseTracking(True)
-
 
     def sizeHint(self) -> QSize:
         """Provide size hint for the tab."""
