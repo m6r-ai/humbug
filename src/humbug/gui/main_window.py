@@ -12,9 +12,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
-from humbug.gui.tab_manager import TabManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.settings_dialog import SettingsDialog
+from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab_manager import TabManager
 
 
 class MainWindow(QMainWindow):
@@ -29,12 +30,10 @@ class MainWindow(QMainWindow):
         self.chat_views = {}  # conversation_id -> ChatView
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self.logger = logging.getLogger("MainWindow")
+        self.style_manager = StyleManager()
 
-        # Create actions first
         self._create_actions()
-        # Create menus using the actions
         self._create_menus()
-        # Then set up the rest of the UI
         self.setup_ui()
 
         # Create a timer that fires every 50ms to keep our menu states correct
@@ -89,6 +88,19 @@ class MainWindow(QMainWindow):
         self.settings_action.setShortcut(QKeySequence("Ctrl+,"))
         self.settings_action.triggered.connect(self._show_settings_dialog)
 
+        # View menu actions
+        self.zoom_in_action = QAction("Zoom In", self)
+        self.zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
+        self.zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.189027))
+
+        self.zoom_out_action = QAction("Zoom Out", self)
+        self.zoom_out_action.setShortcut(QKeySequence("Ctrl+-"))
+        self.zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.189027))
+
+        self.reset_zoom_action = QAction("Reset Zoom", self)
+        self.reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
+        self.reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
+
     def _handle_cut(self):
         """Handle cut action based on focus."""
         chat_view = self.current_chat_view
@@ -138,6 +150,12 @@ class MainWindow(QMainWindow):
         edit_menu.addSeparator()
         edit_menu.addAction(self.settings_action)
 
+        # View menu
+        view_menu = self._menu_bar.addMenu("&View")
+        view_menu.addAction(self.zoom_in_action)
+        view_menu.addAction(self.zoom_out_action)
+        view_menu.addAction(self.reset_zoom_action)
+
     def _show_about_dialog(self):
         """Show the About dialog."""
         dialog = AboutDialog(self)
@@ -178,6 +196,10 @@ class MainWindow(QMainWindow):
         self.close_conv_action.setEnabled(True)
         self.settings_action.setEnabled(True)
 
+        current_zoom = self.windowHandle().devicePixelRatio()
+        self.zoom_in_action.setEnabled(current_zoom < 2.0)
+        self.zoom_out_action.setEnabled(current_zoom > 0.5)
+
     def setup_ui(self):
         """Set up the user interface."""
         self.setWindowTitle("Humbug")
@@ -197,39 +219,48 @@ class MainWindow(QMainWindow):
         # Create initial conversation tab
         self.create_conversation_tab()
 
-        # Set dark theme
-        self.setStyleSheet("""
-            QMainWindow {
+        self.style_manager.zoom_changed.connect(self._update_styles)
+        self._update_styles()
+
+    def _update_styles(self) -> None:
+        zoom_factor = self.style_manager.zoom_factor
+
+        self.setStyleSheet(f"""
+            * {{
+                font-size: {13 * zoom_factor}pt;
+            }}
+            QMainWindow {{
                 background-color: #1e1e1e;
                 color: #ffffff;
-            }
-            QMenuBar {
+            }}
+            QMenuBar {{
                 background-color: #2d2d2d;
                 color: #ffffff;
-                padding: 4px;
-            }
-            QMenuBar::item {
+                padding: {4 * zoom_factor}px;
+                font-size: {13 * zoom_factor}pt;
+            }}
+            QMenuBar::item {{
                 background-color: transparent;
                 border-radius: 4px;
-                padding: 4px 8px 4px 8px;
-            }
-            QMenuBar::item:selected {
+                padding: {4 * zoom_factor}px {8 * zoom_factor}px {4 * zoom_factor}px {8 * zoom_factor}px;
+            }}
+            QMenuBar::item:selected {{
                 background-color: #3d3d3d;
-            }
-            QMenu {
+            }}
+            QMenu {{
                 background-color: #2d2d2d;
                 border-color: #3d3d3d;
-                border-width: 1px;
+                border-width: {1 * zoom_factor}px;
                 border-style: solid;
-                border-radius: 4px;
-            }
-            QMenu::item {
-                margin: 3px 5px;
-                padding: 4px 4px 4px 4px;
-            }
-            QMenu::item:selected {
+                border-radius: {4 * zoom_factor}px;
+            }}
+            QMenu::item {{
+                margin: {3 * zoom_factor}px {5 * zoom_factor}px;
+                padding: {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px;
+            }}
+            QMenu::item:selected {{
                 background-color: #3d3d3d
-            }
+            }}
         """)
 
     def create_conversation_tab(self) -> str:
@@ -442,3 +473,12 @@ class MainWindow(QMainWindow):
             }
         )
         await self.transcript_writer.write([cancel_message.to_transcript_dict()])
+
+    def _handle_zoom(self, factor: float):
+        """Handle zoom in/out requests."""
+        new_zoom = self.style_manager.zoom_factor * factor
+        self._set_zoom(new_zoom)
+
+    def _set_zoom(self, zoom_level: float):
+        """Set zoom level for the application."""
+        self.style_manager.set_zoom(zoom_level)

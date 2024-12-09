@@ -117,6 +117,29 @@ Context: humbug application
 
                 This will be matched with a standard keyboard shortcut (e.g. "Ctrl+," for Windows).
 
+        Context: View
+            The "View" menu handles view settings.  When clicked it contains the following:
+
+            Context: Zoom In
+                The "Zoom In" menu item will support zooming in and making the contents of the application
+                larger.  All visual elements must increase in size by a factor of 1.189027, up to a maximum
+                of 2.0
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+=" for Windows).
+
+            Context: Zoom Out
+                The "Zoom Out" menu item will support zooming out and making the contents of the application
+                smaller.  All visual elements must decrease in size by a factor of 1.189027, down to a minimum
+                of 0.5
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+-" for Windows).
+
+            Context: Reset Zoom
+                The "Reset Zoom" menu item will restore the zoom level of the application to its default 1.0
+                of 0.5
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+0" for Windows).
+
     Context: User/AI interactions
         Each conversation comprises a chat between a user and one or more AI backends.
 
