@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, QSize, Signal, QMimeData
 from PySide6.QtGui import QKeyEvent
 
 from humbug.gui.markdown_highlighter import MarkdownHighlighter
+from humbug.gui.style_manager import StyleManager
 
 
 class InputEdit(QTextEdit):
@@ -43,13 +44,21 @@ class InputEdit(QTextEdit):
             }
         """)
 
+        self.style_manager = StyleManager()
+        self.style_manager.zoom_changed.connect(self._update_zoom)
+
+    def _update_zoom(self) -> None:
+        self.updateGeometry()
+
     def _on_content_changed(self):
         """Handle content changes."""
         self.updateGeometry()
 
     def minimumSizeHint(self) -> QSize:
         """Calculate the minimum size needed."""
-        height = max(int(self.document().size().height()), 40)
+        font_pixels = self.style_manager.points_to_pixels(self.style_manager.base_font_size)
+        min_height = font_pixels * 3 * self.style_manager.zoom_factor
+        height = max(int(self.document().size().height()), min_height)
         width = self.width() if self.width() > 0 else self.minimumWidth()
         return QSize(width, height)
 

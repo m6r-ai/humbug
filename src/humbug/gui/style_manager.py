@@ -5,7 +5,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 """
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion
-from PySide6.QtGui import QFontDatabase
+from PySide6.QtGui import QFontDatabase, QGuiApplication
 
 
 class StyleManager(QObject):
@@ -97,3 +97,37 @@ class StyleManager(QObject):
             Scaled size adjusted for current zoom factor
         """
         return int(base_size * self._zoom_factor)
+
+    def points_to_pixels(self, points: float) -> int:
+        """Convert point size to pixels based on device pixel ratio.
+
+        Args:
+            points: Font size in points
+
+        Returns:
+            int: Font size in pixels
+        """
+        # Get the primary screen's logical DPI
+        screen = QGuiApplication.primaryScreen()
+        if not screen:
+            return int(points * 1.333333)  # Fallback to standard 96 DPI (72 * 4/3)
+
+        # Convert points to pixels using the screen's logical DPI
+        logical_dpi = screen.logicalDotsPerInchY()
+        return int((points * logical_dpi) / 72.0)
+
+    def pixels_to_points(self, pixels: float) -> float:
+        """Convert pixel size to points based on device pixel ratio.
+
+        Args:
+            pixels: Size in pixels
+
+        Returns:
+            float: Size in points
+        """
+        screen = QGuiApplication.primaryScreen()
+        if not screen:
+            return pixels * 0.75  # Fallback to standard 96 DPI (72/96)
+
+        logical_dpi = screen.logicalDotsPerInch()
+        return (pixels * 72.0) / logical_dpi
