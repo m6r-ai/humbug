@@ -9,13 +9,7 @@ import shutil
 import sys
 from typing import List, Dict, Optional
 
-
-class FloatOneDecimalEncoder(json.JSONEncoder):
-    """JSON encoder that formats floats to one decimal place."""
-    def default(self, obj):
-        if isinstance(obj, float):
-            return round(obj, 1)
-        return super().default(obj)
+from humbug.transcript.float_one_decimal_encoder import FloatOneDecimalEncoder
 
 
 class TranscriptWriter:

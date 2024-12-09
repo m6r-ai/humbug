@@ -5,7 +5,7 @@ import sys
 from qasync import QEventLoop, QApplication
 
 from humbug.ai.openai_backend import OpenAIBackend
-from humbug.transcript.writer import TranscriptWriter
+from humbug.transcript.transcript_writer import TranscriptWriter
 from humbug.gui.main_window import MainWindow
 
 
