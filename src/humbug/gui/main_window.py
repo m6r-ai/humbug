@@ -237,7 +237,7 @@ class MainWindow(QMainWindow):
         """Close the current conversation tab."""
         chat_view = self.current_chat_view
         if chat_view:
-            self.tab_manager._handle_conversation_close(chat_view.conversation_id)
+            self.tab_manager.close_conversation(chat_view.conversation_id)
 
     @property
     def current_chat_view(self):

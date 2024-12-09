@@ -99,7 +99,7 @@ class TabManager(QTabWidget):
         """
         return self.currentWidget()
 
-    def _handle_conversation_close(self, conversation_id: str):
+    def close_conversation(self, conversation_id: str):
         """Handle conversation closure.
 
         Args:
