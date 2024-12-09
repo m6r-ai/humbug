@@ -8,7 +8,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer, Signal, QSize
 
 from humbug.ai.conversation_settings import ConversationSettings
-from humbug.conversation.conversation_history import ConversationHistory, Message, MessageSource, Usage
+from humbug.conversation.conversation_history import ConversationHistory
+from humbug.conversation.message import Message
+from humbug.conversation.message_source import MessageSource
+from humbug.conversation.usage import Usage
 from humbug.gui.history_view import HistoryView
 from humbug.gui.input_edit import InputEdit
 from humbug.gui.chat_container import ChatContainer
