@@ -203,18 +203,6 @@ class ChatView(QFrame):
     def _set_initial_focus(self):
         """Set initial focus to input area."""
         self.container.input.setFocus()
-        # Explicitly set the focused style
-        self.container.input.setStyleSheet("""
-            QTextEdit {
-                background-color: #404040;
-                color: white;
-                selection-background-color: #606060;
-                border: none;
-            }
-            QTextEdit:focus {
-                background-color: #404040;
-            }
-        """)
 
     def _is_scrolled_to_bottom(self, old_maximum) -> bool:
         """Check if scroll area is at the bottom."""

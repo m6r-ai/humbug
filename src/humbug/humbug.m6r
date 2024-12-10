@@ -230,8 +230,6 @@ Context: humbug application
         Context: Screen colours
             The status line background is light grey with black text.
 
-            The focus area will have a dark grey background.  The non-focus area will have a black background.
-
             Message backgrounds and text colors are:
                 - User messages: White text on #3c3c3c background
                 - AI responses: White text on #282828 background

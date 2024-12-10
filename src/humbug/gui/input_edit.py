@@ -39,9 +39,6 @@ class InputEdit(QTextEdit):
                 selection-background-color: #606060;
                 border: none;
             }
-            QTextEdit:focus {
-                background-color: #404040;
-            }
         """)
 
         self.style_manager = StyleManager()
