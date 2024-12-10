@@ -5,7 +5,9 @@ from typing import Optional, List
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 from PySide6.QtCore import Qt, QSize
 
+from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
+from humbug.gui.style_manager import StyleManager
 
 
 class HistoryView(QScrollArea):
@@ -41,14 +43,15 @@ class HistoryView(QScrollArea):
         self._message_with_selection: Optional[MessageWidget] = None
 
         # Style the widgets
-        self.setStyleSheet("""
-            QScrollArea {
-                background-color: black;
+        style_manager = StyleManager()
+        self.setStyleSheet(f"""
+            QScrollArea {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
                 border: none;
-            }
-            QWidget#container {
-                background-color: black;
-            }
+            }}
+            QWidget#container {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
         """)
         self.container.setObjectName("container")
 
