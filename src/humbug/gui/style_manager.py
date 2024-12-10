@@ -47,12 +47,12 @@ class StyleManager(QObject):
         """Initialize the application colors."""
         return {
             # Background colors
-            ColorRole.BACKGROUND_PRIMARY: "#1e1e1e",
+            ColorRole.BACKGROUND_PRIMARY: "#080808",
             ColorRole.BACKGROUND_SECONDARY: "#2d2d2d",
 
             # Message backgrounds
-            ColorRole.MESSAGE_USER: "#3c3c3c",
-            ColorRole.MESSAGE_AI: "#282828",
+            ColorRole.MESSAGE_USER: "#303030",
+            ColorRole.MESSAGE_AI: "#181818",
             ColorRole.MESSAGE_SYSTEM: "#1a3a1a",
             ColorRole.MESSAGE_ERROR: "#3a1a1a",
             ColorRole.MESSAGE_HEADER: "#2a3544",
@@ -61,9 +61,9 @@ class StyleManager(QObject):
             ColorRole.CODE_BLOCK_BACKGROUND: "#2d2d2d",
 
             # UI elements
-            ColorRole.TAB_ACTIVE: "#3d3d3d",
-            ColorRole.TAB_INACTIVE: "#2d2d2d",
-            ColorRole.TAB_HOVER: "#4d4d4d",
+            ColorRole.TAB_ACTIVE: "#242424",
+            ColorRole.TAB_INACTIVE: "#1c1c1c",
+            ColorRole.TAB_HOVER: "#242424",
             ColorRole.MENU_BACKGROUND: "#2d2d2d",
             ColorRole.MENU_HOVER: "#3d3d3d",
             ColorRole.SCROLLBAR_BACKGROUND: "#2d2d2d",
@@ -75,7 +75,7 @@ class StyleManager(QObject):
             ColorRole.SELECTED_TEXT: "#606060",
 
             # Close button states
-            ColorRole.CLOSE_BUTTON_NORMAL: "#404040",
+            ColorRole.CLOSE_BUTTON_NORMAL: "#242424",
             ColorRole.CLOSE_BUTTON_HOVER: "#ff4444",
         }
 
