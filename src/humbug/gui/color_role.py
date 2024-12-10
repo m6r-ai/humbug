@@ -8,6 +8,7 @@ class ColorRole(Enum):
     # Background colors
     BACKGROUND_PRIMARY = auto()          # Main window background
     BACKGROUND_SECONDARY = auto()        # Secondary elements background
+    BACKGROUND_INPUT = auto()            # Input box background
 
     # Message backgrounds
     MESSAGE_USER = auto()                # User message background

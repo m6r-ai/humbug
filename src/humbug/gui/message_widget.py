@@ -31,7 +31,7 @@ class MessageWidget(QFrame):
         self.header = QLabel(self)
         self.header.setAutoFillBackground(True)
         self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.header.setContentsMargins(8, 4, 8, 4)  # Keep some padding inside header for text
+        self.header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
 
         # Create content area using custom DynamicTextEdit
         self.text_area = DynamicTextEdit(self)
@@ -113,6 +113,7 @@ class MessageWidget(QFrame):
                 color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {self.style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
                 border: none;
+                padding: 8px 8px 8px 8px;
             }}
         """)
 

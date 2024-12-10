@@ -39,7 +39,7 @@ class DynamicTextEdit(QTextEdit):
         """Calculate minimum size based on content."""
         # Get the document height when wrapped to current width
         self.document().setTextWidth(self.viewport().width())
-        height = int(self.document().size().height())
+        height = int(self.document().size().height()) + 16
         # Use parent width for width calculation
         width = self.viewport().width()
         return QSize(width, height)

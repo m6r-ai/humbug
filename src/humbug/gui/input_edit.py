@@ -36,10 +36,12 @@ class InputEdit(QTextEdit):
         style_manager = StyleManager()
         self.setStyleSheet(f"""
             QTextEdit {{
-                background-color: black;
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_INPUT)};
                 color: white;
                 selection-background-color: {style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
                 border: none;
+                padding: 8px 8px 8px 8px;
+                margin: 8px 8px 8px 8px;
             }}
         """)
 
@@ -57,7 +59,7 @@ class InputEdit(QTextEdit):
         """Calculate the minimum size needed."""
         font_pixels = self.style_manager.points_to_pixels(self.style_manager.base_font_size)
         min_height = font_pixels * 3 * self.style_manager.zoom_factor
-        height = max(int(self.document().size().height()), min_height)
+        height = max(int(self.document().size().height()), min_height) + 32
         width = self.width() if self.width() > 0 else self.minimumWidth()
         return QSize(width, height)
 

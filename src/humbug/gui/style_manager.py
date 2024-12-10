@@ -49,6 +49,7 @@ class StyleManager(QObject):
             # Background colors
             ColorRole.BACKGROUND_PRIMARY: "#080808",
             ColorRole.BACKGROUND_SECONDARY: "#2d2d2d",
+            ColorRole.BACKGROUND_INPUT: "#202020",
 
             # Message backgrounds
             ColorRole.MESSAGE_USER: "#303030",
