@@ -144,18 +144,19 @@ class TabLabel(QWidget):
         # Force immediate update
         self.close_button.update()
 
-        style = """
-            QPushButton {
+        style_manager = StyleManager()
+        style = f"""
+            QPushButton {{
                 color: white;
                 border: none;
                 border-radius: 2px;
                 background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_NORMAL)};
                 margin: 0px;
                 padding: 0px;
-            }
-            QPushButton:hover {
+            }}
+            QPushButton:hover {{
                 background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_HOVER)};
-            }
+            }}
         """
         self.close_button.setStyleSheet(style)
 
