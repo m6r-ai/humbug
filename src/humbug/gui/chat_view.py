@@ -225,7 +225,7 @@ class ChatView(QFrame):
 
     def add_message(self, message: str, style: str) -> None:
         """Add a message to history with appropriate styling."""
-        if style == 'ai' and message.startswith("AI: "):
+        if style == 'ai':
             self.history.update_last_ai_response(message[4:])
         else:
             self.history.append_message(message, style)

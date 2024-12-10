@@ -78,9 +78,9 @@ class HistoryView(QScrollArea):
     def update_last_ai_response(self, content: str):
         """Update the last AI response in the history."""
         if self._ai_response_widget:
-            self._ai_response_widget.set_content(f"AI: {content}", 'ai')
+            self._ai_response_widget.set_content(content, 'ai')
         else:
-            self.append_message(f"AI: {content}", 'ai')
+            self.append_message(content, 'ai')
         self.updateGeometry()
 
     def finish_ai_response(self):
