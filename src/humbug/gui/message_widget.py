@@ -1,21 +1,20 @@
 """Widget for displaying individual chat messages."""
 
-import random
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QTextEdit, QSizePolicy
-from PySide6.QtCore import Qt, Signal, QSize, QTimer
+from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QTextCharFormat, QColor
 
 from humbug.gui.markdown_highlighter import MarkdownHighlighter
 
 class DynamicTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        
+
     def _on_content_changed(self):
         """Update the widget size when content changes."""
         self.updateGeometry()
@@ -31,13 +30,13 @@ class DynamicTextEdit(QTextEdit):
 
 class MessageWidget(QFrame):
     """Widget for displaying a single message in the chat history."""
-    
+
     selectionChanged = Signal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFrameStyle(QFrame.NoFrame)
-        
+
         # Create layout
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -47,36 +46,29 @@ class MessageWidget(QFrame):
         self.text_area = DynamicTextEdit(self)
         self.text_area.setReadOnly(True)
         self.text_area.setFrameStyle(QFrame.NoFrame)
-        
+
         # Connect selection change signal
         self.text_area.selectionChanged.connect(self._on_selection_changed)
-        
+
         # Add Markdown highlighter
         self.highlighter = MarkdownHighlighter(self.text_area.document())
-        
-        # Style formats for different message types
+
+        # Style formats for different message types - all using white text
         self.formats = {
             'user': self._create_format('white'),
-            'ai': self._create_format('yellow'),
-            'system': self._create_format('green'),
-            'error': self._create_format('red')
+            'ai': self._create_format('white'),
+            'system': self._create_format('white'),
+            'error': self._create_format('white')
         }
-        
-        # Generate a random dark background color
-        r = random.randint(20, 40)
-        g = random.randint(20, 40)
-        b = random.randint(20, 40)
-        
-        # Set styling
-        self.text_area.setStyleSheet(f"""
-            QTextEdit {{
-                background-color: rgb({r}, {g}, {b});
-                color: white;
-                selection-background-color: #606060;
-                border: none;
-            }}
-        """)
-        
+
+        # Background colors for different message types
+        self.backgrounds = {
+            'user': '#3c3c3c',    # Dark gray for user messages
+            'ai': '#282828',      # Darker gray for AI messages
+            'system': '#1a3a1a',  # Dark green for system messages
+            'error': '#3a1a1a'    # Dark red for error messages
+        }
+
         self.layout.addWidget(self.text_area)
 
         # Set size policies that prevent shrinking
@@ -94,12 +86,23 @@ class MessageWidget(QFrame):
         cursor.setCharFormat(self.formats.get(style, self.formats['user']))
         cursor.insertText(text)
 
+        # Set the background color based on message type
+        background_color = self.backgrounds.get(style, self.backgrounds['user'])
+        self.text_area.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {background_color};
+                color: white;
+                selection-background-color: #606060;
+                border: none;
+            }}
+        """)
+
     def _on_selection_changed(self):
         has_selection = self.text_area.textCursor().hasSelection()
         self.selectionChanged.emit(has_selection)
-        
+
     def has_selection(self) -> bool:
         return self.text_area.textCursor().hasSelection()
-        
+
     def copy_selection(self):
         self.text_area.copy()

@@ -176,13 +176,13 @@ Context: humbug application
         Context: Screen colours
             The status line background is light grey with black text.
 
-            Messages typed by the user will have white text.
-
-            Responses from the AI will have yellow text.
-
-            Responses from application will have green text.
-
             The focus area will have a dark grey background.  The non-focus area will have a black background.
+
+            Message backgrounds and text colors are:
+                - User messages: White text on #3c3c3c background
+                - AI responses: White text on #282828 background
+                - System messages: White text on #1a3a1a background (dark green)
+                - Error messages: White text on #3a1a1a background (dark red)
 
         Context: Conversation Settings
             Each conversation can have its own AI model and temperature settings that affect how the AI responds.
@@ -535,7 +535,6 @@ Context: humbug application
         Context: Error display format
             Errors appear in message history with:
 
-            - Red text on dark background
             - Severity indicator: [ERROR], [WARNING], [INFO]
             - Clear action message if user intervention needed
             - Technical details in expandable section
