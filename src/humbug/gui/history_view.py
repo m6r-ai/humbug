@@ -29,8 +29,8 @@ class HistoryView(QScrollArea):
         self.container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
 
         self.layout = QVBoxLayout(self.container)
-        self.layout.setSpacing(4)
-        self.layout.setContentsMargins(4, 4, 4, 4)
+        self.layout.setSpacing(10)
+        self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.addStretch()  # Push messages to the top
 
         self.setWidget(self.container)
@@ -111,7 +111,7 @@ class HistoryView(QScrollArea):
         self.container.setFixedWidth(self.viewport().width())
         # Update all message widgets
         for message in self.messages:
-            message.setFixedWidth(self.viewport().width() - 8)  # Account for margins
+            message.setFixedWidth(self.viewport().width() - 20)  # Account for margins
 
     def sizeHint(self) -> QSize:
         """Calculate size based on content."""

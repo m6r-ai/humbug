@@ -31,6 +31,60 @@ Context: humbug application
             - Hidden by default on non-selected tabs, appearing only when the tab is hovered over.
             - Highlighted in red when the mouse hovers over the close button itself.
 
+        Context: History display
+            Each message in the history appears as a distinct "card" that spans the full width of the history view.
+
+            Each card has:
+
+            - A header section with a dark bluish-grey (#2a3544) background containing the sender name
+                ("You", "Assistant", or "System Message")
+            - A content section with the message text that uses appropriate background colors:
+                - User messages: White text on #3c3c3c background
+                - AI responses: White text on #282828 background
+                - System messages: White text on #1a3a1a background (dark green)
+                - Error messages: White text on #3a1a1a background (dark red)
+            - A border in the same color as the header (#2a3544)
+            - 8px spacing between cards
+            - 8px padding within the content area
+
+            The cards dynamically resize with the window:
+
+            - The width always matches the window width (minus margins and scroll bar)
+            - The height adjusts automatically based on the content
+            - Text wraps within the card boundaries
+            - Code blocks maintain their formatting while wrapping where possible
+
+            Context: Example layout
+                Here's an ASCII representation of the layout:
+
+                ```plaintext
+                +------------------------------------------+
+                |  You                                     |
+                |------------------------------------------|
+                |  This is a user message that wraps       |
+                |  across multiple lines as needed.        |
+                +------------------------------------------+
+                                ↕ 10px
+                +------------------------------------------+
+                |  Assistant                               |
+                |------------------------------------------|
+                |  This is an AI response that also wraps  |
+                |  across multiple lines as needed.        |
+                |                                          |
+                |  ```python                              |
+                |  def example():                         |
+                |      print("Code blocks maintain their   |
+                |            formatting")                  |
+                |  ```                                    |
+                +------------------------------------------+
+                                ↕ 10px
+                +------------------------------------------+
+                |  System Message                          |
+                |------------------------------------------|
+                |  This is a system message that wraps     |
+                |  across multiple lines as needed.        |
+                +------------------------------------------+
+
     Context: Menus
         The application will have a series of top-level Menus.
 
