@@ -29,8 +29,8 @@ class HistoryView(QScrollArea):
         self.container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
 
         self.layout = QVBoxLayout(self.container)
-        self.layout.setSpacing(4)  # Small gap between messages
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(4)
+        self.layout.setContentsMargins(4, 4, 4, 4)
         self.layout.addStretch()  # Push messages to the top
 
         self.setWidget(self.container)
