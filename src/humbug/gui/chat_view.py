@@ -75,6 +75,7 @@ class ChatView(QFrame):
 
         # Create scroll area
         self.scroll_area = QScrollArea(self)
+        self.scroll_area.setFrameStyle(0)
 
         # Create and set the container widget
         self.container = ChatContainer()
