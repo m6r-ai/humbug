@@ -104,6 +104,15 @@ class HistoryView(QScrollArea):
         if self._message_with_selection:
             self._message_with_selection.copy_selection()
 
+    def resizeEvent(self, event):
+        """Handle resize events."""
+        super().resizeEvent(event)
+        # Ensure container width matches viewport
+        self.container.setFixedWidth(self.viewport().width())
+        # Update all message widgets
+        for message in self.messages:
+            message.setFixedWidth(self.viewport().width() - 8)  # Account for margins
+
     def sizeHint(self) -> QSize:
         """Calculate size based on content."""
         # Get the container's size hint

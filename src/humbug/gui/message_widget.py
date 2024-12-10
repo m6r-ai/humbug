@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QTextEdit, QSizePolicy, QLabel
 )
 from PySide6.QtCore import Qt, Signal, QSize
-from PySide6.QtGui import QTextCharFormat, QColor
+from PySide6.QtGui import QTextCharFormat, QColor, QTextOption
 
 from humbug.gui.markdown_highlighter import MarkdownHighlighter
 
@@ -18,18 +18,36 @@ class DynamicTextEdit(QTextEdit):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setFrameStyle(QFrame.NoFrame)
+        # Force the widget to always use the width of its container
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # Set word wrap mode to adjust to widget width
+        self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
 
     def _on_content_changed(self):
         """Update the widget size when content changes."""
         self.updateGeometry()
+        # Ensure parent MessageWidget updates as well
+        if self.parent():
+            self.parent().updateGeometry()
+
+    def resizeEvent(self, event):
+        """Handle resize events."""
+        super().resizeEvent(event)
+        # Force document width to match widget width
+        self.document().setTextWidth(self.viewport().width())
+        self._on_content_changed()
 
     def minimumSizeHint(self) -> QSize:
-        """Minimum size is the same as size hint."""
-        height = max(int(self.document().size().height()), 0)
-        width = self.width() if self.width() > 0 else self.minimumWidth()
+        """Calculate minimum size based on content."""
+        # Get the document height when wrapped to current width
+        self.document().setTextWidth(self.viewport().width())
+        height = int(self.document().size().height())
+        # Use parent width for width calculation
+        width = self.viewport().width()
         return QSize(width, height)
 
     def sizeHint(self) -> QSize:
+        """Size hint is same as minimum size hint."""
         return self.minimumSizeHint()
 
 
@@ -152,3 +170,21 @@ class MessageWidget(QFrame):
 
     def copy_selection(self):
         self.text_area.copy()
+
+    def resizeEvent(self, event):
+        """Handle resize events."""
+        super().resizeEvent(event)
+        # Ensure text area width matches our width
+        self.text_area.setFixedWidth(self.width())
+        # Update size after resize
+        self.updateGeometry()
+
+    def minimumSizeHint(self) -> QSize:
+        """Calculate minimum size including header and content."""
+        header_height = self.header.sizeHint().height()
+        content_height = self.text_area.minimumSizeHint().height()
+        return QSize(self.width(), header_height + content_height)
+
+    def sizeHint(self) -> QSize:
+        """Size hint is same as minimum size hint."""
+        return self.minimumSizeHint()
