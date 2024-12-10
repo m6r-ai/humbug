@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         self.close_conv_action.setEnabled(True)
         self.settings_action.setEnabled(True)
 
-        current_zoom = self.windowHandle().devicePixelRatio()
+        current_zoom = self.style_manager.zoom_factor
         self.zoom_in_action.setEnabled(current_zoom < 2.0)
         self.zoom_out_action.setEnabled(current_zoom > 0.5)
 
