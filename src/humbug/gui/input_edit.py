@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QFrame, QTextEdit, QSizePolicy
 from PySide6.QtCore import Qt, QSize, Signal, QMimeData
 from PySide6.QtGui import QKeyEvent
 
+from humbug.gui.color_role import ColorRole
 from humbug.gui.markdown_highlighter import MarkdownHighlighter
 from humbug.gui.style_manager import StyleManager
 
@@ -32,13 +33,14 @@ class InputEdit(QTextEdit):
         # Watch for document changes
         self.document().contentsChanged.connect(self._on_content_changed)
 
-        self.setStyleSheet("""
-            QTextEdit {
+        style_manager = StyleManager()
+        self.setStyleSheet(f"""
+            QTextEdit {{
                 background-color: black;
                 color: white;
-                selection-background-color: #606060;
+                selection-background-color: {style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
                 border: none;
-            }
+            }}
         """)
 
         self.style_manager = StyleManager()

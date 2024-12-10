@@ -7,6 +7,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QSize, Signal
 
 from humbug.ai.conversation_settings import ConversationSettings
+from humbug.gui.color_role import ColorRole
+from humbug.gui.style_manager import StyleManager
 
 
 class SettingsDialog(QDialog):
@@ -80,27 +82,28 @@ class SettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #2d2d2d;
+        style_manager = StyleManager()
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 color: white;
-            }
-            QLabel {
+            }}
+            QLabel {{
                 color: white;
-            }
-            QComboBox {
+            }}
+            QComboBox {{
                 background-color: #3d3d3d;
                 color: white;
                 border: 1px solid #4d4d4d;
                 border-radius: 2px;
                 padding: 5px;
                 min-width: 200px;
-            }
-            QComboBox::drop-down {
+            }}
+            QComboBox::drop-down {{
                 border: none;
                 background-color: #4d4d4d;
-            }
-            QComboBox::down-arrow {
+            }}
+            QComboBox::down-arrow {{
                 image: none;
                 border-left: 5px solid transparent;
                 border-right: 5px solid transparent;
@@ -108,38 +111,38 @@ class SettingsDialog(QDialog):
                 width: 0;
                 height: 0;
                 margin-right: 5px;
-            }
-            QDoubleSpinBox {
+            }}
+            QDoubleSpinBox {{
                 background-color: #3d3d3d;
                 color: white;
                 border: 1px solid #4d4d4d;
                 border-radius: 2px;
                 padding: 5px;
                 min-width: 200px;
-            }
-            QDoubleSpinBox:disabled {
+            }}
+            QDoubleSpinBox:disabled {{
                 background-color: #2d2d2d;
                 color: #808080;
                 border: 1px solid #3d3d3d;
-            }
-            QPushButton {
+            }}
+            QPushButton {{
                 background-color: #4d4d4d;
                 color: white;
                 border: none;
                 border-radius: 2px;
                 padding: 5px 15px;
                 min-width: 70px;
-            }
-            QPushButton:hover {
+            }}
+            QPushButton:hover {{
                 background-color: #5d5d5d;
-            }
-            QPushButton:pressed {
+            }}
+            QPushButton:pressed {{
                 background-color: #3d3d3d;
-            }
-            QPushButton:disabled {
-                background-color: #2d2d2d;
+            }}
+            QPushButton:disabled {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 color: #808080;
-            }
+            }}
         """)
 
     def _handle_model_change(self, model: str):

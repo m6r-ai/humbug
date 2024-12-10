@@ -6,6 +6,8 @@ from PySide6.QtWidgets import QTabWidget, QTabBar
 from PySide6.QtCore import Signal
 
 from humbug.gui.chat_view import ChatView
+from humbug.gui.color_role import ColorRole
+from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_label import TabLabel
 
 
@@ -28,22 +30,23 @@ class TabManager(QTabWidget):
         self._conversations = {}  # conversation_id -> ChatView
         self._tab_labels = {}    # conversation_id -> TabLabel
 
-        self.setStyleSheet("""
-            QTabWidget::pane {
+        style_manager = StyleManager()
+        self.setStyleSheet(f"""
+            QTabWidget::pane {{
                 border: none;
-                background: #1e1e1e;
-            }
-            QTabBar::tab {
-                background: #2d2d2d;
+                background: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+            }}
+            QTabBar::tab {{
+                background: {style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
                 border: none;
                 margin-right: 2px;
-            }
-            QTabBar::tab:selected {
-                background: #3d3d3d;
-            }
-            QTabBar::tab:hover {
-                background: #4d4d4d;
-            }
+            }}
+            QTabBar::tab:selected {{
+                background: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
+            QTabBar::tab:hover {{
+                background: {style_manager.get_color_str(ColorRole.TAB_HOVER)};
+            }}
         """)
 
         # Connect tab change signals

@@ -13,6 +13,7 @@ from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
 from humbug.gui.about_dialog import AboutDialog
+from humbug.gui.color_role import ColorRole
 from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_manager import TabManager
@@ -223,17 +224,18 @@ class MainWindow(QMainWindow):
         zoom_factor = self.style_manager.zoom_factor
         base_font_size = self.style_manager.base_font_size
 
+        style_manager = self.style_manager
         self.setStyleSheet(f"""
             * {{
                 font-size: {base_font_size * zoom_factor}pt;
             }}
             QMainWindow {{
-                background-color: #1e1e1e;
-                color: #ffffff;
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QMenuBar {{
-                background-color: #2d2d2d;
-                color: #ffffff;
+                background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 padding: {4 * zoom_factor}px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
@@ -243,11 +245,11 @@ class MainWindow(QMainWindow):
                 padding: {4 * zoom_factor}px {8 * zoom_factor}px {4 * zoom_factor}px {8 * zoom_factor}px;
             }}
             QMenuBar::item:selected {{
-                background-color: #3d3d3d;
+                background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
             }}
             QMenu {{
-                background-color: #2d2d2d;
-                border-color: #3d3d3d;
+                background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
+                border-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
                 border-width: {1 * zoom_factor}px;
                 border-style: solid;
                 border-radius: {4 * zoom_factor}px;
@@ -257,7 +259,7 @@ class MainWindow(QMainWindow):
                 padding: {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px;
             }}
             QMenu::item:selected {{
-                background-color: #3d3d3d
+                background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)}
             }}
         """)
 

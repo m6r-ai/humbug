@@ -12,9 +12,11 @@ from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
 from humbug.conversation.usage import Usage
+from humbug.gui.chat_container import ChatContainer
+from humbug.gui.color_role import ColorRole
 from humbug.gui.history_view import HistoryView
 from humbug.gui.input_edit import InputEdit
-from humbug.gui.chat_container import ChatContainer
+from humbug.gui.style_manager import StyleManager
 
 
 class ChatView(QFrame):
@@ -86,18 +88,19 @@ class ChatView(QFrame):
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         # Style the scroll area
-        self.scroll_area.setStyleSheet("""
-            QScrollBar:vertical {
-                background: #2d2d2d;
+        style_manager = StyleManager()
+        self.scroll_area.setStyleSheet(f"""
+            QScrollBar:vertical {{
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;
-            }
-            QScrollBar::handle:vertical {
-                background: #404040;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-height: 20px;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 height: 0px;
-            }
+            }}
         """)
 
         # Add scroll area to main layout
@@ -105,12 +108,12 @@ class ChatView(QFrame):
 
         # Add status bar
         self.status_bar = QLabel()
-        self.status_bar.setStyleSheet("""
-            QLabel {
-                background-color: #d3d3d3;
+        self.status_bar.setStyleSheet(f"""
+            QLabel {{
+                background-color: {style_manager.get_color_str(ColorRole.STATUS_BAR)};
                 color: black;
                 padding: 2px 2px;
-            }
+            }}
         """)
         layout.addWidget(self.status_bar)
 

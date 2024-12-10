@@ -4,16 +4,20 @@ Implements a singleton pattern to maintain consistent styling across components.
 Provides signals for style changes and utilities for scaled size calculations.
 """
 
+from typing import Dict
+
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion
-from PySide6.QtGui import QFontDatabase, QGuiApplication
+from PySide6.QtGui import QFontDatabase, QGuiApplication, QColor
+
+from humbug.gui.color_role import ColorRole
 
 
 class StyleManager(QObject):
     """Singleton manager for application-wide style settings.
-    
+
     Handles zoom factor management and style updates across the application.
     Emits signals when zoom level changes to notify dependent components.
-    
+
     Attributes:
         zoom_changed (Signal): Emitted when zoom factor changes, passing new factor
         _instance (StyleManager): Singleton instance
@@ -37,6 +41,71 @@ class StyleManager(QObject):
             self._zoom_factor = 1.0
             self._base_font_size = self._determine_base_font_size()
             self._initialized = True
+            self._colors: Dict[ColorRole, str] = self._initialize_colors()
+
+    def _initialize_colors(self) -> Dict[ColorRole, str]:
+        """Initialize the application colors."""
+        return {
+            # Background colors
+            ColorRole.BACKGROUND_PRIMARY: "#1e1e1e",
+            ColorRole.BACKGROUND_SECONDARY: "#2d2d2d",
+
+            # Message backgrounds
+            ColorRole.MESSAGE_USER: "#3c3c3c",
+            ColorRole.MESSAGE_AI: "#282828",
+            ColorRole.MESSAGE_SYSTEM: "#1a3a1a",
+            ColorRole.MESSAGE_ERROR: "#3a1a1a",
+            ColorRole.MESSAGE_HEADER: "#2a3544",
+
+            # Code blocks
+            ColorRole.CODE_BLOCK_BACKGROUND: "#2d2d2d",
+
+            # UI elements
+            ColorRole.TAB_ACTIVE: "#3d3d3d",
+            ColorRole.TAB_INACTIVE: "#2d2d2d",
+            ColorRole.TAB_HOVER: "#4d4d4d",
+            ColorRole.MENU_BACKGROUND: "#2d2d2d",
+            ColorRole.MENU_HOVER: "#3d3d3d",
+            ColorRole.SCROLLBAR_BACKGROUND: "#2d2d2d",
+            ColorRole.SCROLLBAR_HANDLE: "#404040",
+            ColorRole.STATUS_BAR: "#d3d3d3",
+
+            # Text colors
+            ColorRole.TEXT_PRIMARY: "#ffffff",
+            ColorRole.SELECTED_TEXT: "#606060",
+
+            # Close button states
+            ColorRole.CLOSE_BUTTON_NORMAL: "#404040",
+            ColorRole.CLOSE_BUTTON_HOVER: "#ff4444",
+        }
+
+    def get_color(self, role: ColorRole) -> QColor:
+        """Get a color for a specific role.
+
+        Args:
+            role: The ColorRole to look up
+
+        Returns:
+            QColor: The color for the specified role
+
+        Raises:
+            KeyError: If no color is defined for the role
+        """
+        return QColor(self._colors[role])
+
+    def get_color_str(self, role: ColorRole) -> str:
+        """Get a color string for a specific role.
+
+        Args:
+            role: The ColorRole to look up
+
+        Returns:
+            str: The color string (hex format) for the specified role
+
+        Raises:
+            KeyError: If no color is defined for the role
+        """
+        return self._colors[role]
 
     def _determine_base_font_size(self) -> int:
         """Determine the default system font size based on the operating system.
@@ -78,7 +147,7 @@ class StyleManager(QObject):
 
     def set_zoom(self, factor: float):
         """Set new zoom factor and update application styles.
-        
+
         Args:
             factor: New zoom factor to apply (clamped between 0.5 and 2.0)
         """
@@ -89,10 +158,10 @@ class StyleManager(QObject):
 
     def get_scaled_size(self, base_size: int) -> int:
         """Calculate scaled size based on current zoom factor.
-        
+
         Args:
             base_size: Original size to scale
-            
+
         Returns:
             Scaled size adjusted for current zoom factor
         """

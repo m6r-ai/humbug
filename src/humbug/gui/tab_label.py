@@ -6,6 +6,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, QSize, Qt
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 
+from humbug.gui.color_role import ColorRole
+from humbug.gui.style_manager import StyleManager
+
 
 class TabLabel(QWidget):
     """Custom widget for tab labels with close button."""
@@ -70,18 +73,19 @@ class TabLabel(QWidget):
         self.close_button.setIcon(icon)
         self.close_button.setIconSize(QSize(16, 16))
 
-        self.close_button.setStyleSheet("""
-            QPushButton {
+        style_manager = StyleManager()
+        self.close_button.setStyleSheet(f"""
+            QPushButton {{
                 color: white;
                 border: none;
                 border-radius: 2px;
                 background: transparent;
                 margin: 0px;
                 padding: 0px;
-            }
-            QPushButton:hover {
-                background: #ff4444;
-            }
+            }}
+            QPushButton:hover {{
+                background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_HOVER)};
+            }}
         """)
 
         self.close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -145,12 +149,12 @@ class TabLabel(QWidget):
                 color: white;
                 border: none;
                 border-radius: 2px;
-                background: #404040;
+                background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_NORMAL)};
                 margin: 0px;
                 padding: 0px;
             }
             QPushButton:hover {
-                background: #ff4444;
+                background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_HOVER)};
             }
         """
         self.close_button.setStyleSheet(style)

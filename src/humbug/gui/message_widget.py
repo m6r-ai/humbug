@@ -6,15 +6,16 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, QSize
 from PySide6.QtGui import QTextCharFormat, QColor
 
+from humbug.gui.color_role import ColorRole
 from humbug.gui.dynamic_text_edit import DynamicTextEdit
 from humbug.gui.markdown_highlighter import MarkdownHighlighter
+from humbug.gui.style_manager import StyleManager
 
 
 class MessageWidget(QFrame):
     """Widget for displaying a single message in the chat history with header."""
 
     selectionChanged = Signal(bool)
-    FRAME_COLOR = "#2a3544"  # Dark bluish-grey for frame and header
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -87,9 +88,10 @@ class MessageWidget(QFrame):
         self.header.setText(header_text)
 
         # Style the header - using frame color
+        style_manager = StyleManager()
         self.header.setStyleSheet(f"""
             QLabel {{
-                background-color: {self.FRAME_COLOR};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
                 color: white;
                 font-weight: bold;
             }}
@@ -107,7 +109,7 @@ class MessageWidget(QFrame):
             QTextEdit {{
                 background-color: {content_color};
                 color: white;
-                selection-background-color: #606060;
+                selection-background-color: {style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
                 border: none;
             }}
         """)
@@ -115,7 +117,7 @@ class MessageWidget(QFrame):
         # Style the frame
         self.setStyleSheet(f"""
             QFrame {{
-                border: 1px solid {self.FRAME_COLOR};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
                 margin: 0;
             }}
         """)
