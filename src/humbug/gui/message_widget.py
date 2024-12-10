@@ -96,7 +96,6 @@ class MessageWidget(QFrame):
             QLabel {{
                 background-color: {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
                 color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                font-weight: bold;
             }}
         """)
 
