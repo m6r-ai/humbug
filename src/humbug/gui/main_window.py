@@ -25,22 +25,22 @@ class MainWindow(QMainWindow):
     def __init__(self, ai_backend, transcript_writer):
         """Initialize the main window."""
         super().__init__()
-        self.ai_backend = ai_backend
-        self.transcript_writer = transcript_writer
-        self.conversation_count = 0
-        self.chat_views = {}  # conversation_id -> ChatView
+        self._ai_backend = ai_backend
+        self._transcript_writer = transcript_writer
+        self._conversation_count = 0
+        self._chat_views = {}  # conversation_id -> ChatView
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
-        self.logger = logging.getLogger("MainWindow")
+        self._logger = logging.getLogger("MainWindow")
 
         self._create_actions()
         self._create_menus()
-        self.setup_ui()
+        self._setup_ui()
 
         # Create a timer that fires every 50ms to keep our menu states correct
-        self.menu_timer = QTimer()
-        self.menu_timer.setInterval(50)
-        self.menu_timer.timeout.connect(self._update_menu_state)
-        self.menu_timer.start()
+        self._menu_timer = QTimer()
+        self._menu_timer.setInterval(50)
+        self._menu_timer.timeout.connect(self._update_menu_state)
+        self._menu_timer.start()
 
     def _create_actions(self):
         """Create all menu actions."""
@@ -197,7 +197,7 @@ class MainWindow(QMainWindow):
         self.zoom_in_action.setEnabled(current_zoom < 2.0)
         self.zoom_out_action.setEnabled(current_zoom > 0.5)
 
-    def setup_ui(self):
+    def _setup_ui(self):
         """Set up the user interface."""
         self.setWindowTitle("Humbug")
         self.setMinimumSize(800, 600)
@@ -265,13 +265,13 @@ class MainWindow(QMainWindow):
 
     def create_conversation_tab(self) -> str:
         """Create a new conversation tab and return its ID."""
-        self.conversation_count += 1
+        self._conversation_count += 1
         conversation_id = str(uuid.uuid4())
         chat_view = self.tab_manager.create_conversation(
             conversation_id,
-            f"Conv {self.conversation_count}"
+            f"Conv {self._conversation_count}"
         )
-        self.chat_views[conversation_id] = chat_view
+        self._chat_views[conversation_id] = chat_view
         return conversation_id
 
     def _close_current_conversation(self):
@@ -307,7 +307,7 @@ class MainWindow(QMainWindow):
 
         # Write to transcript
         asyncio.create_task(
-            self.transcript_writer.write([user_message.to_transcript_dict()])
+            self._transcript_writer.write([user_message.to_transcript_dict()])
         )
 
         # Handle commands
@@ -346,22 +346,22 @@ class MainWindow(QMainWindow):
             new_settings = dialog.get_settings()
             chat_view.update_settings(new_settings)
             # Update AI backend settings for this conversation
-            self.ai_backend.update_conversation_settings(
+            self._ai_backend.update_conversation_settings(
                 chat_view.conversation_id,
                 new_settings
             )
 
     async def process_ai_response(self, message: str, conversation_id: str):
         """Process AI response with streaming."""
-        chat_view = self.chat_views.get(conversation_id)
+        chat_view = self._chat_views.get(conversation_id)
         if not chat_view:
-            self.logger.error(f"No chat view found for conversation {conversation_id}")
+            self._logger.error(f"No chat view found for conversation {conversation_id}")
             return
 
         try:
-            self.logger.debug(f"\n=== Starting new AI response for conv {conversation_id} ===")
+            self._logger.debug(f"\n=== Starting new AI response for conv {conversation_id} ===")
 
-            stream = self.ai_backend.stream_message(
+            stream = self._ai_backend.stream_message(
                 message,
                 chat_view.get_message_context(),
                 conversation_id
@@ -377,7 +377,7 @@ class MainWindow(QMainWindow):
 
                     # Only write AI messages that are complete (have usage info)
                     if message and (response.usage or response.error):
-                        await self.transcript_writer.write([message.to_transcript_dict()])
+                        await self._transcript_writer.write([message.to_transcript_dict()])
 
                     # Handle retryable errors by adding them to transcript
                     if response.error:
@@ -386,7 +386,7 @@ class MainWindow(QMainWindow):
                                 response.error['message'],
                                 error=response.error
                             )
-                            await self.transcript_writer.write([retry_message.to_transcript_dict()])
+                            await self._transcript_writer.write([retry_message.to_transcript_dict()])
                         else:
                             return
 
@@ -394,21 +394,21 @@ class MainWindow(QMainWindow):
                     break
 
         except (asyncio.CancelledError, GeneratorExit):
-            self.logger.debug(f"AI response cancelled for conv {conversation_id}")
+            self._logger.debug(f"AI response cancelled for conv {conversation_id}")
             if chat_view:
                 message = chat_view.update_streaming_response(
                     content="",
                     completed=True
                 )
                 if message:
-                    await self.transcript_writer.write([message.to_transcript_dict()])
+                    await self._transcript_writer.write([message.to_transcript_dict()])
 
                 cancel_message = chat_view.add_system_message("Request cancelled by user")
-                await self.transcript_writer.write([cancel_message.to_transcript_dict()])
+                await self._transcript_writer.write([cancel_message.to_transcript_dict()])
             return
 
         except Exception as e:
-            self.logger.exception(f"Error processing AI response for conv {conversation_id}")
+            self._logger.exception(f"Error processing AI response for conv {conversation_id}")
             if chat_view:
                 error = {
                     "code": "process_error",
@@ -421,14 +421,14 @@ class MainWindow(QMainWindow):
                     completed=True
                 )
                 if message:
-                    await self.transcript_writer.write([message.to_transcript_dict()])
+                    await self._transcript_writer.write([message.to_transcript_dict()])
 
         finally:
-            self.logger.debug(f"=== Finished AI response for conv {conversation_id} ===")
+            self._logger.debug(f"=== Finished AI response for conv {conversation_id} ===")
 
     async def handle_command(self, command: str, conversation_id: str):
         """Handle application commands."""
-        chat_view = self.chat_views.get(conversation_id)
+        chat_view = self._chat_views.get(conversation_id)
         if not chat_view:
             return
 
@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
             return
 
         system_message = chat_view.add_system_message(f"Unknown command: {command}")
-        await self.transcript_writer.write([system_message.to_transcript_dict()])
+        await self._transcript_writer.write([system_message.to_transcript_dict()])
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
@@ -458,7 +458,7 @@ class MainWindow(QMainWindow):
 
     async def _handle_cancellation(self, conversation_id: str):
         """Write cancellation message to transcript."""
-        chat_view = self.chat_views.get(conversation_id)
+        chat_view = self._chat_views.get(conversation_id)
         if not chat_view:
             return
 
@@ -472,7 +472,7 @@ class MainWindow(QMainWindow):
                 }
             }
         )
-        await self.transcript_writer.write([cancel_message.to_transcript_dict()])
+        await self._transcript_writer.write([cancel_message.to_transcript_dict()])
 
     def _handle_zoom(self, factor: float):
         """Handle zoom in/out requests."""
