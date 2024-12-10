@@ -1,10 +1,13 @@
 """Widget for displaying individual chat messages."""
 
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QTextEdit, QSizePolicy
+from PySide6.QtWidgets import (
+    QFrame, QVBoxLayout, QTextEdit, QSizePolicy, QLabel
+)
 from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QTextCharFormat, QColor
 
 from humbug.gui.markdown_highlighter import MarkdownHighlighter
+
 
 class DynamicTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
@@ -14,6 +17,7 @@ class DynamicTextEdit(QTextEdit):
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setFrameStyle(QFrame.NoFrame)
 
     def _on_content_changed(self):
         """Update the widget size when content changes."""
@@ -28,24 +32,33 @@ class DynamicTextEdit(QTextEdit):
     def sizeHint(self) -> QSize:
         return self.minimumSizeHint()
 
+
 class MessageWidget(QFrame):
-    """Widget for displaying a single message in the chat history."""
+    """Widget for displaying a single message in the chat history with header."""
 
     selectionChanged = Signal(bool)
+    FRAME_COLOR = "#2a3544"  # Dark bluish-grey for frame and header
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFrameStyle(QFrame.NoFrame)
+        self.setFrameStyle(QFrame.Box | QFrame.Plain)
+        self.setLineWidth(1)
 
         # Create layout
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
+        self.layout.setSpacing(0)  # No spacing between widgets
+        self.layout.setContentsMargins(0, 0, 0, 0)  # No margins around layout
 
-        # Create text display using custom DynamicTextEdit
+        # Create header
+        self.header = QLabel(self)
+        self.header.setAutoFillBackground(True)
+        self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.header.setContentsMargins(8, 4, 8, 4)  # Keep some padding inside header for text
+
+        # Create content area using custom DynamicTextEdit
         self.text_area = DynamicTextEdit(self)
         self.text_area.setReadOnly(True)
-        self.text_area.setFrameStyle(QFrame.NoFrame)
+        self.text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
 
         # Connect selection change signal
         self.text_area.selectionChanged.connect(self._on_selection_changed)
@@ -61,7 +74,7 @@ class MessageWidget(QFrame):
             'error': self._create_format('white')
         }
 
-        # Background colors for different message types
+        # Background colors for different message types (content area only)
         self.backgrounds = {
             'user': '#3c3c3c',    # Dark gray for user messages
             'ai': '#282828',      # Darker gray for AI messages
@@ -69,6 +82,7 @@ class MessageWidget(QFrame):
             'error': '#3a1a1a'    # Dark red for error messages
         }
 
+        self.layout.addWidget(self.header)
         self.layout.addWidget(self.text_area)
 
         # Set size policies that prevent shrinking
@@ -81,19 +95,51 @@ class MessageWidget(QFrame):
         return fmt
 
     def set_content(self, text: str, style: str):
+        # Split into source and content
+        if text.startswith("You: "):
+            header_text = "You"
+            content = text[4:]
+        elif text.startswith("AI: "):
+            header_text = "Assistant"
+            content = text[4:]
+        else:
+            header_text = "System Message" if style == 'system' else "Error"
+            content = text
+
+        # Set header text
+        self.header.setText(header_text)
+
+        # Style the header - using frame color
+        self.header.setStyleSheet(f"""
+            QLabel {{
+                background-color: {self.FRAME_COLOR};
+                color: white;
+                font-weight: bold;
+            }}
+        """)
+
+        # Set content
         self.text_area.clear()
         cursor = self.text_area.textCursor()
         cursor.setCharFormat(self.formats.get(style, self.formats['user']))
-        cursor.insertText(text)
+        cursor.insertText(content)
 
-        # Set the background color based on message type
-        background_color = self.backgrounds.get(style, self.backgrounds['user'])
+        # Style the content area
+        content_color = self.backgrounds.get(style, self.backgrounds['user'])
         self.text_area.setStyleSheet(f"""
             QTextEdit {{
-                background-color: {background_color};
+                background-color: {content_color};
                 color: white;
                 selection-background-color: #606060;
                 border: none;
+            }}
+        """)
+
+        # Style the frame
+        self.setStyleSheet(f"""
+            QFrame {{
+                border: 1px solid {self.FRAME_COLOR};
+                margin: 0;
             }}
         """)
 
