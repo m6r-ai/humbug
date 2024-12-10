@@ -182,7 +182,7 @@ class ChatView(QFrame):
 
     def add_user_message(self, content: str) -> Message:
         """Add a user message to the conversation and return the message object."""
-        self.add_message(f"You: {content}", "user")
+        self.add_message(content, "user")
         message = Message.create(
             self._conversation_id,
             MessageSource.USER,

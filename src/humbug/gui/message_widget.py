@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QSizePolicy, QLabel
 )
 from PySide6.QtCore import Signal, QSize
-from PySide6.QtGui import QTextCharFormat, QColor
+from PySide6.QtGui import QTextCharFormat
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.dynamic_text_edit import DynamicTextEdit
@@ -44,20 +44,23 @@ class MessageWidget(QFrame):
         # Add Markdown highlighter
         self.highlighter = MarkdownHighlighter(self.text_area.document())
 
-        # Style formats for different message types - all using white text
+        # Get style manager
+        self.style_manager = StyleManager()
+
+        # Create formats for different message types - all using the primary text color
         self.formats = {
-            'user': self._create_format('white'),
-            'ai': self._create_format('white'),
-            'system': self._create_format('white'),
-            'error': self._create_format('white')
+            'user': self._create_format(),
+            'ai': self._create_format(),
+            'system': self._create_format(),
+            'error': self._create_format()
         }
 
-        # Background colors for different message types (content area only)
-        self.backgrounds = {
-            'user': '#3c3c3c',    # Dark gray for user messages
-            'ai': '#282828',      # Darker gray for AI messages
-            'system': '#1a3a1a',  # Dark green for system messages
-            'error': '#3a1a1a'    # Dark red for error messages
+        # Map message types to background color roles
+        self.background_roles = {
+            'user': ColorRole.MESSAGE_USER,
+            'ai': ColorRole.MESSAGE_AI,
+            'system': ColorRole.MESSAGE_SYSTEM,
+            'error': ColorRole.MESSAGE_ERROR
         }
 
         self.layout.addWidget(self.header)
@@ -67,32 +70,32 @@ class MessageWidget(QFrame):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.text_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-    def _create_format(self, color: str) -> QTextCharFormat:
+    def _create_format(self) -> QTextCharFormat:
+        """Create text format using primary text color from StyleManager."""
         fmt = QTextCharFormat()
-        fmt.setForeground(QColor(color))
+        fmt.setForeground(self.style_manager.get_color(ColorRole.TEXT_PRIMARY))
         return fmt
 
-    def set_content(self, text: str, style: str):
-        # Split into source and content
-        if text.startswith("You: "):
-            header_text = "You"
-            content = text[4:]
-        elif text.startswith("AI: "):
-            header_text = "Assistant"
-            content = text[4:]
-        else:
-            header_text = "System Message" if style == 'system' else "Error"
-            content = text
+    def _get_background_color(self, style: str) -> str:
+        """Get the appropriate background color for the message style."""
+        role = self.background_roles.get(style, ColorRole.MESSAGE_USER)
+        return self.style_manager.get_color_str(role)
 
-        # Set header text
+    def set_content(self, text: str, style: str):
+        header_text = {
+            'user': "You",
+            'ai': "Assistant",
+            'system': "System Message",
+            'error': "Error"
+        }.get(style, "Unknown")
+
         self.header.setText(header_text)
 
-        # Style the header - using frame color
-        style_manager = StyleManager()
+        # Style the header
         self.header.setStyleSheet(f"""
             QLabel {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
-                color: white;
+                background-color: {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
+                color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 font-weight: bold;
             }}
         """)
@@ -101,15 +104,15 @@ class MessageWidget(QFrame):
         self.text_area.clear()
         cursor = self.text_area.textCursor()
         cursor.setCharFormat(self.formats.get(style, self.formats['user']))
-        cursor.insertText(content)
+        cursor.insertText(text)
 
         # Style the content area
-        content_color = self.backgrounds.get(style, self.backgrounds['user'])
+        content_color = self._get_background_color(style)
         self.text_area.setStyleSheet(f"""
             QTextEdit {{
                 background-color: {content_color};
-                color: white;
-                selection-background-color: {style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
+                color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {self.style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
                 border: none;
             }}
         """)
@@ -117,7 +120,7 @@ class MessageWidget(QFrame):
         # Style the frame
         self.setStyleSheet(f"""
             QFrame {{
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
+                border: 1px solid {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
                 margin: 0;
             }}
         """)
