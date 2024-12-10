@@ -241,6 +241,23 @@ Context: humbug application
                 When inside a code block, each new line is automatically formatted with the monospace font and background.
                 The full width background for code blocks is applied immediately, and not just when a newline is entered.
 
+        Context: History display formatting
+            The history display supports the same Markdown-style code formatting as the input box:
+
+            Context: Code blocks
+                Text between matching triple backticks (```) is displayed as a code block.
+                Code blocks use the same monospace font as the input area (Menlo, Monaco, Courier New, monospace).
+                The background color for code blocks is dark grey (#2d2d2d) and extends across the full width.
+                The code block formatting applies to both the triple backtick lines and all content between them.
+
+            Context: Inline code
+                Text between single backticks (`) is displayed as inline code.
+                Inline code uses the same monospace font as code blocks.
+                Inline code has no background color.
+
+            Context: Formatting interaction
+                The Markdown formatting is applied in real-time as messages are added or updated.
+
     Context: Conversation transcript file
         The application will record a transcript of all conversations between the user and the AI, storing each turn
         in a JSON data structure.  The JSON data structure will be written to a transcript file called
