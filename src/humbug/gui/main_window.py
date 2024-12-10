@@ -30,7 +30,6 @@ class MainWindow(QMainWindow):
         self.chat_views = {}  # conversation_id -> ChatView
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self.logger = logging.getLogger("MainWindow")
-        self.style_manager = StyleManager()
 
         self._create_actions()
         self._create_menus()
@@ -118,8 +117,8 @@ class MainWindow(QMainWindow):
 
         if chat_view.input.hasFocus():
             chat_view.input.copy()
-        elif chat_view.history.hasFocus():
-            chat_view.history.copy()
+        else:
+            chat_view.history.copy_selection()
 
     def _create_menus(self):
         """Create the menu bar and all menus."""
@@ -178,20 +177,17 @@ class MainWindow(QMainWindow):
             return
 
         has_input_selection = chat_view.input.textCursor().hasSelection()
-        has_history_selection = chat_view.history.textCursor().hasSelection()
+        has_history_selection = chat_view.history.has_selection()
         has_text = bool(chat_view.get_input_text())
         can_undo = chat_view.input.document().isUndoAvailable()
         can_redo = chat_view.input.document().isRedoAvailable()
         input_focused = chat_view.input.hasFocus()
-        history_focused = chat_view.history.hasFocus()
 
         self.submit_action.setEnabled(has_text)
         self.undo_action.setEnabled(can_undo and input_focused)
         self.redo_action.setEnabled(can_redo and input_focused)
         self.cut_action.setEnabled(has_input_selection and input_focused)
-        self.copy_action.setEnabled(
-            (input_focused and has_input_selection) or (history_focused and has_history_selection)
-        )
+        self.copy_action.setEnabled(has_input_selection or has_history_selection)
         self.paste_action.setEnabled(input_focused)
         self.close_conv_action.setEnabled(True)
         self.settings_action.setEnabled(True)
@@ -219,6 +215,7 @@ class MainWindow(QMainWindow):
         # Create initial conversation tab
         self.create_conversation_tab()
 
+        self.style_manager = StyleManager()
         self.style_manager.zoom_changed.connect(self._update_styles)
         self._update_styles()
 

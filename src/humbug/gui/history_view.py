@@ -1,128 +1,116 @@
 """Chat history view widget."""
 
-from typing import Optional
+from typing import Optional, List
 
-from PySide6.QtWidgets import QFrame, QTextEdit, QSizePolicy
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QTextCursor, QColor, QTextCharFormat, QTextOption
 
-from humbug.gui.markdown_highlighter import MarkdownHighlighter
+from humbug.gui.message_widget import MessageWidget
 
 
-class HistoryView(QTextEdit):
+class HistoryView(QScrollArea):
     """Read-only view for chat history."""
 
     def __init__(self, parent=None):
         """Initialize the history view."""
         super().__init__(parent)
-        self.setReadOnly(True)
         self.setFrameStyle(QFrame.NoFrame)
+        self.setWidgetResizable(True)
+
+        # Disable scroll bars - parent handles scrolling
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        # Create container widget for messages
+        self.container = QWidget(self)
+
+        # Set size policies to ensure proper sizing
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        self.container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
 
-        # Enable word wrap at word boundaries
-        self.setWordWrapMode(QTextOption.WordWrap)
+        self.layout = QVBoxLayout(self.container)
+        self.layout.setSpacing(4)  # Small gap between messages
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.addStretch()  # Push messages to the top
 
-        # Style formats for different message types
-        self.formats = {
-            'user': self._create_format('white'),
-            'ai': self._create_format('yellow'),
-            'system': self._create_format('green'),
-            'error': self._create_format('red')
-        }
+        self.setWidget(self.container)
 
-        # Add Markdown highlighter
-        self.highlighter = MarkdownHighlighter(self.document())
+        # Track messages and current AI response
+        self.messages: List[MessageWidget] = []
+        self._ai_response_widget: Optional[MessageWidget] = None
+        self._message_with_selection: Optional[MessageWidget] = None
 
-        # Track AI response position for updates
-        self._ai_response_start: Optional[int] = None
-        self._ai_response_length: int = 0
-
+        # Style the widgets
         self.setStyleSheet("""
-            QTextEdit {
+            QScrollArea {
                 background-color: black;
-                color: white;
-                selection-background-color: #606060;
                 border: none;
             }
-            QTextEdit:focus {
-                background-color: #404040;
+            QWidget#container {
+                background-color: black;
             }
         """)
-
-        # Watch for document changes
-        self.document().contentsChanged.connect(self._on_content_changed)
-
-    def _on_content_changed(self):
-        """Handle document content changes."""
-        self.updateGeometry()
-
-    def minimumSizeHint(self) -> QSize:
-        """Calculate the total size needed for both widgets."""
-        height = max(int(self.document().size().height()), 100)
-        width = self.width() if self.width() > 0 else self.minimumWidth()
-
-        return QSize(width, height)
-
-    def _create_format(self, color: str) -> QTextCharFormat:
-        """Create a text format with the specified color."""
-        fmt = QTextCharFormat()
-        fmt.setForeground(QColor(color))
-        return fmt
+        self.container.setObjectName("container")
 
     def append_message(self, message: str, style: str):
         """Append a message with the specified style."""
-        # Create a cursor for text manipulation
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End)
+        msg_widget = MessageWidget(self)
+        msg_widget.selectionChanged.connect(
+            lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
+        )
+        msg_widget.set_content(message, style)
 
-        # Add newline if not at start
-        if not cursor.atStart():
-            cursor.insertBlock()
+        # Add widget before the stretch spacer
+        self.layout.insertWidget(self.layout.count() - 1, msg_widget)
+        self.messages.append(msg_widget)
 
-        # Get the format for this message type
-        base_format = self.formats.get(style, self.formats['user'])
-        message_format = QTextCharFormat(base_format)
-
-        # Insert the message
-        cursor.insertText(message, message_format)
-
-        # Track AI response position if needed
         if style == 'ai':
-            self._ai_response_start = cursor.position() - len(message)
-            self._ai_response_length = len(message)
+            self._ai_response_widget = msg_widget
         else:
-            self._ai_response_start = None
-            self._ai_response_length = 0
+            self._ai_response_widget = None
 
-        # Move cursor to end
-        self.setTextCursor(cursor)
-
-        # Force re-highlighting after inserting new content
-        self.highlighter.rehighlight()
+        # Update size after adding message
+        self.updateGeometry()
 
     def update_last_ai_response(self, content: str):
         """Update the last AI response in the history."""
-        if self._ai_response_start is None:
+        if self._ai_response_widget:
+            self._ai_response_widget.set_content(f"AI: {content}", 'ai')
+        else:
             self.append_message(f"AI: {content}", 'ai')
-            return
-
-        cursor = QTextCursor(self.document())
-        cursor.setPosition(self._ai_response_start)
-        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor,
-                          self._ai_response_length)
-
-        # Insert updated content with AI format
-        cursor.insertText(f"AI: {content}", self.formats['ai'])
-        self._ai_response_length = len(f"AI: {content}")
-
-        self.setTextCursor(cursor)
-
-        # Force re-highlighting after updating content
-        self.highlighter.rehighlight()
+        self.updateGeometry()
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
-        self._ai_response_start = None
-        self._ai_response_length = 0
+        self._ai_response_widget = None
+
+    def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
+        """Handle selection changes in message widgets."""
+        if has_selection:
+            if self._message_with_selection and self._message_with_selection != message_widget:
+                old_cursor = self._message_with_selection.text_area.textCursor()
+                old_cursor.clearSelection()
+                self._message_with_selection.text_area.setTextCursor(old_cursor)
+            self._message_with_selection = message_widget
+        elif message_widget == self._message_with_selection:
+            self._message_with_selection = None
+
+    def has_selection(self) -> bool:
+        """Check if any message has selected text."""
+        return self._message_with_selection is not None and self._message_with_selection.has_selection()
+
+    def copy_selection(self):
+        """Copy selected text to clipboard."""
+        if self._message_with_selection:
+            self._message_with_selection.copy_selection()
+
+    def sizeHint(self) -> QSize:
+        """Calculate size based on content."""
+        # Get the container's size hint
+        size = self.container.sizeHint()
+        # Use full width but calculated height
+        return QSize(self.width(), size.height())
+
+    def minimumSizeHint(self) -> QSize:
+        """Minimum size is the same as size hint."""
+        return self.sizeHint()
