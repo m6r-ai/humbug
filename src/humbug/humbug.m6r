@@ -84,6 +84,7 @@ Context: humbug application
                 |  This is a system message that wraps     |
                 |  across multiple lines as needed.        |
                 +------------------------------------------+
+                ```
 
     Context: Menus
         The application will have a series of top-level Menus.
