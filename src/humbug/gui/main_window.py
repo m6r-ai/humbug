@@ -66,23 +66,23 @@ class MainWindow(QMainWindow):
 
         self.undo_action = QAction("Undo", self)
         self.undo_action.setShortcut(QKeySequence("Ctrl+Z"))
-        self.undo_action.triggered.connect(lambda: self.current_chat_view.input.undo())
+        self.undo_action.triggered.connect(lambda: self.current_chat_view.undo())
 
         self.redo_action = QAction("Redo", self)
         self.redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
-        self.redo_action.triggered.connect(lambda: self.current_chat_view.input.redo())
+        self.redo_action.triggered.connect(lambda: self.current_chat_view.redo())
 
         self.cut_action = QAction("Cut", self)
         self.cut_action.setShortcut(QKeySequence("Ctrl+X"))
-        self.cut_action.triggered.connect(self._handle_cut)
+        self.cut_action.triggered.connect(lambda: self.current_chat_view.cut())
 
         self.copy_action = QAction("Copy", self)
         self.copy_action.setShortcut(QKeySequence("Ctrl+C"))
-        self.copy_action.triggered.connect(self._handle_copy)
+        self.copy_action.triggered.connect(lambda: self.current_chat_view.copy())
 
         self.paste_action = QAction("Paste", self)
         self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
-        self.paste_action.triggered.connect(lambda: self.current_chat_view.input.paste())
+        self.paste_action.triggered.connect(lambda: self.current_chat_view.paste())
 
         self.settings_action = QAction("Conversation Settings", self)
         self.settings_action.setShortcut(QKeySequence("Ctrl+,"))
@@ -100,26 +100,6 @@ class MainWindow(QMainWindow):
         self.reset_zoom_action = QAction("Reset Zoom", self)
         self.reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self.reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
-
-    def _handle_cut(self):
-        """Handle cut action based on focus."""
-        chat_view = self.current_chat_view
-        if not chat_view:
-            return
-
-        if chat_view.input.hasFocus():
-            chat_view.input.cut()
-
-    def _handle_copy(self):
-        """Handle copy action based on focus."""
-        chat_view = self.current_chat_view
-        if not chat_view:
-            return
-
-        if chat_view.input.hasFocus():
-            chat_view.input.copy()
-        else:
-            chat_view.history.copy_selection()
 
     def _create_menus(self):
         """Create the menu bar and all menus."""
@@ -156,47 +136,6 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self.zoom_out_action)
         view_menu.addAction(self.reset_zoom_action)
 
-    def _show_about_dialog(self):
-        """Show the About dialog."""
-        dialog = AboutDialog(self)
-        dialog.exec()
-
-    @Slot()
-    def _update_menu_state(self):
-        """Update enabled/disabled state of menu items."""
-        chat_view = self.current_chat_view
-        if not chat_view:
-            # Disable all editing actions if no chat view is available
-            self.submit_action.setEnabled(False)
-            self.undo_action.setEnabled(False)
-            self.redo_action.setEnabled(False)
-            self.cut_action.setEnabled(False)
-            self.copy_action.setEnabled(False)
-            self.paste_action.setEnabled(False)
-            self.close_conv_action.setEnabled(False)
-            self.settings_action.setEnabled(False)
-            return
-
-        has_input_selection = chat_view.input.textCursor().hasSelection()
-        has_history_selection = chat_view.history.has_selection()
-        has_text = bool(chat_view.get_input_text())
-        can_undo = chat_view.input.document().isUndoAvailable()
-        can_redo = chat_view.input.document().isRedoAvailable()
-        input_focused = chat_view.input.hasFocus()
-
-        self.submit_action.setEnabled(has_text)
-        self.undo_action.setEnabled(can_undo and input_focused)
-        self.redo_action.setEnabled(can_redo and input_focused)
-        self.cut_action.setEnabled(has_input_selection and input_focused)
-        self.copy_action.setEnabled(has_input_selection or has_history_selection)
-        self.paste_action.setEnabled(input_focused)
-        self.close_conv_action.setEnabled(True)
-        self.settings_action.setEnabled(True)
-
-        current_zoom = self.style_manager.zoom_factor
-        self.zoom_in_action.setEnabled(current_zoom < 2.0)
-        self.zoom_out_action.setEnabled(current_zoom > 0.5)
-
     def _setup_ui(self):
         """Set up the user interface."""
         self.setWindowTitle("Humbug")
@@ -219,6 +158,41 @@ class MainWindow(QMainWindow):
         self.style_manager = StyleManager()
         self.style_manager.zoom_changed.connect(self._update_styles)
         self._update_styles()
+
+    def _show_about_dialog(self):
+        """Show the About dialog."""
+        dialog = AboutDialog(self)
+        dialog.exec()
+
+    @Slot()
+    def _update_menu_state(self):
+        """Update enabled/disabled state of menu items."""
+        chat_view = self.current_chat_view
+        if not chat_view:
+            # Disable all editing actions if no chat view is available
+            self.submit_action.setEnabled(False)
+            self.undo_action.setEnabled(False)
+            self.redo_action.setEnabled(False)
+            self.cut_action.setEnabled(False)
+            self.copy_action.setEnabled(False)
+            self.paste_action.setEnabled(False)
+            self.close_conv_action.setEnabled(False)
+            self.settings_action.setEnabled(False)
+            return
+
+        has_text = bool(chat_view.get_input_text())
+        self.submit_action.setEnabled(has_text)
+        self.undo_action.setEnabled(chat_view.can_undo())
+        self.redo_action.setEnabled(chat_view.can_redo())
+        self.cut_action.setEnabled(chat_view.can_cut())
+        self.copy_action.setEnabled(chat_view.can_copy())
+        self.paste_action.setEnabled(chat_view.can_paste())
+        self.close_conv_action.setEnabled(True)
+        self.settings_action.setEnabled(True)
+
+        current_zoom = self.style_manager.zoom_factor
+        self.zoom_in_action.setEnabled(current_zoom < 2.0)
+        self.zoom_out_action.setEnabled(current_zoom > 0.5)
 
     def _update_styles(self) -> None:
         zoom_factor = self.style_manager.zoom_factor

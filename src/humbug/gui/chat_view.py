@@ -285,3 +285,52 @@ class ChatView(QFrame):
             0,
             50
         )
+
+    def can_undo(self) -> bool:
+        """Is undo currently available?"""
+        return self.container.input.document().isUndoAvailable()
+
+    def undo(self):
+        """Undo the last edit operation."""
+        self.container.input.text_area.undo()
+
+    def can_redo(self) -> bool:
+        """Is redo currently available?"""
+        return self.container.input.document().isRedoAvailable()
+
+    def redo(self):
+        """Redo the last undone edit operation."""
+        self.container.input.text_area.redo()
+
+    def can_cut(self) -> bool:
+        """Is cut currently available?"""
+        input_focused = self.container.input.hasFocus()
+        has_input_selection = self.container.input.textCursor().hasSelection()
+        return input_focused and has_input_selection
+
+    def cut(self):
+        """Cut selected text to clipboard."""
+        if self.container.input.hasFocus():
+            self.container.input.text_area.cut()
+
+    def can_copy(self) -> bool:
+        """Is copy currently available?"""
+        has_input_selection = self.container.input.textCursor().hasSelection()
+        has_history_selection = self.container.history.has_selection()
+        return has_history_selection or has_input_selection
+
+    def copy(self):
+        """Copy selected text to clipboard."""
+        if self.container.input.hasFocus():
+            self.container.input.copy()
+        else:
+            self.container.history.copy_selection()
+
+    def can_paste(self) -> bool:
+        """Is paste currently available?"""
+        input_focused = self.container.input.hasFocus()
+        return input_focused
+
+    def paste(self):
+        """Paste text from clipboard."""
+        self.container.input.paste()
