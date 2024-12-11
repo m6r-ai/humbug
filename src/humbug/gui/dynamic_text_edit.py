@@ -26,7 +26,7 @@ class DynamicTextEdit(QTextEdit):
         # Batch update handling
         self._update_timer = QTimer(self)
         self._update_timer.setSingleShot(True)
-        self._update_timer.setInterval(50)  # 50ms delay
+        self._update_timer.setInterval(50)
         self._update_timer.timeout.connect(self._process_delayed_update)
         self._pending_update = False
 
