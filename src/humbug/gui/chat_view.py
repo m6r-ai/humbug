@@ -15,7 +15,7 @@ from humbug.conversation.usage import Usage
 from humbug.gui.chat_container import ChatContainer
 from humbug.gui.color_role import ColorRole
 from humbug.gui.history_view import HistoryView
-from humbug.gui.input_edit import InputEdit
+from humbug.gui.live_input_widget import LiveInputWidget
 from humbug.gui.style_manager import StyleManager
 
 
@@ -40,7 +40,7 @@ class ChatView(QFrame):
         return self._conversation_id
 
     @property
-    def input(self) -> InputEdit:
+    def input(self) -> LiveInputWidget:
         """Provide access to input widget."""
         return self.container.input
 

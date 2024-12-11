@@ -9,7 +9,7 @@ from PySide6.QtCore import QSize, Signal
 from PySide6.QtGui import QResizeEvent
 
 from humbug.gui.history_view import HistoryView
-from humbug.gui.input_edit import InputEdit
+from humbug.gui.live_input_widget import LiveInputWidget
 
 
 class ChatContainer(QWidget):
@@ -24,7 +24,7 @@ class ChatContainer(QWidget):
 
         # Create child widgets
         self.history = HistoryView(self)
-        self.input = InputEdit(self)
+        self.input = LiveInputWidget(self)
 
         vbox = QVBoxLayout()
         vbox.setSpacing(0)
