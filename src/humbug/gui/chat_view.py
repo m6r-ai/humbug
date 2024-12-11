@@ -70,6 +70,9 @@ class ChatView(QFrame):
         self.history_view = HistoryView()
         self.scroll_area.setWidget(self.history_view)
 
+        # Track the last known scrollbar visibility state
+        self._scrollbar_visible = False
+
         # Wire up the input widget's signals
         self.history_view.connect_input_cursor_changed(self._ensure_cursor_visible)
 
@@ -128,6 +131,12 @@ class ChatView(QFrame):
 
     def _handle_scroll_request(self, old_size: QSize) -> None:
         """Handle scroll requests from content changes."""
+        # Get the viewport width, which automatically accounts for scrollbar
+        viewport_width = self.scroll_area.viewport().width()
+
+        # Update history view width to match viewport
+        self.history_view.setFixedWidth(viewport_width)
+
         scrollbar = self.scroll_area.verticalScrollBar()
         scrollbar_end = self.scroll_area.viewport().height() - 1 + scrollbar.value()
         if scrollbar_end >= old_size.height() - 20:
