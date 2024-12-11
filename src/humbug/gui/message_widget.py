@@ -161,7 +161,8 @@ class MessageWidget(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
         # Ensure text area width matches our width
-        self.text_area.setFixedWidth(self.width())
+        text_area_width = self.width() - 2  # Subtract 2 for left and right borders
+        self.text_area.setFixedWidth(text_area_width)
         # Update size after resize
         self.updateGeometry()
 
