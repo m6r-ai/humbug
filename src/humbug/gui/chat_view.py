@@ -14,8 +14,6 @@ from humbug.conversation.message_source import MessageSource
 from humbug.conversation.usage import Usage
 from humbug.gui.chat_container import ChatContainer
 from humbug.gui.color_role import ColorRole
-from humbug.gui.history_view import HistoryView
-from humbug.gui.live_input_widget import LiveInputWidget
 from humbug.gui.style_manager import StyleManager
 
 
@@ -38,16 +36,6 @@ class ChatView(QFrame):
     def conversation_id(self) -> str:
         """Get the conversation ID for this view."""
         return self._conversation_id
-
-    @property
-    def input(self) -> LiveInputWidget:
-        """Provide access to input widget."""
-        return self.container.input
-
-    @property
-    def history(self) -> HistoryView:
-        """Provide access to history widget."""
-        return self.container.history
 
     def get_settings(self) -> ConversationSettings:
         """Get current conversation settings."""
@@ -141,7 +129,7 @@ class ChatView(QFrame):
         """Update the current AI response in the conversation."""
         if error:
             error_msg = f"Error: {error['message']}"
-            self.history.update_last_ai_response(error_msg)
+            self.container.history.update_last_ai_response(error_msg)
             error_message = Message.create(
                 self._conversation_id,
                 MessageSource.SYSTEM,
@@ -152,7 +140,7 @@ class ChatView(QFrame):
             return error_message
 
         # Update display
-        self.history.update_last_ai_response(content)
+        self.container.history.update_last_ai_response(content)
 
         # Update or create AI message in conversation
         settings = self.get_settings()
@@ -236,27 +224,27 @@ class ChatView(QFrame):
     def add_message(self, message: str, style: str) -> None:
         """Add a message to history with appropriate styling."""
         if style == 'ai':
-            self.history.update_last_ai_response(message[4:])
+            self.container.history.update_last_ai_response(message[4:])
         else:
-            self.history.append_message(message, style)
+            self.container.history.append_message(message, style)
 
         QTimer.singleShot(0, self._scroll_to_bottom)
 
     def get_input_text(self) -> str:
         """Get the current input text."""
-        return self.input.toPlainText()
+        return self.container.input.toPlainText()
 
     def set_input_text(self, text: str):
         """Set the input text."""
-        self.input.setPlainText(text)
+        self.container.input.setPlainText(text)
 
     def clear_input(self):
         """Clear the input area."""
-        self.input.clear()
+        self.container.input.clear()
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
-        self.history.finish_ai_response()
+        self.container.history.finish_ai_response()
 
     def _update_status_display(self):
         """Update status bar with current settings and token counts."""
