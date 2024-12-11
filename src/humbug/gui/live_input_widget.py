@@ -17,7 +17,6 @@ class LiveInputWidget(MessageWidget):
     def __init__(self, parent=None):
         """Initialize the live input widget."""
         super().__init__(parent, is_input=True)
-        self.setContentsMargins(10, 0, 10, 10)  # Match history margin but no top margin
 
         # Set up the header initial text
         self.set_content("", "user")
