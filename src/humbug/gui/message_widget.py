@@ -57,6 +57,9 @@ class MessageWidget(QFrame):
         # Get style manager
         self.style_manager = StyleManager()
 
+        # Track current message style
+        self._current_style = None
+
         # Create formats for different message types - all using the primary text color
         self.formats = {
             'user': self._create_format(),
@@ -108,7 +111,21 @@ class MessageWidget(QFrame):
         return self.style_manager.get_color_str(role)
 
     def set_content(self, text: str, style: str):
-        """Set the content and style of the message widget."""
+        """Set content with style, handling incremental updates for AI responses."""
+        if style != self._current_style:
+            # Style changed - update header and styling
+            self._setup_style(style)
+            self._current_style = style
+
+            # Full reset needed for style change
+            self.text_area.clear()
+            self.text_area.set_incremental_text(text, self.formats.get(style, self.formats['user']))
+        else:
+            # Same style - just update content incrementally
+            self.text_area.set_incremental_text(text, self.formats.get(style, self.formats['user']))
+
+    def _setup_style(self, style: str):
+        """Set up styling for the message."""
         header_text = {
             'user': "You",
             'ai': "Assistant",
@@ -126,12 +143,6 @@ class MessageWidget(QFrame):
             }}
         """)
 
-        # Set content
-        self.text_area.clear()
-        cursor = self.text_area.textCursor()
-        cursor.setCharFormat(self.formats.get(style, self.formats['user']))
-        cursor.insertText(text)
-
         # Style the content area
         content_color = self._get_background_color(style)
         self.text_area.setStyleSheet(f"""
@@ -140,7 +151,7 @@ class MessageWidget(QFrame):
                 color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {self.style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
                 border: none;
-                padding: 8px 8px 8px 8px;
+                padding: 8px;
             }}
         """)
 
@@ -149,12 +160,8 @@ class MessageWidget(QFrame):
             QFrame {{
                 border: 1px solid {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
                 margin: 0;
-                padding: 0;
             }}
         """)
-
-        # Force immediate layout update
-        self.updateGeometry()
 
     def _on_selection_changed(self):
         """Handle selection changes in the text area."""

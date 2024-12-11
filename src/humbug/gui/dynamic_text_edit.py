@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
 from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QTextOption
+from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat
 
 
 class DynamicTextEdit(QTextEdit):
@@ -29,6 +29,9 @@ class DynamicTextEdit(QTextEdit):
         self._update_timer.setInterval(50)  # 50ms delay
         self._update_timer.timeout.connect(self._process_delayed_update)
         self._pending_update = False
+
+        # Track current content length for incremental updates
+        self._current_length = 0
 
     def wheelEvent(self, event):
         """Explicitly ignore wheel events to let them propagate up."""
@@ -63,7 +66,48 @@ class DynamicTextEdit(QTextEdit):
         super().setPlainText(text)
         self.document().blockSignals(False)
 
+        # Update current length tracker
+        self._current_length = len(text)
+
         # Queue a single update
+        self._on_content_changed()
+
+    def set_incremental_text(self, text: str, text_format: QTextCharFormat = None):
+        """Update text content incrementally by only adding new content."""
+        if len(text) < self._current_length:
+            # Content is shorter than what we have - do a full reset
+            self.document().blockSignals(True)
+            self.clear()
+            cursor = self.textCursor()
+            if text_format:
+                cursor.setCharFormat(text_format)
+            cursor.insertText(text)
+            self.document().blockSignals(False)
+            self._current_length = len(text)
+            self._on_content_changed()
+            return
+
+        if len(text) == self._current_length:
+            # No new content
+            return
+
+        # Only insert the new content
+        self.document().blockSignals(True)
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        if text_format:
+            cursor.setCharFormat(text_format)
+        cursor.insertText(text[self._current_length:])
+        self.document().blockSignals(False)
+        self._current_length = len(text)
+        self._on_content_changed()
+
+    def clear(self):
+        """Override clear to reset current length."""
+        self.document().blockSignals(True)
+        super().clear()
+        self.document().blockSignals(False)
+        self._current_length = 0
         self._on_content_changed()
 
     def minimumSizeHint(self) -> QSize:
