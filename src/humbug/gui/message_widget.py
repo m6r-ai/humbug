@@ -17,10 +17,17 @@ class MessageWidget(QFrame):
 
     selectionChanged = Signal(bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, is_input=False):
+        """Initialize the message widget.
+
+        Args:
+            parent: Optional parent widget
+            is_input: Whether this is an input widget (affects styling)
+        """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
         self.setLineWidth(1)
+        self.is_input = is_input
 
         # Create layout
         self.layout = QVBoxLayout(self)
@@ -34,8 +41,7 @@ class MessageWidget(QFrame):
         self.header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
 
         # Create content area using custom DynamicTextEdit
-        self.text_area = DynamicTextEdit(self)
-        self.text_area.setReadOnly(True)
+        self.text_area = self._create_text_area()
         self.text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
 
         # Connect selection change signal
@@ -70,6 +76,18 @@ class MessageWidget(QFrame):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.text_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
+    def _create_text_area(self) -> DynamicTextEdit:
+        """Create and configure the text area widget.
+
+        Can be overridden by subclasses to customize text area behavior.
+
+        Returns:
+            Configured DynamicTextEdit instance
+        """
+        text_area = DynamicTextEdit(self)
+        text_area.setReadOnly(not self.is_input)
+        return text_area
+
     def _create_format(self) -> QTextCharFormat:
         """Create text format using primary text color from StyleManager."""
         fmt = QTextCharFormat()
@@ -82,6 +100,7 @@ class MessageWidget(QFrame):
         return self.style_manager.get_color_str(role)
 
     def set_content(self, text: str, style: str):
+        """Set the content and style of the message widget."""
         header_text = {
             'user': "You",
             'ai': "Assistant",
@@ -126,13 +145,16 @@ class MessageWidget(QFrame):
         """)
 
     def _on_selection_changed(self):
+        """Handle selection changes in the text area."""
         has_selection = self.text_area.textCursor().hasSelection()
         self.selectionChanged.emit(has_selection)
 
     def has_selection(self) -> bool:
+        """Check if text is selected in the text area."""
         return self.text_area.textCursor().hasSelection()
 
     def copy_selection(self):
+        """Copy selected text to clipboard."""
         self.text_area.copy()
 
     def resizeEvent(self, event):
