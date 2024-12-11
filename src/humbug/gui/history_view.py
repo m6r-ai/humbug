@@ -3,7 +3,7 @@
 from typing import List, Optional
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QSizePolicy
-from PySide6.QtCore import QSize, Signal
+from PySide6.QtCore import QSize, Signal, QRect
 from PySide6.QtGui import QResizeEvent
 
 from humbug.gui.color_role import ColorRole
@@ -114,6 +114,7 @@ class HistoryView(QFrame):
         self._input.setFixedWidth(new_width)
 
         old_size: QSize = event.oldSize()
+        print(f"resize event: {old_size}, {event.size()}")
         self.scroll_requested.emit(old_size)
 
     def sizeHint(self) -> QSize:
@@ -148,7 +149,10 @@ class HistoryView(QFrame):
 
     def get_input_cursor_rect(self):
         """Get the cursor rectangle from the input area."""
-        return self._input.cursorRect()
+        total_height = sum(msg.sizeHint().height() + self.layout.spacing() for msg in self.messages)
+        input_cursor = self._input.cursorRect()
+        cursor = QRect(input_cursor.x(), total_height + input_cursor.y(), input_cursor. width(), input_cursor.height())
+        return cursor
 
     def can_undo(self) -> bool:
         """Check if undo is available in input area."""

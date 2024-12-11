@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
-from PySide6.QtCore import QTimer, Signal
+from PySide6.QtCore import QSize, QTimer, Signal
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.conversation.conversation_history import ConversationHistory
@@ -121,19 +121,17 @@ class ChatView(QFrame):
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
 
-    def _is_scrolled_to_bottom(self) -> bool:
-        """Check if scroll area is at the bottom."""
-        scrollbar = self.scroll_area.verticalScrollBar()
-        return scrollbar.value() >= scrollbar.maximum() - 20
-
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
         scrollbar = self.scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
-    def _handle_scroll_request(self) -> None:
+    def _handle_scroll_request(self, old_size: QSize) -> None:
         """Handle scroll requests from content changes."""
-        if self._is_scrolled_to_bottom():
+        scrollbar = self.scroll_area.verticalScrollBar()
+        scrollbar_end = self.scroll_area.viewport().height() - 1 + scrollbar.value()
+        print(f"size: {old_size}, {scrollbar_end}")
+        if scrollbar_end >= old_size.height() - 20:
             QTimer.singleShot(0, self._scroll_to_bottom)
 
     def add_message(self, message: str, style: str) -> None:
@@ -142,10 +140,6 @@ class ChatView(QFrame):
             self.history_view.update_last_ai_response(message)
         else:
             self.history_view.append_message(message, style)
-
-        # Only auto-scroll if we were already at the bottom
-        if self._is_scrolled_to_bottom():
-            QTimer.singleShot(0, self._scroll_to_bottom)
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
@@ -172,16 +166,14 @@ class ChatView(QFrame):
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""
         cursor_rect = self.history_view.get_input_cursor_rect()
-
-        # Get the global position of the cursor within the scroll area
-        global_pos = self.history_view._input.mapTo(self.scroll_area.viewport(), cursor_rect.topLeft())
+        print(f"ensure csr vis: {cursor_rect}, {self.scroll_area.verticalScrollBar().maximum()}")
 
         # Ensure the cursor is visible by scrolling if necessary
         self.scroll_area.ensureVisible(
-            global_pos.x(),
-            global_pos.y(),
-            cursor_rect.width(),
-            cursor_rect.height() + 50  # Add padding below cursor
+            cursor_rect.x(),
+            cursor_rect.y(),
+            1,
+            50
         )
 
     def get_input_text(self) -> str:

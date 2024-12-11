@@ -1,6 +1,6 @@
 """Input widget that matches history message styling."""
 
-from PySide6.QtCore import Signal, Qt, QMimeData
+from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent
 
 from humbug.gui.message_widget import MessageWidget
@@ -89,7 +89,10 @@ class LiveInputWidget(MessageWidget):
 
     def cursorRect(self):
         """Get the cursor rectangle from the input area."""
-        return self.text_area.cursorRect()
+        text_cursor = self.text_area.cursorRect()
+        offset = self.header.height()
+        cursor = QRect(text_cursor.x(), offset + text_cursor.y(), text_cursor. width(), text_cursor.height())
+        return cursor
 
     def setFocus(self):
         """Set focus to the input area."""
