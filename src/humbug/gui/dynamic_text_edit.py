@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
 from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat
+from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat, QSyntaxHighlighter
 
 
 class DynamicTextEdit(QTextEdit):
@@ -72,6 +72,12 @@ class DynamicTextEdit(QTextEdit):
             self.document().blockSignals(False)
             self._current_length = len(text)
             self._on_content_changed()
+            # Force the highlighter to reprocess the entire document
+            if self.document().isEmpty():
+                return
+            highlighter = self.document().findChild(QSyntaxHighlighter)
+            if highlighter:
+                highlighter.rehighlight()
             return
 
         if len(text) == self._current_length:
@@ -84,10 +90,22 @@ class DynamicTextEdit(QTextEdit):
         cursor.movePosition(QTextCursor.End)
         if text_format:
             cursor.setCharFormat(text_format)
-        cursor.insertText(text[self._current_length:])
+        new_text = text[self._current_length:]
+        cursor.insertText(new_text)
         self.document().blockSignals(False)
         self._current_length = len(text)
         self._on_content_changed()
+
+        # Get the block where we inserted new text
+        cursor.movePosition(QTextCursor.StartOfBlock)
+        current_block = cursor.block()
+
+        # Force the highlighter to reprocess from this block onwards
+        highlighter = self.document().findChild(QSyntaxHighlighter)
+        if highlighter:
+            while current_block.isValid():
+                highlighter.rehighlightBlock(current_block)
+                current_block = current_block.next()
 
     def clear(self):
         """Override clear to reset current length."""
