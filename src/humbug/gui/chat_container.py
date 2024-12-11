@@ -8,8 +8,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QSize, Signal
 from PySide6.QtGui import QResizeEvent
 
+from humbug.gui.color_role import ColorRole
 from humbug.gui.history_view import HistoryView
 from humbug.gui.live_input_widget import LiveInputWidget
+from humbug.gui.style_manager import StyleManager
 
 
 class ChatContainer(QWidget):
@@ -36,6 +38,14 @@ class ChatContainer(QWidget):
         # Set size policy for container
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         self.setMinimumWidth(200)
+
+        # Set background color
+        style_manager = StyleManager()
+        self.setStyleSheet(f"""
+            ChatContainer {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
+        """)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle widget resize events."""

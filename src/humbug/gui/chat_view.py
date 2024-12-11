@@ -70,7 +70,7 @@ class ChatView(QFrame):
         """Set up the user interface."""
         # Main layout
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 1, 0, 0)
         layout.setSpacing(0)
 
         # Create scroll area
@@ -88,8 +88,18 @@ class ChatView(QFrame):
         # Set size policy for scroll area
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        # Style the scroll area
         style_manager = StyleManager()
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                border-top: 1px solid {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
+            #container {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
+        """)
+
+        # Style the scroll area
         self.scroll_area.setStyleSheet(f"""
             QScrollBar:vertical {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};

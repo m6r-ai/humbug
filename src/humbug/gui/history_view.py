@@ -49,9 +49,6 @@ class HistoryView(QScrollArea):
                 background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
                 border: none;
             }}
-            QWidget#container {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-            }}
         """)
         self.container.setObjectName("container")
 
