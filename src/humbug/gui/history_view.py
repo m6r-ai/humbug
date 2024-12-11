@@ -58,8 +58,8 @@ class HistoryView(QFrame):
         msg_widget.set_content(message, style)
         msg_widget.setFixedWidth(self.width() - 20)  # Account for margins
 
-        # Add widget before the stretch spacer
-        self.layout.insertWidget(self.layout.count() - 2, msg_widget)  # -2 to insert before stretch and input
+        # Add widget after the stretch spacer but before the input
+        self.layout.insertWidget(self.layout.count() - 1, msg_widget)
         self.messages.append(msg_widget)
 
         if style == 'ai':

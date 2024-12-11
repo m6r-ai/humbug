@@ -220,8 +220,7 @@ Context: humbug application
         in size upwards as the user adds more content.  This editable region can be arbitrarily large.
 
         To the user, the historical details and the editable region must feel like they're one window.  Where they
-        are required, there is only one vertical and one horizontal scroll bar to cover both the history and
-        editable area.
+        are required, there is only one vertical scroll bar to cover both the history and editable area.
 
         Context: Highlighting operations
             While the editable and non-editable regions must feel like they're one thing, if the user wants to
