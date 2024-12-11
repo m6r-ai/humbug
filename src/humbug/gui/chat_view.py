@@ -73,6 +73,9 @@ class ChatView(QFrame):
         # Wire up the input widget's signals
         self.history_view.connect_input_cursor_changed(self._ensure_cursor_visible)
 
+        # Connect the scroll request signal
+        self.history_view.scroll_requested.connect(self._handle_scroll_request)
+
         # Set size policy for scroll area
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 

@@ -3,7 +3,8 @@
 from typing import List, Optional
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QSizePolicy
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, Signal
+from PySide6.QtGui import QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
@@ -13,6 +14,9 @@ from humbug.gui.style_manager import StyleManager
 
 class HistoryView(QFrame):
     """View for chat history with integrated input area."""
+
+    # Signal to notify when container needs scroll adjustment
+    scroll_requested = Signal(QSize)
 
     def __init__(self, parent=None):
         """Initialize the history view."""
@@ -98,7 +102,7 @@ class HistoryView(QFrame):
         if self._message_with_selection:
             self._message_with_selection.copy_selection()
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
         super().resizeEvent(event)
         new_width = self.width() - 20  # Account for margins
@@ -108,6 +112,9 @@ class HistoryView(QFrame):
 
         # Update input widget
         self._input.setFixedWidth(new_width)
+
+        old_size: QSize = event.oldSize()
+        self.scroll_requested.emit(old_size)
 
     def sizeHint(self) -> QSize:
         """Calculate size based on content."""
