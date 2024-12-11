@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QTextOption
 
 
@@ -23,13 +23,28 @@ class DynamicTextEdit(QTextEdit):
         # Set word wrap mode to adjust to widget width
         self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
 
+        # Batch update handling
+        self._update_timer = QTimer(self)
+        self._update_timer.setSingleShot(True)
+        self._update_timer.setInterval(50)  # 50ms delay
+        self._update_timer.timeout.connect(self._process_delayed_update)
+        self._pending_update = False
+
     def wheelEvent(self, event):
         """Explicitly ignore wheel events to let them propagate up."""
         event.ignore()
 
     def _on_content_changed(self):
-        """Update the widget size when content changes."""
+        """Queue a size update instead of processing immediately."""
+        if not self._pending_update:
+            self._pending_update = True
+            self._update_timer.start()
+
+    def _process_delayed_update(self):
+        """Process the queued size update."""
+        self._pending_update = False
         self.updateGeometry()
+
         # Ensure parent MessageWidget updates as well
         if self.parent():
             self.parent().updateGeometry()
@@ -38,8 +53,17 @@ class DynamicTextEdit(QTextEdit):
         """Handle resize events."""
         super().resizeEvent(event)
 
-        # Force document width to match widget width
+        # Only update document width - let delayed update handle the rest
         self.document().setTextWidth(self.viewport().width())
+
+    def setPlainText(self, text):
+        """Override to optimize bulk text updates."""
+        # Block signals during text update
+        self.document().blockSignals(True)
+        super().setPlainText(text)
+        self.document().blockSignals(False)
+
+        # Queue a single update
         self._on_content_changed()
 
     def minimumSizeHint(self) -> QSize:
