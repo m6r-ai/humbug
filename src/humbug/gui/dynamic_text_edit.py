@@ -59,19 +59,6 @@ class DynamicTextEdit(QTextEdit):
         # Only update document width - let delayed update handle the rest
         self.document().setTextWidth(self.viewport().width())
 
-    def setPlainText(self, text):
-        """Override to optimize bulk text updates."""
-        # Block signals during text update
-        self.document().blockSignals(True)
-        super().setPlainText(text)
-        self.document().blockSignals(False)
-
-        # Update current length tracker
-        self._current_length = len(text)
-
-        # Queue a single update
-        self._on_content_changed()
-
     def set_incremental_text(self, text: str, text_format: QTextCharFormat = None):
         """Update text content incrementally by only adding new content."""
         if len(text) < self._current_length:
