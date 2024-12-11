@@ -114,7 +114,6 @@ class HistoryView(QFrame):
         self._input.setFixedWidth(new_width)
 
         old_size: QSize = event.oldSize()
-        print(f"resize event: {old_size}, {event.size()}")
         self.scroll_requested.emit(old_size)
 
     def sizeHint(self) -> QSize:

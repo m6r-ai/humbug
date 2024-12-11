@@ -130,7 +130,6 @@ class ChatView(QFrame):
         """Handle scroll requests from content changes."""
         scrollbar = self.scroll_area.verticalScrollBar()
         scrollbar_end = self.scroll_area.viewport().height() - 1 + scrollbar.value()
-        print(f"size: {old_size}, {scrollbar_end}")
         if scrollbar_end >= old_size.height() - 20:
             QTimer.singleShot(0, self._scroll_to_bottom)
 
@@ -166,7 +165,6 @@ class ChatView(QFrame):
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""
         cursor_rect = self.history_view.get_input_cursor_rect()
-        print(f"ensure csr vis: {cursor_rect}, {self.scroll_area.verticalScrollBar().maximum()}")
 
         # Ensure the cursor is visible by scrolling if necessary
         self.scroll_area.ensureVisible(

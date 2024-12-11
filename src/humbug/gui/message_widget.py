@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QSizePolicy, QLabel
 )
-from PySide6.QtCore import Signal, QSize
+from PySide6.QtCore import Signal, QSize, Qt
 from PySide6.QtGui import QTextCharFormat
 
 from humbug.gui.color_role import ColorRole
@@ -44,6 +44,10 @@ class MessageWidget(QFrame):
         self.text_area = self._create_text_area()
         self.text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
 
+        # Explicitly disable scrollbars
+        self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         # Connect selection change signal
         self.text_area.selectionChanged.connect(self._on_selection_changed)
 
@@ -74,7 +78,6 @@ class MessageWidget(QFrame):
 
         # Set size policies that prevent shrinking
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.text_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     def _create_text_area(self) -> DynamicTextEdit:
         """Create and configure the text area widget.
@@ -86,6 +89,11 @@ class MessageWidget(QFrame):
         """
         text_area = DynamicTextEdit(self)
         text_area.setReadOnly(not self.is_input)
+
+        # Ensure text area takes up minimum space needed
+        text_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        text_area.setAcceptRichText(False)
+        text_area.setLineWrapMode(DynamicTextEdit.WidgetWidth)
         return text_area
 
     def _create_format(self) -> QTextCharFormat:
@@ -141,8 +149,12 @@ class MessageWidget(QFrame):
             QFrame {{
                 border: 1px solid {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
                 margin: 0;
+                padding: 0;
             }}
         """)
+
+        # Force immediate layout update
+        self.updateGeometry()
 
     def _on_selection_changed(self):
         """Handle selection changes in the text area."""
@@ -160,17 +172,30 @@ class MessageWidget(QFrame):
     def resizeEvent(self, event):
         """Handle resize events."""
         super().resizeEvent(event)
-        # Ensure text area width matches our width
-        text_area_width = self.width() - 2  # Subtract 2 for left and right borders
+
+        # Ensure text area width matches our width.  Subtract 2 for left and right borders
+        text_area_width = self.width() - 2
         self.text_area.setFixedWidth(text_area_width)
+
+        # Force document width to match the text area width
+        self.text_area.document().setTextWidth(self.text_area.viewport().width())
+
         # Update size after resize
         self.updateGeometry()
 
     def minimumSizeHint(self) -> QSize:
         """Calculate minimum size including header and content."""
         header_height = self.header.sizeHint().height()
-        content_height = self.text_area.minimumSizeHint().height()
-        return QSize(self.width(), header_height + content_height)
+
+        # Get the document height when wrapped to current width
+        self.text_area.document().setTextWidth(self.text_area.viewport().width())
+
+        # Add 16 pixels for padding (8px top + 8px bottom)
+        content_height = int(self.text_area.document().size().height()) + 16
+
+        # Add 2 pixels for the frame border (1px top + 1px bottom)
+        total_height = header_height + content_height + 2
+        return QSize(self.width(), total_height)
 
     def sizeHint(self) -> QSize:
         """Size hint is same as minimum size hint."""

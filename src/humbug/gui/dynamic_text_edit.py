@@ -16,10 +16,16 @@ class DynamicTextEdit(QTextEdit):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setFrameStyle(QFrame.NoFrame)
+
         # Force the widget to always use the width of its container
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         # Set word wrap mode to adjust to widget width
         self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+
+    def wheelEvent(self, event):
+        """Explicitly ignore wheel events to let them propagate up."""
+        event.ignore()
 
     def _on_content_changed(self):
         """Update the widget size when content changes."""
@@ -31,6 +37,7 @@ class DynamicTextEdit(QTextEdit):
     def resizeEvent(self, event):
         """Handle resize events."""
         super().resizeEvent(event)
+
         # Force document width to match widget width
         self.document().setTextWidth(self.viewport().width())
         self._on_content_changed()
@@ -40,6 +47,7 @@ class DynamicTextEdit(QTextEdit):
         # Get the document height when wrapped to current width
         self.document().setTextWidth(self.viewport().width())
         height = int(self.document().size().height()) + 16
+
         # Use parent width for width calculation
         width = self.viewport().width()
         return QSize(width, height)
