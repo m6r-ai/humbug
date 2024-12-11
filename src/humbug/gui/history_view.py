@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QSizePolicy
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QSizePolicy, QWidget
 from PySide6.QtCore import QSize, Signal, QRect
 from PySide6.QtGui import QResizeEvent
 
@@ -28,8 +28,18 @@ class HistoryView(QFrame):
         self.layout.setSpacing(10)
         self.layout.setContentsMargins(10, 10, 10, 10)
 
-        # Add stretcher at the top to push messages down
-        self.layout.addStretch()
+        # Create a container widget for messages
+        self.message_container = QWidget(self)
+        self.message_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.message_layout = QVBoxLayout(self.message_container)
+        self.message_layout.setSpacing(10)
+        self.message_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Add stretcher to push messages up
+        self.message_layout.addStretch()
+
+        # Add message container to main layout
+        self.layout.addWidget(self.message_container)
 
         # Create input widget
         self._input = LiveInputWidget(self)
@@ -62,8 +72,8 @@ class HistoryView(QFrame):
         msg_widget.set_content(message, style)
         msg_widget.setFixedWidth(self.width() - 20)  # Account for margins
 
-        # Add widget after the stretch spacer but before the input
-        self.layout.insertWidget(self.layout.count() - 1, msg_widget)
+        # Add widget after the stretch spacer in the message layout
+        self.message_layout.insertWidget(self.message_layout.count(), msg_widget)
         self.messages.append(msg_widget)
 
         if style == 'ai':
@@ -77,6 +87,11 @@ class HistoryView(QFrame):
             self._ai_response_widget.set_content(content, 'ai')
         else:
             self.append_message(content, 'ai')
+
+        # Emit size change signal with current size
+        # This triggers scroll adjustment in parent
+        old_size = self.size()
+        self.scroll_requested.emit(old_size)
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
