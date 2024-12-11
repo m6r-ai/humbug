@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget, QSizePolicy
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QSizePolicy
 from PySide6.QtCore import QSize
 
 from humbug.gui.color_role import ColorRole
@@ -24,22 +24,15 @@ class HistoryView(QFrame):
         self.layout.setSpacing(10)
         self.layout.setContentsMargins(10, 10, 10, 10)
 
-        # Create message container
-        self.message_container = QWidget(self)
-        self.message_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
-
-        # Create message container layout
-        self.message_layout = QVBoxLayout(self.message_container)
-        self.message_layout.setSpacing(10)
-        self.message_layout.setContentsMargins(0, 0, 0, 0)
-        self.message_layout.addStretch()  # Push messages to the top
+        # Add stretcher at the top to push messages down
+        self.layout.addStretch()
 
         # Create input widget
         self._input = LiveInputWidget(self)
         self._input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._input.setFixedWidth(self.width() - 20)  # Account for margins
 
-        # Add widgets to main layout
-        self.layout.addWidget(self.message_container)
+        # Add input widget at the bottom
         self.layout.addWidget(self._input)
 
         # Track messages and current AI response
@@ -54,11 +47,7 @@ class HistoryView(QFrame):
                 background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
                 border: none;
             }}
-            QWidget#message_container {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-            }}
         """)
-        self.message_container.setObjectName("message_container")
 
     def append_message(self, message: str, style: str):
         """Append a message with the specified style."""
@@ -70,7 +59,7 @@ class HistoryView(QFrame):
         msg_widget.setFixedWidth(self.width() - 20)  # Account for margins
 
         # Add widget before the stretch spacer
-        self.message_layout.insertWidget(self.message_layout.count() - 1, msg_widget)
+        self.layout.insertWidget(self.layout.count() - 2, msg_widget)  # -2 to insert before stretch and input
         self.messages.append(msg_widget)
 
         if style == 'ai':
@@ -122,10 +111,9 @@ class HistoryView(QFrame):
 
     def sizeHint(self) -> QSize:
         """Calculate size based on content."""
-        return QSize(
-            self.width(),
-            self.message_container.sizeHint().height() + self._input.sizeHint().height() + 20
-        )
+        total_height = sum(msg.sizeHint().height() + self.layout.spacing() for msg in self.messages)
+        total_height += self._input.sizeHint().height() + (2 * self.layout.contentsMargins().top())
+        return QSize(self.width(), total_height)
 
     def minimumSizeHint(self) -> QSize:
         """Minimum size is the same as size hint."""
