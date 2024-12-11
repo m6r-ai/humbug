@@ -35,12 +35,12 @@ class HistoryView(QFrame):
         self.message_layout.addStretch()  # Push messages to the top
 
         # Create input widget
-        self.input = LiveInputWidget(self)
-        self.input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._input = LiveInputWidget(self)
+        self._input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         # Add widgets to main layout
         self.layout.addWidget(self.message_container)
-        self.layout.addWidget(self.input)
+        self.layout.addWidget(self._input)
 
         # Track messages and current AI response
         self.messages: List[MessageWidget] = []
@@ -116,16 +116,88 @@ class HistoryView(QFrame):
         # Update all message widgets
         for message in self.messages:
             message.setFixedWidth(new_width)
+
         # Update input widget
-        self.input.setFixedWidth(new_width)
+        self._input.setFixedWidth(new_width)
 
     def sizeHint(self) -> QSize:
         """Calculate size based on content."""
         return QSize(
             self.width(),
-            self.message_container.sizeHint().height() + self.input.sizeHint().height() + 20
+            self.message_container.sizeHint().height() + self._input.sizeHint().height() + 20
         )
 
     def minimumSizeHint(self) -> QSize:
         """Minimum size is the same as size hint."""
         return self.sizeHint()
+
+    def get_input_text(self) -> str:
+        """Get the current input text."""
+        return self._input.toPlainText()
+
+    def set_input_text(self, text: str) -> None:
+        """Set the input text."""
+        self._input.setPlainText(text)
+
+    def clear_input(self) -> None:
+        """Clear the input area."""
+        self._input.clear()
+
+    def set_input_focus(self) -> None:
+        """Set focus to the input area."""
+        self._input.setFocus()
+
+    def has_input_focus(self) -> bool:
+        """Check if input area has focus."""
+        return self._input.hasFocus()
+
+    def get_input_cursor_rect(self):
+        """Get the cursor rectangle from the input area."""
+        return self._input.cursorRect()
+
+    def can_undo(self) -> bool:
+        """Check if undo is available in input area."""
+        return self._input.document().isUndoAvailable()
+
+    def undo(self) -> None:
+        """Undo the last edit operation in input area."""
+        self._input.undo()
+
+    def can_redo(self) -> bool:
+        """Check if redo is available in input area."""
+        return self._input.document().isRedoAvailable()
+
+    def redo(self) -> None:
+        """Redo the last undone edit operation in input area."""
+        self._input.redo()
+
+    def can_cut(self) -> bool:
+        """Check if cut is available in input area."""
+        return self._input.hasFocus() and self._input.textCursor().hasSelection()
+
+    def cut(self) -> None:
+        """Cut selected text from input area to clipboard."""
+        self._input.cut()
+
+    def can_copy(self) -> bool:
+        """Check if copy is available."""
+        return self.has_selection() or self._input.textCursor().hasSelection()
+
+    def copy(self):
+        """Copy selected text to clipboard."""
+        if self._input.hasFocus():
+            self._input.copy()
+        else:
+            self.copy_selection()
+
+    def can_paste(self) -> bool:
+        """Check if paste is available in input area."""
+        return self._input.hasFocus()
+
+    def paste(self) -> None:
+        """Paste text from clipboard to input area."""
+        self._input.paste()
+
+    def connect_input_cursor_changed(self, slot):
+        """Connect a slot to input cursor position changes."""
+        self._input.cursorPositionChanged.connect(slot)

@@ -71,7 +71,7 @@ class ChatView(QFrame):
         self.scroll_area.setWidget(self.history_view)
 
         # Wire up the input widget's signals
-        self.history_view.input.cursorPositionChanged.connect(self._ensure_cursor_visible)
+        self.history_view.connect_input_cursor_changed(self._ensure_cursor_visible)
 
         # Set size policy for scroll area
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -144,18 +144,6 @@ class ChatView(QFrame):
         if self._is_scrolled_to_bottom():
             QTimer.singleShot(0, self._scroll_to_bottom)
 
-    def get_input_text(self) -> str:
-        """Get the current input text."""
-        return self.history_view.input.toPlainText()
-
-    def set_input_text(self, text: str):
-        """Set the input text."""
-        self.history_view.input.setPlainText(text)
-
-    def clear_input(self):
-        """Clear the input area."""
-        self.history_view.input.clear()
-
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
         self.history_view.finish_ai_response()
@@ -180,11 +168,10 @@ class ChatView(QFrame):
 
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""
-        input_widget = self.history_view.input
-        cursor_rect = input_widget.cursorRect()
+        cursor_rect = self.history_view.get_input_cursor_rect()
 
         # Get the global position of the cursor within the scroll area
-        global_pos = input_widget.mapTo(self.scroll_area.viewport(), cursor_rect.topLeft())
+        global_pos = self.history_view._input.mapTo(self.scroll_area.viewport(), cursor_rect.topLeft())
 
         # Ensure the cursor is visible by scrolling if necessary
         self.scroll_area.ensureVisible(
@@ -194,56 +181,61 @@ class ChatView(QFrame):
             cursor_rect.height() + 50  # Add padding below cursor
         )
 
+    def get_input_text(self) -> str:
+        """Get the current input text."""
+        return self.history_view.get_input_text()
+
+    def set_input_text(self, text: str):
+        """Set the input text."""
+        self.history_view.set_input_text(text)
+
+    def clear_input(self):
+        """Clear the input area."""
+        self.history_view.clear_input()
+
     def _set_initial_focus(self):
         """Set initial focus to input area."""
-        self.history_view.input.setFocus()
+        self.history_view.set_input_focus()
 
     def can_undo(self) -> bool:
         """Check if undo is available."""
-        return self.history_view.input.document().isUndoAvailable()
+        return self.history_view.can_undo()
 
     def undo(self):
         """Undo the last edit operation."""
-        self.history_view.input.undo()
+        self.history_view.undo()
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
-        return self.history_view.input.document().isRedoAvailable()
+        return self.history_view.can_redo()
 
     def redo(self):
         """Redo the last undone edit operation."""
-        self.history_view.input.redo()
+        self.history_view.redo()
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
-        input_focused = self.history_view.input.hasFocus()
-        has_input_selection = self.history_view.input.textCursor().hasSelection()
-        return input_focused and has_input_selection
+        return self.history_view.can_cut()
 
     def cut(self):
         """Cut selected text to clipboard."""
-        self.history_view.input.cut()
+        self.history_view.cut()
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
-        has_input_selection = self.history_view.input.textCursor().hasSelection()
-        has_history_selection = self.history_view.has_selection()
-        return has_history_selection or has_input_selection
+        return self.history_view.can_copy()
 
     def copy(self):
         """Copy selected text to clipboard."""
-        if self.history_view.input.hasFocus():
-            self.history_view.input.copy()
-        else:
-            self.history_view.copy_selection()
+        self.history_view.copy()
 
     def can_paste(self) -> bool:
         """Check if paste is available."""
-        return self.history_view.input.hasFocus()
+        return self.history_view.can_paste()
 
     def paste(self):
         """Paste text from clipboard."""
-        self.history_view.input.paste()
+        self.history_view.paste()
 
     async def update_streaming_response(self, content: str, usage: Optional[Usage] = None,
                                     error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
