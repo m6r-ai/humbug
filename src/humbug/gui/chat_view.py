@@ -5,7 +5,8 @@ from typing import Dict, List, Optional
 from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
-from PySide6.QtCore import QSize, QTimer, Signal
+from PySide6.QtCore import QSize, QTimer, Signal, QPoint
+from PySide6.QtGui import QCursor
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.conversation.conversation_history import ConversationHistory
@@ -31,6 +32,59 @@ class ChatView(QFrame):
         self._settings = ConversationSettings()
         self._current_ai_message = None
         self._setup_ui()
+
+        # Create timer for smooth scrolling
+        self._scroll_timer = QTimer(self)
+        self._scroll_timer.setInterval(16)  # ~60fps
+        self._scroll_timer.timeout.connect(self._update_scroll)
+        self._last_mouse_pos = None
+
+        # Connect HistoryView's scroll requests to our handler
+        self.history_view.viewportScrollRequested.connect(self._handle_selection_scroll)
+
+    def _handle_selection_scroll(self, mouse_pos: QPoint):
+        """Begin scroll handling for selection drag."""
+        viewport_pos = self.scroll_area.viewport().mapFromGlobal(mouse_pos)
+
+        if not self._scroll_timer.isActive():
+            self._scroll_timer.start()
+
+        self._last_mouse_pos = viewport_pos
+
+    def _update_scroll(self):
+        """Update scroll position based on mouse position."""
+        if not self._last_mouse_pos:
+            self._scroll_timer.stop()
+            return
+
+        viewport = self.scroll_area.viewport()
+        scrollbar = self.scroll_area.verticalScrollBar()
+        current_val = scrollbar.value()
+        viewport_height = viewport.height()
+
+        # Calculate scroll amount based on distance from viewport edges
+        if self._last_mouse_pos.y() < 0:
+            # Above viewport
+            distance_out = -self._last_mouse_pos.y()
+            if distance_out > viewport_height * 2:
+                scrollbar.setValue(scrollbar.minimum())
+            else:
+                scroll_amount = min(50, max(10, distance_out // 5))
+                new_val = max(scrollbar.minimum(), current_val - scroll_amount)
+                scrollbar.setValue(new_val)
+
+        elif self._last_mouse_pos.y() > viewport_height:
+            # Below viewport
+            distance_out = self._last_mouse_pos.y() - viewport_height
+            if distance_out > viewport_height * 2:
+                scrollbar.setValue(scrollbar.maximum())
+            else:
+                scroll_amount = min(50, max(10, distance_out // 5))
+                new_val = min(scrollbar.maximum(), current_val + scroll_amount)
+                scrollbar.setValue(new_val)
+
+        # Update mouse position
+        self._last_mouse_pos = self.scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
     @property
     def conversation_id(self) -> str:

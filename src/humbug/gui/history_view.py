@@ -3,7 +3,7 @@
 from typing import List, Optional
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QSizePolicy, QWidget
-from PySide6.QtCore import QSize, Signal, QRect
+from PySide6.QtCore import QSize, Signal, QRect, QPoint
 from PySide6.QtGui import QResizeEvent
 
 from humbug.gui.color_role import ColorRole
@@ -17,6 +17,7 @@ class HistoryView(QFrame):
 
     # Signal to notify when container needs scroll adjustment
     scroll_requested = Signal(QSize)
+    viewportScrollRequested = Signal(QPoint)
 
     def __init__(self, parent=None):
         """Initialize the history view."""
@@ -69,6 +70,7 @@ class HistoryView(QFrame):
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
+        msg_widget.scrollRequested.connect(self._handle_message_scroll_request)
         msg_widget.set_content(message, style)
         msg_widget.setFixedWidth(self.width() - 20)  # Account for margins
 
@@ -80,6 +82,10 @@ class HistoryView(QFrame):
             self._ai_response_widget = msg_widget
         else:
             self._ai_response_widget = None
+
+    def _handle_message_scroll_request(self, mouse_pos: QPoint):
+        """Propagate scroll requests from message widgets up to ChatView."""
+        self.viewportScrollRequested.emit(mouse_pos)
 
     def update_last_ai_response(self, content: str):
         """Update the last AI response in the history."""
