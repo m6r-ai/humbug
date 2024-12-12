@@ -8,6 +8,8 @@ from PySide6.QtGui import (
     QTextCursor, QTextBlockFormat, QTextDocument, QTextBlockUserData
 )
 
+from humbug.gui.color_role import ColorRole
+from humbug.gui.style_manager import StyleManager
 from humbug.syntax.markdown_parser import MarkdownParser
 
 
@@ -27,16 +29,18 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         # Consistent font family fallback sequence for all code formats
         self._code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
 
+        style_manager = StyleManager()
+
         # For inline code
         self._code_format = QTextCharFormat()
         self._code_format.setFontFamilies(self._code_font_families)
         self._code_format.setFontFixedPitch(True)
+        self._code_format.setForeground(style_manager.get_color(ColorRole.SYNTAX_CODE))
 
-        # For code blocks and fences
-        self._block_format = QTextCharFormat()
-        self._block_format.setFontFamilies(self._code_font_families)
-        self._block_format.setFontFixedPitch(True)
-        self._block_format.setBackground(QColor("#2d2d2d"))
+        # For fenced format
+        self._fence_format = QTextCharFormat()
+        self._fence_format.setFontFamilies(self._code_font_families)
+        self._fence_format.setFontFixedPitch(True)
 
         # Create block format for full-width background
         self._code_block_format = QTextBlockFormat()
@@ -68,7 +72,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         while True:
             token = parser.get_next_token()
-            print(f"token {token}")
             if token is None:
                 break
 
@@ -80,13 +83,17 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                         block_format = self._code_block_format if in_fenced_block else self._normal_block_format
                         cursor = QTextCursor(current_block)
                         cursor.setBlockFormat(block_format)
+                        self.setFormat(0, len(text), self._fence_format)
 
                 case 'BACKTICK':
                     in_code_block = not in_code_block
 
                 case _:
-                    if in_code_block or in_fenced_block:
+                    if in_code_block:
                         self.setFormat(token.start, len(token.value), self._code_format)
+
+                    if in_fenced_block:
+                        self.setFormat(token.start, len(token.value), self._fence_format)
 
         parser_data = ParserData()
         parser_data.fence = in_fenced_block

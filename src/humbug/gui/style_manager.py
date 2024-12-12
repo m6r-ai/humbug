@@ -78,6 +78,9 @@ class StyleManager(QObject):
             # Close button states
             ColorRole.CLOSE_BUTTON_NORMAL: "#242424",
             ColorRole.CLOSE_BUTTON_HOVER: "#ff4444",
+
+            # Syntax highlighting
+            ColorRole.SYNTAX_CODE: "#804040"
         }
 
     def get_color(self, role: ColorRole) -> QColor:
