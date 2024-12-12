@@ -5,10 +5,17 @@ from typing import Optional
 
 from PySide6.QtGui import (
     QTextCharFormat, QSyntaxHighlighter, QColor,
-    QTextCursor, QTextBlockFormat, QTextDocument
+    QTextCursor, QTextBlockFormat, QTextDocument, QTextBlockUserData
 )
 
 from humbug.syntax.markdown_parser import MarkdownParser
+
+
+class ParserData(QTextBlockUserData):
+    def __init__(self):
+        super().__init__()
+        self.fence = False
+
 
 class MarkdownHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for Markdown code blocks."""
@@ -36,20 +43,54 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._code_block_format.setBackground(QColor("#2d2d2d"))
         self._normal_block_format = QTextBlockFormat()
 
-        self._logger = logging.getLogger("MainWindow")
+        self._logger = logging.getLogger("MarkdownHighlighter")
 
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
-        self._logger.debug(f"highlight block: {text}")
-
         parser = MarkdownParser(text)
+        current_block = self.currentBlock()
+        prev_block = current_block.previous()
+
+        prev_parser_data = None
+        if prev_block:
+            prev_parser_data = prev_block.userData()
+
+        if not prev_parser_data:
+            prev_parser_data = ParserData()
+
+        in_fenced_block = prev_parser_data.fence
+        in_code_block = False
+
+        # Set our background based on how we last saw things
+        block_format = self._code_block_format if in_fenced_block else self._normal_block_format
+        cursor = QTextCursor(current_block)
+        cursor.setBlockFormat(block_format)
 
         while True:
             token = parser.get_next_token()
+            print(f"token {token}")
             if token is None:
                 break
 
-            self._logger.debug(f"token {token}")
+            match token.type:
+                case 'FENCE':
+                    in_fenced_block = not in_fenced_block
+                    if in_fenced_block:
+                        # When we detect an opening fence highlight it as text too
+                        block_format = self._code_block_format if in_fenced_block else self._normal_block_format
+                        cursor = QTextCursor(current_block)
+                        cursor.setBlockFormat(block_format)
+
+                case 'BACKTICK':
+                    in_code_block = not in_code_block
+
+                case _:
+                    if in_code_block or in_fenced_block:
+                        self.setFormat(token.start, len(token.value), self._code_format)
+
+        parser_data = ParserData()
+        parser_data.fence = in_fenced_block
+        current_block.setUserData(parser_data)
 
 #        # Apply formatting
 #        if in_code_block or is_fence:

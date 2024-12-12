@@ -7,6 +7,7 @@ from typing import List, Callable, Optional
 class Token:
     type: str
     value: str
+    start: int
 
 
 class Lexer(ABC):
@@ -91,14 +92,15 @@ class Lexer(ABC):
 
         self._position += 1  # Skip the closing quote
         string_value = self._input[start:self._position]
-        self._tokens.append(Token(type='STRING', value=string_value))
+        self._tokens.append(Token(type='STRING', value=string_value, start=start))
 
     def _read_newline(self) -> None:
         """
         Reads a newline in the input.
         """
+        start = self._position
         self._position += 1
-        self._tokens.append(Token(type='NEWLINE', value='\n'))
+        self._tokens.append(Token(type='NEWLINE', value='\n', start=start))
 
     def _read_whitespace(self) -> None:
         """
@@ -110,7 +112,7 @@ class Lexer(ABC):
             self._position += 1
 
         whitespace_value = self._input[start:self._position]
-        self._tokens.append(Token(type='WHITESPACE', value=whitespace_value))
+        self._tokens.append(Token(type='WHITESPACE', value=whitespace_value, start=start))
 
     # Helper Methods
 

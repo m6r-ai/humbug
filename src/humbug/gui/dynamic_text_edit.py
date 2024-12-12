@@ -1,5 +1,7 @@
 """Widget for displaying parts of individual chat messages."""
 
+import logging
+
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
@@ -33,6 +35,8 @@ class DynamicTextEdit(QTextEdit):
         # Track current content length for incremental updates
         self._current_length = 0
 
+        self._logger = logging.getLogger("DynamicTextEdit")
+
     def wheelEvent(self, event):
         """Explicitly ignore wheel events to let them propagate up."""
         event.ignore()
@@ -61,51 +65,26 @@ class DynamicTextEdit(QTextEdit):
 
     def set_incremental_text(self, text: str, text_format: QTextCharFormat = None):
         """Update text content incrementally by only adding new content."""
-        if len(text) < self._current_length:
-            # Content is shorter than what we have - do a full reset
-            self.document().blockSignals(True)
-            self.clear()
-            cursor = self.textCursor()
-            if text_format:
-                cursor.setCharFormat(text_format)
-            cursor.insertText(text)
-            self.document().blockSignals(False)
-            self._current_length = len(text)
-            self._on_content_changed()
-            # Force the highlighter to reprocess the entire document
-            if self.document().isEmpty():
-                return
-            highlighter = self.document().findChild(QSyntaxHighlighter)
-            if highlighter:
-                highlighter.rehighlight()
-            return
-
+        self._logger.debug(f"inc text: '{text}'")
         if len(text) == self._current_length:
             # No new content
             return
 
+        if len(text) < self._current_length:
+            # Content is shorter than what we have - do a full reset
+            self._logger.warning(f"text is shorter than before!: '{text}'")
+            self.clear()
+            self._current_length = 0
+            return
+
         # Only insert the new content
-        self.document().blockSignals(True)
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.End)
         if text_format:
             cursor.setCharFormat(text_format)
         new_text = text[self._current_length:]
         cursor.insertText(new_text)
-        self.document().blockSignals(False)
         self._current_length = len(text)
-        self._on_content_changed()
-
-        # Get the block where we inserted new text
-        cursor.movePosition(QTextCursor.StartOfBlock)
-        current_block = cursor.block()
-
-        # Force the highlighter to reprocess from this block onwards
-        highlighter = self.document().findChild(QSyntaxHighlighter)
-        if highlighter:
-            while current_block.isValid():
-                highlighter.rehighlightBlock(current_block)
-                current_block = current_block.next()
 
     def clear(self):
         """Override clear to reset current length."""
