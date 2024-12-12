@@ -91,34 +91,3 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         parser_data = ParserData()
         parser_data.fence = in_fenced_block
         current_block.setUserData(parser_data)
-
-#        # Apply formatting
-#        if in_code_block or is_fence:
-#            # Apply code block formatting
-#            self.setFormat(0, len(text), self.block_format)
-#            cursor = QTextCursor(current_block)
-#            cursor.setBlockFormat(self.code_block_format)
-#        else:
-#            # Apply normal formatting and look for inline code
-#            cursor = QTextCursor(current_block)
-#            cursor.setBlockFormat(self.normal_block_format)
-#            i = 0
-#            while i < len(text):
-#                if text[i] == '`':
-#                    start = i
-#                    i += 1
-#                    while i < len(text):
-#                        if text[i] == '`':
-#                            # Found the closing backtick
-#                            self.setFormat(start, i - start + 1, self.code_format)
-#                            self.logger.debug("Applied inline code format %d-%d", start, i + 1)
-#                            break
-#                        i += 1
-#                i += 1
-#
-#        # Set state for next block
-#        new_state = self.CODE_BLOCK_STATE if in_code_block else self.NORMAL_STATE
-#        self.setCurrentBlockState(new_state)
-#
-#        if new_state != prev_state:
-#            self.logger.debug("State changed from %d to %d", prev_state, new_state)
