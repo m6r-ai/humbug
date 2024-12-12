@@ -4,7 +4,8 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QSizePolicy, QLabel
 )
 from PySide6.QtCore import Signal, QSize, Qt
-from PySide6.QtGui import QTextCharFormat
+from PySide6.QtGui import QTextCharFormat, QCursor
+from PySide6.QtWidgets import QScrollArea
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.dynamic_text_edit import DynamicTextEdit
@@ -165,7 +166,46 @@ class MessageWidget(QFrame):
 
     def _on_selection_changed(self):
         """Handle selection changes in the text area."""
-        has_selection = self.text_area.textCursor().hasSelection()
+        cursor = self.text_area.textCursor()
+        has_selection = cursor.hasSelection()
+
+        # Find the scroll area by walking up the parent hierarchy
+        parent = self.parent()
+        while parent and not isinstance(parent, QScrollArea):
+            parent = parent.parent()
+
+        scroll_area = parent
+        if scroll_area and has_selection:
+            # Get the actual mouse position in global coordinates
+            mouse_global = QCursor.pos()
+            # Convert to scroll area viewport coordinates
+            viewport_pos = scroll_area.viewport().mapFromGlobal(mouse_global)
+            scrollbar = scroll_area.verticalScrollBar()
+            current_val = scrollbar.value()
+            viewport_height = scroll_area.viewport().height()
+
+            if viewport_pos.y() < 0:  # Above viewport
+                # Calculate distance above viewport and adjust speed
+                distance_out = -viewport_pos.y()
+                if distance_out > viewport_height * 2:  # Very far above
+                    scrollbar.setValue(scrollbar.minimum())
+                else:
+                    # Gradual acceleration as we move further out
+                    scroll_amount = min(50, max(10, distance_out // 5))
+                    new_val = max(scrollbar.minimum(), current_val - scroll_amount)
+                    scrollbar.setValue(new_val)
+
+            elif viewport_pos.y() > viewport_height:  # Below viewport
+                # Calculate distance below viewport and adjust speed
+                distance_out = viewport_pos.y() - viewport_height
+                if distance_out > viewport_height * 2:  # Very far below
+                    scrollbar.setValue(scrollbar.maximum())
+                else:
+                    # Gradual acceleration as we move further out
+                    scroll_amount = min(50, max(10, distance_out // 5))
+                    new_val = min(scrollbar.maximum(), current_val + scroll_amount)
+                    scrollbar.setValue(new_val)
+
         self.selectionChanged.emit(has_selection)
 
     def has_selection(self) -> bool:
