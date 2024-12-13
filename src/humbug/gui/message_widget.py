@@ -56,6 +56,13 @@ class MessageWidget(QFrame):
         self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
+        # Set text_area as the widget for scroll_area
+        self.scroll_area.setWidget(self.text_area)
+
+        # Add widgets to layout in correct order
+        self.layout.addWidget(self.header)
+        self.layout.addWidget(self.scroll_area)
+
         # Connect selection change signal
         self.text_area.selectionChanged.connect(self._on_selection_changed)
 
@@ -85,9 +92,6 @@ class MessageWidget(QFrame):
             'error': ColorRole.MESSAGE_ERROR
         }
 
-        self.layout.addWidget(self.header)
-        self.layout.addWidget(self.text_area)
-
         # Set size policies that prevent shrinking
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
@@ -113,7 +117,7 @@ class MessageWidget(QFrame):
         Returns:
             Configured DynamicTextEdit instance
         """
-        text_area = DynamicTextEdit(self)
+        text_area = DynamicTextEdit()
         text_area.setReadOnly(not self.is_input)
 
         # Ensure text area takes up minimum space needed
