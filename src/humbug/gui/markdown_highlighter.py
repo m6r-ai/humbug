@@ -7,6 +7,7 @@ from PySide6.QtGui import (
     QTextCharFormat, QSyntaxHighlighter, QColor,
     QTextCursor, QTextBlockFormat, QTextDocument, QTextBlockUserData
 )
+from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -22,12 +23,16 @@ class ParserData(QTextBlockUserData):
 class MarkdownHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for Markdown code blocks."""
 
+    # Signal emitted when code block state changes
+    codeBlockStateChanged = Signal(bool)
+
     def __init__(self, parent: Optional[QTextDocument] = None) -> None:
         """Initialize the highlighter."""
         super().__init__(parent)
 
         # Consistent font family fallback sequence for all code formats
         self._code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
+        self._has_code_block = False
 
         style_manager = StyleManager()
 
@@ -98,3 +103,18 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         parser_data = ParserData()
         parser_data.fence = in_fenced_block
         current_block.setUserData(parser_data)
+
+        # Check if document contains any code blocks
+        has_code = False
+        block = self.document().firstBlock()
+        while block.isValid():
+            data = block.userData()
+            if data and data.fence:
+                has_code = True
+                break
+            block = block.next()
+
+        # Emit signal if state changed
+        if has_code != self._has_code_block:
+            self._has_code_block = has_code
+            self.codeBlockStateChanged.emit(has_code)

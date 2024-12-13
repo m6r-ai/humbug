@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
 from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat, QSyntaxHighlighter
+from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat
 
 
 class DynamicTextEdit(QTextEdit):
@@ -35,7 +35,30 @@ class DynamicTextEdit(QTextEdit):
         # Track current content length for incremental updates
         self._current_length = 0
 
+        # Track code block state
+        self._has_code_block = False
+
         self._logger = logging.getLogger("DynamicTextEdit")
+
+    def set_has_code_block(self, has_code: bool):
+        """Update word wrap mode based on whether content contains code blocks."""
+        if has_code == self._has_code_block:
+            return
+
+        self._has_code_block = has_code
+        if has_code:
+            self.setWordWrapMode(QTextOption.NoWrap)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        else:
+            self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        # Force layout update
+        self._on_content_changed()
+
+    def has_code_block(self) -> bool:
+        """Check if content contains code blocks."""
+        return self._has_code_block
 
     def wheelEvent(self, event):
         """Explicitly ignore wheel events to let them propagate up."""
@@ -60,8 +83,9 @@ class DynamicTextEdit(QTextEdit):
         """Handle resize events."""
         super().resizeEvent(event)
 
-        # Only update document width - let delayed update handle the rest
-        self.document().setTextWidth(self.viewport().width())
+        # Only update document width if we're in wrap mode
+        if not self._has_code_block:
+            self.document().setTextWidth(self.viewport().width())
 
     def set_incremental_text(self, text: str, text_format: QTextCharFormat = None):
         """Update text content incrementally by only adding new content."""
@@ -97,11 +121,15 @@ class DynamicTextEdit(QTextEdit):
     def minimumSizeHint(self) -> QSize:
         """Calculate minimum size based on content."""
         # Get the document height when wrapped to current width
-        self.document().setTextWidth(self.viewport().width())
-        height = int(self.document().size().height()) + 16
+        if not self._has_code_block:
+            self.document().setTextWidth(self.viewport().width())
+            width = self.viewport().width()
+        else:
+            # For code blocks, use the actual content width
+            self.document().setTextWidth(-1)  # Use document's ideal width
+            width = max(self.viewport().width(), self.document().idealWidth())
 
-        # Use parent width for width calculation
-        width = self.viewport().width()
+        height = int(self.document().size().height()) + 16
         return QSize(width, height)
 
     def sizeHint(self) -> QSize:

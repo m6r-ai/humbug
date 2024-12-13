@@ -1,7 +1,7 @@
 """Widget for displaying individual chat messages."""
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QSizePolicy, QLabel
+    QFrame, QVBoxLayout, QSizePolicy, QLabel, QScrollArea
 )
 from PySide6.QtCore import Signal, QSize, Qt, QPoint
 from PySide6.QtGui import QTextCharFormat, QCursor
@@ -41,6 +41,13 @@ class MessageWidget(QFrame):
         self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
 
+        # Create scroll area for content
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setFrameStyle(QFrame.NoFrame)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         # Create content area using custom DynamicTextEdit
         self.text_area = self._create_text_area()
         self.text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
@@ -54,6 +61,7 @@ class MessageWidget(QFrame):
 
         # Add Markdown highlighter
         self.highlighter = MarkdownHighlighter(self.text_area.document())
+        self.highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
 
         # Get style manager
         self.style_manager = StyleManager()
@@ -83,6 +91,20 @@ class MessageWidget(QFrame):
         # Set size policies that prevent shrinking
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
+        self.scroll_area.setStyleSheet(f"""
+            QScrollBar:horizontal {{
+                background: {self.style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                height: 12px;
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {self.style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """)
+
     def _create_text_area(self) -> DynamicTextEdit:
         """Create and configure the text area widget.
 
@@ -97,7 +119,6 @@ class MessageWidget(QFrame):
         # Ensure text area takes up minimum space needed
         text_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         text_area.setAcceptRichText(False)
-        text_area.setLineWrapMode(DynamicTextEdit.WidgetWidth)
         return text_area
 
     def _create_format(self) -> QTextCharFormat:
@@ -183,16 +204,27 @@ class MessageWidget(QFrame):
         """Copy selected text to clipboard."""
         self.text_area.copy()
 
+    def _on_code_block_state_changed(self, has_code_block: bool):
+        """Handle changes in code block state."""
+        self.text_area.set_has_code_block(has_code_block)
+        # Ensure proper scroll behavior
+        self.updateGeometry()
+
     def resizeEvent(self, event):
         """Handle resize events."""
         super().resizeEvent(event)
 
-        # Ensure text area width matches our width.  Subtract 2 for left and right borders
-        text_area_width = self.width() - 2
-        self.text_area.setFixedWidth(text_area_width)
+        # Adjust scroll area width to match our width minus borders
+        scroll_width = self.width() - 2
+        self.scroll_area.setFixedWidth(scroll_width)
 
-        # Force document width to match the text area width
-        self.text_area.document().setTextWidth(self.text_area.viewport().width())
+        # If we have code blocks, let the text area be as wide as needed
+        if self.text_area.has_code_block():
+            self.text_area.setMinimumWidth(0)
+            self.text_area.setMaximumWidth(16777215)  # Qt's QWIDGETSIZE_MAX
+        else:
+            # Otherwise, match the scroll area width
+            self.text_area.setFixedWidth(scroll_width)
 
         # Update size after resize
         self.updateGeometry()
