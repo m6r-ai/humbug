@@ -3,8 +3,8 @@
 from typing import List, Optional
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QSizePolicy, QWidget
-from PySide6.QtCore import QSize, Signal, QRect, QPoint, Qt
-from PySide6.QtGui import QResizeEvent, QMouseEvent
+from PySide6.QtCore import QSize, Signal, QRect, QPoint
+from PySide6.QtGui import QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget

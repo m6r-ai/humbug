@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QSizePolicy, QLabel
 )
 from PySide6.QtCore import Signal, QSize, Qt, QPoint
-from PySide6.QtGui import QTextCharFormat, QCursor, QMouseEvent
+from PySide6.QtGui import QTextCharFormat, QCursor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.dynamic_text_edit import DynamicTextEdit
