@@ -41,27 +41,22 @@ class MessageWidget(QFrame):
         self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
 
-        # Create scroll area for content
-        self.scroll_area = QScrollArea(self)
-        self.scroll_area.setFrameStyle(QFrame.NoFrame)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
         # Create content area using custom DynamicTextEdit
-        self.text_area = self._create_text_area()
+        self.text_area = DynamicTextEdit()
+        self.text_area.setReadOnly(not self.is_input)
+
+        # Ensure text area takes up minimum space needed
+        self.text_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.text_area.setAcceptRichText(False)
         self.text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
 
         # Explicitly disable scrollbars
         self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        # Set text_area as the widget for scroll_area
-        self.scroll_area.setWidget(self.text_area)
-
         # Add widgets to layout in correct order
         self.layout.addWidget(self.header)
-        self.layout.addWidget(self.scroll_area)
+        self.layout.addWidget(self.text_area)
 
         # Connect selection change signal
         self.text_area.selectionChanged.connect(self._on_selection_changed)
@@ -94,36 +89,6 @@ class MessageWidget(QFrame):
 
         # Set size policies that prevent shrinking
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        self.scroll_area.setStyleSheet(f"""
-            QScrollBar:horizontal {{
-                background: {self.style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                height: 12px;
-            }}
-            QScrollBar::handle:horizontal {{
-                background: {self.style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
-        """)
-
-    def _create_text_area(self) -> DynamicTextEdit:
-        """Create and configure the text area widget.
-
-        Can be overridden by subclasses to customize text area behavior.
-
-        Returns:
-            Configured DynamicTextEdit instance
-        """
-        text_area = DynamicTextEdit()
-        text_area.setReadOnly(not self.is_input)
-
-        # Ensure text area takes up minimum space needed
-        text_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        text_area.setAcceptRichText(False)
-        return text_area
 
     def _create_format(self) -> QTextCharFormat:
         """Create text format using primary text color from StyleManager."""
@@ -218,19 +183,15 @@ class MessageWidget(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-        # Adjust scroll area width to match our width minus borders
-        scroll_width = self.width() - 2
-        self.scroll_area.setFixedWidth(scroll_width)
+        content_width = self.width() - 2  # Account for frame border
 
-        # If we have code blocks, let the text area be as wide as needed
+        # If we have code blocks, allow horizontal scrolling
         if self.text_area.has_code_block():
-            self.text_area.setMinimumWidth(0)
-            self.text_area.setMaximumWidth(16777215)  # Qt's QWIDGETSIZE_MAX
+            self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         else:
-            # Otherwise, match the scroll area width
-            self.text_area.setFixedWidth(scroll_width)
+            self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.text_area.setFixedWidth(content_width)
 
-        # Update size after resize
         self.updateGeometry()
 
     def minimumSizeHint(self) -> QSize:

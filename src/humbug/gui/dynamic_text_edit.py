@@ -130,6 +130,7 @@ class DynamicTextEdit(QTextEdit):
             width = max(self.viewport().width(), self.document().idealWidth())
 
         height = int(self.document().size().height()) + 16
+        print(f"min size high: {height}")
         return QSize(width, height)
 
     def sizeHint(self) -> QSize:
