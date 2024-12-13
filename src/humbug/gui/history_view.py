@@ -3,8 +3,8 @@
 from typing import List, Optional
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QSizePolicy, QWidget
-from PySide6.QtCore import QSize, Signal, QRect, QPoint
-from PySide6.QtGui import QResizeEvent
+from PySide6.QtCore import QSize, Signal, QRect, QPoint, Qt
+from PySide6.QtGui import QResizeEvent, QMouseEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
@@ -17,6 +17,7 @@ class HistoryView(QFrame):
 
     # Signal to notify when container needs scroll adjustment
     scroll_requested = Signal(QSize)
+    selectionScrollStopped = Signal()
     viewportScrollRequested = Signal(QPoint)
 
     def __init__(self, parent=None):
@@ -64,6 +65,10 @@ class HistoryView(QFrame):
             }}
         """)
 
+    def _on_mouse_released(self):
+        """Handle mouse release from text area."""
+        self.selectionScrollStopped.emit()
+
     def append_message(self, message: str, style: str):
         """Append a message with the specified style."""
         msg_widget = MessageWidget(self)
@@ -71,6 +76,7 @@ class HistoryView(QFrame):
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
         msg_widget.scrollRequested.connect(self._handle_message_scroll_request)
+        msg_widget.mouseReleased.connect(self._on_mouse_released)
         msg_widget.set_content(message, style)
         msg_widget.setFixedWidth(self.width() - 20)  # Account for margins
 

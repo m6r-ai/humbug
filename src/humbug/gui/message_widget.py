@@ -1,10 +1,10 @@
 """Widget for displaying individual chat messages."""
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QSizePolicy, QLabel, QScrollArea
+    QFrame, QVBoxLayout, QSizePolicy, QLabel
 )
 from PySide6.QtCore import Signal, QSize, Qt, QPoint
-from PySide6.QtGui import QTextCharFormat, QCursor
+from PySide6.QtGui import QTextCharFormat, QCursor, QMouseEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.dynamic_text_edit import DynamicTextEdit
@@ -17,6 +17,7 @@ class MessageWidget(QFrame):
 
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
+    mouseReleased = Signal()
 
     def __init__(self, parent=None, is_input=False):
         """Initialize the message widget.
@@ -60,6 +61,7 @@ class MessageWidget(QFrame):
 
         # Connect selection change signal
         self.text_area.selectionChanged.connect(self._on_selection_changed)
+        self.text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add Markdown highlighter
         self.highlighter = MarkdownHighlighter(self.text_area.document())
@@ -89,6 +91,10 @@ class MessageWidget(QFrame):
 
         # Set size policies that prevent shrinking
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+    def _on_mouse_released(self):
+        """Handle mouse release from text area."""
+        self.mouseReleased.emit()
 
     def _create_format(self) -> QTextCharFormat:
         """Create text format using primary text color from StyleManager."""

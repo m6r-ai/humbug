@@ -5,12 +5,14 @@ import logging
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
-from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat
+from PySide6.QtCore import Qt, QSize, QTimer, Signal
+from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat, QMouseEvent
 
 
 class DynamicTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
+
+    mouseReleased = Signal(QMouseEvent)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -39,6 +41,11 @@ class DynamicTextEdit(QTextEdit):
         self._has_code_block = False
 
         self._logger = logging.getLogger("DynamicTextEdit")
+
+    def mouseReleaseEvent(self, event):
+        """Propagate mouse release events to parent."""
+        super().mouseReleaseEvent(event)
+        self.mouseReleased.emit(event)
 
     def set_has_code_block(self, has_code: bool):
         """Update word wrap mode based on whether content contains code blocks."""

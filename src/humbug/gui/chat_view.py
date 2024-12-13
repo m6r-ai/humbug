@@ -41,6 +41,7 @@ class ChatView(QFrame):
 
         # Connect HistoryView's scroll requests to our handler
         self.history_view.viewportScrollRequested.connect(self._handle_selection_scroll)
+        self.history_view.selectionScrollStopped.connect(self._stop_scroll)
 
     def _handle_selection_scroll(self, mouse_pos: QPoint):
         """Begin scroll handling for selection drag."""
@@ -50,6 +51,13 @@ class ChatView(QFrame):
             self._scroll_timer.start()
 
         self._last_mouse_pos = viewport_pos
+
+    def _stop_scroll(self):
+        """Stop any ongoing selection scrolling."""
+        if self._scroll_timer.isActive():
+            self._scroll_timer.stop()
+
+        self._last_mouse_pos = None
 
     def _update_scroll(self):
         """Update scroll position based on mouse position."""
