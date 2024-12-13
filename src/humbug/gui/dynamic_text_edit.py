@@ -68,7 +68,19 @@ class DynamicTextEdit(QTextEdit):
         return self._has_code_block
 
     def wheelEvent(self, event):
-        """Explicitly ignore wheel events to let them propagate up."""
+        """Handle wheel events for horizontal scrolling."""
+        # If this is a code block, handle horizontal scrolling for compatible mice
+        if self._has_code_block and event.angleDelta().x() != 0:
+            # Get the horizontal scrollbar
+            hbar = self.horizontalScrollBar()
+            if hbar:
+                # Use the horizontal component directly
+                delta = event.angleDelta().x()
+                hbar.setValue(hbar.value() - delta)
+                event.accept()
+                return
+
+        # For all other cases, propagate the event up
         event.ignore()
 
     def _on_content_changed(self):
