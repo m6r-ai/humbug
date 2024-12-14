@@ -72,7 +72,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Set our background based on how we last saw things
         block_format = self._code_block_format if in_fenced_block else self._normal_block_format
-        print(f"text: {in_fenced_block} {text}")
         cursor = QTextCursor(current_block)
         cursor.setBlockFormat(block_format)
 

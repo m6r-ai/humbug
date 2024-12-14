@@ -150,6 +150,17 @@ class MessageWidget(QFrame):
                 border: none;
                 padding: 8px;
             }}
+            QScrollBar:horizontal {{
+                height: 12px;
+                background: {self.style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {self.style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
         """)
 
         # Style the frame
@@ -208,7 +219,7 @@ class MessageWidget(QFrame):
         self.text_area.document().setTextWidth(self.text_area.viewport().width())
 
         # Add 16 pixels for padding (8px top + 8px bottom)
-        content_height = int(self.text_area.document().size().height()) + 16
+        content_height = self.text_area.minimumSizeHint().height()
 
         # Add 2 pixels for the frame border (1px top + 1px bottom)
         total_height = header_height + content_height + 2

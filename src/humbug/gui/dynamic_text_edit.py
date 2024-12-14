@@ -149,6 +149,11 @@ class DynamicTextEdit(QTextEdit):
             width = max(self.viewport().width(), self.document().idealWidth())
 
         height = int(self.document().size().height()) + 16
+
+        if self._has_code_block and self.horizontalScrollBar().isVisible():
+            # Additional space for scrollbar with gap
+            height += 14
+
         return QSize(width, height)
 
     def sizeHint(self) -> QSize:
