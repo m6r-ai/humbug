@@ -72,6 +72,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Set our background based on how we last saw things
         block_format = self._code_block_format if in_fenced_block else self._normal_block_format
+        print(f"text: {in_fenced_block} {text}")
         cursor = QTextCursor(current_block)
         cursor.setBlockFormat(block_format)
 
@@ -80,25 +81,29 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             if token is None:
                 break
 
-            match token.type:
-                case 'FENCE':
-                    in_fenced_block = not in_fenced_block
-                    if in_fenced_block:
-                        # When we detect an opening fence highlight it as text too
-                        block_format = self._code_block_format if in_fenced_block else self._normal_block_format
-                        cursor = QTextCursor(current_block)
-                        cursor.setBlockFormat(block_format)
-                        self.setFormat(0, len(text), self._fence_format)
+            if token.type == 'FENCE':
+                self.setFormat(0, len(text), self._fence_format)
 
-                case 'BACKTICK':
+                in_fenced_block = not in_fenced_block
+                if in_fenced_block:
+                    # When we detect an opening fence highlight it as text too
+                    block_format = self._code_block_format if in_fenced_block else self._normal_block_format
+                    cursor = QTextCursor(current_block)
+                    cursor.setBlockFormat(block_format)
+
+                continue
+
+            if token.type == 'BACKTICK':
+                if not in_fenced_block:
                     in_code_block = not in_code_block
+                    continue
 
-                case _:
-                    if in_code_block:
-                        self.setFormat(token.start, len(token.value), self._code_format)
+            if in_fenced_block:
+                self.setFormat(token.start, len(token.value), self._fence_format)
+                continue
 
-                    if in_fenced_block:
-                        self.setFormat(token.start, len(token.value), self._fence_format)
+            if in_code_block:
+                self.setFormat(token.start, len(token.value), self._code_format)
 
         parser_data = ParserData()
         parser_data.fence = in_fenced_block

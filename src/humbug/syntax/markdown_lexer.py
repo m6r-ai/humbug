@@ -55,7 +55,8 @@ class MarkdownLexer(Lexer):
                 self._position += 1
 
             lang_identifier = self._input[start_lang:self._position]
-            self._tokens.append(Token(type='FENCE', value=lang_identifier, start=start))
+            self._tokens.append(Token(type='FENCE', value='```', start=start))
+            self._tokens.append(Token(type='LANGUAGE', value=lang_identifier, start=start))
             return
 
         self._position += 1
