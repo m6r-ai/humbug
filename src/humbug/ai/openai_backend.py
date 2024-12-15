@@ -147,7 +147,7 @@ class OpenAIBackend(AIBackend):
 
                             except asyncio.TimeoutError:
                                 delay = self.base_delay * (2 ** attempt)
-                                self.logger.debug(f"Timeout on attempt {attempt + 1}/{self.max_retries}")
+                                self.logger.debug("Timeout on attempt %d/%d", attempt + 1, self.max_retries)
                                 if attempt < self.max_retries - 1:
                                     yield AIResponse(
                                         content="",
@@ -158,7 +158,7 @@ class OpenAIBackend(AIBackend):
                                         }
                                     )
                                     await asyncio.sleep(delay)
-                                    self.logger.debug(f"Retrying after timeout (attempt {attempt + 2}/{self.max_retries})")
+                                    self.logger.debug("Retrying after timeout (attempt %d/%d)", attempt + 2, self.max_retries)
                                     continue
 
                                 yield AIResponse(
@@ -173,7 +173,7 @@ class OpenAIBackend(AIBackend):
 
                             except aiohttp.ClientError as e:
                                 delay = self.base_delay * (2 ** attempt)
-                                self.logger.debug(f"Network error on attempt {attempt + 1}/{self.max_retries}: {str(e)}")
+                                self.logger.debug("Network error on attempt %d/%d: %s", attempt + 1, self.max_retries, str(e))
                                 if attempt < self.max_retries - 1:
                                     yield AIResponse(
                                         content="",
@@ -184,7 +184,7 @@ class OpenAIBackend(AIBackend):
                                         }
                                     )
                                     await asyncio.sleep(delay)
-                                    self.logger.debug(f"Retrying after network error (attempt {attempt + 2}/{self.max_retries})")
+                                    self.logger.debug("Retrying after network error (attempt %d/%d)", attempt + 2, self.max_retries)
                                     continue
 
                                 yield AIResponse(
@@ -198,7 +198,7 @@ class OpenAIBackend(AIBackend):
                                 return
 
                 except Exception as e:
-                    self.logger.debug(f"Unexpected error: {e}")
+                    self.logger.debug("Unexpected error: %s", str(e))
                     yield AIResponse(
                         content="",
                         error={

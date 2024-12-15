@@ -24,10 +24,16 @@ class Message:
     completed: bool = True
 
     @classmethod
-    def create(cls, conversation_id: str, source: MessageSource, content: str,
-               usage: Optional[Usage] = None, error: Optional[Dict] = None,
-               model: Optional[str] = None, temperature: Optional[float] = None,
-               completed: bool = True) -> 'Message':
+    def create(
+        cls,
+        conversation_id: str,
+        source: MessageSource, content: str,
+        usage: Optional[Usage] = None,
+        error: Optional[Dict] = None,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        completed: bool = True
+    ) -> 'Message':
         """Create a new message with generated ID and current timestamp."""
         return cls(
             id=str(uuid.uuid4()),
