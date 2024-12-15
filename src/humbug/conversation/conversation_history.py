@@ -1,10 +1,6 @@
 """Conversation state management for the Humbug application."""
 
-from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
 from typing import Dict, List, Optional
-import uuid
 
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
@@ -24,7 +20,13 @@ class ConversationHistory:
         """Add a message to the history."""
         self.messages.append(message)
 
-    def update_message(self, message_id: str, content: str, usage: Optional[Usage] = None, completed: bool = None) -> Optional[Message]:
+    def update_message(
+        self,
+        message_id: str,
+        content: str,
+        usage: Optional[Usage] = None,
+        completed: bool = None
+    ) -> Optional[Message]:
         """Update an existing message and return the updated message."""
         for message in self.messages:
             if message.id == message_id:

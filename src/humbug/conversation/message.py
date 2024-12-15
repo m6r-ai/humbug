@@ -2,8 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import uuid
 
 from humbug.conversation.message_source import MessageSource

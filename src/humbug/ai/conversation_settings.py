@@ -1,3 +1,5 @@
+"""Class to handle conversation settings."""
+
 class ConversationSettings:
     """Data class for conversation settings."""
 
