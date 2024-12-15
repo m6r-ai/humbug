@@ -679,20 +679,33 @@ Context: humbug application
                 Use the aiohttp library for HTTP interactions (e.g. the REST API).
 
         Context: Exception handling philosophy
-            When handling exceptions in Python code:
+            Context: Exception documentation
+                Document what exceptions each function may raise in its docstring.
 
-            - Never use bare 'except:' or 'except Exception:' clauses
-            - Always catch specific exception types that could occur from the operation
-            - Each layer of the application must wrap lower-level exceptions in domain-appropriate exception classes
-            - Include contextual information when wrapping exceptions
-            - Preserve the exception chain using "raise ... from e" syntax
-            - Document what exceptions each function may raise in its docstring
-            - Log all exceptions when they occur, before re-raising or wrapping them
-            - Include sufficient context in log messages to aid debugging
-            - Use appropriate log levels:
-                - ERROR for exceptions that indicate failure
-                - WARNING for exceptions that can be handled/recovered from
-                - DEBUG for detailed exception information during development
+            Context: Handling exceptions
+                We should attempt to handle and mitigate exceptions at the level closest to which they are first
+                detected.  If we cannot handle or mitigate the exception then it should be wrapped in a domain-appropriate
+                exception class and this re-raised to the next level up the call stack.
+
+                Include contextual information when wrapping exceptions.
+
+                Preserve the exception chain using "raise ... from e" syntax.
+
+            Context: Avoid bare "except:" or "except Exception:" clauses.
+                We should avoid the use of bare "except:" or "except Exception:" clauses unless a function we are calling
+                can only have exceptions handled this way.
+
+                We should always catch specific exception types that could occur from an operation.
+
+            Context: Exception logging
+                All exceptions should be logged when they occur, before re-raising or wrapping them.
+
+                Use appropriate log levels:
+                - ERROR for exceptions that indicate failure.
+                - WARNING for exceptions that can be handled/recovered from.
+                - DEBUG for detailed exception information during development.
+
+                We must include sufficient context in log messages to aid debugging.
 
             Context: Exception wrapping example
                 Do this:
