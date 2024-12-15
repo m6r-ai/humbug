@@ -108,7 +108,6 @@ class DynamicTextEdit(QTextEdit):
 
     def set_incremental_text(self, text: str, text_format: QTextCharFormat = None):
         """Update text content incrementally by only adding new content."""
-        self._logger.debug(f"inc text: '{text}'")
         if len(text) == self._current_length:
             # No new content
             return
