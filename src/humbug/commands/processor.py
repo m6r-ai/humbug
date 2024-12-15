@@ -1,6 +1,9 @@
 """Command processor for handling application commands."""
 
+import logging
 from typing import Callable, Dict, Optional
+
+from humbug.commands.exceptions import CommandNotFoundError
 
 
 class CommandProcessor:
@@ -10,6 +13,7 @@ class CommandProcessor:
         """Initialize the command processor."""
         self.commands: Dict[str, Callable] = {}
         self._register_commands()
+        self._logger = logging.getLogger("CommandProcessor")
 
     def _register_commands(self):
         """Register all available commands."""
@@ -18,18 +22,29 @@ class CommandProcessor:
         }
 
     async def process_command(self, command: str) -> Optional[str]:
-        """Process a command and return response if any."""
+        """Process a command and return response if any.
+
+        Args:
+            command: The command string to process
+
+        Returns:
+            Optional response message from the command
+
+        Raises:
+            CommandNotFoundError: If the command is not recognized
+            CommandExecutionError: If the command fails during execution
+        """
         cmd_parts = command.strip().split(maxsplit=1)
         cmd_name = cmd_parts[0].lower()
 
         if cmd_name not in self.commands:
-            return f"Unknown command: {cmd_name}"
+            self._logger.warning("Unknown command attempted: %s", cmd_name)
+            raise CommandNotFoundError(f"Unknown command: {cmd_name}")
 
-        try:
-            return await self.commands[cmd_name]()
-        except Exception as e:
-            return f"Error executing command {cmd_name}: {str(e)}"
+        self._logger.debug("Executing command: %s", cmd_name)
+        return await self.commands[cmd_name]()
 
     async def _cmd_exit(self) -> str:
         """Handle the exit command."""
+        self._logger.info("Exit command received")
         return "Exiting application..."
