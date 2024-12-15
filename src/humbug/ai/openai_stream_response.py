@@ -14,12 +14,12 @@ class OpenAIStreamResponse:
         self.content = ""
         self.usage: Optional[AIUsage] = None
         self.error = None
-        self.logger = logging.getLogger("OpenAIStreamResponse")
+        self._logger = logging.getLogger("OpenAIStreamResponse")
 
     def update_from_chunk(self, chunk: dict) -> None:
         """Update from a response chunk and return new content if any."""
         if "error" in chunk:
-            self.logger.debug("Got error message: %s", chunk["error"])
+            self._logger.debug("Got error message: %s", chunk["error"])
             self.error = {
                 "code": "stream_error",
                 "message": chunk["error"].get("message", "Unknown error"),

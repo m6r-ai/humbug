@@ -20,22 +20,22 @@ class OpenAIBackend(AIBackend):
     def __init__(self, api_key: str):
         """Initialize the OpenAI backend."""
         super().__init__()
-        self.api_key = api_key
-        self.api_url = "https://api.openai.com/v1/chat/completions"
-        self.conversation_settings: Dict[str, ConversationSettings] = {}
-        self.default_settings = ConversationSettings()
-        self.max_retries = 3
-        self.base_delay = 2
-        self.rate_limiter = RateLimiter()
-        self.logger = logging.getLogger("OpenAIBackend")
+        self._api_key = api_key
+        self._api_url = "https://api.openai.com/v1/chat/completions"
+        self._conversation_settings: Dict[str, ConversationSettings] = {}
+        self._default_settings = ConversationSettings()
+        self._max_retries = 3
+        self._base_delay = 2
+        self._rate_limiter = RateLimiter()
+        self._logger = logging.getLogger("OpenAIBackend")
 
     def update_conversation_settings(self, conversation_id: str, settings: ConversationSettings):
         """Update settings for a specific conversation."""
-        self.conversation_settings[conversation_id] = settings
+        self._conversation_settings[conversation_id] = settings
 
     def get_conversation_settings(self, conversation_id: str) -> ConversationSettings:
         """Get settings for a specific conversation."""
-        return self.conversation_settings.get(conversation_id, self.default_settings)
+        return self._conversation_settings.get(conversation_id, self._default_settings)
 
     async def stream_message(
         self,
@@ -44,7 +44,7 @@ class OpenAIBackend(AIBackend):
         conversation_id: str = None
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""
-        settings = self.get_conversation_settings(conversation_id) if conversation_id else self.default_settings
+        settings = self.get_conversation_settings(conversation_id) if conversation_id else self._default_settings
 
         messages = [{"role": "user", "content": msg} for msg in conversation_history]
         messages.append({"role": "user", "content": message})
@@ -60,12 +60,12 @@ class OpenAIBackend(AIBackend):
         if ConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
-        self.logger.debug("stream message %s", data)
+        self._logger.debug("stream message %s", data)
 
         try:
-            for attempt in range(self.max_retries):
+            for attempt in range(self._max_retries):
                 try:
-                    await self.rate_limiter.acquire()
+                    await self._rate_limiter.acquire()
 
                     post_timeout = aiohttp.ClientTimeout(
                         total=None,
@@ -74,10 +74,10 @@ class OpenAIBackend(AIBackend):
                     )
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
-                            self.api_url,
+                            self._api_url,
                             headers={
                                 "Content-Type": "application/json",
-                                "Authorization": f"Bearer {self.api_key}"
+                                "Authorization": f"Bearer {self._api_key}"
                             },
                             json=data,
                             timeout=post_timeout
@@ -124,7 +124,7 @@ class OpenAIBackend(AIBackend):
                                         )
 
                                     except asyncio.CancelledError:
-                                        self.logger.exception("CancelledError")
+                                        self._logger.exception("CancelledError")
                                         yield AIResponse(
                                             content=response_handler.content,
                                             error={
@@ -135,70 +135,70 @@ class OpenAIBackend(AIBackend):
                                         return
 
                                     except json.JSONDecodeError as e:
-                                        self.logger.exception("JSON exception: %s", e)
+                                        self._logger.exception("JSON exception: %s", e)
                                         continue
 
                                     except Exception as e:
-                                        self.logger.exception("unexpected exception: %s", e)
+                                        self._logger.exception("unexpected exception: %s", e)
                                         break
 
                                 # Successfully processed response, exit retry loop
                                 break
 
                             except asyncio.TimeoutError:
-                                delay = self.base_delay * (2 ** attempt)
-                                self.logger.debug("Timeout on attempt %d/%d", attempt + 1, self.max_retries)
-                                if attempt < self.max_retries - 1:
+                                delay = self._base_delay * (2 ** attempt)
+                                self._logger.debug("Timeout on attempt %d/%d", attempt + 1, self._max_retries)
+                                if attempt < self._max_retries - 1:
                                     yield AIResponse(
                                         content="",
                                         error={
                                             "code": "timeout",
-                                            "message": f"Request timed out (attempt {attempt + 1}/{self.max_retries}). Retrying in {delay} seconds...",
+                                            "message": f"Request timed out (attempt {attempt + 1}/{self._max_retries}). Retrying in {delay} seconds...",
                                             "details": {"attempt": attempt + 1}
                                         }
                                     )
                                     await asyncio.sleep(delay)
-                                    self.logger.debug("Retrying after timeout (attempt %d/%d)", attempt + 2, self.max_retries)
+                                    self._logger.debug("Retrying after timeout (attempt %d/%d)", attempt + 2, self._max_retries)
                                     continue
 
                                 yield AIResponse(
                                     content="",
                                     error={
                                         "code": "timeout",
-                                        "message": f"Request timed out after {self.max_retries} attempts",
+                                        "message": f"Request timed out after {self._max_retries} attempts",
                                         "details": {"attempt": attempt + 1}
                                     }
                                 )
                                 return
 
                             except aiohttp.ClientError as e:
-                                delay = self.base_delay * (2 ** attempt)
-                                self.logger.debug("Network error on attempt %d/%d: %s", attempt + 1, self.max_retries, str(e))
-                                if attempt < self.max_retries - 1:
+                                delay = self._base_delay * (2 ** attempt)
+                                self._logger.debug("Network error on attempt %d/%d: %s", attempt + 1, self._max_retries, str(e))
+                                if attempt < self._max_retries - 1:
                                     yield AIResponse(
                                         content="",
                                         error={
                                             "code": "network_error",
-                                            "message": f"Network error (attempt {attempt + 1}/{self.max_retries}): {str(e)}. Retrying in {delay} seconds...",
+                                            "message": f"Network error (attempt {attempt + 1}/{self._max_retries}): {str(e)}. Retrying in {delay} seconds...",
                                             "details": {"type": type(e).__name__, "attempt": attempt + 1}
                                         }
                                     )
                                     await asyncio.sleep(delay)
-                                    self.logger.debug("Retrying after network error (attempt %d/%d)", attempt + 2, self.max_retries)
+                                    self._logger.debug("Retrying after network error (attempt %d/%d)", attempt + 2, self._max_retries)
                                     continue
 
                                 yield AIResponse(
                                     content="",
                                     error={
                                         "code": "network_error",
-                                        "message": f"Network error after {self.max_retries} attempts: {str(e)}",
+                                        "message": f"Network error after {self._max_retries} attempts: {str(e)}",
                                         "details": {"type": type(e).__name__, "attempt": attempt + 1}
                                     }
                                 )
                                 return
 
                 except Exception as e:
-                    self.logger.debug("Unexpected error: %s", str(e))
+                    self._logger.debug("Unexpected error: %s", str(e))
                     yield AIResponse(
                         content="",
                         error={
@@ -210,5 +210,5 @@ class OpenAIBackend(AIBackend):
                     return
 
         except (GeneratorExit, asyncio.CancelledError):
-            self.logger.debug("Stream cancelled or generator closed")
+            self._logger.debug("Stream cancelled or generator closed")
             return
