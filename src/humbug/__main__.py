@@ -1,12 +1,34 @@
 import asyncio
 import os
 import sys
+import time
 
 from qasync import QEventLoop, QApplication
 
 from humbug.ai.openai_backend import OpenAIBackend
 from humbug.transcript.transcript_writer import TranscriptWriter
 from humbug.gui.main_window import MainWindow
+
+
+class HumbugApplication(QApplication):
+    """Class for the application.  Specialized to do event time reporting."""
+    def __init__(self, argv):
+        super().__init__(argv)
+
+        self._start_time = time.monotonic()
+
+    def notify(self, receiver, event):
+        event_type = event.type()
+        receiver_name = receiver.objectName()
+        start = time.monotonic()
+        ret = QApplication.notify(self, receiver, event)
+        end = time.monotonic()
+        elapsed_time = (end - start) * 1000
+        if elapsed_time > 2:
+            rel_start = start - self._start_time
+            print(f"{rel_start:.3f}: processing event type {event_type} for object {receiver_name} took {elapsed_time:.3f} msec")
+
+        return ret
 
 
 async def main():
@@ -28,7 +50,7 @@ async def main():
 
 def run_app():
     # Create application first
-    app = QApplication(sys.argv)
+    app = HumbugApplication(sys.argv)
 
     # Create and set event loop
     loop = QEventLoop(app)
