@@ -76,7 +76,6 @@ class StyleManager(QObject):
             ColorRole.SELECTED_TEXT: "#606060",
 
             # Close button states
-            ColorRole.CLOSE_BUTTON_NORMAL: "#242424",
             ColorRole.CLOSE_BUTTON_HOVER: "#ff4444",
 
             # Syntax highlighting

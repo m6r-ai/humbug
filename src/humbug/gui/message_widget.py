@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QSizePolicy, QLabel
 )
-from PySide6.QtCore import Signal, QSize, Qt, QPoint
+from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QTextCharFormat, QCursor
 
 from humbug.gui.color_role import ColorRole
@@ -33,13 +33,14 @@ class MessageWidget(QFrame):
 
         # Create layout
         self.layout = QVBoxLayout(self)
+        self.setLayout(self.layout)
         self.layout.setSpacing(0)  # No spacing between widgets
         self.layout.setContentsMargins(0, 0, 0, 0)  # No margins around layout
 
         # Create header
         self.header = QLabel(self)
         self.header.setAutoFillBackground(True)
-        self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
 
         # Create content area using custom DynamicTextEdit
@@ -47,7 +48,6 @@ class MessageWidget(QFrame):
         self.text_area.setReadOnly(not self.is_input)
 
         # Ensure text area takes up minimum space needed
-        self.text_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.text_area.setAcceptRichText(False)
         self.text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
 
@@ -88,9 +88,6 @@ class MessageWidget(QFrame):
             'system': ColorRole.MESSAGE_SYSTEM,
             'error': ColorRole.MESSAGE_ERROR
         }
-
-        # Set size policies that prevent shrinking
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     def _on_mouse_released(self):
         """Handle mouse release from text area."""
@@ -200,31 +197,19 @@ class MessageWidget(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-        content_width = self.width() - 2  # Account for frame border
-
         # If we have code blocks, allow horizontal scrolling
         if self.text_area.has_code_block():
             self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         else:
             self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            self.text_area.setFixedWidth(content_width)
 
-        self.updateGeometry()
+    def clear_selection(self):
+        """Clear any text selection in this message."""
+        cursor = self.text_area.textCursor()
+        cursor.clearSelection()
+        self.text_area.setTextCursor(cursor)
 
-    def minimumSizeHint(self) -> QSize:
-        """Calculate minimum size including header and content."""
-        header_height = self.header.sizeHint().height()
-
-        # Get the document height when wrapped to current width
-        self.text_area.document().setTextWidth(self.text_area.viewport().width())
-
-        # Add 16 pixels for padding (8px top + 8px bottom)
-        content_height = self.text_area.minimumSizeHint().height()
-
-        # Add 2 pixels for the frame border (1px top + 1px bottom)
-        total_height = header_height + content_height + 2
-        return QSize(self.width(), total_height)
-
-    def sizeHint(self) -> QSize:
-        """Size hint is same as minimum size hint."""
-        return self.minimumSizeHint()
+    @property
+    def is_ai(self) -> bool:
+        """Check if this is an AI response message."""
+        return self._current_style == 'ai'

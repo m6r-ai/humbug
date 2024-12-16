@@ -22,7 +22,7 @@ class DynamicTextEdit(QTextEdit):
         self.setFrameStyle(QFrame.NoFrame)
 
         # Force the widget to always use the width of its container
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         # Set word wrap mode to adjust to widget width
         self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
@@ -98,14 +98,6 @@ class DynamicTextEdit(QTextEdit):
         if self.parent():
             self.parent().updateGeometry()
 
-    def resizeEvent(self, event):
-        """Handle resize events."""
-        super().resizeEvent(event)
-
-        # Only update document width if we're in wrap mode
-        if not self._has_code_block:
-            self.document().setTextWidth(self.viewport().width())
-
     def set_incremental_text(self, text: str, text_format: QTextCharFormat = None):
         """Update text content incrementally by only adding new content."""
         if len(text) == self._current_length:
@@ -124,37 +116,31 @@ class DynamicTextEdit(QTextEdit):
         cursor.movePosition(QTextCursor.End)
         if text_format:
             cursor.setCharFormat(text_format)
+
         new_text = text[self._current_length:]
         cursor.insertText(new_text)
         self._current_length = len(text)
 
     def clear(self):
         """Override clear to reset current length."""
-        self.document().blockSignals(True)
         super().clear()
-        self.document().blockSignals(False)
         self._current_length = 0
         self._on_content_changed()
 
-    def minimumSizeHint(self) -> QSize:
-        """Calculate minimum size based on content."""
-        # Get the document height when wrapped to current width
-        if not self._has_code_block:
-            self.document().setTextWidth(self.viewport().width())
-            width = self.viewport().width()
-        else:
-            # For code blocks, use the actual content width
-            self.document().setTextWidth(-1)  # Use document's ideal width
-            width = max(self.viewport().width(), self.document().idealWidth())
-
+    def _height(self) -> int:
         height = int(self.document().size().height()) + 16
-
         if self._has_code_block and self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14
 
-        return QSize(width, height)
+        return height
+
+    def minimumSizeHint(self) -> QSize:
+        """Calculate minimum size based on content."""
+        width = super().minimumSizeHint().width()
+        return QSize(width, self._height())
 
     def sizeHint(self) -> QSize:
-        """Size hint is same as minimum size hint."""
-        return self.minimumSizeHint()
+        """Calculate idea size based on content."""
+        width = super().sizeHint().width()
+        return QSize(width, self._height())

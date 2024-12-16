@@ -40,9 +40,11 @@ class TabManager(QTabWidget):
                 background: {style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
                 border: none;
                 margin-right: 2px;
+                border-bottom: 1px solid {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
             }}
             QTabBar::tab:selected {{
                 background: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                border-bottom: none;
             }}
             QTabBar::tab:hover {{
                 background: {style_manager.get_color_str(ColorRole.TAB_HOVER)};
@@ -68,7 +70,7 @@ class TabManager(QTabWidget):
 
         # Create custom tab label
         tab_label = TabLabel(title)
-        tab_label._close_clicked.connect(lambda: self.close_conversation(conversation_id))
+        tab_label.close_clicked.connect(lambda: self.close_conversation(conversation_id))
         self._tab_labels[conversation_id] = tab_label
 
         # Add tab with custom label widget

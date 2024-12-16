@@ -46,7 +46,7 @@ class HistoryView(QFrame):
         # Create input widget
         self._input = LiveInputWidget(self)
         self._input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._input.setFixedWidth(self.width() - 20)  # Account for margins
+        #self._input.setFixedWidth(self.width() - 20)  # Account for margins
 
         # Add input widget at the bottom
         self.layout.addWidget(self._input)
@@ -78,7 +78,7 @@ class HistoryView(QFrame):
         msg_widget.scrollRequested.connect(self._handle_message_scroll_request)
         msg_widget.mouseReleased.connect(self._on_mouse_released)
         msg_widget.set_content(message, style)
-        msg_widget.setFixedWidth(self.width() - 20)  # Account for margins
+        #msg_widget.setFixedWidth(self.width() - 20)  # Account for margins
 
         # Add widget after the stretch spacer in the message layout
         self.message_layout.insertWidget(self.message_layout.count(), msg_widget)
@@ -131,14 +131,15 @@ class HistoryView(QFrame):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
+        print("resize HV")
         super().resizeEvent(event)
         new_width = self.width() - 20  # Account for margins
         # Update all message widgets
-        for message in self.messages:
-            message.setFixedWidth(new_width)
+        #for message in self.messages:
+            #message.setFixedWidth(new_width)
 
         # Update input widget
-        self._input.setFixedWidth(new_width)
+        #self._input.setFixedWidth(new_width)
 
         old_size: QSize = event.oldSize()
         self.scroll_requested.emit(old_size)

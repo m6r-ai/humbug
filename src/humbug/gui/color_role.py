@@ -35,7 +35,6 @@ class ColorRole(Enum):
     SELECTED_TEXT = auto()               # Selected text background
 
     # Close button states
-    CLOSE_BUTTON_NORMAL = auto()         # Normal state of close button
     CLOSE_BUTTON_HOVER = auto()          # Hover state of close button
 
     # Syntax highlighting
