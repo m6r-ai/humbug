@@ -1,13 +1,6 @@
 """Transcript writer implementation for Humbug application."""
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 import json
-import os
-import shutil
-import sys
-from typing import List, Dict, Optional
 
 
 class FloatOneDecimalEncoder(json.JSONEncoder):

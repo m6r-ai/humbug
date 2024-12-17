@@ -9,7 +9,6 @@ class NetworkError(Exception):
     - Timeouts (asyncio.TimeoutError)
     - DNS failures (aiohttp.ClientConnectorError)
     """
-    pass
 
 
 class APIError(Exception):
@@ -20,7 +19,6 @@ class APIError(Exception):
     - Error responses in the body
     - Rate limit exceeded responses
     """
-    pass
 
 
 class StreamError(Exception):
@@ -30,4 +28,3 @@ class StreamError(Exception):
     - JSON parsing failures (json.JSONDecodeError)
     - Invalid text encoding (UnicodeDecodeError)
     """
-    pass

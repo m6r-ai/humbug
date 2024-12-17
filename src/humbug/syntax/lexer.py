@@ -30,7 +30,6 @@ class Lexer(ABC):
         :param ch: The start character
         :return: The lexing function
         """
-        pass
 
     def _lex_tokens(self) -> None:
         """

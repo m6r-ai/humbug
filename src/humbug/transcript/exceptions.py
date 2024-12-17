@@ -9,7 +9,6 @@ class TranscriptWriteError(Exception):
     - Permission errors during write (PermissionError)
     - Missing parent directory (FileNotFoundError)
     """
-    pass
 
 
 class TranscriptReadError(Exception):
@@ -20,7 +19,6 @@ class TranscriptReadError(Exception):
     - Missing transcript file (FileNotFoundError)
     - Permission denied reading file (PermissionError)
     """
-    pass
 
 
 class TranscriptRotationError(Exception):
@@ -31,4 +29,3 @@ class TranscriptRotationError(Exception):
     - Cannot delete old files (PermissionError)
     - Cannot create new transcript file (IOError)
     """
-    pass

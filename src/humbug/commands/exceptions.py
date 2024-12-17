@@ -7,7 +7,6 @@ class CommandNotFoundError(Exception):
     Raised when the user attempts to execute a command that doesn't exist
     in the registered command set.
     """
-    pass
 
 
 class CommandExecutionError(Exception):
@@ -17,4 +16,3 @@ class CommandExecutionError(Exception):
     execution. Commands should wrap their specific errors in this exception
     with appropriate context.
     """
-    pass

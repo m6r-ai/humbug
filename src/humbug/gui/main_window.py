@@ -66,23 +66,23 @@ class MainWindow(QMainWindow):
 
         self.undo_action = QAction("Undo", self)
         self.undo_action.setShortcut(QKeySequence("Ctrl+Z"))
-        self.undo_action.triggered.connect(lambda: self.current_chat_view.undo())
+        self.undo_action.triggered.connect(self._undo)
 
         self.redo_action = QAction("Redo", self)
         self.redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
-        self.redo_action.triggered.connect(lambda: self.current_chat_view.redo())
+        self.redo_action.triggered.connect(self._redo)
 
         self.cut_action = QAction("Cut", self)
         self.cut_action.setShortcut(QKeySequence("Ctrl+X"))
-        self.cut_action.triggered.connect(lambda: self.current_chat_view.cut())
+        self.cut_action.triggered.connect(self._cut)
 
         self.copy_action = QAction("Copy", self)
         self.copy_action.setShortcut(QKeySequence("Ctrl+C"))
-        self.copy_action.triggered.connect(lambda: self.current_chat_view.copy())
+        self.copy_action.triggered.connect(self._copy)
 
         self.paste_action = QAction("Paste", self)
         self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
-        self.paste_action.triggered.connect(lambda: self.current_chat_view.paste())
+        self.paste_action.triggered.connect(self._paste)
 
         self.settings_action = QAction("Conversation Settings", self)
         self.settings_action.setShortcut(QKeySequence("Ctrl+,"))
@@ -158,6 +158,21 @@ class MainWindow(QMainWindow):
         self.style_manager = StyleManager()
         self.style_manager.zoom_changed.connect(self._update_styles)
         self._update_styles()
+
+    def _undo(self):
+        self.current_chat_view.undo()
+
+    def _redo(self):
+        self.current_chat_view.redo()
+
+    def _cut(self):
+        self.current_chat_view.cut()
+
+    def _copy(self):
+        self.current_chat_view.copy()
+
+    def _paste(self):
+        self.current_chat_view.paste()
 
     def _show_about_dialog(self):
         """Show the About dialog."""
@@ -326,11 +341,11 @@ class MainWindow(QMainWindow):
         """Process AI response with streaming."""
         chat_view = self._chat_views.get(conversation_id)
         if not chat_view:
-            self._logger.error(f"No chat view found for conversation {conversation_id}")
+            self._logger.error("No chat view found for conversation %s", conversation_id)
             return
 
         try:
-            self._logger.debug(f"\n=== Starting new AI response for conv {conversation_id} ===")
+            self._logger.debug("\n=== Starting new AI response for conv %s ===", conversation_id)
 
             stream = self._ai_backend.stream_message(
                 message,
@@ -365,7 +380,7 @@ class MainWindow(QMainWindow):
                     break
 
         except (asyncio.CancelledError, GeneratorExit):
-            self._logger.debug(f"AI response cancelled for conv {conversation_id}")
+            self._logger.debug("AI response cancelled for conv %s", conversation_id)
             if chat_view:
                 message = chat_view.update_streaming_response(
                     content="",
@@ -379,7 +394,7 @@ class MainWindow(QMainWindow):
             return
 
         except Exception as e:
-            self._logger.exception(f"Error processing AI response for conv {conversation_id}")
+            self._logger.exception("Error processing AI response for conv %s", conversation_id)
             if chat_view:
                 error = {
                     "code": "process_error",
@@ -395,7 +410,7 @@ class MainWindow(QMainWindow):
                     await self._transcript_writer.write([message.to_transcript_dict()])
 
         finally:
-            self._logger.debug(f"=== Finished AI response for conv {conversation_id} ===")
+            self._logger.debug("=== Finished AI response for conv %s ===", conversation_id)
 
     async def handle_command(self, command: str, conversation_id: str):
         """Handle application commands."""

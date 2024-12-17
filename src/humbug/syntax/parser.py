@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from dataclasses import dataclass
 
 
 from humbug.syntax.lexer import Lexer, Token
@@ -17,4 +16,3 @@ class Parser(ABC):
 
         :return: The next Token available or None if there are no tokens left.
         """
-        pass

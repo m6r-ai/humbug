@@ -74,7 +74,6 @@ class LiveInputWidget(MessageWidget):
 
         super().keyPressEvent(event)
 
-    # Delegate methods to text_area
     def clear(self):
         """Clear the input area."""
         self.text_area.clear()
