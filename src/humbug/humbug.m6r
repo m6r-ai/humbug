@@ -206,6 +206,10 @@ Context: humbug application
 
             The specific colors and measurements should scale with the application's zoom level.
 
+        Context: Menu state updates
+            Menu item states (enabled/disabled) must be updated at least every 50ms to ensure responsive UI
+            feedback to user actions.
+
     Context: User/AI interactions
         Each conversation comprises a chat between a user and one or more AI backends.
 
