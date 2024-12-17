@@ -26,48 +26,40 @@ class TabLabel(QWidget):
 
         self.is_current = False
         self.is_hovered = False
+        self.style_manager = StyleManager()
 
-        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
-        layout = QHBoxLayout(self)
-        self.setLayout(layout)
-        layout.setSpacing(6)
-        layout.setContentsMargins(8, 4, 8, 4)
+        self._layout = QHBoxLayout(self)
+        self.setLayout(self._layout)
 
         # Add label with size policy
         self.label = QLabel(text)
         self.label.setStyleSheet("color: white;")
-        layout.addWidget(self.label)
+        self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self._layout.addWidget(self.label)
 
-        # Add stretching space to push close button right
-        layout.addStretch()
-
-        self._close_button = QToolButton(parent=self)
-        self._close_button.setFixedSize(18, 18)
+        self._close_button = QToolButton()
         self._close_button.setCursor(Qt.PointingHandCursor)
         self._close_button.clicked.connect(self.close_clicked)
+        self._close_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self._layout.addWidget(self._close_button)
 
-        self._visible_close_icon = self._create_visible_close_icon()
-        self._invisible_close_icon = self._create_invisible_close_icon()
-
-        self._close_button.setIconSize(QSize(16, 16))
-        self._close_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self._update_close_button()
-        layout.addWidget(self._close_button)
+        self.handle_zoom_changed(self.style_manager.zoom_factor)
 
         self.setMouseTracking(True)
 
     def _create_visible_close_icon(self) -> QIcon:
         """Create and set the close icon for the button."""
         icon = QIcon()
-        base_size = 64  # High resolution for better scaling
+        base_size = 64  # High resolution for scaling
         pixmap = QPixmap(base_size, base_size)
         pixmap.fill(Qt.transparent)
 
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
         pen = painter.pen()
-        pen.setWidth(4)  # Thicker line for scaling
+        pen.setWidth(4)
         pen.setColor(QColor("white"))
         painter.setPen(pen)
 
@@ -76,19 +68,58 @@ class TabLabel(QWidget):
         painter.drawLine(base_size - margin, margin, margin, base_size - margin)
         painter.end()
 
-        # Scale down to target size
-        scaled_pixmap = pixmap.scaled(16, 16, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        # Scale to current zoom level
+        target_size = self.style_manager.get_scaled_size(16)
+        scaled_pixmap = pixmap.scaled(target_size, target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         icon.addPixmap(scaled_pixmap, QIcon.Normal, QIcon.Off)
         icon.addPixmap(scaled_pixmap, QIcon.Active, QIcon.Off)
 
         return icon
 
     def _create_invisible_close_icon(self) -> QIcon:
-        transparent_pixmap = QPixmap(16, 16)
+        """Create a transparent icon for the inactive state."""
+        size = self.style_manager.get_scaled_size(16)
+        transparent_pixmap = QPixmap(size, size)
         transparent_pixmap.fill(Qt.transparent)
-        transparent_icon = QIcon(transparent_pixmap)
+        return QIcon(transparent_pixmap)
 
-        return transparent_icon
+    def handle_zoom_changed(self, factor: float):
+        """Handle zoom factor changes from StyleManager.
+
+        Args:
+            factor: New zoom factor
+        """
+        self._update_font_size()
+
+        # Update close button size
+        button_size = 18 * factor
+        self._close_button.setFixedSize(button_size, button_size)
+
+        # Update icon size
+        icon_size = 16 * factor
+        self._close_button.setIconSize(QSize(icon_size, icon_size))
+
+        # Recreate icons at new size
+        self._visible_close_icon = self._create_visible_close_icon()
+        self._invisible_close_icon = self._create_invisible_close_icon()
+
+        # Update layout margins and spacing
+        self._layout.setSpacing(6 * factor)
+        margins = 8 * factor
+        v_margins = 4 * factor
+        self._layout.setContentsMargins(margins, v_margins, margins, v_margins)
+
+        self._update_close_button()
+
+        self.adjustSize()
+
+    def _update_font_size(self):
+        """Update the label font size based on current zoom factor."""
+        font = self.label.font()
+        base_size = self.style_manager.base_font_size
+        scaled_size = self.style_manager.get_scaled_size(base_size)
+        font.setPointSize(scaled_size)
+        self.label.setFont(font)
 
     def enterEvent(self, event):
         """Handle mouse entering the tab label."""
@@ -106,10 +137,8 @@ class TabLabel(QWidget):
         """Update close button appearance based on current state."""
         visible = self.is_current or self.is_hovered
 
-        # Update the stylesheet based on visibility
         style_manager = StyleManager()
         if visible:
-            # Visible state - use different background colors based on tab state
             base_color = (ColorRole.TAB_ACTIVE if self.is_current
                         else ColorRole.TAB_HOVER)
             style = f"""
@@ -127,7 +156,6 @@ class TabLabel(QWidget):
             self._close_button.setCursor(Qt.PointingHandCursor)
             self._close_button.setToolTip("Close Tab")
         else:
-            # Invisible state - hide the button
             style = f"""
                 QToolButton {{
                     border: none;

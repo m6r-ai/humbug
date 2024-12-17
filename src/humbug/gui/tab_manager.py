@@ -30,30 +30,32 @@ class TabManager(QTabWidget):
         self._conversations = {}  # conversation_id -> ChatView
         self._tab_labels = {}    # conversation_id -> TabLabel
 
-        style_manager = StyleManager()
+        self._style_manager = StyleManager()
         self.setStyleSheet(f"""
             QTabWidget::pane {{
                 border: none;
-                background: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
             }}
             QTabBar::tab {{
-                background: {style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
+                background: {self._style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
                 border: none;
                 margin-right: 2px;
-                border-bottom: 1px solid {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
             }}
             QTabBar::tab:selected {{
-                background: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                background: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
                 border-bottom: none;
             }}
             QTabBar::tab:hover {{
-                background: {style_manager.get_color_str(ColorRole.TAB_HOVER)};
+                background: {self._style_manager.get_color_str(ColorRole.TAB_HOVER)};
             }}
         """)
 
         # Connect tab change signals
         self.currentChanged.connect(self._on_tab_changed)
         self.tabBar().setDrawBase(False)  # Remove line under tabs
+
+        self._style_manager.zoom_changed.connect(self._handle_zoom_changed)
 
     def create_conversation(self, conversation_id: str, title: str) -> 'ChatView':
         """Create a new conversation tab.
@@ -75,7 +77,6 @@ class TabManager(QTabWidget):
 
         # Add tab with custom label widget
         index = self.addTab(chat_view, "")
-        self.setTabText(index, "")  # Clear default text
         self.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
 
         # Set initial state for new tab
@@ -157,3 +158,12 @@ class TabManager(QTabWidget):
         for conv_id, label in self._tab_labels.items():
             widget = self._conversations[conv_id]
             label.set_current(widget == current)
+
+    def _handle_zoom_changed(self, factor: float):
+        """Handle zoom factor changes from StyleManager.
+
+        Args:
+            factor: New zoom factor
+        """
+        for label in self._tab_labels.values():
+            label.handle_zoom_changed(factor)

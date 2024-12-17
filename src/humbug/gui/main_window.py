@@ -200,9 +200,6 @@ class MainWindow(QMainWindow):
 
         style_manager = self.style_manager
         self.setStyleSheet(f"""
-            * {{
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
             QMainWindow {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
