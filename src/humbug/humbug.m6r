@@ -29,6 +29,7 @@ Context: humbug application
 
             - Always visible but not highlighted on the currently selected tab.
             - Hidden by default on non-selected tabs, appearing only when the tab is hovered over.
+            - Use a transparent background when not hovered
             - Highlighted in red when the mouse hovers over the close button itself.
 
         Context: History display
@@ -71,11 +72,11 @@ Context: humbug application
                 |  This is an AI response that also wraps  |
                 |  across multiple lines as needed.        |
                 |                                          |
-                |  ```python                              |
-                |  def example():                         |
+                |  ```python                               |
+                |  def example():                          |
                 |      print("Code blocks maintain their   |
                 |            formatting")                  |
-                |  ```                                    |
+                |  ```                                     |
                 +------------------------------------------+
                                 ↕ 10px
                 +------------------------------------------+
@@ -195,6 +196,16 @@ Context: humbug application
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+0" for Windows).
 
+        Context: Menu styling
+            Menus and menu items must have consistent visual styling:
+
+            - Menu items have 4px border radius for rounded corners
+            - Menu items have 8px horizontal padding and 4px vertical padding
+            - Menu items highlight with a darker background color on hover
+            - Submenus have a 1px border and 4px border radius
+
+            The specific colors and measurements should scale with the application's zoom level.
+
     Context: User/AI interactions
         Each conversation comprises a chat between a user and one or more AI backends.
 
@@ -209,8 +220,7 @@ Context: humbug application
         the user.
 
     Context: Conversations
-        The bottom line of each conversation window has a status bar.  It will show the current numbers of input and
-        output tokens that have been used since the start of the application.
+        The bottom line of each conversation window has a status bar.
 
         The top part of the conversation window will show a history of everything that has happened, including
         messages and commands from the user, responses from the application, and responses from the AI.  Historical
@@ -221,6 +231,13 @@ Context: humbug application
 
         To the user, the historical details and the editable region must feel like they're one window.  Where they
         are required, there is only one vertical scroll bar to cover both the history and editable area.
+
+        Context: Status bar
+            The status bar at the bottom of each conversation window shows:
+
+            - Current AI model name (e.g., "Model: gpt-4o-mini")
+            - Temperature setting if applicable (e.g., "Temp: 0.7" or "Temp: N/A" for models without temperature)
+            - Input and output token counts since the start of the application
 
         Context: Highlighting operations
             While the editable and non-editable regions must feel like they're one thing, if the user wants to
@@ -235,6 +252,10 @@ Context: humbug application
                 - AI responses: White text on #282828 background
                 - System messages: White text on #1a3a1a background (dark green)
                 - Error messages: White text on #3a1a1a background (dark red)
+
+        Context: Message display
+            Messages must automatically adjust their display height based on content.  The height adjustment should
+            happen smoothly and in real-time as content is added or removed.
 
         Context: Conversation Settings
             Each conversation can have its own AI model and temperature settings that affect how the AI responds.
