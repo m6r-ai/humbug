@@ -32,6 +32,7 @@ class ColorRole(Enum):
 
     # Text colors
     TEXT_PRIMARY = auto()                # Primary text color
+    DISABLED_TEXT = auto()               # Disabled text color
     SELECTED_TEXT = auto()               # Selected text background
 
     # Close button states

@@ -221,12 +221,12 @@ class MainWindow(QMainWindow):
             }}
             QMenuBar {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 padding: {4 * zoom_factor}px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
             QMenuBar::item {{
                 background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border-radius: 4px;
                 padding: {4 * zoom_factor}px {8 * zoom_factor}px {4 * zoom_factor}px {8 * zoom_factor}px;
             }}
@@ -235,6 +235,7 @@ class MainWindow(QMainWindow):
             }}
             QMenu {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
                 border-width: {1 * zoom_factor}px;
                 border-style: solid;
@@ -243,6 +244,9 @@ class MainWindow(QMainWindow):
             QMenu::item {{
                 margin: {3 * zoom_factor}px {5 * zoom_factor}px;
                 padding: {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px;
+            }}
+            QMenu::item:disabled {{
+                color: {style_manager.get_color_str(ColorRole.DISABLED_TEXT)};
             }}
             QMenu::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)}

@@ -73,6 +73,7 @@ class StyleManager(QObject):
 
             # Text colors
             ColorRole.TEXT_PRIMARY: "#ffffff",
+            ColorRole.DISABLED_TEXT: "#808080",
             ColorRole.SELECTED_TEXT: "#606060",
 
             # Close button states
