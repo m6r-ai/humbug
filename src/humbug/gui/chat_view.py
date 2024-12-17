@@ -76,12 +76,12 @@ class ChatView(QFrame):
         self._messages_layout.addStretch()
         self._messages_layout.addWidget(self._input)
 
-        style_manager = StyleManager()
+        self._style_manager = StyleManager()
 
         self._messages_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self._messages_container.setStyleSheet(f"""
             QWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
             }}
         """)
 
@@ -97,11 +97,11 @@ class ChatView(QFrame):
                 border: none;
             }}
             QScrollBar:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;
             }}
             QScrollBar::handle:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-height: 20px;
             }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
@@ -113,7 +113,7 @@ class ChatView(QFrame):
         self._status_bar = QLabel()
         self._status_bar.setStyleSheet(f"""
             QLabel {{
-                background-color: {style_manager.get_color_str(ColorRole.STATUS_BAR)};
+                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR)};
                 color: black;
                 padding: 2px 2px;
             }}
@@ -125,14 +125,19 @@ class ChatView(QFrame):
         chat_layout.addWidget(self._scroll_area)
         chat_layout.addWidget(self._status_bar)
 
+        base_font_size = self._style_manager.base_font_size
+        zoom_factor = self._style_manager.zoom_factor
         self.setStyleSheet(f"""
             QFrame {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-                border-top: 1px solid {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                font-size: {base_font_size * zoom_factor}pt;
             }}
         """)
 
         self.update_status(0, 0)
+
+        self._style_manager.zoom_changed.connect(self._handle_zoom_changed)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
@@ -468,3 +473,11 @@ class ChatView(QFrame):
         was_at_bottom = scrollbar.value() == scrollbar.maximum()
         if was_at_bottom:
             self._scroll_to_bottom()
+
+    def _handle_zoom_changed(self, factor: float) -> None:
+        base_font_size = self._style_manager.base_font_size
+        self.setStyleSheet(f"""
+            QFrame {{
+                font-size: {base_font_size * factor}pt;
+            }}
+        """)
