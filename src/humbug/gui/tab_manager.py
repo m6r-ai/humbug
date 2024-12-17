@@ -32,6 +32,9 @@ class TabManager(QTabWidget):
 
         self._style_manager = StyleManager()
         self.setStyleSheet(f"""
+            QTabBar::scroller {{
+                width: 40px;
+            }}
             QTabWidget::pane {{
                 border: none;
                 background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
@@ -53,7 +56,9 @@ class TabManager(QTabWidget):
 
         # Connect tab change signals
         self.currentChanged.connect(self._on_tab_changed)
-        self.tabBar().setDrawBase(False)  # Remove line under tabs
+        tab_bar = self.tabBar()
+        tab_bar.setDrawBase(False)  # Remove line under tabs
+        tab_bar.setUsesScrollButtons(True)
 
         self._style_manager.zoom_changed.connect(self._handle_zoom_changed)
 
