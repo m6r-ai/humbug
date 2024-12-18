@@ -20,8 +20,6 @@ class Lexer(ABC):
         # Initialize lexing functions for ASCII characters (0-127)
         self._lexing_functions: List[Callable[[], None]] = [self._get_lexing_function(chr(i)) for i in range(128)]
 
-        self._lex_tokens()
-
     @abstractmethod
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -31,7 +29,7 @@ class Lexer(ABC):
         :return: The lexing function
         """
 
-    def _lex_tokens(self) -> None:
+    def lex(self) -> None:
         """
         Lex all the tokens in the input.
         """
@@ -45,36 +43,31 @@ class Lexer(ABC):
 
             fn()
 
-    def get_next_token(self) -> Optional[Token]:
+    def get_next_token(self, filter_list: List=None) -> Optional[Token]:
         """
-        Gets the next token from the input.
+        Gets the next token from the input that does not have a type found in the filter list.
 
         :return: The next Token available or None if there are no tokens left.
         """
-        if self._next_token >= len(self._tokens):
-            return None
-        token = self._tokens[self._next_token]
-        self._next_token += 1
-        return token
+        while True:
+            if self._next_token >= len(self._tokens):
+                return None
 
-    def peek_next_syntax_token(self) -> Optional[Token]:
+            token = self._tokens[self._next_token]
+            self._next_token += 1
+            if (not filter_list) or (token.type not in filter_list):
+                return token
+
+    def peek_next_token(self, filter_list: List=None) -> Optional[Token]:
         """
-        Get the next syntactic token (not whitespace or comment).
+        Get the next token that does not have a type found in the filter list.
 
         :return: The next syntactic Token or None if none found.
         """
         current_token_index = self._next_token
-
-        while True:
-            token = self.get_next_token()
-            if token is None:
-                break
-            if token.type not in ('COMMENT', 'WHITESPACE', 'NEWLINE'):
-                self._next_token = current_token_index
-                return token
-
+        token = self.get_next_token(filter_list)
         self._next_token = current_token_index
-        return None
+        return token
 
     def _read_string(self) -> None:
         """
@@ -87,6 +80,7 @@ class Lexer(ABC):
         while self._position < len(self._input) and self._input[self._position] != quote:
             if self._input[self._position] == '\\' and (self._position + 1) < len(self._input):
                 self._position += 1  # Skip the escape character
+
             self._position += 1
 
         self._position += 1  # Skip the closing quote

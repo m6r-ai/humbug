@@ -7,6 +7,8 @@ class MarkdownLexer(Lexer):
     def __init__(self, input_text: str):
         super().__init__(input_text)
 
+        self._in_code_block = False
+
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
         Get the lexing function that matches a given start character.
@@ -23,12 +25,25 @@ class MarkdownLexer(Lexer):
         if ch == '`':
             return self._read_backtick
 
-        return self._read_text
+        if self._is_letter_or_digit(ch):
+            return self._read_text
+
+        return self._read_symbol
+
+    def _read_symbol(self) -> None:
+        start: int = self._position
+        self._position += 1
+        text_value = self._input[start:self._position]
+        self._tokens.append(Token(type='SYMBOL', value=text_value, start=start))
 
     def _read_text(self) -> None:
         start: int = self._position
         self._position += 1
-        while self._position < len(self._input) and self._input[self._position] != '\n' and self._input[self._position] != '`':
+        while self._position < len(self._input):
+            ch = self._input[self._position]
+            if (not self._is_letter_or_digit(ch)) and (ch != '-') and (ch != '_'):
+                break
+
             self._position += 1
 
         text_value = self._input[start:self._position]
@@ -41,22 +56,7 @@ class MarkdownLexer(Lexer):
         # is the (optional) name of the language
         if self._input[self._position:].startswith('```'):
             self._position += 3
-
-            # Capture optional language identifier
-            lang_identifier = ''
-            while self._position < len(self._input) and self._input[self._position].isspace():
-                # Skip any whitespace after backticks
-                self._position += 1
-
-            # Start capturing the language identifier
-            start_lang = self._position
-            while (self._position < len(self._input) and
-                   (self._input[self._position].isalnum() or self._input[self._position] in ('-', '_'))):
-                self._position += 1
-
-            lang_identifier = self._input[start_lang:self._position]
             self._tokens.append(Token(type='FENCE', value='```', start=start))
-            self._tokens.append(Token(type='LANGUAGE', value=lang_identifier, start=start))
             return
 
         self._position += 1
