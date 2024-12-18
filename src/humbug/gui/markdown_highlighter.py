@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 
 from PySide6.QtGui import (
-    QTextCharFormat, QSyntaxHighlighter, QColor,
+    QTextCharFormat, QSyntaxHighlighter,
     QTextDocument, QTextBlockUserData
 )
 from PySide6.QtCore import Signal
