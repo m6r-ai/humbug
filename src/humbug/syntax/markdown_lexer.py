@@ -4,11 +4,6 @@ from humbug.syntax.lexer import Lexer, Token
 
 
 class MarkdownLexer(Lexer):
-    def __init__(self, input_text: str):
-        super().__init__(input_text)
-
-        self._in_code_block = False
-
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
         Get the lexing function that matches a given start character.

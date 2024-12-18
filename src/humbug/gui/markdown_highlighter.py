@@ -17,7 +17,7 @@ from humbug.syntax.markdown_parser import MarkdownParser
 class BlockData(QTextBlockUserData):
     def __init__(self):
         super().__init__()
-        self.fence = False
+        self.fence_depth = 0
         self.parser_state = None
 
 
@@ -66,7 +66,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         parser = MarkdownParser()
         parser_state = parser.parse(prev_block_data.parser_state, text)
 
-        in_fenced_block = prev_block_data.fence
+        fence_depth = prev_block_data.fence_depth
         in_code_block = False
 
         while True:
@@ -74,24 +74,25 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             if token is None:
                 break
 
-            if token.type == 'FENCE_START':
-                self.setFormat(0, len(text), self._fence_format)
+            match token.type:
+                case 'FENCE_START':
+                    self.setFormat(0, len(text), self._fence_format)
 
-                in_fenced_block = True
-                continue
-
-            if token.type == 'FENCE_END':
-                self.setFormat(0, len(text), self._fence_format)
-
-                in_fenced_block = False
-                continue
-
-            if token.type == 'BACKTICK':
-                if not in_fenced_block:
-                    in_code_block = not in_code_block
+                    fence_depth += 1
                     continue
 
-            if in_fenced_block:
+                case 'FENCE_END':
+                    self.setFormat(0, len(text), self._fence_format)
+
+                    fence_depth -= 1
+                    continue
+
+                case 'BACKTICK':
+                    if fence_depth == 0:
+                        in_code_block = not in_code_block
+                        continue
+
+            if fence_depth > 0:
                 self.setFormat(0, len(text), self._fence_format)
                 continue
 
@@ -100,7 +101,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         block_data = BlockData()
         block_data.parser_state = parser_state
-        block_data.fence = in_fenced_block
+        block_data.fence_depth = fence_depth
         current_block.setUserData(block_data)
 
         # Check if document contains any code blocks
@@ -108,7 +109,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         block = self.document().firstBlock()
         while block.isValid():
             data = block.userData()
-            if data and data.fence:
+            if data and data.fence_depth > 0:
                 has_code = True
                 break
             block = block.next()
