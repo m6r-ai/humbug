@@ -54,7 +54,14 @@ class PythonLexer(Lexer):
         if (self._position + 2 < len(self._input) and
                 self._input[self._position + 1] == ch and
                 self._input[self._position + 2] == ch):
-            self._read_docstring(ch)
+            start = self._position
+            self._position += 3
+            self._tokens.append(Token(
+                type='DOCSTRING',
+                value=self._input[start:self._position],
+                start=start
+            ))
+            print(f"doc string {self._position}")
             return
 
         self._read_string()
@@ -63,7 +70,8 @@ class PythonLexer(Lexer):
         """
         Read a dot operator or decimal point in a number.
         """
-        if self._is_digit(self._input[self._position + 1]):
+        if (self._position + 1 < len(self._input) and
+                self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
 
@@ -164,28 +172,6 @@ class PythonLexer(Lexer):
                self._input[self._position] != '\n'):
             self._position += 1
 
-        self._tokens.append(Token(
-            type='COMMENT',
-            value=self._input[start:self._position],
-            start=start
-        ))
-
-    def _read_docstring(self, quote_char: str) -> None:
-        """
-        Read a docstring token.
-
-        Args:
-            quote_char: The quote character used (single or double quote)
-        """
-        start = self._position
-        self._position += 3
-        while ((self._position + 2) < len(self._input) and
-               not (self._input[self._position] == quote_char and
-                    self._input[self._position + 1] == quote_char and
-                    self._input[self._position + 2] == quote_char)):
-            self._position += 1
-
-        self._position += 3
         self._tokens.append(Token(
             type='COMMENT',
             value=self._input[start:self._position],

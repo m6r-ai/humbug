@@ -52,7 +52,7 @@ class PythonParser(Parser):
         lexer.lex()
 
         while True:
-            token = lexer.get_next_token(['WHITESPACE'])
+            token = lexer.get_next_token()
             if not token:
                 break
 

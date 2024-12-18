@@ -7,7 +7,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 from typing import Dict
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion
-from PySide6.QtGui import QFontDatabase, QGuiApplication, QColor
+from PySide6.QtGui import QTextCharFormat, QFontDatabase, QGuiApplication, QColor
 
 from humbug.gui.color_role import ColorRole
 
@@ -42,6 +42,10 @@ class StyleManager(QObject):
             self._base_font_size = self._determine_base_font_size()
             self._initialized = True
             self._colors: Dict[ColorRole, str] = self._initialize_colors()
+            self._highlights: Dict[str, QTextCharFormat] = {}
+
+            self._code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
+            self._initialize_highlights()
 
     def _initialize_colors(self) -> Dict[ColorRole, str]:
         """Initialize the application colors."""
@@ -78,8 +82,65 @@ class StyleManager(QObject):
 
             # Syntax highlighting
             ColorRole.CODE_BLOCK_BACKGROUND: "#141414",
-            ColorRole.SYNTAX_CODE: "#804040"
+            ColorRole.SYNTAX_CODE: "#804040",
+            ColorRole.SYNTAX_COMMENT: "#68d068",
+            ColorRole.SYNTAX_CSS_AT_RULE: "#ffc0eb",
+            ColorRole.SYNTAX_CSS_PSEUDO: "#90e0e8",
+            ColorRole.SYNTAX_CSS_SELECTOR: "#80b0f0",
+            ColorRole.SYNTAX_ELEMENT: "#90e0e8",
+            ColorRole.SYNTAX_ERROR: "#ff0000",
+            ColorRole.SYNTAX_FUNCTION: "#e0e080",
+            ColorRole.SYNTAX_HEADING: "#f06060",
+            ColorRole.SYNTAX_HTML_ATTRIBUTE: "#90e0e8",
+            ColorRole.SYNTAX_HTML_DOCTYPE: "#808080",
+            ColorRole.SYNTAX_HTML_TAG: "#ffc0eb",
+            ColorRole.SYNTAX_IDENTIFIER: "#80b0f0",
+            ColorRole.SYNTAX_KEYWORD: "#ffc0eb",
+            ColorRole.SYNTAX_NUMBER: "#c08040",
+            ColorRole.SYNTAX_OPERATOR: "#c0c0c0",
+            ColorRole.SYNTAX_PREPROCESSOR: "#808080",
+            ColorRole.SYNTAX_REGEXP: "#c87050",
+            ColorRole.SYNTAX_STRING: "#f06060",
+            ColorRole.SYNTAX_TEXT: "#d0d0d0"
         }
+
+    def _initialize_highlights(self):
+        # Mapping from token type to colour
+        colour_mapping = {
+            "COMMENT": ColorRole.SYNTAX_COMMENT,
+            "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,
+            "CSS_PSEUDO": ColorRole.SYNTAX_CSS_PSEUDO,
+            "CSS_SELECTOR": ColorRole.SYNTAX_CSS_SELECTOR,
+            "ELEMENT": ColorRole.SYNTAX_ELEMENT,
+            "ERROR": ColorRole.SYNTAX_ERROR,
+            "FUNCTION": ColorRole.SYNTAX_FUNCTION,
+            "HEADING": ColorRole.SYNTAX_HEADING,
+            "HTML_ATTRIBUTE": ColorRole.SYNTAX_HTML_ATTRIBUTE,
+            "HTML_DOCTYPE": ColorRole.SYNTAX_HTML_DOCTYPE,
+            "HTML_TAG": ColorRole.SYNTAX_HTML_TAG,
+            "IDENTIFIER": ColorRole.SYNTAX_IDENTIFIER,
+            "KEYWORD": ColorRole.SYNTAX_KEYWORD,
+            "NUMBER": ColorRole.SYNTAX_NUMBER,
+            "OPERATOR": ColorRole.SYNTAX_OPERATOR,
+            "PREPROCESSOR": ColorRole.SYNTAX_PREPROCESSOR,
+            "REGEXP": ColorRole.SYNTAX_REGEXP,
+            "STRING": ColorRole.SYNTAX_STRING,
+            "TEXT": ColorRole.SYNTAX_TEXT
+        }
+
+        for token_type, role in colour_mapping.items():
+            text_format = self._create_highlight(role)
+            self._highlights[token_type] = text_format
+
+        self._error_highlight = self._create_highlight(ColorRole.SYNTAX_ERROR)
+
+    def _create_highlight(self, role: ColorRole) -> QTextCharFormat:
+        text_highlight = QTextCharFormat()
+        text_highlight.setFontFamilies(self._code_font_families)
+        text_highlight.setFontFixedPitch(True)
+        text_highlight.setForeground(QColor(self._colors[role]))
+
+        return text_highlight
 
     def get_color(self, role: ColorRole) -> QColor:
         """Get a color for a specific role.
@@ -108,6 +169,9 @@ class StyleManager(QObject):
             KeyError: If no color is defined for the role
         """
         return self._colors[role]
+
+    def get_highlight(self, token_type: str) -> QTextCharFormat:
+        return self._highlights.get(token_type, self._error_highlight)
 
     def _determine_base_font_size(self) -> int:
         """Determine the default system font size based on the operating system.

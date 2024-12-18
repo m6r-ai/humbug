@@ -40,3 +40,22 @@ class ColorRole(Enum):
 
     # Syntax highlighting
     SYNTAX_CODE = auto()                 # Code block
+    SYNTAX_COMMENT = auto()
+    SYNTAX_CSS_AT_RULE = auto()
+    SYNTAX_CSS_PSEUDO = auto()
+    SYNTAX_CSS_SELECTOR = auto()
+    SYNTAX_ELEMENT = auto()
+    SYNTAX_ERROR = auto()
+    SYNTAX_FUNCTION = auto()
+    SYNTAX_HEADING = auto()
+    SYNTAX_HTML_ATTRIBUTE = auto()
+    SYNTAX_HTML_DOCTYPE = auto()
+    SYNTAX_HTML_TAG = auto()
+    SYNTAX_IDENTIFIER = auto()
+    SYNTAX_KEYWORD = auto()
+    SYNTAX_NUMBER = auto()
+    SYNTAX_OPERATOR = auto()
+    SYNTAX_PREPROCESSOR = auto()
+    SYNTAX_REGEXP = auto()
+    SYNTAX_STRING = auto()
+    SYNTAX_TEXT = auto()

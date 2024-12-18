@@ -3,7 +3,8 @@ from enum import IntEnum
 
 from humbug.syntax.markdown_lexer import MarkdownLexer
 from humbug.syntax.lexer import Token
-from humbug.syntax.parser import Parser
+from humbug.syntax.parser import Parser, ParserState
+from humbug.syntax.python_parser import PythonParser, PythonParserState
 
 
 class ProgrammingLanguage(IntEnum):
@@ -25,9 +26,10 @@ language_mapping = {
 
 
 @dataclass
-class MarkdownParserState:
+class MarkdownParserState(ParserState):
     in_code_block: bool
     language: ProgrammingLanguage
+    embedded_parser_state: ParserState
 
 
 class MarkdownParser(Parser):
@@ -36,16 +38,38 @@ class MarkdownParser(Parser):
 
         self._parser_state = MarkdownParserState(
             in_code_block=False,
-            language=ProgrammingLanguage.UNKNOWN
+            language=ProgrammingLanguage.UNKNOWN,
+            embedded_parser_state=None
         )
+
+    def _embedded_parse(self, input_str: str) -> None:
+        print(f"embedded parse {input_str}")
+
+        embedded_parser = None
+        match self._parser_state.language:
+            case ProgrammingLanguage.PYTHON:
+                embedded_parser = PythonParser()
+
+        embedded_parser_state = embedded_parser.parse(self._parser_state.embedded_parser_state, input_str)
+        while True:
+            token = embedded_parser.get_next_token()
+            if token is None:
+                break
+
+            print(f"token: {token}")
+            self._tokens.append(Token(type=token.type, value=token.value, start=token.start))
+
+        self._parser_state.embedded_parser_state = embedded_parser_state
 
     def parse(self, parser_state: MarkdownParserState, input_str: str) -> None:
         if not parser_state:
             self._parser_state.in_code_block = False
-            self._parser_state.language = None
+            self._parser_state.language = ProgrammingLanguage.UNKNOWN
+            self._parser_state.embedded_parser_state = None
         else:
             self._parser_state.in_code_block = parser_state.in_code_block
             self._parser_state.language = parser_state.language
+            self._parser_state.embedded_parser_state = parser_state.embedded_parser_state
 
         lexer = MarkdownLexer(input_str)
         lexer.lex()
@@ -53,18 +77,24 @@ class MarkdownParser(Parser):
         seen_text = False
 
         while True:
-            lex_token = lexer.get_next_token(['WHITESPACE'])
+            lex_token = lexer.get_next_token()
             if not lex_token:
                 break
+
+            if lex_token.type == 'WHITESPACE':
+                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                continue
 
             if (not seen_text) and (lex_token.type == 'FENCE'):
                 seen_text = True
                 if self._parser_state.in_code_block:
                     self._parser_state.in_code_block = False
                     self._tokens.append(Token(type='FENCE_END', value='```', start=lex_token.start))
-                    self._parser_state.language = None
+                    self._parser_state.language = ProgrammingLanguage.UNKNOWN
+                    print("*** FENCE END")
                     continue
 
+                print("*** FENCE START")
                 self._parser_state.in_code_block = True
                 self._tokens.append(Token(type='FENCE_START', value='```', start=lex_token.start))
 
@@ -75,15 +105,20 @@ class MarkdownParser(Parser):
 
                     input_normalized = next_token.value.strip().lower()
                     self._parser_state.language = language_mapping.get(input_normalized, ProgrammingLanguage.UNKNOWN)
-                    print(f"language {next_token.value}, {self._parser_state.language}")
 
                 continue
 
             seen_text = True
-            self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+
+            if self._parser_state.language != ProgrammingLanguage.UNKNOWN:
+                self._embedded_parse(input_str)
+                break
+
+            self._tokens.append(Token(type='TEXT', value=lex_token.value, start=lex_token.start))
 
         new_parser_state = MarkdownParserState(
             in_code_block=self._parser_state.in_code_block,
-            language=self._parser_state.language
+            language=self._parser_state.language,
+            embedded_parser_state=self._parser_state.embedded_parser_state
         )
         return new_parser_state

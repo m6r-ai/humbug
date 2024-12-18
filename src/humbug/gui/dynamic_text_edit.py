@@ -5,7 +5,7 @@ import logging
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
-from PySide6.QtCore import Qt, QSize, QTimer, Signal
+from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
 from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat, QMouseEvent, QKeyEvent
 
 
@@ -88,12 +88,14 @@ class DynamicTextEdit(QTextEdit):
         print(f"event: {event.key()}, {event.modifiers()}")
         super().keyPressEvent(event)
 
+    @Slot()
     def _on_content_changed(self):
         """Queue a content update instead of processing immediately."""
         if not self._pending_update:
             self._pending_update = True
             self._update_timer.start()
 
+    @Slot()
     def _process_delayed_update(self):
         """Process the queued size update."""
         self._pending_update = False

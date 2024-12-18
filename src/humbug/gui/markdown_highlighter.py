@@ -35,14 +35,14 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
         self._has_code_block = False
 
-        style_manager = StyleManager()
+        self._style_manager = StyleManager()
 
         # For inline code
         self._code_format = QTextCharFormat()
         self._code_format.setFontFamilies(self._code_font_families)
         self._code_format.setFontFixedPitch(True)
-        self._code_format.setForeground(style_manager.get_color(ColorRole.SYNTAX_CODE))
-        self._code_format.setBackground(style_manager.get_color(ColorRole.CODE_BLOCK_BACKGROUND))
+        self._code_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_CODE))
+        self._code_format.setBackground(self._style_manager.get_color(ColorRole.CODE_BLOCK_BACKGROUND))
 
         # For fenced format
         self._fence_format = QTextCharFormat()
@@ -93,7 +93,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                         continue
 
             if fence_depth > 0:
-                self.setFormat(0, len(text), self._fence_format)
+                self.setFormat(token.start, len(token.value), self._style_manager.get_highlight(token.type))
                 continue
 
             if in_code_block:

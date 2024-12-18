@@ -1,8 +1,14 @@
 from abc import ABC
+from dataclasses import dataclass
 from typing import Optional, List
 
 
 from humbug.syntax.lexer import Lexer, Token
+
+
+@dataclass
+class ParserState:
+    pass
 
 
 class Parser(ABC):
