@@ -4,6 +4,7 @@ from enum import IntEnum
 from humbug.syntax.markdown_lexer import MarkdownLexer
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
+from humbug.syntax.c_parser import CParser
 from humbug.syntax.java_script_parser import JavaScriptParser
 from humbug.syntax.python_parser import PythonParser
 from humbug.syntax.text_parser import TextParser
@@ -11,14 +12,15 @@ from humbug.syntax.text_parser import TextParser
 
 class ProgrammingLanguage(IntEnum):
     UNKNOWN = -1
-    JAVASCRIPT = 0
-    PYTHON = 1
-    TEXT = 2
+    C = 0
+    JAVASCRIPT = 1
+    PYTHON = 2
+    TEXT = 3
 
 
 # Mapping from lowercase language names to enum members
 language_mapping = {
-    "c": ProgrammingLanguage.TEXT,
+    "c": ProgrammingLanguage.C,
     "c++": ProgrammingLanguage.TEXT,
     "css": ProgrammingLanguage.TEXT,
     "html": ProgrammingLanguage.TEXT,
@@ -49,6 +51,9 @@ class MarkdownParser(Parser):
     def _embedded_parse(self, input_str: str) -> None:
         embedded_parser = None
         match self._parser_state.language:
+            case ProgrammingLanguage.C:
+                embedded_parser = CParser()
+
             case ProgrammingLanguage.JAVASCRIPT:
                 embedded_parser = JavaScriptParser()
 
