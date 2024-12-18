@@ -53,15 +53,12 @@ class MarkdownParser(Parser):
             case ProgrammingLanguage.TEXT:
                 embedded_parser = TextParser()
 
-        print(f"embedded parse {input_str}, {embedded_parser}")
-
         embedded_parser_state = embedded_parser.parse(self._parser_state.embedded_parser_state, input_str)
         while True:
             token = embedded_parser.get_next_token()
             if token is None:
                 break
 
-            print(f"token: {token}")
             self._tokens.append(Token(type=token.type, value=token.value, start=token.start))
 
         self._parser_state.embedded_parser_state = embedded_parser_state
@@ -97,10 +94,8 @@ class MarkdownParser(Parser):
                     self._parser_state.in_code_block = False
                     self._parser_state.language = ProgrammingLanguage.UNKNOWN
                     self._parser_state.embedded_parser_state = None
-                    print("*** FENCE END")
                     continue
 
-                print("*** FENCE START")
                 self._parser_state.in_code_block = True
                 self._parser_state.embedded_parser_state = None
                 self._tokens.append(Token(type='FENCE_START', value='```', start=lex_token.start))

@@ -38,7 +38,6 @@ class TextParser(Parser):
             value=input_str,
             start=0
         ))
-        print("text parse")
 
         new_parser_state = TextParserState()
         return new_parser_state
