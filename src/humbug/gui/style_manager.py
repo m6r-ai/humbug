@@ -89,7 +89,7 @@ class StyleManager(QObject):
             ColorRole.SYNTAX_CSS_SELECTOR: "#80b0f0",
             ColorRole.SYNTAX_ELEMENT: "#90e0e8",
             ColorRole.SYNTAX_ERROR: "#ff0000",
-            ColorRole.SYNTAX_FUNCTION: "#e0e080",
+            ColorRole.SYNTAX_FUNCTION_OR_METHOD: "#e0e080",
             ColorRole.SYNTAX_HEADING: "#f06060",
             ColorRole.SYNTAX_HTML_ATTRIBUTE: "#90e0e8",
             ColorRole.SYNTAX_HTML_DOCTYPE: "#808080",
@@ -113,7 +113,7 @@ class StyleManager(QObject):
             "CSS_SELECTOR": ColorRole.SYNTAX_CSS_SELECTOR,
             "ELEMENT": ColorRole.SYNTAX_ELEMENT,
             "ERROR": ColorRole.SYNTAX_ERROR,
-            "FUNCTION": ColorRole.SYNTAX_FUNCTION,
+            "FUNCTION_OR_METHOD": ColorRole.SYNTAX_FUNCTION_OR_METHOD,
             "HEADING": ColorRole.SYNTAX_HEADING,
             "HTML_ATTRIBUTE": ColorRole.SYNTAX_HTML_ATTRIBUTE,
             "HTML_DOCTYPE": ColorRole.SYNTAX_HTML_DOCTYPE,
@@ -125,7 +125,8 @@ class StyleManager(QObject):
             "PREPROCESSOR": ColorRole.SYNTAX_PREPROCESSOR,
             "REGEXP": ColorRole.SYNTAX_REGEXP,
             "STRING": ColorRole.SYNTAX_STRING,
-            "TEXT": ColorRole.SYNTAX_TEXT
+            "TEXT": ColorRole.SYNTAX_TEXT,
+            "WHITESPACE": ColorRole.SELECTED_TEXT
         }
 
         for token_type, role in colour_mapping.items():
@@ -171,6 +172,9 @@ class StyleManager(QObject):
         return self._colors[role]
 
     def get_highlight(self, token_type: str) -> QTextCharFormat:
+        if token_type not in self._highlights:
+            print(f"token type {token_type} not mapped")
+
         return self._highlights.get(token_type, self._error_highlight)
 
     def _determine_base_font_size(self) -> int:
