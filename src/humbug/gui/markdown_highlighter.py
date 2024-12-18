@@ -64,7 +64,10 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             prev_block_data = BlockData()
 
         parser = MarkdownParser()
-        parser_state = parser.parse(prev_block_data.parser_state, text)
+        try:
+            parser_state = parser.parse(prev_block_data.parser_state, text)
+        except Exception as e:
+            print(f"WTAF? {e}")
 
         fence_depth = prev_block_data.fence_depth
         in_code_block = False
