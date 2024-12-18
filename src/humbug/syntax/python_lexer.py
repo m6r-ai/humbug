@@ -61,7 +61,6 @@ class PythonLexer(Lexer):
                 value=self._input[start:self._position],
                 start=start
             ))
-            print(f"doc string {self._position}")
             return
 
         self._read_string()

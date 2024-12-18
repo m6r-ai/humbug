@@ -692,7 +692,7 @@ Context: humbug application
             instead of this:
             ```
             if condition:
-                return;
+                return
             else:
                 next_statement()
             ```
