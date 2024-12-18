@@ -1,6 +1,7 @@
 """Markdown code highlighter."""
 
 import logging
+import traceback
 from typing import Optional
 
 from PySide6.QtGui import (
@@ -68,6 +69,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             parser_state = parser.parse(prev_block_data.parser_state, text)
         except Exception as e:
             print(f"WTAF? {e}")
+            traceback.print_exc()
 
         fence_depth = prev_block_data.fence_depth
         in_code_block = False
