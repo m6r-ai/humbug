@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
         # Edit menu actions
         self.submit_action = QAction("Submit", self)
         self.submit_action.setShortcut(QKeySequence("Ctrl+J"))
-        self.submit_action.triggered.connect(self.submit_message)
+        self.submit_action.triggered.connect(self._submit_message)
 
         self.undo_action = QAction("Undo", self)
         self.undo_action.setShortcut(QKeySequence("Ctrl+Z"))
@@ -279,7 +279,7 @@ class MainWindow(QMainWindow):
         """Strip control characters from input text, preserving newlines."""
         return ''.join(char for char in text if char == '\n' or (ord(char) >= 32 and ord(char) != 127))
 
-    def submit_message(self):
+    def _submit_message(self):
         """Handle message submission."""
         chat_view = self.current_chat_view
         if not chat_view:
@@ -431,6 +431,7 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
+
         if event.key() == Qt.Key_Escape:
             chat_view = self.current_chat_view
             if chat_view:

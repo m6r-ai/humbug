@@ -58,9 +58,6 @@ class StyleManager(QObject):
             ColorRole.MESSAGE_ERROR: "#3a1a1a",
             ColorRole.MESSAGE_HEADER: "#2a3544",
 
-            # Code blocks
-            ColorRole.CODE_BLOCK_BACKGROUND: "#2d2d2d",
-
             # UI elements
             ColorRole.TAB_ACTIVE: "#242424",
             ColorRole.TAB_INACTIVE: "#1c1c1c",
@@ -80,6 +77,7 @@ class StyleManager(QObject):
             ColorRole.CLOSE_BUTTON_HOVER: "#ff4444",
 
             # Syntax highlighting
+            ColorRole.CODE_BLOCK_BACKGROUND: "#141414",
             ColorRole.SYNTAX_CODE: "#804040"
         }
 

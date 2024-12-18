@@ -44,6 +44,7 @@ class LiveInputWidget(MessageWidget):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
+        print(f"event: {event.key()}, {event.modifiers()}")
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
             text = self.text_area.toPlainText().strip()
             if text:

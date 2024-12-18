@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal
-from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat, QMouseEvent
+from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat, QMouseEvent, QKeyEvent
 
 
 class DynamicTextEdit(QTextEdit):
@@ -30,7 +30,7 @@ class DynamicTextEdit(QTextEdit):
         # Batch update handling
         self._update_timer = QTimer(self)
         self._update_timer.setSingleShot(True)
-        self._update_timer.setInterval(50)
+        self._update_timer.setInterval(16)
         self._update_timer.timeout.connect(self._process_delayed_update)
         self._pending_update = False
 
@@ -83,8 +83,13 @@ class DynamicTextEdit(QTextEdit):
         # For all other cases, propagate the event up
         event.ignore()
 
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle special key events."""
+        print(f"event: {event.key()}, {event.modifiers()}")
+        super().keyPressEvent(event)
+
     def _on_content_changed(self):
-        """Queue a size update instead of processing immediately."""
+        """Queue a content update instead of processing immediately."""
         if not self._pending_update:
             self._pending_update = True
             self._update_timer.start()
@@ -106,7 +111,7 @@ class DynamicTextEdit(QTextEdit):
 
         if len(text) < self._current_length:
             # Content is shorter than what we have - do a full reset
-            self._logger.warning(f"text is shorter than before!: '{text}'")
+            self._logger.warning("text is shorter than before!: '%s'", text)
             self.clear()
             self._current_length = 0
             return

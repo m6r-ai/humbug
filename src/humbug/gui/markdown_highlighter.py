@@ -5,7 +5,7 @@ from typing import Optional
 
 from PySide6.QtGui import (
     QTextCharFormat, QSyntaxHighlighter, QColor,
-    QTextCursor, QTextBlockFormat, QTextDocument, QTextBlockUserData
+    QTextDocument, QTextBlockUserData
 )
 from PySide6.QtCore import Signal
 
@@ -41,16 +41,12 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._code_format.setFontFamilies(self._code_font_families)
         self._code_format.setFontFixedPitch(True)
         self._code_format.setForeground(style_manager.get_color(ColorRole.SYNTAX_CODE))
+        self._code_format.setBackground(style_manager.get_color(ColorRole.CODE_BLOCK_BACKGROUND))
 
         # For fenced format
         self._fence_format = QTextCharFormat()
         self._fence_format.setFontFamilies(self._code_font_families)
         self._fence_format.setFontFixedPitch(True)
-
-        # Create block format for full-width background
-        self._code_block_format = QTextBlockFormat()
-        self._code_block_format.setBackground(QColor("#2d2d2d"))
-        self._normal_block_format = QTextBlockFormat()
 
         self._logger = logging.getLogger("MarkdownHighlighter")
 
@@ -70,11 +66,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         in_fenced_block = prev_parser_data.fence
         in_code_block = False
 
-        # Set our background based on how we last saw things
-        block_format = self._code_block_format if in_fenced_block else self._normal_block_format
-        cursor = QTextCursor(current_block)
-        cursor.setBlockFormat(block_format)
-
         while True:
             token = parser.get_next_token()
             if token is None:
@@ -84,12 +75,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self.setFormat(0, len(text), self._fence_format)
 
                 in_fenced_block = not in_fenced_block
-                if in_fenced_block:
-                    # When we detect an opening fence highlight it as text too
-                    block_format = self._code_block_format if in_fenced_block else self._normal_block_format
-                    cursor = QTextCursor(current_block)
-                    cursor.setBlockFormat(block_format)
-
                 continue
 
             if token.type == 'BACKTICK':
