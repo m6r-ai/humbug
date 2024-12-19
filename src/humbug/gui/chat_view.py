@@ -131,13 +131,13 @@ class ChatView(QFrame):
             QFrame {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-                font-size: {base_font_size * zoom_factor}pt;
             }}
         """)
 
         self.update_status(0, 0)
 
         self._style_manager.zoom_changed.connect(self._handle_zoom_changed)
+        self._handle_zoom_changed(zoom_factor)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
@@ -475,9 +475,14 @@ class ChatView(QFrame):
             self._scroll_to_bottom()
 
     def _handle_zoom_changed(self, factor: float) -> None:
+        font = self.font()
         base_font_size = self._style_manager.base_font_size
-        self.setStyleSheet(f"""
-            QFrame {{
-                font-size: {base_font_size * factor}pt;
-            }}
-        """)
+        font.setPointSizeF(base_font_size * factor)
+        self.setFont(font)
+
+        # Apply to all widgets in the hierarchy
+        for widget in self.findChildren(QWidget):
+            widget.setFont(font)
+
+        print(f"size {base_font_size * factor}")
+        self.updateGeometry()

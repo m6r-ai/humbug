@@ -7,7 +7,9 @@ Provides signals for style changes and utilities for scaled size calculations.
 from typing import Dict
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion
-from PySide6.QtGui import QTextCharFormat, QFontDatabase, QGuiApplication, QColor
+from PySide6.QtGui import (
+    QTextCharFormat, QFontDatabase, QGuiApplication, QColor, QFontMetricsF, QFont
+)
 
 from humbug.gui.color_role import ColorRole
 
@@ -177,7 +179,7 @@ class StyleManager(QObject):
 
         return self._highlights.get(token_type, self._error_highlight)
 
-    def _determine_base_font_size(self) -> int:
+    def _determine_base_font_size(self) -> float:
         """Determine the default system font size based on the operating system.
 
         Returns:
@@ -206,7 +208,7 @@ class StyleManager(QObject):
         return 10
 
     @property
-    def base_font_size(self) -> int:
+    def base_font_size(self) -> float:
         """Get the base font size for the current system."""
         return self._base_font_size
 
@@ -226,7 +228,7 @@ class StyleManager(QObject):
             self._zoom_factor = new_factor
             self.zoom_changed.emit(self._zoom_factor)
 
-    def get_scaled_size(self, base_size: int) -> int:
+    def get_scaled_size(self, base_size: float) -> float:
         """Calculate scaled size based on current zoom factor.
 
         Args:
@@ -235,25 +237,32 @@ class StyleManager(QObject):
         Returns:
             Scaled size adjusted for current zoom factor
         """
-        return int(base_size * self._zoom_factor)
+        return base_size * self._zoom_factor
 
-    def points_to_pixels(self, points: float) -> int:
+    def get_space_width(self) -> float:
+        font = QFont(["Menlo", "Monaco", "Courier New", "monospace"])
+        font.setPointSizeF(self._base_font_size * self._zoom_factor)
+        font_metrics = QFontMetricsF(font)
+        space_width = font_metrics.horizontalAdvance('        ') / 8
+        return space_width
+
+    def points_to_pixels(self, points: float) -> float:
         """Convert point size to pixels based on device pixel ratio.
 
         Args:
             points: Font size in points
 
         Returns:
-            int: Font size in pixels
+            Font size in pixels
         """
         # Get the primary screen's logical DPI
         screen = QGuiApplication.primaryScreen()
         if not screen:
-            return int(points * 1.333333)  # Fallback to standard 96 DPI (72 * 4/3)
+            return points * 1.333333  # Fallback to standard 96 DPI (72 * 4/3)
 
         # Convert points to pixels using the screen's logical DPI
         logical_dpi = screen.logicalDotsPerInchY()
-        return int((points * logical_dpi) / 72.0)
+        return (points * logical_dpi) / 72.0
 
     def pixels_to_points(self, pixels: float) -> float:
         """Convert pixel size to points based on device pixel ratio.
@@ -262,7 +271,7 @@ class StyleManager(QObject):
             pixels: Size in pixels
 
         Returns:
-            float: Size in points
+            Size in points
         """
         screen = QGuiApplication.primaryScreen()
         if not screen:

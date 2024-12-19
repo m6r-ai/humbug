@@ -6,7 +6,11 @@ from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
-from PySide6.QtGui import QTextOption, QTextCursor, QTextCharFormat, QMouseEvent, QKeyEvent
+from PySide6.QtGui import (
+    QTextOption, QTextCursor, QTextCharFormat, QMouseEvent, QKeyEvent
+)
+
+from humbug.gui.style_manager import StyleManager
 
 
 class DynamicTextEdit(QTextEdit):
@@ -27,6 +31,11 @@ class DynamicTextEdit(QTextEdit):
         # Set word wrap mode to adjust to widget width
         self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
 
+        # Calculate tab stops
+        self._style_manager = StyleManager()
+        self._style_manager.zoom_changed.connect(self._handle_zoom_changed)
+        self._handle_zoom_changed(self._style_manager.zoom_factor)
+
         # Batch update handling
         self._update_timer = QTimer(self)
         self._update_timer.setSingleShot(True)
@@ -41,6 +50,10 @@ class DynamicTextEdit(QTextEdit):
         self._has_code_block = False
 
         self._logger = logging.getLogger("DynamicTextEdit")
+
+    def _handle_zoom_changed(self, factor: float) -> None:
+        print(f"new tab stop for {self._style_manager.zoom_factor}, {factor}, {self._style_manager.get_space_width() * 8}")
+        self.setTabStopDistance(self._style_manager.get_space_width() * 8)
 
     def mouseReleaseEvent(self, event):
         """Propagate mouse release events to parent."""
