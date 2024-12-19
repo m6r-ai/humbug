@@ -68,7 +68,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         try:
             parser_state = parser.parse(prev_block_data.parser_state, text)
         except Exception as e:
-            print(f"WTAF? {e}")
+            print(f"Parser raised exception {e}")
             traceback.print_exc()
 
         fence_depth = prev_block_data.fence_depth
