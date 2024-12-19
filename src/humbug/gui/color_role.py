@@ -42,8 +42,6 @@ class ColorRole(Enum):
     SYNTAX_CODE = auto()                 # Code block
     SYNTAX_COMMENT = auto()
     SYNTAX_CSS_AT_RULE = auto()
-    SYNTAX_CSS_PSEUDO = auto()
-    SYNTAX_CSS_SELECTOR = auto()
     SYNTAX_ELEMENT = auto()
     SYNTAX_ERROR = auto()
     SYNTAX_FUNCTION_OR_METHOD = auto()

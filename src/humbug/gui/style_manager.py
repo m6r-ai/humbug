@@ -87,8 +87,6 @@ class StyleManager(QObject):
             ColorRole.SYNTAX_CODE: "#804040",
             ColorRole.SYNTAX_COMMENT: "#68d068",
             ColorRole.SYNTAX_CSS_AT_RULE: "#ffc0eb",
-            ColorRole.SYNTAX_CSS_PSEUDO: "#90e0e8",
-            ColorRole.SYNTAX_CSS_SELECTOR: "#80b0f0",
             ColorRole.SYNTAX_ELEMENT: "#90e0e8",
             ColorRole.SYNTAX_ERROR: "#ff0000",
             ColorRole.SYNTAX_FUNCTION_OR_METHOD: "#e0e080",
@@ -111,8 +109,6 @@ class StyleManager(QObject):
         colour_mapping = {
             "COMMENT": ColorRole.SYNTAX_COMMENT,
             "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,
-            "CSS_PSEUDO": ColorRole.SYNTAX_CSS_PSEUDO,
-            "CSS_SELECTOR": ColorRole.SYNTAX_CSS_SELECTOR,
             "ELEMENT": ColorRole.SYNTAX_ELEMENT,
             "ERROR": ColorRole.SYNTAX_ERROR,
             "FUNCTION_OR_METHOD": ColorRole.SYNTAX_FUNCTION_OR_METHOD,
