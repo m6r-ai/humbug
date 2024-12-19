@@ -12,7 +12,7 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.markdown_parser import MarkdownParser
+from humbug.syntax.markdown_parser import MarkdownParser, ProgrammingLanguage
 
 
 class BlockData(QTextBlockUserData):
@@ -64,6 +64,13 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         if not prev_block_data:
             prev_block_data = BlockData()
 
+        language = ProgrammingLanguage.UNKNOWN
+        current_block_data = current_block.userData()
+        if current_block_data:
+            current_parser_data = current_block_data.parser_state
+            if current_parser_data:
+                language = current_parser_data.language
+
         parser = MarkdownParser()
         try:
             parser_state = parser.parse(prev_block_data.parser_state, text)
@@ -82,13 +89,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             match token.type:
                 case 'FENCE_START':
                     self.setFormat(0, len(text), self._fence_format)
-
                     fence_depth += 1
                     continue
 
                 case 'FENCE_END':
                     self.setFormat(0, len(text), self._fence_format)
-
                     fence_depth -= 1
                     continue
 
@@ -103,6 +108,13 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
             if in_code_block:
                 self.setFormat(token.start, len(token.value), self._code_format)
+
+        # Did we change any of our code fences?  If we did then this means we need to rehighlight
+        # everything from this block onwards.
+        user_data = current_block.userData()
+        if (user_data and user_data.fence_depth != fence_depth) or (language != parser_state.language):
+            # It doesn't matter what we set this to, it just needs to be different to what it was before
+            self.setCurrentBlockState(self.currentBlockState() + 1)
 
         block_data = BlockData()
         block_data.parser_state = parser_state
