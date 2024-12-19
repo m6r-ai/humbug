@@ -36,7 +36,7 @@ class MarkdownLexer(Lexer):
         self._position += 1
         while self._position < len(self._input):
             ch = self._input[self._position]
-            if (not self._is_letter_or_digit(ch)) and (ch != '-') and (ch != '_'):
+            if (not self._is_letter_or_digit(ch)) and (ch != '-') and (ch != '_') and (ch != '+'):
                 break
 
             self._position += 1
