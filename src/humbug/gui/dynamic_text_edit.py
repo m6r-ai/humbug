@@ -52,7 +52,6 @@ class DynamicTextEdit(QTextEdit):
         self._logger = logging.getLogger("DynamicTextEdit")
 
     def _handle_zoom_changed(self, factor: float) -> None:
-        print(f"new tab stop for {self._style_manager.zoom_factor}, {factor}, {self._style_manager.get_space_width() * 8}")
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
 
     def mouseReleaseEvent(self, event):
