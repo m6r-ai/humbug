@@ -2,27 +2,26 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.lexer import Token
-from humbug.syntax.c_parser import CParser, CParserState
-from humbug.syntax.cpp_lexer import CppLexer
+from humbug.syntax.javascript_parser import JavaScriptParser, JavaScriptParserState
+from humbug.syntax.typescript_lexer import TypeScriptLexer
 
 
 @dataclass
-class CppParserState(CParserState):
+class TypeScriptParserState(JavaScriptParserState):
     """
     State information for the Cpp parser.
     """
 
 
-class CppParser(CParser):
+class TypeScriptParser(JavaScriptParser):
     """
-    Parser for C++ code.
+    Parser for TypeScript code.
 
-    This parser extends the C parser to handle C++-specific syntax while
-    maintaining the same token processing logic for function calls and
-    element access.
+    This parser extends the JavaScript parser to handle TypeScript-specific syntax
+    and constructs.
     """
 
-    def parse(self, prev_parser_state: Optional[CppParserState], input_str: str) -> CppParserState:
+    def parse(self, prev_parser_state: Optional[TypeScriptParserState], input_str: str) -> TypeScriptParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -34,16 +33,14 @@ class CppParser(CParser):
             The updated parser state after parsing
 
         Note:
-            The parser converts identifier tokens to FUNCTION_OR_METHOD tokens
-            when they're followed by parentheses, and to ELEMENT tokens when
-            they're part of a dotted or arrow access chain. It also handles
-            C++-specific cases like the 'this' keyword.
+            Uses the TypeScript lexer for token generation while maintaining the
+            JavaScript parsing logic.
         """
-        parser_state = CppParserState(in_element=False)
+        parser_state = TypeScriptParserState(in_element=False)
         if prev_parser_state:
             parser_state.in_element = prev_parser_state.in_element
 
-        lexer = CppLexer(input_str)
+        lexer = TypeScriptLexer(input_str)
         lexer.lex()
 
         while True:
@@ -52,12 +49,17 @@ class CppParser(CParser):
                 break
 
             if token.type != 'IDENTIFIER':
-                if token.type == 'OPERATOR' and token.value not in ('.', '->'):
+                if (token.type == 'OPERATOR' and
+                        token.value not in ('.', '?.')):
                     parser_state.in_element = False
                     self._tokens.append(token)
                     continue
 
-                if token.type != 'KEYWORD' or token.value != 'this':
+                if token.type != 'KEYWORD':
+                    self._tokens.append(token)
+                    continue
+
+                if token.value != 'this' and not parser_state.in_element:
                     self._tokens.append(token)
                     continue
 
@@ -79,7 +81,7 @@ class CppParser(CParser):
                     continue
 
                 # Is the next token going to be an element?
-                if next_token.value in ('.', '->'):
+                if next_token.value in ('.', '?.'):
                     next_in_element = True
 
             parser_state.in_element = next_in_element

@@ -12,6 +12,7 @@ from humbug.syntax.javascript_parser import JavaScriptParser
 from humbug.syntax.metaphor_parser import MetaphorParser
 from humbug.syntax.python_parser import PythonParser
 from humbug.syntax.text_parser import TextParser
+from humbug.syntax.typescript_parser import TypeScriptParser
 
 
 class ProgrammingLanguage(IntEnum):
@@ -36,7 +37,7 @@ language_mapping = {
     "javascript": ProgrammingLanguage.JAVASCRIPT,
     "metaphor": ProgrammingLanguage.METAPHOR,
     "python": ProgrammingLanguage.PYTHON,
-    "typescript": ProgrammingLanguage.TEXT
+    "typescript": ProgrammingLanguage.TYPESCRIPT
 }
 
 
@@ -79,6 +80,9 @@ class MarkdownParser(Parser):
 
             case ProgrammingLanguage.TEXT:
                 embedded_parser = TextParser()
+
+            case ProgrammingLanguage.TYPESCRIPT:
+                embedded_parser = TypeScriptParser()
 
         embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
         while True:
