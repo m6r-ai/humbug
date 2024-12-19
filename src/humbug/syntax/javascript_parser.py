@@ -3,7 +3,7 @@ from typing import Optional
 
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser
-from humbug.syntax.java_script_lexer import JavaScriptLexer
+from humbug.syntax.javascript_lexer import JavaScriptLexer
 
 
 @dataclass

@@ -6,7 +6,8 @@ from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.c_parser import CParser
 from humbug.syntax.css_parser import CSSParser
-from humbug.syntax.java_script_parser import JavaScriptParser
+from humbug.syntax.html_parser import HTMLParser
+from humbug.syntax.javascript_parser import JavaScriptParser
 from humbug.syntax.metaphor_parser import MetaphorParser
 from humbug.syntax.python_parser import PythonParser
 from humbug.syntax.text_parser import TextParser
@@ -30,7 +31,7 @@ language_mapping = {
     "c": ProgrammingLanguage.C,
     "c++": ProgrammingLanguage.TEXT,
     "css": ProgrammingLanguage.CSS,
-    "html": ProgrammingLanguage.TEXT,
+    "html": ProgrammingLanguage.HTML,
     "javascript": ProgrammingLanguage.JAVASCRIPT,
     "metaphor": ProgrammingLanguage.METAPHOR,
     "python": ProgrammingLanguage.PYTHON,
@@ -59,6 +60,9 @@ class MarkdownParser(Parser):
 
             case ProgrammingLanguage.CSS:
                 embedded_parser = CSSParser()
+
+            case ProgrammingLanguage.HTML:
+                embedded_parser = HTMLParser()
 
             case ProgrammingLanguage.JAVASCRIPT:
                 embedded_parser = JavaScriptParser()
