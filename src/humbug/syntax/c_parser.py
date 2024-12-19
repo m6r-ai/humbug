@@ -25,17 +25,12 @@ class CParser(Parser):
     like function calls and element access.
     """
 
-    def __init__(self) -> None:
-        """Initialize the C parser."""
-        super().__init__()
-        self._parser_state = CParserState()
-
-    def parse(self, parser_state: Optional[CParserState], input_str: str) -> CParserState:
+    def parse(self, prev_parser_state: Optional[CParserState], input_str: str) -> CParserState:
         """
         Parse the input string using the provided parser state.
 
         Args:
-            parser_state: Optional previous parser state
+            prev_parser_state: Optional previous parser state
             input_str: The input string to parse
 
         Returns:
@@ -46,7 +41,9 @@ class CParser(Parser):
             when they're followed by parentheses, and to ELEMENT tokens when
             they're part of a dotted or arrow access chain.
         """
-        self._parser_state.in_element = parser_state.in_element if parser_state else False
+        parser_state = CParserState(in_element=False)
+        if prev_parser_state:
+            parser_state.in_element = prev_parser_state.in_element
 
         lexer = CLexer(input_str)
         lexer.lex()
@@ -62,14 +59,14 @@ class CParser(Parser):
 
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
-            cur_in_element = self._parser_state.in_element
+            cur_in_element = parser_state.in_element
             next_token = lexer.peek_next_token(['WHITESPACE'])
-            self._parser_state.in_element = cur_in_element
+            parser_state.in_element = cur_in_element
 
             next_in_element = False
             if next_token and next_token.type == 'OPERATOR':
                 if next_token.value == '(':
-                    self._parser_state.in_element = False
+                    parser_state.in_element = False
                     self._tokens.append(Token(
                         type='FUNCTION_OR_METHOD',
                         value=token.value,
@@ -81,7 +78,7 @@ class CParser(Parser):
                 if next_token.value in ('.', '->'):
                     next_in_element = True
 
-            self._parser_state.in_element = next_in_element
+            parser_state.in_element = next_in_element
 
             if cur_in_element:
                 self._tokens.append(Token(
@@ -93,5 +90,4 @@ class CParser(Parser):
 
             self._tokens.append(token)
 
-        new_parser_state = CParserState(in_element=self._parser_state.in_element)
-        return new_parser_state
+        return parser_state
