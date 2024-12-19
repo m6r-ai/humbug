@@ -125,7 +125,6 @@ class ChatView(QFrame):
         chat_layout.addWidget(self._scroll_area)
         chat_layout.addWidget(self._status_bar)
 
-        base_font_size = self._style_manager.base_font_size
         zoom_factor = self._style_manager.zoom_factor
         self.setStyleSheet(f"""
             QFrame {{
