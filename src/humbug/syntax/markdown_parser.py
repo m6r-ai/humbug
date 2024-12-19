@@ -5,6 +5,7 @@ from humbug.syntax.markdown_lexer import MarkdownLexer
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.c_parser import CParser
+from humbug.syntax.cpp_parser import CppParser
 from humbug.syntax.css_parser import CSSParser
 from humbug.syntax.html_parser import HTMLParser
 from humbug.syntax.javascript_parser import JavaScriptParser
@@ -29,7 +30,7 @@ class ProgrammingLanguage(IntEnum):
 # Mapping from lowercase language names to enum members
 language_mapping = {
     "c": ProgrammingLanguage.C,
-    "c++": ProgrammingLanguage.TEXT,
+    "c++": ProgrammingLanguage.CPP,
     "css": ProgrammingLanguage.CSS,
     "html": ProgrammingLanguage.HTML,
     "javascript": ProgrammingLanguage.JAVASCRIPT,
@@ -57,6 +58,9 @@ class MarkdownParser(Parser):
         match language:
             case ProgrammingLanguage.C:
                 embedded_parser = CParser()
+
+            case ProgrammingLanguage.CPP:
+                embedded_parser = CppParser()
 
             case ProgrammingLanguage.CSS:
                 embedded_parser = CSSParser()
