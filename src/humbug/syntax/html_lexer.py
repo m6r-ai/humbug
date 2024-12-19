@@ -1,17 +1,6 @@
-from typing import Callable, Dict
+from typing import Callable
 
 from humbug.syntax.lexer import Lexer, Token
-
-
-# Define HTML token styles
-STYLES: Dict[str, str] = {
-    'ATTRIBUTE': 'html-attribute',
-    'DOCTYPE': 'html-doctype',
-    'SCRIPT': None,
-    'STYLE': None,
-    'TAG': 'html-tag',
-    'TEXT': 'text'
-}
 
 
 class HTMLLexer(Lexer):
@@ -163,7 +152,7 @@ class HTMLLexer(Lexer):
         start = self._position
         self._position += 4  # Skip past '<!--'
         while (self._position < len(self._input) and
-               not (self._input[self._position - 2:self._position + 1] == '-->')):
+                (self._input[self._position - 2:self._position + 1] != '-->')):
             self._position += 1
 
         if self._position < len(self._input):
