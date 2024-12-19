@@ -43,9 +43,9 @@ language_mapping = {
 
 @dataclass
 class MarkdownParserState(ParserState):
-    in_fence_block: bool
-    language: ProgrammingLanguage
-    embedded_parser_state: ParserState
+    in_fence_block: bool = False
+    language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
+    embedded_parser_state: ParserState = None
 
 
 class MarkdownParser(Parser):
@@ -84,7 +84,11 @@ class MarkdownParser(Parser):
             case ProgrammingLanguage.TYPESCRIPT:
                 embedded_parser = TypeScriptParser()
 
+        # We apply a per-parser offset to any continuation value in case we switched language!
+        continuation_offset = int(language) * 0x1000
         embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
+        embedded_parser_state.continuation_state += continuation_offset
+
         while True:
             token = embedded_parser.get_next_token()
             if token is None:
@@ -95,11 +99,7 @@ class MarkdownParser(Parser):
         return embedded_parser_state
 
     def parse(self, prev_parser_state: MarkdownParserState, input_str: str) -> MarkdownParserState:
-        parser_state = MarkdownParserState(
-            in_fence_block=False,
-            language=ProgrammingLanguage.UNKNOWN,
-            embedded_parser_state=None
-        )
+        parser_state = MarkdownParserState()
 
         if prev_parser_state:
             parser_state.in_fence_block = prev_parser_state.in_fence_block
@@ -150,6 +150,7 @@ class MarkdownParser(Parser):
             if parser_state.language != ProgrammingLanguage.UNKNOWN:
                 embedded_parser_state = self._embedded_parse(parser_state.language, parser_state.embedded_parser_state, input_str)
                 parser_state.embedded_parser_state = embedded_parser_state
+                parser_state.continuation_state = embedded_parser_state.continuation_state
                 break
 
             self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))

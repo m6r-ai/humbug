@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, List
 
@@ -8,7 +8,10 @@ from humbug.syntax.lexer import Lexer, Token
 
 @dataclass
 class ParserState:
-    pass
+    """
+    State information for the Parser.
+    """
+    continuation_state: int = 0
 
 
 class Parser(ABC):
@@ -16,6 +19,12 @@ class Parser(ABC):
         self._lexer: Optional[Lexer] = None
         self._tokens: List[Token] = []
         self._next_token: int = 0
+
+    @abstractmethod
+    def parse(self, prev_parser_state: Optional[ParserState], input_str: str) -> ParserState:
+        """
+        Parse the input string
+        """
 
     def get_next_token(self) -> Optional[Token]:
         """

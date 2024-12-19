@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.lexer import Token
-from humbug.syntax.parser import Parser
+from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.javascript_lexer import JavaScriptLexer
 
 
 @dataclass
-class JavaScriptParserState:
+class JavaScriptParserState(ParserState):
     """
     State information for the JavaScript parser.
 
@@ -41,7 +41,8 @@ class JavaScriptParser(Parser):
             when they're followed by parentheses, and to ELEMENT tokens when
             they're part of a dotted access chain.
         """
-        parser_state = JavaScriptParserState(in_element=False)
+        parser_state = JavaScriptParserState()
+
         if prev_parser_state:
             parser_state.in_element = prev_parser_state.in_element
 

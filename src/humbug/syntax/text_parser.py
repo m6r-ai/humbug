@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.lexer import Token
-from humbug.syntax.parser import Parser
+from humbug.syntax.parser import Parser, ParserState
 
 
 @dataclass
-class TextParserState:
+class TextParserState(ParserState):
     """
     State information for the Text parser.
     """

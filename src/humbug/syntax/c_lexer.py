@@ -1,6 +1,18 @@
-from typing import Callable
+from dataclasses import dataclass
+from typing import Optional, Callable
 
 from humbug.syntax.lexer import Lexer, Token
+
+
+@dataclass
+class CLexerState:
+    """
+    State information for the C lexer.
+
+    Attributes:
+        in_block_comment: Indicates if we're currently parsing a block comment
+    """
+    in_block_comment: bool = False
 
 
 class CLexer(Lexer):
@@ -10,6 +22,27 @@ class CLexer(Lexer):
     This lexer handles C-specific syntax including keywords, operators, numbers,
     strings, comments, and preprocessor directives.
     """
+
+    def __init__(self, input_text: str):
+        super().__init__(input_text)
+        self._in_block_comment = False
+
+    def stateful_lex(self, prev_lexer_state: Optional[CLexerState]) -> CLexerState:
+        """
+        Lex all the tokens in the input.
+        """
+        lexer_state = CLexerState(in_block_comment=False)
+        if prev_lexer_state:
+            self._in_block_comment = prev_lexer_state.in_block_comment
+
+        if self._in_block_comment:
+            self._read_block_comment(0)
+
+        if not self._in_block_comment:
+            self.lex()
+
+        lexer_state.in_block_comment = self._in_block_comment
+        return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -83,7 +116,7 @@ class CLexer(Lexer):
                 return
 
             if self._input[self._position + 1] == '*':
-                self._read_block_comment()
+                self._read_block_comment(2)
                 return
 
         self._read_operator()
@@ -208,18 +241,24 @@ class CLexer(Lexer):
             start=start
         ))
 
-    def _read_block_comment(self) -> None:
+    def _read_block_comment(self, skip_chars: int) -> None:
         """
         Read a block comment token.
         """
+        self._in_block_comment = True
         start = self._position
-        self._position += 2  # Skip /*
-        while (self._position < len(self._input) and
-               not (self._input[self._position - 1] == '*' and
-                    self._input[self._position] == '/')):
+        self._position += skip_chars  # Skip /*
+        while (self._position + 1) < len(self._input):
+            if self._input[self._position] == '*' and self._input[self._position + 1] == '/':
+                self._in_block_comment = False
+                self._position += 2
+                break
+
             self._position += 1
 
-        if self._position < len(self._input):
+        # If we're still in a block comment we've got one character left on this line and
+        # we need to include it in the comment too.
+        if self._in_block_comment:
             self._position += 1
 
         self._tokens.append(Token(

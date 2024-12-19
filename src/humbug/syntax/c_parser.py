@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.lexer import Token
-from humbug.syntax.parser import Parser
-from humbug.syntax.c_lexer import CLexer
+from humbug.syntax.parser import Parser, ParserState
+from humbug.syntax.c_lexer import CLexer, CLexerState
 
 
 @dataclass
-class CParserState:
+class CParserState(ParserState):
     """
     State information for the C parser.
 
@@ -15,7 +15,7 @@ class CParserState:
         in_element: Indicates if we're currently parsing an element
     """
     in_element: bool = False
-
+    lexer_state: CLexerState = None
 
 class CParser(Parser):
     """
@@ -41,12 +41,17 @@ class CParser(Parser):
             when they're followed by parentheses, and to ELEMENT tokens when
             they're part of a dotted or arrow access chain.
         """
-        parser_state = CParserState(in_element=False)
+        parser_state = CParserState()
+        prev_lexer_state = None
+
         if prev_parser_state:
             parser_state.in_element = prev_parser_state.in_element
+            prev_lexer_state = prev_parser_state.lexer_state
 
         lexer = CLexer(input_str)
-        lexer.lex()
+        lexer_state = lexer.stateful_lex(prev_lexer_state)
+        parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
+        parser_state.lexer_state = lexer_state
 
         while True:
             token = lexer.get_next_token()

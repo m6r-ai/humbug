@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
-from humbug.syntax.parser import Parser
+from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.metaphor_lexer import MetaphorLexer
 
 
 @dataclass
-class MetaphorParserState:
+class MetaphorParserState(ParserState):
     """
     State information for the Metaphor parser.
     """

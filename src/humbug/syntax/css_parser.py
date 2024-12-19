@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.lexer import Token
-from humbug.syntax.parser import Parser
+from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.css_lexer import CSSLexer
 
 
 @dataclass
-class CSSParserState:
+class CSSParserState(ParserState):
     """
     State information for the CSS parser.
 

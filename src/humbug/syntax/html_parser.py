@@ -4,11 +4,11 @@ from typing import Optional
 from humbug.syntax.javascript_parser import JavaScriptParser
 from humbug.syntax.css_parser import CSSParser
 from humbug.syntax.html_lexer import HTMLLexer
-from humbug.syntax.parser import Parser
+from humbug.syntax.parser import Parser, ParserState
 
 
 @dataclass
-class HTMLParserState:
+class HTMLParserState(ParserState):
     """
     State information for the HTML parser.
 
@@ -44,6 +44,7 @@ class HTMLParser(Parser):
             specialized parsers for those languages.
         """
         parser_state = HTMLParserState()
+
 #        if prev_parser_state:
 #            parser_state.js_parser = prev_parser_state.js_parser
 #            parser_state.css_parser = prev_parser_state.css_parser
