@@ -40,12 +40,16 @@ class CppParser(CParser):
             C++-specific cases like the 'this' keyword.
         """
         parser_state = CppParserState()
+        prev_lexer_state = None
 
         if prev_parser_state:
             parser_state.in_element = prev_parser_state.in_element
+            prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = CppLexer(input_str)
-        lexer.lex()
+        lexer = CppLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
+        parser_state.lexer_state = lexer_state
 
         while True:
             token = lexer.get_next_token()

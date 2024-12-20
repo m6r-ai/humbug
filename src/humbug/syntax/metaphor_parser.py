@@ -32,8 +32,8 @@ class MetaphorParser(Parser):
         """
         parser_state = MetaphorParserState()
 
-        lexer = MetaphorLexer(input_str)
-        lexer.lex()
+        lexer = MetaphorLexer()
+        lexer.lex(None, input_str)
 
         while True:
             token = lexer.get_next_token()

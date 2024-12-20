@@ -111,8 +111,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 if in_code_block:
                     self.setFormat(token.start, len(token.value), self._code_format)
 
-            # Did we change any of our code fences?  If we did then this means we need to rehighlight
-            # everything from this block onwards.
+            # Check if we need to rehighlight everything from this block onwards.
             if (contination_state != parser_state.continuation_state) or (current_fence_depth != fence_depth) or (language != parser_state.language):
                 # It doesn't matter what we set this to, it just needs to be different to what it was before
                 self.setCurrentBlockState(self.currentBlockState() + 1)
@@ -130,6 +129,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 if data and data.fence_depth > 0:
                     has_code = True
                     break
+
                 block = block.next()
 
             # Emit signal if state changed

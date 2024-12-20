@@ -1,6 +1,18 @@
-from typing import Callable
+from dataclasses import dataclass
+from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token
+
+
+@dataclass
+class HTMLLexerState(LexerState):
+    """
+    State information for the HTML lexer.
+
+    Attributes:
+        in_comment: Indicates if we're currently parsing a block comment
+    """
+    in_comment: bool = False
 
 
 class HTMLLexer(Lexer):
@@ -16,17 +28,36 @@ class HTMLLexer(Lexer):
         _seen_equals: Indicates if we've seen an equals sign in the current attribute
     """
 
-    def __init__(self, input_str: str) -> None:
+    def __init__(self) -> None:
         """
         Initialize the HTML lexer.
 
         Args:
             input_str: The input string to lex
         """
-        super().__init__(input_str)
+        super().__init__()
         self._in_tag = False
         self._tag_name = ''
         self._seen_equals = False
+        self._in_comment = False
+
+    def lex(self, prev_lexer_state: Optional[HTMLLexerState], input_str: str) -> HTMLLexerState:
+        """
+        Lex all the tokens in the input.
+        """
+        self._input = input_str
+        lexer_state = HTMLLexerState()
+        if prev_lexer_state:
+            self._in_comment = prev_lexer_state.in_comment
+
+        if self._in_comment:
+            self._read_html_comment(0)
+
+        if not self._in_comment:
+            self._inner_lex()
+
+        lexer_state.in_comment = self._in_comment
+        return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -58,11 +89,11 @@ class HTMLLexer(Lexer):
         """
         if (self._position + 1 < len(self._input) and
                 self._input[self._position + 1] == '!'):
-            if self._input[self._position + 2:].startswith('HTML_DOCTYPE'):
+            if self._input[self._position + 2:].startswith('DOCTYPE'):
                 self._read_doctype()
                 return
 
-            self._read_html_comment()
+            self._read_html_comment(4)
             return
 
         self._position += 1
@@ -145,18 +176,24 @@ class HTMLLexer(Lexer):
             start=start
         ))
 
-    def _read_html_comment(self) -> None:
+    def _read_html_comment(self, skip_chars: int) -> None:
         """
         Read an HTML comment.
         """
+        self._in_comment = True
         start = self._position
-        self._position += 4  # Skip past '<!--'
-        while (self._position < len(self._input) and
-                (self._input[self._position - 2:self._position + 1] != '-->')):
+        self._position += skip_chars  # Skip past '<!--'
+        while (self._position + 2) < len(self._input):
+            if self._input[self._position:self._position + 3] == '-->':
+                self._in_comment = False
+                self._position += 3
+
             self._position += 1
 
-        if self._position < len(self._input):
-            self._position += 1
+        # If we're still in a block comment we've got two characters left on this line and
+        # we need to include them in the comment too.
+        if self._in_comment:
+            self._position = len(self._input)
 
         self._tokens.append(Token(
             type='COMMENT',

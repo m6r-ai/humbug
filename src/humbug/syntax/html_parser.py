@@ -44,13 +44,19 @@ class HTMLParser(Parser):
             specialized parsers for those languages.
         """
         parser_state = HTMLParserState()
+        prev_lexer_state = None
+
+        if prev_parser_state:
+            prev_lexer_state = prev_parser_state.lexer_state
 
 #        if prev_parser_state:
 #            parser_state.js_parser = prev_parser_state.js_parser
 #            parser_state.css_parser = prev_parser_state.css_parser
 
-        lexer = HTMLLexer(input_str)
-        lexer.lex()
+        lexer = HTMLLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        parser_state.continuation_state = 1 if lexer_state.in_comment else 0
+        parser_state.lexer_state = lexer_state
 
         while True:
             # If we're using a JavaScript parser, use that until we've completed

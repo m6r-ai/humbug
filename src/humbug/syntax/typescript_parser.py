@@ -37,12 +37,16 @@ class TypeScriptParser(JavaScriptParser):
             JavaScript parsing logic.
         """
         parser_state = TypeScriptParserState()
+        prev_lexer_state = None
 
         if prev_parser_state:
             parser_state.in_element = prev_parser_state.in_element
+            prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = TypeScriptLexer(input_str)
-        lexer.lex()
+        lexer = TypeScriptLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
+        parser_state.lexer_state = lexer_state
 
         while True:
             token = lexer.get_next_token()

@@ -1,6 +1,18 @@
-from typing import Callable
+from dataclasses import dataclass
+from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token
+
+
+@dataclass
+class JavaScriptLexerState(LexerState):
+    """
+    State information for the JavaScript lexer.
+
+    Attributes:
+        in_block_comment: Indicates if we're currently parsing a block comment
+    """
+    in_block_comment: bool = False
 
 
 class JavaScriptLexer(Lexer):
@@ -10,6 +22,28 @@ class JavaScriptLexer(Lexer):
     This lexer handles JavaScript-specific syntax including keywords, operators,
     strings, regular expressions, comments, and numeric literals.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._in_block_comment = False
+
+    def lex(self, prev_lexer_state: Optional[JavaScriptLexerState], input_str: str) -> JavaScriptLexerState:
+        """
+        Lex all the tokens in the input.
+        """
+        self._input = input_str
+        lexer_state = JavaScriptLexerState(in_block_comment=False)
+        if prev_lexer_state:
+            self._in_block_comment = prev_lexer_state.in_block_comment
+
+        if self._in_block_comment:
+            self._read_block_comment(0)
+
+        if not self._in_block_comment:
+            self._inner_lex()
+
+        lexer_state.in_block_comment = self._in_block_comment
+        return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -58,7 +92,7 @@ class JavaScriptLexer(Lexer):
                 return
 
             if self._input[self._position + 1] == '*':
-                self._read_block_comment()
+                self._read_block_comment(2)
                 return
 
         self._read_regexp_or_divide()
@@ -204,23 +238,32 @@ class JavaScriptLexer(Lexer):
             start=start
         ))
 
-    def _read_block_comment(self) -> None:
+    def _read_block_comment(self, skip_chars: int) -> None:
         """
         Read a block comment token.
         """
+        self._in_block_comment = True
         start = self._position
-        self._position += 2
-        while (self._position < len(self._input) and
-               not (self._input[self._position - 1] == '*' and
-                    self._input[self._position] == '/')):
+        self._position += skip_chars  # Skip /*
+        while (self._position + 1) < len(self._input):
+            if self._input[self._position] == '*' and self._input[self._position + 1] == '/':
+                self._in_block_comment = False
+                self._position += 2
+                break
+
             self._position += 1
 
-        self._position += 1
+        # If we're still in a block comment we've got one character left on this line and
+        # we need to include it in the comment too.
+        if self._in_block_comment:
+            self._position = len(self._input)
+
         self._tokens.append(Token(
             type='COMMENT',
             value=self._input[start:self._position],
             start=start
         ))
+
 
     def _read_regexp_or_divide(self) -> None:
         """

@@ -1,9 +1,17 @@
-from typing import Callable
+from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token
 
 
 class MarkdownLexer(Lexer):
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
+        """
+        Lex all the tokens in the input.
+        """
+        self._input = input_str
+        self._inner_lex()
+        return None
+
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
         Get the lexing function that matches a given start character.

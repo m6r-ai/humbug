@@ -1,6 +1,6 @@
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
-from humbug.syntax.lexer import Lexer, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token
 
 
 # Define styles as a module-level dictionary similar to the TypeScript implementation
@@ -15,15 +15,20 @@ class MetaphorLexer(Lexer):
     and text content.
     """
 
-    def __init__(self, input_str: str) -> None:
+    def __init__(self) -> None:
         """
         Initialize the Metaphor lexer.
-
-        Args:
-            input_str: The input string to lex
         """
-        super().__init__(input_str)
+        super().__init__()
         self._seen_keyword: bool = False
+
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
+        """
+        Lex all the tokens in the input.
+        """
+        self._input = input_str
+        self._inner_lex()
+        return None
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """

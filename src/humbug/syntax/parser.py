@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 
 
-from humbug.syntax.lexer import Lexer, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token
 
 
 @dataclass
@@ -11,6 +11,7 @@ class ParserState:
     """
     State information for the Parser.
     """
+    lexer_state: LexerState = None
     continuation_state: int = 0
 
 

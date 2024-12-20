@@ -3,7 +3,7 @@ from typing import Optional
 
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.c_lexer import CLexer, CLexerState
+from humbug.syntax.c_lexer import CLexer
 
 
 @dataclass
@@ -15,7 +15,7 @@ class CParserState(ParserState):
         in_element: Indicates if we're currently parsing an element
     """
     in_element: bool = False
-    lexer_state: CLexerState = None
+
 
 class CParser(Parser):
     """
@@ -48,8 +48,8 @@ class CParser(Parser):
             parser_state.in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = CLexer(input_str)
-        lexer_state = lexer.stateful_lex(prev_lexer_state)
+        lexer = CLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
         parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
         parser_state.lexer_state = lexer_state
 

@@ -1,6 +1,19 @@
-from typing import Callable
+from dataclasses import dataclass
+from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token
+
+
+@dataclass
+class PythonLexerState(LexerState):
+    """
+    State information for the Python lexer.
+
+    Attributes:
+        in_docstring: Indicates if we're currently parsing a docstring
+    """
+    in_docstring: bool = False
+    docstring_quote: str = ""
 
 
 class PythonLexer(Lexer):
@@ -10,6 +23,31 @@ class PythonLexer(Lexer):
     This lexer handles Python-specific syntax including keywords, operators, numbers,
     strings, docstrings, and comments.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._in_docstring = False
+        self._docstring_quote = ""
+
+    def lex(self, prev_lexer_state: Optional[PythonLexerState], input_str: str) -> PythonLexerState:
+        """
+        Lex all the tokens in the input.
+        """
+        self._input = input_str
+        lexer_state = PythonLexerState()
+        if prev_lexer_state:
+            self._in_docstring = prev_lexer_state.in_docstring
+            self._docstring_quote = prev_lexer_state.docstring_quote
+
+        if self._in_docstring:
+            self._read_docstring(self._docstring_quote, 0)
+
+        if not self._in_docstring:
+            self._inner_lex()
+
+        lexer_state.in_docstring = self._in_docstring
+        lexer_state.docstring_quote = self._docstring_quote
+        return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -54,13 +92,8 @@ class PythonLexer(Lexer):
         if (self._position + 2 < len(self._input) and
                 self._input[self._position + 1] == ch and
                 self._input[self._position + 2] == ch):
-            start = self._position
-            self._position += 3
-            self._tokens.append(Token(
-                type='DOCSTRING',
-                value=self._input[start:self._position],
-                start=start
-            ))
+            self._docstring_quote = ch
+            self._read_docstring(ch, 3)
             return
 
         self._read_string()
@@ -173,6 +206,35 @@ class PythonLexer(Lexer):
 
         self._tokens.append(Token(
             type='COMMENT',
+            value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _read_docstring(self, quote_char: str, skip_chars: int) -> None:
+        """
+        Read a docstring token.
+
+        Args:
+            quote_char: The quote character used (single or double quote)
+        """
+        self._in_docstring = True
+        start = self._position
+        self._position += skip_chars  # Skip /*
+        while (self._position + 2) < len(self._input):
+            if (self._input[self._position] == quote_char and
+                    self._input[self._position + 1] == quote_char and
+                    self._input[self._position + 2] == quote_char):
+                self._in_docstring = False
+                self._position += 3
+
+            self._position += 1
+
+        # If we're still in a docstring we need to consume the whole line
+        if self._in_docstring:
+            self._position = len(self._input)
+
+        self._tokens.append(Token(
+            type='STRING',
             value=self._input[start:self._position],
             start=start
         ))

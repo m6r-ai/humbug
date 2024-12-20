@@ -41,8 +41,15 @@ class CSSParser(Parser):
         """
         parser_state = CSSParserState()
 
-        lexer = CSSLexer(input_str)
-        lexer.lex()
+        prev_lexer_state = None
+
+        if prev_parser_state:
+            prev_lexer_state = prev_parser_state.lexer_state
+
+        lexer = CSSLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        parser_state.continuation_state = 1 if lexer_state.in_comment else 0
+        parser_state.lexer_state = lexer_state
 
         while True:
             token = lexer.get_next_token()

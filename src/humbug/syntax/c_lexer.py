@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional, Callable
 
-from humbug.syntax.lexer import Lexer, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token
 
 
 @dataclass
-class CLexerState:
+class CLexerState(LexerState):
     """
     State information for the C lexer.
 
@@ -23,15 +23,16 @@ class CLexer(Lexer):
     strings, comments, and preprocessor directives.
     """
 
-    def __init__(self, input_text: str):
-        super().__init__(input_text)
+    def __init__(self):
+        super().__init__()
         self._in_block_comment = False
 
-    def stateful_lex(self, prev_lexer_state: Optional[CLexerState]) -> CLexerState:
+    def lex(self, prev_lexer_state: Optional[CLexerState], input_str: str) -> CLexerState:
         """
         Lex all the tokens in the input.
         """
-        lexer_state = CLexerState(in_block_comment=False)
+        self._input = input_str
+        lexer_state = CLexerState()
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
 
@@ -39,7 +40,7 @@ class CLexer(Lexer):
             self._read_block_comment(0)
 
         if not self._in_block_comment:
-            self.lex()
+            self._inner_lex()
 
         lexer_state.in_block_comment = self._in_block_comment
         return lexer_state
@@ -259,7 +260,7 @@ class CLexer(Lexer):
         # If we're still in a block comment we've got one character left on this line and
         # we need to include it in the comment too.
         if self._in_block_comment:
-            self._position += 1
+            self._position = len(self._input)
 
         self._tokens.append(Token(
             type='COMMENT',

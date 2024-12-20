@@ -10,9 +10,16 @@ class Token:
     start: int
 
 
+@dataclass
+class LexerState:
+    """
+    State information for the Lexer.
+    """
+
+
 class Lexer(ABC):
-    def __init__(self, input_text: str):
-        self._input: str = input_text
+    def __init__(self):
+        self._input: str = None
         self._position: int = 0
         self._tokens: List[Token] = []
         self._next_token: int = 0
@@ -29,7 +36,13 @@ class Lexer(ABC):
         :return: The lexing function
         """
 
-    def lex(self) -> None:
+    @abstractmethod
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
+        """
+        Parse the input string
+        """
+
+    def _inner_lex(self) -> None:
         """
         Lex all the tokens in the input.
         """

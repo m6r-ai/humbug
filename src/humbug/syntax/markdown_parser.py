@@ -106,10 +106,11 @@ class MarkdownParser(Parser):
             parser_state.language = prev_parser_state.language
             parser_state.embedded_parser_state = prev_parser_state.embedded_parser_state
 
-        lexer = MarkdownLexer(input_str)
-        lexer.lex()
+        lexer = MarkdownLexer()
+        lexer.lex(None, input_str)
 
         seen_text = False
+        parse_embedded = parser_state.language != ProgrammingLanguage.UNKNOWN
 
         while True:
             lex_token = lexer.get_next_token()
@@ -127,6 +128,7 @@ class MarkdownParser(Parser):
                     parser_state.in_fence_block = False
                     parser_state.language = ProgrammingLanguage.UNKNOWN
                     parser_state.embedded_parser_state = None
+                    parse_embedded = False
                     continue
 
                 parser_state.in_fence_block = True
@@ -148,11 +150,13 @@ class MarkdownParser(Parser):
             seen_text = True
 
             if parser_state.language != ProgrammingLanguage.UNKNOWN:
-                embedded_parser_state = self._embedded_parse(parser_state.language, parser_state.embedded_parser_state, input_str)
-                parser_state.embedded_parser_state = embedded_parser_state
-                parser_state.continuation_state = embedded_parser_state.continuation_state
                 break
 
             self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+
+        if parse_embedded:
+            embedded_parser_state = self._embedded_parse(parser_state.language, parser_state.embedded_parser_state, input_str)
+            parser_state.embedded_parser_state = embedded_parser_state
+            parser_state.continuation_state = embedded_parser_state.continuation_state
 
         return parser_state
