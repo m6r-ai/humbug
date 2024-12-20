@@ -13,7 +13,7 @@ Humbug is a GUI-based application that enables interaction with AI backends thro
 
 ## Requirements
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - OpenAI API key
 - PySide6
 - aiohttp
