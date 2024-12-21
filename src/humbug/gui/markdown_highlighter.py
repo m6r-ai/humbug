@@ -1,7 +1,6 @@
 """Markdown code highlighter."""
 
 import logging
-import traceback
 from typing import Optional
 
 from PySide6.QtGui import (
@@ -137,6 +136,5 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self._has_code_block = has_code
                 self.codeBlockStateChanged.emit(has_code)
 
-        except Exception as e:
-            print(f"Parser raised exception {e}")
-            traceback.print_exc()
+        except Exception:
+            self._logger.exception("highlighting exception")

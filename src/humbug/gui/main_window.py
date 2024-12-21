@@ -318,8 +318,8 @@ class MainWindow(QMainWindow):
             if chat_view.conversation_id in self._current_tasks:
                 try:
                     self._current_tasks[chat_view.conversation_id].remove(task)
-                except ValueError:
-                    pass
+                except ValueError as e:
+                    self._logger.debug("Value Error: %d: %s", chat_view.conversation_id, e)
 
         task.add_done_callback(task_done_callback)
 

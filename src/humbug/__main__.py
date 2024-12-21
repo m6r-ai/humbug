@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import sys
 import time
@@ -8,6 +9,25 @@ from qasync import QEventLoop, QApplication
 from humbug.ai.openai_backend import OpenAIBackend
 from humbug.transcript.transcript_writer import TranscriptWriter
 from humbug.gui.main_window import MainWindow
+
+
+def install_global_exception_handler():
+    """Install a global exception handler for uncaught exceptions."""
+    logger = logging.getLogger('GlobalExceptionHandler')
+
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            # Don't log keyboard interrupt
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+
+        logger.critical(
+            "Uncaught exception",
+            exc_info=(exc_type, exc_value, exc_traceback),
+            stack_info=True
+        )
+
+    sys.excepthook = handle_exception
 
 
 class HumbugApplication(QApplication):
@@ -32,6 +52,8 @@ class HumbugApplication(QApplication):
 
 
 async def main():
+    install_global_exception_handler()
+
     # Check for API key
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
