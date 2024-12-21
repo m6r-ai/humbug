@@ -804,8 +804,19 @@ Action: Build the software
 #    If the software should be structured into multiple files then please provide each file separately and identify the
 #    name of each one as you produce it.
 
-    An earlier version of the application is provided here.  Please use this as a template.  This version may not meet
+#    An earlier version of the application is provided here.  Please use this as a template.  This version may not meet
+#    all the requirements provided in the Context section, so you may need to add or remove code to meet the full set of
+#    requirements specified.
+#
+#    Embed: src/humbug/**/*.py
+
+    An earlier version of most of the application is provided here.  Please use this as a template.  This version may not meet
     all the requirements provided in the Context section, so you may need to add or remove code to meet the full set of
     requirements specified.
 
-    Embed: src/humbug/**/*.py
+    Embed: src/humbug/*.py
+    Embed: src/humbug/ai/*.py
+    Embed: src/humbug/commands/*.py
+    Embed: src/humbug/conversation/*.py
+    Embed: src/humbug/gui/*.py
+    Embed: src/humbug/transcript/*.py
