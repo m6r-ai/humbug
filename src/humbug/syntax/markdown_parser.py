@@ -32,6 +32,7 @@ class ProgrammingLanguage(IntEnum):
 language_mapping = {
     "c": ProgrammingLanguage.C,
     "c++": ProgrammingLanguage.CPP,
+    "cpp": ProgrammingLanguage.CPP,
     "css": ProgrammingLanguage.CSS,
     "html": ProgrammingLanguage.HTML,
     "javascript": ProgrammingLanguage.JAVASCRIPT,
