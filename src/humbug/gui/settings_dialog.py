@@ -43,6 +43,7 @@ class SettingsDialog(QDialog):
         self.model_combo.addItems(self.available_models)
         self.model_combo.currentTextChanged.connect(self._handle_model_change)
         model_layout.addWidget(model_label)
+        model_layout.addStretch()
         model_layout.addWidget(self.model_combo)
         layout.addLayout(model_layout)
 
@@ -54,6 +55,7 @@ class SettingsDialog(QDialog):
         self.temp_spin.setSingleStep(0.1)
         self.temp_spin.setDecimals(1)
         temp_layout.addWidget(temp_label)
+        temp_layout.addStretch()
         temp_layout.addWidget(self.temp_spin)
         layout.addLayout(temp_layout)
 
@@ -74,7 +76,7 @@ class SettingsDialog(QDialog):
         self.model_combo.currentTextChanged.connect(self._handle_value_change)
         self.temp_spin.valueChanged.connect(self._handle_value_change)
 
-        button_layout.addStretch()
+#        button_layout.addStretch()
         button_layout.addWidget(self.ok_button)
         button_layout.addWidget(self.cancel_button)
         button_layout.addWidget(self.apply_button)
@@ -92,45 +94,17 @@ class SettingsDialog(QDialog):
                 color: white;
             }}
             QComboBox {{
-                background-color: #3d3d3d;
-                color: white;
-                border: 1px solid #4d4d4d;
-                border-radius: 2px;
-                padding: 5px;
-                min-width: 200px;
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                background-color: #4d4d4d;
-            }}
-            QComboBox::down-arrow {{
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid white;
-                width: 0;
-                height: 0;
-                margin-right: 5px;
+                width: 200px;
             }}
             QDoubleSpinBox {{
-                background-color: #3d3d3d;
-                color: white;
-                border: 1px solid #4d4d4d;
-                border-radius: 2px;
-                padding: 5px;
-                min-width: 200px;
-            }}
-            QDoubleSpinBox:disabled {{
-                background-color: #2d2d2d;
-                color: #808080;
-                border: 1px solid #3d3d3d;
+                width: 200px;
             }}
             QPushButton {{
                 background-color: #4d4d4d;
                 color: white;
                 border: none;
                 border-radius: 2px;
-                padding: 5px 15px;
+                padding: 10px 15px;
                 min-width: 70px;
             }}
             QPushButton:hover {{

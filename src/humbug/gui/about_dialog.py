@@ -1,6 +1,6 @@
 """Menu implementation for Humbug application."""
 
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
+from PySide6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QSizePolicy
 from PySide6.QtCore import Qt, QSize
 
 from humbug import format_version
@@ -13,7 +13,7 @@ class AboutDialog(QDialog):
         """Initialize the About dialog."""
         super().__init__(parent)
         self.setWindowTitle("About Humbug")
-        self.setFixedSize(QSize(400, 200))
+        self.setFixedSize(QSize(400, 250))
         self.setup_ui()
 
     def setup_ui(self):
@@ -37,10 +37,14 @@ class AboutDialog(QDialog):
         layout.addWidget(desc_label)
 
         # Close button
+        button_layout = QHBoxLayout()
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.accept)
-        close_button.setStyleSheet("margin: 10px;")
-        layout.addWidget(close_button)
+        close_button.setStyleSheet("padding: 10px 15px;")
+        button_layout.addStretch()
+        button_layout.addWidget(close_button)
+        button_layout.addStretch()
 
-        layout.addStretch()
+        layout.addLayout(button_layout)
+
         self.setLayout(layout)
