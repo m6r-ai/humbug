@@ -45,7 +45,8 @@ class ChatView(QFrame):
 
         # Initialize tracking variables
         self._auto_scroll = True
-        self._last_maximum = 0
+        self._last_scroll_maximum = 0
+        self._last_insertion_point = 0
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -251,6 +252,18 @@ class ChatView(QFrame):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
+        current_pos = self._scroll_area.verticalScrollBar().value()
+
+        # Work out what we're supposed to do about scrolling.
+        vbar_maximum = self._scroll_area.verticalScrollBar().maximum()
+
+        if (current_pos > self._last_insertion_point):
+            if self._last_scroll_maximum != vbar_maximum:
+                max_diff = vbar_maximum - self._last_scroll_maximum
+                self._scroll_area.verticalScrollBar().setValue(current_pos + max_diff)
+
+        self._last_scroll_maximum = vbar_maximum
+
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
         scrollbar = self._scroll_area.verticalScrollBar()
@@ -270,18 +283,24 @@ class ChatView(QFrame):
         self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
         self._messages.append(msg_widget)
 
-        if self._auto_scroll:
-            self._scroll_to_bottom()
+        # When we call this we should always scroll to the bottom and restore auto-scrolling
+        self._auto_scroll = True
+        self._scroll_to_bottom()
 
     def _update_last_ai_response(self, content: str):
         """Update the last AI response in the history."""
-        if self._messages and self._messages[-1].is_ai:
-            self._messages[-1].set_content(content, 'ai')
-        else:
+        # If our last message was not from the AI then create a new one.
+        if not self._messages or not self._messages[-1].is_ai:
             self._add_message(content, 'ai')
+            return
 
-        if self._auto_scroll:
-            self._scroll_to_bottom()
+        # Store current scroll position before appending.  If this insertion triggers a change
+        # in scrolling state then we'll get a signal and will adjust the scrollbar state based
+        # on this.
+        self._last_insertion_point = self._get_insertion_point()
+
+        # Update our message
+        self._messages[-1].set_content(content, 'ai')
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
@@ -323,6 +342,12 @@ class ChatView(QFrame):
             f"Input tokens: {input_tokens} | "
             f"Output tokens: {output_tokens}"
         )
+
+    def _get_insertion_point(self):
+        """Determine where streaming responses will insert in the scroll area"""
+        total_height = self._messages_container.height()
+        input_height = self._input.height()
+        return total_height - input_height - 2 * self._messages_layout.spacing()
 
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""
