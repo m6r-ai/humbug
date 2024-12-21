@@ -87,6 +87,43 @@ Context: humbug application
                 +------------------------------------------+
                 ```
 
+        Context: Syntax highlighting
+            Code blocks and inline code will be syntax highlighted based on the programming language:
+
+            - Keywords appear in pink (#ffc0eb)
+            - Comments appear in green (#68d068)
+            - Strings appear in red (#f06060)
+            - Numbers appear in orange (#c08040)
+            - Operators appear in light grey (#c0c0c0)
+            - Functions and methods appear in light yellow (#e0e080)
+            - Class and type names appear in light blue (#80b0f0)
+            - Regular expressions appear in orange-brown (#c87050)
+            - Element access appears in light blue (#90e0e8)
+            - HTML/CSS-specific:
+                - HTML tags appear in pink (#ffc0eb)
+                - HTML attributes appear in light blue (#90e0e8)
+                - CSS at-rules appear in pink (#ffc0eb)
+                - DOCTYPE declarations appear in grey (#808080)
+            - Preprocessor directives appear in grey (#808080)
+            - Error text appears in red (#ff0000)
+
+            The syntax highlighting is updated in real-time as text is entered or changed.
+
+            Context: Language detection
+                When a code block starts with a language identifier (e.g., ```python), the
+                appropriate syntax highlighting rules for that language are applied.
+                If no language is specified, the code is treated as plain text with no highlighting.
+
+            Context: Supported languages
+                Syntax highlighting is supported for:
+
+                - Python
+                - JavaScript/TypeScript
+                - HTML
+                - CSS
+                - C/C++
+                - Metaphor
+
     Context: Menus
         The application will have a series of top-level Menus.
 
