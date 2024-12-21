@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
-from PySide6.QtCore import QSize, QTimer, Signal, QPoint, Qt
+from PySide6.QtCore import QTimer, Signal, QPoint, Qt, Slot
 from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.ai.conversation_settings import ConversationSettings
@@ -43,11 +43,13 @@ class ChatView(QFrame):
         self._scroll_timer.timeout.connect(self._update_scroll)
         self._last_mouse_pos = None
 
-        # Create timer for delayed resize handling
-        self._resize_timer = QTimer(self)
-        self._resize_timer.setSingleShot(True)
-        self._resize_timer.setInterval(100)
-        self._resize_timer.timeout.connect(self._handle_delayed_resize)
+        # Initialize tracking variables
+        self._auto_scroll = True
+        self._last_maximum = 0
+
+        # Connect to the vertical scrollbar's change signals
+        self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
+        self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
     def _setup_ui(self):
         """Set up the user interface."""
@@ -220,28 +222,41 @@ class ChatView(QFrame):
         if text:
             self.submitted.emit(text)
 
+    @Slot(int)
+    def _on_scroll_value_changed(self, value: int):
+        """
+        Handle scroll value changes to detect user scrolling.
+
+        Args:
+            value (int): The new scroll value
+        """
+        # Get the vertical scrollbar
+        vbar = self._scroll_area.verticalScrollBar()
+
+        # Check if we're at the bottom
+        at_bottom = value == vbar.maximum()
+
+        # If user scrolls up, disable auto-scroll
+        if not at_bottom:
+            self._auto_scroll = False
+
+        # If user scrolls to bottom, re-enable auto-scroll
+        if at_bottom:
+            self._auto_scroll = True
+
+    @Slot(int, int)
+    def _on_scroll_range_changed(self, _minimum, _maximum):
+        """Handle the scroll range changing."""
+        # If we're set to auto-scroll then do so now
+        if self._auto_scroll:
+            self._scroll_to_bottom()
+
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
         scrollbar = self._scroll_area.verticalScrollBar()
-        print(f"scroll to bottom {scrollbar.maximum()}")
         scrollbar.setValue(scrollbar.maximum())
 
-    def _handle_scroll_request(self, old_size: QSize) -> None:
-        """Handle scroll requests from content changes."""
-        scrollbar = self._scroll_area.verticalScrollBar()
-        scrollbar_end = self._scroll_area.viewport().height() - 1 + scrollbar.value()
-        print(f"handle_scroll_req {old_size}, {scrollbar_end}")
-        if scrollbar_end >= old_size.height() - 20:
-            QTimer.singleShot(10, self._scroll_to_bottom)
-
-    def _update_scrollbar_visibility(self):
-        """Update scrollbar visibility based on content height."""
-        self._scroll_area.setVerticalScrollBarPolicy(
-            Qt.ScrollBarAlwaysOn if self._messages_container.height() > self._scroll_area.height()
-            else Qt.ScrollBarAsNeeded
-        )
-
-    def add_message(self, message: str, style: str) -> None:
+    def _add_message(self, message: str, style: str) -> None:
         """Add a message to history with appropriate styling."""
         msg_widget = MessageWidget(self)
         msg_widget.selectionChanged.connect(
@@ -255,17 +270,18 @@ class ChatView(QFrame):
         self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
         self._messages.append(msg_widget)
 
-        self._handle_scroll_request(self._messages_container.size())
-        self._update_scrollbar_visibility()
+        if self._auto_scroll:
+            self._scroll_to_bottom()
 
-    def update_last_ai_response(self, content: str):
+    def _update_last_ai_response(self, content: str):
         """Update the last AI response in the history."""
         if self._messages and self._messages[-1].is_ai:
             self._messages[-1].set_content(content, 'ai')
         else:
-            self.add_message(content, 'ai')
+            self._add_message(content, 'ai')
 
-        self._handle_scroll_request(self._messages_container.size())
+        if self._auto_scroll:
+            self._scroll_to_bottom()
 
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
@@ -384,7 +400,7 @@ class ChatView(QFrame):
         """Update the current AI response in the conversation."""
         if error:
             error_msg = f"Error: {error['message']}"
-            self.update_last_ai_response(error_msg)
+            self._update_last_ai_response(error_msg)
             error_message = Message.create(
                 self._conversation_id,
                 MessageSource.SYSTEM,
@@ -395,7 +411,7 @@ class ChatView(QFrame):
             return error_message
 
         # Update display
-        self.update_last_ai_response(content)
+        self._update_last_ai_response(content)
 
         # Update or create AI message in conversation
         settings = self.get_settings()
@@ -436,7 +452,7 @@ class ChatView(QFrame):
 
     def add_user_message(self, content: str) -> Message:
         """Add a user message to the conversation."""
-        self.add_message(content, "user")
+        self._add_message(content, "user")
         message = Message.create(
             self._conversation_id,
             MessageSource.USER,
@@ -447,7 +463,7 @@ class ChatView(QFrame):
 
     def add_system_message(self, content: str, error: Optional[Dict] = None) -> Message:
         """Add a system message to the conversation."""
-        self.add_message(content, "system")
+        self._add_message(content, "system")
         message = Message.create(
             self._conversation_id,
             MessageSource.SYSTEM,
@@ -461,16 +477,7 @@ class ChatView(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-        # Start resize timer to handle the change after a small delay
-        self._resize_timer.start()
-
-    def _handle_delayed_resize(self):
-        """Handle resize after a delay to avoid too frequent updates."""
-        self._update_scrollbar_visibility()
-        # Preserve scroll position relative to bottom
-        scrollbar = self._scroll_area.verticalScrollBar()
-        was_at_bottom = scrollbar.value() == scrollbar.maximum()
-        if was_at_bottom:
+        if self._auto_scroll:
             self._scroll_to_bottom()
 
     def _handle_zoom_changed(self, factor: float) -> None:
@@ -483,5 +490,4 @@ class ChatView(QFrame):
         for widget in self.findChildren(QWidget):
             widget.setFont(font)
 
-        print(f"size {base_font_size * factor}")
         self.updateGeometry()
