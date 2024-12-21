@@ -1,6 +1,6 @@
 """Menu implementation for Humbug application."""
 
-from PySide6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QSizePolicy
+from PySide6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, QSize
 
 from humbug import format_version
