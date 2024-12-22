@@ -320,9 +320,15 @@ Context: humbug application
 
                 Context: Model Selection
                     The AI model is selected via a dropdown menu.
+
                     Available models should be configurable at application startup.
+
                     The default model is "gpt-4o-mini".
+
                     Any change to the model selection takes effect on the next message sent to the AI.
+
+                    If a model's provider is not available (no API key), that model should be disabled in the
+                    conversation settings.
 
                 Context: Temperature Setting
                     The temperature is set via a numeric input field that:
@@ -511,14 +517,18 @@ Context: humbug application
     Context: Communication with the AI
         Communication with the AI is via a REST API.
 
-        The initial implementation solely supports OpenAI.
+        The implementation supports OpenAI and Google Gemini.
 
         Context: OpenAI REST endpoint
             Messages are sent via a POST message.
+
             The API to use is the "continuations" API.  The endpoint is "https://api.openai.com/v1/chat/completions".
+
             This needs two headers to be provided:
+
             "Content-Type": "application/json"
             "Authorization": {key}"
+
             {key} must be replaced with the API key found in the environment variable `OPENAI_API_KEY`.
 
             The data for the POST is of this form:
@@ -585,31 +595,118 @@ Context: humbug application
             In this message, the content is what should be captured as the AI response, but capture the usage information
             in the JSON transcript.
 
+        Context: Google REST endpoint
+            Messages are sent via a POST message.
+
+            The API to use is the Gemini streaming API. The endpoint pattern is:
+
+            "https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse"
+
+            where {model} is replaced with the selected model name (e.g., "gemini-1.5-flash").
+
+            This needs two headers to be provided:
+
+            "Content-Type": "application/json"
+            "x-goog-api-key": {key}
+
+            {key} must be replaced with the API key found in the environment variable `GOOGLE_API_KEY`.
+
+            The data for the POST is of this form:
+
+            ```json
+            {
+                "contents": [{
+                    "parts":[
+                        {"text": "User message goes here"}
+                    ]
+                }],
+                "safetySettings": [
+                    {
+                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        "threshold": "BLOCK_ONLY_HIGH"
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 800,
+                    "topP": 0.8,
+                    "topK": 10
+                }
+            }
+
+            ```
+
+            The temperature value should be omitted for models that don't support it.
+
+            With streaming enabled (alt=sse parameter), responses arrive as Server-Sent Events.
+
+            Each event begins with "data: " followed by a JSON object.
+
+            The stream ends with a "data: [DONE]" message.
+
+            Each JSON chunk takes this form:
+
+            ```json
+            {
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": "chunk of response text"
+                                }
+                            ]
+                        },
+                        "finishReason": null
+                    }
+                ]
+            }
+            ```
+
+            The final chunk will have finishReason set to "STOP" and may include usage information.
+
     Context: Message history
         Maintain conversation context by including all previous messages in the session.
 
-    Context: AI interactions
+    Context: AI models
+        The following AI models are available:
+
+        - "gpt-4o-mini": OpenAI GPT-4 Mini model
+        - "gpt-4o": OpenAI GPT-4 model
+        - "o1-mini": OpenAI O1 Mini model
+        - "o1-preview": OpenAI O1 Preview model
+        - "gemini-1.5-flash": Google Gemini 1.5 Flash model
+        - "gemini-1.5-pro": Google Gemini 1.5 Pro model
+
         The AI model is configurable via the settings dialog.  It it set to "gpt-4o-mini" by default.
 
+        Context: Model providers
+            Models are provided by different AI services:
+
+            - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"
+            - Google models: "gemini-1.5-flash", "gemini-1.5-pro"
+
+        Context: Provider configuration
+            Each provider requires its own API key:
+
+            - OpenAI models require OPENAI_API_KEY environment variable
+            - Google models require GOOGLE_API_KEY environment variable
+
+            At least one provider must be configured for the application to start.
+
         Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
-
-        Context: Available models
-            The following AI models are available:
-
-            - "gpt-4o-mini"
-            - "gpt-4o"
-            - "o1-mini"
-            - "o1-preview"
 
     Context: Temperature settings
         Temperature controls how deterministic or creative the AI's responses are.
 
-        GPT-4o models support temperature adjustment:
+        GPT-4o and Gemini models support temperature adjustment:
 
-        - gpt-4o-mini: Supports temperature 0.0-1.0.
-        - gpt-4o: Supports temperature 0.0-1.0.
-        - o1-mini: No temperature setting.
-        - o1-preview: No temperature setting.
+        - gpt-4o-mini: Supports temperature 0.0-1.0
+        - gpt-4o: Supports temperature 0.0-1.0
+        - o1-mini: No temperature setting
+        - o1-preview: No temperature setting
+        - gemini-1.5-flash: Supports temperature 0.0-1.0
+        - gemini-1.5-pro: Supports temperature 0.0-1.0
 
         The temperature control in the Settings dialog is automatically:
 
@@ -656,6 +753,25 @@ Context: humbug application
             - System errors: Graceful degradation
 
             During retries, preserve the message in the input box.
+
+        Context: Provider-specific errors
+            Each AI provider may return different error formats.  The application must normalize these different error formats
+            into a consistent internal format for display and handling.
+
+            Context: OpenAI errors
+                OpenAI errors include:
+
+                - Invalid API key
+                - Rate limits exceeded
+                - Model overloaded
+
+            Context: Gemini errors
+                Gemini errors include:
+
+                - Invalid API key
+                - Quota exceeded
+                - Model not found
+                - Invalid request format
 
         Context: Error display format
             Errors appear in message history with:

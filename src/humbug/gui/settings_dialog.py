@@ -1,5 +1,6 @@
 """Dialog for configuring conversation-specific settings."""
 
+from typing import List
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QDoubleSpinBox
@@ -23,7 +24,7 @@ class SettingsDialog(QDialog):
         self.setFixedSize(QSize(400, 200))
         self.setModal(True)
 
-        self._available_models = ConversationSettings.get_available_models()
+        self._available_models: List[str] = []
         self._initial_settings = None
         self._current_settings = None
         self._model_temperatures = {}
@@ -36,7 +37,6 @@ class SettingsDialog(QDialog):
         model_layout = QHBoxLayout()
         model_label = QLabel("AI Model:")
         self._model_combo = QComboBox()
-        self._model_combo.addItems(self._available_models)
         self._model_combo.currentTextChanged.connect(self._handle_model_change)
         model_layout.addWidget(model_label)
         model_layout.addStretch()
@@ -72,7 +72,6 @@ class SettingsDialog(QDialog):
         self._model_combo.currentTextChanged.connect(self._handle_value_change)
         self.temp_spin.valueChanged.connect(self._handle_value_change)
 
-#        button_layout.addStretch()
         button_layout.addWidget(self.ok_button)
         button_layout.addWidget(self.cancel_button)
         button_layout.addWidget(self.apply_button)
@@ -153,6 +152,16 @@ class SettingsDialog(QDialog):
             current_model != self._current_settings.model or
             current_temp != self._current_settings.temperature
         )
+
+    def set_available_models(self, models: List[str]):
+        """Set the list of available models.
+
+        Args:
+            models: List of model names that are available for use
+        """
+        self._available_models = models
+        self._model_combo.clear()
+        self._model_combo.addItems(models)
 
     def get_settings(self) -> ConversationSettings:
         """Get the current settings from the dialog."""

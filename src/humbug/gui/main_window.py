@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
+from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.settings_dialog import SettingsDialog
@@ -22,16 +24,19 @@ from humbug.gui.tab_manager import TabManager
 class MainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
-    def __init__(self, ai_backend, transcript_writer):
+    def __init__(self, ai_backends: Dict[str, AIBackend], transcript_writer):
         """Initialize the main window."""
         super().__init__()
-        self._ai_backend = ai_backend
+        self._ai_backends = ai_backends
         self._transcript_writer = transcript_writer
         self._conversation_count = 0
         self._chat_views = {}  # conversation_id -> ChatView
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
+
+        # Initialize available models based on active backends
+        self._available_models = self._get_available_models()
 
         # Humbug menu actions
         self._about_action = QAction("About Humbug", self)
@@ -321,6 +326,15 @@ class MainWindow(QMainWindow):
 
         task.add_done_callback(task_done_callback)
 
+    def _get_available_models(self) -> List[str]:
+        """Get list of available models based on active backends."""
+        models = []
+        for model in ConversationSettings.AVAILABLE_MODELS:
+            provider = ConversationSettings.get_provider(model)
+            if provider in self._ai_backends:
+                models.append(model)
+        return models
+
     def _show_settings_dialog(self):
         """Show the conversation settings dialog."""
         chat_view = self.current_chat_view
@@ -328,16 +342,21 @@ class MainWindow(QMainWindow):
             return
 
         dialog = SettingsDialog(self)
+        # Pass available models to dialog
+        dialog.set_available_models(self._available_models)
         dialog.set_settings(chat_view.get_settings())
 
         if dialog.exec() == QDialog.Accepted:
             new_settings = dialog.get_settings()
             chat_view.update_settings(new_settings)
-            # Update AI backend settings for this conversation
-            self._ai_backend.update_conversation_settings(
-                chat_view.conversation_id,
-                new_settings
-            )
+            # Get the appropriate backend for the selected model
+            provider = ConversationSettings.get_provider(new_settings.model)
+            backend = self._ai_backends.get(provider)
+            if backend:
+                backend.update_conversation_settings(
+                    chat_view.conversation_id,
+                    new_settings
+                )
 
     async def process_ai_response(self, message: str, conversation_id: str):
         """Process AI response with streaming."""
@@ -349,7 +368,21 @@ class MainWindow(QMainWindow):
         try:
             self._logger.debug("\n=== Starting new AI response for conv %s ===", conversation_id)
 
-            stream = self._ai_backend.stream_message(
+            # Get the appropriate backend for the conversation
+            settings = chat_view.get_settings()
+            provider = ConversationSettings.get_provider(settings.model)
+            backend = self._ai_backends.get(provider)
+
+            if not backend:
+                error_msg = f"No backend available for provider: {provider}"
+                system_message = chat_view.add_system_message(
+                    error_msg,
+                    error={"code": "backend_error", "message": error_msg}
+                )
+                await self._transcript_writer.write([system_message.to_transcript_dict()])
+                return
+
+            stream = backend.stream_message(
                 message,
                 chat_view.get_message_context(),
                 conversation_id

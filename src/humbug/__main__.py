@@ -1,3 +1,5 @@
+"""Main entry point for the Humbug application."""
+
 import asyncio
 import logging
 import os
@@ -6,7 +8,7 @@ import time
 
 from qasync import QEventLoop, QApplication
 
-from humbug.ai.openai_backend import OpenAIBackend
+from humbug.ai.provider import AIProvider
 from humbug.transcript.transcript_writer import TranscriptWriter
 from humbug.gui.main_window import MainWindow
 
@@ -31,10 +33,9 @@ def install_global_exception_handler():
 
 
 class HumbugApplication(QApplication):
-    """Class for the application.  Specialized to do event time reporting."""
+    """Class for the application. Specialized to do event time reporting."""
     def __init__(self, argv):
         super().__init__(argv)
-
         self._start_time = time.monotonic()
 
     def notify(self, receiver, event):
@@ -54,21 +55,28 @@ class HumbugApplication(QApplication):
 async def main():
     install_global_exception_handler()
 
-    # Check for API key
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("Error: OPENAI_API_KEY environment variable not set")
+    # Check for API keys
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    google_key = os.environ.get("GOOGLE_API_KEY")
+
+    if not openai_key and not google_key:
+        print("Error: Neither OPENAI_API_KEY nor GOOGLE_API_KEY environment variables are set")
         return 1
 
     # Initialize components
-    ai_backend = OpenAIBackend(api_key)
+    ai_backends = AIProvider.create_backends(openai_key, google_key)
+    if not ai_backends:
+        print("Error: No AI backends could be initialized")
+        return 1
+
     transcript = TranscriptWriter()
 
     # Create and show main window
-    window = MainWindow(ai_backend, transcript)
+    window = MainWindow(ai_backends, transcript)
     window.show()
 
     return 0
+
 
 def run_app():
     # Create application first
@@ -88,6 +96,7 @@ def run_app():
             return exit_code
     except KeyboardInterrupt:
         return 0
+
 
 if __name__ == "__main__":
     sys.exit(run_app())
