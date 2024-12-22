@@ -22,12 +22,12 @@ class LiveInputWidget(MessageWidget):
         self.set_content("", "user")
 
         # Connect text cursor signals
-        self.text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
+        self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
 
         # Initialize input history
-        self.input_history = []
-        self.history_index = -1
-        self.current_input = ""
+        self._input_history = []
+        self._history_index = -1
+        self._current_index = ""
 
     def _create_text_area(self) -> DynamicTextEdit:
         """Create and configure the input text area."""
@@ -39,93 +39,93 @@ class LiveInputWidget(MessageWidget):
     def _insert_from_mime_data(self, source: QMimeData) -> None:
         """Override default paste behavior to insert only plain text."""
         if source.hasText():
-            cursor = self.text_area.textCursor()
+            cursor = self._text_area.textCursor()
             cursor.insertText(source.text())
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
 #        print(f"event: {event.key()}, {event.modifiers()}")
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
-            text = self.text_area.toPlainText().strip()
+            text = self._text_area.toPlainText().strip()
             if text:
                 self.submitted.emit(text)
-                if text not in self.input_history:
-                    self.input_history.append(text)
-                self.history_index = -1
+                if text not in self._input_history:
+                    self._input_history.append(text)
+                self._history_index = -1
                 self.clear()
             return
 
-        if self.text_area.textCursor().atStart() and not self.text_area.textCursor().hasSelection():
-            if event.key() == Qt.Key_Up and self.input_history:
-                if self.history_index == -1:
-                    self.current_input = self.text_area.toPlainText()
-                self.history_index = min(len(self.input_history) - 1,
-                                       self.history_index + 1)
-                self.text_area.setPlainText(self.input_history[-self.history_index - 1])
+        if self._text_area.textCursor().atStart() and not self._text_area.textCursor().hasSelection():
+            if event.key() == Qt.Key_Up and self._input_history:
+                if self._history_index == -1:
+                    self._current_index = self._text_area.toPlainText()
+                self._history_index = min(len(self._input_history) - 1,
+                                       self._history_index + 1)
+                self._text_area.setPlainText(self._input_history[-self._history_index - 1])
                 return
 
             if event.key() == Qt.Key_Down:
-                if self.history_index > 0:
-                    self.history_index -= 1
-                    self.text_area.setPlainText(self.input_history[-self.history_index - 1])
-                elif self.history_index == 0:
-                    self.history_index = -1
-                    self.text_area.setPlainText(self.current_input)
+                if self._history_index > 0:
+                    self._history_index -= 1
+                    self._text_area.setPlainText(self._input_history[-self._history_index - 1])
+                elif self._history_index == 0:
+                    self._history_index = -1
+                    self._text_area.setPlainText(self._current_index)
                 return
 
         super().keyPressEvent(event)
 
     def clear(self):
         """Clear the input area."""
-        self.text_area.clear()
+        self._text_area.clear()
 
     def toPlainText(self) -> str:
         """Get the current input text."""
-        return self.text_area.toPlainText()
+        return self._text_area.toPlainText()
 
     def setPlainText(self, text: str):
         """Set the input text."""
-        self.text_area.setPlainText(text)
+        self._text_area.setPlainText(text)
 
     def cursorRect(self):
         """Get the cursor rectangle from the input area."""
-        text_cursor = self.text_area.cursorRect()
+        text_cursor = self._text_area.cursorRect()
         offset = self.header.height()
         cursor = QRect(text_cursor.x(), offset + text_cursor.y(), text_cursor. width(), text_cursor.height())
         return cursor
 
     def setFocus(self):
         """Set focus to the input area."""
-        self.text_area.setFocus()
+        self._text_area.setFocus()
 
     def hasFocus(self) -> bool:
         """Check if the input area has focus."""
-        return self.text_area.hasFocus()
+        return self._text_area.hasFocus()
 
     def document(self):
         """Get the document from the input area."""
-        return self.text_area.document()
+        return self._text_area.document()
 
     def textCursor(self):
         """Get the text cursor from the input area."""
-        return self.text_area.textCursor()
+        return self._text_area.textCursor()
 
     def undo(self):
         """Undo the last edit operation."""
-        self.text_area.undo()
+        self._text_area.undo()
 
     def redo(self):
         """Redo the last undone edit operation."""
-        self.text_area.redo()
+        self._text_area.redo()
 
     def cut(self):
         """Cut selected text to clipboard."""
-        self.text_area.cut()
+        self._text_area.cut()
 
     def copy(self):
         """Copy selected text to clipboard."""
-        self.text_area.copy()
+        self._text_area.copy()
 
     def paste(self):
         """Paste text from clipboard."""
-        self.text_area.paste()
+        self._text_area.paste()

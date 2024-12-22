@@ -82,11 +82,6 @@ class ChatView(QFrame):
         self._style_manager = StyleManager()
 
         self._messages_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self._messages_container.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-            }}
-        """)
 
         # Set up the scroll area
         self._scroll_area.setFrameStyle(0)
@@ -95,32 +90,9 @@ class ChatView(QFrame):
         self._scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._scroll_area.setStyleSheet(f"""
-            QScrollArea {{
-                border: none;
-            }}
-            QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-        """)
 
         # Set up the status bar
         self._status_bar = QLabel()
-        self._status_bar.setStyleSheet(f"""
-            QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR)};
-                color: black;
-                padding: 2px 2px;
-            }}
-        """)
 
         # Main layout
         chat_layout.setContentsMargins(0, 1, 0, 0)
@@ -129,12 +101,6 @@ class ChatView(QFrame):
         chat_layout.addWidget(self._status_bar)
 
         zoom_factor = self._style_manager.zoom_factor
-        self.setStyleSheet(f"""
-            QFrame {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-            }}
-        """)
 
         self.update_status(0, 0)
 
@@ -511,8 +477,46 @@ class ChatView(QFrame):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
+        self._messages_container.setStyleSheet(f"""
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
+        """)
+        self._scroll_area.setStyleSheet(f"""
+            QScrollArea {{
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+        """)
+        self._status_bar.setStyleSheet(f"""
+            QLabel {{
+                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: 2px 2px;
+            }}
+        """)
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
+        """)
+
         # Apply to all widgets in the hierarchy
         for widget in self.findChildren(QWidget):
             widget.setFont(font)
+
+        for widget in self.findChildren(MessageWidget):
+            widget.handle_style_changed()
 
         self.updateGeometry()

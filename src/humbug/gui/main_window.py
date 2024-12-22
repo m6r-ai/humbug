@@ -164,8 +164,8 @@ class MainWindow(QMainWindow):
         self.create_conversation_tab()
 
         self.style_manager = StyleManager()
-        self.style_manager.style_changed.connect(self._update_styles)
-        self._update_styles()
+        self.style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_style_changed()
 
     def _undo(self):
         self.current_chat_view.undo()
@@ -217,7 +217,7 @@ class MainWindow(QMainWindow):
         self.zoom_in_action.setEnabled(current_zoom < 2.0)
         self.zoom_out_action.setEnabled(current_zoom > 0.5)
 
-    def _update_styles(self) -> None:
+    def _handle_style_changed(self) -> None:
         zoom_factor = self.style_manager.zoom_factor
         base_font_size = self.style_manager.base_font_size
 

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QSizePolicy, QLabel
 )
 from PySide6.QtCore import Signal, Qt, QPoint
-from PySide6.QtGui import QTextCharFormat, QCursor
+from PySide6.QtGui import QCursor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.dynamic_text_edit import DynamicTextEdit
@@ -29,42 +29,42 @@ class MessageWidget(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
         self.setLineWidth(1)
-        self.is_input = is_input
+        self._is_input = is_input
 
         # Create layout
-        self.layout = QVBoxLayout(self)
-        self.setLayout(self.layout)
-        self.layout.setSpacing(0)  # No spacing between widgets
-        self.layout.setContentsMargins(0, 0, 0, 0)  # No margins around layout
+        self._layout = QVBoxLayout(self)
+        self.setLayout(self._layout)
+        self._layout.setSpacing(0)  # No spacing between widgets
+        self._layout.setContentsMargins(0, 0, 0, 0)  # No margins around layout
 
         # Create header
-        self.header = QLabel(self)
-        self.header.setAutoFillBackground(True)
-        self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
+        self._header = QLabel(self)
+        self._header.setAutoFillBackground(True)
+        self._header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self._header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
 
         # Create content area using custom DynamicTextEdit
-        self.text_area = DynamicTextEdit()
-        self.text_area.setReadOnly(not self.is_input)
+        self._text_area = DynamicTextEdit()
+        self._text_area.setReadOnly(not self._is_input)
 
         # Ensure text area takes up minimum space needed
-        self.text_area.setAcceptRichText(False)
-        self.text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
+        self._text_area.setAcceptRichText(False)
+        self._text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
 
         # Explicitly disable scrollbars
-        self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Add widgets to layout in correct order
-        self.layout.addWidget(self.header)
-        self.layout.addWidget(self.text_area)
+        self._layout.addWidget(self._header)
+        self._layout.addWidget(self._text_area)
 
         # Connect selection change signal
-        self.text_area.selectionChanged.connect(self._on_selection_changed)
-        self.text_area.mouseReleased.connect(self._on_mouse_released)
+        self._text_area.selectionChanged.connect(self._on_selection_changed)
+        self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add Markdown highlighter
-        self.highlighter = MarkdownHighlighter(self.text_area.document())
+        self.highlighter = MarkdownHighlighter(self._text_area.document())
         self.highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
 
         # Get style manager
@@ -72,14 +72,6 @@ class MessageWidget(QFrame):
 
         # Track current message style
         self._current_style = None
-
-        # Create formats for different message types - all using the primary text color
-        self.formats = {
-            'user': self._create_format(),
-            'ai': self._create_format(),
-            'system': self._create_format(),
-            'error': self._create_format()
-        }
 
         # Map message types to background color roles
         self.background_roles = {
@@ -93,12 +85,6 @@ class MessageWidget(QFrame):
         """Handle mouse release from text area."""
         self.mouseReleased.emit()
 
-    def _create_format(self) -> QTextCharFormat:
-        """Create text format using primary text color from StyleManager."""
-        fmt = QTextCharFormat()
-        fmt.setForeground(self.style_manager.get_color(ColorRole.TEXT_PRIMARY))
-        return fmt
-
     def _get_background_color(self, style: str) -> str:
         """Get the appropriate background color for the message style."""
         role = self.background_roles.get(style, ColorRole.MESSAGE_USER)
@@ -108,38 +94,79 @@ class MessageWidget(QFrame):
         """Set content with style, handling incremental updates for AI responses."""
         if style != self._current_style:
             # Style changed - update header and styling
-            self._setup_style(style)
+            header_text = {
+                'user': "You",
+                'ai': "Assistant",
+                'system': "System Message",
+                'error': "Error"
+            }.get(style, "Unknown")
+
+            self._header.setText(header_text)
+            self.handle_style_changed()
             self._current_style = style
 
             # Full reset needed for style change
-            self.text_area.clear()
-            self.text_area.set_incremental_text(text, self.formats.get(style, self.formats['user']))
+            self._text_area.clear()
+
+        self._text_area.set_incremental_text(text)
+
+    def _on_selection_changed(self):
+        """Handle selection changes in the text area."""
+        cursor = self._text_area.textCursor()
+        has_selection = cursor.hasSelection()
+
+        if has_selection:
+            # Emit global mouse position for accurate scroll calculations
+            self.scrollRequested.emit(QCursor.pos())
+
+        self.selectionChanged.emit(has_selection)
+
+    def has_selection(self) -> bool:
+        """Check if text is selected in the text area."""
+        return self._text_area.textCursor().hasSelection()
+
+    def copy_selection(self):
+        """Copy selected text to clipboard."""
+        self._text_area.copy()
+
+    def _on_code_block_state_changed(self, has_code_block: bool):
+        """Handle changes in code block state."""
+        self._text_area.set_has_code_block(has_code_block)
+        # Ensure proper scroll behavior
+        self.updateGeometry()
+
+    def resizeEvent(self, event):
+        """Handle resize events."""
+        super().resizeEvent(event)
+
+        # If we have code blocks, allow horizontal scrolling
+        if self._text_area.has_code_block():
+            self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         else:
-            # Same style - just update content incrementally
-            self.text_area.set_incremental_text(text, self.formats.get(style, self.formats['user']))
+            self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-    def _setup_style(self, style: str):
-        """Set up styling for the message."""
-        header_text = {
-            'user': "You",
-            'ai': "Assistant",
-            'system': "System Message",
-            'error': "Error"
-        }.get(style, "Unknown")
+    def clear_selection(self):
+        """Clear any text selection in this message."""
+        cursor = self._text_area.textCursor()
+        cursor.clearSelection()
+        self._text_area.setTextCursor(cursor)
 
-        self.header.setText(header_text)
+    @property
+    def is_ai(self) -> bool:
+        """Check if this is an AI response message."""
+        return self._current_style == 'ai'
 
-        # Style the header
-        self.header.setStyleSheet(f"""
+    def handle_style_changed(self):
+        """Handle the style changing"""
+        self._header.setStyleSheet(f"""
             QLabel {{
                 background-color: {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
                 color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
         """)
 
-        # Style the content area
-        content_color = self._get_background_color(style)
-        self.text_area.setStyleSheet(f"""
+        content_color = self._get_background_color(self._current_style)
+        self._text_area.setStyleSheet(f"""
             QTextEdit {{
                 background-color: {content_color};
                 color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -160,7 +187,6 @@ class MessageWidget(QFrame):
             }}
         """)
 
-        # Style the frame
         self.setStyleSheet(f"""
             QFrame {{
                 border: 1px solid {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
@@ -168,48 +194,4 @@ class MessageWidget(QFrame):
             }}
         """)
 
-    def _on_selection_changed(self):
-        """Handle selection changes in the text area."""
-        cursor = self.text_area.textCursor()
-        has_selection = cursor.hasSelection()
-
-        if has_selection:
-            # Emit global mouse position for accurate scroll calculations
-            self.scrollRequested.emit(QCursor.pos())
-
-        self.selectionChanged.emit(has_selection)
-
-    def has_selection(self) -> bool:
-        """Check if text is selected in the text area."""
-        return self.text_area.textCursor().hasSelection()
-
-    def copy_selection(self):
-        """Copy selected text to clipboard."""
-        self.text_area.copy()
-
-    def _on_code_block_state_changed(self, has_code_block: bool):
-        """Handle changes in code block state."""
-        self.text_area.set_has_code_block(has_code_block)
-        # Ensure proper scroll behavior
-        self.updateGeometry()
-
-    def resizeEvent(self, event):
-        """Handle resize events."""
-        super().resizeEvent(event)
-
-        # If we have code blocks, allow horizontal scrolling
-        if self.text_area.has_code_block():
-            self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        else:
-            self.text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-    def clear_selection(self):
-        """Clear any text selection in this message."""
-        cursor = self.text_area.textCursor()
-        cursor.clearSelection()
-        self.text_area.setTextCursor(cursor)
-
-    @property
-    def is_ai(self) -> bool:
-        """Check if this is an AI response message."""
-        return self._current_style == 'ai'
+        self.highlighter.rehighlight()

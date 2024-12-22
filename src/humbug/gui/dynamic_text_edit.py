@@ -117,7 +117,7 @@ class DynamicTextEdit(QTextEdit):
         if self.parent():
             self.parent().updateGeometry()
 
-    def set_incremental_text(self, text: str, text_format: QTextCharFormat = None):
+    def set_incremental_text(self, text: str):
         """Update text content incrementally by only adding new content."""
         if len(text) == self._current_length:
             # No new content
@@ -133,9 +133,6 @@ class DynamicTextEdit(QTextEdit):
         # Only insert the new content
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.End)
-        if text_format:
-            cursor.setCharFormat(text_format)
-
         new_text = text[self._current_length:]
         cursor.insertText(new_text)
         self._current_length = len(text)
