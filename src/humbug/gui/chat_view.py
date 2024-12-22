@@ -257,7 +257,7 @@ class ChatView(QFrame):
         # Work out what we're supposed to do about scrolling.
         vbar_maximum = self._scroll_area.verticalScrollBar().maximum()
 
-        if (current_pos > self._last_insertion_point):
+        if current_pos > self._last_insertion_point:
             if self._last_scroll_maximum != vbar_maximum:
                 max_diff = vbar_maximum - self._last_scroll_maximum
                 self._scroll_area.verticalScrollBar().setValue(current_pos + max_diff)
