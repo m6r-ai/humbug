@@ -14,10 +14,7 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("About Humbug")
         self.setFixedSize(QSize(400, 250))
-        self.setup_ui()
 
-    def setup_ui(self):
-        """Set up the About dialog UI."""
         layout = QVBoxLayout()
 
         # Title with version

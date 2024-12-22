@@ -35,25 +35,7 @@ class ChatView(QFrame):
         self._current_ai_message = None
         self._messages: List[MessageWidget] = []
         self._message_with_selection: Optional[MessageWidget] = None
-        self._setup_ui()
 
-        # Create timer for smooth scrolling
-        self._scroll_timer = QTimer(self)
-        self._scroll_timer.setInterval(16)  # ~60fps
-        self._scroll_timer.timeout.connect(self._update_scroll)
-        self._last_mouse_pos = None
-
-        # Initialize tracking variables
-        self._auto_scroll = True
-        self._last_scroll_maximum = 0
-        self._last_insertion_point = 0
-
-        # Connect to the vertical scrollbar's change signals
-        self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
-        self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
-
-    def _setup_ui(self):
-        """Set up the user interface."""
         chat_layout = QVBoxLayout(self)
         self.setLayout(chat_layout)
 
@@ -106,6 +88,21 @@ class ChatView(QFrame):
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed(zoom_factor)
+
+        # Create timer for smooth scrolling
+        self._scroll_timer = QTimer(self)
+        self._scroll_timer.setInterval(16)  # ~60fps
+        self._scroll_timer.timeout.connect(self._update_scroll)
+        self._last_mouse_pos = None
+
+        # Initialize tracking variables
+        self._auto_scroll = True
+        self._last_scroll_maximum = 0
+        self._last_insertion_point = 0
+
+        # Connect to the vertical scrollbar's change signals
+        self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
+        self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)

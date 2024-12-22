@@ -33,18 +33,6 @@ class MainWindow(QMainWindow):
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
 
-        self._create_actions()
-        self._create_menus()
-        self._setup_ui()
-
-        # Create a timer that fires every 50ms to keep our menu states correct
-        self._menu_timer = QTimer()
-        self._menu_timer.setInterval(50)
-        self._menu_timer.timeout.connect(self._update_menu_state)
-        self._menu_timer.start()
-
-    def _create_actions(self):
-        """Create all menu actions."""
         # Humbug menu actions
         self._about_action = QAction("About Humbug", self)
         self._about_action.triggered.connect(self._show_about_dialog)
@@ -107,8 +95,6 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
-    def _create_menus(self):
-        """Create the menu bar and all menus."""
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
 
@@ -144,8 +130,6 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self._zoom_out_action)
         view_menu.addAction(self._reset_zoom_action)
 
-    def _setup_ui(self):
-        """Set up the user interface."""
         self.setWindowTitle("Humbug")
         self.setMinimumSize(800, 600)
 
@@ -166,6 +150,12 @@ class MainWindow(QMainWindow):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
+
+        # Create a timer that fires every 50ms to keep our menu states correct
+        self._menu_timer = QTimer()
+        self._menu_timer.setInterval(50)
+        self._menu_timer.timeout.connect(self._update_menu_state)
+        self._menu_timer.start()
 
     def _undo(self):
         self.current_chat_view.undo()
