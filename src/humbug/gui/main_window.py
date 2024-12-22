@@ -89,6 +89,12 @@ class MainWindow(QMainWindow):
         self.settings_action.triggered.connect(self._show_settings_dialog)
 
         # View menu actions
+        self._dark_mode = True
+        self._dark_mode_action = QAction("&Dark Mode", self)
+        self._dark_mode_action.setCheckable(True)
+        self._dark_mode_action.setChecked(True)
+        self._dark_mode_action.triggered.connect(self._handle_dark_mode)
+
         self.zoom_in_action = QAction("Zoom In", self)
         self.zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
         self.zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.189027))
@@ -132,6 +138,8 @@ class MainWindow(QMainWindow):
 
         # View menu
         view_menu = self._menu_bar.addMenu("&View")
+        view_menu.addAction(self._dark_mode_action)
+        view_menu.addSeparator()
         view_menu.addAction(self.zoom_in_action)
         view_menu.addAction(self.zoom_out_action)
         view_menu.addAction(self.reset_zoom_action)
@@ -156,7 +164,7 @@ class MainWindow(QMainWindow):
         self.create_conversation_tab()
 
         self.style_manager = StyleManager()
-        self.style_manager.zoom_changed.connect(self._update_styles)
+        self.style_manager.style_changed.connect(self._update_styles)
         self._update_styles()
 
     def _undo(self):
@@ -464,6 +472,11 @@ class MainWindow(QMainWindow):
             }
         )
         await self._transcript_writer.write([cancel_message.to_transcript_dict()])
+
+    def _handle_dark_mode(self, _):
+        """Handle dark mode enable/disable requests."""
+        self._dark_mode = not self._dark_mode
+        self._dark_mode_action.setChecked(self._dark_mode)
 
     def _handle_zoom(self, factor: float):
         """Handle zoom in/out requests."""

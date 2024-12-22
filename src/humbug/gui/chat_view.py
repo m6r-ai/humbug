@@ -138,8 +138,8 @@ class ChatView(QFrame):
 
         self.update_status(0, 0)
 
-        self._style_manager.zoom_changed.connect(self._handle_zoom_changed)
-        self._handle_zoom_changed(zoom_factor)
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_style_changed(zoom_factor)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
@@ -505,7 +505,7 @@ class ChatView(QFrame):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-    def _handle_zoom_changed(self, factor: float) -> None:
+    def _handle_style_changed(self, factor: float) -> None:
         font = self.font()
         base_font_size = self._style_manager.base_font_size
         font.setPointSizeF(base_font_size * factor)

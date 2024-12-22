@@ -21,13 +21,13 @@ class StyleManager(QObject):
     Emits signals when zoom level changes to notify dependent components.
 
     Attributes:
-        zoom_changed (Signal): Emitted when zoom factor changes, passing new factor
+        style_changed (Signal): Emitted when style changes, passing new zoom factor
         _instance (StyleManager): Singleton instance
         _zoom_factor (float): Current zoom scaling factor
         _initialized (bool): Tracks initialization state of QObject base
     """
 
-    zoom_changed = Signal(float)
+    style_changed = Signal(float)
     _instance = None
 
     def __new__(cls):
@@ -222,7 +222,7 @@ class StyleManager(QObject):
         new_factor = max(0.5, min(2.0, factor))
         if new_factor != self._zoom_factor:
             self._zoom_factor = new_factor
-            self.zoom_changed.emit(self._zoom_factor)
+            self.style_changed.emit(self._zoom_factor)
 
     def get_scaled_size(self, base_size: float) -> float:
         """Calculate scaled size based on current zoom factor.

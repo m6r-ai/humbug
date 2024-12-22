@@ -33,8 +33,8 @@ class DynamicTextEdit(QTextEdit):
 
         # Calculate tab stops
         self._style_manager = StyleManager()
-        self._style_manager.zoom_changed.connect(self._handle_zoom_changed)
-        self._handle_zoom_changed(self._style_manager.zoom_factor)
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_style_changed(self._style_manager.zoom_factor)
 
         # Batch update handling
         self._update_timer = QTimer(self)
@@ -51,7 +51,7 @@ class DynamicTextEdit(QTextEdit):
 
         self._logger = logging.getLogger("DynamicTextEdit")
 
-    def _handle_zoom_changed(self, factor: float) -> None:
+    def _handle_style_changed(self, factor: float) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
 
     def mouseReleaseEvent(self, event):

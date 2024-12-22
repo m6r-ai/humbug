@@ -39,12 +39,12 @@ Context: humbug application
 
             - A header section with a dark bluish-grey (#2a3544) background containing the sender name
                 ("You", "Assistant", or "System Message")
-            - A content section with the message text that uses appropriate background colors:
+            - A content section with the message text that uses appropriate background colours:
                 - User messages: White text on #3c3c3c background
                 - AI responses: White text on #282828 background
                 - System messages: White text on #1a3a1a background (dark green)
                 - Error messages: White text on #3a1a1a background (dark red)
-            - A border in the same color as the header (#2a3544)
+            - A border in the same colour as the header (#2a3544)
             - 8px spacing between cards
             - 8px padding within the content area
 
@@ -198,7 +198,7 @@ Context: humbug application
             Context: Paste behavior
                 When text is pasted into the input area via any method (menu, keyboard shortcuts, or right-click),
                 only the plain text content is transferred.  All formatting from the source text (including fonts,
-                colors, and text styling) is removed, ensuring the pasted content matches the default input area
+                colours, and text styling) is removed, ensuring the pasted content matches the default input area
                 styling.
 
                 After the paste operation completes, the cursor should be at the end of the pasted block.
@@ -214,6 +214,15 @@ Context: humbug application
 
         Context: View
             The "View" menu handles view settings.  When clicked it contains the following:
+
+            Context: Dark Mode
+                The "Dark Mode" menu item will have a checkmark indicating if dark mode is enabled or not.
+                By default it will be enabled.
+
+                The application will support a distinct set of light and dark mode colour styling.
+
+            Context: Separator
+                There will be a horizontal Separator
 
             Context: Zoom In
                 The "Zoom In" menu item will support zooming in and making the contents of the application
@@ -240,10 +249,10 @@ Context: humbug application
 
             - Menu items have 4px border radius for rounded corners
             - Menu items have 8px horizontal padding and 4px vertical padding
-            - Menu items highlight with a darker background color on hover
+            - Menu items highlight with a darker background colour on hover
             - Submenus have a 1px border and 4px border radius
 
-            The specific colors and measurements should scale with the application's zoom level.
+            The specific colours and measurements should scale with the application's zoom level and colour styling.
 
         Context: Menu state updates
             Menu item states (enabled/disabled) must be updated at least every 50ms to ensure responsive UI
@@ -290,7 +299,7 @@ Context: humbug application
         Context: Screen colours
             The status line background is light grey with black text.
 
-            Message backgrounds and text colors are:
+            Message backgrounds and text colours are:
                 - User messages: White text on #3c3c3c background
                 - AI responses: White text on #282828 background
                 - System messages: White text on #1a3a1a background (dark green)
@@ -344,13 +353,13 @@ Context: humbug application
             Context: Code blocks
                 Text between matching triple backticks (```) is displayed as a code block.
                 Code blocks use a monospace font (set as a family fallback: Menlo, Monaco, Courier New, monospace).
-                The background color for code blocks is dark grey (#2d2d2d) and extends across the full width of the input box.
+                The background colour for code blocks is dark grey (#2d2d2d) and extends across the full width of the input box.
                 The code block formatting applies to both the triple backtick lines and all content between them.
 
             Context: Inline code
                 Text between single backticks (`) is displayed as inline code.
                 Inline code uses the same monospace font as code blocks.
-                Inline code has no background color.
+                Inline code has no background colour.
 
             Context: Formatting updates
                 The formatting is updated in real-time as the user types.
@@ -363,13 +372,13 @@ Context: humbug application
             Context: Code blocks
                 Text between matching triple backticks (```) is displayed as a code block.
                 Code blocks use the same monospace font as the input area (Menlo, Monaco, Courier New, monospace).
-                The background color for code blocks is dark grey (#2d2d2d) and extends across the full width.
+                The background colour for code blocks is dark grey (#2d2d2d) and extends across the full width.
                 The code block formatting applies to both the triple backtick lines and all content between them.
 
             Context: Inline code
                 Text between single backticks (`) is displayed as inline code.
                 Inline code uses the same monospace font as code blocks.
-                Inline code has no background color.
+                Inline code has no background colour.
 
             Context: Formatting interaction
                 The Markdown formatting is applied in real-time as messages are added or updated.

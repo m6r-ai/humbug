@@ -60,7 +60,7 @@ class TabManager(QTabWidget):
         tab_bar.setDrawBase(False)  # Remove line under tabs
         tab_bar.setUsesScrollButtons(True)
 
-        self._style_manager.zoom_changed.connect(self._handle_zoom_changed)
+        self._style_manager.style_changed.connect(self._handle_style_changed)
 
     def create_conversation(self, conversation_id: str, title: str) -> 'ChatView':
         """Create a new conversation tab.
@@ -136,7 +136,7 @@ class TabManager(QTabWidget):
         # Update current states for all tabs
         for conv_id, label in self._tab_labels.items():
             widget = self._conversations[conv_id]
-            is_current = (widget == self.widget(index))
+            is_current = widget == self.widget(index)
             label.set_current(is_current)
 
     def tabInserted(self, index: int):
@@ -164,8 +164,8 @@ class TabManager(QTabWidget):
             widget = self._conversations[conv_id]
             label.set_current(widget == current)
 
-    def _handle_zoom_changed(self, factor: float):
-        """Handle zoom factor changes from StyleManager.
+    def _handle_style_changed(self, factor: float):
+        """Handle style changes from StyleManager.
 
         Args:
             factor: New zoom factor
