@@ -90,7 +90,7 @@ class LiveInputWidget(MessageWidget):
     def cursorRect(self):
         """Get the cursor rectangle from the input area."""
         text_cursor = self._text_area.cursorRect()
-        offset = self.header.height()
+        offset = self._header.height()
         cursor = QRect(text_cursor.x(), offset + text_cursor.y(), text_cursor. width(), text_cursor.height())
         return cursor
 
