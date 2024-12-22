@@ -144,44 +144,56 @@ class GeminiBackend(AIBackend):
                             response_handler = GeminiStreamResponse()
                             try:
                                 async for line in response.content:
-                                    if asyncio.current_task().cancelled():
-                                        raise asyncio.CancelledError()
-
                                     try:
-                                        if line.startswith(b"data: "):
-                                            line = line[6:].decode('utf-8').strip()
-                                            if line == "[DONE]":
-                                                break
+                                        line = line.decode('utf-8').strip()
+                                        if not line:
+                                            continue
 
-                                            chunk = json.loads(line)
-                                            response_handler.update_from_chunk(chunk)
-                                            if response_handler.error:
-                                                yield AIResponse(
-                                                    content="",
-                                                    error=response_handler.error
-                                                )
-                                                return
+                                        if line.startswith("data: "):
+                                            line = line[6:]
 
+                                        if line == "[DONE]":
+                                            break
+
+                                        chunk = json.loads(line)
+                                        response_handler.update_from_chunk(chunk)
+                                        if response_handler.error:
                                             yield AIResponse(
-                                                content=response_handler.content,
-                                                model=model,
-                                                temperature=settings.temperature,
-                                                usage=response_handler.usage
+                                                content="",
+                                                error=response_handler.error
                                             )
+                                            return
+
+                                        yield AIResponse(
+                                            content=response_handler.content,
+                                            usage=response_handler.usage
+                                        )
+
+                                    except asyncio.CancelledError:
+                                        self._logger.exception("CancelledError")
+                                        yield AIResponse(
+                                            content=response_handler.content,
+                                            error={
+                                                "code": "cancelled",
+                                                "message": "Request cancelled by user"
+                                            }
+                                        )
+                                        return
 
                                     except json.JSONDecodeError as e:
-                                        self._logger.warning("JSON decode error: %s", str(e))
+                                        self._logger.exception("JSON exception: %s", e)
                                         continue
 
                                     except Exception as e:
-                                        self._logger.exception("Unexpected error processing chunk: %s", str(e))
-                                        continue
+                                        self._logger.exception("unexpected exception: %s", e)
+                                        break
 
                                 # Successfully processed response, exit retry loop
                                 break
 
                             except asyncio.TimeoutError:
                                 delay = self._base_delay * (2 ** attempt)
+                                self._logger.debug("Timeout on attempt %d/%d", attempt + 1, self._max_retries)
                                 if attempt < self._max_retries - 1:
                                     yield AIResponse(
                                         content="",
@@ -192,6 +204,7 @@ class GeminiBackend(AIBackend):
                                         }
                                     )
                                     await asyncio.sleep(delay)
+                                    self._logger.debug("Retrying after timeout (attempt %d/%d)", attempt + 2, self._max_retries)
                                     continue
 
                                 yield AIResponse(
@@ -204,42 +217,43 @@ class GeminiBackend(AIBackend):
                                 )
                                 return
 
-                except aiohttp.ClientError as e:
-                    delay = self._base_delay * (2 ** attempt)
-                    if attempt < self._max_retries - 1:
-                        yield AIResponse(
-                            content="",
-                            error={
-                                "code": "network_error",
-                                "message": f"Network error (attempt {attempt + 1}/{self._max_retries}): {str(e)}. Retrying in {delay} seconds...",
-                                "details": {"type": type(e).__name__, "attempt": attempt + 1}
-                            }
-                        )
-                        await asyncio.sleep(delay)
-                        self._logger.debug("Retrying after network error (attempt %d/%d)", attempt + 2, self._max_retries)
-                        continue
+                            except aiohttp.ClientError as e:
+                                delay = self._base_delay * (2 ** attempt)
+                                self._logger.debug("Network error on attempt %d/%d: %s", attempt + 1, self._max_retries, str(e))
+                                if attempt < self._max_retries - 1:
+                                    yield AIResponse(
+                                        content="",
+                                        error={
+                                            "code": "network_error",
+                                            "message": f"Network error (attempt {attempt + 1}/{self._max_retries}): {str(e)}. Retrying in {delay} seconds...",
+                                            "details": {"type": type(e).__name__, "attempt": attempt + 1}
+                                        }
+                                    )
+                                    await asyncio.sleep(delay)
+                                    self._logger.debug("Retrying after network error (attempt %d/%d)", attempt + 2, self._max_retries)
+                                    continue
 
+                                yield AIResponse(
+                                    content="",
+                                    error={
+                                        "code": "network_error",
+                                        "message": f"Network error after {self._max_retries} attempts: {str(e)}",
+                                        "details": {"type": type(e).__name__, "attempt": attempt + 1}
+                                    }
+                                )
+                                return
+
+                except Exception as e:
+                    self._logger.exception("Unexpected error: %s", str(e))
                     yield AIResponse(
                         content="",
                         error={
-                            "code": "network_error",
-                            "message": f"Network error after {self._max_retries} attempts: {str(e)}",
-                            "details": {"type": type(e).__name__, "attempt": attempt + 1}
+                            "code": "error",
+                            "message": f"Error: {str(e)}",
+                            "details": {"type": type(e).__name__}
                         }
                     )
-                    return
 
-        except asyncio.CancelledError:
+        except (GeneratorExit, asyncio.CancelledError):
             self._logger.debug("Request cancelled for conversation %s", conversation_id)
             raise
-
-        except Exception as e:
-            self._logger.exception("Unexpected error: %s", str(e))
-            yield AIResponse(
-                content="",
-                error={
-                    "code": "error",
-                    "message": f"Error: {str(e)}",
-                    "details": {"type": type(e).__name__}
-                }
-            )

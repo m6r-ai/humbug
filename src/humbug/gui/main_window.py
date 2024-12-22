@@ -417,15 +417,27 @@ class MainWindow(QMainWindow):
         except (asyncio.CancelledError, GeneratorExit):
             self._logger.debug("AI response cancelled for conv %s", conversation_id)
             if chat_view:
-                message = chat_view.update_streaming_response(
+                # Complete any ongoing AI response
+                message = await chat_view.update_streaming_response(
                     content="",
                     completed=True
                 )
-                if message:
+                if message:  # Only write if we got a message back
                     await self._transcript_writer.write([message.to_transcript_dict()])
 
-                cancel_message = chat_view.add_system_message("Request cancelled by user")
-                await self._transcript_writer.write([cancel_message.to_transcript_dict()])
+                # Add cancellation message
+                system_message = chat_view.add_system_message(
+                    "Request cancelled by user",
+                    error={
+                        "code": "cancelled",
+                        "message": "Request cancelled by user",
+                        "details": {
+                            "time": datetime.utcnow().isoformat()
+                        }
+                    }
+                )
+                await self._transcript_writer.write([system_message.to_transcript_dict()])
+
             return
 
         except Exception as e:

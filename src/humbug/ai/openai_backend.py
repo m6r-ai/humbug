@@ -210,5 +210,5 @@ class OpenAIBackend(AIBackend):
                     return
 
         except (GeneratorExit, asyncio.CancelledError):
-            self._logger.debug("Stream cancelled or generator closed")
+            self._logger.debug("Request cancelled for conversation %s", conversation_id)
             return
