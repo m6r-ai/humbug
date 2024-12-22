@@ -694,8 +694,6 @@ Context: humbug application
 
             At least one provider must be configured for the application to start.
 
-        Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
-
     Context: Temperature settings
         Temperature controls how deterministic or creative the AI's responses are.
 
@@ -707,6 +705,8 @@ Context: humbug application
         - o1-preview: No temperature setting
         - gemini-1.5-flash: Supports temperature 0.0-1.0
         - gemini-1.5-pro: Supports temperature 0.0-1.0
+
+        Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
 
         The temperature control in the Settings dialog is automatically:
 
