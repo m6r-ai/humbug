@@ -35,7 +35,6 @@ class TabLabel(QWidget):
 
         # Add label with size policy
         self._label = QLabel(text)
-        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)}")
         self._label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._layout.addWidget(self._label)
 
@@ -89,6 +88,8 @@ class TabLabel(QWidget):
         Args:
             factor: New zoom factor
         """
+        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)}")
+
         self._update_font_size()
 
         # Update close button size

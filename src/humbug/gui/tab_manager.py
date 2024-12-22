@@ -31,28 +31,6 @@ class TabManager(QTabWidget):
         self._tab_labels = {}    # conversation_id -> TabLabel
 
         self._style_manager = StyleManager()
-        self.setStyleSheet(f"""
-            QTabBar::scroller {{
-                width: 40px;
-            }}
-            QTabWidget::pane {{
-                border: none;
-                background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-            }}
-            QTabBar::tab {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
-                border: none;
-                margin-right: 2px;
-                border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-            }}
-            QTabBar::tab:selected {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-                border-bottom: none;
-            }}
-            QTabBar::tab:hover {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_HOVER)};
-            }}
-        """)
 
         # Connect tab change signals
         self.currentChanged.connect(self._on_tab_changed)
@@ -60,6 +38,7 @@ class TabManager(QTabWidget):
         tab_bar.setDrawBase(False)  # Remove line under tabs
         tab_bar.setUsesScrollButtons(True)
 
+        self._handle_style_changed(self._style_manager.zoom_factor)
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
     def create_conversation(self, conversation_id: str, title: str) -> 'ChatView':
@@ -170,5 +149,28 @@ class TabManager(QTabWidget):
         Args:
             factor: New zoom factor
         """
+        self.setStyleSheet(f"""
+            QTabBar::scroller {{
+                width: 40px;
+            }}
+            QTabWidget::pane {{
+                border: none;
+                background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+            }}
+            QTabBar::tab {{
+                background: {self._style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
+                border: none;
+                margin-right: 2px;
+                border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+            }}
+            QTabBar::tab:selected {{
+                background: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                border-bottom: none;
+            }}
+            QTabBar::tab:hover {{
+                background: {self._style_manager.get_color_str(ColorRole.TAB_HOVER)};
+            }}
+        """)
+
         for label in self._tab_labels.values():
             label.handle_style_changed(factor)
