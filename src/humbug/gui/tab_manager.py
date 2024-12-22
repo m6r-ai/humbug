@@ -171,4 +171,4 @@ class TabManager(QTabWidget):
             factor: New zoom factor
         """
         for label in self._tab_labels.values():
-            label.handle_zoom_changed(factor)
+            label.handle_style_changed(factor)
