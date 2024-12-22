@@ -3,7 +3,7 @@
 import logging
 from typing import Callable, Dict, Optional
 
-from humbug.commands.exceptions import CommandNotFoundError
+from humbug.commands.exceptions import CommandNotFoundError, CommandExecutionError
 
 
 class CommandProcessor:
@@ -42,7 +42,11 @@ class CommandProcessor:
             raise CommandNotFoundError(f"Unknown command: {cmd_name}")
 
         self._logger.debug("Executing command: %s", cmd_name)
-        return await self.commands[cmd_name]()
+        try:
+            return await self.commands[cmd_name]()
+        except Exception as e:
+            self._logger.error("Command execution failed", exc_info=True)
+            raise CommandExecutionError(f"Failed to execute command '{cmd_name}'") from e
 
     async def _cmd_exit(self) -> str:
         """Handle the exit command."""
