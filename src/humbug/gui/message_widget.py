@@ -64,11 +64,11 @@ class MessageWidget(QFrame):
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add Markdown highlighter
-        self.highlighter = MarkdownHighlighter(self._text_area.document())
-        self.highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
+        self._highlighter = MarkdownHighlighter(self._text_area.document())
+        self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
 
         # Get style manager
-        self.style_manager = StyleManager()
+        self._style_manager = StyleManager()
 
         # Track current message style
         self._current_style = None
@@ -88,7 +88,7 @@ class MessageWidget(QFrame):
     def _get_background_color(self, style: str) -> str:
         """Get the appropriate background color for the message style."""
         role = self.background_roles.get(style, ColorRole.MESSAGE_USER)
-        return self.style_manager.get_color_str(role)
+        return self._style_manager.get_color_str(role)
 
     def set_content(self, text: str, style: str):
         """Set content with style, handling incremental updates for AI responses."""
@@ -160,8 +160,8 @@ class MessageWidget(QFrame):
         """Handle the style changing"""
         self._header.setStyleSheet(f"""
             QLabel {{
-                background-color: {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
-                color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
         """)
 
@@ -169,17 +169,17 @@ class MessageWidget(QFrame):
         self._text_area.setStyleSheet(f"""
             QTextEdit {{
                 background-color: {content_color};
-                color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {self.style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
                 border: none;
                 padding: 8px;
             }}
             QScrollBar:horizontal {{
                 height: 12px;
-                background: {self.style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
             QScrollBar::handle:horizontal {{
-                background: {self.style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
@@ -189,9 +189,9 @@ class MessageWidget(QFrame):
 
         self.setStyleSheet(f"""
             QFrame {{
-                border: 1px solid {self.style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
                 margin: 0;
             }}
         """)
 
-        self.highlighter.rehighlight()
+        self._highlighter.rehighlight()

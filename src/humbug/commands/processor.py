@@ -11,13 +11,13 @@ class CommandProcessor:
 
     def __init__(self):
         """Initialize the command processor."""
-        self.commands: Dict[str, Callable] = {}
+        self._commands: Dict[str, Callable] = {}
         self._register_commands()
         self._logger = logging.getLogger("CommandProcessor")
 
     def _register_commands(self):
         """Register all available commands."""
-        self.commands = {
+        self._commands = {
             "exit": self._cmd_exit,
         }
 
@@ -37,13 +37,13 @@ class CommandProcessor:
         cmd_parts = command.strip().split(maxsplit=1)
         cmd_name = cmd_parts[0].lower()
 
-        if cmd_name not in self.commands:
+        if cmd_name not in self._commands:
             self._logger.warning("Unknown command attempted: %s", cmd_name)
             raise CommandNotFoundError(f"Unknown command: {cmd_name}")
 
         self._logger.debug("Executing command: %s", cmd_name)
         try:
-            return await self.commands[cmd_name]()
+            return await self._commands[cmd_name]()
         except Exception as e:
             self._logger.error("Command execution failed", exc_info=True)
             raise CommandExecutionError(f"Failed to execute command '{cmd_name}'") from e

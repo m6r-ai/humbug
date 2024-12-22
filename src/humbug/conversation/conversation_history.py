@@ -11,14 +11,14 @@ class ConversationHistory:
 
     def __init__(self, conversation_id: str):
         """Initialize empty conversation history."""
-        self.conversation_id = conversation_id
-        self.messages: List[Message] = []
-        self.total_input_tokens: int = 0
-        self.total_output_tokens: int = 0
+        self._conversation_id = conversation_id
+        self._messages: List[Message] = []
+        self._total_input_tokens: int = 0
+        self._total_output_tokens: int = 0
 
     def add_message(self, message: Message) -> None:
         """Add a message to the history."""
-        self.messages.append(message)
+        self._messages.append(message)
 
     def update_message(
         self,
@@ -28,7 +28,7 @@ class ConversationHistory:
         completed: bool = None
     ) -> Optional[Message]:
         """Update an existing message and return the updated message."""
-        for message in self.messages:
+        for message in self._messages:
             if message.id == message_id:
                 message.content = content
                 if usage is not None:
@@ -36,8 +36,8 @@ class ConversationHistory:
                     message.usage = usage
                     # Only update token counts if we didn't have usage before
                     if old_usage is None:
-                        self.total_input_tokens += usage.prompt_tokens
-                        self.total_output_tokens += usage.completion_tokens
+                        self._total_input_tokens += usage.prompt_tokens
+                        self._total_output_tokens += usage.completion_tokens
                 if completed is not None:
                     message.completed = completed
                 return message
@@ -45,24 +45,24 @@ class ConversationHistory:
 
     def recalculate_token_counts(self) -> None:
         """Recalculate total token counts from all messages."""
-        self.total_input_tokens = 0
-        self.total_output_tokens = 0
-        for message in self.messages:
+        self._total_input_tokens = 0
+        self._total_output_tokens = 0
+        for message in self._messages:
             if message.usage:
-                self.total_input_tokens += message.usage.prompt_tokens
-                self.total_output_tokens += message.usage.completion_tokens
+                self._total_input_tokens += message.usage.prompt_tokens
+                self._total_output_tokens += message.usage.completion_tokens
 
     def get_messages_for_context(self) -> List[str]:
         """Get messages formatted for AI context."""
         result = []
         i = 0
-        while i < len(self.messages):
-            if self.messages[i].source == MessageSource.USER:
+        while i < len(self._messages):
+            if self._messages[i].source == MessageSource.USER:
                 # Found a user message, look for corresponding AI response
-                user_msg = self.messages[i]
+                user_msg = self._messages[i]
                 ai_msg = None
-                if i + 1 < len(self.messages) and self.messages[i + 1].source == MessageSource.AI:
-                    ai_msg = self.messages[i + 1]
+                if i + 1 < len(self._messages) and self._messages[i + 1].source == MessageSource.AI:
+                    ai_msg = self._messages[i + 1]
 
                 # Only include the exchange if:
                 # 1. It's a user message without an AI response yet (current exchange)
@@ -77,13 +77,9 @@ class ConversationHistory:
 
         return result
 
-    def get_messages_for_transcript(self) -> List[Dict]:
-        """Get messages formatted for transcript writing."""
-        return [msg.to_transcript_dict() for msg in self.messages]
-
     def get_token_counts(self) -> Dict[str, int]:
         """Get current token usage counts."""
         return {
-            "input": self.total_input_tokens,
-            "output": self.total_output_tokens
+            "input": self._total_input_tokens,
+            "output": self._total_output_tokens
         }

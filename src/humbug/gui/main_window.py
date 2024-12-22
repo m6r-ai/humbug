@@ -46,48 +46,48 @@ class MainWindow(QMainWindow):
     def _create_actions(self):
         """Create all menu actions."""
         # Humbug menu actions
-        self.about_action = QAction("About Humbug", self)
-        self.about_action.triggered.connect(self._show_about_dialog)
+        self._about_action = QAction("About Humbug", self)
+        self._about_action.triggered.connect(self._show_about_dialog)
 
-        self.quit_action = QAction("Quit Humbug", self)
-        self.quit_action.setShortcut(QKeySequence("Ctrl+Q"))
-        self.quit_action.triggered.connect(self.close)
+        self._quit_action = QAction("Quit Humbug", self)
+        self._quit_action.setShortcut(QKeySequence("Ctrl+Q"))
+        self._quit_action.triggered.connect(self.close)
 
         # File menu actions
-        self.new_conv_action = QAction("New Conversation", self)
-        self.new_conv_action.triggered.connect(self.create_conversation_tab)
+        self._new_conv_action = QAction("New Conversation", self)
+        self._new_conv_action.triggered.connect(self.create_conversation_tab)
 
-        self.close_conv_action = QAction("Close Conversation", self)
-        self.close_conv_action.triggered.connect(self._close_current_conversation)
+        self._close_conv_action = QAction("Close Conversation", self)
+        self._close_conv_action.triggered.connect(self._close_current_conversation)
 
         # Edit menu actions
-        self.submit_action = QAction("Submit", self)
-        self.submit_action.setShortcut(QKeySequence("Ctrl+J"))
-        self.submit_action.triggered.connect(self._submit_message)
+        self._submit_action = QAction("Submit", self)
+        self._submit_action.setShortcut(QKeySequence("Ctrl+J"))
+        self._submit_action.triggered.connect(self._submit_message)
 
-        self.undo_action = QAction("Undo", self)
-        self.undo_action.setShortcut(QKeySequence("Ctrl+Z"))
-        self.undo_action.triggered.connect(self._undo)
+        self._undo_action = QAction("Undo", self)
+        self._undo_action.setShortcut(QKeySequence("Ctrl+Z"))
+        self._undo_action.triggered.connect(self._undo)
 
-        self.redo_action = QAction("Redo", self)
-        self.redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
-        self.redo_action.triggered.connect(self._redo)
+        self._redo_action = QAction("Redo", self)
+        self._redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
+        self._redo_action.triggered.connect(self._redo)
 
-        self.cut_action = QAction("Cut", self)
-        self.cut_action.setShortcut(QKeySequence("Ctrl+X"))
-        self.cut_action.triggered.connect(self._cut)
+        self._cut_action = QAction("Cut", self)
+        self._cut_action.setShortcut(QKeySequence("Ctrl+X"))
+        self._cut_action.triggered.connect(self._cut)
 
-        self.copy_action = QAction("Copy", self)
-        self.copy_action.setShortcut(QKeySequence("Ctrl+C"))
-        self.copy_action.triggered.connect(self._copy)
+        self._copy_action = QAction("Copy", self)
+        self._copy_action.setShortcut(QKeySequence("Ctrl+C"))
+        self._copy_action.triggered.connect(self._copy)
 
-        self.paste_action = QAction("Paste", self)
-        self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
-        self.paste_action.triggered.connect(self._paste)
+        self._paste_action = QAction("Paste", self)
+        self._paste_action.setShortcut(QKeySequence("Ctrl+V"))
+        self._paste_action.triggered.connect(self._paste)
 
-        self.settings_action = QAction("Conversation Settings", self)
-        self.settings_action.setShortcut(QKeySequence("Ctrl+,"))
-        self.settings_action.triggered.connect(self._show_settings_dialog)
+        self._settings_action = QAction("Conversation Settings", self)
+        self._settings_action.setShortcut(QKeySequence("Ctrl+,"))
+        self._settings_action.triggered.connect(self._show_settings_dialog)
 
         # View menu actions
         self._dark_mode_action = QAction("&Dark Mode", self)
@@ -95,17 +95,17 @@ class MainWindow(QMainWindow):
         self._dark_mode_action.setChecked(True)
         self._dark_mode_action.triggered.connect(self._handle_dark_mode)
 
-        self.zoom_in_action = QAction("Zoom In", self)
-        self.zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
-        self.zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.189027))
+        self._zoom_in_action = QAction("Zoom In", self)
+        self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
+        self._zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.189027))
 
-        self.zoom_out_action = QAction("Zoom Out", self)
-        self.zoom_out_action.setShortcut(QKeySequence("Ctrl+-"))
-        self.zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.189027))
+        self._zoom_out_action = QAction("Zoom Out", self)
+        self._zoom_out_action.setShortcut(QKeySequence("Ctrl+-"))
+        self._zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.189027))
 
-        self.reset_zoom_action = QAction("Reset Zoom", self)
-        self.reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
-        self.reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
+        self._reset_zoom_action = QAction("Reset Zoom", self)
+        self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
+        self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
     def _create_menus(self):
         """Create the menu bar and all menus."""
@@ -114,35 +114,35 @@ class MainWindow(QMainWindow):
 
         # Humbug menu
         humbug_menu = self._menu_bar.addMenu("&Humbug")
-        humbug_menu.addAction(self.about_action)
+        humbug_menu.addAction(self._about_action)
         humbug_menu.addSeparator()
-        humbug_menu.addAction(self.quit_action)
+        humbug_menu.addAction(self._quit_action)
 
         # File menu
         file_menu = self._menu_bar.addMenu("&File")
-        file_menu.addAction(self.new_conv_action)
-        file_menu.addAction(self.close_conv_action)
+        file_menu.addAction(self._new_conv_action)
+        file_menu.addAction(self._close_conv_action)
 
         # Edit menu
         edit_menu = self._menu_bar.addMenu("&Edit")
-        edit_menu.addAction(self.submit_action)
+        edit_menu.addAction(self._submit_action)
         edit_menu.addSeparator()
-        edit_menu.addAction(self.undo_action)
-        edit_menu.addAction(self.redo_action)
+        edit_menu.addAction(self._undo_action)
+        edit_menu.addAction(self._redo_action)
         edit_menu.addSeparator()
-        edit_menu.addAction(self.cut_action)
-        edit_menu.addAction(self.copy_action)
-        edit_menu.addAction(self.paste_action)
+        edit_menu.addAction(self._cut_action)
+        edit_menu.addAction(self._copy_action)
+        edit_menu.addAction(self._paste_action)
         edit_menu.addSeparator()
-        edit_menu.addAction(self.settings_action)
+        edit_menu.addAction(self._settings_action)
 
         # View menu
         view_menu = self._menu_bar.addMenu("&View")
         view_menu.addAction(self._dark_mode_action)
         view_menu.addSeparator()
-        view_menu.addAction(self.zoom_in_action)
-        view_menu.addAction(self.zoom_out_action)
-        view_menu.addAction(self.reset_zoom_action)
+        view_menu.addAction(self._zoom_in_action)
+        view_menu.addAction(self._zoom_out_action)
+        view_menu.addAction(self._reset_zoom_action)
 
     def _setup_ui(self):
         """Set up the user interface."""
@@ -163,8 +163,8 @@ class MainWindow(QMainWindow):
         # Create initial conversation tab
         self.create_conversation_tab()
 
-        self.style_manager = StyleManager()
-        self.style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
     def _undo(self):
@@ -193,35 +193,35 @@ class MainWindow(QMainWindow):
         chat_view = self.current_chat_view
         if not chat_view:
             # Disable all editing actions if no chat view is available
-            self.submit_action.setEnabled(False)
-            self.undo_action.setEnabled(False)
-            self.redo_action.setEnabled(False)
-            self.cut_action.setEnabled(False)
-            self.copy_action.setEnabled(False)
-            self.paste_action.setEnabled(False)
-            self.close_conv_action.setEnabled(False)
-            self.settings_action.setEnabled(False)
+            self._submit_action.setEnabled(False)
+            self._undo_action.setEnabled(False)
+            self._redo_action.setEnabled(False)
+            self._cut_action.setEnabled(False)
+            self._copy_action.setEnabled(False)
+            self._paste_action.setEnabled(False)
+            self._close_conv_action.setEnabled(False)
+            self._settings_action.setEnabled(False)
             return
 
         has_text = bool(chat_view.get_input_text())
-        self.submit_action.setEnabled(has_text)
-        self.undo_action.setEnabled(chat_view.can_undo())
-        self.redo_action.setEnabled(chat_view.can_redo())
-        self.cut_action.setEnabled(chat_view.can_cut())
-        self.copy_action.setEnabled(chat_view.can_copy())
-        self.paste_action.setEnabled(chat_view.can_paste())
-        self.close_conv_action.setEnabled(True)
-        self.settings_action.setEnabled(True)
+        self._submit_action.setEnabled(has_text)
+        self._undo_action.setEnabled(chat_view.can_undo())
+        self._redo_action.setEnabled(chat_view.can_redo())
+        self._cut_action.setEnabled(chat_view.can_cut())
+        self._copy_action.setEnabled(chat_view.can_copy())
+        self._paste_action.setEnabled(chat_view.can_paste())
+        self._close_conv_action.setEnabled(True)
+        self._settings_action.setEnabled(True)
 
-        current_zoom = self.style_manager.zoom_factor
-        self.zoom_in_action.setEnabled(current_zoom < 2.0)
-        self.zoom_out_action.setEnabled(current_zoom > 0.5)
+        current_zoom = self._style_manager.zoom_factor
+        self._zoom_in_action.setEnabled(current_zoom < 2.0)
+        self._zoom_out_action.setEnabled(current_zoom > 0.5)
 
     def _handle_style_changed(self) -> None:
-        zoom_factor = self.style_manager.zoom_factor
-        base_font_size = self.style_manager.base_font_size
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor
+        base_font_size = style_manager.base_font_size
 
-        style_manager = self.style_manager
         self.setStyleSheet(f"""
             QMainWindow {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
@@ -477,13 +477,13 @@ class MainWindow(QMainWindow):
         """Handle dark mode enable/disable requests."""
         self._dark_mode = not self._dark_mode
         self._dark_mode_action.setChecked(self._dark_mode)
-        self.style_manager.set_color_mode(ColorMode.DARK if self._dark_mode else ColorMode.LIGHT)
+        self._style_manager.set_color_mode(ColorMode.DARK if self._dark_mode else ColorMode.LIGHT)
 
     def _handle_zoom(self, factor: float):
         """Handle zoom in/out requests."""
-        new_zoom = self.style_manager.zoom_factor * factor
+        new_zoom = self._style_manager.zoom_factor * factor
         self._set_zoom(new_zoom)
 
     def _set_zoom(self, zoom_level: float):
         """Set zoom level for the application."""
-        self.style_manager.set_zoom(zoom_level)
+        self._style_manager.set_zoom(zoom_level)

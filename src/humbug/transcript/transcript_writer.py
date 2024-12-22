@@ -17,11 +17,11 @@ class TranscriptWriter:
 
     def __init__(self, max_size_mb: int = 50, max_files: int = 5):
         """Initialize transcript writer with configurable limits."""
-        self.filename = self._get_filename()
-        self.file_size = 0
-        self.max_size = max_size_mb * 1024 * 1024  # Convert MB to bytes
-        self.max_files = max_files
-        self.backup_suffix = ".backup"
+        self._filename = self._get_filename()
+        self._file_size = 0
+        self._max_size = max_size_mb * 1024 * 1024  # Convert MB to bytes
+        self._max_files = max_files
+        self._backup_suffix = ".backup"
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._initialize_file()
 
@@ -35,7 +35,7 @@ class TranscriptWriter:
 
     def _initialize_file(self):
         """Initialize a new transcript file."""
-        if not os.path.exists(self.filename):
+        if not os.path.exists(self._filename):
             metadata = {
                 "metadata": {
                     "timestamp": datetime.utcnow().isoformat(),
@@ -47,13 +47,13 @@ class TranscriptWriter:
 
     def _write_json_sync(self, data: Dict):
         """Synchronous JSON write for initialization only."""
-        with open(self.filename, 'w') as f:
+        with open(self._filename, 'w') as f:
             json.dump(data, f, indent=2, cls=FloatOneDecimalEncoder)
-        self.file_size = os.path.getsize(self.filename)
+        self._file_size = os.path.getsize(self._filename)
 
     async def _write_json(self, data: Dict):
         """Write JSON data to file with atomic operation and backup."""
-        temp_file = f"{self.filename}.tmp"
+        temp_file = f"{self._filename}.tmp"
         try:
             # Use ThreadPoolExecutor for file operations
             await asyncio.get_event_loop().run_in_executor(
@@ -63,8 +63,8 @@ class TranscriptWriter:
                 data
             )
             # Atomic rename
-            os.replace(temp_file, self.filename)
-            self.file_size = os.path.getsize(self.filename)
+            os.replace(temp_file, self._filename)
+            self._file_size = os.path.getsize(self._filename)
 
         except Exception as e:
             # Create backup of existing file if possible
@@ -82,8 +82,8 @@ class TranscriptWriter:
                     pass
 
             # Create new file
-            self.filename = self._get_filename(suffix="recovery")
-            self.file_size = 0
+            self._filename = self._get_filename(suffix="recovery")
+            self._file_size = 0
             self._initialize_file()
             raise
 
@@ -101,18 +101,18 @@ class TranscriptWriter:
 
     async def _rotate_file(self):
         """Rotate transcript file if size limit reached."""
-        if self.file_size >= self.max_size:
+        if self._file_size >= self._max_size:
             try:
                 # List all transcript files
-                transcript_dir = os.path.dirname(self.filename) or '.'
+                transcript_dir = os.path.dirname(self._filename) or '.'
                 files = [f for f in os.listdir(transcript_dir)
                         if f.startswith('transcript-') and
                         f.endswith('.json') and
-                        not f.endswith(f'{self.backup_suffix}.json')]
+                        not f.endswith(f'{self._backup_suffix}.json')]
                 files.sort(key=lambda f: os.path.getctime(os.path.join(transcript_dir, f)))
 
                 # Remove oldest files if we have too many
-                while len(files) >= self.max_files:
+                while len(files) >= self._max_files:
                     try:
                         oldest = files.pop(0)
                         os.unlink(os.path.join(transcript_dir, oldest))
@@ -120,18 +120,18 @@ class TranscriptWriter:
                         print(f"Error removing old transcript {oldest}: {e}", file=sys.stderr)
 
                 # Start new file
-                self.filename = os.path.join(transcript_dir, self._get_filename())
-                self.file_size = 0
+                self._filename = os.path.join(transcript_dir, self._get_filename())
+                self._file_size = 0
                 self._initialize_file()
             except Exception as e:
                 print(f"Error during transcript rotation: {e}", file=sys.stderr)
 
     def _create_backup(self) -> str:
         """Create a backup of the current transcript file."""
-        backup_name = f"{os.path.splitext(self.filename)[0]}{self.backup_suffix}.json"
+        backup_name = f"{os.path.splitext(self._filename)[0]}{self._backup_suffix}.json"
         try:
-            if os.path.exists(self.filename):
-                shutil.copy2(self.filename, backup_name)
+            if os.path.exists(self._filename):
+                shutil.copy2(self._filename, backup_name)
             return backup_name
         except Exception as e:
             print(f"Error creating backup: {e}", file=sys.stderr)
@@ -142,10 +142,10 @@ class TranscriptWriter:
         for attempt in range(3):  # Max 3 retries
             try:
                 try:
-                    data = await self._read_json(self.filename)
+                    data = await self._read_json(self._filename)
                 except FileNotFoundError:
                     self._initialize_file()
-                    data = await self._read_json(self.filename)
+                    data = await self._read_json(self._filename)
 
                 # Process messages
                 for message in messages:
@@ -171,13 +171,13 @@ class TranscriptWriter:
                 if backup_file:
                     print(f"Created backup at: {backup_file}", file=sys.stderr)
 
-                self.filename = self._get_filename(suffix="recovery")
-                self.file_size = 0
+                self._filename = self._get_filename(suffix="recovery")
+                self._file_size = 0
                 self._initialize_file()
 
                 # One final try with the new file
                 try:
-                    data = await self._read_json(self.filename)
+                    data = await self._read_json(self._filename)
                     for message in messages:
                         data["conversation"].append(message)
                     await self._write_json(data)
