@@ -4,6 +4,7 @@ Implements a singleton pattern to maintain consistent styling across components.
 Provides signals for style changes and utilities for scaled size calculations.
 """
 
+from enum import Enum, auto
 from typing import Dict
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion
@@ -12,6 +13,12 @@ from PySide6.QtGui import (
 )
 
 from humbug.gui.color_role import ColorRole
+
+
+class ColorMode(Enum):
+    """Enumeration for color theme modes."""
+    LIGHT = auto()
+    DARK = auto()
 
 
 class StyleManager(QObject):
@@ -43,65 +50,183 @@ class StyleManager(QObject):
             self._zoom_factor = 1.0
             self._base_font_size = self._determine_base_font_size()
             self._initialized = True
-            self._colors: Dict[ColorRole, str] = self._initialize_colors()
+            self._color_mode = ColorMode.DARK  # Default to dark mode
+            self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[str, QTextCharFormat] = {}
 
             self._code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
             self._initialize_highlights()
 
-    def _initialize_colors(self) -> Dict[ColorRole, str]:
-        """Initialize the application colors."""
+    def _initialize_colors(self) -> Dict[ColorRole, Dict[ColorMode, str]]:
+        """Initialize the application colors for both light and dark modes."""
         return {
             # Background colors
-            ColorRole.BACKGROUND_PRIMARY: "#080808",
-            ColorRole.BACKGROUND_SECONDARY: "#2d2d2d",
-            ColorRole.BACKGROUND_INPUT: "#202020",
+            ColorRole.BACKGROUND_PRIMARY: {
+                ColorMode.DARK: "#080808",
+                ColorMode.LIGHT: "#ffffff"
+            },
+            ColorRole.BACKGROUND_SECONDARY: {
+                ColorMode.DARK: "#2d2d2d",
+                ColorMode.LIGHT: "#f0f0f0"
+            },
+            ColorRole.BACKGROUND_INPUT: {
+                ColorMode.DARK: "#202020",
+                ColorMode.LIGHT: "#ffffff"
+            },
 
             # Message backgrounds
-            ColorRole.MESSAGE_USER: "#303030",
-            ColorRole.MESSAGE_AI: "#181818",
-            ColorRole.MESSAGE_SYSTEM: "#1a3a1a",
-            ColorRole.MESSAGE_ERROR: "#3a1a1a",
-            ColorRole.MESSAGE_HEADER: "#2a3544",
+            ColorRole.MESSAGE_USER: {
+                ColorMode.DARK: "#303030",
+                ColorMode.LIGHT: "#e8e8e8"
+            },
+            ColorRole.MESSAGE_AI: {
+                ColorMode.DARK: "#181818",
+                ColorMode.LIGHT: "#f8f8f8"
+            },
+            ColorRole.MESSAGE_SYSTEM: {
+                ColorMode.DARK: "#1a3a1a",
+                ColorMode.LIGHT: "#e8ffe8"
+            },
+            ColorRole.MESSAGE_ERROR: {
+                ColorMode.DARK: "#3a1a1a",
+                ColorMode.LIGHT: "#ffe8e8"
+            },
+            ColorRole.MESSAGE_HEADER: {
+                ColorMode.DARK: "#2a3544",
+                ColorMode.LIGHT: "#edf2f7"
+            },
 
             # UI elements
-            ColorRole.TAB_ACTIVE: "#242424",
-            ColorRole.TAB_INACTIVE: "#1c1c1c",
-            ColorRole.TAB_HOVER: "#242424",
-            ColorRole.MENU_BACKGROUND: "#2d2d2d",
-            ColorRole.MENU_HOVER: "#3d3d3d",
-            ColorRole.SCROLLBAR_BACKGROUND: "#2d2d2d",
-            ColorRole.SCROLLBAR_HANDLE: "#404040",
-            ColorRole.STATUS_BAR: "#d3d3d3",
+            ColorRole.TAB_ACTIVE: {
+                ColorMode.DARK: "#242424",
+                ColorMode.LIGHT: "#ffffff"
+            },
+            ColorRole.TAB_INACTIVE: {
+                ColorMode.DARK: "#1c1c1c",
+                ColorMode.LIGHT: "#f0f0f0"
+            },
+            ColorRole.TAB_HOVER: {
+                ColorMode.DARK: "#242424",
+                ColorMode.LIGHT: "#f8f8f8"
+            },
+            ColorRole.MENU_BACKGROUND: {
+                ColorMode.DARK: "#2d2d2d",
+                ColorMode.LIGHT: "#f0f0f0"
+            },
+            ColorRole.MENU_HOVER: {
+                ColorMode.DARK: "#3d3d3d",
+                ColorMode.LIGHT: "#e0e0e0"
+            },
+            ColorRole.SCROLLBAR_BACKGROUND: {
+                ColorMode.DARK: "#2d2d2d",
+                ColorMode.LIGHT: "#f0f0f0"
+            },
+            ColorRole.SCROLLBAR_HANDLE: {
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#c0c0c0"
+            },
+            ColorRole.STATUS_BAR: {
+                ColorMode.DARK: "#d3d3d3",
+                ColorMode.LIGHT: "#404040"
+            },
 
             # Text colors
-            ColorRole.TEXT_PRIMARY: "#ffffff",
-            ColorRole.DISABLED_TEXT: "#808080",
-            ColorRole.SELECTED_TEXT: "#606060",
+            ColorRole.TEXT_PRIMARY: {
+                ColorMode.DARK: "#ffffff",
+                ColorMode.LIGHT: "#000000"
+            },
+            ColorRole.DISABLED_TEXT: {
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#a0a0a0"
+            },
+            ColorRole.SELECTED_TEXT: {
+                ColorMode.DARK: "#606060",
+                ColorMode.LIGHT: "#e0e0e0"
+            },
 
             # Close button states
-            ColorRole.CLOSE_BUTTON_HOVER: "#ff4444",
+            ColorRole.CLOSE_BUTTON_HOVER: {
+                ColorMode.DARK: "#ff4444",
+                ColorMode.LIGHT: "#ff4444"
+            },
 
             # Syntax highlighting
-            ColorRole.CODE_BLOCK_BACKGROUND: "#141414",
-            ColorRole.SYNTAX_CODE: "#804040",
-            ColorRole.SYNTAX_COMMENT: "#68d068",
-            ColorRole.SYNTAX_CSS_AT_RULE: "#ffc0eb",
-            ColorRole.SYNTAX_ELEMENT: "#90e0e8",
-            ColorRole.SYNTAX_ERROR: "#ff0000",
-            ColorRole.SYNTAX_FUNCTION_OR_METHOD: "#e0e080",
-            ColorRole.SYNTAX_HEADING: "#f06060",
-            ColorRole.SYNTAX_HTML_ATTRIBUTE: "#90e0e8",
-            ColorRole.SYNTAX_HTML_DOCTYPE: "#808080",
-            ColorRole.SYNTAX_HTML_TAG: "#ffc0eb",
-            ColorRole.SYNTAX_IDENTIFIER: "#80b0f0",
-            ColorRole.SYNTAX_KEYWORD: "#ffc0eb",
-            ColorRole.SYNTAX_NUMBER: "#c08040",
-            ColorRole.SYNTAX_OPERATOR: "#c0c0c0",
-            ColorRole.SYNTAX_PREPROCESSOR: "#808080",
-            ColorRole.SYNTAX_REGEXP: "#c87050",
-            ColorRole.SYNTAX_STRING: "#f06060",
-            ColorRole.SYNTAX_TEXT: "#d0d0d0"
+            ColorRole.CODE_BLOCK_BACKGROUND: {
+                ColorMode.DARK: "#141414",
+                ColorMode.LIGHT: "#f8f8f8"
+            },
+            ColorRole.SYNTAX_CODE: {
+                ColorMode.DARK: "#804040",
+                ColorMode.LIGHT: "#c04040"
+            },
+            ColorRole.SYNTAX_COMMENT: {
+                ColorMode.DARK: "#68d068",
+                ColorMode.LIGHT: "#408040"
+            },
+            ColorRole.SYNTAX_CSS_AT_RULE: {
+                ColorMode.DARK: "#ffc0eb",
+                ColorMode.LIGHT: "#c000a0"
+            },
+            ColorRole.SYNTAX_ELEMENT: {
+                ColorMode.DARK: "#90e0e8",
+                ColorMode.LIGHT: "#0080a0"
+            },
+            ColorRole.SYNTAX_ERROR: {
+                ColorMode.DARK: "#ff0000",
+                ColorMode.LIGHT: "#ff0000"
+            },
+            ColorRole.SYNTAX_FUNCTION_OR_METHOD: {
+                ColorMode.DARK: "#e0e080",
+                ColorMode.LIGHT: "#806000"
+            },
+            ColorRole.SYNTAX_HEADING: {
+                ColorMode.DARK: "#f06060",
+                ColorMode.LIGHT: "#c04040"
+            },
+            ColorRole.SYNTAX_HTML_ATTRIBUTE: {
+                ColorMode.DARK: "#90e0e8",
+                ColorMode.LIGHT: "#0080a0"
+            },
+            ColorRole.SYNTAX_HTML_DOCTYPE: {
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#606060"
+            },
+            ColorRole.SYNTAX_HTML_TAG: {
+                ColorMode.DARK: "#ffc0eb",
+                ColorMode.LIGHT: "#c000a0"
+            },
+            ColorRole.SYNTAX_IDENTIFIER: {
+                ColorMode.DARK: "#80b0f0",
+                ColorMode.LIGHT: "#0060c0"
+            },
+            ColorRole.SYNTAX_KEYWORD: {
+                ColorMode.DARK: "#ffc0eb",
+                ColorMode.LIGHT: "#c000a0"
+            },
+            ColorRole.SYNTAX_NUMBER: {
+                ColorMode.DARK: "#c08040",
+                ColorMode.LIGHT: "#804000"
+            },
+            ColorRole.SYNTAX_OPERATOR: {
+                ColorMode.DARK: "#c0c0c0",
+                ColorMode.LIGHT: "#404040"
+            },
+            ColorRole.SYNTAX_PREPROCESSOR: {
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#606060"
+            },
+            ColorRole.SYNTAX_REGEXP: {
+                ColorMode.DARK: "#c87050",
+                ColorMode.LIGHT: "#a04020"
+            },
+            ColorRole.SYNTAX_STRING: {
+                ColorMode.DARK: "#f06060",
+                ColorMode.LIGHT: "#c04040"
+            },
+            ColorRole.SYNTAX_TEXT: {
+                ColorMode.DARK: "#d0d0d0",
+                ColorMode.LIGHT: "#404040"
+            }
         }
 
     def _initialize_highlights(self):
@@ -137,7 +262,7 @@ class StyleManager(QObject):
         text_highlight = QTextCharFormat()
         text_highlight.setFontFamilies(self._code_font_families)
         text_highlight.setFontFixedPitch(True)
-        text_highlight.setForeground(QColor(self._colors[role]))
+        text_highlight.setForeground(QColor(self._colors[role][self._color_mode]))
 
         return text_highlight
 
@@ -153,7 +278,7 @@ class StyleManager(QObject):
         Raises:
             KeyError: If no color is defined for the role
         """
-        return QColor(self._colors[role])
+        return QColor(self._colors[role][self._color_mode])
 
     def get_color_str(self, role: ColorRole) -> str:
         """Get a color string for a specific role.
@@ -167,7 +292,7 @@ class StyleManager(QObject):
         Raises:
             KeyError: If no color is defined for the role
         """
-        return self._colors[role]
+        return self._colors[role][self._color_mode]
 
     def get_highlight(self, token_type: str) -> QTextCharFormat:
         if token_type not in self._highlights:
@@ -207,6 +332,22 @@ class StyleManager(QObject):
     def base_font_size(self) -> float:
         """Get the base font size for the current system."""
         return self._base_font_size
+
+    @property
+    def color_mode(self) -> ColorMode:
+        """Get the current color mode."""
+        return self._color_mode
+
+    def set_color_mode(self, mode: ColorMode):
+        """Set the color mode and update application styles.
+
+        Args:
+            mode: The ColorMode to switch to
+        """
+        if mode != self._color_mode:
+            self._color_mode = mode
+            self._initialize_highlights()  # Reinitialize highlights with new colors
+            self.style_changed.emit(self._zoom_factor)  # Trigger style update
 
     @property
     def zoom_factor(self) -> float:

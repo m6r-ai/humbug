@@ -35,7 +35,7 @@ class TabLabel(QWidget):
 
         # Add label with size policy
         self.label = QLabel(text)
-        self.label.setStyleSheet("color: white;")
+        self.label.setStyleSheet(f"color: {self.style_manager.get_color_str(ColorRole.TEXT_PRIMARY)}")
         self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._layout.addWidget(self.label)
 

@@ -15,7 +15,7 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.settings_dialog import SettingsDialog
-from humbug.gui.style_manager import StyleManager
+from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 
 
@@ -31,6 +31,7 @@ class MainWindow(QMainWindow):
         self._chat_views = {}  # conversation_id -> ChatView
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self._logger = logging.getLogger("MainWindow")
+        self._dark_mode = True
 
         self._create_actions()
         self._create_menus()
@@ -89,7 +90,6 @@ class MainWindow(QMainWindow):
         self.settings_action.triggered.connect(self._show_settings_dialog)
 
         # View menu actions
-        self._dark_mode = True
         self._dark_mode_action = QAction("&Dark Mode", self)
         self._dark_mode_action.setCheckable(True)
         self._dark_mode_action.setChecked(True)
@@ -477,6 +477,7 @@ class MainWindow(QMainWindow):
         """Handle dark mode enable/disable requests."""
         self._dark_mode = not self._dark_mode
         self._dark_mode_action.setChecked(self._dark_mode)
+        self.style_manager.set_color_mode(ColorMode.DARK if self._dark_mode else ColorMode.LIGHT)
 
     def _handle_zoom(self, factor: float):
         """Handle zoom in/out requests."""
