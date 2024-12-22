@@ -60,7 +60,7 @@ class TabLabel(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
         pen = painter.pen()
         pen.setWidth(4)
-        pen.setColor(QColor("white"))
+        pen.setColor(QColor(self._style_manager.get_color(ColorRole.TEXT_PRIMARY)))
         painter.setPen(pen)
 
         margin = base_size // 4
