@@ -256,4 +256,4 @@ class GeminiBackend(AIBackend):
 
         except (GeneratorExit, asyncio.CancelledError):
             self._logger.debug("Request cancelled for conversation %s", conversation_id)
-            raise
+            return
