@@ -101,9 +101,9 @@ class MessageWidget(QFrame):
                 'error': "Error"
             }.get(style, "Unknown")
 
+            self._current_style = style
             self._header.setText(header_text)
             self.handle_style_changed()
-            self._current_style = style
 
             # Full reset needed for style change
             self._text_area.clear()
