@@ -34,17 +34,17 @@ class GeminiStreamResponse:
         if "candidates" in chunk and chunk["candidates"]:
             candidate = chunk["candidates"][0]
 
-            # Check for completion reason
-            if candidate.get("finishReason") == "STOP" and "usageMetadata" in candidate:
-                metadata = candidate["usageMetadata"]
-                self.usage = AIUsage(
-                    prompt_tokens=metadata.get("promptTokenCount", 0),
-                    completion_tokens=metadata.get("candidateTokenCount", 0),
-                    total_tokens=metadata.get("totalTokenCount", 0)
-                )
-
             # Extract text content
             if "content" in candidate and "parts" in candidate["content"]:
                 for part in candidate["content"]["parts"]:
                     if "text" in part:
                         self.content += part["text"]
+
+            # Check for completion reason
+            if candidate.get("finishReason") == "STOP" and "usageMetadata" in chunk:
+                metadata = chunk["usageMetadata"]
+                self.usage = AIUsage(
+                    prompt_tokens=metadata.get("promptTokenCount", 0),
+                    completion_tokens=metadata.get("candidatesTokenCount", 0),
+                    total_tokens=metadata.get("totalTokenCount", 0)
+                )
