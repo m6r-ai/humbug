@@ -628,7 +628,6 @@ Context: humbug application
                 ],
                 "generationConfig": {
                     "temperature": 0.7,
-                    "maxOutputTokens": 800,
                     "topP": 0.8,
                     "topK": 10
                 }
@@ -677,6 +676,7 @@ Context: humbug application
         - "o1-preview": OpenAI O1 Preview model
         - "gemini-1.5-flash": Google Gemini 1.5 Flash model
         - "gemini-1.5-pro": Google Gemini 1.5 Pro model
+        - "gemini-2.0-flash-exp": Google Gemini 2.0 Flash experimental model
 
         The AI model is configurable via the settings dialog.  It it set to "gpt-4o-mini" by default.
 
@@ -705,6 +705,7 @@ Context: humbug application
         - o1-preview: No temperature setting
         - gemini-1.5-flash: Supports temperature 0.0-1.0
         - gemini-1.5-pro: Supports temperature 0.0-1.0
+        - gemini-2.0-flash-exp: Supports temperature 0.0-1.1
 
         Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
 

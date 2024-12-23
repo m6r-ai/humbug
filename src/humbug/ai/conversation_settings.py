@@ -11,7 +11,8 @@ class ConversationSettings:
         "o1-preview",
         # Gemini models
         "gemini-1.5-flash",
-        "gemini-1.5-pro"
+        "gemini-1.5-pro",
+        "gemini-2.0-flash-exp",
     ]
 
     PROVIDER_MAP = {
@@ -20,7 +21,8 @@ class ConversationSettings:
         "o1-mini": "openai",
         "o1-preview": "openai",
         "gemini-1.5-flash": "google",
-        "gemini-1.5-pro": "google"
+        "gemini-1.5-pro": "google",
+        "gemini-2.0-flash-exp": "google",
     }
 
     TEMPERATURE_SUPPORTED_MODELS = {
@@ -29,7 +31,8 @@ class ConversationSettings:
         "o1-mini": False,
         "o1-preview": False,
         "gemini-1.5-flash": True,
-        "gemini-1.5-pro": True
+        "gemini-1.5-pro": True,
+        "gemini-2.0-flash-exp": True
     }
 
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
