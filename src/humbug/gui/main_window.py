@@ -3,11 +3,12 @@
 import asyncio
 from datetime import datetime
 import logging
+import os
 from typing import Dict, List
 import uuid
 
 from PySide6.QtWidgets import (
-    QMainWindow, QDialog, QWidget, QVBoxLayout, QApplication, QMenuBar
+    QMainWindow, QDialog, QWidget, QVBoxLayout, QApplication, QMenuBar, QFileDialog
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -15,7 +16,9 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
+from humbug.gui.chat_view import ChatView
 from humbug.gui.color_role import ColorRole
+from humbug.gui.editor_tab import EditorTab
 from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
@@ -52,6 +55,22 @@ class MainWindow(QMainWindow):
 
         self._close_conv_action = QAction("Close Conversation", self)
         self._close_conv_action.triggered.connect(self._close_current_conversation)
+
+        self._new_file_action = QAction("New File", self)
+        self._new_file_action.triggered.connect(self._new_file)
+        self._new_file_action.setShortcut(QKeySequence.New)
+
+        self._open_action = QAction("Open File...", self)
+        self._open_action.triggered.connect(self._open_file)
+        self._open_action.setShortcut(QKeySequence.Open)
+
+        self._save_action = QAction("Save", self)
+        self._save_action.triggered.connect(self._save_file)
+        self._save_action.setShortcut(QKeySequence.Save)
+
+        self._save_as_action = QAction("Save As...", self)
+        self._save_as_action.triggered.connect(self._save_file_as)
+        self._save_as_action.setShortcut(QKeySequence.SaveAs)
 
         # Edit menu actions
         self._submit_action = QAction("Submit", self)
@@ -112,6 +131,10 @@ class MainWindow(QMainWindow):
         # File menu
         file_menu = self._menu_bar.addMenu("&File")
         file_menu.addAction(self._new_conv_action)
+        file_menu.addAction(self._new_file_action)
+        file_menu.addAction(self._open_action)
+        file_menu.addAction(self._save_action)
+        file_menu.addAction(self._save_as_action)
         file_menu.addAction(self._close_conv_action)
 
         # Edit menu
@@ -182,32 +205,105 @@ class MainWindow(QMainWindow):
         dialog = AboutDialog(self)
         dialog.exec()
 
+    def _new_file(self):
+        """Create a new empty editor tab."""
+        self._untitled_count = getattr(self, '_untitled_count', 0) + 1
+        tab_id = str(uuid.uuid4())
+        editor = EditorTab(tab_id, self)
+        editor.set_filename(None, self._untitled_count)
+        
+        # Connect editor signals
+        editor.close_requested.connect(lambda id: self.tab_manager.close_tab(id))
+        editor.title_changed.connect(self.tab_manager.update_tab_title)
+        editor.modified_state_changed.connect(self._handle_tab_modified)
+        
+        self.tab_manager.add_tab(editor, f"Untitled-{self._untitled_count}")
+        return editor
+
+    def _open_file(self):
+        """Show open file dialog and create editor tab."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open File",
+            os.path.expanduser("~/"),
+            "All Files (*.*)"
+        )
+        
+        if file_path:
+            # Check if file is already open
+            for tab in self.tab_manager.get_all_tabs():
+                if isinstance(tab, EditorTab) and tab._filename == file_path:
+                    self.tab_manager.set_current_tab(tab.tab_id)
+                    return
+            
+            tab_id = str(uuid.uuid4())
+            editor = EditorTab(tab_id, self)
+            editor.set_filename(file_path)
+            
+            # Connect editor signals
+            editor.close_requested.connect(lambda id: self.tab_manager.close_tab(id))
+            editor.title_changed.connect(self.tab_manager.update_tab_title)
+            editor.modified_state_changed.connect(self._handle_tab_modified)
+            
+            self.tab_manager.add_tab(editor, os.path.basename(file_path))
+
+    def _save_file(self):
+        """Save the current file."""
+        current_tab = self.tab_manager.get_current_tab()
+        if isinstance(current_tab, EditorTab):
+            current_tab.save()
+
+    def _save_file_as(self):
+        """Save the current file with a new name."""
+        current_tab = self.tab_manager.get_current_tab()
+        if isinstance(current_tab, EditorTab):
+            current_tab.save_as()
+
+    def _handle_tab_modified(self, tab_id: str, modified: bool):
+        """Update UI to reflect tab modified state."""
+        self.tab_manager.set_tab_modified(tab_id, modified)
+        self._update_menu_state()
+
     @Slot()
     def _update_menu_state(self):
         """Update enabled/disabled state of menu items."""
-        chat_view = self.current_chat_view
-        if not chat_view:
-            # Disable all editing actions if no chat view is available
-            self._submit_action.setEnabled(False)
-            self._undo_action.setEnabled(False)
-            self._redo_action.setEnabled(False)
-            self._cut_action.setEnabled(False)
-            self._copy_action.setEnabled(False)
-            self._paste_action.setEnabled(False)
-            self._close_conv_action.setEnabled(False)
-            self._settings_action.setEnabled(False)
+        current_tab = self.tab_manager.get_current_tab()
+        
+        # Disable all actions by default
+        self._save_action.setEnabled(False)
+        self._save_as_action.setEnabled(False)
+        self._undo_action.setEnabled(False)
+        self._redo_action.setEnabled(False)
+        self._cut_action.setEnabled(False)
+        self._copy_action.setEnabled(False)
+        self._paste_action.setEnabled(False)
+        self._submit_action.setEnabled(False)
+        self._close_conv_action.setEnabled(False)
+        self._settings_action.setEnabled(False)
+
+        if not current_tab:
             return
 
-        has_text = bool(chat_view.get_input_text())
-        self._submit_action.setEnabled(has_text)
-        self._undo_action.setEnabled(chat_view.can_undo())
-        self._redo_action.setEnabled(chat_view.can_redo())
-        self._cut_action.setEnabled(chat_view.can_cut())
-        self._copy_action.setEnabled(chat_view.can_copy())
-        self._paste_action.setEnabled(chat_view.can_paste())
+        # Enable common edit operations based on tab state
+        self._undo_action.setEnabled(current_tab.can_undo())
+        self._redo_action.setEnabled(current_tab.can_redo())
+        self._cut_action.setEnabled(current_tab.can_cut())
+        self._copy_action.setEnabled(current_tab.can_copy())
+        self._paste_action.setEnabled(current_tab.can_paste())
         self._close_conv_action.setEnabled(True)
-        self._settings_action.setEnabled(True)
 
+        # Enable file-specific operations for editor tabs
+        if isinstance(current_tab, EditorTab):
+            self._save_action.setEnabled(current_tab.is_modified)
+            self._save_as_action.setEnabled(True)
+        
+        # Enable chat-specific operations for chat tabs
+        elif isinstance(current_tab, ChatView):
+            has_text = bool(current_tab.get_input_text())
+            self._submit_action.setEnabled(has_text)
+            self._settings_action.setEnabled(True)
+
+        # Update zoom actions
         current_zoom = self._style_manager.zoom_factor
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)

@@ -17,18 +17,18 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab_base import TabBase
 
 
-class ChatView(QFrame):
+class ChatView(TabBase):
     """Unified chat view implementing single-window feel with distinct regions."""
 
     # Signal emitted when the tab should be closed
-    close_requested = Signal(str)  # Emits conversation_id
     submitted = Signal(str)  # Emits message text when submitted
 
     def __init__(self, conversation_id: str, parent: Optional[QWidget] = None) -> None:
         """Initialize the unified chat view."""
-        super().__init__(parent)
+        super().__init__(conversation_id, parent)
         self._conversation_id = conversation_id
         self._conversation = ConversationHistory(conversation_id)
         self._settings = ConversationSettings()
@@ -339,6 +339,12 @@ class ChatView(QFrame):
     def _set_initial_focus(self):
         """Set initial focus to input area."""
         self._input.setFocus()
+
+    def can_close(self) -> bool:
+        return True
+
+    def save(self) -> bool:
+        return True
 
     def can_undo(self) -> bool:
         """Check if undo is available."""

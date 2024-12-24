@@ -1,158 +1,199 @@
-"""Tab management for the Humbug application."""
+"""Updated TabManager implementation to support both chat and editor tabs"""
 
-from typing import Optional
-
+from typing import Optional, Dict, List, cast
 from PySide6.QtWidgets import QTabWidget, QTabBar
 from PySide6.QtCore import Signal
 
+from humbug.gui.tab_base import TabBase
 from humbug.gui.chat_view import ChatView
+from humbug.gui.editor_tab import EditorTab
+from humbug.gui.tab_label import TabLabel
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab_label import TabLabel
 
 
 class TabManager(QTabWidget):
-    """Manages conversation tabs with custom labels."""
+    """Manages multiple tabs for conversations and editors."""
 
-    conversation_closed = Signal(str)  # Emits conversation_id
+    tab_closed = Signal(str)  # Emits tab_id
 
     def __init__(self, parent=None):
-        """Initialize the tab manager.
-
-        Args:
-            parent: Optional parent widget
-        """
+        """Initialize the tab manager."""
         super().__init__(parent)
-        self.setMovable(True)  # Allow tab reordering
-        self.setDocumentMode(True)  # Better visual integration
+        self.setMovable(True)
+        self.setDocumentMode(True)
 
-        # Track conversations and their labels
-        self._conversations = {}  # conversation_id -> ChatView
-        self._tab_labels = {}    # conversation_id -> TabLabel
+        # Track tabs
+        self._tabs: Dict[str, TabBase] = {}
+        self._tab_labels: Dict[str, TabLabel] = {}
 
         self._style_manager = StyleManager()
-
-        # Connect tab change signals
-        self.currentChanged.connect(self._on_tab_changed)
-        tab_bar = self.tabBar()
-        tab_bar.setDrawBase(False)  # Remove line under tabs
-        tab_bar.setUsesScrollButtons(True)
-
-        self._handle_style_changed(self._style_manager.zoom_factor)
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
-    def create_conversation(self, conversation_id: str, title: str) -> 'ChatView':
-        """Create a new conversation tab.
+        # Configure tab bar
+        tab_bar = self.tabBar()
+        tab_bar.setDrawBase(False)
+        tab_bar.setUsesScrollButtons(True)
 
+        # Connect signals
+        self.currentChanged.connect(self._on_tab_changed)
+
+        self._handle_style_changed(self._style_manager.zoom_factor)
+
+    def add_tab(self, tab: TabBase, title: str) -> None:
+        """Add a new tab to the manager.
+        
+        Args:
+            tab: The tab widget to add
+            title: Initial title for the tab
+        """
+        tab_id = tab.tab_id
+        self._tabs[tab_id] = tab
+
+        # Create custom tab label
+        tab_label = TabLabel(title)
+        tab_label.close_clicked.connect(lambda: self.close_tab(tab_id))
+        self._tab_labels[tab_id] = tab_label
+
+        # Add tab with custom label
+        index = self.addTab(tab, "")
+        self.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+
+        # Set initial state
+        if self.count() == 1:  # If this is the first tab
+            tab_label.set_current(True)
+
+        self.setCurrentWidget(tab)
+
+    def create_conversation(self, conversation_id: str, title: str) -> ChatView:
+        """Create a new conversation tab.
+        
         Args:
             conversation_id: Unique identifier for the conversation
             title: Title to display in the tab
-
+        
         Returns:
             The created ChatView instance
         """
         chat_view = ChatView(conversation_id, self)
-        self._conversations[conversation_id] = chat_view
-
-        # Create custom tab label
-        tab_label = TabLabel(title)
-        tab_label.close_clicked.connect(lambda: self.close_conversation(conversation_id))
-        self._tab_labels[conversation_id] = tab_label
-
-        # Add tab with custom label widget
-        index = self.addTab(chat_view, "")
-        self.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
-
-        # Set initial state for new tab
-        if self.count() == 1:  # If this is the first tab
-            tab_label.set_current(True)
-
-        self.setCurrentWidget(chat_view)
+        self.add_tab(chat_view, title)
         return chat_view
 
-    def get_chat_view(self, conversation_id: str) -> Optional['ChatView']:
-        """Get chat view by conversation ID.
-
+    def close_tab(self, tab_id: str) -> None:
+        """Close a tab by its ID.
+        
         Args:
-            conversation_id: The ID of the conversation to retrieve
-
-        Returns:
-            The ChatView instance or None if not found
+            tab_id: ID of the tab to close
         """
-        return self._conversations.get(conversation_id)
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return
 
-    def get_current_chat(self) -> Optional['ChatView']:
-        """Get the currently active chat view.
+        # Check if tab can be closed
+        if not tab.can_close():
+            return
 
+        # Remove tab
+        index = self.indexOf(tab)
+        self.removeTab(index)
+        del self._tabs[tab_id]
+
+        # Clean up label
+        if tab_id in self._tab_labels:
+            self._tab_labels[tab_id].deleteLater()
+            del self._tab_labels[tab_id]
+
+        # Emit signal
+        self.tab_closed.emit(tab_id)
+        tab.deleteLater()
+
+    def get_current_tab(self) -> Optional[TabBase]:
+        """Get the currently active tab.
+        
         Returns:
-            The current ChatView instance or None if no tabs exist
+            The current tab or None if no tabs exist
         """
-        return self.currentWidget()
+        widget = self.currentWidget()
+        return cast(TabBase, widget) if widget else None
 
-    def close_conversation(self, conversation_id: str):
-        """Handle conversation closure.
-
+    def get_tab(self, tab_id: str) -> Optional[TabBase]:
+        """Get a tab by its ID.
+        
         Args:
-            conversation_id: ID of the conversation to close
+            tab_id: ID of the tab to retrieve
+        
+        Returns:
+            The tab or None if not found
         """
-        chat_view = self._conversations.get(conversation_id)
-        if chat_view:
-            index = self.indexOf(chat_view)
-            self.removeTab(index)
-            del self._conversations[conversation_id]
-            if conversation_id in self._tab_labels:
-                self._tab_labels[conversation_id].deleteLater()
-                del self._tab_labels[conversation_id]
-            self.conversation_closed.emit(conversation_id)
-            chat_view.deleteLater()
+        return self._tabs.get(tab_id)
 
-    def _on_tab_changed(self, index: int):
+    def get_all_tabs(self) -> List[TabBase]:
+        """Get all tabs.
+        
+        Returns:
+            List of all tab instances
+        """
+        return list(self._tabs.values())
+
+    def set_current_tab(self, tab_id: str) -> None:
+        """Set the current tab by ID.
+        
+        Args:
+            tab_id: ID of the tab to make current
+        """
+        tab = self._tabs.get(tab_id)
+        if tab:
+            self.setCurrentWidget(tab)
+
+    def update_tab_title(self, tab_id: str, title: str) -> None:
+        """Update a tab's title.
+        
+        Args:
+            tab_id: ID of the tab to update
+            title: New title for the tab
+        """
+        label = self._tab_labels.get(tab_id)
+        if label:
+            label.update_text(title)
+
+    def set_tab_modified(self, tab_id: str, modified: bool) -> None:
+        """Update a tab's modified state.
+        
+        Args:
+            tab_id: ID of the tab to update
+            modified: Whether the tab is modified
+        """
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return
+
+        label = self._tab_labels.get(tab_id)
+        if label:
+            current_text = label.text()
+            if modified and not current_text.endswith('*'):
+                label.update_text(f"{current_text}*")
+            elif not modified and current_text.endswith('*'):
+                label.update_text(current_text[:-1])
+
+    def _on_tab_changed(self, index: int) -> None:
         """Handle tab selection changes.
 
         Args:
             index: Index of the newly selected tab
         """
         # Update current states for all tabs
-        for conv_id, label in self._tab_labels.items():
-            widget = self._conversations[conv_id]
-            is_current = widget == self.widget(index)
+        for tab_id, label in self._tab_labels.items():
+            tab = self._tabs[tab_id]
+            is_current = tab == self.widget(index)
             label.set_current(is_current)
 
-    def tabInserted(self, index: int):
-        """Handle tab insertion.
-
-        Args:
-            index: Index where the tab was inserted
-        """
-        super().tabInserted(index)
-        self._update_all_tab_states()
-
-    def tabRemoved(self, index: int):
-        """Handle tab removal.
-
-        Args:
-            index: Index where the tab was removed
-        """
-        super().tabRemoved(index)
-        self._update_all_tab_states()
-
-    def _update_all_tab_states(self):
-        """Update states for all tab labels."""
-        current = self.currentWidget()
-        for conv_id, label in self._tab_labels.items():
-            widget = self._conversations[conv_id]
-            label.set_current(widget == current)
-
-    def _handle_style_changed(self, factor: float):
+    def _handle_style_changed(self, factor: float = 1.0) -> None:
         """Handle style changes from StyleManager.
 
         Args:
             factor: New zoom factor
         """
         self.setStyleSheet(f"""
-            QTabBar::scroller {{
-                width: 40px;
-            }}
             QTabWidget::pane {{
                 border: none;
                 background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
@@ -172,5 +213,6 @@ class TabManager(QTabWidget):
             }}
         """)
 
+        # Update all tab labels
         for label in self._tab_labels.values():
             label.handle_style_changed(factor)
