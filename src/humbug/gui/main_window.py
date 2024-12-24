@@ -223,10 +223,9 @@ class MainWindow(QMainWindow):
     def _open_file(self):
         """Show open file dialog and create editor tab."""
         file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open File",
-            os.path.expanduser("~/"),
-            "All Files (*.*)"
+            self,                    # Parent
+            "Open File",            # Title
+            os.path.expanduser("~/") # Starting directory
         )
         
         if file_path:

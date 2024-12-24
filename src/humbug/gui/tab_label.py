@@ -175,3 +175,19 @@ class TabLabel(QWidget):
         """Update the current state of the tab."""
         self._is_current = is_current
         self._update_close_button()
+
+    def text(self) -> str:
+        """Get the current text of the tab label.
+
+        Returns:
+            str: The current text displayed in the label
+        """
+        return self._label.text()
+
+    def update_text(self, text: str) -> None:
+        """Update the text displayed in the tab label.
+
+        Args:
+            text: New text to display
+        """
+        self._label.setText(text)
