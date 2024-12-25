@@ -211,12 +211,12 @@ class MainWindow(QMainWindow):
         tab_id = str(uuid.uuid4())
         editor = EditorTab(tab_id, self)
         editor.set_filename(None, self._untitled_count)
-        
+
         # Connect editor signals
         editor.close_requested.connect(lambda id: self.tab_manager.close_tab(id))
         editor.title_changed.connect(self.tab_manager.update_tab_title)
         editor.modified_state_changed.connect(self._handle_tab_modified)
-        
+
         self.tab_manager.add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
 
@@ -230,9 +230,7 @@ class MainWindow(QMainWindow):
         )
         self._menu_timer.start()
 
-        print(f"file path: {file_path}")
         if file_path:
-
             # Check if file is already open
             for tab in self.tab_manager.get_all_tabs():
                 if isinstance(tab, EditorTab) and tab._filename == file_path:
@@ -271,7 +269,7 @@ class MainWindow(QMainWindow):
     def _update_menu_state(self):
         """Update enabled/disabled state of menu items."""
         current_tab = self.tab_manager.get_current_tab()
-        
+
         # Disable all actions by default
         self._save_action.setEnabled(False)
         self._save_as_action.setEnabled(False)
@@ -299,7 +297,7 @@ class MainWindow(QMainWindow):
         if isinstance(current_tab, EditorTab):
             self._save_action.setEnabled(current_tab.is_modified)
             self._save_as_action.setEnabled(True)
-        
+
         # Enable chat-specific operations for chat tabs
         elif isinstance(current_tab, ChatView):
             has_text = bool(current_tab.get_input_text())
