@@ -168,14 +168,22 @@ Context: humbug application
             Context: New Conversation
                 The "New Conversation" menu item will create a new conversation tab.
 
+                This will be matched with a keyboard shortcut "Ctrl+Shift+N".
+
             Context: New File
                 The "New File" menu item will create a new empty editor tab.
+
+            Context: Separator
+                There will be a horizontal Separator
 
             Context: Open
                 The "Open File..." menu item will show a file selection dialog allowing the user to open
                 an existing file in a new editor tab.
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+O" for Windows).
+
+            Context: Separator
+                There will be a horizontal Separator
 
             Context: Save
                 The "Save" menu item will save the current file if it is an editor tab.
@@ -190,8 +198,13 @@ Context: humbug application
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+S" for Windows).
 
-            Context: Close
-                The "Close" menu item with close the current tab, if a tab is active.
+            Context: Separator
+                There will be a horizontal Separator
+
+            Context: Close Tab
+                The "Close Tab" menu item with close the current tab, if a tab is active.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+W" for Windows).
 
         Context: Edit
             The "Edit" menu handles edit capabilities.  When clicked it contains the following:

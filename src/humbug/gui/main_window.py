@@ -51,26 +51,28 @@ class MainWindow(QMainWindow):
 
         # File menu actions
         self._new_conv_action = QAction("New Conversation", self)
+        self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self._new_conv_action.triggered.connect(self.create_conversation_tab)
 
-        self._close_conv_action = QAction("Close Conversation", self)
+        self._new_file_action = QAction("New File", self)
+        self._new_file_action.setShortcut(QKeySequence.New)
+        self._new_file_action.triggered.connect(self._new_file)
+
+        self._close_conv_action = QAction("Close Tab", self)
+        self._close_conv_action.setShortcut(QKeySequence("Ctrl+W"))
         self._close_conv_action.triggered.connect(self._close_current_conversation)
 
-        self._new_file_action = QAction("New File", self)
-        self._new_file_action.triggered.connect(self._new_file)
-        self._new_file_action.setShortcut(QKeySequence.New)
-
         self._open_action = QAction("Open File...", self)
-        self._open_action.triggered.connect(self._open_file)
         self._open_action.setShortcut(QKeySequence.Open)
+        self._open_action.triggered.connect(self._open_file)
 
         self._save_action = QAction("Save", self)
-        self._save_action.triggered.connect(self._save_file)
         self._save_action.setShortcut(QKeySequence.Save)
+        self._save_action.triggered.connect(self._save_file)
 
         self._save_as_action = QAction("Save As...", self)
-        self._save_as_action.triggered.connect(self._save_file_as)
         self._save_as_action.setShortcut(QKeySequence.SaveAs)
+        self._save_as_action.triggered.connect(self._save_file_as)
 
         # Edit menu actions
         self._submit_action = QAction("Submit", self)
@@ -132,9 +134,12 @@ class MainWindow(QMainWindow):
         file_menu = self._menu_bar.addMenu("&File")
         file_menu.addAction(self._new_conv_action)
         file_menu.addAction(self._new_file_action)
+        file_menu.addSeparator()
         file_menu.addAction(self._open_action)
+        file_menu.addSeparator()
         file_menu.addAction(self._save_action)
         file_menu.addAction(self._save_as_action)
+        file_menu.addSeparator()
         file_menu.addAction(self._close_conv_action)
 
         # Edit menu
