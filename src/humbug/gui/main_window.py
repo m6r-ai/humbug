@@ -186,19 +186,19 @@ class MainWindow(QMainWindow):
         self._menu_timer.start()
 
     def _undo(self):
-        self.current_chat_view.undo()
+        self.current_tab.undo()
 
     def _redo(self):
-        self.current_chat_view.redo()
+        self.current_tab.redo()
 
     def _cut(self):
-        self.current_chat_view.cut()
+        self.current_tab.cut()
 
     def _copy(self):
-        self.current_chat_view.copy()
+        self.current_tab.copy()
 
     def _paste(self):
-        self.current_chat_view.paste()
+        self.current_tab.paste()
 
     def _show_about_dialog(self):
         """Show the About dialog."""
@@ -222,28 +222,32 @@ class MainWindow(QMainWindow):
 
     def _open_file(self):
         """Show open file dialog and create editor tab."""
+        self._menu_timer.stop()
         file_path, _ = QFileDialog.getOpenFileName(
             self,                    # Parent
             "Open File",            # Title
             os.path.expanduser("~/") # Starting directory
         )
-        
+        self._menu_timer.start()
+
+        print(f"file path: {file_path}")
         if file_path:
+
             # Check if file is already open
             for tab in self.tab_manager.get_all_tabs():
                 if isinstance(tab, EditorTab) and tab._filename == file_path:
                     self.tab_manager.set_current_tab(tab.tab_id)
                     return
-            
+
             tab_id = str(uuid.uuid4())
             editor = EditorTab(tab_id, self)
             editor.set_filename(file_path)
-            
+
             # Connect editor signals
             editor.close_requested.connect(lambda id: self.tab_manager.close_tab(id))
             editor.title_changed.connect(self.tab_manager.update_tab_title)
             editor.modified_state_changed.connect(self._handle_tab_modified)
-            
+
             self.tab_manager.add_tab(editor, os.path.basename(file_path))
 
     def _save_file(self):
@@ -364,14 +368,14 @@ class MainWindow(QMainWindow):
 
     def _close_current_conversation(self):
         """Close the current conversation tab."""
-        chat_view = self.current_chat_view
+        chat_view = self.current_tab
         if chat_view:
             self.tab_manager.close_conversation(chat_view.conversation_id)
 
     @property
-    def current_chat_view(self):
-        """Get the currently active chat view."""
-        return self.tab_manager.get_current_chat()
+    def current_tab(self):
+        """Get the currently active tab."""
+        return self.tab_manager.get_current_tab()
 
     def _sanitize_input(self, text: str) -> str:
         """Strip control characters from input text, preserving newlines."""
@@ -379,7 +383,7 @@ class MainWindow(QMainWindow):
 
     def _submit_message(self):
         """Handle message submission."""
-        chat_view = self.current_chat_view
+        chat_view = self.current_tab
         if not chat_view:
             return
 
@@ -432,7 +436,7 @@ class MainWindow(QMainWindow):
 
     def _show_settings_dialog(self):
         """Show the conversation settings dialog."""
-        chat_view = self.current_chat_view
+        chat_view = self.current_tab
         if not chat_view:
             return
 
@@ -571,7 +575,7 @@ class MainWindow(QMainWindow):
         """Handle global key events."""
 
         if event.key() == Qt.Key_Escape:
-            chat_view = self.current_chat_view
+            chat_view = self.current_tab
             if chat_view:
                 conversation_id = chat_view.conversation_id
                 if conversation_id in self._current_tasks:
