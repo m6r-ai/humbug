@@ -13,9 +13,11 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.syntax.chat_parser import ChatParser, ChatParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser_factory import ParserFactory
 
 
 class EditorHighlighterBlockData(QTextBlockUserData):
+    """Data associated with each text block."""
     def __init__(self):
         super().__init__()
         self.fence_depth = 0
@@ -23,7 +25,7 @@ class EditorHighlighterBlockData(QTextBlockUserData):
 
 
 class EditorHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for Chat code blocks."""
+    """Syntax highlighter for source code files."""
 
     # Signal emitted when code block state changes
     codeBlockStateChanged = Signal(bool)
@@ -35,7 +37,7 @@ class EditorHighlighter(QSyntaxHighlighter):
         # Consistent font family fallback sequence for all code formats
         self._code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
         self._has_code_block = False
-
+        self._language = ProgrammingLanguage.TEXT
         self._style_manager = StyleManager()
 
         # For inline code
@@ -52,6 +54,17 @@ class EditorHighlighter(QSyntaxHighlighter):
 
         self._logger = logging.getLogger("EditorHighlighter")
 
+    def set_language(self, language: ProgrammingLanguage) -> None:
+        """
+        Set the programming language for syntax highlighting.
+
+        Args:
+            language: The programming language to use
+        """
+        if self._language != language:
+            self._language = language
+            self.rehighlight()
+
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
         try:
@@ -61,59 +74,79 @@ class EditorHighlighter(QSyntaxHighlighter):
             prev_block_data: EditorHighlighterBlockData = None
             prev_parser_state = None
             fence_depth = 0
+
             if prev_block:
                 prev_block_data = prev_block.userData()
                 if prev_block_data:
                     prev_parser_state = prev_block_data.parser_state
                     fence_depth = prev_block_data.fence_depth
 
-            language = ProgrammingLanguage.UNKNOWN
-            contination_state = -1
-            current_fence_depth = 0
+            continuation_state = -1
             current_block_data: EditorHighlighterBlockData = current_block.userData()
-            if current_block_data:
-                current_fence_depth = current_block_data.fence_depth
-                current_parser_data: ChatParserState = current_block_data.parser_state
-                if current_parser_data:
-                    language = current_parser_data.language
-                    contination_state = current_parser_data.continuation_state
 
-            parser = ChatParser()
-            parser_state: ChatParserState = parser.parse(prev_parser_state, text)
+            if self._language == ProgrammingLanguage.TEXT:
+                # If we're just handling plain text, use the chat parser for markdown-style
+                # code blocks
+                parser = ChatParser()
+                parser_state = parser.parse(prev_parser_state, text)
 
-            in_code_block = False
+                in_code_block = False
 
-            while True:
-                token = parser.get_next_token()
-                if token is None:
-                    break
+                while True:
+                    token = parser.get_next_token()
+                    if token is None:
+                        break
 
-                match token.type:
-                    case 'FENCE_START':
-                        self.setFormat(0, len(text), self._fence_format)
-                        fence_depth += 1
-                        continue
-
-                    case 'FENCE_END':
-                        self.setFormat(0, len(text), self._fence_format)
-                        fence_depth -= 1
-                        continue
-
-                    case 'BACKTICK':
-                        if fence_depth == 0:
-                            in_code_block = not in_code_block
+                    match token.type:
+                        case 'FENCE_START':
+                            self.setFormat(0, len(text), self._fence_format)
+                            fence_depth += 1
                             continue
 
-                if fence_depth > 0:
-                    self.setFormat(token.start, len(token.value), self._style_manager.get_highlight(token.type))
-                    continue
+                        case 'FENCE_END':
+                            self.setFormat(0, len(text), self._fence_format)
+                            fence_depth -= 1
+                            continue
 
-                if in_code_block:
-                    self.setFormat(token.start, len(token.value), self._code_format)
+                        case 'BACKTICK':
+                            if fence_depth == 0:
+                                in_code_block = not in_code_block
+                                continue
 
-            # Check if we need to rehighlight everything from this block onwards.
-            if (contination_state != parser_state.continuation_state) or (current_fence_depth != fence_depth) or (language != parser_state.language):
-                # It doesn't matter what we set this to, it just needs to be different to what it was before
+                    if fence_depth > 0:
+                        self.setFormat(token.start, len(token.value), self._style_manager.get_highlight(token.type))
+                        continue
+
+                    if in_code_block:
+                        self.setFormat(token.start, len(token.value), self._code_format)
+
+            else:
+                # Use the appropriate language parser
+                parser = ParserFactory.create_parser(self._language)
+                if not parser:
+                    return
+
+                parser_state = parser.parse(prev_parser_state, text)
+
+                # Apply syntax highlighting based on token types
+                while True:
+                    token = parser.get_next_token()
+                    if token is None:
+                        break
+
+                    self.setFormat(
+                        token.start,
+                        len(token.value),
+                        self._style_manager.get_highlight(token.type)
+                    )
+
+            # Check if we need to rehighlight everything from this block onwards
+            if current_block_data:
+                current_parser_state = current_block_data.parser_state
+                if current_parser_state:
+                    continuation_state = current_parser_state.continuation_state
+
+            if continuation_state != parser_state.continuation_state:
                 self.setCurrentBlockState(self.currentBlockState() + 1)
 
             block_data = EditorHighlighterBlockData()
@@ -121,21 +154,22 @@ class EditorHighlighter(QSyntaxHighlighter):
             block_data.fence_depth = fence_depth
             current_block.setUserData(block_data)
 
-            # Check if document contains any code blocks
-            has_code = False
-            block = self.document().firstBlock()
-            while block.isValid():
-                data = block.userData()
-                if data and data.fence_depth > 0:
-                    has_code = True
-                    break
+            # Check if document contains any code blocks (only relevant for text mode)
+            if self._language == ProgrammingLanguage.TEXT:
+                has_code = False
+                block = self.document().firstBlock()
+                while block.isValid():
+                    data = block.userData()
+                    if data and data.fence_depth > 0:
+                        has_code = True
+                        break
 
-                block = block.next()
+                    block = block.next()
 
-            # Emit signal if state changed
-            if has_code != self._has_code_block:
-                self._has_code_block = has_code
-                self.codeBlockStateChanged.emit(has_code)
+                # Emit signal if state changed
+                if has_code != self._has_code_block:
+                    self._has_code_block = has_code
+                    self.codeBlockStateChanged.emit(has_code)
 
         except Exception:
             self._logger.exception("highlighting exception")

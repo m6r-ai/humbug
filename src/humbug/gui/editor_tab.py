@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QLabel, QFileDialog, QMessageBox,
@@ -12,6 +12,40 @@ from humbug.gui.editor_highlighter import EditorHighlighter
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_text_edit import EditorTextEdit
 from humbug.gui.style_manager import StyleManager
+from humbug.syntax.programming_language import ProgrammingLanguage
+
+
+# Map file extensions to programming languages
+LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
+    # C/C++
+    '.c': ProgrammingLanguage.C,
+    '.h': ProgrammingLanguage.C,
+    '.cpp': ProgrammingLanguage.CPP,
+    '.hpp': ProgrammingLanguage.CPP,
+    '.cc': ProgrammingLanguage.CPP,
+    '.hh': ProgrammingLanguage.CPP,
+    '.cxx': ProgrammingLanguage.CPP,
+    '.hxx': ProgrammingLanguage.CPP,
+
+    # Web
+    '.css': ProgrammingLanguage.CSS,
+    '.html': ProgrammingLanguage.HTML,
+    '.htm': ProgrammingLanguage.HTML,
+    '.js': ProgrammingLanguage.JAVASCRIPT,
+    '.jsx': ProgrammingLanguage.JAVASCRIPT,
+    '.ts': ProgrammingLanguage.TYPESCRIPT,
+    '.tsx': ProgrammingLanguage.TYPESCRIPT,
+
+    # Python
+    '.py': ProgrammingLanguage.PYTHON,
+    '.pyw': ProgrammingLanguage.PYTHON,
+    '.pyi': ProgrammingLanguage.PYTHON,
+
+    # Other
+    '.metaphor': ProgrammingLanguage.METAPHOR,
+    '.txt': ProgrammingLanguage.TEXT,
+    '.md': ProgrammingLanguage.TEXT,
+}
 
 
 class EditorTab(TabBase):
@@ -34,6 +68,7 @@ class EditorTab(TabBase):
         self._auto_save_timer = QTimer(self)
         self._auto_save_timer.setInterval(5 * 60 * 1000)  # 5 minutes
         self._auto_save_timer.timeout.connect(self._auto_save)
+        self._current_language = ProgrammingLanguage.TEXT
 
         # Set up layout
         layout = QVBoxLayout(self)
@@ -62,6 +97,34 @@ class EditorTab(TabBase):
 
         self._update_status()
 
+    def _detect_language(self, filename: Optional[str]) -> ProgrammingLanguage:
+        """
+        Detect the programming language based on file extension.
+
+        Args:
+            filename: The filename to analyze
+
+        Returns:
+            The detected programming language
+        """
+        if not filename:
+            return ProgrammingLanguage.TEXT
+
+        ext = os.path.splitext(filename)[1].lower()
+        return LANGUAGE_MAP.get(ext, ProgrammingLanguage.TEXT)
+
+    def _update_language(self, new_language: ProgrammingLanguage) -> None:
+        """
+        Update the syntax highlighting language.
+
+        Args:
+            new_language: The new programming language to use
+        """
+        if self._current_language != new_language:
+            self._current_language = new_language
+            self._highlighter.set_language(new_language)
+            self._update_status()
+
     def set_filename(self, filename: Optional[str], untitled_number: Optional[int] = None) -> None:
         """
         Set the file being edited.
@@ -72,6 +135,11 @@ class EditorTab(TabBase):
         """
         self._filename = filename
         self._untitled_number = untitled_number
+
+        # Update syntax highlighting based on file extension
+        new_language = self._detect_language(filename)
+        self._update_language(new_language)
+
         if filename and os.path.exists(filename):
             try:
                 with open(filename, 'r', encoding='utf-8') as f:
@@ -119,19 +187,20 @@ class EditorTab(TabBase):
         # Get file info
         encoding = "UTF-8"
         line_ending = "LF"  # We could detect this from file content
-        file_type = "Text"
-        if self._filename:
-            ext = os.path.splitext(self._filename)[1].lower()
-            if ext in {'.py', '.pyw'}:
-                file_type = "Python"
-            elif ext in {'.js', '.jsx', '.ts', '.tsx'}:
-                file_type = "JavaScript"
-            elif ext == '.html':
-                file_type = "HTML"
-            elif ext == '.css':
-                file_type = "CSS"
-            elif ext in {'.c', '.cpp', '.h', '.hpp'}:
-                file_type = "C/C++"
+
+        # Get language name from enum
+        language_names = {
+            ProgrammingLanguage.TEXT: "Text",
+            ProgrammingLanguage.C: "C",
+            ProgrammingLanguage.CPP: "C++",
+            ProgrammingLanguage.CSS: "CSS",
+            ProgrammingLanguage.HTML: "HTML",
+            ProgrammingLanguage.JAVASCRIPT: "JavaScript",
+            ProgrammingLanguage.TYPESCRIPT: "TypeScript",
+            ProgrammingLanguage.PYTHON: "Python",
+            ProgrammingLanguage.METAPHOR: "Metaphor",
+        }
+        file_type = language_names.get(self._current_language, "Text")
 
         self._status_bar.setText(
             f"Line {line}, Column {column} | {encoding} | {line_ending} | {file_type}"
