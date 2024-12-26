@@ -52,7 +52,7 @@ class MainWindow(QMainWindow):
         # File menu actions
         self._new_conv_action = QAction("New Conversation", self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
-        self._new_conv_action.triggered.connect(self.create_conversation_tab)
+        self._new_conv_action.triggered.connect(self._new_conversation_tab)
 
         self._new_file_action = QAction("New File", self)
         self._new_file_action.setShortcut(QKeySequence.New)
@@ -178,7 +178,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.tab_manager)
 
         # Create initial conversation tab
-        self.create_conversation_tab()
+        self._new_conversation_tab()
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -358,14 +358,12 @@ class MainWindow(QMainWindow):
             }}
         """)
 
-    def create_conversation_tab(self) -> str:
+    def _new_conversation_tab(self) -> str:
         """Create a new conversation tab and return its ID."""
         self._conversation_count += 1
         conversation_id = str(uuid.uuid4())
-        chat_tab = self.tab_manager.create_conversation(
-            conversation_id,
-            f"Conv {self._conversation_count}"
-        )
+        chat_tab = ChatTab(conversation_id, self)
+        self.tab_manager.add_tab(chat_tab, f"Conv {self._conversation_count}")
         self._chat_tabs[conversation_id] = chat_tab
         return conversation_id
 
