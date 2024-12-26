@@ -112,17 +112,24 @@ class EditorTab(TabBase):
             QMessageBox {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                min-width: 400px;
             }}
             QLabel {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                min-height: 40px;
+            }}
+            QDialogButtonBox {{
+                button-layout: center;
+                margin-top: 8px;
             }}
             QPushButton {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 2px;
-                padding: 5px 15px;
-                min-width: 65px;
+                padding: 6px;
+                min-width: 80px;
+                margin: 0 4px;
             }}
             QPushButton:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_HOVER)};
