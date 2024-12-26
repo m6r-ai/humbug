@@ -8,7 +8,7 @@ from PySide6.QtGui import QCursor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.dynamic_text_edit import DynamicTextEdit
-from humbug.gui.markdown_highlighter import MarkdownHighlighter
+from humbug.gui.chat_highlighter import ChatHighlighter
 from humbug.gui.style_manager import StyleManager
 
 
@@ -63,8 +63,8 @@ class MessageWidget(QFrame):
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
-        # Add Markdown highlighter
-        self._highlighter = MarkdownHighlighter(self._text_area.document())
+        # Add chat highlighter
+        self._highlighter = ChatHighlighter(self._text_area.document())
         self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
 
         # Get style manager

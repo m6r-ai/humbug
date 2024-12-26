@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from enum import IntEnum
 
-from humbug.syntax.markdown_lexer import MarkdownLexer
 from humbug.syntax.lexer import Token
+from humbug.syntax.chat_lexer import ChatLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.c_parser import CParser
 from humbug.syntax.cpp_parser import CppParser
@@ -43,13 +43,13 @@ language_mapping = {
 
 
 @dataclass
-class MarkdownParserState(ParserState):
+class ChatParserState(ParserState):
     in_fence_block: bool = False
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState = None
 
 
-class MarkdownParser(Parser):
+class ChatParser(Parser):
     def _embedded_parse(
             self,
             language: ProgrammingLanguage,
@@ -99,15 +99,15 @@ class MarkdownParser(Parser):
 
         return embedded_parser_state
 
-    def parse(self, prev_parser_state: MarkdownParserState, input_str: str) -> MarkdownParserState:
-        parser_state = MarkdownParserState()
+    def parse(self, prev_parser_state: ChatParserState, input_str: str) -> ChatParserState:
+        parser_state = ChatParserState()
 
         if prev_parser_state:
             parser_state.in_fence_block = prev_parser_state.in_fence_block
             parser_state.language = prev_parser_state.language
             parser_state.embedded_parser_state = prev_parser_state.embedded_parser_state
 
-        lexer = MarkdownLexer()
+        lexer = ChatLexer()
         lexer.lex(None, input_str)
 
         seen_text = False

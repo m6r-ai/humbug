@@ -10,7 +10,7 @@ from PySide6.QtGui import QTextCharFormat, QSyntaxHighlighter
 
 from humbug.gui.tab_base import TabBase
 from humbug.gui.dynamic_text_edit import DynamicTextEdit
-from humbug.gui.markdown_highlighter import MarkdownHighlighter
+from humbug.gui.chat_highlighter import ChatHighlighter
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 
@@ -58,7 +58,7 @@ class EditorTab(TabBase):
         layout.addWidget(self._status_bar)
 
         # Set up syntax highlighter
-        self._highlighter = MarkdownHighlighter(self._editor.document())
+        self._highlighter = ChatHighlighter(self._editor.document())
 
         self._update_status()
 

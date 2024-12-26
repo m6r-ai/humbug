@@ -1,4 +1,4 @@
-"""Markdown code highlighter."""
+"""Chat code highlighter."""
 
 import logging
 from typing import Optional
@@ -11,7 +11,7 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.markdown_parser import MarkdownParser, MarkdownParserState, ProgrammingLanguage
+from humbug.syntax.chat_parser import ChatParser, ChatParserState, ProgrammingLanguage
 
 
 class BlockData(QTextBlockUserData):
@@ -21,8 +21,8 @@ class BlockData(QTextBlockUserData):
         self.parser_state = None
 
 
-class MarkdownHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for Markdown code blocks."""
+class ChatHighlighter(QSyntaxHighlighter):
+    """Syntax highlighter for Chat code blocks."""
 
     # Signal emitted when code block state changes
     codeBlockStateChanged = Signal(bool)
@@ -49,7 +49,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._fence_format.setFontFamilies(self._code_font_families)
         self._fence_format.setFontFixedPitch(True)
 
-        self._logger = logging.getLogger("MarkdownHighlighter")
+        self._logger = logging.getLogger("ChatHighlighter")
 
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
@@ -72,13 +72,13 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             current_block_data: BlockData = current_block.userData()
             if current_block_data:
                 current_fence_depth = current_block_data.fence_depth
-                current_parser_data: MarkdownParserState = current_block_data.parser_state
+                current_parser_data: ChatParserState = current_block_data.parser_state
                 if current_parser_data:
                     language = current_parser_data.language
                     contination_state = current_parser_data.continuation_state
 
-            parser = MarkdownParser()
-            parser_state: MarkdownParserState = parser.parse(prev_parser_state, text)
+            parser = ChatParser()
+            parser_state: ChatParserState = parser.parse(prev_parser_state, text)
 
             in_code_block = False
 
