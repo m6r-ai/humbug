@@ -3,7 +3,7 @@
 from typing import Dict, List, Optional
 
 from PySide6.QtWidgets import (
-    QFrame, QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
+    QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import QTimer, Signal, QPoint, Qt, Slot
 from PySide6.QtGui import QCursor, QResizeEvent

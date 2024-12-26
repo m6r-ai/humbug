@@ -229,9 +229,9 @@ class MainWindow(QMainWindow):
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
         file_path, _ = QFileDialog.getOpenFileName(
-            self,                    # Parent
-            "Open File",            # Title
-            os.path.expanduser("~/") # Starting directory
+            self,
+            "Open File",
+            os.path.expanduser("~/")
         )
         self._menu_timer.start()
 
