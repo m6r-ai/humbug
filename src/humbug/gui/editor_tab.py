@@ -76,19 +76,48 @@ class EditorTab(TabBase):
 
         # Add status bar
         self._status_bar = QLabel()
-        self._status_bar.setStyleSheet(f"""
-            QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 2px;
-            }}
-        """)
         layout.addWidget(self._status_bar)
 
         # Set up syntax highlighter
         self._highlighter = EditorHighlighter(self._editor.document())
 
+        # Connect to style changes
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_style_changed(self._style_manager.zoom_factor)
+
         self._update_status()
+
+    def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
+        """
+        Handle style and zoom changes.
+
+        Args:
+            zoom_factor: New zoom scaling factor
+        """
+        # Update font size
+        font = self._editor.font()
+        base_size = self._style_manager.base_font_size
+        font.setPointSizeF(base_size * zoom_factor)
+        self._editor.setFont(font)
+
+        # Update tab stops - scale with zoom
+        space_width = self._style_manager.get_space_width()
+        self._editor.setTabStopDistance(space_width * 8)
+
+        # Update status bar styling
+        self._status_bar.setStyleSheet(f"""
+            QLabel {{
+                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: {2 * zoom_factor}px;
+            }}
+        """)
+
+        # Scale line number area
+        self._editor.update_line_number_area_width()
+
+        # Force a redraw of syntax highlighting
+        self._highlighter.rehighlight()
 
     def _detect_language(self, filename: Optional[str]) -> ProgrammingLanguage:
         """

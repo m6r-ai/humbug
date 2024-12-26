@@ -24,9 +24,9 @@ class EditorTextEdit(QPlainTextEdit):
 
         # Setup line number area
         self._line_number_area = LineNumberArea(self)
-        self.blockCountChanged.connect(self._update_line_number_area_width)
+        self.blockCountChanged.connect(self.update_line_number_area_width)
         self.updateRequest.connect(self._update_line_number_area)
-        self._update_line_number_area_width()
+        self.update_line_number_area_width()
 
         self._style_manager = StyleManager()
 
@@ -41,7 +41,7 @@ class EditorTextEdit(QPlainTextEdit):
         space = 3 + self.fontMetrics().horizontalAdvance('9') * digits
         return space
 
-    def _update_line_number_area_width(self):
+    def update_line_number_area_width(self):
         """Update the margins to accommodate the line numbers."""
         self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
 
@@ -54,7 +54,7 @@ class EditorTextEdit(QPlainTextEdit):
                 self._line_number_area.width(), rect.height())
 
         if rect.contains(self.viewport().rect()):
-            self._update_line_number_area_width()
+            self.update_line_number_area_width()
 
     def resizeEvent(self, event):
         """Handle resize events."""
@@ -71,18 +71,24 @@ class EditorTextEdit(QPlainTextEdit):
         bg_color = self._style_manager.get_color(ColorRole.BACKGROUND_SECONDARY)
         painter.fillRect(event.rect(), bg_color)
 
+        # Use the editor's current font for line numbers
+        painter.setFont(self.font())
+
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
         offset = self.contentOffset()
         top = self.blockBoundingGeometry(block).translated(offset).top()
         bottom = top + self.blockBoundingRect(block).height()
 
+        # Scale the right margin with zoom
+        right_margin = self._style_manager.get_scaled_size(3)
+
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
                 text_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
                 painter.setPen(text_color)
-                painter.drawText(0, int(top), self._line_number_area.width(),
+                painter.drawText(0, int(top), self._line_number_area.width() - right_margin,
                     self.fontMetrics().height(),
                     Qt.AlignRight, number)
 
