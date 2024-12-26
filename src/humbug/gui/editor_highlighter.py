@@ -11,7 +11,6 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.chat_parser import ChatParser, ChatParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_factory import ParserFactory
 
@@ -84,61 +83,24 @@ class EditorHighlighter(QSyntaxHighlighter):
             continuation_state = -1
             current_block_data: EditorHighlighterBlockData = current_block.userData()
 
-            if self._language == ProgrammingLanguage.TEXT:
-                # If we're just handling plain text, use the chat parser for markdown-style
-                # code blocks
-                parser = ChatParser()
-                parser_state = parser.parse(prev_parser_state, text)
+            # Use the appropriate language parser
+            parser = ParserFactory.create_parser(self._language)
+            if not parser:
+                return
 
-                in_code_block = False
+            parser_state = parser.parse(prev_parser_state, text)
 
-                while True:
-                    token = parser.get_next_token()
-                    if token is None:
-                        break
+            # Apply syntax highlighting based on token types
+            while True:
+                token = parser.get_next_token()
+                if token is None:
+                    break
 
-                    match token.type:
-                        case 'FENCE_START':
-                            self.setFormat(0, len(text), self._fence_format)
-                            fence_depth += 1
-                            continue
-
-                        case 'FENCE_END':
-                            self.setFormat(0, len(text), self._fence_format)
-                            fence_depth -= 1
-                            continue
-
-                        case 'BACKTICK':
-                            if fence_depth == 0:
-                                in_code_block = not in_code_block
-                                continue
-
-                    if fence_depth > 0:
-                        self.setFormat(token.start, len(token.value), self._style_manager.get_highlight(token.type))
-                        continue
-
-                    if in_code_block:
-                        self.setFormat(token.start, len(token.value), self._code_format)
-
-            else:
-                # Use the appropriate language parser
-                parser = ParserFactory.create_parser(self._language)
-                if not parser:
-                    return
-
-                parser_state = parser.parse(prev_parser_state, text)
-
-                # Apply syntax highlighting based on token types
-                while True:
-                    token = parser.get_next_token()
-                    if token is None:
-                        break
-
-                    self.setFormat(
-                        token.start,
-                        len(token.value),
-                        self._style_manager.get_highlight(token.type)
-                    )
+                self.setFormat(
+                    token.start,
+                    len(token.value),
+                    self._style_manager.get_highlight(token.type)
+                )
 
             # Check if we need to rehighlight everything from this block onwards
             if current_block_data:

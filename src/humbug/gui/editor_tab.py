@@ -17,34 +17,27 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 
 # Map file extensions to programming languages
 LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
-    # C/C++
     '.c': ProgrammingLanguage.C,
-    '.h': ProgrammingLanguage.C,
-    '.cpp': ProgrammingLanguage.CPP,
-    '.hpp': ProgrammingLanguage.CPP,
     '.cc': ProgrammingLanguage.CPP,
-    '.hh': ProgrammingLanguage.CPP,
-    '.cxx': ProgrammingLanguage.CPP,
-    '.hxx': ProgrammingLanguage.CPP,
-
-    # Web
+    '.cpp': ProgrammingLanguage.CPP,
     '.css': ProgrammingLanguage.CSS,
+    '.cxx': ProgrammingLanguage.CPP,
+    '.h': ProgrammingLanguage.C,
+    '.hh': ProgrammingLanguage.CPP,
+    '.hpp': ProgrammingLanguage.CPP,
     '.html': ProgrammingLanguage.HTML,
     '.htm': ProgrammingLanguage.HTML,
+    '.hxx': ProgrammingLanguage.CPP,
     '.js': ProgrammingLanguage.JAVASCRIPT,
     '.jsx': ProgrammingLanguage.JAVASCRIPT,
-    '.ts': ProgrammingLanguage.TYPESCRIPT,
-    '.tsx': ProgrammingLanguage.TYPESCRIPT,
-
-    # Python
+    '.m6r': ProgrammingLanguage.METAPHOR,
+    '.md': ProgrammingLanguage.TEXT,
     '.py': ProgrammingLanguage.PYTHON,
     '.pyw': ProgrammingLanguage.PYTHON,
     '.pyi': ProgrammingLanguage.PYTHON,
-
-    # Other
-    '.metaphor': ProgrammingLanguage.METAPHOR,
+    '.ts': ProgrammingLanguage.TYPESCRIPT,
+    '.tsx': ProgrammingLanguage.TYPESCRIPT,
     '.txt': ProgrammingLanguage.TEXT,
-    '.md': ProgrammingLanguage.TEXT,
 }
 
 
@@ -260,6 +253,7 @@ class EditorTab(TabBase):
             content = self._editor.toPlainText()
             with open(self._filename, 'w', encoding='utf-8') as f:
                 f.write(content)
+
             self._last_save_content = content
             self._set_modified(False)
             return True
@@ -286,12 +280,17 @@ class EditorTab(TabBase):
             "Save As",
             self._filename or os.path.expanduser("~/")
         )
-        if filename:
-            self._filename = filename
-            self._untitled_number = None
-            self._update_title()
-            return self.save()
-        return False
+        if not filename:
+            return False
+
+        self._filename = filename
+        self._untitled_number = None
+        self._update_title()
+
+        new_language = self._detect_language(filename)
+        self._update_language(new_language)
+
+        return self.save()
 
     def can_undo(self) -> bool:
         return self._editor.document().isUndoAvailable()
