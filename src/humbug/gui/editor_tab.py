@@ -87,6 +87,52 @@ class EditorTab(TabBase):
 
         self._update_status()
 
+    def _create_styled_message_box(
+        self,
+        icon: QMessageBox.Icon,
+        title: str,
+        text: str,
+        buttons: QMessageBox.StandardButtons = QMessageBox.Ok
+    ) -> QMessageBox:
+        """Create a message box with appropriate styling.
+
+        Args:
+            icon: Icon to display in message box
+            title: Title of message box
+            text: Message text
+            buttons: Buttons to display
+
+        Returns:
+            Styled message box instance
+        """
+        msgbox = QMessageBox(icon, title, text, buttons, self)
+        style_manager = StyleManager()
+        # Set colors based on current theme
+        msgbox.setStyleSheet(f"""
+            QMessageBox {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QLabel {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QPushButton {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 2px;
+                padding: 5px 15px;
+                min-width: 65px;
+            }}
+            QPushButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_HOVER)};
+            }}
+            QPushButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
+        """)
+        return msgbox
+
     def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
         """
         Handle style and zoom changes.
@@ -200,11 +246,12 @@ class EditorTab(TabBase):
                 self._last_save_content = content
                 self._set_modified(False)
             except Exception as e:
-                QMessageBox.critical(
-                    self,
+                msgbox = self._create_styled_message_box(
+                    QMessageBox.Critical,
                     "Error Opening File",
                     f"Could not open {filename}: {str(e)}"
                 )
+                msgbox.exec()
         self._update_title()
 
     def _update_title(self) -> None:
@@ -284,12 +331,13 @@ class EditorTab(TabBase):
         if not self._is_modified:
             return True
 
-        reply = QMessageBox.question(
-            self,
+        msgbox = self._create_styled_message_box(
+            QMessageBox.Question,
             "Save Changes?",
             f"Do you want to save changes to {self._filename or f'Untitled-{self._untitled_number}'}?",
             QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
         )
+        reply = msgbox.exec()
 
         if reply == QMessageBox.Save:
             return self.save()
@@ -317,11 +365,12 @@ class EditorTab(TabBase):
             self._set_modified(False)
             return True
         except Exception as e:
-            QMessageBox.critical(
-                self,
+            msgbox = self._create_styled_message_box(
+                QMessageBox.Critical,
                 "Error Saving File",
                 f"Could not save {self._filename}: {str(e)}"
             )
+            msgbox.exec()
             return False
 
     def can_save_as(self) -> bool:
