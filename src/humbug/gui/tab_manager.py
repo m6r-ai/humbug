@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QTabWidget, QTabBar
 from PySide6.QtCore import Signal
 
 from humbug.gui.tab_base import TabBase
-from humbug.gui.chat_view import ChatView
+from humbug.gui.chat_tab import ChatTab
 from humbug.gui.editor_tab import EditorTab
 from humbug.gui.tab_label import TabLabel
 from humbug.gui.color_role import ColorRole
@@ -65,7 +65,7 @@ class TabManager(QTabWidget):
 
         self.setCurrentWidget(tab)
 
-    def create_conversation(self, conversation_id: str, title: str) -> ChatView:
+    def create_conversation(self, conversation_id: str, title: str) -> ChatTab:
         """Create a new conversation tab.
         
         Args:
@@ -73,11 +73,11 @@ class TabManager(QTabWidget):
             title: Title to display in the tab
         
         Returns:
-            The created ChatView instance
+            The created ChatTab instance
         """
-        chat_view = ChatView(conversation_id, self)
-        self.add_tab(chat_view, title)
-        return chat_view
+        chat_tab = ChatTab(conversation_id, self)
+        self.add_tab(chat_tab, title)
+        return chat_tab
 
     def close_tab(self, tab_id: str) -> None:
         """Close a tab by its ID.

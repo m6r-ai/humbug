@@ -16,7 +16,7 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
-from humbug.gui.chat_view import ChatView
+from humbug.gui.chat_tab import ChatTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
 from humbug.gui.settings_dialog import SettingsDialog
@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
         self._ai_backends = ai_backends
         self._transcript_writer = transcript_writer
         self._conversation_count = 0
-        self._chat_views = {}  # conversation_id -> ChatView
+        self._chat_tabs = {}  # conversation_id -> ChatTab
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
@@ -304,7 +304,7 @@ class MainWindow(QMainWindow):
             self._save_as_action.setEnabled(True)
 
         # Enable chat-specific operations for chat tabs
-        elif isinstance(current_tab, ChatView):
+        elif isinstance(current_tab, ChatTab):
             has_text = bool(current_tab.get_input_text())
             self._submit_action.setEnabled(has_text)
             self._settings_action.setEnabled(True)
@@ -362,18 +362,18 @@ class MainWindow(QMainWindow):
         """Create a new conversation tab and return its ID."""
         self._conversation_count += 1
         conversation_id = str(uuid.uuid4())
-        chat_view = self.tab_manager.create_conversation(
+        chat_tab = self.tab_manager.create_conversation(
             conversation_id,
             f"Conv {self._conversation_count}"
         )
-        self._chat_views[conversation_id] = chat_view
+        self._chat_tabs[conversation_id] = chat_tab
         return conversation_id
 
     def _close_current_tab(self):
         """Close the current conversation tab."""
-        chat_view = self.current_tab
-        if chat_view:
-            self.tab_manager.close_tab(chat_view.conversation_id)
+        chat_tab = self.current_tab
+        if chat_tab:
+            self.tab_manager.close_tab(chat_tab.conversation_id)
 
     @property
     def current_tab(self):
@@ -386,19 +386,19 @@ class MainWindow(QMainWindow):
 
     def _submit_message(self):
         """Handle message submission."""
-        chat_view = self.current_tab
-        if not chat_view:
+        chat_tab = self.current_tab
+        if not chat_tab:
             return
 
-        message = self._sanitize_input(chat_view.get_input_text().strip())
+        message = self._sanitize_input(chat_tab.get_input_text().strip())
         if not message:
             return
 
         # Clear input area
-        chat_view.clear_input()
+        chat_tab.clear_input()
 
         # Add user message and get the message object
-        user_message = chat_view.add_user_message(message)
+        user_message = chat_tab.add_user_message(message)
 
         # Write to transcript
         asyncio.create_task(
@@ -407,24 +407,24 @@ class MainWindow(QMainWindow):
 
         # Handle commands
         if message.startswith('/'):
-            asyncio.create_task(self.handle_command(message[1:], chat_view.conversation_id))
+            asyncio.create_task(self.handle_command(message[1:], chat_tab.conversation_id))
             return
 
         # Start AI response
         task = asyncio.create_task(
-            self.process_ai_response(message, chat_view.conversation_id)
+            self.process_ai_response(message, chat_tab.conversation_id)
         )
 
-        if chat_view.conversation_id not in self._current_tasks:
-            self._current_tasks[chat_view.conversation_id] = []
-        self._current_tasks[chat_view.conversation_id].append(task)
+        if chat_tab.conversation_id not in self._current_tasks:
+            self._current_tasks[chat_tab.conversation_id] = []
+        self._current_tasks[chat_tab.conversation_id].append(task)
 
         def task_done_callback(task):
-            if chat_view.conversation_id in self._current_tasks:
+            if chat_tab.conversation_id in self._current_tasks:
                 try:
-                    self._current_tasks[chat_view.conversation_id].remove(task)
+                    self._current_tasks[chat_tab.conversation_id].remove(task)
                 except ValueError as e:
-                    self._logger.debug("Value Error: %d: %s", chat_view.conversation_id, e)
+                    self._logger.debug("Value Error: %d: %s", chat_tab.conversation_id, e)
 
         task.add_done_callback(task_done_callback)
 
@@ -439,45 +439,45 @@ class MainWindow(QMainWindow):
 
     def _show_settings_dialog(self):
         """Show the conversation settings dialog."""
-        chat_view = self.current_tab
-        if not chat_view:
+        chat_tab = self.current_tab
+        if not chat_tab:
             return
 
         dialog = SettingsDialog(self)
         # Pass available models to dialog
         dialog.set_available_models(self._available_models)
-        dialog.set_settings(chat_view.get_settings())
+        dialog.set_settings(chat_tab.get_settings())
 
         if dialog.exec() == QDialog.Accepted:
             new_settings = dialog.get_settings()
-            chat_view.update_settings(new_settings)
+            chat_tab.update_settings(new_settings)
             # Get the appropriate backend for the selected model
             provider = ConversationSettings.get_provider(new_settings.model)
             backend = self._ai_backends.get(provider)
             if backend:
                 backend.update_conversation_settings(
-                    chat_view.conversation_id,
+                    chat_tab.conversation_id,
                     new_settings
                 )
 
     async def process_ai_response(self, message: str, conversation_id: str):
         """Process AI response with streaming."""
-        chat_view = self._chat_views.get(conversation_id)
-        if not chat_view:
-            self._logger.error("No chat view found for conversation %s", conversation_id)
+        chat_tab = self._chat_tabs.get(conversation_id)
+        if not chat_tab:
+            self._logger.error("No chat tab found for conversation %s", conversation_id)
             return
 
         try:
             self._logger.debug("\n=== Starting new AI response for conv %s ===", conversation_id)
 
             # Get the appropriate backend for the conversation
-            settings = chat_view.get_settings()
+            settings = chat_tab.get_settings()
             provider = ConversationSettings.get_provider(settings.model)
             backend = self._ai_backends.get(provider)
 
             if not backend:
                 error_msg = f"No backend available for provider: {provider}"
-                system_message = chat_view.add_system_message(
+                system_message = chat_tab.add_system_message(
                     error_msg,
                     error={"code": "backend_error", "message": error_msg}
                 )
@@ -486,13 +486,13 @@ class MainWindow(QMainWindow):
 
             stream = backend.stream_message(
                 message,
-                chat_view.get_message_context(),
+                chat_tab.get_message_context(),
                 conversation_id
             )
 
             async for response in stream:
                 try:
-                    message = await chat_view.update_streaming_response(
+                    message = await chat_tab.update_streaming_response(
                         content=response.content,
                         usage=response.usage,
                         error=response.error
@@ -505,7 +505,7 @@ class MainWindow(QMainWindow):
                     # Handle retryable errors by adding them to transcript
                     if response.error:
                         if response.error['code'] in ['network_error', 'timeout']:
-                            retry_message = chat_view.add_system_message(
+                            retry_message = chat_tab.add_system_message(
                                 response.error['message'],
                                 error=response.error
                             )
@@ -518,9 +518,9 @@ class MainWindow(QMainWindow):
 
         except (asyncio.CancelledError, GeneratorExit):
             self._logger.debug("AI response cancelled for conv %s", conversation_id)
-            if chat_view:
+            if chat_tab:
                 # Complete any ongoing AI response
-                message = await chat_view.update_streaming_response(
+                message = await chat_tab.update_streaming_response(
                     content="",
                     completed=True
                 )
@@ -528,7 +528,7 @@ class MainWindow(QMainWindow):
                     await self._transcript_writer.write([message.to_transcript_dict()])
 
                 # Add cancellation message
-                system_message = chat_view.add_system_message(
+                system_message = chat_tab.add_system_message(
                     "Request cancelled by user",
                     error={
                         "code": "cancelled",
@@ -544,13 +544,13 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             self._logger.exception("Error processing AI response for conv %s", conversation_id)
-            if chat_view:
+            if chat_tab:
                 error = {
                     "code": "process_error",
                     "message": str(e),
                     "details": {"type": type(e).__name__}
                 }
-                message = chat_view.update_streaming_response(
+                message = chat_tab.update_streaming_response(
                     content="",
                     error=error,
                     completed=True
@@ -563,29 +563,29 @@ class MainWindow(QMainWindow):
 
     async def handle_command(self, command: str, conversation_id: str):
         """Handle application commands."""
-        chat_view = self._chat_views.get(conversation_id)
-        if not chat_view:
+        chat_tab = self._chat_tabs.get(conversation_id)
+        if not chat_tab:
             return
 
         if command.strip().lower() == "exit":
             QApplication.quit()
             return
 
-        system_message = chat_view.add_system_message(f"Unknown command: {command}")
+        system_message = chat_tab.add_system_message(f"Unknown command: {command}")
         await self._transcript_writer.write([system_message.to_transcript_dict()])
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
 
         if event.key() == Qt.Key_Escape:
-            chat_view = self.current_tab
-            if chat_view:
-                conversation_id = chat_view.conversation_id
+            chat_tab = self.current_tab
+            if chat_tab:
+                conversation_id = chat_tab.conversation_id
                 if conversation_id in self._current_tasks:
                     for task in self._current_tasks[conversation_id]:
                         if not task.done():
                             task.cancel()
-                    chat_view.finish_ai_response()
+                    chat_tab.finish_ai_response()
                     asyncio.create_task(
                         self._handle_cancellation(conversation_id)
                     )
@@ -594,11 +594,11 @@ class MainWindow(QMainWindow):
 
     async def _handle_cancellation(self, conversation_id: str):
         """Write cancellation message to transcript."""
-        chat_view = self._chat_views.get(conversation_id)
-        if not chat_view:
+        chat_tab = self._chat_tabs.get(conversation_id)
+        if not chat_tab:
             return
 
-        cancel_message = chat_view.add_system_message(
+        cancel_message = chat_tab.add_system_message(
             "Request cancelled by user",
             error={
                 "code": "cancelled",

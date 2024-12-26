@@ -1,4 +1,4 @@
-"""Unified chat view implementation with correct scrolling and input expansion."""
+"""Unified chat tab implementation with correct scrolling and input expansion."""
 
 from typing import Dict, List, Optional
 
@@ -20,14 +20,14 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 
 
-class ChatView(TabBase):
-    """Unified chat view implementing single-window feel with distinct regions."""
+class ChatTab(TabBase):
+    """Unified chat tab implementing single-window feel with distinct regions."""
 
     # Signal emitted when the tab should be closed
     submitted = Signal(str)  # Emits message text when submitted
 
     def __init__(self, conversation_id: str, parent: Optional[QWidget] = None) -> None:
-        """Initialize the unified chat view."""
+        """Initialize the unified chat tab."""
         super().__init__(conversation_id, parent)
         self._conversation_id = conversation_id
         self._conversation = ConversationHistory(conversation_id)
@@ -160,7 +160,7 @@ class ChatView(TabBase):
 
     @property
     def conversation_id(self) -> str:
-        """Get the conversation ID for this view."""
+        """Get the conversation ID for this tab."""
         return self._conversation_id
 
     def get_settings(self) -> ConversationSettings:
