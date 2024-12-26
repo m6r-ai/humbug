@@ -6,9 +6,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QCursor
 
-from humbug.gui.color_role import ColorRole
-from humbug.gui.dynamic_text_edit import DynamicTextEdit
 from humbug.gui.chat_highlighter import ChatHighlighter
+from humbug.gui.chat_text_edit import ChatTextEdit
+from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 
 
@@ -43,8 +43,8 @@ class MessageWidget(QFrame):
         self._header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self._header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
 
-        # Create content area using custom DynamicTextEdit
-        self._text_area = DynamicTextEdit()
+        # Create content area using custom ChatTextEdit
+        self._text_area = ChatTextEdit()
         self._text_area.setReadOnly(not self._is_input)
 
         # Ensure text area takes up minimum space needed

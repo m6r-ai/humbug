@@ -13,7 +13,7 @@ from PySide6.QtGui import (
 from humbug.gui.style_manager import StyleManager
 
 
-class DynamicTextEdit(QTextEdit):
+class ChatTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
 
     mouseReleased = Signal(QMouseEvent)
@@ -49,7 +49,7 @@ class DynamicTextEdit(QTextEdit):
         # Track code block state
         self._has_code_block = False
 
-        self._logger = logging.getLogger("DynamicTextEdit")
+        self._logger = logging.getLogger("ChatTextEdit")
 
     def _handle_style_changed(self, _factor: float) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
