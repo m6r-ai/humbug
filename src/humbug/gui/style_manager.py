@@ -127,8 +127,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c0c0c0"
             },
             ColorRole.STATUS_BAR: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#d3d3d3"
+                ColorMode.DARK: "#383838",
+                ColorMode.LIGHT: "#d4d4d4"
             },
 
             # Text colors

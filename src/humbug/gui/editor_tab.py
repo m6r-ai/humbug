@@ -124,6 +124,9 @@ class EditorTab(TabBase):
                 height: 0px;
                 width: 0px;
             }}
+            QAbstractScrollArea::corner {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
         """)
 
         # Update status bar styling
