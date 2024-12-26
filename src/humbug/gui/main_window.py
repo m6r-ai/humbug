@@ -239,7 +239,7 @@ class MainWindow(QMainWindow):
         if file_path:
             # Check if file is already open
             for tab in self.tab_manager.get_all_tabs():
-                if isinstance(tab, EditorTab) and tab._filename == file_path:
+                if isinstance(tab, EditorTab) and tab.filename == file_path:
                     self.tab_manager.set_current_tab(tab.tab_id)
                     return
 

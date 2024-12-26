@@ -172,6 +172,11 @@ class EditorTab(TabBase):
             self._highlighter.set_language(new_language)
             self._update_status()
 
+    @property
+    def filename(self) -> str:
+        """Get the name of the file being edited."""
+        return self._filename
+
     def set_filename(self, filename: Optional[str], untitled_number: Optional[int] = None) -> None:
         """
         Set the file being edited.
