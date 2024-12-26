@@ -104,6 +104,12 @@ class EditorTab(TabBase):
         space_width = self._style_manager.get_space_width()
         self._editor.setTabStopDistance(space_width * 8)
 
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+            }}
+        """)
+
         # Update status bar styling
         self._status_bar.setStyleSheet(f"""
             QLabel {{
