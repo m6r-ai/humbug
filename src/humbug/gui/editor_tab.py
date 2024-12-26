@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer
 
 from humbug.gui.tab_base import TabBase
-from humbug.gui.chat_highlighter import ChatHighlighter
+from humbug.gui.editor_highlighter import EditorHighlighter
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_text_edit import EditorTextEdit
 from humbug.gui.style_manager import StyleManager
@@ -58,7 +58,7 @@ class EditorTab(TabBase):
         layout.addWidget(self._status_bar)
 
         # Set up syntax highlighter
-        self._highlighter = ChatHighlighter(self._editor.document())
+        self._highlighter = EditorHighlighter(self._editor.document())
 
         self._update_status()
 
