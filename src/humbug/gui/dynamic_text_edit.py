@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
 from PySide6.QtGui import (
-    QTextOption, QTextCursor, QTextCharFormat, QMouseEvent, QKeyEvent
+    QTextOption, QTextCursor, QMouseEvent, QKeyEvent
 )
 
 from humbug.gui.style_manager import StyleManager
@@ -51,7 +51,7 @@ class DynamicTextEdit(QTextEdit):
 
         self._logger = logging.getLogger("DynamicTextEdit")
 
-    def _handle_style_changed(self, factor: float) -> None:
+    def _handle_style_changed(self, _factor: float) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
 
     def mouseReleaseEvent(self, event):

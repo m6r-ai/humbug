@@ -26,11 +26,10 @@ class ChatTab(TabBase):
     # Signal emitted when the tab should be closed
     submitted = Signal(str)  # Emits message text when submitted
 
-    def __init__(self, conversation_id: str, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, tab_id: str, parent: Optional[QWidget] = None) -> None:
         """Initialize the unified chat tab."""
-        super().__init__(conversation_id, parent)
-        self._conversation_id = conversation_id
-        self._conversation = ConversationHistory(conversation_id)
+        super().__init__(tab_id, parent)
+        self._conversation = ConversationHistory(tab_id)
         self._settings = ConversationSettings()
         self._current_ai_message = None
         self._messages: List[MessageWidget] = []
@@ -157,11 +156,6 @@ class ChatTab(TabBase):
 
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
-
-    @property
-    def conversation_id(self) -> str:
-        """Get the conversation ID for this tab."""
-        return self._conversation_id
 
     def get_settings(self) -> ConversationSettings:
         """Get current conversation settings."""
@@ -340,55 +334,6 @@ class ChatTab(TabBase):
         """Set initial focus to input area."""
         self._input.setFocus()
 
-    def can_close(self) -> bool:
-        return True
-
-    def save(self) -> bool:
-        return True
-
-    def can_undo(self) -> bool:
-        """Check if undo is available."""
-        return self._input.document().isUndoAvailable()
-
-    def undo(self):
-        """Undo the last edit operation."""
-        self._input.undo()
-
-    def can_redo(self) -> bool:
-        """Check if redo is available."""
-        return self._input.document().isRedoAvailable()
-
-    def redo(self):
-        """Redo the last undone edit operation."""
-        self._input.redo()
-
-    def can_cut(self) -> bool:
-        """Check if cut is available."""
-        return self._input.hasFocus() and self._input.textCursor().hasSelection()
-
-    def cut(self):
-        """Cut selected text to clipboard."""
-        self._input.cut()
-
-    def can_copy(self) -> bool:
-        """Check if copy is available."""
-        return self.has_selection() or (self._input.hasFocus() and self._input.textCursor().hasSelection())
-
-    def copy(self):
-        """Copy selected text to clipboard."""
-        if self._input.hasFocus():
-            self._input.copy()
-        elif self._message_with_selection:
-            self._message_with_selection.copy_selection()
-
-    def can_paste(self) -> bool:
-        """Check if paste is available."""
-        return self._input.hasFocus()
-
-    def paste(self):
-        """Paste text from clipboard."""
-        self._input.paste()
-
     async def update_streaming_response(self, content: str, usage: Optional[Usage] = None,
                                      error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
         """Update the current AI response in the conversation."""
@@ -396,7 +341,7 @@ class ChatTab(TabBase):
             error_msg = f"Error: {error['message']}"
             self._update_last_ai_response(error_msg)
             error_message = Message.create(
-                self._conversation_id,
+                self._tab_id,
                 MessageSource.SYSTEM,
                 error_msg,
                 error=error
@@ -412,7 +357,7 @@ class ChatTab(TabBase):
         if not self._current_ai_message:
             # Create and add initial message
             message = Message.create(
-                self._conversation_id,
+                self._tab_id,
                 MessageSource.AI,
                 content,
                 model=settings.model,
@@ -448,7 +393,7 @@ class ChatTab(TabBase):
         """Add a user message to the conversation."""
         self._add_message(content, "user")
         message = Message.create(
-            self._conversation_id,
+            self._tab_id,
             MessageSource.USER,
             content
         )
@@ -459,7 +404,7 @@ class ChatTab(TabBase):
         """Add a system message to the conversation."""
         self._add_message(content, "system")
         message = Message.create(
-            self._conversation_id,
+            self._tab_id,
             MessageSource.SYSTEM,
             content,
             error=error
@@ -523,3 +468,64 @@ class ChatTab(TabBase):
             widget.handle_style_changed()
 
         self.updateGeometry()
+
+    def can_close(self) -> bool:
+        return True
+
+    def can_save(self) -> bool:
+        return False
+
+    def save(self) -> bool:
+        return True
+
+    def can_save_as(self) -> bool:
+        return False
+
+    def save_as(self) -> bool:
+        return True
+
+    def can_undo(self) -> bool:
+        """Check if undo is available."""
+        return self._input.document().isUndoAvailable()
+
+    def undo(self):
+        """Undo the last edit operation."""
+        self._input.undo()
+
+    def can_redo(self) -> bool:
+        """Check if redo is available."""
+        return self._input.document().isRedoAvailable()
+
+    def redo(self):
+        """Redo the last undone edit operation."""
+        self._input.redo()
+
+    def can_cut(self) -> bool:
+        """Check if cut is available."""
+        return self._input.hasFocus() and self._input.textCursor().hasSelection()
+
+    def cut(self):
+        """Cut selected text to clipboard."""
+        self._input.cut()
+
+    def can_copy(self) -> bool:
+        """Check if copy is available."""
+        return self.has_selection() or (self._input.hasFocus() and self._input.textCursor().hasSelection())
+
+    def copy(self):
+        """Copy selected text to clipboard."""
+        if self._input.hasFocus():
+            self._input.copy()
+        elif self._message_with_selection:
+            self._message_with_selection.copy_selection()
+
+    def can_paste(self) -> bool:
+        """Check if paste is available."""
+        return self._input.hasFocus()
+
+    def paste(self):
+        """Paste text from clipboard."""
+        self._input.paste()
+
+    def can_submit(self) -> bool:
+        return True

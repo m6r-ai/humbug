@@ -114,7 +114,7 @@ class EditorTab(TabBase):
         cursor = self._editor.textCursor()
         line = cursor.blockNumber() + 1
         column = cursor.columnNumber() + 1
-        
+
         # Get file info
         encoding = "UTF-8"
         line_ending = "LF"  # We could detect this from file content
@@ -173,6 +173,9 @@ class EditorTab(TabBase):
             return self.save()
         return reply == QMessageBox.Discard
 
+    def can_save(self) -> bool:
+        return self._is_modified
+
     def save(self) -> bool:
         """Save the current file.
         
@@ -197,6 +200,9 @@ class EditorTab(TabBase):
             )
             return False
 
+    def can_save_as(self) -> bool:
+        return True
+
     def save_as(self) -> bool:
         """Show save as dialog and save file.
         
@@ -215,15 +221,14 @@ class EditorTab(TabBase):
             return self.save()
         return False
 
-    # Implement abstract methods for editing operations
     def can_undo(self) -> bool:
         return self._editor.document().isUndoAvailable()
 
-    def can_redo(self) -> bool:
-        return self._editor.document().isRedoAvailable()
-
     def undo(self) -> None:
         self._editor.undo()
+
+    def can_redo(self) -> bool:
+        return self._editor.document().isRedoAvailable()
 
     def redo(self) -> None:
         self._editor.redo()
@@ -231,17 +236,20 @@ class EditorTab(TabBase):
     def can_cut(self) -> bool:
         return self._editor.textCursor().hasSelection()
 
-    def can_copy(self) -> bool:
-        return self._editor.textCursor().hasSelection()
-
-    def can_paste(self) -> bool:
-        return True
-
     def cut(self) -> None:
         self._editor.cut()
+
+    def can_copy(self) -> bool:
+        return self._editor.textCursor().hasSelection()
 
     def copy(self) -> None:
         self._editor.copy()
 
+    def can_paste(self) -> bool:
+        return True
+
     def paste(self) -> None:
         self._editor.paste()
+
+    def can_submit(self) -> bool:
+        return False

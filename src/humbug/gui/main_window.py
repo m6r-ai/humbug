@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
         self._ai_backends = ai_backends
         self._transcript_writer = transcript_writer
         self._conversation_count = 0
-        self._chat_tabs = {}  # conversation_id -> ChatTab
+        self._chat_tabs = {}  # tab_id -> ChatTab
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
@@ -58,9 +58,9 @@ class MainWindow(QMainWindow):
         self._new_file_action.setShortcut(QKeySequence.New)
         self._new_file_action.triggered.connect(self._new_file)
 
-        self._close_conv_action = QAction("Close Tab", self)
-        self._close_conv_action.setShortcut(QKeySequence("Ctrl+W"))
-        self._close_conv_action.triggered.connect(self._close_current_tab)
+        self._close_tab_action = QAction("Close Tab", self)
+        self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
+        self._close_tab_action.triggered.connect(self._close_current_tab)
 
         self._open_action = QAction("Open File...", self)
         self._open_action.setShortcut(QKeySequence.Open)
@@ -140,7 +140,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self._save_action)
         file_menu.addAction(self._save_as_action)
         file_menu.addSeparator()
-        file_menu.addAction(self._close_conv_action)
+        file_menu.addAction(self._close_tab_action)
 
         # Edit menu
         edit_menu = self._menu_bar.addMenu("&Edit")
@@ -191,19 +191,19 @@ class MainWindow(QMainWindow):
         self._menu_timer.start()
 
     def _undo(self):
-        self.current_tab.undo()
+        self.tab_manager.get_current_tab().undo()
 
     def _redo(self):
-        self.current_tab.redo()
+        self.tab_manager.get_current_tab().redo()
 
     def _cut(self):
-        self.current_tab.cut()
+        self.tab_manager.get_current_tab().cut()
 
     def _copy(self):
-        self.current_tab.copy()
+        self.tab_manager.get_current_tab().copy()
 
     def _paste(self):
-        self.current_tab.paste()
+        self.tab_manager.get_current_tab().paste()
 
     def _show_about_dialog(self):
         """Show the About dialog."""
@@ -218,8 +218,8 @@ class MainWindow(QMainWindow):
         editor.set_filename(None, self._untitled_count)
 
         # Connect editor signals
-        editor.close_requested.connect(lambda id: self.tab_manager.close_tab(id))
-        editor.title_changed.connect(self.tab_manager.update_tab_title)
+        editor.close_requested.connect(self._handle_tab_close_requested)
+        editor.title_changed.connect(self._handle_tab_title_changed)
         editor.modified_state_changed.connect(self._handle_tab_modified)
 
         self.tab_manager.add_tab(editor, f"Untitled-{self._untitled_count}")
@@ -247,8 +247,8 @@ class MainWindow(QMainWindow):
             editor.set_filename(file_path)
 
             # Connect editor signals
-            editor.close_requested.connect(lambda id: self.tab_manager.close_tab(id))
-            editor.title_changed.connect(self.tab_manager.update_tab_title)
+            editor.close_requested.connect(self._handle_tab_close_requested)
+            editor.title_changed.connect(self._handle_tab_title_changed)
             editor.modified_state_changed.connect(self._handle_tab_modified)
 
             self.tab_manager.add_tab(editor, os.path.basename(file_path))
@@ -265,10 +265,17 @@ class MainWindow(QMainWindow):
         if isinstance(current_tab, EditorTab):
             current_tab.save_as()
 
-    def _handle_tab_modified(self, tab_id: str, modified: bool):
+    def _handle_tab_close_requested(self, tab_id: str) -> None:
+        """Update UI to reflect a tab has been requested to close."""
+        self.tab_manager.close_tab(tab_id)
+
+    def _handle_tab_title_changed(self, tab_id: str, title: str) -> None:
+        """Update UI to reflect a tab title has changed."""
+        self.tab_manager.update_tab_title(tab_id, title)
+
+    def _handle_tab_modified(self, tab_id: str, modified: bool) -> None:
         """Update UI to reflect tab modified state."""
         self.tab_manager.set_tab_modified(tab_id, modified)
-        self._update_menu_state()
 
     @Slot()
     def _update_menu_state(self):
@@ -278,35 +285,32 @@ class MainWindow(QMainWindow):
         # Disable all actions by default
         self._save_action.setEnabled(False)
         self._save_as_action.setEnabled(False)
+        self._close_tab_action.setEnabled(False)
         self._undo_action.setEnabled(False)
         self._redo_action.setEnabled(False)
         self._cut_action.setEnabled(False)
         self._copy_action.setEnabled(False)
         self._paste_action.setEnabled(False)
         self._submit_action.setEnabled(False)
-        self._close_conv_action.setEnabled(False)
         self._settings_action.setEnabled(False)
 
         if not current_tab:
             return
 
         # Enable common edit operations based on tab state
+        self._save_action.setEnabled(current_tab.can_save())
+        self._save_as_action.setEnabled(current_tab.can_save_as())
+        self._close_tab_action.setEnabled(True)
         self._undo_action.setEnabled(current_tab.can_undo())
         self._redo_action.setEnabled(current_tab.can_redo())
         self._cut_action.setEnabled(current_tab.can_cut())
         self._copy_action.setEnabled(current_tab.can_copy())
         self._paste_action.setEnabled(current_tab.can_paste())
-        self._close_conv_action.setEnabled(True)
-
-        # Enable file-specific operations for editor tabs
-        if isinstance(current_tab, EditorTab):
-            self._save_action.setEnabled(current_tab.is_modified)
-            self._save_as_action.setEnabled(True)
+        self._submit_action.setEnabled(current_tab.can_submit())
 
         # Enable chat-specific operations for chat tabs
-        elif isinstance(current_tab, ChatTab):
+        if isinstance(current_tab, ChatTab):
             has_text = bool(current_tab.get_input_text())
-            self._submit_action.setEnabled(has_text)
             self._settings_action.setEnabled(True)
 
         # Update zoom actions
@@ -361,22 +365,19 @@ class MainWindow(QMainWindow):
     def _new_conversation_tab(self) -> str:
         """Create a new conversation tab and return its ID."""
         self._conversation_count += 1
-        conversation_id = str(uuid.uuid4())
-        chat_tab = ChatTab(conversation_id, self)
+        tab_id = str(uuid.uuid4())
+        chat_tab = ChatTab(tab_id, self)
         self.tab_manager.add_tab(chat_tab, f"Conv {self._conversation_count}")
-        self._chat_tabs[conversation_id] = chat_tab
-        return conversation_id
+        self._chat_tabs[tab_id] = chat_tab
+        return tab_id
 
     def _close_current_tab(self):
         """Close the current conversation tab."""
-        chat_tab = self.current_tab
-        if chat_tab:
-            self.tab_manager.close_tab(chat_tab.conversation_id)
+        chat_tab = self.tab_manager.get_current_tab()
+        if not chat_tab:
+            return
 
-    @property
-    def current_tab(self):
-        """Get the currently active tab."""
-        return self.tab_manager.get_current_tab()
+        self.tab_manager.close_tab(chat_tab.tab_id)
 
     def _sanitize_input(self, text: str) -> str:
         """Strip control characters from input text, preserving newlines."""
@@ -384,8 +385,11 @@ class MainWindow(QMainWindow):
 
     def _submit_message(self):
         """Handle message submission."""
-        chat_tab = self.current_tab
+        chat_tab = self.tab_manager.get_current_tab()
         if not chat_tab:
+            return
+
+        if not chat_tab.can_submit():
             return
 
         message = self._sanitize_input(chat_tab.get_input_text().strip())
@@ -405,24 +409,25 @@ class MainWindow(QMainWindow):
 
         # Handle commands
         if message.startswith('/'):
-            asyncio.create_task(self.handle_command(message[1:], chat_tab.conversation_id))
+            asyncio.create_task(self.handle_command(message[1:], chat_tab.tab_id))
             return
 
         # Start AI response
         task = asyncio.create_task(
-            self.process_ai_response(message, chat_tab.conversation_id)
+            self.process_ai_response(message, chat_tab.tab_id)
         )
 
-        if chat_tab.conversation_id not in self._current_tasks:
-            self._current_tasks[chat_tab.conversation_id] = []
-        self._current_tasks[chat_tab.conversation_id].append(task)
+        if chat_tab.tab_id not in self._current_tasks:
+            self._current_tasks[chat_tab.tab_id] = []
+
+        self._current_tasks[chat_tab.tab_id].append(task)
 
         def task_done_callback(task):
-            if chat_tab.conversation_id in self._current_tasks:
+            if chat_tab.tab_id in self._current_tasks:
                 try:
-                    self._current_tasks[chat_tab.conversation_id].remove(task)
+                    self._current_tasks[chat_tab.tab_id].remove(task)
                 except ValueError as e:
-                    self._logger.debug("Value Error: %d: %s", chat_tab.conversation_id, e)
+                    self._logger.debug("Value Error: %d: %s", chat_tab.tab_id, e)
 
         task.add_done_callback(task_done_callback)
 
@@ -437,7 +442,7 @@ class MainWindow(QMainWindow):
 
     def _show_settings_dialog(self):
         """Show the conversation settings dialog."""
-        chat_tab = self.current_tab
+        chat_tab = self.tab_manager.get_current_tab()
         if not chat_tab:
             return
 
@@ -454,19 +459,19 @@ class MainWindow(QMainWindow):
             backend = self._ai_backends.get(provider)
             if backend:
                 backend.update_conversation_settings(
-                    chat_tab.conversation_id,
+                    chat_tab.tab_id,
                     new_settings
                 )
 
-    async def process_ai_response(self, message: str, conversation_id: str):
+    async def process_ai_response(self, message: str, tab_id: str):
         """Process AI response with streaming."""
-        chat_tab = self._chat_tabs.get(conversation_id)
+        chat_tab = self._chat_tabs.get(tab_id)
         if not chat_tab:
-            self._logger.error("No chat tab found for conversation %s", conversation_id)
+            self._logger.error("No chat tab found for conversation %s", tab_id)
             return
 
         try:
-            self._logger.debug("\n=== Starting new AI response for conv %s ===", conversation_id)
+            self._logger.debug("\n=== Starting new AI response for conv %s ===", tab_id)
 
             # Get the appropriate backend for the conversation
             settings = chat_tab.get_settings()
@@ -485,7 +490,7 @@ class MainWindow(QMainWindow):
             stream = backend.stream_message(
                 message,
                 chat_tab.get_message_context(),
-                conversation_id
+                tab_id
             )
 
             async for response in stream:
@@ -515,7 +520,7 @@ class MainWindow(QMainWindow):
                     break
 
         except (asyncio.CancelledError, GeneratorExit):
-            self._logger.debug("AI response cancelled for conv %s", conversation_id)
+            self._logger.debug("AI response cancelled for conv %s", tab_id)
             if chat_tab:
                 # Complete any ongoing AI response
                 message = await chat_tab.update_streaming_response(
@@ -541,7 +546,7 @@ class MainWindow(QMainWindow):
             return
 
         except Exception as e:
-            self._logger.exception("Error processing AI response for conv %s", conversation_id)
+            self._logger.exception("Error processing AI response for conv %s", tab_id)
             if chat_tab:
                 error = {
                     "code": "process_error",
@@ -557,11 +562,11 @@ class MainWindow(QMainWindow):
                     await self._transcript_writer.write([message.to_transcript_dict()])
 
         finally:
-            self._logger.debug("=== Finished AI response for conv %s ===", conversation_id)
+            self._logger.debug("=== Finished AI response for conv %s ===", tab_id)
 
-    async def handle_command(self, command: str, conversation_id: str):
+    async def handle_command(self, command: str, tab_id: str):
         """Handle application commands."""
-        chat_tab = self._chat_tabs.get(conversation_id)
+        chat_tab = self._chat_tabs.get(tab_id)
         if not chat_tab:
             return
 
@@ -576,23 +581,23 @@ class MainWindow(QMainWindow):
         """Handle global key events."""
 
         if event.key() == Qt.Key_Escape:
-            chat_tab = self.current_tab
+            chat_tab = self.tab_manager.get_current_tab()
             if chat_tab:
-                conversation_id = chat_tab.conversation_id
-                if conversation_id in self._current_tasks:
-                    for task in self._current_tasks[conversation_id]:
+                tab_id = chat_tab.tab_id
+                if tab_id in self._current_tasks:
+                    for task in self._current_tasks[tab_id]:
                         if not task.done():
                             task.cancel()
                     chat_tab.finish_ai_response()
                     asyncio.create_task(
-                        self._handle_cancellation(conversation_id)
+                        self._handle_cancellation(tab_id)
                     )
         else:
             super().keyPressEvent(event)
 
-    async def _handle_cancellation(self, conversation_id: str):
+    async def _handle_cancellation(self, tab_id: str):
         """Write cancellation message to transcript."""
-        chat_tab = self._chat_tabs.get(conversation_id)
+        chat_tab = self._chat_tabs.get(tab_id)
         if not chat_tab:
             return
 
