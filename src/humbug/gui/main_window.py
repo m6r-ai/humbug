@@ -627,3 +627,13 @@ class MainWindow(QMainWindow):
     def _set_zoom(self, zoom_level: float):
         """Set zoom level for the application."""
         self._style_manager.set_zoom(zoom_level)
+
+    def closeEvent(self, event):
+        """Handle application close request."""
+        # Check each tab in turn
+        for tab in self.tab_manager.get_all_tabs():
+            if tab.is_modified and not tab.can_close():
+                event.ignore()
+                return
+
+        event.accept()
