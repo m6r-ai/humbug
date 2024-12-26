@@ -146,6 +146,7 @@ class TabManager(QTabWidget):
         label = self._tab_labels.get(tab_id)
         if label:
             label.update_text(title)
+            self.adjustSize()
 
     def set_tab_modified(self, tab_id: str, modified: bool) -> None:
         """
@@ -166,6 +167,8 @@ class TabManager(QTabWidget):
                 label.update_text(f"{current_text}*")
             elif not modified and current_text.endswith('*'):
                 label.update_text(current_text[:-1])
+
+            self.adjustSize()
 
     def _on_tab_changed(self, index: int) -> None:
         """
