@@ -1,31 +1,11 @@
 from dataclasses import dataclass
-from enum import IntEnum
+from typing import Optional
 
 from humbug.syntax.lexer import Token
 from humbug.syntax.chat_lexer import ChatLexer
 from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.c_parser import CParser
-from humbug.syntax.cpp_parser import CppParser
-from humbug.syntax.css_parser import CSSParser
-from humbug.syntax.html_parser import HTMLParser
-from humbug.syntax.javascript_parser import JavaScriptParser
-from humbug.syntax.metaphor_parser import MetaphorParser
-from humbug.syntax.python_parser import PythonParser
-from humbug.syntax.text_parser import TextParser
-from humbug.syntax.typescript_parser import TypeScriptParser
-
-
-class ProgrammingLanguage(IntEnum):
-    UNKNOWN = -1
-    C = 0
-    CPP = 1
-    CSS = 2
-    HTML = 3
-    JAVASCRIPT = 4
-    METAPHOR = 5
-    PYTHON = 6
-    TEXT = 7
-    TYPESCRIPT = 8
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser_factory import ParserFactory
 
 
 # Mapping from lowercase language names to enum members
@@ -44,46 +24,51 @@ language_mapping = {
 
 @dataclass
 class ChatParserState(ParserState):
+    """
+    State information for the Chat parser.
+
+    Attributes:
+        in_fence_block: Indicates if we're currently in a code fence block
+        language: The current programming language being parsed
+        embedded_parser_state: State of the embedded language parser
+    """
     in_fence_block: bool = False
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState = None
 
 
 class ChatParser(Parser):
+    """
+    Parser for chat content with embedded code blocks.
+
+    This parser processes chat content and delegates embedded code blocks to
+    appropriate language-specific parsers.
+    """
+
     def _embedded_parse(
             self,
             language: ProgrammingLanguage,
             prev_embedded_parser_state: ParserState,
             input_str: str
     ) -> ParserState:
-        embedded_parser = None
-        match language:
-            case ProgrammingLanguage.C:
-                embedded_parser = CParser()
+        """
+        Parse embedded code content using an appropriate language parser.
 
-            case ProgrammingLanguage.CPP:
-                embedded_parser = CppParser()
+        Args:
+            language: The programming language to use for parsing
+            prev_embedded_parser_state: Previous parser state if any
+            input_str: The input string to parse
 
-            case ProgrammingLanguage.CSS:
-                embedded_parser = CSSParser()
+        Returns:
+            Updated parser state after parsing
 
-            case ProgrammingLanguage.HTML:
-                embedded_parser = HTMLParser()
-
-            case ProgrammingLanguage.JAVASCRIPT:
-                embedded_parser = JavaScriptParser()
-
-            case ProgrammingLanguage.METAPHOR:
-                embedded_parser = MetaphorParser()
-
-            case ProgrammingLanguage.PYTHON:
-                embedded_parser = PythonParser()
-
-            case ProgrammingLanguage.TEXT:
-                embedded_parser = TextParser()
-
-            case ProgrammingLanguage.TYPESCRIPT:
-                embedded_parser = TypeScriptParser()
+        Note:
+            Uses ParserFactory to instantiate appropriate parser for the language.
+            Returns None if no parser is available for the language.
+        """
+        embedded_parser = ParserFactory.create_parser(language)
+        if not embedded_parser:
+            return None
 
         # We apply a per-parser offset to any continuation value in case we switched language!
         continuation_offset = int(language) * 0x1000
@@ -99,7 +84,21 @@ class ChatParser(Parser):
 
         return embedded_parser_state
 
-    def parse(self, prev_parser_state: ChatParserState, input_str: str) -> ChatParserState:
+    def parse(self, prev_parser_state: Optional[ChatParserState], input_str: str) -> ChatParserState:
+        """
+        Parse chat content including embedded code blocks.
+
+        Args:
+            prev_parser_state: Optional previous parser state
+            input_str: The input string to parse
+
+        Returns:
+            The updated parser state after parsing
+
+        Note:
+            Handles transitions between regular chat content and code fence blocks,
+            delegating code blocks to appropriate language parsers.
+        """
         parser_state = ChatParserState()
 
         if prev_parser_state:
@@ -158,6 +157,7 @@ class ChatParser(Parser):
         if parse_embedded:
             embedded_parser_state = self._embedded_parse(parser_state.language, parser_state.embedded_parser_state, input_str)
             parser_state.embedded_parser_state = embedded_parser_state
-            parser_state.continuation_state = embedded_parser_state.continuation_state
+            if embedded_parser_state:
+                parser_state.continuation_state = embedded_parser_state.continuation_state
 
         return parser_state

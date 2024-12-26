@@ -11,7 +11,8 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.chat_parser import ChatParser, ChatParserState, ProgrammingLanguage
+from humbug.syntax.chat_parser import ChatParser, ChatParserState
+from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 class EditorHighlighterBlockData(QTextBlockUserData):
