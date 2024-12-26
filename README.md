@@ -59,10 +59,6 @@ Launch the application:
 python -m humbug
 ```
 
-### Commands
-
-- `/exit` - Exit the application
-
 ### Keyboard Shortcuts
 
 - `Ctrl+J` - Submit message

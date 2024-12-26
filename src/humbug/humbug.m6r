@@ -355,10 +355,6 @@ Context: humbug application
     Context: User/AI interactions
         Each conversation comprises a chat between a user and one or more AI backends.
 
-        If the user starts a message with "/" this indicates a command to the application rather than a message
-        for the AI.  The application must process commands as they are presented, stripping the "/" before
-        processing..
-
         Interactions occur in a turn-by-turn fashion, where the user edits a message, until they hit "Ctrl+J".  On
         hitting "Ctrl+J" the application will add the user's message to the conversation transcript and process the
         message.  If the message is for the AI then the application will attempt to send the message to the AI
@@ -369,8 +365,7 @@ Context: humbug application
         The bottom line of each conversation window has a status bar.
 
         The top part of the conversation window will show a history of everything that has happened, including
-        messages and commands from the user, responses from the application, and responses from the AI.  Historical
-        messages cannot be edited
+        messages, responses from the application, and responses from the AI.  Historical messages cannot be edited
 
         Below the conversation history and above the status bar is a user input editor.  This input area will increase
         in size upwards as the user adds more content.  This editable region can be arbitrarily large.
@@ -566,25 +561,6 @@ Context: humbug application
                 1. Log error to stderr.
                 2. Create backup file.
                 3. Continue with new file.
-
-    Context: Commands
-        The following are commands the application must support (commands are case sensitive):
-
-        Context: "exit":
-            On receiving the "exit" command the application will exit.
-
-        Context: "new":
-            Creates a new empty editor tab
-
-        Context: "open":
-            Shows the open file dialog
-
-        Context: "save":
-            Saves the current file if in an editor tab
-
-        Context: Unknown commands
-            If the user types and unknown command then the application will respond that it does not know the
-            command.
 
     Context: State handling
         No state is preserved between different invocations of the application.
@@ -1047,7 +1023,6 @@ Action: Build the software
 
     Embed: src/humbug/*.py
     Embed: src/humbug/ai/*.py
-    Embed: src/humbug/commands/*.py
     Embed: src/humbug/conversation/*.py
     Embed: src/humbug/gui/*.py
     Embed: src/humbug/transcript/*.py

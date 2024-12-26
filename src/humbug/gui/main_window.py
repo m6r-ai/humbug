@@ -407,11 +407,6 @@ class MainWindow(QMainWindow):
             self._transcript_writer.write([user_message.to_transcript_dict()])
         )
 
-        # Handle commands
-        if message.startswith('/'):
-            asyncio.create_task(self.handle_command(message[1:], chat_tab.tab_id))
-            return
-
         # Start AI response
         task = asyncio.create_task(
             self.process_ai_response(message, chat_tab.tab_id)
@@ -563,19 +558,6 @@ class MainWindow(QMainWindow):
 
         finally:
             self._logger.debug("=== Finished AI response for conv %s ===", tab_id)
-
-    async def handle_command(self, command: str, tab_id: str):
-        """Handle application commands."""
-        chat_tab = self._chat_tabs.get(tab_id)
-        if not chat_tab:
-            return
-
-        if command.strip().lower() == "exit":
-            QApplication.quit()
-            return
-
-        system_message = chat_tab.add_system_message(f"Unknown command: {command}")
-        await self._transcript_writer.write([system_message.to_transcript_dict()])
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
