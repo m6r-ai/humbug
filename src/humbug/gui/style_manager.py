@@ -22,7 +22,8 @@ class ColorMode(Enum):
 
 
 class StyleManager(QObject):
-    """Singleton manager for application-wide style settings.
+    """
+    Singleton manager for application-wide style settings.
 
     Handles zoom factor management and style updates across the application.
     Emits signals when zoom level changes to notify dependent components.
@@ -267,7 +268,8 @@ class StyleManager(QObject):
         return text_highlight
 
     def get_color(self, role: ColorRole) -> QColor:
-        """Get a color for a specific role.
+        """
+        Get a color for a specific role.
 
         Args:
             role: The ColorRole to look up
@@ -281,7 +283,8 @@ class StyleManager(QObject):
         return QColor(self._colors[role][self._color_mode])
 
     def get_color_str(self, role: ColorRole) -> str:
-        """Get a color string for a specific role.
+        """
+        Get a color string for a specific role.
 
         Args:
             role: The ColorRole to look up
@@ -301,7 +304,8 @@ class StyleManager(QObject):
         return self._highlights.get(token_type, self._error_highlight)
 
     def _determine_base_font_size(self) -> float:
-        """Determine the default system font size based on the operating system.
+        """
+        Determine the default system font size based on the operating system.
 
         Returns:
             int: Base font size in points.
@@ -339,7 +343,8 @@ class StyleManager(QObject):
         return self._color_mode
 
     def set_color_mode(self, mode: ColorMode):
-        """Set the color mode and update application styles.
+        """
+        Set the color mode and update application styles.
 
         Args:
             mode: The ColorMode to switch to
@@ -355,7 +360,8 @@ class StyleManager(QObject):
         return self._zoom_factor
 
     def set_zoom(self, factor: float):
-        """Set new zoom factor and update application styles.
+        """
+        Set new zoom factor and update application styles.
 
         Args:
             factor: New zoom factor to apply (clamped between 0.5 and 2.0)
@@ -366,7 +372,8 @@ class StyleManager(QObject):
             self.style_changed.emit(self._zoom_factor)
 
     def get_scaled_size(self, base_size: float) -> float:
-        """Calculate scaled size based on current zoom factor.
+        """
+        Calculate scaled size based on current zoom factor.
 
         Args:
             base_size: Original size to scale
@@ -384,7 +391,8 @@ class StyleManager(QObject):
         return space_width
 
     def points_to_pixels(self, points: float) -> float:
-        """Convert point size to pixels based on device pixel ratio.
+        """
+        Convert point size to pixels based on device pixel ratio.
 
         Args:
             points: Font size in points
@@ -402,7 +410,8 @@ class StyleManager(QObject):
         return (points * logical_dpi) / 72.0
 
     def pixels_to_points(self, pixels: float) -> float:
-        """Convert pixel size to points based on device pixel ratio.
+        """
+        Convert pixel size to points based on device pixel ratio.
 
         Args:
             pixels: Size in pixels

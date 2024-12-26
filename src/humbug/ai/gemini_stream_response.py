@@ -17,7 +17,8 @@ class GeminiStreamResponse:
         self._logger = logging.getLogger("GeminiStreamResponse")
 
     def update_from_chunk(self, chunk: dict) -> None:
-        """Update from a response chunk and return new content if any.
+        """
+        Update from a response chunk and return new content if any.
 
         Args:
             chunk: Response chunk from Gemini API

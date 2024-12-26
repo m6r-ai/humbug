@@ -11,7 +11,8 @@ class TabBase(QFrame):
     modified_state_changed = Signal(str, bool)  # Emits (tab_id, is_modified)
 
     def __init__(self, tab_id: str, parent=None):
-        """Initialize the base tab.
+        """
+        Initialize the base tab.
 
         Args:
             tab_id: Unique identifier for this tab
@@ -38,21 +39,24 @@ class TabBase(QFrame):
             self.modified_state_changed.emit(self._tab_id, modified)
 
     def can_close(self) -> bool:
-        """Check if the tab can be closed.
+        """
+        Check if the tab can be closed.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_close")
 
     def can_save(self) -> bool:
-        """Check if the tab can be saved.
+        """
+        Check if the tab can be saved.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_save")
 
     def save(self) -> bool:
-        """Save the tab's content if applicable.
+        """
+        Save the tab's content if applicable.
 
         Must be implemented by subclasses.
 
@@ -62,14 +66,16 @@ class TabBase(QFrame):
         raise NotImplementedError("Subclasses must implement save")
 
     def can_save_as(self) -> bool:
-        """Check if the tab can be saved "as".
+        """
+        Check if the tab can be saved "as".
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_save_as")
 
     def save_as(self) -> bool:
-        """Save the tab's content "as" if applicable.
+        """
+        Save the tab's content "as" if applicable.
 
         Must be implemented by subclasses.
 
@@ -79,77 +85,88 @@ class TabBase(QFrame):
         raise NotImplementedError("Subclasses must implement save_as")
 
     def can_undo(self) -> bool:
-        """Check if undo operation is available.
+        """
+        Check if undo operation is available.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_undo")
 
     def undo(self) -> None:
-        """Perform undo operation.
+        """
+        Perform undo operation.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement undo")
 
     def can_redo(self) -> bool:
-        """Check if redo operation is available.
+        """
+        Check if redo operation is available.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_redo")
 
     def redo(self) -> None:
-        """Perform redo operation.
+        """
+        Perform redo operation.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement redo")
 
     def can_cut(self) -> bool:
-        """Check if cut operation is available.
+        """
+        Check if cut operation is available.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_cut")
 
     def cut(self) -> None:
-        """Perform cut operation.
+        """
+        Perform cut operation.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement cut")
 
     def can_copy(self) -> bool:
-        """Check if copy operation is available.
+        """
+        Check if copy operation is available.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_copy")
 
     def copy(self) -> None:
-        """Perform copy operation.
+        """
+        Perform copy operation.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement copy")
 
     def can_paste(self) -> bool:
-        """Check if paste operation is available.
+        """
+        Check if paste operation is available.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_paste")
 
     def paste(self) -> None:
-        """Perform paste operation.
+        """
+        Perform paste operation.
 
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement paste")
 
     def can_submit(self) -> bool:
-        """Check if submit operation is available.
+        """
+        Check if submit operation is available.
 
         Must be implemented by subclasses.
         """

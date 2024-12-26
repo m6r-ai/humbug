@@ -19,7 +19,8 @@ class EditorTab(TabBase):
     """Tab for editing text files."""
 
     def __init__(self, tab_id: str, parent=None):
-        """Initialize editor tab.
+        """
+        Initialize editor tab.
         
         Args:
             tab_id: Unique identifier for this tab
@@ -63,7 +64,8 @@ class EditorTab(TabBase):
         self._update_status()
 
     def set_filename(self, filename: Optional[str], untitled_number: Optional[int] = None) -> None:
-        """Set the file being edited.
+        """
+        Set the file being edited.
         
         Args:
             filename: Path to file or None for new file
@@ -177,7 +179,8 @@ class EditorTab(TabBase):
         return self._is_modified
 
     def save(self) -> bool:
-        """Save the current file.
+        """
+        Save the current file.
         
         Returns:
             bool: True if save was successful
@@ -204,7 +207,8 @@ class EditorTab(TabBase):
         return True
 
     def save_as(self) -> bool:
-        """Show save as dialog and save file.
+        """
+        Show save as dialog and save file.
         
         Returns:
             bool: True if save was successful

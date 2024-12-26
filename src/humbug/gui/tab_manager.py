@@ -39,7 +39,8 @@ class TabManager(QTabWidget):
         self._handle_style_changed(self._style_manager.zoom_factor)
 
     def add_tab(self, tab: TabBase, title: str) -> None:
-        """Add a new tab to the manager.
+        """
+        Add a new tab to the manager.
         
         Args:
             tab: The tab widget to add
@@ -64,7 +65,8 @@ class TabManager(QTabWidget):
         self.setCurrentWidget(tab)
 
     def close_tab(self, tab_id: str) -> None:
-        """Close a tab by its ID.
+        """
+        Close a tab by its ID.
         
         Args:
             tab_id: ID of the tab to close
@@ -92,7 +94,8 @@ class TabManager(QTabWidget):
         tab.deleteLater()
 
     def get_current_tab(self) -> Optional[TabBase]:
-        """Get the currently active tab.
+        """
+        Get the currently active tab.
         
         Returns:
             The current tab or None if no tabs exist
@@ -101,7 +104,8 @@ class TabManager(QTabWidget):
         return cast(TabBase, widget) if widget else None
 
     def get_tab(self, tab_id: str) -> Optional[TabBase]:
-        """Get a tab by its ID.
+        """
+        Get a tab by its ID.
         
         Args:
             tab_id: ID of the tab to retrieve
@@ -112,7 +116,8 @@ class TabManager(QTabWidget):
         return self._tabs.get(tab_id)
 
     def get_all_tabs(self) -> List[TabBase]:
-        """Get all tabs.
+        """
+        Get all tabs.
         
         Returns:
             List of all tab instances
@@ -120,7 +125,8 @@ class TabManager(QTabWidget):
         return list(self._tabs.values())
 
     def set_current_tab(self, tab_id: str) -> None:
-        """Set the current tab by ID.
+        """
+        Set the current tab by ID.
         
         Args:
             tab_id: ID of the tab to make current
@@ -130,7 +136,8 @@ class TabManager(QTabWidget):
             self.setCurrentWidget(tab)
 
     def update_tab_title(self, tab_id: str, title: str) -> None:
-        """Update a tab's title.
+        """
+        Update a tab's title.
         
         Args:
             tab_id: ID of the tab to update
@@ -141,7 +148,8 @@ class TabManager(QTabWidget):
             label.update_text(title)
 
     def set_tab_modified(self, tab_id: str, modified: bool) -> None:
-        """Update a tab's modified state.
+        """
+        Update a tab's modified state.
         
         Args:
             tab_id: ID of the tab to update
@@ -160,7 +168,8 @@ class TabManager(QTabWidget):
                 label.update_text(current_text[:-1])
 
     def _on_tab_changed(self, index: int) -> None:
-        """Handle tab selection changes.
+        """
+        Handle tab selection changes.
 
         Args:
             index: Index of the newly selected tab
@@ -172,7 +181,8 @@ class TabManager(QTabWidget):
             label.set_current(is_current)
 
     def _handle_style_changed(self, factor: float = 1.0) -> None:
-        """Handle style changes from StyleManager.
+        """
+        Handle style changes from StyleManager.
 
         Args:
             factor: New zoom factor

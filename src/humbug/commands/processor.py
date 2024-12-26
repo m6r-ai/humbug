@@ -22,7 +22,8 @@ class CommandProcessor:
         }
 
     async def process_command(self, command: str) -> Optional[str]:
-        """Process a command and return response if any.
+        """
+        Process a command and return response if any.
 
         Args:
             command: The command string to process

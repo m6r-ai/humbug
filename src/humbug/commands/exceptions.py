@@ -2,7 +2,8 @@
 
 
 class CommandNotFoundError(Exception):
-    """Unknown command errors.
+    """
+    Unknown command errors.
 
     Raised when the user attempts to execute a command that doesn't exist
     in the registered command set.
@@ -10,7 +11,8 @@ class CommandNotFoundError(Exception):
 
 
 class CommandExecutionError(Exception):
-    """Command execution failure.
+    """
+    Command execution failure.
     
     Raised by commands when they encounter unrecoverable errors during
     execution. Commands should wrap their specific errors in this exception
