@@ -60,7 +60,7 @@ class MainWindow(QMainWindow):
 
         self._close_conv_action = QAction("Close Tab", self)
         self._close_conv_action.setShortcut(QKeySequence("Ctrl+W"))
-        self._close_conv_action.triggered.connect(self._close_current_conversation)
+        self._close_conv_action.triggered.connect(self._close_current_tab)
 
         self._open_action = QAction("Open File...", self)
         self._open_action.setShortcut(QKeySequence.Open)
@@ -369,11 +369,11 @@ class MainWindow(QMainWindow):
         self._chat_views[conversation_id] = chat_view
         return conversation_id
 
-    def _close_current_conversation(self):
+    def _close_current_tab(self):
         """Close the current conversation tab."""
         chat_view = self.current_tab
         if chat_view:
-            self.tab_manager.close_conversation(chat_view.conversation_id)
+            self.tab_manager.close_tab(chat_view.conversation_id)
 
     @property
     def current_tab(self):
