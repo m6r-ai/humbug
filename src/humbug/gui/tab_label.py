@@ -195,3 +195,4 @@ class TabLabel(QWidget):
             text: New text to display
         """
         self._label.setText(text)
+        self.adjustSize()
