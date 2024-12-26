@@ -528,4 +528,5 @@ class ChatTab(TabBase):
         self._input.paste()
 
     def can_submit(self) -> bool:
-        return True
+        has_text = bool(self.get_input_text())
+        return has_text

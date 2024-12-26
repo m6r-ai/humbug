@@ -1,17 +1,16 @@
 import os
 import time
-from typing import Optional, Set
+from typing import Optional
 
 from PySide6.QtWidgets import (
-    QVBoxLayout, QLabel, QFileDialog, QMessageBox
+    QVBoxLayout, QLabel, QFileDialog, QMessageBox,
 )
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QTextCharFormat, QSyntaxHighlighter
+from PySide6.QtCore import QTimer
 
 from humbug.gui.tab_base import TabBase
-from humbug.gui.dynamic_text_edit import DynamicTextEdit
 from humbug.gui.chat_highlighter import ChatHighlighter
 from humbug.gui.color_role import ColorRole
+from humbug.gui.editor_text_edit import EditorTextEdit
 from humbug.gui.style_manager import StyleManager
 
 
@@ -21,7 +20,7 @@ class EditorTab(TabBase):
     def __init__(self, tab_id: str, parent=None):
         """
         Initialize editor tab.
-        
+
         Args:
             tab_id: Unique identifier for this tab
             parent: Optional parent widget
@@ -42,7 +41,7 @@ class EditorTab(TabBase):
         layout.setSpacing(0)
 
         # Create editor
-        self._editor = DynamicTextEdit()
+        self._editor = EditorTextEdit()
         self._editor.textChanged.connect(self._handle_text_changed)
         self._editor.cursorPositionChanged.connect(self._update_status)
         layout.addWidget(self._editor)
@@ -66,7 +65,7 @@ class EditorTab(TabBase):
     def set_filename(self, filename: Optional[str], untitled_number: Optional[int] = None) -> None:
         """
         Set the file being edited.
-        
+
         Args:
             filename: Path to file or None for new file
             untitled_number: Number to use for untitled file
@@ -181,7 +180,7 @@ class EditorTab(TabBase):
     def save(self) -> bool:
         """
         Save the current file.
-        
+
         Returns:
             bool: True if save was successful
         """
@@ -209,7 +208,7 @@ class EditorTab(TabBase):
     def save_as(self) -> bool:
         """
         Show save as dialog and save file.
-        
+
         Returns:
             bool: True if save was successful
         """
