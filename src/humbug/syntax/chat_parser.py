@@ -9,7 +9,7 @@ from humbug.syntax.parser_factory import ParserFactory
 
 
 # Mapping from lowercase language names to enum members
-language_mapping = {
+LANGUAGE_MAPPING = {
     "c": ProgrammingLanguage.C,
     "c++": ProgrammingLanguage.CPP,
     "cpp": ProgrammingLanguage.CPP,
@@ -141,10 +141,10 @@ class ChatParser(Parser):
                     self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
 
                     input_normalized = next_token.value.strip().lower()
-                    parser_state.language = language_mapping.get(input_normalized, ProgrammingLanguage.TEXT)
+                    parser_state.language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
                     continue
 
-                parser_state.language = language_mapping.get('', ProgrammingLanguage.TEXT)
+                parser_state.language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
                 continue
 
             seen_text = True
