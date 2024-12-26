@@ -6,8 +6,6 @@ from typing import Optional
 from PySide6.QtGui import (
     QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 )
-from PySide6.QtCore import Signal
-
 from humbug.gui.style_manager import StyleManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_factory import ParserFactory

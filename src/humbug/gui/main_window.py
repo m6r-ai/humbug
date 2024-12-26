@@ -8,7 +8,7 @@ from typing import Dict, List
 import uuid
 
 from PySide6.QtWidgets import (
-    QMainWindow, QDialog, QWidget, QVBoxLayout, QApplication, QMenuBar, QFileDialog
+    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -33,6 +33,7 @@ class MainWindow(QMainWindow):
         self._ai_backends = ai_backends
         self._transcript_writer = transcript_writer
         self._conversation_count = 0
+        self._untitled_count = 0
         self._chat_tabs = {}  # tab_id -> ChatTab
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self._logger = logging.getLogger("MainWindow")
@@ -212,7 +213,7 @@ class MainWindow(QMainWindow):
 
     def _new_file(self):
         """Create a new empty editor tab."""
-        self._untitled_count = getattr(self, '_untitled_count', 0) + 1
+        self._untitled_count += 1
         tab_id = str(uuid.uuid4())
         editor = EditorTab(tab_id, self)
         editor.set_filename(None, self._untitled_count)
@@ -310,7 +311,6 @@ class MainWindow(QMainWindow):
 
         # Enable chat-specific operations for chat tabs
         if isinstance(current_tab, ChatTab):
-            has_text = bool(current_tab.get_input_text())
             self._settings_action.setEnabled(True)
 
         # Update zoom actions
