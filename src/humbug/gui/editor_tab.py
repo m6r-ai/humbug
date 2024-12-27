@@ -362,10 +362,17 @@ class EditorTab(TabBase):
             f"Do you want to save changes to {self._filename or f'Untitled-{self._untitled_number}'}?",
             QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
         )
+
+        # Force button roles to ensure consistent behavior across platforms
+        msgbox.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+        msgbox.setDefaultButton(QMessageBox.Save)
+        msgbox.setEscapeButton(QMessageBox.Cancel)
+
         reply = msgbox.exec()
 
         if reply == QMessageBox.Save:
             return self.save()
+
         return reply == QMessageBox.Discard
 
     def can_save(self) -> bool:
