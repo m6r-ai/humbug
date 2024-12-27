@@ -1,5 +1,5 @@
 """Anthropic backend implementation."""
-from typing import List
+from typing import Dict, List
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.conversation_settings import ConversationSettings
@@ -15,13 +15,10 @@ class AnthropicBackend(AIBackend):
         self._api_key = api_key
         self._api_url = "https://api.anthropic.com/v1/messages"
 
-    def _build_request_data(self, message: str, conversation_history: List[str], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, message: str, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
         """Build Anthropic-specific request data."""
-        # Convert flat history into message objects
-        messages = []
-        for i, msg in enumerate(conversation_history):
-            role = "assistant" if i % 2 else "user"
-            messages.append({"role": role, "content": msg})
+        # Take existing messages in correct format
+        messages = conversation_history.copy()
 
         data = {
             "model": settings.model,

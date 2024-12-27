@@ -53,7 +53,12 @@ class ConversationHistory:
                 self._total_output_tokens += message.usage.completion_tokens
 
     def get_messages_for_context(self) -> List[str]:
-        """Get messages formatted for AI context."""
+        """
+        Get messages formatted for AI context.
+
+        Returns:
+            List of message dictionaries with role and content.
+        """
         result = []
         i = 0
         while i < len(self._messages):
@@ -68,9 +73,15 @@ class ConversationHistory:
                 # 1. It's a user message without an AI response yet (current exchange)
                 # 2. Or it's a completed exchange without errors
                 if (ai_msg is None) or (ai_msg.completed and not ai_msg.error):
-                    result.append(user_msg.content)
+                    result.append({
+                        "role": "user",
+                        "content": user_msg.content
+                    })
                     if ai_msg:
-                        result.append(ai_msg.content)
+                        result.append({
+                            "role": "assistant",
+                            "content": ai_msg.content
+                        })
                         i += 1  # Skip the AI message since we've handled it
 
             i += 1  # Move to next message

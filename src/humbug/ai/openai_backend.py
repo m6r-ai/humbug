@@ -1,5 +1,5 @@
 """OpenAI backend implementation."""
-from typing import List
+from typing import Dict, List
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.conversation_settings import ConversationSettings
@@ -15,9 +15,10 @@ class OpenAIBackend(AIBackend):
         self._api_key = api_key
         self._api_url = "https://api.openai.com/v1/chat/completions"
 
-    def _build_request_data(self, message: str, conversation_history: List[str], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, message: str, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
         """Build OpenAI-specific request data."""
-        messages = [{"role": "user", "content": msg} for msg in conversation_history]
+        # conversation_history already contains properly formatted messages
+        messages = conversation_history.copy()
 
         data = {
             "model": settings.model,

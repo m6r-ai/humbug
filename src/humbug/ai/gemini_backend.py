@@ -1,5 +1,5 @@
 """Google Gemini backend implementation."""
-from typing import List
+from typing import Dict, List
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.conversation_settings import ConversationSettings
@@ -16,15 +16,22 @@ class GeminiBackend(AIBackend):
         self._api_base = "https://generativelanguage.googleapis.com/v1beta/models"
         self._default_settings = ConversationSettings("gemini-1.5-flash")
 
-    def _build_request_data(self, message: str, conversation_history: List[str], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, message: str, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
         """Build Gemini-specific request data."""
-        # Combine history and current message into context
-        messages = [{"text": msg} for msg in conversation_history]
+        contents = []
+
+        # Convert history format to Gemini format
+        for msg in conversation_history:
+            role = "model" if msg["role"] == "assistant" else "user"
+            contents.append({
+                "role": role,
+                "parts": [{
+                    "text": msg["content"]
+                }]
+            })
 
         data = {
-            "contents": [{
-                "parts": messages
-            }],
+            "contents": contents,
             "safetySettings": [
                 {
                     "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
