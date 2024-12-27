@@ -5,41 +5,52 @@ from enum import Enum, auto
 
 class ColorRole(Enum):
     """Enumeration of color roles in the application."""
-    # Background colors
+    # Background colours
     BACKGROUND_PRIMARY = auto()         # Main window background
     BACKGROUND_SECONDARY = auto()       # Secondary elements background
     BACKGROUND_DIALOG = auto()          # Dialog box background
-    BACKGROUND_INPUT = auto()           # Input box background
 
-    # Text colors
+    # Text colours
     TEXT_PRIMARY = auto()               # Primary text color
-    DISABLED_TEXT = auto()              # Disabled text color
-    SELECTED_TEXT = auto()              # Selected text background
+    TEXT_DISABLED = auto()              # Disabled text color
+    TEXT_SELECTED = auto()              # Selected text background
 
-    # Message backgrounds
-    MESSAGE_USER = auto()               # User message background
-    MESSAGE_AI = auto()                 # AI message background
-    MESSAGE_SYSTEM = auto()             # System message background
-    MESSAGE_ERROR = auto()              # Error message background
-    MESSAGE_HEADER = auto()             # Message header background
+    # Tab colours
+    TAB_BACKGROUND_ACTIVE = auto()      # Active tab background
+    TAB_BACKGROUND_INACTIVE = auto()    # Inactive tab background
+    TAB_BACKGROUND_HOVER = auto()       # Tab hover background
 
-    # Code blocks
-    CODE_BLOCK_BACKGROUND = auto()      # Code block background
+    # Button colours
+    BUTTON_BACKGROUND = auto()          # Push button background
+    BUTTON_BACKGROUND_DISABLED = auto()
+                                        # Disabled push button background
+    BUTTON_BACKGROUND_PRESSED = auto()  # Pressed push button background
+    BUTTON_BACKGROUND_HOVER = auto()    # Hover state push button background
 
-    # UI elements
-    TAB_ACTIVE = auto()                 # Active tab background
-    TAB_INACTIVE = auto()               # Inactive tab background
-    TAB_HOVER = auto()                  # Tab hover background
+    # Menu elements
     MENU_BACKGROUND = auto()            # Menu background
     MENU_HOVER = auto()                 # Menu item hover
+
+    # Scroll bar elements
     SCROLLBAR_BACKGROUND = auto()       # Scrollbar background
     SCROLLBAR_HANDLE = auto()           # Scrollbar handle
-    STATUS_BAR = auto()                 # Status bar background
+
+    # Message backgrounds
+    MESSAGE_BACKGROUND_USER = auto()    # User message background
+    MESSAGE_BACKGROUND_AI = auto()      # AI message background
+    MESSAGE_BACKGROUND_SYSTEM = auto()  # System message background
+    MESSAGE_BACKGROUND_ERROR = auto()   # Error message background
+    MESSAGE_BACKGROUND_HEADER = auto()  # Message header background
+
+    # Status bar elements
+    STATUS_BAR_BACKGROUND = auto()      # Status bar background
 
     # Close button states
-    CLOSE_BUTTON_HOVER = auto()         # Hover state of close button
+    CLOSE_BUTTON_BACKGROUND_HOVER = auto()
+                                        # Hover state close button background
 
     # Syntax highlighting
+    SYNTAX_BACKGROUND_CODE = auto()     # Code block background
     SYNTAX_CODE = auto()                # Code block
     SYNTAX_COMMENT = auto()
     SYNTAX_CSS_AT_RULE = auto()

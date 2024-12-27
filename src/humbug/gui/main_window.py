@@ -355,7 +355,7 @@ class MainWindow(QMainWindow):
                 padding: {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px;
             }}
             QMenu::item:disabled {{
-                color: {style_manager.get_color_str(ColorRole.DISABLED_TEXT)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
             QMenu::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)}

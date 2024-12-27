@@ -75,10 +75,10 @@ class MessageWidget(QFrame):
 
         # Map message types to background color roles
         self.background_roles = {
-            'user': ColorRole.MESSAGE_USER,
-            'ai': ColorRole.MESSAGE_AI,
-            'system': ColorRole.MESSAGE_SYSTEM,
-            'error': ColorRole.MESSAGE_ERROR
+            'user': ColorRole.MESSAGE_BACKGROUND_USER,
+            'ai': ColorRole.MESSAGE_BACKGROUND_AI,
+            'system': ColorRole.MESSAGE_BACKGROUND_SYSTEM,
+            'error': ColorRole.MESSAGE_BACKGROUND_ERROR
         }
 
     def _on_mouse_released(self):
@@ -87,7 +87,7 @@ class MessageWidget(QFrame):
 
     def _get_background_color(self, style: str) -> str:
         """Get the appropriate background color for the message style."""
-        role = self.background_roles.get(style, ColorRole.MESSAGE_USER)
+        role = self.background_roles.get(style, ColorRole.MESSAGE_BACKGROUND_USER)
         return self._style_manager.get_color_str(role)
 
     def set_content(self, text: str, style: str):
@@ -160,7 +160,7 @@ class MessageWidget(QFrame):
         """Handle the style changing"""
         self._header.setStyleSheet(f"""
             QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HEADER)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
         """)
@@ -170,7 +170,7 @@ class MessageWidget(QFrame):
             QTextEdit {{
                 background-color: {content_color};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.SELECTED_TEXT)};
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
                 padding: 8px;
             }}
@@ -189,7 +189,7 @@ class MessageWidget(QFrame):
 
         self.setStyleSheet(f"""
             QFrame {{
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.MESSAGE_HEADER)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HEADER)};
                 margin: 0;
             }}
         """)

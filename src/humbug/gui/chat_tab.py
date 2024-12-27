@@ -427,7 +427,7 @@ class ChatTab(TabBase):
 
         self._messages_container.setStyleSheet(f"""
             QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
         """)
         self._scroll_area.setStyleSheet(f"""
@@ -448,15 +448,15 @@ class ChatTab(TabBase):
         """)
         self._status_bar.setStyleSheet(f"""
             QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR)};
+                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 padding: 2px 2px;
             }}
         """)
         self.setStyleSheet(f"""
             QFrame {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
-                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
         """)
 

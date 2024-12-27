@@ -137,22 +137,25 @@ class EditorTab(TabBase):
                 margin-top: 8px;
             }}
             QPushButton {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                border-radius: 2px;
+                border-radius: 4px;
                 padding: 6px;
                 min-width: 80px;
                 margin: 0 4px;
             }}
             QPushButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
             QPushButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+            QPushButton:disabled {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
         """)
-        return msgbox
         return msgbox
 
     def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
@@ -174,7 +177,7 @@ class EditorTab(TabBase):
 
         self.setStyleSheet(f"""
             QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;
             }}
             QScrollBar:vertical, QScrollBar:horizontal {{
@@ -200,7 +203,7 @@ class EditorTab(TabBase):
         # Update status bar styling
         self._status_bar.setStyleSheet(f"""
             QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR)};
+                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 padding: {2 * zoom_factor}px;
             }}

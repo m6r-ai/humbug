@@ -59,9 +59,9 @@ class StyleManager(QObject):
             self._initialize_highlights()
 
     def _initialize_colors(self) -> Dict[ColorRole, Dict[ColorMode, str]]:
-        """Initialize the application colors for both light and dark modes."""
+        """Initialize the application colours for both light and dark modes."""
         return {
-            # Background colors
+            # Background colours
             ColorRole.BACKGROUND_PRIMARY: {
                 ColorMode.DARK: "#080808",
                 ColorMode.LIGHT: "#e0e0e0"
@@ -74,60 +74,54 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#343434",
                 ColorMode.LIGHT: "#d0d0d0"
             },
-            ColorRole.BACKGROUND_INPUT: {
-                ColorMode.DARK: "#202020",
-                ColorMode.LIGHT: "#e8e8e8"
-            },
 
-            # Text colors
+            # Text colours
             ColorRole.TEXT_PRIMARY: {
                 ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#000000"
             },
-            ColorRole.DISABLED_TEXT: {
+            ColorRole.TEXT_DISABLED: {
                 ColorMode.DARK: "#808080",
                 ColorMode.LIGHT: "#a0a0a0"
             },
-            ColorRole.SELECTED_TEXT: {
+            ColorRole.TEXT_SELECTED: {
                 ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#e0e0e0"
             },
 
-            # Message backgrounds
-            ColorRole.MESSAGE_USER: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#f8f8f8"
-            },
-            ColorRole.MESSAGE_AI: {
-                ColorMode.DARK: "#181818",
-                ColorMode.LIGHT: "#e4e4e4"
-            },
-            ColorRole.MESSAGE_SYSTEM: {
-                ColorMode.DARK: "#1a3a1a",
-                ColorMode.LIGHT: "#e8ffe8"
-            },
-            ColorRole.MESSAGE_ERROR: {
-                ColorMode.DARK: "#3a1a1a",
-                ColorMode.LIGHT: "#ffe8e8"
-            },
-            ColorRole.MESSAGE_HEADER: {
-                ColorMode.DARK: "#2a3544",
-                ColorMode.LIGHT: "#edf2f7"
-            },
-
-            # UI elements
-            ColorRole.TAB_ACTIVE: {
+            # Tab colours
+            ColorRole.TAB_BACKGROUND_ACTIVE: {
                 ColorMode.DARK: "#242424",
                 ColorMode.LIGHT: "#ffffff"
             },
-            ColorRole.TAB_INACTIVE: {
+            ColorRole.TAB_BACKGROUND_INACTIVE: {
                 ColorMode.DARK: "#1c1c1c",
                 ColorMode.LIGHT: "#f0f0f0"
             },
-            ColorRole.TAB_HOVER: {
+            ColorRole.TAB_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#242424",
                 ColorMode.LIGHT: "#f8f8f8"
             },
+
+            # Button colours
+            ColorRole.BUTTON_BACKGROUND: {
+                ColorMode.DARK: "#1c1c1c",
+                ColorMode.LIGHT: "#ffffff"
+            },
+            ColorRole.BUTTON_BACKGROUND_DISABLED: {
+                ColorMode.DARK: "#242424",
+                ColorMode.LIGHT: "#d8d8d8"
+            },
+            ColorRole.BUTTON_BACKGROUND_PRESSED: {
+                ColorMode.DARK: "#505050",
+                ColorMode.LIGHT: "#b0b0b0"
+            },
+            ColorRole.BUTTON_BACKGROUND_HOVER: {
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#c0c0c0"
+            },
+
+            # Menu elements
             ColorRole.MENU_BACKGROUND: {
                 ColorMode.DARK: "#2d2d2d",
                 ColorMode.LIGHT: "#f0f0f0"
@@ -136,6 +130,8 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#3d3d3d",
                 ColorMode.LIGHT: "#e0e0e0"
             },
+
+            # Scroll bar elements
             ColorRole.SCROLLBAR_BACKGROUND: {
                 ColorMode.DARK: "#2d2d2d",
                 ColorMode.LIGHT: "#f0f0f0"
@@ -144,19 +140,43 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#404040",
                 ColorMode.LIGHT: "#c0c0c0"
             },
-            ColorRole.STATUS_BAR: {
+
+            # Message backgrounds
+            ColorRole.MESSAGE_BACKGROUND_USER: {
+                ColorMode.DARK: "#303030",
+                ColorMode.LIGHT: "#f8f8f8"
+            },
+            ColorRole.MESSAGE_BACKGROUND_AI: {
+                ColorMode.DARK: "#181818",
+                ColorMode.LIGHT: "#e4e4e4"
+            },
+            ColorRole.MESSAGE_BACKGROUND_SYSTEM: {
+                ColorMode.DARK: "#1a3a1a",
+                ColorMode.LIGHT: "#e8ffe8"
+            },
+            ColorRole.MESSAGE_BACKGROUND_ERROR: {
+                ColorMode.DARK: "#3a1a1a",
+                ColorMode.LIGHT: "#ffe8e8"
+            },
+            ColorRole.MESSAGE_BACKGROUND_HEADER: {
+                ColorMode.DARK: "#2a3544",
+                ColorMode.LIGHT: "#edf2f7"
+            },
+
+            # Status bar elements
+            ColorRole.STATUS_BAR_BACKGROUND: {
                 ColorMode.DARK: "#383838",
                 ColorMode.LIGHT: "#d4d4d4"
             },
 
             # Close button states
-            ColorRole.CLOSE_BUTTON_HOVER: {
+            ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#ff4444",
                 ColorMode.LIGHT: "#ff4444"
             },
 
             # Syntax highlighting
-            ColorRole.CODE_BLOCK_BACKGROUND: {
+            ColorRole.SYNTAX_BACKGROUND_CODE: {
                 ColorMode.DARK: "#141414",
                 ColorMode.LIGHT: "#f8f8f8"
             },
@@ -236,7 +256,7 @@ class StyleManager(QObject):
 
     def _initialize_highlights(self):
         # Mapping from token type to colour
-        colour_mapping = {
+        COLOUR_MAPPING = {
             "COMMENT": ColorRole.SYNTAX_COMMENT,
             "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,
             "ELEMENT": ColorRole.SYNTAX_ELEMENT,
@@ -254,10 +274,10 @@ class StyleManager(QObject):
             "REGEXP": ColorRole.SYNTAX_REGEXP,
             "STRING": ColorRole.SYNTAX_STRING,
             "TEXT": ColorRole.SYNTAX_TEXT,
-            "WHITESPACE": ColorRole.SELECTED_TEXT
+            "WHITESPACE": ColorRole.SYNTAX_TEXT
         }
 
-        for token_type, role in colour_mapping.items():
+        for token_type, role in COLOUR_MAPPING.items():
             text_format = self._create_highlight(role)
             self._highlights[token_type] = text_format
 

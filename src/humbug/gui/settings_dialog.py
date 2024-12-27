@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QDoubleSpinBox
 )
-from PySide6.QtCore import QSize, Signal
+from PySide6.QtCore import Signal
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.color_role import ColorRole
@@ -21,7 +21,7 @@ class SettingsDialog(QDialog):
         """Initialize the settings dialog."""
         super().__init__(parent)
         self.setWindowTitle("Conversation Settings")
-        self.setFixedSize(QSize(400, 200))
+        self.setMinimumWidth(400)
         self.setModal(True)
 
         self._available_models: List[str] = []
@@ -29,6 +29,9 @@ class SettingsDialog(QDialog):
         self._current_settings = None
         self._model_temperatures = {}
 
+        style_manager = StyleManager()
+
+        # Main layout with proper spacing
         layout = QVBoxLayout()
         layout.setSpacing(10)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -36,7 +39,9 @@ class SettingsDialog(QDialog):
         # Model selection
         model_layout = QHBoxLayout()
         model_label = QLabel("AI Model:")
+        model_label.setMinimumHeight(40)
         self._model_combo = QComboBox()
+        self._model_combo.setMinimumWidth(200)
         self._model_combo.currentTextChanged.connect(self._handle_model_change)
         model_layout.addWidget(model_label)
         model_layout.addStretch()
@@ -46,10 +51,12 @@ class SettingsDialog(QDialog):
         # Temperature setting
         temp_layout = QHBoxLayout()
         temp_label = QLabel("Temperature:")
+        temp_label.setMinimumHeight(40)
         self.temp_spin = QDoubleSpinBox()
         self.temp_spin.setRange(0.0, 1.0)
         self.temp_spin.setSingleStep(0.1)
         self.temp_spin.setDecimals(1)
+        self.temp_spin.setMinimumWidth(200)
         temp_layout.addWidget(temp_label)
         temp_layout.addStretch()
         temp_layout.addWidget(self.temp_spin)
@@ -57,9 +64,9 @@ class SettingsDialog(QDialog):
 
         layout.addStretch()
 
-        # Button row
+        # Button row with proper spacing and alignment
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(10)
+        button_layout.setSpacing(4)
 
         self.ok_button = QPushButton("OK")
         self.cancel_button = QPushButton("Cancel")
@@ -72,45 +79,67 @@ class SettingsDialog(QDialog):
         self._model_combo.currentTextChanged.connect(self._handle_value_change)
         self.temp_spin.valueChanged.connect(self._handle_value_change)
 
-        button_layout.addWidget(self.ok_button)
-        button_layout.addWidget(self.cancel_button)
-        button_layout.addWidget(self.apply_button)
+        # Set minimum button widths
+        min_button_width = 80
+        for button in [self.ok_button, self.cancel_button, self.apply_button]:
+            button.setMinimumWidth(min_button_width)
+            button.setContentsMargins(6, 6, 6, 6)
+            button_layout.addWidget(button)
 
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-        style_manager = StyleManager()
+        # Apply consistent dialog styling
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                color: white;
             }}
             QLabel {{
-                color: white;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
             }}
             QComboBox {{
-                width: 200px;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 6px;
+            }}
+            QComboBox:disabled {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QComboBox::drop-down {{
+                border: none;
             }}
             QDoubleSpinBox {{
-                width: 200px;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 6px;
+            }}
+            QDoubleSpinBox:disabled {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
             QPushButton {{
-                background-color: #4d4d4d;
-                color: white;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                border-radius: 2px;
-                padding: 10px 15px;
-                min-width: 70px;
+                border-radius: 4px;
+                padding: 6px;
+                min-width: 80px;
             }}
             QPushButton:hover {{
-                background-color: #5d5d5d;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
             QPushButton:pressed {{
-                background-color: #3d3d3d;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
             QPushButton:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                color: #808080;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
         """)
 
@@ -154,7 +183,8 @@ class SettingsDialog(QDialog):
         )
 
     def set_available_models(self, models: List[str]):
-        """Set the list of available models.
+        """
+        Set the list of available models.
 
         Args:
             models: List of model names that are available for use

@@ -142,8 +142,8 @@ class TabLabel(QWidget):
 
         style_manager = StyleManager()
         if visible:
-            base_color = (ColorRole.TAB_ACTIVE if self._is_current
-                        else ColorRole.TAB_HOVER)
+            base_color = (ColorRole.TAB_BACKGROUND_ACTIVE if self._is_current
+                        else ColorRole.TAB_BACKGROUND_HOVER)
             style = f"""
                 QToolButton {{
                     border: none;
@@ -152,7 +152,7 @@ class TabLabel(QWidget):
                     background: {style_manager.get_color_str(base_color)};
                 }}
                 QToolButton:hover {{
-                    background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_HOVER)};
+                    background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
                 }}
             """
             self._close_button.setIcon(self._visible_close_icon)
@@ -164,7 +164,7 @@ class TabLabel(QWidget):
                     border: none;
                     outline: none;
                     padding: 0px;
-                    background: {style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
+                    background: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
                 }}
             """
             self._close_button.setIcon(self._invisible_close_icon)

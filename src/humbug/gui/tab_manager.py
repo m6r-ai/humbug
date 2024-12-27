@@ -196,17 +196,17 @@ class TabManager(QTabWidget):
                 background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
             }}
             QTabBar::tab {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
+                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
                 border: none;
                 margin-right: 2px;
                 border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
             }}
             QTabBar::tab:selected {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
+                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border-bottom: none;
             }}
             QTabBar::tab:hover {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_HOVER)};
+                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
             }}
         """)
 
