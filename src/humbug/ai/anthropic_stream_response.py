@@ -38,18 +38,15 @@ class AnthropicStreamResponse:
             if "message" in chunk and "usage" in chunk["message"]:
                 usage = chunk["message"]["usage"]
                 self._input_tokens = usage.get("input_tokens", 0)
-
         elif event_type == "content_block_delta":
             delta = chunk.get("delta", {})
             if delta.get("type") == "text_delta":
                 self.content += delta.get("text", "")
-
         elif event_type == "message_delta":
             # Track output tokens but don't expose them yet
             if "usage" in chunk:
                 usage = chunk["usage"]
                 self._output_tokens = usage.get("output_tokens", 0)
-
         elif event_type == "message_stop":
             # Only now do we create and expose the usage stats
             self.usage = AIUsage(

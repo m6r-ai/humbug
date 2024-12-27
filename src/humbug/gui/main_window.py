@@ -466,7 +466,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            self._logger.debug("\n=== Starting new AI response for conv %s ===", tab_id)
+            self._logger.debug("=== Starting new AI response for conv %s ===", tab_id)
 
             # Get the appropriate backend for the conversation
             settings = chat_tab.get_settings()

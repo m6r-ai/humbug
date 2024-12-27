@@ -22,7 +22,6 @@ class AnthropicBackend(AIBackend):
         for i, msg in enumerate(conversation_history):
             role = "assistant" if i % 2 else "user"
             messages.append({"role": role, "content": msg})
-        messages.append({"role": "user", "content": message})
 
         data = {
             "model": settings.model,

@@ -20,7 +20,6 @@ class GeminiBackend(AIBackend):
         """Build Gemini-specific request data."""
         # Combine history and current message into context
         messages = [{"text": msg} for msg in conversation_history]
-        messages.append({"text": message})
 
         data = {
             "contents": [{

@@ -18,7 +18,6 @@ class OpenAIBackend(AIBackend):
     def _build_request_data(self, message: str, conversation_history: List[str], settings: ConversationSettings) -> dict:
         """Build OpenAI-specific request data."""
         messages = [{"role": "user", "content": msg} for msg in conversation_history]
-        messages.append({"role": "user", "content": message})
 
         data = {
             "model": settings.model,
