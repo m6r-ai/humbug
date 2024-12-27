@@ -1,16 +1,17 @@
 """Updated TabManager implementation to support both chat and editor tabs"""
 
 from typing import Optional, Dict, List, cast
-from PySide6.QtWidgets import QTabWidget, QTabBar
+from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Signal
 
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_label import TabLabel
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.welcome_widget import WelcomeWidget
 
 
-class TabManager(QTabWidget):
+class TabManager(QWidget):
     """Manages multiple tabs for conversations and editors."""
 
     tab_closed = Signal(str)  # Emits tab_id
@@ -18,8 +19,28 @@ class TabManager(QTabWidget):
     def __init__(self, parent=None):
         """Initialize the tab manager."""
         super().__init__(parent)
-        self.setMovable(True)
-        self.setDocumentMode(True)
+
+        # Create main layout
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # Create stack widget for tab container and welcome message
+        self._stack = QStackedWidget()
+        main_layout.addWidget(self._stack)
+
+        # Create welcome widget
+        self._welcome_widget = WelcomeWidget()
+        self._stack.addWidget(self._welcome_widget)
+
+        # Create tab widget
+        self._tab_widget = QTabWidget()
+        self._tab_widget.setMovable(True)
+        self._tab_widget.setDocumentMode(True)
+        self._stack.addWidget(self._tab_widget)
+
+        # Set initial state
+        self._stack.setCurrentWidget(self._welcome_widget)
 
         # Track tabs
         self._tabs: Dict[str, TabBase] = {}
@@ -29,12 +50,12 @@ class TabManager(QTabWidget):
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
         # Configure tab bar
-        tab_bar = self.tabBar()
+        tab_bar = self._tab_widget.tabBar()
         tab_bar.setDrawBase(False)
         tab_bar.setUsesScrollButtons(True)
 
         # Connect signals
-        self.currentChanged.connect(self._on_tab_changed)
+        self._tab_widget.currentChanged.connect(self._on_tab_changed)
 
         self._handle_style_changed(self._style_manager.zoom_factor)
 
@@ -55,14 +76,15 @@ class TabManager(QTabWidget):
         self._tab_labels[tab_id] = tab_label
 
         # Add tab with custom label
-        index = self.addTab(tab, "")
-        self.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+        index = self._tab_widget.addTab(tab, "")
+        self._tab_widget.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
 
         # Set initial state
-        if self.count() == 1:  # If this is the first tab
+        if self._tab_widget.count() == 1:  # If this is the first tab
             tab_label.set_current(True)
+            self._stack.setCurrentWidget(self._tab_widget)
 
-        self.setCurrentWidget(tab)
+        self._tab_widget.setCurrentWidget(tab)
 
     def close_tab(self, tab_id: str) -> None:
         """
@@ -80,8 +102,8 @@ class TabManager(QTabWidget):
             return
 
         # Remove tab
-        index = self.indexOf(tab)
-        self.removeTab(index)
+        index = self._tab_widget.indexOf(tab)
+        self._tab_widget.removeTab(index)
         del self._tabs[tab_id]
 
         # Clean up label
@@ -93,6 +115,10 @@ class TabManager(QTabWidget):
         self.tab_closed.emit(tab_id)
         tab.deleteLater()
 
+        # Show welcome message if no tabs remain
+        if not self._tabs:
+            self._stack.setCurrentWidget(self._welcome_widget)
+
     def get_current_tab(self) -> Optional[TabBase]:
         """
         Get the currently active tab.
@@ -100,7 +126,7 @@ class TabManager(QTabWidget):
         Returns:
             The current tab or None if no tabs exist
         """
-        widget = self.currentWidget()
+        widget = self._tab_widget.currentWidget()
         return cast(TabBase, widget) if widget else None
 
     def get_tab(self, tab_id: str) -> Optional[TabBase]:
@@ -133,7 +159,7 @@ class TabManager(QTabWidget):
         """
         tab = self._tabs.get(tab_id)
         if tab:
-            self.setCurrentWidget(tab)
+            self._tab_widget.setCurrentWidget(tab)
 
     def update_tab_title(self, tab_id: str, title: str) -> None:
         """
@@ -180,7 +206,7 @@ class TabManager(QTabWidget):
         # Update current states for all tabs
         for tab_id, label in self._tab_labels.items():
             tab = self._tabs[tab_id]
-            is_current = tab == self.widget(index)
+            is_current = tab == self._tab_widget.widget(index)
             label.set_current(is_current)
 
     def _handle_style_changed(self, factor: float = 1.0) -> None:
@@ -190,7 +216,7 @@ class TabManager(QTabWidget):
         Args:
             factor: New zoom factor
         """
-        self.setStyleSheet(f"""
+        self._tab_widget.setStyleSheet(f"""
             QTabWidget::pane {{
                 border: none;
                 background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};

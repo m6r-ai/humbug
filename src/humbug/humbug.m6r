@@ -15,6 +15,17 @@ Context: humbug application
 
         Selecting a tab brings that conversation to the front of the tab group.
 
+        When there are no tabs open, the application displays a welcome message in the main window area.
+
+        The welcome message appears in a styled box with dialog-style spacing that shows:
+
+        - The application name "Humbug" in a font twice the size of the default application font
+        - The version number underneath in the default font size
+
+        Both pieces of text are centered within the styled box.
+
+        The welcome message is automatically hidden when tabs are created and reappears when all tabs are closed.
+
         Context: Tab types
             There are two distinct types of tabs:
 
