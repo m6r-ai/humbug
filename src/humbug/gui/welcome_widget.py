@@ -1,6 +1,6 @@
 """Welcome message widget implementation."""
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
+from PySide6.QtWidgets import QVBoxLayout, QLabel, QFrame
 from PySide6.QtCore import Qt
 
 from humbug import format_version
