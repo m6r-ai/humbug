@@ -8,7 +8,7 @@ class ConversationSettings:
         "gpt-4o-mini",
         "gpt-4o",
         "o1-mini",
-        "o1-preview",
+        "o1",
 
         # Gemini models
         "gemini-1.5-flash",
@@ -24,7 +24,7 @@ class ConversationSettings:
         "gpt-4o-mini": "openai",
         "gpt-4o": "openai",
         "o1-mini": "openai",
-        "o1-preview": "openai",
+        "o1": "openai",
         "gemini-1.5-flash": "google",
         "gemini-1.5-pro": "google",
         "gemini-2.0-flash-exp": "google",
@@ -36,7 +36,7 @@ class ConversationSettings:
         "gpt-4o-mini": True,
         "gpt-4o": True,
         "o1-mini": False,
-        "o1-preview": False,
+        "o1": False,
         "gemini-1.5-flash": True,
         "gemini-1.5-pro": True,
         "gemini-2.0-flash-exp": True,
