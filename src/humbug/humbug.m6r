@@ -210,6 +210,8 @@ Context: humbug application
             Context: Quit Humbug
                 The "Quit Humbug" menu item will allow the user to exit the application.
 
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Q" for Windows).
+
         Context: File
             The "File" menu handles new files and tabs.  When clicked it contains the following:
 
@@ -742,11 +744,23 @@ Context: humbug application
 
             ```json
             {
-                "contents": [{
-                    "parts":[
-                        {"text": "User message goes here"}
-                    ]
-                }],
+                "contents": [
+                    {"role":"user",
+                        "parts":[{
+                            "text": "Hello"
+                        }]
+                    },
+                    {"role": "model",
+                        "parts":[{
+                            "text": "Great to meet you. What would you like to know?"
+                        }]
+                    },
+                    {"role":"user",
+                        "parts":[{
+                            "text": "I have two dogs in my house. How many paws are in my house?"
+                        }]
+                    },
+                ],
                 "safetySettings": [
                     {
                         "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
