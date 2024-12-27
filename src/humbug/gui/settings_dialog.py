@@ -82,7 +82,7 @@ class SettingsDialog(QDialog):
         style_manager = StyleManager()
         self.setStyleSheet(f"""
             QDialog {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 color: white;
             }}
             QLabel {{

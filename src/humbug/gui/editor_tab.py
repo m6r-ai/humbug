@@ -123,13 +123,13 @@ class EditorTab(TabBase):
         # Set colors based on current theme
         msgbox.setStyleSheet(f"""
             QMessageBox {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 min-width: 400px;
             }}
             QLabel {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 min-height: 40px;
             }}
             QDialogButtonBox {{

@@ -144,6 +144,17 @@ Context: humbug application
                 - C/C++
                 - Metaphor
 
+        Context: Dialog styling
+            Modal dialogs must maintain visual consistency with the application theme:
+
+            Context: Color scheme
+                Dialogs must use the same color scheme as the main application:
+
+                - Dialog background uses BACKGROUND_DIALOG color
+                - Text uses TEXT_PRIMARY color
+                - Buttons use TAB_INACTIVE color with TAB_HOVER for hover state
+                - All text and interactive elements must respect current theme colors
+
     Context: Menus
         The application will have a series of top-level Menus.
 
@@ -890,6 +901,20 @@ Context: humbug application
         Context: Performance guidelines
             Context: Scrolling performance
                 - 60 FPS target for scroll operations
+
+        Context: Dialog boxes
+            Standard dialog boxes (QMessageBox) must maintain consistent appearance:
+
+            - Minimum width of 400px
+            - Dialog icon color matches TEXT_PRIMARY color
+            - Message text uses minimum height of 40px
+            - Dialog text background matches dialog background
+            - Buttons centered with 8px margin above
+            - All buttons same size with 80px minimum width
+            - Button padding of 6px
+            - 4px margin between buttons
+            - Button hover state uses TAB_HOVER color
+            - Button pressed state uses TAB_ACTIVE color
 
     Context: Security
         Context: Outputs

@@ -70,9 +70,27 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#2d2d2d",
                 ColorMode.LIGHT: "#f0f0f0"
             },
+            ColorRole.BACKGROUND_DIALOG: {
+                ColorMode.DARK: "#343434",
+                ColorMode.LIGHT: "#d0d0d0"
+            },
             ColorRole.BACKGROUND_INPUT: {
                 ColorMode.DARK: "#202020",
                 ColorMode.LIGHT: "#e8e8e8"
+            },
+
+            # Text colors
+            ColorRole.TEXT_PRIMARY: {
+                ColorMode.DARK: "#ffffff",
+                ColorMode.LIGHT: "#000000"
+            },
+            ColorRole.DISABLED_TEXT: {
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#a0a0a0"
+            },
+            ColorRole.SELECTED_TEXT: {
+                ColorMode.DARK: "#606060",
+                ColorMode.LIGHT: "#e0e0e0"
             },
 
             # Message backgrounds
@@ -129,20 +147,6 @@ class StyleManager(QObject):
             ColorRole.STATUS_BAR: {
                 ColorMode.DARK: "#383838",
                 ColorMode.LIGHT: "#d4d4d4"
-            },
-
-            # Text colors
-            ColorRole.TEXT_PRIMARY: {
-                ColorMode.DARK: "#ffffff",
-                ColorMode.LIGHT: "#000000"
-            },
-            ColorRole.DISABLED_TEXT: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#a0a0a0"
-            },
-            ColorRole.SELECTED_TEXT: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#e0e0e0"
             },
 
             # Close button states
