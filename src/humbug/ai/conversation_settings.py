@@ -13,6 +13,8 @@ class ConversationSettings:
         "gemini-1.5-flash",
         "gemini-1.5-pro",
         "gemini-2.0-flash-exp",
+        # Anthropic models
+        "claude-3-5-sonnet-20241022",
     ]
 
     PROVIDER_MAP = {
@@ -23,6 +25,7 @@ class ConversationSettings:
         "gemini-1.5-flash": "google",
         "gemini-1.5-pro": "google",
         "gemini-2.0-flash-exp": "google",
+        "claude-3-5-sonnet-20241022": "anthropic",
     }
 
     TEMPERATURE_SUPPORTED_MODELS = {
@@ -32,7 +35,8 @@ class ConversationSettings:
         "o1-preview": False,
         "gemini-1.5-flash": True,
         "gemini-1.5-pro": True,
-        "gemini-2.0-flash-exp": True
+        "gemini-2.0-flash-exp": True,
+        "claude-3-5-sonnet-20241022": True
     }
 
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):

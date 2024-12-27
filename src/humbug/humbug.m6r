@@ -791,6 +791,78 @@ Context: humbug application
 
             The final chunk will have finishReason set to "STOP" and may include usage information.
 
+        Context: Anthropic REST endpoint
+            Messages are sent via a POST message.
+
+            The endpoint is "https://api.anthropic.com/v1/messages".
+
+            This needs three headers to be provided:
+
+            "Content-Type": "application/json"
+            "x-api-key": {key}
+            "anthropic-version": "2023-06-01"
+
+            {key} must be replaced with the API key found in the environment variable `ANTHROPIC_API_KEY`.
+
+            The data for the POST is of this form:
+
+            ```json
+            {
+                "model": "selected-model",
+                "messages": [{"role": "user", "content": "Say this is a test!"}],
+                "temperature": temp-setting,
+                "max_tokens": 1024,
+                "stream": true
+            }
+            ```
+
+            In this, "selected-model" is name of the selected AI model, and "temp-setting" is the numeric temperature 
+            setting defined by the user.
+
+            The content section of a message should be replaced with the user's message to the AI.
+
+            With streaming enabled, responses arrive as server-sent events. Each event begins with "data: " followed by 
+            event type and a JSON object. The sequence will be:
+
+            1. message_start with initial usage statistics
+            2. content_block_start to mark beginning of response
+            3. content_block_delta events with actual content
+            4. content_block_stop for end of current block 
+            5. message_delta with final usage statistics
+            6. message_stop to end the sequence
+
+            Example response chunk formats:
+
+            ```json
+            {
+                "type": "content_block_delta",
+                "index": 0,
+                "delta": {
+                    "type": "text_delta",
+                    "text": "chunk of text"
+                }
+            }
+            ```
+
+            Usage stats are provided in message_start and message_delta events:
+
+            ```json
+            {
+                "usage": {
+                    "input_tokens": 12,
+                    "output_tokens": 6
+                }
+            }
+            ```
+
+            Context: Provider-specific errors
+                Context: Anthropic errors
+                    Anthropic errors include:
+
+                    - Invalid API key
+                    - Overloaded error (too many requests)
+                    - Model overloaded
+
     Context: Message history
         Maintain conversation context by including all previous messages in the session.
 
@@ -804,6 +876,7 @@ Context: humbug application
         - "gemini-1.5-flash": Google Gemini 1.5 Flash model
         - "gemini-1.5-pro": Google Gemini 1.5 Pro model
         - "gemini-2.0-flash-exp": Google Gemini 2.0 Flash experimental model
+        - "claude-3-5-sonnet-20241022": Anthropic Claude 3.5 Sonnet model
 
         The AI model is configurable via the settings dialog.  It it set to "gpt-4o-mini" by default.
 
@@ -812,12 +885,14 @@ Context: humbug application
 
             - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"
             - Google models: "gemini-1.5-flash", "gemini-1.5-pro"
+            - Anthropic models: "claude-3-5-sonnet-20241022"
 
         Context: Provider configuration
             Each provider requires its own API key:
 
             - OpenAI models require OPENAI_API_KEY environment variable
             - Google models require GOOGLE_API_KEY environment variable
+            - Anthropic models require ANTHROPIC_API_KEY environment variable
 
             At least one provider must be configured for the application to start.
 
@@ -832,7 +907,8 @@ Context: humbug application
         - o1-preview: No temperature setting
         - gemini-1.5-flash: Supports temperature 0.0-1.0
         - gemini-1.5-pro: Supports temperature 0.0-1.0
-        - gemini-2.0-flash-exp: Supports temperature 0.0-1.1
+        - gemini-2.0-flash-exp: Supports temperature 0.0-1.0
+        - claude-3-5-sonnet-20241022: Supports temperature 0.0-1.0
 
         Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
 

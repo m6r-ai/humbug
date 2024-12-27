@@ -58,13 +58,14 @@ async def main():
     # Check for API keys
     openai_key = os.environ.get("OPENAI_API_KEY")
     google_key = os.environ.get("GOOGLE_API_KEY")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
 
-    if not openai_key and not google_key:
-        print("Error: Neither OPENAI_API_KEY nor GOOGLE_API_KEY environment variables are set")
+    if not any([openai_key, google_key, anthropic_key]):
+        print("Error: No API keys found. At least one of OPENAI_API_KEY, GOOGLE_API_KEY, or ANTHROPIC_API_KEY must be set")
         return 1
 
     # Initialize components
-    ai_backends = AIProvider.create_backends(openai_key, google_key)
+    ai_backends = AIProvider.create_backends(openai_key, google_key, anthropic_key)
     if not ai_backends:
         print("Error: No AI backends could be initialized")
         return 1

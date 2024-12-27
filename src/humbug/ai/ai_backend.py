@@ -35,22 +35,18 @@ class AIBackend(ABC):
     @abstractmethod
     def _build_request_data(self, message: str, conversation_history: List[str], settings: ConversationSettings) -> dict:
         """Abstract method to build backend-specific request data."""
-        pass
 
     @abstractmethod
     def _create_stream_response_handler(self):
         """Abstract method to create a backend-specific stream response handler."""
-        pass
 
     @abstractmethod
     def _get_api_url(self, settings: ConversationSettings) -> str:
         """Abstract method to get the API URL."""
-        pass
 
     @abstractmethod
     def _get_headers(self) -> dict:
         """Abstract method to get the API headers."""
-        pass
 
     async def stream_message(
         self,
@@ -75,6 +71,7 @@ class AIBackend(ABC):
                         sock_read=10
                     )
                     async with aiohttp.ClientSession() as session:
+                        print(f"send: {data}")
                         async with session.post(
                             url,
                             headers=headers,
@@ -125,12 +122,16 @@ class AIBackend(ABC):
                                         if not line:
                                             continue
 
-                                        if line.startswith("data: "):
-                                            line = line[6:]
+                                        if not line.startswith("data: "):
+                                            continue
+
+                                        print("data")
+                                        line = line[6:]
 
                                         if line == "[DONE]":
                                             break
 
+                                        print(f"ai backend: {line}")
                                         chunk = json.loads(line)
                                         response_handler.update_from_chunk(chunk)
                                         if response_handler.error:
@@ -157,6 +158,7 @@ class AIBackend(ABC):
                                         return
 
                                     except json.JSONDecodeError as e:
+                                        print("JSON exception")
                                         self._logger.exception("JSON exception: %s", e)
                                         continue
 
