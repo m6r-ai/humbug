@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QLabel, QFileDialog, QMessageBox,
 )
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QPainter
 
 from humbug.gui.tab_base import TabBase
 from humbug.gui.editor_highlighter import EditorHighlighter
@@ -107,6 +108,18 @@ class EditorTab(TabBase):
         """
         msgbox = QMessageBox(icon, title, text, buttons, self)
         style_manager = StyleManager()
+
+        # Set icon color to match text
+        icon_color = style_manager.get_color(ColorRole.TEXT_PRIMARY)
+        pixmap = msgbox.iconPixmap()
+        if pixmap:
+            # Create a painter to recolor the icon
+            painter = QPainter(pixmap)
+            painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+            painter.fillRect(pixmap.rect(), icon_color)
+            painter.end()
+            msgbox.setIconPixmap(pixmap)
+
         # Set colors based on current theme
         msgbox.setStyleSheet(f"""
             QMessageBox {{
@@ -116,6 +129,7 @@ class EditorTab(TabBase):
             }}
             QLabel {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 min-height: 40px;
             }}
             QDialogButtonBox {{
@@ -138,6 +152,7 @@ class EditorTab(TabBase):
                 background-color: {style_manager.get_color_str(ColorRole.TAB_ACTIVE)};
             }}
         """)
+        return msgbox
         return msgbox
 
     def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
