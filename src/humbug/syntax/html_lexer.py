@@ -10,9 +10,19 @@ class HTMLLexerState(LexerState):
     State information for the HTML lexer.
 
     Attributes:
+        in_tag: Indicates if we're currently parsing a tag
+        tag_name: The name of any tag we're currently parsing
+        seen_equals: Indicates if we're currently parsing an attribute
         in_comment: Indicates if we're currently parsing a block comment
+        in_script: Indicates if we're currently parsing a script block
+        in_style: Indicates if we're currently parsing a style block
     """
+    in_tag: bool = False
+    tag_name: str = ""
+    seen_equals: bool = False
     in_comment: bool = False
+    in_script: bool = False
+    in_style: bool = False
 
 
 class HTMLLexer(Lexer):
@@ -21,11 +31,6 @@ class HTMLLexer(Lexer):
 
     This lexer handles HTML-specific syntax including tags, attributes, DOCTYPE
     declarations, comments, and embedded script and style content.
-
-    Attributes:
-        _in_tag: Indicates if we're currently within an HTML tag
-        _tag_name: The name of the current tag being processed
-        _seen_equals: Indicates if we've seen an equals sign in the current attribute
     """
 
     def __init__(self) -> None:
@@ -40,6 +45,8 @@ class HTMLLexer(Lexer):
         self._tag_name = ''
         self._seen_equals = False
         self._in_comment = False
+        self._in_script = False
+        self._in_style = False
 
     def lex(self, prev_lexer_state: Optional[HTMLLexerState], input_str: str) -> HTMLLexerState:
         """
@@ -48,15 +55,29 @@ class HTMLLexer(Lexer):
         self._input = input_str
         lexer_state = HTMLLexerState()
         if prev_lexer_state:
+            self._in_tag = prev_lexer_state.in_tag
+            self._tag_name = prev_lexer_state.tag_name
+            self._seen_equals = prev_lexer_state.seen_equals
             self._in_comment = prev_lexer_state.in_comment
+            self._in_script = prev_lexer_state.in_script
+            self._in_style = prev_lexer_state.in_style
 
         if self._in_comment:
             self._read_html_comment(0)
+        elif self._in_script:
+            self._read_script_block()
+        elif self._in_style:
+            self._read_style_block()
 
-        if not self._in_comment:
+        if not self._in_comment and not self._in_script and not self._in_style:
             self._inner_lex()
 
+        lexer_state.in_tag = self._in_tag
+        lexer_state.tag_name = self._tag_name
+        lexer_state.seen_equals = self._seen_equals
         lexer_state.in_comment = self._in_comment
+        lexer_state.in_script = self._in_script
+        lexer_state.in_style = self._in_style
         return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
@@ -116,6 +137,15 @@ class HTMLLexer(Lexer):
             value='>',
             start=self._position - 1
         ))
+
+        if self._tag_name.lower() == 'script':
+            self._in_script = True
+            self._read_script_block()
+            return
+
+        if self._tag_name.lower() == 'style':
+            self._in_script = True
+            self._read_style_block()
 
     def _read_default(self) -> None:
         """
@@ -198,6 +228,42 @@ class HTMLLexer(Lexer):
         self._tokens.append(Token(
             type='COMMENT',
             value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _read_script_block(self) -> None:
+        """
+        Read a script block.
+        """
+        self._in_script = True
+        start = self._position
+        script_close = self._input.lower().find('</script', self._position)
+        if script_close == -1:
+            script_close = len(self._input)
+            self._in_script = False
+
+        self._position = script_close
+        self._tokens.append(Token(
+            type='SCRIPT',
+            value=self._input[start:script_close],
+            start=start
+        ))
+
+    def _read_style_block(self) -> None:
+        """
+        Read a style block.
+        """
+        self._in_style = True
+        start = self._position
+        style_close = self._input.lower().find('</style', self._position)
+        if style_close == -1:
+            style_close = len(self._input)
+            self._in_style = False
+
+        self._position = style_close
+        self._tokens.append(Token(
+            type='STYLE',
+            value=self._input[start:style_close],
             start=start
         ))
 
