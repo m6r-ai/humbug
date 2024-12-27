@@ -428,7 +428,9 @@ Context: humbug application
 
             - Current AI model name (e.g., "Model: gpt-4o-mini")
             - Temperature setting if applicable (e.g., "Temp: 0.7" or "Temp: N/A" for models without temperature)
-            - Input and output token counts since the start of the application
+            - Input and output token counts for the last message
+
+            In parenthesis after the input token count should be the context window size.
 
         Context: Highlighting operations
             While the editable and non-editable regions must feel like they're one thing, if the user wants to
@@ -477,6 +479,14 @@ Context: humbug application
                     - Has spinner arrows for adjustment
                     - Default value is 0.7
                     - Changes take effect on the next message sent to the AI
+
+                Context: Model limits display
+                    The dialog shows the model's limitations:
+
+                    - Context window size (maximum input tokens)
+                    - Maximum output tokens
+
+                    These are displayed below the temperature setting.
 
                 Context: Dialog Controls
                     The dialog has:

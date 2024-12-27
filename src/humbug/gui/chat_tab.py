@@ -296,9 +296,8 @@ class ChatTab(TabBase):
         self._status_bar.setText(
             f"Model: {self._settings.model} | "
             f"{temp_display} | "
-            f"Input tokens: {input_tokens} | "
-            f"Output tokens: {output_tokens} | "
-            f"Context window: {self._settings.context_window:,}"
+            f"Last response - Input: {input_tokens} ({self._settings.context_window}) | "
+            f"Output: {output_tokens}"
         )
 
     def _get_insertion_point(self):

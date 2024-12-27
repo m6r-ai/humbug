@@ -13,8 +13,7 @@ class ConversationHistory:
         """Initialize empty conversation history."""
         self._conversation_id = conversation_id
         self._messages: List[Message] = []
-        self._total_input_tokens: int = 0
-        self._total_output_tokens: int = 0
+        self._last_response_tokens = {"input": 0, "output": 0}
 
     def add_message(self, message: Message) -> None:
         """Add a message to the history."""
@@ -36,21 +35,12 @@ class ConversationHistory:
                     message.usage = usage
                     # Only update token counts if we didn't have usage before
                     if old_usage is None:
-                        self._total_input_tokens += usage.prompt_tokens
-                        self._total_output_tokens += usage.completion_tokens
+                        self._last_response_tokens["input"] = usage.prompt_tokens
+                        self._last_response_tokens["output"] = usage.completion_tokens
                 if completed is not None:
                     message.completed = completed
                 return message
         return None
-
-    def recalculate_token_counts(self) -> None:
-        """Recalculate total token counts from all messages."""
-        self._total_input_tokens = 0
-        self._total_output_tokens = 0
-        for message in self._messages:
-            if message.usage:
-                self._total_input_tokens += message.usage.prompt_tokens
-                self._total_output_tokens += message.usage.completion_tokens
 
     def get_messages_for_context(self) -> List[str]:
         """
@@ -89,8 +79,5 @@ class ConversationHistory:
         return result
 
     def get_token_counts(self) -> Dict[str, int]:
-        """Get current token usage counts."""
-        return {
-            "input": self._total_input_tokens,
-            "output": self._total_output_tokens
-        }
+        """Get token counts from last response."""
+        return self._last_response_tokens
