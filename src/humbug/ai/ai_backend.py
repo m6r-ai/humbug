@@ -131,7 +131,6 @@ class AIBackend(ABC):
                                         if line == "[DONE]":
                                             break
 
-                                        print(f"ai backend: {line}")
                                         chunk = json.loads(line)
                                         response_handler.update_from_chunk(chunk)
                                         if response_handler.error:
