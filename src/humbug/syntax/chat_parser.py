@@ -99,18 +99,19 @@ class ChatParser(Parser):
             Handles transitions between regular chat content and code fence blocks,
             delegating code blocks to appropriate language parsers.
         """
-        parser_state = ChatParserState()
-
+        in_fence_block = False
+        language = ProgrammingLanguage.UNKNOWN
+        embedded_parser_state = None
         if prev_parser_state:
-            parser_state.in_fence_block = prev_parser_state.in_fence_block
-            parser_state.language = prev_parser_state.language
-            parser_state.embedded_parser_state = prev_parser_state.embedded_parser_state
+            in_fence_block = prev_parser_state.in_fence_block
+            language = prev_parser_state.language
+            embedded_parser_state = prev_parser_state.embedded_parser_state
 
         lexer = ChatLexer()
         lexer.lex(None, input_str)
 
         seen_text = False
-        parse_embedded = parser_state.language != ProgrammingLanguage.UNKNOWN
+        parse_embedded = language != ProgrammingLanguage.UNKNOWN
 
         while True:
             lex_token = lexer.get_next_token()
@@ -123,16 +124,16 @@ class ChatParser(Parser):
 
             if (not seen_text) and (lex_token.type == 'FENCE'):
                 seen_text = True
-                if parser_state.in_fence_block:
+                if in_fence_block:
                     self._tokens.append(Token(type='FENCE_END', value='```', start=lex_token.start))
-                    parser_state.in_fence_block = False
-                    parser_state.language = ProgrammingLanguage.UNKNOWN
-                    parser_state.embedded_parser_state = None
+                    in_fence_block = False
+                    language = ProgrammingLanguage.UNKNOWN
+                    embedded_parser_state = None
                     parse_embedded = False
                     continue
 
-                parser_state.in_fence_block = True
-                parser_state.embedded_parser_state = None
+                in_fence_block = True
+                embedded_parser_state = None
                 self._tokens.append(Token(type='FENCE_START', value='```', start=lex_token.start))
 
                 next_token = lexer.peek_next_token('WHITESPACE')
@@ -141,23 +142,26 @@ class ChatParser(Parser):
                     self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
 
                     input_normalized = next_token.value.strip().lower()
-                    parser_state.language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
+                    language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
                     continue
 
-                parser_state.language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
+                language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
                 continue
 
             seen_text = True
 
-            if parser_state.language != ProgrammingLanguage.UNKNOWN:
+            if language != ProgrammingLanguage.UNKNOWN:
                 break
 
             self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
 
+        parser_state = ChatParserState()
+        parser_state.in_fence_block = in_fence_block
+        parser_state.language = language
         if parse_embedded:
-            embedded_parser_state = self._embedded_parse(parser_state.language, parser_state.embedded_parser_state, input_str)
-            parser_state.embedded_parser_state = embedded_parser_state
+            new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
+            parser_state.embedded_parser_state = new_embedded_parser_state
             if embedded_parser_state:
-                parser_state.continuation_state = embedded_parser_state.continuation_state
+                parser_state.continuation_state = new_embedded_parser_state.continuation_state
 
         return parser_state

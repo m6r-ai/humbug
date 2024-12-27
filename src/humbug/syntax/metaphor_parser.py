@@ -30,8 +30,6 @@ class MetaphorParser(Parser):
         Raises:
             ValueError: If the lexer has not been initialized
         """
-        parser_state = MetaphorParserState()
-
         lexer = MetaphorLexer()
         lexer.lex(None, input_str)
 
@@ -42,4 +40,5 @@ class MetaphorParser(Parser):
 
             self._tokens.append(token)
 
+        parser_state = MetaphorParserState()
         return parser_state

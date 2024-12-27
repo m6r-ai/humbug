@@ -41,17 +41,14 @@ class PythonParser(Parser):
             when they're followed by parentheses, and to ELEMENT tokens when
             they're part of a dotted access chain.
         """
-        parser_state = PythonParserState()
+        in_element = False
         prev_lexer_state = None
-
         if prev_parser_state:
-            parser_state.in_element = prev_parser_state.in_element
+            in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 
         lexer = PythonLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
-        parser_state.continuation_state = 1 if lexer_state.in_docstring else 0
-        parser_state.lexer_state = lexer_state
 
         while True:
             token = lexer.get_next_token()
@@ -64,14 +61,14 @@ class PythonParser(Parser):
 
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
-            cur_in_element = parser_state.in_element
+            cur_in_element = in_element
             next_token = lexer.peek_next_token(['WHITESPACE'])
-            parser_state.in_element = cur_in_element
+            in_element = cur_in_element
 
             next_in_element = False
             if next_token and next_token.type == 'OPERATOR':
                 if next_token.value == '(':
-                    parser_state.in_element = False
+                    in_element = False
                     self._tokens.append(Token(
                         type='FUNCTION_OR_METHOD',
                         value=token.value,
@@ -83,7 +80,7 @@ class PythonParser(Parser):
                 if next_token.value == '.':
                     next_in_element = True
 
-            parser_state.in_element = next_in_element
+            in_element = next_in_element
 
             if cur_in_element:
                 self._tokens.append(Token(
@@ -95,4 +92,8 @@ class PythonParser(Parser):
 
             self._tokens.append(token)
 
+        parser_state = PythonParserState()
+        parser_state.continuation_state = 1 if lexer_state.in_docstring else 0
+        parser_state.lexer_state = lexer_state
+        parser_state.in_element = in_element
         return parser_state

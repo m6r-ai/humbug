@@ -28,12 +28,11 @@ class TextParser(Parser):
         Returns:
             The updated parser state after parsing
         """
-        parser_state = TextParserState()
-
         self._tokens.append(Token(
             type='TEXT',
             value=input_str,
             start=0
         ))
 
+        parser_state = TextParserState()
         return parser_state

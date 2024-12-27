@@ -43,9 +43,7 @@ class HTMLParser(Parser):
             The parser handles embedded JavaScript and CSS content by delegating to
             specialized parsers for those languages.
         """
-        parser_state = HTMLParserState()
         prev_lexer_state = None
-
         if prev_parser_state:
             prev_lexer_state = prev_parser_state.lexer_state
 
@@ -63,9 +61,6 @@ class HTMLParser(Parser):
             continuation_state = 2
         elif lexer_state.in_style:
             continuation_state = 3
-
-        parser_state.continuation_state = continuation_state
-        parser_state.lexer_state = lexer_state
 
         while True:
             # If we're using a JavaScript parser, use that until we've completed
@@ -112,4 +107,7 @@ class HTMLParser(Parser):
 
             self._tokens.append(token)
 
+        parser_state = HTMLParserState()
+        parser_state.continuation_state = continuation_state
+        parser_state.lexer_state = lexer_state
         return parser_state

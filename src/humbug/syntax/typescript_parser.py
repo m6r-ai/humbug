@@ -36,17 +36,14 @@ class TypeScriptParser(JavaScriptParser):
             Uses the TypeScript lexer for token generation while maintaining the
             JavaScript parsing logic.
         """
-        parser_state = TypeScriptParserState()
+        in_element = False
         prev_lexer_state = None
-
         if prev_parser_state:
-            parser_state.in_element = prev_parser_state.in_element
+            in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 
         lexer = TypeScriptLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
-        parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
-        parser_state.lexer_state = lexer_state
 
         while True:
             token = lexer.get_next_token()
@@ -56,7 +53,7 @@ class TypeScriptParser(JavaScriptParser):
             if token.type != 'IDENTIFIER':
                 if (token.type == 'OPERATOR' and
                         token.value not in ('.', '?.')):
-                    parser_state.in_element = False
+                    in_element = False
                     self._tokens.append(token)
                     continue
 
@@ -64,20 +61,20 @@ class TypeScriptParser(JavaScriptParser):
                     self._tokens.append(token)
                     continue
 
-                if token.value != 'this' and not parser_state.in_element:
+                if token.value != 'this' and not in_element:
                     self._tokens.append(token)
                     continue
 
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
-            cur_in_element = parser_state.in_element
+            cur_in_element = in_element
             next_token = lexer.peek_next_token(['WHITESPACE'])
-            parser_state.in_element = cur_in_element
+            in_element = cur_in_element
 
             next_in_element = False
             if next_token and next_token.type == 'OPERATOR':
                 if next_token.value == '(':
-                    parser_state.in_element = False
+                    in_element = False
                     self._tokens.append(Token(
                         type='FUNCTION_OR_METHOD',
                         value=token.value,
@@ -89,7 +86,7 @@ class TypeScriptParser(JavaScriptParser):
                 if next_token.value in ('.', '?.'):
                     next_in_element = True
 
-            parser_state.in_element = next_in_element
+            in_element = next_in_element
 
             if cur_in_element:
                 self._tokens.append(Token(
@@ -101,4 +98,8 @@ class TypeScriptParser(JavaScriptParser):
 
             self._tokens.append(token)
 
+        parser_state = TypeScriptParserState()
+        parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
+        parser_state.lexer_state = lexer_state
+        parser_state.in_element = in_element
         return parser_state
