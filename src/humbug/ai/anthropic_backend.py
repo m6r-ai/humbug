@@ -23,7 +23,7 @@ class AnthropicBackend(AIBackend):
         data = {
             "model": settings.model,
             "messages": messages,
-            "max_tokens": 4096,
+            "max_tokens": settings.max_output_tokens,
             "stream": True
         }
 

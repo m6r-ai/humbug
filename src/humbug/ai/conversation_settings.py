@@ -9,10 +9,12 @@ class ConversationSettings:
         "gpt-4o",
         "o1-mini",
         "o1-preview",
+
         # Gemini models
         "gemini-1.5-flash",
         "gemini-1.5-pro",
         "gemini-2.0-flash-exp",
+
         # Anthropic models
         "claude-3-5-haiku-20241022",
         "claude-3-5-sonnet-20241022"
@@ -42,10 +44,25 @@ class ConversationSettings:
         "claude-3-5-sonnet-20241022": True
     }
 
+    MODEL_LIMITS = {
+        "gpt-4o-mini": {"context_window": 128000, "max_output_tokens": 16384},
+        "gpt-4o": {"context_window": 128000, "max_output_tokens": 16384},
+        "o1-mini": {"context_window": 128000, "max_output_tokens": 65536},
+        "o1": {"context_window": 200000, "max_output_tokens": 100000},
+        "gemini-1.5-flash": {"context_window": 1048576, "max_output_tokens": 8192},
+        "gemini-1.5-pro": {"context_window": 2097152, "max_output_tokens": 8192},
+        "gemini-2.0-flash-exp": {"context_window": 1048576, "max_output_tokens": 8192},
+        "claude-3-5-haiku-20241022": {"context_window": 200000, "max_output_tokens": 4096},
+        "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192}
+    }
+
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
         """Initialize conversation settings with defaults."""
         self.model = model
         self.temperature = temperature if self.supports_temperature(model) else None
+        model_limits = self.MODEL_LIMITS.get(model, {"context_window": 8192, "max_output_tokens": 2048})
+        self.context_window = model_limits["context_window"]
+        self.max_output_tokens = model_limits["max_output_tokens"]
 
     @classmethod
     def get_available_models(cls) -> list[str]:
@@ -61,3 +78,8 @@ class ConversationSettings:
     def supports_temperature(cls, model: str) -> bool:
         """Check if model supports temperature setting."""
         return cls.TEMPERATURE_SUPPORTED_MODELS.get(model, False)
+
+    @classmethod
+    def get_model_limits(cls, model: str) -> dict:
+        """Get the context window and max output tokens for a model."""
+        return cls.MODEL_LIMITS.get(model, {"context_window": 8192, "max_output_tokens": 2048})

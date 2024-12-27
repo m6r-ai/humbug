@@ -62,6 +62,11 @@ class SettingsDialog(QDialog):
         temp_layout.addWidget(self.temp_spin)
         layout.addLayout(temp_layout)
 
+        # Add limits display
+        self._limits_label = QLabel()
+        self._limits_label.setMinimumHeight(40)
+        layout.addWidget(self._limits_label)
+
         layout.addStretch()
 
         # Button row with proper spacing and alignment
@@ -147,6 +152,15 @@ class SettingsDialog(QDialog):
         """Handle model selection changes."""
         supports_temp = ConversationSettings.supports_temperature(model)
         self.temp_spin.setEnabled(supports_temp)
+
+        # Get and display model limits
+        limits = ConversationSettings.get_model_limits(model)
+        context_window = limits["context_window"]
+        max_output = limits["max_output_tokens"]
+        self._limits_label.setText(
+            f"Context window: {context_window:,} tokens\n"
+            f"Max output: {max_output:,} tokens"
+        )
 
         if supports_temp:
             if model in self._model_temperatures:
