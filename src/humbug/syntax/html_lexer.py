@@ -53,7 +53,6 @@ class HTMLLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
-        lexer_state = HTMLLexerState()
         if prev_lexer_state:
             self._in_tag = prev_lexer_state.in_tag
             self._tag_name = prev_lexer_state.tag_name
@@ -72,6 +71,7 @@ class HTMLLexer(Lexer):
         if not self._in_comment and not self._in_script and not self._in_style:
             self._inner_lex()
 
+        lexer_state = HTMLLexerState()
         lexer_state.in_tag = self._in_tag
         lexer_state.tag_name = self._tag_name
         lexer_state.seen_equals = self._seen_equals
@@ -114,6 +114,7 @@ class HTMLLexer(Lexer):
                 self._read_doctype()
                 return
 
+            self._in_comment = True
             self._read_html_comment(4)
             return
 
@@ -139,12 +140,14 @@ class HTMLLexer(Lexer):
         ))
 
         if self._tag_name.lower() == 'script':
+            print("script tag found")
             self._in_script = True
             self._read_script_block()
             return
 
         if self._tag_name.lower() == 'style':
-            self._in_script = True
+            print("style tag found")
+            self._in_style = True
             self._read_style_block()
 
     def _read_default(self) -> None:
@@ -153,36 +156,6 @@ class HTMLLexer(Lexer):
         """
         if self._in_tag:
             self._read_tag()
-            return
-
-        # Handle script elements
-        if self._tag_name.lower() == 'script':
-            script_open = self._position
-            script_close = self._input.lower().find('</script', self._position)
-            if script_close == -1:
-                script_close = len(self._input)
-
-            self._position = script_close
-            self._tokens.append(Token(
-                type='SCRIPT',
-                value=self._input[script_open:script_close],
-                start=script_open
-            ))
-            return
-
-        # Handle style elements
-        if self._tag_name.lower() == 'style':
-            style_open = self._position
-            style_close = self._input.lower().find('</style', self._position)
-            if style_close == -1:
-                style_close = len(self._input)
-
-            self._position = style_close
-            self._tokens.append(Token(
-                type='STYLE',
-                value=self._input[style_open:style_close],
-                start=style_open
-            ))
             return
 
         self._read_text()
@@ -210,7 +183,6 @@ class HTMLLexer(Lexer):
         """
         Read an HTML comment.
         """
-        self._in_comment = True
         start = self._position
         self._position += skip_chars  # Skip past '<!--'
         while (self._position + 2) < len(self._input):
@@ -235,12 +207,12 @@ class HTMLLexer(Lexer):
         """
         Read a script block.
         """
-        self._in_script = True
         start = self._position
         script_close = self._input.lower().find('</script', self._position)
-        if script_close == -1:
-            script_close = len(self._input)
+        if script_close != -1:
             self._in_script = False
+        else:
+            script_close = len(self._input)
 
         self._position = script_close
         self._tokens.append(Token(
@@ -253,12 +225,12 @@ class HTMLLexer(Lexer):
         """
         Read a style block.
         """
-        self._in_style = True
         start = self._position
         style_close = self._input.lower().find('</style', self._position)
-        if style_close == -1:
-            style_close = len(self._input)
+        if style_close != -1:
             self._in_style = False
+        else:
+            style_close = len(self._input)
 
         self._position = style_close
         self._tokens.append(Token(

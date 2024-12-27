@@ -55,7 +55,16 @@ class HTMLParser(Parser):
 
         lexer = HTMLLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
-        parser_state.continuation_state = 1 if lexer_state.in_comment else 0
+
+        continuation_state = 0
+        if lexer_state.in_comment:
+            continuation_state = 1
+        elif lexer_state.in_script:
+            continuation_state = 2
+        elif lexer_state.in_style:
+            continuation_state = 3
+
+        parser_state.continuation_state = continuation_state
         parser_state.lexer_state = lexer_state
 
         while True:

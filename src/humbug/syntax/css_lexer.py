@@ -32,7 +32,6 @@ class CSSLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
-        lexer_state = CSSLexerState(in_comment=False)
         if prev_lexer_state:
             self._in_comment = prev_lexer_state.in_comment
 
@@ -42,6 +41,7 @@ class CSSLexer(Lexer):
         if not self._in_comment:
             self._inner_lex()
 
+        lexer_state = CSSLexerState(in_comment=False)
         lexer_state.in_comment = self._in_comment
         return lexer_state
 

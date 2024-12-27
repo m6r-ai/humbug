@@ -32,7 +32,6 @@ class JavaScriptLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
-        lexer_state = JavaScriptLexerState(in_block_comment=False)
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
 
@@ -42,6 +41,7 @@ class JavaScriptLexer(Lexer):
         if not self._in_block_comment:
             self._inner_lex()
 
+        lexer_state = JavaScriptLexerState(in_block_comment=False)
         lexer_state.in_block_comment = self._in_block_comment
         return lexer_state
 

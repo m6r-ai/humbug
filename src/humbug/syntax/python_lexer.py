@@ -34,7 +34,6 @@ class PythonLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
-        lexer_state = PythonLexerState()
         if prev_lexer_state:
             self._in_docstring = prev_lexer_state.in_docstring
             self._docstring_quote = prev_lexer_state.docstring_quote
@@ -45,6 +44,7 @@ class PythonLexer(Lexer):
         if not self._in_docstring:
             self._inner_lex()
 
+        lexer_state = PythonLexerState()
         lexer_state.in_docstring = self._in_docstring
         lexer_state.docstring_quote = self._docstring_quote
         return lexer_state

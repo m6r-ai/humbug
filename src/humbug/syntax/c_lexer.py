@@ -32,7 +32,6 @@ class CLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
-        lexer_state = CLexerState()
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
 
@@ -42,6 +41,7 @@ class CLexer(Lexer):
         if not self._in_block_comment:
             self._inner_lex()
 
+        lexer_state = CLexerState()
         lexer_state.in_block_comment = self._in_block_comment
         return lexer_state
 
