@@ -71,7 +71,6 @@ class AIBackend(ABC):
                         sock_read=10
                     )
                     async with aiohttp.ClientSession() as session:
-                        print(f"send: {data}")
                         async with session.post(
                             url,
                             headers=headers,
@@ -125,7 +124,6 @@ class AIBackend(ABC):
                                         if not line.startswith("data: "):
                                             continue
 
-                                        print("data")
                                         line = line[6:]
 
                                         if line == "[DONE]":
@@ -157,7 +155,6 @@ class AIBackend(ABC):
                                         return
 
                                     except json.JSONDecodeError as e:
-                                        print("JSON exception")
                                         self._logger.exception("JSON exception: %s", e)
                                         continue
 
