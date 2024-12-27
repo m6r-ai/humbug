@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QDoubleSpinBox
 )
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.color_role import ColorRole
@@ -21,7 +21,7 @@ class SettingsDialog(QDialog):
         """Initialize the settings dialog."""
         super().__init__(parent)
         self.setWindowTitle("Conversation Settings")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(500)
         self.setModal(True)
 
         self._available_models: List[str] = []
@@ -33,7 +33,7 @@ class SettingsDialog(QDialog):
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
-        layout.setSpacing(10)
+        layout.setSpacing(12)  # Slightly increased spacing
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Model selection
@@ -41,7 +41,8 @@ class SettingsDialog(QDialog):
         model_label = QLabel("AI Model:")
         model_label.setMinimumHeight(40)
         self._model_combo = QComboBox()
-        self._model_combo.setMinimumWidth(200)
+        self._model_combo.setMinimumWidth(300)
+        self._model_combo.setMinimumHeight(40)  # Match label height
         self._model_combo.currentTextChanged.connect(self._handle_model_change)
         model_layout.addWidget(model_label)
         model_layout.addStretch()
@@ -56,22 +57,46 @@ class SettingsDialog(QDialog):
         self.temp_spin.setRange(0.0, 1.0)
         self.temp_spin.setSingleStep(0.1)
         self.temp_spin.setDecimals(1)
-        self.temp_spin.setMinimumWidth(200)
+        self.temp_spin.setMinimumWidth(300)  # Match combo box width
+        self.temp_spin.setMinimumHeight(40)  # Match label height
         temp_layout.addWidget(temp_label)
         temp_layout.addStretch()
         temp_layout.addWidget(self.temp_spin)
         layout.addLayout(temp_layout)
 
-        # Add limits display
-        self._limits_label = QLabel()
-        self._limits_label.setMinimumHeight(40)
-        layout.addWidget(self._limits_label)
+        # Context window display
+        context_layout = QHBoxLayout()
+        context_label = QLabel("Context Window:")
+        context_label.setMinimumHeight(40)
+        self.context_value = QLabel()
+        self.context_value.setMinimumWidth(300)  # Match combo box width
+        self.context_value.setMinimumHeight(40)  # Match label height
+        self.context_value.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        context_layout.addWidget(context_label)
+        context_layout.addStretch()
+        context_layout.addWidget(self.context_value)
+        layout.addLayout(context_layout)
 
+        # Max output display
+        output_layout = QHBoxLayout()
+        output_label = QLabel("Max Output Tokens:")
+        output_label.setMinimumHeight(40)
+        self.output_value = QLabel()
+        self.output_value.setMinimumWidth(300)  # Match combo box width
+        self.output_value.setMinimumHeight(40)  # Match label height
+        self.output_value.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        output_layout.addWidget(output_label)
+        output_layout.addStretch()
+        output_layout.addWidget(self.output_value)
+        layout.addLayout(output_layout)
+
+        # Add extra spacing before buttons (24px since our base spacing is 12px)
+        layout.addSpacing(24)
         layout.addStretch()
 
         # Button row with proper spacing and alignment
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(4)
+        button_layout.setSpacing(8)  # Slightly increased button spacing
 
         self.ok_button = QPushButton("OK")
         self.cancel_button = QPushButton("Cancel")
@@ -84,11 +109,13 @@ class SettingsDialog(QDialog):
         self._model_combo.currentTextChanged.connect(self._handle_value_change)
         self.temp_spin.valueChanged.connect(self._handle_value_change)
 
-        # Set minimum button widths
-        min_button_width = 80
+        # Set minimum button widths and heights
+        min_button_width = 90  # Slightly increased
+        min_button_height = 40  # Match other controls
         for button in [self.ok_button, self.cancel_button, self.apply_button]:
             button.setMinimumWidth(min_button_width)
-            button.setContentsMargins(6, 6, 6, 6)
+            button.setMinimumHeight(min_button_height)
+            button.setContentsMargins(8, 8, 8, 8)
             button_layout.addWidget(button)
 
         layout.addLayout(button_layout)
@@ -108,7 +135,7 @@ class SettingsDialog(QDialog):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
-                padding: 6px;
+                padding: 8px;
             }}
             QComboBox:disabled {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
@@ -117,24 +144,36 @@ class SettingsDialog(QDialog):
             QComboBox::drop-down {{
                 border: none;
             }}
+            QComboBox QAbstractItemView {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                selection-color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
             QDoubleSpinBox {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
-                padding: 6px;
+                padding: 8px;
             }}
             QDoubleSpinBox:disabled {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QLabel[valueDisplay="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
             }}
             QPushButton {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
-                padding: 6px;
-                min-width: 80px;
+                padding: 8px;
             }}
             QPushButton:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
@@ -155,12 +194,15 @@ class SettingsDialog(QDialog):
 
         # Get and display model limits
         limits = ConversationSettings.get_model_limits(model)
-        context_window = limits["context_window"]
-        max_output = limits["max_output_tokens"]
-        self._limits_label.setText(
-            f"Context window: {context_window:,} tokens\n"
-            f"Max output: {max_output:,} tokens"
-        )
+        self.context_value.setText(f"{limits['context_window']:,} tokens")
+        self.context_value.setProperty('valueDisplay', True)
+        self.context_value.style().unpolish(self.context_value)
+        self.context_value.style().polish(self.context_value)
+
+        self.output_value.setText(f"{limits['max_output_tokens']:,} tokens")
+        self.output_value.setProperty('valueDisplay', True)
+        self.output_value.style().unpolish(self.output_value)
+        self.output_value.style().polish(self.output_value)
 
         if supports_temp:
             if model in self._model_temperatures:
@@ -233,6 +275,11 @@ class SettingsDialog(QDialog):
         if model_index >= 0:
             self._model_combo.setCurrentIndex(model_index)
 
+        # Update limits display for the current model
+        limits = ConversationSettings.get_model_limits(settings.model)
+        self.context_value.setText(f"{limits['context_window']:,} tokens")
+        self.output_value.setText(f"{limits['max_output_tokens']:,} tokens")
+
         supports_temp = ConversationSettings.supports_temperature(settings.model)
         self.temp_spin.setEnabled(supports_temp)
         if supports_temp and settings.temperature is not None:
@@ -262,5 +309,4 @@ class SettingsDialog(QDialog):
         """Handle Cancel button click."""
         if self._initial_settings:
             self.settings_changed.emit(self._initial_settings)
-
         super().reject()
