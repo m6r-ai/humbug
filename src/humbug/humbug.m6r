@@ -38,7 +38,7 @@ Context: humbug application
                 - Always visible but not highlighted on the currently selected tab.
                 - Hidden by default on non-selected tabs, appearing only when the tab is hovered over.
                 - Use a transparent background when not hovered
-                - Highlighted in red when the mouse hovers over the close button itself.
+                - Highlighted in red (#ff4444) when the mouse hovers over the close button itself.
 
                 Context: History display
                     Each message in the history appears as a distinct "card" that spans the full width of the history view.
@@ -94,6 +94,17 @@ Context: humbug application
                         |  across multiple lines as needed.        |
                         +------------------------------------------+
                         ```
+
+                Context: Selection behaviour
+                    Selection of text is limited to within a single message - it cannot span across multiple
+                    messages or between the input area and message history.
+
+                    When selecting text near the top or bottom of the visible area, the view will
+                    automatically scroll to follow the selection.
+
+                    The scroll speed increases based on how far outside the visible area the cursor is.
+
+                    The maximum scroll speed is reached when the cursor is twice the viewport height away.
 
             Context: Editor tabs
                 Each editor tab will be named with the filename being edited.
