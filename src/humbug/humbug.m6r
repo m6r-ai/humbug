@@ -525,7 +525,7 @@ Context: humbug application
 
             Context: Code blocks
                 Text between matching triple backticks (```) is displayed as a code block.
-                Code blocks use a monospace font (set as a family fallback: Menlo, Consolas, Monaco, Courier New, monospace).
+                Code blocks use a monospace font (set as a family fallback: Lucida Console, Menlo, Consolas, Monaco, Courier New, monospace).
                 The background colour for code blocks is dark grey (#2d2d2d) and extends across the full width of the input box.
                 The code block formatting applies to both the triple backtick lines and all content between them.
 
@@ -544,7 +544,7 @@ Context: humbug application
 
             Context: Code blocks
                 Text between matching triple backticks (```) is displayed as a code block.
-                Code blocks use the same monospace font as the input area (Menlo, Consolas, Monaco, Courier New, monospace).
+                Code blocks use the same monospace font as the input area (Lucida Console, Menlo, Consolas, Monaco, Courier New, monospace).
                 The background colour for code blocks is dark grey (#2d2d2d) and extends across the full width.
                 The code block formatting applies to both the triple backtick lines and all content between them.
 
