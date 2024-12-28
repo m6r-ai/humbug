@@ -55,7 +55,7 @@ class StyleManager(QObject):
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[str, QTextCharFormat] = {}
 
-            self._code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
+            self._code_font_families = ["Menlo", "Consolas", "Monaco", "Courier New", "monospace"]
             self._initialize_highlights()
 
     def _initialize_colors(self) -> Dict[ColorRole, Dict[ColorMode, str]]:
@@ -408,7 +408,7 @@ class StyleManager(QObject):
         return base_size * self._zoom_factor
 
     def get_space_width(self) -> float:
-        font = QFont(["Menlo", "Monaco", "Courier New", "monospace"])
+        font = QFont(["Menlo", "Consolas", "Monaco", "Courier New", "monospace"])
         font.setPointSizeF(self._base_font_size * self._zoom_factor)
         font_metrics = QFontMetricsF(font)
         space_width = font_metrics.horizontalAdvance('        ') / 8

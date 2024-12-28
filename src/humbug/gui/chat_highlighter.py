@@ -33,7 +33,7 @@ class ChatHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
 
         # Consistent font family fallback sequence for all code formats
-        self._code_font_families = ["Menlo", "Monaco", "Courier New", "monospace"]
+        self._code_font_families = ["Menlo", "Consolas", "Monaco", "Courier New", "monospace"]
         self._has_code_block = False
 
         self._style_manager = StyleManager()
