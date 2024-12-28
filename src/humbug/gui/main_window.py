@@ -24,7 +24,6 @@ from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.transcript.transcript_loader import TranscriptLoader
-from humbug.transcript.transcript_manager import TranscriptManager
 from humbug.transcript.transcript_writer import TranscriptWriter
 
 
@@ -35,7 +34,6 @@ class MainWindow(QMainWindow):
         """Initialize the main window."""
         super().__init__()
         self._ai_backends = ai_backends
-        self._conversation_count = TranscriptManager.get_conversation_number()
         self._untitled_count = 0
         self._chat_tabs = {}  # tab_id -> ChatTab
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
@@ -376,8 +374,6 @@ class MainWindow(QMainWindow):
 
     def _new_conversation(self) -> str:
         """Create a new conversation tab and return its ID."""
-        TranscriptManager.ensure_conversations_directory()
-
         # Generate timestamp and use it for both ID and metadata
         timestamp = datetime.utcnow()
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
@@ -386,7 +382,6 @@ class MainWindow(QMainWindow):
         filename = f"conversations/{conversation_id}.conv"
         writer = TranscriptWriter(
             filename,
-            self._conversation_count,
             timestamp.isoformat()
         )
 
@@ -394,7 +389,6 @@ class MainWindow(QMainWindow):
         chat_tab = ChatTab(conversation_id, writer, self)
         self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
         self._chat_tabs[conversation_id] = chat_tab
-        self._conversation_count += 1
         return conversation_id
 
     def _open_conversation(self):
@@ -430,7 +424,6 @@ class MainWindow(QMainWindow):
             filename = f"conversations/{conversation_id}.conv"
             writer = TranscriptWriter(
                 filename,
-                self._conversation_count,
                 timestamp.isoformat()
             )
 
@@ -443,7 +436,6 @@ class MainWindow(QMainWindow):
             # Add tab
             self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
             self._chat_tabs[conversation_id] = chat_tab
-            self._conversation_count += 1
 
         except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
             msgbox = self._create_styled_message_box(

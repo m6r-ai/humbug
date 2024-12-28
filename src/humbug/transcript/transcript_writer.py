@@ -1,6 +1,5 @@
 """Transcript writer for individual conversations."""
 
-from datetime import datetime
 import json
 import os
 import sys
@@ -11,25 +10,23 @@ from humbug.transcript.float_one_decimal_encoder import FloatOneDecimalEncoder
 class TranscriptWriter:
     """Handles writing a single conversation transcript."""
 
-    def __init__(self, filename: str, conversation_number: int, timestamp: str):
+    def __init__(self, filename: str, timestamp: str):
         """Initialize transcript writer for a conversation.
 
         Args:
             filename: Full path to transcript file
-            conversation_number: Sequential number for this conversation
             timestamp: ISO format timestamp for the conversation start
         """
         self._filename = filename
         self._timestamp = timestamp
-        self._initialize_file(conversation_number)
+        self._initialize_file()
 
-    def _initialize_file(self, conversation_number: int) -> None:
+    def _initialize_file(self) -> None:
         """Initialize a new transcript file with metadata."""
         metadata = {
             "metadata": {
                 "timestamp": self._timestamp,
                 "version": "0.1",
-                "conversation_number": conversation_number
             },
             "conversation": []
         }
@@ -71,4 +68,3 @@ class TranscriptWriter:
     def close(self) -> None:
         """Close the transcript file."""
         # Nothing to do as we don't keep file handles open
-        pass

@@ -28,6 +28,12 @@ def setup_logging():
     )
 
 
+def setup_conversations():
+    """Establish conversations directory."""
+    # Create conversations directory if it doesn't exist
+    os.makedirs("conversations", exist_ok=True)
+
+
 def format_version() -> str:
     """Format version number, showing patch number only if non-zero."""
     parts = __version__.split('.')
@@ -36,5 +42,6 @@ def format_version() -> str:
     return __version__
 
 
-# Setup logging when module is imported
+# Setup when module is imported
 setup_logging()
+setup_conversations()

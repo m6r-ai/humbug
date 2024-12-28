@@ -581,9 +581,8 @@ Context: humbug application
                         "properties": {
                             "timestamp": { "type": "string", "format": "date-time" },
                             "version": { "type": "string" },
-                            "conversation_number": { "type": "integer" }
                         },
-                        "required": ["timestamp", "version", "conversation_number"]
+                        "required": ["timestamp", "version"]
                     },
                     "conversation": {
                         "type": "array",
