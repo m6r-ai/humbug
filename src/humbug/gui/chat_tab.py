@@ -1,6 +1,9 @@
 """Unified chat tab implementation with correct scrolling and input expansion."""
 
 from typing import Dict, List, Optional
+import asyncio
+from datetime import datetime
+import logging
 
 from PySide6.QtWidgets import (
     QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
@@ -27,10 +30,26 @@ class ChatTab(TabBase):
     # Signal emitted when the tab should be closed
     submitted = Signal(str)  # Emits message text when submitted
 
-    def __init__(self, tab_id: str, transcript_writer: TranscriptWriter, parent: Optional[QWidget] = None) -> None:
-        """Initialize the unified chat tab."""
+    def __init__(self, tab_id: str, transcript_filename: str, timestamp: str,
+                 parent: Optional[QWidget] = None) -> None:
+        """
+        Initialize the unified chat tab.
+
+        Args:
+            tab_id: Unique identifier for this tab
+            transcript_filename: Full path to transcript file
+            timestamp: ISO format timestamp for the conversation
+            parent: Optional parent widget
+        """
         super().__init__(tab_id, parent)
-        self._transcript_writer: TranscriptWriter = transcript_writer
+        self._logger = logging.getLogger("ChatTab")
+
+        # Create transcript writer with provided filename
+        self._transcript_writer = TranscriptWriter(
+            transcript_filename,
+            timestamp
+        )
+
         self._conversation = ConversationHistory(tab_id)
         self._settings = ConversationSettings()
         self._current_ai_message = None
@@ -108,6 +127,33 @@ class ChatTab(TabBase):
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
 
+    async def _write_transcript(self, messages: List[Dict]) -> None:
+        """
+        Write messages to transcript file.
+
+        Args:
+            messages: List of message dictionaries to write
+
+        Raises:
+            IOError: If writing to transcript file fails
+        """
+        try:
+            await self._transcript_writer.write(messages)
+        except Exception as e:
+            self._logger.error("Failed to write to transcript: %s", e)
+            # Add error message to conversation
+            error_msg = f"Failed to write to transcript: {str(e)}"
+            self.add_system_message(
+                error_msg,
+                error={
+                    "code": "transcript_error",
+                    "message": error_msg,
+                    "details": {
+                        "type": type(e).__name__
+                    }
+                }
+            )
+
     def _handle_selection_scroll(self, mouse_pos: QPoint):
         """Begin scroll handling for selection drag."""
         viewport_pos = self._scroll_area.viewport().mapFromGlobal(mouse_pos)
@@ -174,7 +220,6 @@ class ChatTab(TabBase):
         """Update conversation settings."""
         self._settings = settings
         self._update_status_display()
-
 
     def _handle_submit(self):
         """Handle message submission from input widget."""
@@ -343,12 +388,12 @@ class ChatTab(TabBase):
             error_msg = f"Error: {error['message']}"
             self._update_last_ai_response(error_msg)
             error_message = Message.create(
-                self._tab_id,
                 MessageSource.SYSTEM,
                 error_msg,
                 error=error
             )
             self._conversation.add_message(error_message)
+            await self._write_transcript([error_message.to_transcript_dict()])
             return error_message
 
         # Update display
@@ -359,7 +404,6 @@ class ChatTab(TabBase):
         if not self._current_ai_message:
             # Create and add initial message
             message = Message.create(
-                self._tab_id,
                 MessageSource.AI,
                 content,
                 model=settings.model,
@@ -382,11 +426,13 @@ class ChatTab(TabBase):
         if usage:
             self._update_status_display()
             self._current_ai_message = None
+            await self._write_transcript([message.to_transcript_dict()])
             return message
 
         if completed:
             self.finish_ai_response()
             self._current_ai_message = None
+            await self._write_transcript([message.to_transcript_dict()])
             return message
 
         return message
@@ -395,23 +441,23 @@ class ChatTab(TabBase):
         """Add a user message to the conversation."""
         self._add_message(content, "user")
         message = Message.create(
-            self._tab_id,
             MessageSource.USER,
             content
         )
         self._conversation.add_message(message)
+        asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
         return message
 
     def add_system_message(self, content: str, error: Optional[Dict] = None) -> Message:
         """Add a system message to the conversation."""
         self._add_message(content, "system")
         message = Message.create(
-            self._tab_id,
             MessageSource.SYSTEM,
             content,
             error=error
         )
         self._conversation.add_message(message)
+        asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
         return message
 
     def load_message_history(self, messages: List[Message]):

@@ -16,7 +16,6 @@ class Message:
     source: MessageSource
     content: str
     timestamp: datetime
-    conversation_id: str
     usage: Optional[Usage] = None
     error: Optional[Dict] = None
     model: Optional[str] = None
@@ -26,7 +25,6 @@ class Message:
     @classmethod
     def create(
         cls,
-        conversation_id: str,
         source: MessageSource, content: str,
         usage: Optional[Usage] = None,
         error: Optional[Dict] = None,
@@ -40,7 +38,6 @@ class Message:
             source=source,
             content=content,
             timestamp=datetime.utcnow(),
-            conversation_id=conversation_id,
             usage=usage,
             error=error,
             model=model,
@@ -55,7 +52,6 @@ class Message:
             "timestamp": self.timestamp.isoformat(),
             "type": self._get_transcript_type(),
             "content": self.content,
-            "conversation_id": self.conversation_id,
             "completed": self.completed
         }
 

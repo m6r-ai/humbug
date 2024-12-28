@@ -24,7 +24,6 @@ from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.transcript.transcript_loader import TranscriptLoader
-from humbug.transcript.transcript_writer import TranscriptWriter
 
 
 class MainWindow(QMainWindow):
@@ -380,13 +379,9 @@ class MainWindow(QMainWindow):
 
         # Create transcript file based on same ID
         filename = f"conversations/{conversation_id}.conv"
-        writer = TranscriptWriter(
-            filename,
-            timestamp.isoformat()
-        )
 
         # Create tab using same ID
-        chat_tab = ChatTab(conversation_id, writer, self)
+        chat_tab = ChatTab(conversation_id, filename, timestamp.isoformat(), self)
         self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
         self._chat_tabs[conversation_id] = chat_tab
         return conversation_id
@@ -422,13 +417,9 @@ class MainWindow(QMainWindow):
 
             # Create new transcript file for this conversation
             filename = f"conversations/{conversation_id}.conv"
-            writer = TranscriptWriter(
-                filename,
-                timestamp.isoformat()
-            )
 
             # Create new tab
-            chat_tab = ChatTab(conversation_id, writer, self)
+            chat_tab = ChatTab(conversation_id, filename, timestamp.isoformat(), self)
 
             # Load the messages into the new conversation
             chat_tab.load_message_history(messages)
@@ -475,11 +466,6 @@ class MainWindow(QMainWindow):
 
         # Add user message and get the message object
         user_message = chat_tab.add_user_message(message)
-
-        # Write to transcript
-        asyncio.create_task(
-            chat_tab._transcript_writer.write([user_message.to_transcript_dict()])
-        )
 
         # Start AI response
         task = asyncio.create_task(
@@ -553,7 +539,6 @@ class MainWindow(QMainWindow):
                     error_msg,
                     error={"code": "backend_error", "message": error_msg}
                 )
-                await chat_tab._transcript_writer.write([system_message.to_transcript_dict()])
                 return
 
             stream = backend.stream_message(
@@ -570,18 +555,13 @@ class MainWindow(QMainWindow):
                         error=response.error
                     )
 
-                    # Only write AI messages that are complete (have usage info)
-                    if message and (response.usage or response.error):
-                        await chat_tab._transcript_writer.write([message.to_transcript_dict()])
-
                     # Handle retryable errors by adding them to transcript
                     if response.error:
                         if response.error['code'] in ['network_error', 'timeout']:
-                            retry_message = chat_tab.add_system_message(
+                            chat_tab.add_system_message(
                                 response.error['message'],
                                 error=response.error
                             )
-                            await chat_tab._transcript_writer.write([retry_message.to_transcript_dict()])
                         else:
                             return
 
@@ -592,15 +572,13 @@ class MainWindow(QMainWindow):
             self._logger.debug("AI response cancelled for conv %s", tab_id)
             if chat_tab:
                 # Complete any ongoing AI response
-                message = await chat_tab.update_streaming_response(
+                await chat_tab.update_streaming_response(
                     content="",
                     completed=True
                 )
-                if message:  # Only write if we got a message back
-                    await chat_tab._transcript_writer.write([message.to_transcript_dict()])
 
                 # Add cancellation message
-                system_message = chat_tab.add_system_message(
+                chat_tab.add_system_message(
                     "Request cancelled by user",
                     error={
                         "code": "cancelled",
@@ -610,7 +588,6 @@ class MainWindow(QMainWindow):
                         }
                     }
                 )
-                await chat_tab._transcript_writer.write([system_message.to_transcript_dict()])
 
             return
 
@@ -622,13 +599,11 @@ class MainWindow(QMainWindow):
                     "message": str(e),
                     "details": {"type": type(e).__name__}
                 }
-                message = chat_tab.update_streaming_response(
+                chat_tab.update_streaming_response(
                     content="",
                     error=error,
                     completed=True
                 )
-                if message:
-                    await self._transcript_writer.write([message.to_transcript_dict()])
 
         finally:
             self._logger.debug("=== Finished AI response for conv %s ===", tab_id)
