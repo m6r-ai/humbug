@@ -12,6 +12,18 @@ from humbug.ai.provider import AIProvider
 from humbug.transcript.transcript_writer import TranscriptWriter
 from humbug.gui.main_window import MainWindow
 
+# Import parsers to ensure we register them
+from humbug.syntax.c_parser import CParser  # noqa: F401
+from humbug.syntax.cpp_parser import CppParser  # noqa: F401
+from humbug.syntax.css_parser import CSSParser  # noqa: F401
+from humbug.syntax.html_parser import HTMLParser  # noqa: F401
+from humbug.syntax.javascript_parser import JavaScriptParser  # noqa: F401
+from humbug.syntax.metaphor_parser import MetaphorParser  # noqa: F401
+from humbug.syntax.python_parser import PythonParser  # noqa: F401
+from humbug.syntax.text_parser import TextParser  # noqa: F401
+from humbug.syntax.typescript_parser import TypeScriptParser  # noqa: F401
+from humbug.syntax.parser_registry import ParserRegistry
+
 
 def install_global_exception_handler():
     """Install a global exception handler for uncaught exceptions."""

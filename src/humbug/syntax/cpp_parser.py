@@ -4,6 +4,8 @@ from typing import Optional
 from humbug.syntax.lexer import Token
 from humbug.syntax.c_parser import CParser, CParserState
 from humbug.syntax.cpp_lexer import CppLexer
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser_registry import ParserRegistry
 
 
 @dataclass
@@ -13,6 +15,7 @@ class CppParserState(CParserState):
     """
 
 
+@ParserRegistry.register_parser(ProgrammingLanguage.CPP)
 class CppParser(CParser):
     """
     Parser for C++ code.

@@ -140,13 +140,11 @@ class HTMLLexer(Lexer):
         ))
 
         if self._tag_name.lower() == 'script':
-            print("script tag found")
             self._in_script = True
             self._read_script_block()
             return
 
         if self._tag_name.lower() == 'style':
-            print("style tag found")
             self._in_style = True
             self._read_style_block()
 

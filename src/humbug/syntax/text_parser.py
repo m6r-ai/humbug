@@ -3,6 +3,8 @@ from typing import Optional
 
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser_registry import ParserRegistry
 
 
 @dataclass
@@ -12,6 +14,7 @@ class TextParserState(ParserState):
     """
 
 
+@ParserRegistry.register_parser(ProgrammingLanguage.TEXT)
 class TextParser(Parser):
     """
     Parser for text.

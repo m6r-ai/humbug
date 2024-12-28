@@ -8,7 +8,7 @@ from PySide6.QtGui import (
 )
 from humbug.gui.style_manager import StyleManager
 from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.parser_factory import ParserFactory
+from humbug.syntax.parser_registry import ParserRegistry
 
 
 class EditorHighlighterBlockData(QTextBlockUserData):
@@ -60,7 +60,7 @@ class EditorHighlighter(QSyntaxHighlighter):
             current_block_data: EditorHighlighterBlockData = current_block.userData()
 
             # Use the appropriate language parser
-            parser = ParserFactory.create_parser(self._language)
+            parser = ParserRegistry.create_parser(self._language)
             if not parser:
                 return
 

@@ -4,6 +4,8 @@ from typing import Optional
 from humbug.syntax.lexer import Token
 from humbug.syntax.javascript_parser import JavaScriptParser, JavaScriptParserState
 from humbug.syntax.typescript_lexer import TypeScriptLexer
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser_registry import ParserRegistry
 
 
 @dataclass
@@ -13,6 +15,7 @@ class TypeScriptParserState(JavaScriptParserState):
     """
 
 
+@ParserRegistry.register_parser(ProgrammingLanguage.TYPESCRIPT)
 class TypeScriptParser(JavaScriptParser):
     """
     Parser for TypeScript code.

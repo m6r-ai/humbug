@@ -5,7 +5,7 @@ from humbug.syntax.lexer import Token
 from humbug.syntax.chat_lexer import ChatLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.parser_factory import ParserFactory
+from humbug.syntax.parser_registry import ParserRegistry
 
 
 # Mapping from lowercase language names to enum members
@@ -66,7 +66,7 @@ class ChatParser(Parser):
             Uses ParserFactory to instantiate appropriate parser for the language.
             Returns None if no parser is available for the language.
         """
-        embedded_parser = ParserFactory.create_parser(language)
+        embedded_parser = ParserRegistry.create_parser(language)
         if not embedded_parser:
             return None
 
@@ -161,7 +161,7 @@ class ChatParser(Parser):
         if parse_embedded:
             new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
             parser_state.embedded_parser_state = new_embedded_parser_state
-            if embedded_parser_state:
+            if new_embedded_parser_state:
                 parser_state.continuation_state = new_embedded_parser_state.continuation_state
 
         return parser_state

@@ -4,6 +4,8 @@ from typing import Optional
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.python_lexer import PythonLexer
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser_registry import ParserRegistry
 
 
 @dataclass
@@ -17,6 +19,7 @@ class PythonParserState(ParserState):
     in_element: bool = False
 
 
+@ParserRegistry.register_parser(ProgrammingLanguage.PYTHON)
 class PythonParser(Parser):
     """
     Parser for Python code.

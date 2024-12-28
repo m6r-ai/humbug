@@ -3,6 +3,8 @@ from typing import Optional
 
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.metaphor_lexer import MetaphorLexer
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser_registry import ParserRegistry
 
 
 @dataclass
@@ -12,6 +14,7 @@ class MetaphorParserState(ParserState):
     """
 
 
+@ParserRegistry.register_parser(ProgrammingLanguage.METAPHOR)
 class MetaphorParser(Parser):
     """
     Parser for Metaphor language.

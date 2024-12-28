@@ -4,6 +4,8 @@ from typing import Optional
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.css_lexer import CSSLexer
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser_registry import ParserRegistry
 
 
 @dataclass
@@ -16,6 +18,7 @@ class CSSParserState(ParserState):
     """
 
 
+@ParserRegistry.register_parser(ProgrammingLanguage.CSS)
 class CSSParser(Parser):
     """
     Parser for CSS code.
