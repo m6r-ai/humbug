@@ -89,10 +89,6 @@ class HTMLParser(Parser):
             prev_lexer_state = prev_parser_state.lexer_state
             embedded_parser_state = prev_parser_state.embedded_parser_state
 
-#        if prev_parser_state:
-#            parser_state.js_parser = prev_parser_state.js_parser
-#            parser_state.css_parser = prev_parser_state.css_parser
-
         lexer = HTMLLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
 
