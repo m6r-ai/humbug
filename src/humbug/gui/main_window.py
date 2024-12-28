@@ -24,17 +24,18 @@ from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.transcript.transcript_loader import TranscriptLoader
+from humbug.transcript.transcript_manager import TranscriptManager
+from humbug.transcript.transcript_writer import TranscriptWriter
 
 
 class MainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
-    def __init__(self, ai_backends: Dict[str, AIBackend], transcript_writer):
+    def __init__(self, ai_backends: Dict[str, AIBackend]):
         """Initialize the main window."""
         super().__init__()
         self._ai_backends = ai_backends
-        self._transcript_writer = transcript_writer
-        self._conversation_count = 0
+        self._conversation_count = TranscriptManager.get_conversation_number()
         self._untitled_count = 0
         self._chat_tabs = {}  # tab_id -> ChatTab
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
@@ -274,7 +275,11 @@ class MainWindow(QMainWindow):
             current_tab.save_as()
 
     def _handle_tab_close_requested(self, tab_id: str) -> None:
-        """Update UI to reflect a tab has been requested to close."""
+        """Handle tab close request."""
+        tab = self._chat_tabs.get(tab_id)
+        if tab:
+            tab._transcript_writer.close()
+
         self.tab_manager.close_tab(tab_id)
 
     def _handle_tab_title_changed(self, tab_id: str, title: str) -> None:
@@ -371,11 +376,15 @@ class MainWindow(QMainWindow):
 
     def _new_conversation(self) -> str:
         """Create a new conversation tab and return its ID."""
-        self._conversation_count += 1
+        TranscriptManager.ensure_conversations_directory()
+        filename = TranscriptManager.generate_transcript_filename()
+        writer = TranscriptWriter(filename, self._conversation_count)
+
         tab_id = str(uuid.uuid4())
-        chat_tab = ChatTab(tab_id, self)
+        chat_tab = ChatTab(tab_id, writer, self)
         self.tab_manager.add_tab(chat_tab, f"Conv {self._conversation_count}")
         self._chat_tabs[tab_id] = chat_tab
+        self._conversation_count += 1
         return tab_id
 
     def _open_conversation(self):
@@ -459,7 +468,7 @@ class MainWindow(QMainWindow):
 
         # Write to transcript
         asyncio.create_task(
-            self._transcript_writer.write([user_message.to_transcript_dict()])
+            chat_tab._transcript_writer.write([user_message.to_transcript_dict()])
         )
 
         # Start AI response
@@ -534,7 +543,7 @@ class MainWindow(QMainWindow):
                     error_msg,
                     error={"code": "backend_error", "message": error_msg}
                 )
-                await self._transcript_writer.write([system_message.to_transcript_dict()])
+                await chat_tab._transcript_writer.write([system_message.to_transcript_dict()])
                 return
 
             stream = backend.stream_message(
@@ -553,7 +562,7 @@ class MainWindow(QMainWindow):
 
                     # Only write AI messages that are complete (have usage info)
                     if message and (response.usage or response.error):
-                        await self._transcript_writer.write([message.to_transcript_dict()])
+                        await chat_tab._transcript_writer.write([message.to_transcript_dict()])
 
                     # Handle retryable errors by adding them to transcript
                     if response.error:
@@ -562,7 +571,7 @@ class MainWindow(QMainWindow):
                                 response.error['message'],
                                 error=response.error
                             )
-                            await self._transcript_writer.write([retry_message.to_transcript_dict()])
+                            await chat_tab._transcript_writer.write([retry_message.to_transcript_dict()])
                         else:
                             return
 
@@ -578,7 +587,7 @@ class MainWindow(QMainWindow):
                     completed=True
                 )
                 if message:  # Only write if we got a message back
-                    await self._transcript_writer.write([message.to_transcript_dict()])
+                    await chat_tab._transcript_writer.write([message.to_transcript_dict()])
 
                 # Add cancellation message
                 system_message = chat_tab.add_system_message(
@@ -591,7 +600,7 @@ class MainWindow(QMainWindow):
                         }
                     }
                 )
-                await self._transcript_writer.write([system_message.to_transcript_dict()])
+                await chat_tab._transcript_writer.write([system_message.to_transcript_dict()])
 
             return
 

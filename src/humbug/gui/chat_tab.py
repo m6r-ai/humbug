@@ -18,6 +18,7 @@ from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
+from humbug.transcript.transcript_writer import TranscriptWriter
 
 
 class ChatTab(TabBase):
@@ -26,9 +27,10 @@ class ChatTab(TabBase):
     # Signal emitted when the tab should be closed
     submitted = Signal(str)  # Emits message text when submitted
 
-    def __init__(self, tab_id: str, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, tab_id: str, transcript_writer: TranscriptWriter, parent: Optional[QWidget] = None) -> None:
         """Initialize the unified chat tab."""
         super().__init__(tab_id, parent)
+        self._transcript_writer: TranscriptWriter = transcript_writer
         self._conversation = ConversationHistory(tab_id)
         self._settings = ConversationSettings()
         self._current_ai_message = None

@@ -18,6 +18,6 @@ htmlcol
 # Ignore virtual environment
 venv
 
-# Ignore transcript and log files
-transcript-*
+# Ignore conversation and log files
+conversations
 logs

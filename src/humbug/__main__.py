@@ -9,7 +9,6 @@ import time
 from qasync import QEventLoop, QApplication
 
 from humbug.ai.provider import AIProvider
-from humbug.transcript.transcript_writer import TranscriptWriter
 from humbug.gui.main_window import MainWindow
 
 # Import parsers to ensure we register them
@@ -82,10 +81,8 @@ async def main():
         print("Error: No AI backends could be initialized")
         return 1
 
-    transcript = TranscriptWriter()
-
     # Create and show main window
-    window = MainWindow(ai_backends, transcript)
+    window = MainWindow(ai_backends)
     window.show()
 
     return 0
