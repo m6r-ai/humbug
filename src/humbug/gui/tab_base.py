@@ -46,6 +46,14 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement can_close")
 
+    def close(self) -> None:
+        """
+        Close the tab's content if applicable.
+
+        Must be implemented by subclasses.
+        """
+        raise NotImplementedError("Subclasses must implement save")
+
     def can_save(self) -> bool:
         """
         Check if the tab can be saved.

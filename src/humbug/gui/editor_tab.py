@@ -375,6 +375,9 @@ class EditorTab(TabBase):
 
         return reply == QMessageBox.Discard
 
+    def close(self) -> bool:
+        pass
+
     def can_save(self) -> bool:
         return self._is_modified
 

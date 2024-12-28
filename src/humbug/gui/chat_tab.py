@@ -517,6 +517,9 @@ class ChatTab(TabBase):
     def can_close(self) -> bool:
         return True
 
+    def close(self) -> None:
+        self._transcript_writer.close()
+
     def can_save(self) -> bool:
         return False
 

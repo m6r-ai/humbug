@@ -276,7 +276,7 @@ class MainWindow(QMainWindow):
         """Handle tab close request."""
         tab = self._chat_tabs.get(tab_id)
         if tab:
-            tab._transcript_writer.close()
+            tab.close()
 
         self.tab_manager.close_tab(tab_id)
 
@@ -406,7 +406,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            messages, error, metadata = TranscriptLoader.load_transcript(file_path)
+            messages, error, _metadata = TranscriptLoader.load_transcript(file_path)
             if error:
                 msgbox = self._create_styled_message_box(
                     QMessageBox.Critical,
