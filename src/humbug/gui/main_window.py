@@ -2,13 +2,14 @@
 
 import asyncio
 from datetime import datetime
+import json
 import logging
 import os
 from typing import Dict, List
 import uuid
 
 from PySide6.QtWidgets import (
-    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog
+    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -22,6 +23,7 @@ from humbug.gui.editor_tab import EditorTab
 from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
+from humbug.transcript.transcript_loader import TranscriptLoader
 
 
 class MainWindow(QMainWindow):
@@ -53,7 +55,7 @@ class MainWindow(QMainWindow):
         # File menu actions
         self._new_conv_action = QAction("New Conversation", self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
-        self._new_conv_action.triggered.connect(self._new_conversation_tab)
+        self._new_conv_action.triggered.connect(self._new_conversation)
 
         self._new_file_action = QAction("New File", self)
         self._new_file_action.setShortcut(QKeySequence.New)
@@ -63,9 +65,13 @@ class MainWindow(QMainWindow):
         self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
         self._close_tab_action.triggered.connect(self._close_current_tab)
 
-        self._open_action = QAction("Open File...", self)
-        self._open_action.setShortcut(QKeySequence.Open)
-        self._open_action.triggered.connect(self._open_file)
+        self._open_conv_action = QAction("Open Conversation...", self)
+        self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
+        self._open_conv_action.triggered.connect(self._open_conversation)
+
+        self._open_file_action = QAction("Open File...", self)
+        self._open_file_action.setShortcut(QKeySequence.Open)
+        self._open_file_action.triggered.connect(self._open_file)
 
         self._save_action = QAction("Save", self)
         self._save_action.setShortcut(QKeySequence.Save)
@@ -136,7 +142,8 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self._new_conv_action)
         file_menu.addAction(self._new_file_action)
         file_menu.addSeparator()
-        file_menu.addAction(self._open_action)
+        file_menu.addAction(self._open_conv_action)
+        file_menu.addAction(self._open_file_action)
         file_menu.addSeparator()
         file_menu.addAction(self._save_action)
         file_menu.addAction(self._save_as_action)
@@ -179,7 +186,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.tab_manager)
 
         # Create initial conversation tab
-        self._new_conversation_tab()
+        self._new_conversation()
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -362,7 +369,7 @@ class MainWindow(QMainWindow):
             }}
         """)
 
-    def _new_conversation_tab(self) -> str:
+    def _new_conversation(self) -> str:
         """Create a new conversation tab and return its ID."""
         self._conversation_count += 1
         tab_id = str(uuid.uuid4())
@@ -370,6 +377,54 @@ class MainWindow(QMainWindow):
         self.tab_manager.add_tab(chat_tab, f"Conv {self._conversation_count}")
         self._chat_tabs[tab_id] = chat_tab
         return tab_id
+
+    def _open_conversation(self):
+        """Show open conversation dialog and create chat tab."""
+        self._menu_timer.stop()
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Conversation",
+            os.path.expanduser("~/"),
+            "Transcript Files (*.json);;All Files (*.*)"
+        )
+        self._menu_timer.start()
+
+        if not file_path:
+            return
+
+        try:
+            messages, error, metadata = TranscriptLoader.load_transcript(file_path)
+            if error:
+                msgbox = self._create_styled_message_box(
+                    QMessageBox.Critical,
+                    "Error Loading Conversation",
+                    f"Could not load {file_path}: {error}"
+                )
+                msgbox.exec()
+                return
+
+            # Create new conversation tab
+            tab_id = str(uuid.uuid4())
+            chat_tab = ChatTab(tab_id, self)
+
+            # Load the entire conversation state
+            chat_tab.load_message_history(messages)
+
+            # Get conversation name from metadata or use default
+            conv_name = metadata.get("conversation_name", f"Conv {self._conversation_count + 1}")
+            self._conversation_count += 1
+
+            # Add tab
+            self.tab_manager.add_tab(chat_tab, conv_name)
+            self._chat_tabs[tab_id] = chat_tab
+
+        except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
+            msgbox = self._create_styled_message_box(
+                QMessageBox.Critical,
+                "Error Loading Conversation",
+                f"Could not load {file_path}: {str(e)}"
+            )
+            msgbox.exec()
 
     def _close_current_tab(self):
         """Close the current conversation tab."""

@@ -412,6 +412,49 @@ class ChatTab(TabBase):
         self._conversation.add_message(message)
         return message
 
+    def load_message_history(self, messages: List[Message]):
+        """
+        Load existing message history from transcript.
+
+        Args:
+            messages: List of Message objects to load
+        """
+        # Replace the conversation history entirely
+        self._conversation = ConversationHistory(self._tab_id)
+
+        # Add all messages in order to both display and history
+        for message in messages:
+            # Display message with appropriate style
+            style = {
+                MessageSource.USER: "user",
+                MessageSource.AI: "ai",
+                MessageSource.SYSTEM: "system"
+            }[message.source]
+            self._add_message(message.content, style)
+
+            # Add to conversation history with all metadata intact
+            self._conversation.add_message(message)
+
+            # If this was an AI message, update status display
+            if message.source == MessageSource.AI:
+                if message.usage:
+                    self._conversation._last_response_tokens = {
+                        "input": message.usage.prompt_tokens,
+                        "output": message.usage.completion_tokens
+                    }
+                if message.model:
+                    self.update_settings(ConversationSettings(
+                        model=message.model,
+                        temperature=message.temperature
+                    ))
+
+        # Update display with final state
+        self._update_status_display()
+
+        # Ensure we're scrolled to the end
+        self._auto_scroll = True
+        self._scroll_to_bottom()
+
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
         super().resizeEvent(event)
