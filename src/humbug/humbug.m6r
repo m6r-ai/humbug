@@ -223,10 +223,24 @@ Context: humbug application
             Context: New File
                 The "New File" menu item will create a new empty editor tab.
 
+                This will be matched with a keyboard shortcut "Ctrl+N".
+
             Context: Separator
                 There will be a horizontal Separator
 
-            Context: Open
+            Context: Open Conversation
+                The "Open Conversation..." menu item will show a file selection dialog allowing the user to open
+                a previously saved conversation transcript in a new conversation tab.
+
+                When opened, the conversation history will be restored including:
+
+                - All previous messages (user and AI)
+                - System messages and error states
+                - Model selection and temperature settings
+
+                This will be matched with a keyboard shortcut "Ctrl+Shift+O".
+
+            Context: Open File
                 The "Open File..." menu item will show a file selection dialog allowing the user to open
                 an existing file in a new editor tab.
 
