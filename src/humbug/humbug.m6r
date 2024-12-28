@@ -35,10 +35,11 @@ Context: humbug application
             Each type has its own distinct visual appearance and behavior.
 
             Context: Conversation tabs
-                Each tab will be named with a conversation name.  This will default to "Conv <num>" where <num> is a
-                simple incrementing number starting from 1 for each conversation created during the current run of the
-                application (e.g., "Conv 1", "Conv 2", "Conv 3", etc.).  These numbers do not need to persist between
-                different runs of the application.
+                Each tab will be named with a conversation name.  This will default to "Conv: ID" where <ID> is a
+                based on the date and time at which the conversation started.  The ID format will be:
+                "yyyy-mm-dd-hh-mm-ss-ttt", substituting the conversation start date and time (in UTC) for yyyy,
+                mm, dd, hh, mm, ss, ttt (year, numeric month, day-of-month, hours, minutes, seconds, and thousandths of
+                seconds respectively).
 
                 Each tab will have a close button (typically rendered as an "x" icon) that appears after the conversation
                 name.  Clicking this close button will close the tab in the same way as clicking the "Close Conversation"
@@ -237,6 +238,9 @@ Context: humbug application
                 - All previous messages (user and AI)
                 - System messages and error states
                 - Model selection and temperature settings
+
+                To avoid conflict with the original transcript file, a new transcript file will be created for
+                the new conversation.  This will use the date/time of the "open" operation.
 
                 This will be matched with a keyboard shortcut "Ctrl+Shift+O".
 
@@ -552,13 +556,17 @@ Context: humbug application
             Context: Formatting interaction
                 The Markdown formatting is applied in real-time as messages are added or updated.
 
-    Context: Conversation transcript file
+    Context: Conversation transcript files
         The application will record a transcript of all conversations between the user and the AI, storing each turn
         in a JSON data structure.  The JSON data structure will be written to a transcript file called
-        "transcript-yyyy-mm-dd-hh-mm-ss.json", substituting the application start date and time (in GMT) for yyyy,
-        mm, dd, hh, mm, and ss (year, numeric month, day-of-month, hours, minutes, and seconds respectively).
+        "yyyy-mm-dd-hh-mm-ss-ttt.conv", substituting the conversation start date and time (in UTC) for yyyy,
+        mm, dd, hh, mm, ss, ttt (year, numeric month, day-of-month, hours, minutes, seconds, and thousandths of
+        seconds respectively).
 
-        On exiting the application this file must be fully closed.
+        Transcript files will be written to a "conversations" directory of the current working directory.  If this
+        does not exist then the application should create it.
+
+        On closing a conversation tab the matching file must be fully closed.
 
         Context: Transcript JSON schema
             Use the following JSON schema:
@@ -620,13 +628,6 @@ Context: humbug application
                 "required": ["metadata", "conversation"]
             }
             ```
-
-    Context: Transcript file management
-        Context: Transcript Rotation
-            - Max file size: 50MB.
-            - On size limit: Create new file with incremented suffix.
-            - Keep last 5 transcript files.
-            - Delete oldest when limit reached.
 
         Context: Error recovery
             - Write to temp file first.
@@ -1036,6 +1037,17 @@ Context: humbug application
                 Exponential backoff: 2, 4, 8 seconds.
 
                 Preserve conversation context between retries.
+
+    Context: Logging
+        Where appropriate the application will log key operations, errors, and exceptions to a log file.  A new log file
+        will be created at the start of each application run.
+
+        The log file will be named "yyyy-mm-dd-hh-mm-ss-ttt.log", substituting the application start date and time (in UTC)
+        for yyyy, mm, dd, hh, mm, ss, ttt (year, numeric month, day-of-month, hours, minutes, seconds, and thousandths of
+        seconds respectively).
+
+        The log file will be written to a "logs" directory of the current working directory.  If this
+        does not exist then the application should create it.
 
     Context: GUI
         The GUI must be built using the latest version of PySide6, and with qasync to support the integration of this
