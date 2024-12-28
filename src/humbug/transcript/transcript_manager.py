@@ -2,10 +2,14 @@
 
 import os
 from datetime import datetime
-from typing import Optional
 
 class TranscriptManager:
     """Manages transcript file operations."""
+
+    @staticmethod
+    def generate_conversation_id() -> str:
+        """Generate a unique conversation ID based on current UTC time."""
+        return datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
     @staticmethod
     def ensure_conversations_directory() -> None:

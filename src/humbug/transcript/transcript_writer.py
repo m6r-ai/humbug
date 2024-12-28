@@ -1,9 +1,9 @@
 """Transcript writer for individual conversations."""
 
-import asyncio
 from datetime import datetime
 import json
 import os
+import sys
 from typing import Dict, List
 
 from humbug.transcript.float_one_decimal_encoder import FloatOneDecimalEncoder
@@ -11,21 +11,23 @@ from humbug.transcript.float_one_decimal_encoder import FloatOneDecimalEncoder
 class TranscriptWriter:
     """Handles writing a single conversation transcript."""
 
-    def __init__(self, filename: str, conversation_number: int):
+    def __init__(self, filename: str, conversation_number: int, timestamp: str):
         """Initialize transcript writer for a conversation.
 
         Args:
             filename: Full path to transcript file
             conversation_number: Sequential number for this conversation
+            timestamp: ISO format timestamp for the conversation start
         """
         self._filename = filename
+        self._timestamp = timestamp
         self._initialize_file(conversation_number)
 
     def _initialize_file(self, conversation_number: int) -> None:
         """Initialize a new transcript file with metadata."""
         metadata = {
             "metadata": {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": self._timestamp,
                 "version": "0.1",
                 "conversation_number": conversation_number
             },
@@ -46,20 +48,25 @@ class TranscriptWriter:
                 data = json.load(f)
 
             # Add new messages
-            for message in messages:
-                data["conversation"].append(message)
+            data["conversation"].extend(messages)
 
             # Write to temp file then rename for atomic operation
             temp_file = f"{self._filename}.tmp"
             with open(temp_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, cls=FloatOneDecimalEncoder)
 
+            # Atomic replace
             os.replace(temp_file, self._filename)
 
         except Exception as e:
             print(f"Error writing transcript: {str(e)}", file=sys.stderr)
-            # If this fails, the chat tab will still have the content in memory
-            # Next write will try again with all messages
+            # Create backup of current file if possible
+            try:
+                if os.path.exists(self._filename):
+                    backup = f"{self._filename}.backup"
+                    os.replace(self._filename, backup)
+            except Exception:
+                pass
 
     def close(self) -> None:
         """Close the transcript file."""

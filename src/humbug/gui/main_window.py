@@ -377,15 +377,25 @@ class MainWindow(QMainWindow):
     def _new_conversation(self) -> str:
         """Create a new conversation tab and return its ID."""
         TranscriptManager.ensure_conversations_directory()
-        filename = TranscriptManager.generate_transcript_filename()
-        writer = TranscriptWriter(filename, self._conversation_count)
 
-        tab_id = str(uuid.uuid4())
-        chat_tab = ChatTab(tab_id, writer, self)
-        self.tab_manager.add_tab(chat_tab, f"Conv {self._conversation_count}")
-        self._chat_tabs[tab_id] = chat_tab
+        # Generate timestamp and use it for both ID and metadata
+        timestamp = datetime.utcnow()
+        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+
+        # Create transcript file based on same ID
+        filename = f"conversations/{conversation_id}.conv"
+        writer = TranscriptWriter(
+            filename,
+            self._conversation_count,
+            timestamp.isoformat()
+        )
+
+        # Create tab using same ID
+        chat_tab = ChatTab(conversation_id, writer, self)
+        self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
+        self._chat_tabs[conversation_id] = chat_tab
         self._conversation_count += 1
-        return tab_id
+        return conversation_id
 
     def _open_conversation(self):
         """Show open conversation dialog and create chat tab."""
@@ -394,7 +404,7 @@ class MainWindow(QMainWindow):
             self,
             "Open Conversation",
             os.path.expanduser("~/"),
-            "Transcript Files (*.json);;All Files (*.*)"
+            "Transcript Files (*.conv);;All Files (*.*)"
         )
         self._menu_timer.start()
 
@@ -412,20 +422,28 @@ class MainWindow(QMainWindow):
                 msgbox.exec()
                 return
 
-            # Create new conversation tab
-            tab_id = str(uuid.uuid4())
-            chat_tab = ChatTab(tab_id, self)
+            # Create new conversation with new timestamp
+            timestamp = datetime.utcnow()
+            conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
-            # Load the entire conversation state
+            # Create new transcript file for this conversation
+            filename = f"conversations/{conversation_id}.conv"
+            writer = TranscriptWriter(
+                filename,
+                self._conversation_count,
+                timestamp.isoformat()
+            )
+
+            # Create new tab
+            chat_tab = ChatTab(conversation_id, writer, self)
+
+            # Load the messages into the new conversation
             chat_tab.load_message_history(messages)
 
-            # Get conversation name from metadata or use default
-            conv_name = metadata.get("conversation_name", f"Conv {self._conversation_count + 1}")
-            self._conversation_count += 1
-
             # Add tab
-            self.tab_manager.add_tab(chat_tab, conv_name)
-            self._chat_tabs[tab_id] = chat_tab
+            self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
+            self._chat_tabs[conversation_id] = chat_tab
+            self._conversation_count += 1
 
         except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
             msgbox = self._create_styled_message_box(
