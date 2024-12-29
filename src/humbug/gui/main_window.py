@@ -9,7 +9,7 @@ from typing import Dict, List
 import uuid
 
 from PySide6.QtWidgets import (
-    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QMessageBox
+    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -20,6 +20,7 @@ from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.chat_tab import ChatTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
+from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
@@ -403,12 +404,12 @@ class MainWindow(QMainWindow):
         try:
             messages, error, _metadata = TranscriptLoader.load_transcript(file_path)
             if error:
-                msgbox = self._create_styled_message_box(
-                    QMessageBox.Critical,
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
                     "Error Loading Conversation",
                     f"Could not load {file_path}: {error}"
                 )
-                msgbox.exec()
                 return
 
             # Create new conversation with new timestamp
@@ -429,12 +430,12 @@ class MainWindow(QMainWindow):
             self._chat_tabs[conversation_id] = chat_tab
 
         except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
-            msgbox = self._create_styled_message_box(
-                QMessageBox.Critical,
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
                 "Error Loading Conversation",
                 f"Could not load {file_path}: {str(e)}"
             )
-            msgbox.exec()
 
     def _close_current_tab(self):
         """Close the current conversation tab."""
