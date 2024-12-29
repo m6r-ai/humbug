@@ -404,6 +404,7 @@ class MainWindow(QMainWindow):
         try:
             messages, error, _metadata = TranscriptLoader.load_transcript(file_path)
             if error:
+                self._logger.exception("Error opening conversation: %s: %s", file_path, error)
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
@@ -430,6 +431,7 @@ class MainWindow(QMainWindow):
             self._chat_tabs[conversation_id] = chat_tab
 
         except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
+            self._logger.exception("Error opening conversation: %s: %s", file_path, str(e))
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
