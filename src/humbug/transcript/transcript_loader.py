@@ -95,7 +95,6 @@ class TranscriptLoader:
                     source=source,
                     content=msg["content"],
                     timestamp=timestamp,
-                    conversation_id=msg.get("conversation_id", str(uuid.uuid4())),
                     usage=usage,
                     error=msg.get("error"),
                     model=msg.get("model"),
