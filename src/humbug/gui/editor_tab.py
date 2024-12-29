@@ -3,7 +3,7 @@ import time
 from typing import Dict, Optional
 
 from PySide6.QtWidgets import (
-    QVBoxLayout, QLabel, QFileDialog, QMessageBox,
+    QVBoxLayout, QLabel, QFileDialog
 )
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QPainter
@@ -13,6 +13,7 @@ from humbug.gui.editor_highlighter import EditorHighlighter
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_text_edit import EditorTextEdit
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
@@ -88,133 +89,6 @@ class EditorTab(TabBase):
 
         self._update_status()
 
-    def _create_styled_message_box(
-        self,
-        icon: QMessageBox.Icon,
-        title: str,
-        text: str,
-        buttons: QMessageBox.StandardButtons = QMessageBox.Ok
-    ) -> QMessageBox:
-        """Create a message box with appropriate styling.
-
-        Args:
-            icon: Icon to display in message box
-            title: Title of message box
-            text: Message text
-            buttons: Buttons to display
-
-        Returns:
-            Styled message box instance
-        """
-        msgbox = QMessageBox(icon, title, text, buttons, self)
-        style_manager = StyleManager()
-
-        # Set icon color to match text
-        icon_color = style_manager.get_color(ColorRole.TEXT_PRIMARY)
-        pixmap = msgbox.iconPixmap()
-        if pixmap:
-            # Create a painter to recolor the icon
-            painter = QPainter(pixmap)
-            painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
-            painter.fillRect(pixmap.rect(), icon_color)
-            painter.end()
-            msgbox.setIconPixmap(pixmap)
-
-        # Set colors based on current theme
-        msgbox.setStyleSheet(f"""
-            QMessageBox {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                min-width: 400px;
-            }}
-            QLabel {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                min-height: 40px;
-            }}
-            QDialogButtonBox {{
-                button-layout: center;
-                margin-top: 8px;
-            }}
-            QPushButton {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 6px;
-                min-width: 80px;
-                margin: 0 4px;
-            }}
-            QPushButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            QPushButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-            QPushButton:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-        """)
-        return msgbox
-
-    def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
-        """
-        Handle style and zoom changes.
-
-        Args:
-            zoom_factor: New zoom scaling factor
-        """
-        # Update font size
-        font = self._editor.font()
-        base_size = self._style_manager.base_font_size
-        font.setPointSizeF(base_size * zoom_factor)
-        self._editor.setFont(font)
-
-        # Update tab stops - scale with zoom
-        space_width = self._style_manager.get_space_width()
-        self._editor.setTabStopDistance(space_width * 8)
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-            QScrollBar:vertical, QScrollBar:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-                height: 12px;
-            }}
-            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-                min-width: 20px;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-                height: 0px;
-                width: 0px;
-            }}
-            QAbstractScrollArea::corner {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-        """)
-
-        # Update status bar styling
-        self._status_bar.setStyleSheet(f"""
-            QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: {2 * zoom_factor}px;
-            }}
-        """)
-
-        # Scale line number area
-        self._editor.update_line_number_area_width()
-
-        # Force a redraw of syntax highlighting
-        self._highlighter.rehighlight()
-
     def _detect_language(self, filename: Optional[str]) -> ProgrammingLanguage:
         """
         Detect the programming language based on file extension.
@@ -271,12 +145,12 @@ class EditorTab(TabBase):
                 self._last_save_content = content
                 self._set_modified(False)
             except Exception as e:
-                msgbox = self._create_styled_message_box(
-                    QMessageBox.Critical,
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
                     "Error Opening File",
                     f"Could not open {filename}: {str(e)}"
                 )
-                msgbox.exec()
         self._update_title()
 
     def _update_title(self) -> None:
@@ -356,24 +230,18 @@ class EditorTab(TabBase):
         if not self._is_modified:
             return True
 
-        msgbox = self._create_styled_message_box(
-            QMessageBox.Question,
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
             "Save Changes?",
             f"Do you want to save changes to {self._filename or f'Untitled-{self._untitled_number}'}?",
-            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+            [MessageBoxButton.SAVE, MessageBoxButton.DISCARD, MessageBoxButton.CANCEL]
         )
 
-        # Force button roles to ensure consistent behavior across platforms
-        msgbox.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-        msgbox.setDefaultButton(QMessageBox.Save)
-        msgbox.setEscapeButton(QMessageBox.Cancel)
-
-        reply = msgbox.exec()
-
-        if reply == QMessageBox.Save:
+        if result == MessageBoxButton.SAVE:
             return self.save()
 
-        return reply == QMessageBox.Discard
+        return result == MessageBoxButton.DISCARD
 
     def close(self) -> bool:
         pass
@@ -400,12 +268,12 @@ class EditorTab(TabBase):
             self._set_modified(False)
             return True
         except Exception as e:
-            msgbox = self._create_styled_message_box(
-                QMessageBox.Critical,
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
                 "Error Saving File",
                 f"Could not save {self._filename}: {str(e)}"
             )
-            msgbox.exec()
             return False
 
     def can_save_as(self) -> bool:
@@ -436,34 +304,101 @@ class EditorTab(TabBase):
         return self.save()
 
     def can_undo(self) -> bool:
+        """Check if undo is available."""
         return self._editor.document().isUndoAvailable()
 
     def undo(self) -> None:
+        """Undo the last edit operation."""
         self._editor.undo()
 
     def can_redo(self) -> bool:
+        """Check if redo is available."""
         return self._editor.document().isRedoAvailable()
 
     def redo(self) -> None:
+        """Redo the last undone edit operation."""
         self._editor.redo()
 
     def can_cut(self) -> bool:
+        """Check if cut is available."""
         return self._editor.textCursor().hasSelection()
 
     def cut(self) -> None:
+        """Cut selected text to clipboard."""
         self._editor.cut()
 
     def can_copy(self) -> bool:
+        """Check if copy is available."""
         return self._editor.textCursor().hasSelection()
 
     def copy(self) -> None:
+        """Copy selected text to clipboard."""
         self._editor.copy()
 
     def can_paste(self) -> bool:
+        """Check if paste is available."""
         return True
 
     def paste(self) -> None:
+        """Paste text from clipboard."""
         self._editor.paste()
 
     def can_submit(self) -> bool:
         return False
+
+    def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
+        """
+        Handle style and zoom changes.
+
+        Args:
+            zoom_factor: New zoom scaling factor
+        """
+        # Update font size
+        font = self._editor.font()
+        base_size = self._style_manager.base_font_size
+        font.setPointSizeF(base_size * zoom_factor)
+        self._editor.setFont(font)
+
+        # Update tab stops - scale with zoom
+        space_width = self._style_manager.get_space_width()
+        self._editor.setTabStopDistance(space_width * 8)
+
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+            QScrollBar:vertical, QScrollBar:horizontal {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+                height: 12px;
+            }}
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+                min-width: 20px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                height: 0px;
+                width: 0px;
+            }}
+            QAbstractScrollArea::corner {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+        """)
+
+        # Update status bar styling
+        self._status_bar.setStyleSheet(f"""
+            QLabel {{
+                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: {2 * zoom_factor}px;
+            }}
+        """)
+
+        # Scale line number area
+        self._editor.update_line_number_area_width()
+
+        # Force a redraw of syntax highlighting
+        self._highlighter.rehighlight()
