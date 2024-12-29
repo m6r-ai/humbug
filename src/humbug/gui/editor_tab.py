@@ -89,6 +89,64 @@ class EditorTab(TabBase):
 
         self._update_status()
 
+
+    def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
+        """
+        Handle style and zoom changes.
+
+        Args:
+            zoom_factor: New zoom scaling factor
+        """
+        # Update font size
+        font = self._editor.font()
+        base_size = self._style_manager.base_font_size
+        font.setPointSizeF(base_size * zoom_factor)
+        self._editor.setFont(font)
+
+        # Update tab stops - scale with zoom
+        space_width = self._style_manager.get_space_width()
+        self._editor.setTabStopDistance(space_width * 8)
+
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+            QScrollBar:vertical, QScrollBar:horizontal {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+                height: 12px;
+            }}
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+                min-width: 20px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                height: 0px;
+                width: 0px;
+            }}
+            QAbstractScrollArea::corner {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+        """)
+
+        # Update status bar styling
+        self._status_bar.setStyleSheet(f"""
+            QLabel {{
+                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: {2 * zoom_factor}px;
+            }}
+        """)
+
+        # Scale line number area
+        self._editor.update_line_number_area_width()
+
+        # Force a redraw of syntax highlighting
+        self._highlighter.rehighlight()
+
     def _detect_language(self, filename: Optional[str]) -> ProgrammingLanguage:
         """
         Detect the programming language based on file extension.
@@ -345,60 +403,3 @@ class EditorTab(TabBase):
 
     def can_submit(self) -> bool:
         return False
-
-    def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
-        """
-        Handle style and zoom changes.
-
-        Args:
-            zoom_factor: New zoom scaling factor
-        """
-        # Update font size
-        font = self._editor.font()
-        base_size = self._style_manager.base_font_size
-        font.setPointSizeF(base_size * zoom_factor)
-        self._editor.setFont(font)
-
-        # Update tab stops - scale with zoom
-        space_width = self._style_manager.get_space_width()
-        self._editor.setTabStopDistance(space_width * 8)
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-            QScrollBar:vertical, QScrollBar:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-                height: 12px;
-            }}
-            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-                min-width: 20px;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-                height: 0px;
-                width: 0px;
-            }}
-            QAbstractScrollArea::corner {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-        """)
-
-        # Update status bar styling
-        self._status_bar.setStyleSheet(f"""
-            QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: {2 * zoom_factor}px;
-            }}
-        """)
-
-        # Scale line number area
-        self._editor.update_line_number_area_width()
-
-        # Force a redraw of syntax highlighting
-        self._highlighter.rehighlight()
