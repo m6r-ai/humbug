@@ -3,7 +3,6 @@
 import json
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
-import uuid
 
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
@@ -74,7 +73,7 @@ class TranscriptLoader:
                 }
                 if msg["type"] not in type_to_source:
                     return [], f"Invalid message type: {msg['type']}", None
-                
+
                 source = type_to_source[msg["type"]]
 
                 # Handle usage data if present
