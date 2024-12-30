@@ -468,7 +468,7 @@ class MainWindow(QMainWindow):
         chat_tab.clear_input()
 
         # Add user message and get the message object
-        user_message = chat_tab.add_user_message(message)
+        chat_tab.add_user_message(message)
 
         # Start AI response
         task = asyncio.create_task(
@@ -538,7 +538,7 @@ class MainWindow(QMainWindow):
 
             if not backend:
                 error_msg = f"No backend available for provider: {provider}"
-                system_message = chat_tab.add_system_message(
+                chat_tab.add_system_message(
                     error_msg,
                     error={"code": "backend_error", "message": error_msg}
                 )
