@@ -1,8 +1,6 @@
 """Widget for displaying individual chat messages."""
 
-from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QSizePolicy, QLabel
-)
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel
 from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QCursor
 
@@ -28,7 +26,6 @@ class MessageWidget(QFrame):
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
-        self.setLineWidth(1)
         self._is_input = is_input
 
         # Create layout
@@ -39,9 +36,6 @@ class MessageWidget(QFrame):
 
         # Create header
         self._header = QLabel(self)
-        self._header.setAutoFillBackground(True)
-        self._header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self._header.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside header for text
 
         # Create content area using custom ChatTextEdit
         self._text_area = ChatTextEdit()
@@ -49,7 +43,6 @@ class MessageWidget(QFrame):
 
         # Ensure text area takes up minimum space needed
         self._text_area.setAcceptRichText(False)
-        self._text_area.setContentsMargins(8, 8, 8, 8)  # Keep some padding inside content for text
 
         # Explicitly disable scrollbars
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -75,20 +68,15 @@ class MessageWidget(QFrame):
 
         # Map message types to background color roles
         self.background_roles = {
-            'user': ColorRole.MESSAGE_BACKGROUND_USER,
-            'ai': ColorRole.MESSAGE_BACKGROUND_AI,
-            'system': ColorRole.MESSAGE_BACKGROUND_SYSTEM,
-            'error': ColorRole.MESSAGE_BACKGROUND_ERROR
+            'user': ColorRole.MESSAGE_USER,
+            'ai': ColorRole.MESSAGE_AI,
+            'system': ColorRole.MESSAGE_SYSTEM,
+            'error': ColorRole.MESSAGE_ERROR
         }
 
     def _on_mouse_released(self):
         """Handle mouse release from text area."""
         self.mouseReleased.emit()
-
-    def _get_background_color(self, style: str) -> str:
-        """Get the appropriate background color for the message style."""
-        role = self.background_roles.get(style, ColorRole.MESSAGE_BACKGROUND_USER)
-        return self._style_manager.get_color_str(role)
 
     def set_content(self, text: str, style: str):
         """Set content with style, handling incremental updates for AI responses."""
@@ -158,21 +146,29 @@ class MessageWidget(QFrame):
 
     def handle_style_changed(self):
         """Handle the style changing"""
+        role = self.background_roles.get(self._current_style, ColorRole.MESSAGE_USER)
+        label_color = self._style_manager.get_color_str(role)
         self._header.setStyleSheet(f"""
             QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HEADER)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {label_color};
+                border: none;
+                border-radius: 0;
+                margin: 8px 8px 0 8px;
+                padding: 1px;
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
         """)
 
-        content_color = self._get_background_color(self._current_style)
+        # Content area styling
         self._text_area.setStyleSheet(f"""
             QTextEdit {{
-                background-color: {content_color};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
-                padding: 8px;
+                border-radius: 0;
+                margin: 8px;
+                padding: 0;
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
             QScrollBar:horizontal {{
                 height: 12px;
@@ -187,11 +183,12 @@ class MessageWidget(QFrame):
             }}
         """)
 
+        # Main frame styling
         self.setStyleSheet(f"""
             QFrame {{
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HEADER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
+                border-radius: 8px;
             }}
         """)
-
         self._highlighter.rehighlight()

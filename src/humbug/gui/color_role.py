@@ -19,6 +19,7 @@ class ColorRole(Enum):
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background
     TAB_BACKGROUND_INACTIVE = auto()    # Inactive tab background
     TAB_BACKGROUND_HOVER = auto()       # Tab hover background
+    TAB_BORDER_ACTIVE = auto()          # Active tab border
 
     # Button colours
     BUTTON_BACKGROUND = auto()          # Push button background
@@ -35,12 +36,12 @@ class ColorRole(Enum):
     SCROLLBAR_BACKGROUND = auto()       # Scrollbar background
     SCROLLBAR_HANDLE = auto()           # Scrollbar handle
 
-    # Message backgrounds
-    MESSAGE_BACKGROUND_USER = auto()    # User message background
-    MESSAGE_BACKGROUND_AI = auto()      # AI message background
-    MESSAGE_BACKGROUND_SYSTEM = auto()  # System message background
-    MESSAGE_BACKGROUND_ERROR = auto()   # Error message background
-    MESSAGE_BACKGROUND_HEADER = auto()  # Message header background
+    # Message colours
+    MESSAGE_BACKGROUND = auto()         # Message background
+    MESSAGE_USER = auto()               # User message background
+    MESSAGE_AI = auto()                 # AI message background
+    MESSAGE_SYSTEM = auto()             # System message background
+    MESSAGE_ERROR = auto()              # Error message background
 
     # Status bar elements
     STATUS_BAR_BACKGROUND = auto()      # Status bar background

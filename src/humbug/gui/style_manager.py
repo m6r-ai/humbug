@@ -102,6 +102,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#242424",
                 ColorMode.LIGHT: "#f8f8f8"
             },
+            ColorRole.TAB_BORDER_ACTIVE: {
+                ColorMode.DARK: "#8080ff",
+                ColorMode.LIGHT: "#8080ff"
+            },
 
             # Button colours
             ColorRole.BUTTON_BACKGROUND: {
@@ -141,26 +145,26 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c0c0c0"
             },
 
-            # Message backgrounds
-            ColorRole.MESSAGE_BACKGROUND_USER: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#f8f8f8"
-            },
-            ColorRole.MESSAGE_BACKGROUND_AI: {
+            # Message colours
+            ColorRole.MESSAGE_BACKGROUND: {
                 ColorMode.DARK: "#181818",
                 ColorMode.LIGHT: "#e4e4e4"
             },
-            ColorRole.MESSAGE_BACKGROUND_SYSTEM: {
-                ColorMode.DARK: "#1a3a1a",
-                ColorMode.LIGHT: "#e8ffe8"
+            ColorRole.MESSAGE_USER: {
+                ColorMode.DARK: "#80c080",
+                ColorMode.LIGHT: "#40a040"
             },
-            ColorRole.MESSAGE_BACKGROUND_ERROR: {
-                ColorMode.DARK: "#3a1a1a",
-                ColorMode.LIGHT: "#ffe8e8"
+            ColorRole.MESSAGE_AI: {
+                ColorMode.DARK: "#8080c0",
+                ColorMode.LIGHT: "#4040a0"
             },
-            ColorRole.MESSAGE_BACKGROUND_HEADER: {
-                ColorMode.DARK: "#2a3544",
-                ColorMode.LIGHT: "#edf2f7"
+            ColorRole.MESSAGE_SYSTEM: {
+                ColorMode.DARK: "#a0a080",
+                ColorMode.LIGHT: "#707040"
+            },
+            ColorRole.MESSAGE_ERROR: {
+                ColorMode.DARK: "#c08080",
+                ColorMode.LIGHT: "#a04040"
             },
 
             # Status bar elements

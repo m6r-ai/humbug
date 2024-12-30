@@ -229,6 +229,7 @@ class TabManager(QWidget):
             }}
             QTabBar::tab:selected {{
                 background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border-top: 2px solid {self._style_manager.get_color_str(ColorRole.TAB_BORDER_ACTIVE)};
                 border-bottom: none;
             }}
             QTabBar::tab:hover {{
