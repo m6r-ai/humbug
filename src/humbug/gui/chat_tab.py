@@ -469,6 +469,15 @@ class ChatTab(TabBase):
         asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
         return message
 
+    def get_message_history(self) -> List[Message]:
+        """
+        Retrieve the full message history for this conversation.
+
+        Returns:
+            List of Message objects representing the conversation history
+        """
+        return self._conversation._messages.copy()
+
     def load_message_history(self, messages: List[Message]):
         """
         Load existing message history from transcript.

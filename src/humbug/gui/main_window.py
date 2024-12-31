@@ -466,7 +466,7 @@ class MainWindow(QMainWindow):
         chat_tab = ChatTab(conversation_id, filename, timestamp, self)
 
         # Copy all messages, preserving original timestamps
-        messages = current_tab._conversation._messages.copy()
+        messages = current_tab.get_message_history()
         chat_tab.load_message_history(messages)
 
         # Add tab
