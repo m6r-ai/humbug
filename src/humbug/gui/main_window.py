@@ -16,6 +16,7 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
+from humbug.conversation.message_source import MessageSource
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.chat_tab import ChatTab
 from humbug.gui.color_role import ColorRole
@@ -71,6 +72,10 @@ class MainWindow(QMainWindow):
         self._open_file_action = QAction("Open File...", self)
         self._open_file_action.setShortcut(QKeySequence.Open)
         self._open_file_action.triggered.connect(self._open_file)
+
+        self._fork_conv_action = QAction("Fork Conversation", self)
+        self._fork_conv_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
+        self._fork_conv_action.triggered.connect(self._fork_conversation)
 
         self._save_action = QAction("Save", self)
         self._save_action.setShortcut(QKeySequence.Save)
@@ -143,6 +148,8 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(self._open_conv_action)
         file_menu.addAction(self._open_file_action)
+        file_menu.addSeparator()
+        file_menu.addAction(self._fork_conv_action)
         file_menu.addSeparator()
         file_menu.addAction(self._save_action)
         file_menu.addAction(self._save_as_action)
@@ -294,6 +301,7 @@ class MainWindow(QMainWindow):
         current_tab = self.tab_manager.get_current_tab()
 
         # Disable all actions by default
+        self._fork_conv_action.setEnabled(False)
         self._save_action.setEnabled(False)
         self._save_as_action.setEnabled(False)
         self._close_tab_action.setEnabled(False)
@@ -321,6 +329,7 @@ class MainWindow(QMainWindow):
 
         # Enable chat-specific operations for chat tabs
         if isinstance(current_tab, ChatTab):
+            self._fork_conv_action.setEnabled(True)
             self._settings_action.setEnabled(True)
 
         # Update zoom actions
@@ -413,17 +422,12 @@ class MainWindow(QMainWindow):
                 )
                 return
 
-            # Create new conversation with new timestamp
+            # Generate ID from original file path
+            conversation_id = os.path.splitext(os.path.basename(file_path))[0]
             timestamp = datetime.utcnow()
-            conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
-            # Create new transcript file for this conversation
-            filename = f"conversations/{conversation_id}.conv"
-
-            # Create new tab
-            chat_tab = ChatTab(conversation_id, filename, timestamp, self)
-
-            # Load the messages into the new conversation
+            # Create chat tab with original file
+            chat_tab = ChatTab(conversation_id, file_path, timestamp, self)
             chat_tab.load_message_history(messages)
 
             # Add tab
@@ -438,6 +442,34 @@ class MainWindow(QMainWindow):
                 "Error Loading Conversation",
                 f"Could not load {file_path}: {str(e)}"
             )
+
+    def _fork_conversation(self):
+        """Create a new conversation tab with the history of the current conversation."""
+        current_tab = self.tab_manager.get_current_tab()
+        if not isinstance(current_tab, ChatTab):
+            return
+
+        # Generate new conversation ID and timestamp
+        timestamp = datetime.utcnow()
+        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+
+        # Create new transcript file
+        filename = f"conversations/{conversation_id}.conv"
+
+        # Create new tab
+        chat_tab = ChatTab(conversation_id, filename, timestamp, self)
+
+        # Copy message history from current tab
+        messages = []
+        for msg in current_tab._conversation._messages:
+            if msg.source in [MessageSource.USER, MessageSource.AI]:
+                messages.append(msg)
+
+        chat_tab.load_message_history(messages)
+
+        # Add tab
+        self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
+        self._chat_tabs[conversation_id] = chat_tab
 
     def _close_current_tab(self):
         """Close the current conversation tab."""

@@ -230,7 +230,7 @@ Context: humbug application
 
             Context: Open Conversation
                 The "Open Conversation..." menu item will show a file selection dialog allowing the user to open
-                a previously saved conversation transcript in a new conversation tab.
+                an existing conversation transcript and continue the conversation in the same file.
 
                 When opened, the conversation history will be restored including:
 
@@ -241,6 +241,8 @@ Context: humbug application
                 To avoid conflict with the original transcript file, a new transcript file will be created for
                 the new conversation.  This will use the date/time of the "open" operation.
 
+                If the conversation is already open then that tab should move to being the current active tab.
+
                 This will be matched with a keyboard shortcut "Ctrl+Shift+O".
 
             Context: Open File
@@ -248,6 +250,18 @@ Context: humbug application
                 an existing file in a new editor tab.
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+O" for Windows).
+
+            Context: Separator
+                There will be a horizontal Separator
+
+            Context: Fork Conversation
+                The "Fork Conversation" menu item will create a new conversation tab containing the history of the 
+                currently selected conversation tab.
+
+                This will create a new transcript file based on the current date/time, but will retain all previous
+                message dates and times.
+
+                This will be matched with a keyboard shortcut "Ctrl+Shift+F".
 
             Context: Separator
                 There will be a horizontal Separator
