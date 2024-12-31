@@ -467,6 +467,18 @@ class MainWindow(QMainWindow):
 
         # Copy all messages, preserving original timestamps
         messages = current_tab.get_message_history()
+
+        # Convert messages to transcript dictionaries
+        transcript_messages = [msg.to_transcript_dict() for msg in messages]
+
+        # Write the full history to the new transcript file
+        async def write_full_history():
+            await chat_tab._write_transcript(transcript_messages)
+
+        # Create task to write transcript
+        asyncio.create_task(write_full_history())
+
+        # Load messages into the new tab
         chat_tab.load_message_history(messages)
 
         # Add tab
