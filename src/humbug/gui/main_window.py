@@ -2,7 +2,6 @@
 
 import asyncio
 from datetime import datetime
-import json
 import logging
 import os
 from typing import Dict, List
@@ -16,7 +15,6 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
-from humbug.conversation.message_source import MessageSource
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.chat_tab import ChatTab
 from humbug.gui.color_role import ColorRole
