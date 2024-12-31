@@ -8,6 +8,7 @@ from typing import Dict, List
 
 from humbug.transcript.float_one_decimal_encoder import FloatOneDecimalEncoder
 
+
 class TranscriptWriter:
     """Handles writing a single conversation transcript."""
 
@@ -20,7 +21,10 @@ class TranscriptWriter:
         """
         self._filename = filename
         self._timestamp: datetime = timestamp
-        self._initialize_file()
+
+        # Only initialize if file doesn't exist
+        if not os.path.exists(filename):
+            self._initialize_file()
 
     def _initialize_file(self) -> None:
         """Initialize a new transcript file with metadata."""

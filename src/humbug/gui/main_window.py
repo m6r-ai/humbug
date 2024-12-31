@@ -410,8 +410,15 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
+        # Check if conversation is already open
+        conversation_id = os.path.splitext(os.path.basename(file_path))[0]
+        if conversation_id in self._chat_tabs:
+            # Just focus the existing tab
+            self.tab_manager.set_current_tab(conversation_id)
+            return
+
         try:
-            messages, error, _metadata = TranscriptLoader.load_transcript(file_path)
+            messages, error, metadata = TranscriptLoader.load_transcript(file_path)
             if error:
                 self._logger.exception("Error opening conversation: %s: %s", file_path, error)
                 MessageBox.show_message(
@@ -422,9 +429,8 @@ class MainWindow(QMainWindow):
                 )
                 return
 
-            # Generate ID from original file path
-            conversation_id = os.path.splitext(os.path.basename(file_path))[0]
-            timestamp = datetime.utcnow()
+            # Use original timestamp from metadata
+            timestamp = datetime.fromisoformat(metadata["timestamp"])
 
             # Create chat tab with original file
             chat_tab = ChatTab(conversation_id, file_path, timestamp, self)
@@ -434,7 +440,7 @@ class MainWindow(QMainWindow):
             self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
             self._chat_tabs[conversation_id] = chat_tab
 
-        except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
+        except Exception as e:
             self._logger.exception("Error opening conversation: %s: %s", file_path, str(e))
             MessageBox.show_message(
                 self,
@@ -442,6 +448,8 @@ class MainWindow(QMainWindow):
                 "Error Loading Conversation",
                 f"Could not load {file_path}: {str(e)}"
             )
+
+    # In MainWindow._fork_conversation():
 
     def _fork_conversation(self):
         """Create a new conversation tab with the history of the current conversation."""
@@ -459,12 +467,8 @@ class MainWindow(QMainWindow):
         # Create new tab
         chat_tab = ChatTab(conversation_id, filename, timestamp, self)
 
-        # Copy message history from current tab
-        messages = []
-        for msg in current_tab._conversation._messages:
-            if msg.source in [MessageSource.USER, MessageSource.AI]:
-                messages.append(msg)
-
+        # Copy all messages, preserving original timestamps
+        messages = current_tab._conversation._messages.copy()
         chat_tab.load_message_history(messages)
 
         # Add tab

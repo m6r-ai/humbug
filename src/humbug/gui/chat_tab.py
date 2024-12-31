@@ -476,10 +476,6 @@ class ChatTab(TabBase):
         Args:
             messages: List of Message objects to load
         """
-        # Replace the conversation history entirely
-        self._conversation = ConversationHistory(self._tab_id)
-
-        # Add all messages in order to both display and history
         for message in messages:
             # Display message with appropriate style
             style = {
@@ -489,10 +485,10 @@ class ChatTab(TabBase):
             }[message.source]
             self._add_message(message.content, style, message.timestamp)
 
-            # Add to conversation history with all metadata intact
+            # Add to conversation history
             self._conversation.add_message(message)
 
-            # If this was an AI message, update status display
+            # Update settings and status if AI message
             if message.source == MessageSource.AI:
                 if message.usage:
                     self._conversation._last_response_tokens = {

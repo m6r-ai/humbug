@@ -238,9 +238,6 @@ Context: humbug application
                 - System messages and error states
                 - Model selection and temperature settings
 
-                To avoid conflict with the original transcript file, a new transcript file will be created for
-                the new conversation.  This will use the date/time of the "open" operation.
-
                 If the conversation is already open then that tab should move to being the current active tab.
 
                 This will be matched with a keyboard shortcut "Ctrl+Shift+O".
