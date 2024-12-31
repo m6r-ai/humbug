@@ -1,8 +1,8 @@
 """Unified chat tab implementation with correct scrolling and input expansion."""
 
+from datetime import datetime
 from typing import Dict, List, Optional
 import asyncio
-from datetime import datetime
 import logging
 
 from PySide6.QtWidgets import (
@@ -30,7 +30,7 @@ class ChatTab(TabBase):
     # Signal emitted when the tab should be closed
     submitted = Signal(str)  # Emits message text when submitted
 
-    def __init__(self, tab_id: str, transcript_filename: str, timestamp: str,
+    def __init__(self, tab_id: str, transcript_filename: str, timestamp: datetime,
                  parent: Optional[QWidget] = None) -> None:
         """
         Initialize the unified chat tab.
@@ -273,15 +273,22 @@ class ChatTab(TabBase):
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
-    def _add_message(self, message: str, style: str) -> None:
-        """Add a message to history with appropriate styling."""
+    def _add_message(self, message: str, style: str, timestamp: datetime = None) -> None:
+        """
+        Add a message to history with appropriate styling.
+
+        Args:
+            message: The message text
+            style: The style type ('user', 'ai', 'system', or 'error')
+            timestamp: Optional ISO format timestamp string
+        """
         msg_widget = MessageWidget(self)
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
-        msg_widget.set_content(message, style)
+        msg_widget.set_content(message, style, timestamp)
 
         # Add widget before input
         self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
@@ -291,11 +298,11 @@ class ChatTab(TabBase):
         self._auto_scroll = True
         self._scroll_to_bottom()
 
-    def _update_last_ai_response(self, content: str):
+    def _update_last_ai_response(self, content: str, timestamp: datetime = None):
         """Update the last AI response in the history."""
         # If our last message was not from the AI then create a new one.
         if not self._messages or not self._messages[-1].is_ai:
-            self._add_message(content, 'ai')
+            self._add_message(content, 'ai', timestamp)
             return
 
         # Store current scroll position before appending.  If this insertion triggers a change
@@ -382,7 +389,7 @@ class ChatTab(TabBase):
         self._input.setFocus()
 
     async def update_streaming_response(self, content: str, usage: Optional[Usage] = None,
-                                     error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
+                                    error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
         """Update the current AI response in the conversation."""
         if error:
             error_msg = f"Error: {error['message']}"
@@ -397,7 +404,7 @@ class ChatTab(TabBase):
             return error_message
 
         # Update display
-        self._update_last_ai_response(content)
+        self._update_last_ai_response(content, self._current_ai_message.timestamp if self._current_ai_message else None)
 
         # Update or create AI message in conversation
         settings = self.get_settings()
@@ -437,24 +444,26 @@ class ChatTab(TabBase):
 
         return message
 
-    def add_user_message(self, content: str) -> Message:
+    def add_user_message(self, content: str, timestamp: datetime = None) -> Message:
         """Add a user message to the conversation."""
         self._add_message(content, "user")
         message = Message.create(
             MessageSource.USER,
-            content
+            content,
+            timestamp=timestamp
         )
         self._conversation.add_message(message)
         asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
         return message
 
-    def add_system_message(self, content: str, error: Optional[Dict] = None) -> Message:
+    def add_system_message(self, content: str, error: Optional[Dict] = None, timestamp: datetime = None) -> Message:
         """Add a system message to the conversation."""
         self._add_message(content, "system")
         message = Message.create(
             MessageSource.SYSTEM,
             content,
-            error=error
+            error=error,
+            timestamp=timestamp
         )
         self._conversation.add_message(message)
         asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
@@ -478,7 +487,7 @@ class ChatTab(TabBase):
                 MessageSource.AI: "ai",
                 MessageSource.SYSTEM: "system"
             }[message.source]
-            self._add_message(message.content, style)
+            self._add_message(message.content, style, message.timestamp)
 
             # Add to conversation history with all metadata intact
             self._conversation.add_message(message)

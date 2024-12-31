@@ -382,7 +382,7 @@ class MainWindow(QMainWindow):
         filename = f"conversations/{conversation_id}.conv"
 
         # Create tab using same ID
-        chat_tab = ChatTab(conversation_id, filename, timestamp.isoformat(), self)
+        chat_tab = ChatTab(conversation_id, filename, timestamp, self)
         self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
         self._chat_tabs[conversation_id] = chat_tab
         return conversation_id
@@ -421,7 +421,7 @@ class MainWindow(QMainWindow):
             filename = f"conversations/{conversation_id}.conv"
 
             # Create new tab
-            chat_tab = ChatTab(conversation_id, filename, timestamp.isoformat(), self)
+            chat_tab = ChatTab(conversation_id, filename, timestamp, self)
 
             # Load the messages into the new conversation
             chat_tab.load_message_history(messages)

@@ -1,5 +1,6 @@
 """Transcript writer for individual conversations."""
 
+from datetime import datetime
 import json
 import os
 import sys
@@ -10,7 +11,7 @@ from humbug.transcript.float_one_decimal_encoder import FloatOneDecimalEncoder
 class TranscriptWriter:
     """Handles writing a single conversation transcript."""
 
-    def __init__(self, filename: str, timestamp: str):
+    def __init__(self, filename: str, timestamp: datetime):
         """Initialize transcript writer for a conversation.
 
         Args:
@@ -18,14 +19,14 @@ class TranscriptWriter:
             timestamp: ISO format timestamp for the conversation start
         """
         self._filename = filename
-        self._timestamp = timestamp
+        self._timestamp: datetime = timestamp
         self._initialize_file()
 
     def _initialize_file(self) -> None:
         """Initialize a new transcript file with metadata."""
         metadata = {
             "metadata": {
-                "timestamp": self._timestamp,
+                "timestamp": self._timestamp.isoformat(),
                 "version": "0.1",
             },
             "conversation": []

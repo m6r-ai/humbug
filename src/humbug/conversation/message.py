@@ -30,14 +30,20 @@ class Message:
         error: Optional[Dict] = None,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
-        completed: bool = True
+        completed: bool = True,
+        timestamp: Optional[datetime] = None
     ) -> 'Message':
         """Create a new message with generated ID and current timestamp."""
+        if timestamp:
+            msg_timestamp = datetime.fromisoformat(timestamp)
+        else:
+            msg_timestamp = datetime.utcnow()
+
         return cls(
             id=str(uuid.uuid4()),
             source=source,
             content=content,
-            timestamp=datetime.utcnow(),
+            timestamp=msg_timestamp,
             usage=usage,
             error=error,
             model=model,

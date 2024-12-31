@@ -1,6 +1,7 @@
 """Widget for displaying individual chat messages."""
 
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel
+from datetime import datetime
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QCursor
 
@@ -31,25 +32,30 @@ class MessageWidget(QFrame):
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        self._layout.setSpacing(0)  # No spacing between widgets
-        self._layout.setContentsMargins(0, 0, 0, 0)  # No margins around layout
+        self._layout.setSpacing(8)
+        self._layout.setContentsMargins(8, 8, 8, 8)
 
-        # Create header
-        self._header = QLabel(self)
+        # Create header area with horizontal layout
+        self._header = QWidget(self)
+        self._header_layout = QHBoxLayout(self._header)
+        self._header_layout.setContentsMargins(0, 0, 0, 0)
+        self._header_layout.setSpacing(4)
+
+        # Create role and timestamp labels
+        self._role_label = QLabel(self)
+        self._timestamp_label = QLabel(self)
+        self._header_layout.addWidget(self._role_label)
+        self._header_layout.addWidget(self._timestamp_label)
+        self._header_layout.addStretch()
+
+        # Add header widget to main layout
+        self._layout.addWidget(self._header)
 
         # Create content area using custom ChatTextEdit
-        self._text_area = ChatTextEdit()
+        self._text_area = self._create_text_area()
         self._text_area.setReadOnly(not self._is_input)
 
-        # Ensure text area takes up minimum space needed
-        self._text_area.setAcceptRichText(False)
-
-        # Explicitly disable scrollbars
-        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        # Add widgets to layout in correct order
-        self._layout.addWidget(self._header)
+        # Add text area to main layout
         self._layout.addWidget(self._text_area)
 
         # Connect selection change signal
@@ -74,23 +80,56 @@ class MessageWidget(QFrame):
             'error': ColorRole.MESSAGE_ERROR
         }
 
+    def _create_text_area(self) -> ChatTextEdit:
+        """Create and configure the text area.
+        
+        Returns:
+            Configured ChatTextEdit instance
+        """
+        text_area = ChatTextEdit()
+        text_area.setAcceptRichText(False)
+        text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        return text_area
+
     def _on_mouse_released(self):
         """Handle mouse release from text area."""
         self.mouseReleased.emit()
 
-    def set_content(self, text: str, style: str):
-        """Set content with style, handling incremental updates for AI responses."""
+    def set_content(self, text: str, style: str, timestamp: datetime = None):
+        """Set content with style, handling incremental updates for AI responses.
+        
+        Args:
+            text: The message text content
+            style: The style type ('user', 'ai', 'system', or 'error')
+            timestamp: datetime object for the message timestamp
+        """
         if style != self._current_style:
             # Style changed - update header and styling
-            header_text = {
-                'user': "You",
-                'ai': "Assistant",
-                'system': "System Message",
-                'error': "Error"
-            }.get(style, "Unknown")
+            if self._is_input:
+                # For input box, show "Please add a message"
+                self._role_label.setText("Please add a message (Ctrl-J to submit)")
+                self._timestamp_label.setText("")  # No timestamp for input
+            else:
+                # For history messages, show role with timestamp
+                role_text = {
+                    'user': "You",
+                    'ai': "Assistant",
+                    'system': "System Message",
+                    'error': "Error"
+                }.get(style, "Unknown")
+
+                # Format the timestamp if provided, otherwise use current time
+                dt = timestamp
+                if not dt:
+                    # Default to current time if no timestamp provided
+                    dt = datetime.utcnow()
+
+                self._role_label.setText(role_text)
+                timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                self._timestamp_label.setText(timestamp_str)
 
             self._current_style = style
-            self._header.setText(header_text)
             self.handle_style_changed()
 
             # Full reset needed for style change
@@ -148,13 +187,34 @@ class MessageWidget(QFrame):
         """Handle the style changing"""
         role = self.background_roles.get(self._current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
-        self._header.setStyleSheet(f"""
+
+        # Role label styling (bold)
+        self._role_label.setStyleSheet(f"""
             QLabel {{
                 font-weight: bold;
                 color: {label_color};
+                margin: 0;
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+        """)
+
+        # Timestamp label styling (normal weight)
+        self._timestamp_label.setStyleSheet(f"""
+            QLabel {{
+                font-weight: normal;
+                color: {label_color};
+                padding: 0;
+                margin: 0;
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+        """)
+
+
+        # Header widget styling
+        self._header.setStyleSheet(f"""
+            QWidget {{
                 border: none;
                 border-radius: 0;
-                margin: 8px 8px 0 8px;
                 padding: 1px;
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
@@ -167,7 +227,6 @@ class MessageWidget(QFrame):
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
                 border-radius: 0;
-                margin: 8px;
                 padding: 0;
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
