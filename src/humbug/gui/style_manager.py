@@ -147,7 +147,7 @@ class StyleManager(QObject):
 
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
-                ColorMode.DARK: "#383838",
+                ColorMode.DARK: "#323232",
                 ColorMode.LIGHT: "#e4e4e4"
             },
             ColorRole.MESSAGE_USER: {
