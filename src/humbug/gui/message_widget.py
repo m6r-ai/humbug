@@ -150,6 +150,7 @@ class MessageWidget(QFrame):
         label_color = self._style_manager.get_color_str(role)
         self._header.setStyleSheet(f"""
             QLabel {{
+                font-weight: bold;
                 color: {label_color};
                 border: none;
                 border-radius: 0;
