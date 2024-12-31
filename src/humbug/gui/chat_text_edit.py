@@ -144,7 +144,7 @@ class ChatTextEdit(QTextEdit):
         self._on_content_changed()
 
     def _height(self) -> int:
-        height = int(self.document().size().height()) + 16
+        height = int(self.document().size().height())
         if self._has_code_block and self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14
