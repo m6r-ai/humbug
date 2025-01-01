@@ -513,9 +513,6 @@ class MainWindow(QMainWindow):
         # Add user message and get the message object
         chat_tab.add_user_message(message)
 
-        # Add empty AI response message immediately
-        chat_tab._add_message("", "ai")
-
         # Start AI response
         task = asyncio.create_task(
             self.process_ai_response(message, chat_tab.tab_id)
