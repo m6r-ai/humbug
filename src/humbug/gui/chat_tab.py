@@ -8,7 +8,7 @@ import logging
 from PySide6.QtWidgets import (
     QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
-from PySide6.QtCore import QTimer, Signal, QPoint, Qt, Slot
+from PySide6.QtCore import QTimer, QPoint, Qt, Slot
 from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.ai.conversation_settings import ConversationSettings
@@ -52,6 +52,7 @@ class ChatTab(TabBase):
         self._current_ai_message = None
         self._messages: List[MessageWidget] = []
         self._message_with_selection: Optional[MessageWidget] = None
+        self._is_streaming = False
 
         chat_layout = QVBoxLayout(self)
         self.setLayout(chat_layout)
@@ -381,7 +382,13 @@ class ChatTab(TabBase):
     async def update_streaming_response(self, content: str, usage: Optional[Usage] = None,
                                     error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
         """Update the current AI response in the conversation."""
+        if not self._is_streaming:
+            self._is_streaming = True
+            self._input.set_streaming(True)
+
         if error:
+            self._is_streaming = False
+            self._input.set_streaming(False)
             error_msg = f"{error['message']}"
             error_message = Message.create(
                 MessageSource.SYSTEM,
@@ -421,12 +428,16 @@ class ChatTab(TabBase):
                 return None
 
         if usage:
+            self._is_streaming = False
+            self._input.set_streaming(False)
             self._update_status_display()
             self._current_ai_message = None
             await self._write_transcript([message.to_transcript_dict()])
             return message
 
         if completed:
+            self._is_streaming = False
+            self._input.set_streaming(False)
             self.finish_ai_response()
             self._current_ai_message = None
             await self._write_transcript([message.to_transcript_dict()])
@@ -627,4 +638,4 @@ class ChatTab(TabBase):
 
     def can_submit(self) -> bool:
         has_text = bool(self.get_input_text())
-        return has_text
+        return has_text and not self._is_streaming

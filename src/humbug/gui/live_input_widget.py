@@ -28,6 +28,21 @@ class LiveInputWidget(MessageWidget):
         self._history_index = -1
         self._current_index = ""
 
+        self._is_streaming = False
+        self._update_header_text()
+
+    def set_streaming(self, streaming: bool):
+        """Update the streaming state and header text."""
+        self._is_streaming = streaming
+        self._update_header_text()
+
+    def _update_header_text(self):
+        """Update the header text based on current state."""
+        if self._is_streaming:
+            self._role_label.setText("Please wait for AI response to complete (Esc to cancel)")
+        else:
+            self._role_label.setText("Please add a message (Ctrl-J to submit)")
+
     def _create_text_area(self) -> ChatTextEdit:
         """Create and configure the input text area."""
         text_area = super()._create_text_area()
