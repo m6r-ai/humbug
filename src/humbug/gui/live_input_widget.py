@@ -39,7 +39,7 @@ class LiveInputWidget(MessageWidget):
     def _update_header_text(self):
         """Update the header text based on current state."""
         if self._is_streaming:
-            self._role_label.setText("Please wait for AI response to complete (Esc to cancel)")
+            self._role_label.setText("Processing your request (Esc to cancel)")
         else:
             self._role_label.setText("Please add a message (Ctrl-J to submit)")
 
