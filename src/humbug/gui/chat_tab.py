@@ -27,9 +27,6 @@ from humbug.transcript.transcript_writer import TranscriptWriter
 class ChatTab(TabBase):
     """Unified chat tab implementing single-window feel with distinct regions."""
 
-    # Signal emitted when the tab should be closed
-    submitted = Signal(str)  # Emits message text when submitted
-
     def __init__(self, tab_id: str, transcript_filename: str, timestamp: datetime,
                  parent: Optional[QWidget] = None) -> None:
         """
@@ -69,7 +66,6 @@ class ChatTab(TabBase):
         # Set up the input box
         self._input = LiveInputWidget(self._messages_container)
         self._input.cursorPositionChanged.connect(self._ensure_cursor_visible)
-        self._input.submitted.connect(self._handle_submit)
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
         )
@@ -220,12 +216,6 @@ class ChatTab(TabBase):
         """Update conversation settings."""
         self._settings = settings
         self._update_status_display()
-
-    def _handle_submit(self):
-        """Handle message submission from input widget."""
-        text = self.get_input_text().strip()
-        if text:
-            self.submitted.emit(text)
 
     @Slot(int)
     def _on_scroll_value_changed(self, value: int):

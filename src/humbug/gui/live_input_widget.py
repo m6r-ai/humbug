@@ -10,7 +10,6 @@ from humbug.gui.chat_text_edit import ChatTextEdit
 class LiveInputWidget(MessageWidget):
     """Widget for live message input that matches history message styling."""
 
-    submitted = Signal(str)
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
 
@@ -48,7 +47,6 @@ class LiveInputWidget(MessageWidget):
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
             text = self._text_area.toPlainText().strip()
             if text:
-                self.submitted.emit(text)
                 if text not in self._input_history:
                     self._input_history.append(text)
                 self._history_index = -1
