@@ -70,51 +70,53 @@ class AIBackend(ABC):
                         sock_connect=20,
                         sock_read=60
                     )
-                    async with aiohttp.ClientSession() as session:
-                        async with session.post(
-                            url,
-                            headers=headers,
-                            json=data,
-                            timeout=post_timeout
-                        ) as response:
-                            if response.status != 200:
-                                error_data = await response.json()
-                                error_msg = error_data.get("error", {}).get("message", "Unknown error")
-                                # Map Gemini error codes to consistent format
-                                if "error" in error_data and "status" in error_data["error"]:
-                                    error_code = error_data["error"]["status"]
-                                    if error_code == "RESOURCE_EXHAUSTED":
-                                        error_msg = "Rate limit exceeded. Retrying..."
-                                    elif error_code == "PERMISSION_DENIED":
-                                        error_msg = "Invalid API key or permissions"
-                                    elif error_code == "UNAVAILABLE":
-                                        error_msg = "Service temporarily unavailable"
 
-                                if response.status == 429 or "RESOURCE_EXHAUSTED" in error_msg:
-                                    if attempt < self._max_retries - 1:
-                                        delay = self._base_delay * (2 ** attempt)
-                                        yield AIResponse(
-                                            content="",
-                                            error={
-                                                "code": "rate_limit",
-                                                "message": f"Rate limit exceeded. Retrying in {delay} seconds...",
-                                                "details": error_data
-                                            }
-                                        )
-                                        await asyncio.sleep(delay)
-                                        continue
-                                yield AIResponse(
-                                    content="",
-                                    error={
-                                        "code": str(response.status),
-                                        "message": f"API error: {error_msg}",
-                                        "details": error_data
-                                    }
-                                )
-                                return
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.post(
+                                url,
+                                headers=headers,
+                                json=data,
+                                timeout=post_timeout
+                            ) as response:
+                                if response.status != 200:
+                                    error_data = await response.json()
+                                    error_msg = error_data.get("error", {}).get("message", "Unknown error")
+                                    # Map Gemini error codes to consistent format
+                                    if "error" in error_data and "status" in error_data["error"]:
+                                        error_code = error_data["error"]["status"]
+                                        if error_code == "RESOURCE_EXHAUSTED":
+                                            error_msg = "Rate limit exceeded. Retrying..."
+                                        elif error_code == "PERMISSION_DENIED":
+                                            error_msg = "Invalid API key or permissions"
+                                        elif error_code == "UNAVAILABLE":
+                                            error_msg = "Service temporarily unavailable"
 
-                            response_handler = self._create_stream_response_handler()
-                            try:
+                                    if response.status == 429 or "RESOURCE_EXHAUSTED" in error_msg:
+                                        if attempt < self._max_retries - 1:
+                                            delay = self._base_delay * (2 ** attempt)
+                                            yield AIResponse(
+                                                content="",
+                                                error={
+                                                    "code": "rate_limit",
+                                                    "message": f"Rate limit exceeded. Retrying in {delay} seconds...",
+                                                    "details": error_data
+                                                }
+                                            )
+                                            await asyncio.sleep(delay)
+                                            continue
+
+                                    yield AIResponse(
+                                        content="",
+                                        error={
+                                            "code": str(response.status),
+                                            "message": f"API error: {error_msg}",
+                                            "details": error_data
+                                        }
+                                    )
+                                    return
+
+                                response_handler = self._create_stream_response_handler()
                                 async for line in response.content:
                                     try:
                                         line = line.decode('utf-8').strip()
@@ -165,65 +167,54 @@ class AIBackend(ABC):
                                 # Successfully processed response, exit retry loop
                                 break
 
-                            except asyncio.TimeoutError:
-                                delay = self._base_delay * (2 ** attempt)
-                                self._logger.debug("Timeout on attempt %d/%d", attempt + 1, self._max_retries)
-                                if attempt < self._max_retries - 1:
-                                    yield AIResponse(
-                                        content="",
-                                        error={
-                                            "code": "timeout",
-                                            "message": f"Request timed out (attempt {attempt + 1}/{self._max_retries}). Retrying in {delay} seconds...",
-                                            "details": {"attempt": attempt + 1}
-                                        }
-                                    )
-                                    await asyncio.sleep(delay)
-                                    self._logger.debug("Retrying after timeout (attempt %d/%d)", attempt + 2, self._max_retries)
-                                    continue
+                    except asyncio.TimeoutError:
+                        delay = self._base_delay * (2 ** attempt)
+                        self._logger.warning("Timeout on attempt %d/%d", attempt + 1, self._max_retries)
+                        if attempt < self._max_retries - 1:
+                            yield AIResponse(
+                                content="",
+                                error={
+                                    "code": "timeout",
+                                    "message": f"Request timed out (attempt {attempt + 1}/{self._max_retries}). Retrying in {delay} seconds...",
+                                    "details": {"attempt": attempt + 1}
+                                }
+                            )
+                            await asyncio.sleep(delay)
+                            self._logger.debug("Retrying after timeout (attempt %d/%d)", attempt + 2, self._max_retries)
+                            continue
 
-                                yield AIResponse(
-                                    content="",
-                                    error={
-                                        "code": "timeout",
-                                        "message": f"Request timed out after {self._max_retries} attempts",
-                                        "details": {"attempt": attempt + 1}
-                                    }
-                                )
-                                return
-
-                            except aiohttp.ClientError as e:
-                                delay = self._base_delay * (2 ** attempt)
-                                self._logger.debug("Network error on attempt %d/%d: %s", attempt + 1, self._max_retries, str(e))
-                                if attempt < self._max_retries - 1:
-                                    yield AIResponse(
-                                        content="",
-                                        error={
-                                            "code": "network_error",
-                                            "message": f"Network error (attempt {attempt + 1}/{self._max_retries}): {str(e)}. Retrying in {delay} seconds...",
-                                            "details": {"type": type(e).__name__, "attempt": attempt + 1}
-                                        }
-                                    )
-                                    await asyncio.sleep(delay)
-                                    self._logger.debug("Retrying after network error (attempt %d/%d)", attempt + 2, self._max_retries)
-                                    continue
-
-                                yield AIResponse(
-                                    content="",
-                                    error={
-                                        "code": "network_error",
-                                        "message": f"Network error after {self._max_retries} attempts: {str(e)}",
-                                        "details": {"type": type(e).__name__, "attempt": attempt + 1}
-                                    }
-                                )
-                                return
+                        yield AIResponse(
+                            content="",
+                            error={
+                                "code": "timeout",
+                                "message": f"Request timed out after {self._max_retries} attempts",
+                                "details": {"attempt": attempt + 1}
+                            }
+                        )
+                        return
 
                 except Exception as e:
-                    self._logger.exception("Unexpected error: %s", str(e))
+                    # We can get a lot of very unclear error messages back from aiohttp so while we
+                    # don't really want to catch a generic Exception, we don't have much choice here.
+                    self._logger.exception("Error processing AI response: %s", str(e))
+                    delay = self._base_delay * (2 ** attempt)
+                    if attempt < self._max_retries - 1:
+                        yield AIResponse(
+                            content="",
+                            error={
+                                "code": "error",
+                                "message": f"Error: {str(e)}. Retrying in {delay} seconds...",
+                                "details": {"type": type(e).__name__}
+                            }
+                        )
+                        await asyncio.sleep(delay)
+                        continue
+
                     yield AIResponse(
                         content="",
                         error={
                             "code": "error",
-                            "message": f"Error: {str(e)}",
+                            "message": f"Error after {self._max_retries} attempts: {str(e)}",
                             "details": {"type": type(e).__name__}
                         }
                     )
