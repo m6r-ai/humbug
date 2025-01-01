@@ -455,7 +455,10 @@ class MainWindow(QMainWindow):
         if not isinstance(current_tab, ChatTab):
             return
 
-        # Generate new conversation ID and timestamp
+        # Get original conversation's metadata timestamp
+        original_timestamp = current_tab._transcript_writer._timestamp
+
+        # Generate new conversation ID using current time (for filename)
         timestamp = datetime.utcnow()
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
@@ -463,7 +466,7 @@ class MainWindow(QMainWindow):
         filename = f"conversations/{conversation_id}.conv"
 
         # Create new tab
-        chat_tab = ChatTab(conversation_id, filename, timestamp, self)
+        chat_tab = ChatTab(conversation_id, filename, original_timestamp, self)
 
         # Copy all messages, preserving original timestamps
         messages = current_tab.get_message_history()
