@@ -304,12 +304,6 @@ class ChatTab(TabBase):
         # Update our message
         self._messages[-1].set_content(content, 'ai')
 
-    def finish_ai_response(self):
-        """Mark the current AI response as complete."""
-        self._current_ai_message = None
-        self._is_streaming = False
-        self._input.set_streaming(False)
-
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
         if has_selection:
@@ -381,8 +375,12 @@ class ChatTab(TabBase):
         """Set initial focus to input area."""
         self._input.setFocus()
 
-    async def update_streaming_response(self, content: str, usage: Optional[Usage] = None,
-                                    error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
+    async def update_streaming_response(
+        self,
+        content: str,
+        usage: Optional[Usage] = None,
+        error: Optional[Dict] = None
+    ) -> Optional[Message]:
         """Update the current AI response in the conversation."""
         if not self._is_streaming:
             self._is_streaming = True
@@ -436,7 +434,7 @@ class ChatTab(TabBase):
                 self._current_ai_message.id,
                 content,
                 usage=usage,
-                completed=(usage is not None or completed)
+                completed=(usage is not None)
             )
             if not message:
                 return None
@@ -445,12 +443,6 @@ class ChatTab(TabBase):
             self._is_streaming = False
             self._input.set_streaming(False)
             self._update_status_display()
-            self._current_ai_message = None
-            await self._write_transcript([message.to_transcript_dict()])
-            return message
-
-        if completed:
-            self.finish_ai_response()
             self._current_ai_message = None
             await self._write_transcript([message.to_transcript_dict()])
             return message

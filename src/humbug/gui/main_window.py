@@ -637,8 +637,7 @@ class MainWindow(QMainWindow):
                 }
                 await chat_tab.update_streaming_response(
                     content="",
-                    error=error,
-                    completed=True
+                    error=error
                 )
 
         finally:
