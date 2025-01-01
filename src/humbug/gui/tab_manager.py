@@ -4,10 +4,12 @@ from typing import Optional, Dict, List, cast
 from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Signal
 
+from humbug.gui.chat_tab import ChatTab
+from humbug.gui.color_role import ColorRole
+from humbug.gui.editor_tab import EditorTab
+from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_label import TabLabel
-from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import StyleManager
 from humbug.gui.welcome_widget import WelcomeWidget
 
 
@@ -62,7 +64,7 @@ class TabManager(QWidget):
     def add_tab(self, tab: TabBase, title: str) -> None:
         """
         Add a new tab to the manager.
-        
+
         Args:
             tab: The tab widget to add
             title: Initial title for the tab
@@ -89,7 +91,7 @@ class TabManager(QWidget):
     def close_tab(self, tab_id: str) -> None:
         """
         Close a tab by its ID.
-        
+
         Args:
             tab_id: ID of the tab to close
         """
@@ -122,7 +124,7 @@ class TabManager(QWidget):
     def get_current_tab(self) -> Optional[TabBase]:
         """
         Get the currently active tab.
-        
+
         Returns:
             The current tab or None if no tabs exist
         """
@@ -132,10 +134,10 @@ class TabManager(QWidget):
     def get_tab(self, tab_id: str) -> Optional[TabBase]:
         """
         Get a tab by its ID.
-        
+
         Args:
             tab_id: ID of the tab to retrieve
-        
+
         Returns:
             The tab or None if not found
         """
@@ -144,7 +146,7 @@ class TabManager(QWidget):
     def get_all_tabs(self) -> List[TabBase]:
         """
         Get all tabs.
-        
+
         Returns:
             List of all tab instances
         """
@@ -153,7 +155,7 @@ class TabManager(QWidget):
     def set_current_tab(self, tab_id: str) -> None:
         """
         Set the current tab by ID.
-        
+
         Args:
             tab_id: ID of the tab to make current
         """
@@ -164,7 +166,7 @@ class TabManager(QWidget):
     def update_tab_title(self, tab_id: str, title: str) -> None:
         """
         Update a tab's title.
-        
+
         Args:
             tab_id: ID of the tab to update
             title: New title for the tab
@@ -177,7 +179,7 @@ class TabManager(QWidget):
     def set_tab_modified(self, tab_id: str, modified: bool) -> None:
         """
         Update a tab's modified state.
-        
+
         Args:
             tab_id: ID of the tab to update
             modified: Whether the tab is modified
@@ -208,6 +210,52 @@ class TabManager(QWidget):
             tab = self._tabs[tab_id]
             is_current = tab == self._tab_widget.widget(index)
             label.set_current(is_current)
+
+    def get_chat_tabs(self) -> List[ChatTab]:
+        """
+        Get all chat tabs.
+
+        Returns:
+            List of all ChatTab instances
+        """
+        return [tab for tab in self._tabs.values() if isinstance(tab, ChatTab)]
+
+    def get_editor_tabs(self) -> List[EditorTab]:
+        """
+        Get all editor tabs.
+
+        Returns:
+            List of all EditorTab instances
+        """
+        return [tab for tab in self._tabs.values() if isinstance(tab, EditorTab)]
+
+    def find_chat_tab_by_id(self, conversation_id: str) -> Optional[ChatTab]:
+        """
+        Find a chat tab by its conversation ID.
+
+        Args:
+            conversation_id: The ID to search for
+
+        Returns:
+            The ChatTab if found, None otherwise
+        """
+        tab = self._tabs.get(conversation_id)
+        return tab if isinstance(tab, ChatTab) else None
+
+    def find_editor_tab_by_filename(self, filename: str) -> Optional[EditorTab]:
+        """
+        Find an editor tab by its filename.
+
+        Args:
+            filename: The filename to search for
+
+        Returns:
+            The EditorTab if found, None otherwise
+        """
+        for tab in self._tabs.values():
+            if isinstance(tab, EditorTab) and tab.filename == filename:
+                return tab
+        return None
 
     def _handle_style_changed(self, factor: float = 1.0) -> None:
         """

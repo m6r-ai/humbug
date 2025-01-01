@@ -34,7 +34,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._ai_backends = ai_backends
         self._untitled_count = 0
-        self._chat_tabs = {}  # tab_id -> ChatTab
         self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
@@ -249,10 +248,10 @@ class MainWindow(QMainWindow):
 
         if file_path:
             # Check if file is already open
-            for tab in self.tab_manager.get_all_tabs():
-                if isinstance(tab, EditorTab) and tab.filename == file_path:
-                    self.tab_manager.set_current_tab(tab.tab_id)
-                    return
+            existing_tab = self.tab_manager.find_editor_tab_by_filename(file_path)
+            if existing_tab:
+                self.tab_manager.set_current_tab(existing_tab.tab_id)
+                return
 
             tab_id = str(uuid.uuid4())
             editor = EditorTab(tab_id, self)
@@ -391,7 +390,6 @@ class MainWindow(QMainWindow):
         # Create tab using same ID
         chat_tab = ChatTab(conversation_id, filename, timestamp, self)
         self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
-        self._chat_tabs[conversation_id] = chat_tab
         return conversation_id
 
     def _open_conversation(self):
@@ -410,8 +408,7 @@ class MainWindow(QMainWindow):
 
         # Check if conversation is already open
         conversation_id = os.path.splitext(os.path.basename(file_path))[0]
-        if conversation_id in self._chat_tabs:
-            # Just focus the existing tab
+        if self.tab_manager.find_chat_tab_by_id(conversation_id):
             self.tab_manager.set_current_tab(conversation_id)
             return
 
@@ -433,10 +430,7 @@ class MainWindow(QMainWindow):
             # Create chat tab with original file
             chat_tab = ChatTab(conversation_id, file_path, timestamp, self)
             chat_tab.load_message_history(messages)
-
-            # Add tab
             self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
-            self._chat_tabs[conversation_id] = chat_tab
 
         except Exception as e:
             self._logger.exception("Error opening conversation: %s: %s", file_path, str(e))
@@ -572,7 +566,7 @@ class MainWindow(QMainWindow):
 
     async def process_ai_response(self, message: str, tab_id: str):
         """Process AI response with streaming."""
-        chat_tab = self._chat_tabs.get(tab_id)
+        chat_tab = self.tab_manager.find_chat_tab_by_id(tab_id)
         if not chat_tab:
             self._logger.error("No chat tab found for conversation %s", tab_id)
             return
