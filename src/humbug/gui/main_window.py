@@ -616,22 +616,14 @@ class MainWindow(QMainWindow):
             self._logger.debug("AI response cancelled for conv %s", tab_id)
             if chat_tab:
                 # Complete any ongoing AI response
-                await chat_tab.update_streaming_response(
-                    content="",
-                    completed=True
-                )
-
-                # Add cancellation message
-                chat_tab.add_system_message(
-                    "Request cancelled by user",
-                    error={
-                        "code": "cancelled",
-                        "message": "Request cancelled by user",
-                        "details": {
-                            "time": datetime.utcnow().isoformat()
+                if chat_tab._current_ai_message:
+                    await chat_tab.update_streaming_response(
+                        content=chat_tab._current_ai_message.content,
+                        error={
+                            "code": "cancelled",
+                            "message": "Request cancelled by user"
                         }
-                    }
-                )
+                    )
 
             return
 
@@ -643,7 +635,7 @@ class MainWindow(QMainWindow):
                     "message": str(e),
                     "details": {"type": type(e).__name__}
                 }
-                chat_tab.update_streaming_response(
+                await chat_tab.update_streaming_response(
                     content="",
                     error=error,
                     completed=True
@@ -654,39 +646,16 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
-
         if event.key() == Qt.Key_Escape:
             chat_tab = self.tab_manager.get_current_tab()
-            if chat_tab:
+            if chat_tab and isinstance(chat_tab, ChatTab):
                 tab_id = chat_tab.tab_id
                 if tab_id in self._current_tasks:
                     for task in self._current_tasks[tab_id]:
                         if not task.done():
                             task.cancel()
-                    chat_tab.finish_ai_response()
-                    asyncio.create_task(
-                        self._handle_cancellation(tab_id)
-                    )
         else:
             super().keyPressEvent(event)
-
-    async def _handle_cancellation(self, tab_id: str):
-        """Write cancellation message to transcript."""
-        chat_tab = self._chat_tabs.get(tab_id)
-        if not chat_tab:
-            return
-
-        cancel_message = chat_tab.add_system_message(
-            "Request cancelled by user",
-            error={
-                "code": "cancelled",
-                "message": "Request cancelled by user",
-                "details": {
-                    "time": datetime.utcnow().isoformat()
-                }
-            }
-        )
-        await self._transcript_writer.write([cancel_message.to_transcript_dict()])
 
     def _handle_dark_mode(self, _):
         """Handle dark mode enable/disable requests."""

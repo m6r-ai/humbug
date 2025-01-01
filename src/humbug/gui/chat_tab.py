@@ -307,6 +307,8 @@ class ChatTab(TabBase):
     def finish_ai_response(self):
         """Mark the current AI response as complete."""
         self._current_ai_message = None
+        self._is_streaming = False
+        self._input.set_streaming(False)
 
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
@@ -389,6 +391,19 @@ class ChatTab(TabBase):
         if error:
             self._is_streaming = False
             self._input.set_streaming(False)
+
+            # For cancellation, preserve the partial response first
+            if error.get("code") == "cancelled" and self._current_ai_message:
+                message = self._conversation.update_message(
+                    self._current_ai_message.id,
+                    content,
+                    completed=False
+                )
+                if message:
+                    await self._write_transcript([message.to_transcript_dict()])
+                self._current_ai_message = None
+
+            # Then add the error message
             error_msg = f"{error['message']}"
             error_message = Message.create(
                 MessageSource.SYSTEM,
@@ -397,7 +412,6 @@ class ChatTab(TabBase):
             )
             self._conversation.add_message(error_message)
             self.add_system_message(error_msg, error=error)
-            await self._write_transcript([error_message.to_transcript_dict()])
             return error_message
 
         # Update display
@@ -436,8 +450,6 @@ class ChatTab(TabBase):
             return message
 
         if completed:
-            self._is_streaming = False
-            self._input.set_streaming(False)
             self.finish_ai_response()
             self._current_ai_message = None
             await self._write_transcript([message.to_transcript_dict()])
