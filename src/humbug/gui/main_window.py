@@ -601,15 +601,12 @@ class MainWindow(QMainWindow):
                         error=response.error
                     )
 
-                    # Handle retryable errors by adding them to transcript
+                    # Handle retryable errors by checking if we should continue
                     if response.error:
                         if response.error['code'] in ['network_error', 'timeout']:
-                            chat_tab.add_system_message(
-                                response.error['message'],
-                                error=response.error
-                            )
-                        else:
-                            return
+                            continue  # Continue to next retry attempt
+
+                        return  # Non-retryable error, stop processing
 
                 except StopAsyncIteration:
                     break
