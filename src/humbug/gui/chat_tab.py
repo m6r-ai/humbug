@@ -392,14 +392,14 @@ class ChatTab(TabBase):
                                     error: Optional[Dict] = None, completed: bool = False) -> Optional[Message]:
         """Update the current AI response in the conversation."""
         if error:
-            error_msg = f"Error: {error['message']}"
-            self._update_last_ai_response(error_msg)
+            error_msg = f"{error['message']}"
             error_message = Message.create(
                 MessageSource.SYSTEM,
                 error_msg,
                 error=error
             )
             self._conversation.add_message(error_message)
+            self.add_system_message(error_msg, error=error)
             await self._write_transcript([error_message.to_transcript_dict()])
             return error_message
 
