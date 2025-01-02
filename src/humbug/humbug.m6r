@@ -106,6 +106,16 @@ Context: humbug application
                         +------------------------------------------+
                         ```
 
+                Context: Input box behavior
+                    The input box starts with a single line and expands vertically as content is added.
+
+                    The input box supports:
+                        - Home key: Moves cursor to start of current line
+                        - End key: Moves cursor to end of current line
+                        - Ctrl+Home: Moves cursor to start of message
+                        - Ctrl+End: Moves cursor to end of message
+                        - Page Up/Down: Scroll by viewport height
+
                 Context: Selection behaviour
                     Selection of text is limited to within a single message - it cannot span across multiple
                     messages or between the input area and message history.
@@ -128,6 +138,14 @@ Context: humbug application
                 If there are unsaved changes in the file, an asterisk (*) will appear after the filename.
 
                 The close button behavior matches that of conversation tabs.
+
+                Context: Navigation
+                    The editor supports:
+                        - Home key: Moves cursor to start of current line
+                        - End key: Moves cursor to end of current line
+                        - Ctrl+Home: Moves cursor to start of message
+                        - Ctrl+End: Moves cursor to end of message
+                        - Page Up/Down: Scroll by viewport height
 
         Context: Syntax highlighting
             Code blocks and inline code will be syntax highlighted based on the programming language:
@@ -252,7 +270,7 @@ Context: humbug application
                 There will be a horizontal Separator
 
             Context: Fork Conversation
-                The "Fork Conversation" menu item will create a new conversation tab containing the history of the 
+                The "Fork Conversation" menu item will create a new conversation tab containing the history of the
                 currently selected conversation tab.
 
                 This will create a new transcript file based on the current date/time, but will retain all previous
@@ -438,6 +456,28 @@ Context: humbug application
         message.  If the message is for the AI then the application will attempt to send the message to the AI
         and await a response.  If there is an error or exception then the application will report the details to
         the user.
+
+        Context: Message submission
+            Messages are submitted using Ctrl+J or the Submit menu item.
+
+            During streaming response:
+                - Input area shows "Processing your request (Esc to cancel)"
+                - Submit action is disabled
+                - Input area is cleared but preserved in history
+                - Escape key cancels current streaming response
+                - Cancel adds "Request cancelled by user" message
+                - Partial response is preserved in transcript
+
+        Context: Streaming handling
+            Status line shows token counts after response completes
+            Partial responses are shown incrementally as received
+            Response streaming can be cancelled by:
+                - Escape key
+                - Closing the conversation tab
+                - Quitting the application
+
+            Auto-scroll follows streamed content unless user scrolls up
+            Unsaved partial responses are preserved in transcript on error
 
     Context: Conversations
         The bottom line of each conversation window has a status bar.
@@ -863,18 +903,18 @@ Context: humbug application
             }
             ```
 
-            In this, "selected-model" is name of the selected AI model, and "temp-setting" is the numeric temperature 
+            In this, "selected-model" is name of the selected AI model, and "temp-setting" is the numeric temperature
             setting defined by the user.
 
             The content section of a message should be replaced with the user's message to the AI.
 
-            With streaming enabled, responses arrive as server-sent events. Each event begins with "data: " followed by 
+            With streaming enabled, responses arrive as server-sent events. Each event begins with "data: " followed by
             event type and a JSON object. The sequence will be:
 
             1. message_start with initial usage statistics
             2. content_block_start to mark beginning of response
             3. content_block_delta events with actual content
-            4. content_block_stop for end of current block 
+            4. content_block_stop for end of current block
             5. message_delta with final usage statistics
             6. message_stop to end the sequence
 
