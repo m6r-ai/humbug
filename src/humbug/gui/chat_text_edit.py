@@ -119,7 +119,6 @@ class ChatTextEdit(QTextEdit):
             event.accept()
             return
 
-        # Handle page up/down
         if event.key() in (Qt.Key_PageUp, Qt.Key_PageDown):
             # Find the scroll area viewport by walking up hierarchy
             widget = self
@@ -131,30 +130,26 @@ class ChatTextEdit(QTextEdit):
                 widget = widget.parent()
 
             if viewport:
-                # Map our position to viewport coordinates
-                our_pos = self.mapTo(viewport, QPoint(0, 0))
-                visible_height = viewport.height() - our_pos.y()
-                if visible_height > 0:
-                    # Calculate visible lines based on cursor height
-                    cursor_rect = self.cursorRect()
-                    line_height = cursor_rect.height()
-                    visible_lines = max(1, visible_height // line_height)
+                # Calculate visible lines based on cursor height
+                cursor_rect = self.cursorRect()
+                line_height = cursor_rect.height()
+                visible_lines = max(1, viewport.height() // line_height)
 
-                    # Move cursor by calculated lines
-                    cursor = self.textCursor()
-                    orig_pos = cursor.position()
+                # Move cursor by calculated lines
+                cursor = self.textCursor()
+                orig_pos = cursor.position()
 
-                    movement = QTextCursor.Up if event.key() == Qt.Key_PageUp else QTextCursor.Down
-                    cursor.movePosition(movement, QTextCursor.MoveAnchor, visible_lines)
+                movement = QTextCursor.Up if event.key() == Qt.Key_PageUp else QTextCursor.Down
+                cursor.movePosition(movement, QTextCursor.MoveAnchor, visible_lines)
 
-                    # Only set cursor if it actually moved
-                    if cursor.position() != orig_pos:
-                        self.setTextCursor(cursor)
-                        # Signal for scroll - ChatTab will handle ensuring cursor visibility
-                        self.pageScrollRequested.emit(
-                            ScrollDirection.PAGE_UP if event.key() == Qt.Key_PageUp
-                            else ScrollDirection.PAGE_DOWN
-                        )
+                # Only set cursor if it actually moved
+                if cursor.position() != orig_pos:
+                    self.setTextCursor(cursor)
+                    # Signal for scroll - ChatTab will handle ensuring cursor visibility
+                    self.pageScrollRequested.emit(
+                        ScrollDirection.PAGE_UP if event.key() == Qt.Key_PageUp
+                        else ScrollDirection.PAGE_DOWN
+                    )
 
             event.accept()
             return
