@@ -472,7 +472,6 @@ Context: humbug application
                 - User messages: White text on #3c3c3c background
                 - AI responses: White text on #282828 background
                 - System messages: White text on #1a3a1a background (dark green)
-                - Error messages: White text on #3a1a1a background (dark red)
 
         Context: Message display
             Messages must automatically adjust their display height based on content.  The height adjustment should
