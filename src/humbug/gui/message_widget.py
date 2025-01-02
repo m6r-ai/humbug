@@ -76,8 +76,7 @@ class MessageWidget(QFrame):
         self.background_roles = {
             'user': ColorRole.MESSAGE_USER,
             'ai': ColorRole.MESSAGE_AI,
-            'system': ColorRole.MESSAGE_SYSTEM,
-            'error': ColorRole.MESSAGE_ERROR
+            'system': ColorRole.MESSAGE_SYSTEM
         }
 
     def _create_text_area(self) -> ChatTextEdit:

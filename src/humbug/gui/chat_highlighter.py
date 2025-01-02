@@ -32,11 +32,11 @@ class ChatHighlighter(QSyntaxHighlighter):
         """Initialize the highlighter."""
         super().__init__(parent)
 
-        # Consistent font family fallback sequence for all code formats
-        self._code_font_families = ["Lucida Console", "Menlo", "Consolas", "Monaco", "Courier New", "monospace"]
-        self._has_code_block = False
-
         self._style_manager = StyleManager()
+
+        # Consistent font family fallback sequence for all code formats
+        self._code_font_families = self._style_manager.monospace_font_families
+        self._has_code_block = False
 
         # For inline code
         self._code_format = QTextCharFormat()

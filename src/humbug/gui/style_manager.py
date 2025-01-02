@@ -5,7 +5,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 """
 
 from enum import Enum, auto
-from typing import Dict
+from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion
 from PySide6.QtGui import (
@@ -159,10 +159,6 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#4040a0"
             },
             ColorRole.MESSAGE_SYSTEM: {
-                ColorMode.DARK: "#a0a080",
-                ColorMode.LIGHT: "#707040"
-            },
-            ColorRole.MESSAGE_ERROR: {
                 ColorMode.DARK: "#c08080",
                 ColorMode.LIGHT: "#a04040"
             },
@@ -412,7 +408,7 @@ class StyleManager(QObject):
         return base_size * self._zoom_factor
 
     def get_space_width(self) -> float:
-        font = QFont(["Lucida Console", "Menlo", "Consolas", "Monaco", "Courier New", "monospace"])
+        font = QFont(self.monospace_font_families)
         font.setPointSizeF(self._base_font_size * self._zoom_factor)
         font_metrics = QFontMetricsF(font)
         space_width = font_metrics.horizontalAdvance('        ') / 8
@@ -453,3 +449,8 @@ class StyleManager(QObject):
 
         logical_dpi = screen.logicalDotsPerInch()
         return (pixels * 72.0) / logical_dpi
+
+    @property
+    def monospace_font_families(self) -> List[str]:
+        """Get the standard monospace font family fallback sequence."""
+        return ["Lucida Console", "Menlo", "Consolas", "Monaco", "Courier New", "monospace"]

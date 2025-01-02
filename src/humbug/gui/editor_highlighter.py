@@ -26,9 +26,9 @@ class EditorHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
 
         # Consistent font family fallback sequence for all code formats
-        self._code_font_families = ["Lucida Console", "Menlo", "Consolas", "Monaco", "Courier New", "monospace"]
-        self._language = ProgrammingLanguage.TEXT
         self._style_manager = StyleManager()
+        self._code_font_families = self._style_manager.monospace_font_families
+        self._language = ProgrammingLanguage.TEXT
         self._logger = logging.getLogger("EditorHighlighter")
 
     def set_language(self, language: ProgrammingLanguage) -> None:

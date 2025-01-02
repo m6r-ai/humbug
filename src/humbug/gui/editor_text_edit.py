@@ -22,9 +22,11 @@ class EditorTextEdit(QPlainTextEdit):
         self.setLineWrapMode(QPlainTextEdit.NoWrap)  # No word wrap for code
         self.setTabStopDistance(32)  # 4 spaces worth of tab stops
 
+        self._style_manager = StyleManager()
+
         # Setup line number area
         self._line_number_area = LineNumberArea(self)
-        self._monospace_font_families = ["Lucida Console", "Menlo", "Consolas", "Monaco", "Courier New", "monospace"]
+        self._monospace_font_families = self._style_manager.monospace_font_families
         font = self._line_number_area.font()
         font.setFamilies(self._monospace_font_families)
         self._line_number_area.setFont(font)
@@ -32,8 +34,6 @@ class EditorTextEdit(QPlainTextEdit):
         self.blockCountChanged.connect(self.update_line_number_area_width)
         self.updateRequest.connect(self._update_line_number_area)
         self.update_line_number_area_width()
-
-        self._style_manager = StyleManager()
 
     def line_number_area_width(self) -> int:
         """Calculate the width needed for the line number area."""

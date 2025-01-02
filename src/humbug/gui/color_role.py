@@ -41,7 +41,6 @@ class ColorRole(Enum):
     MESSAGE_USER = auto()               # User message background
     MESSAGE_AI = auto()                 # AI message background
     MESSAGE_SYSTEM = auto()             # System message background
-    MESSAGE_ERROR = auto()              # Error message background
 
     # Status bar elements
     STATUS_BAR_BACKGROUND = auto()      # Status bar background
