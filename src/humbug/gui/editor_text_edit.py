@@ -44,7 +44,7 @@ class EditorTextEdit(QPlainTextEdit):
             digits += 1
 
         digit_width = self.fontMetrics().horizontalAdvance('9')
-        return digit_width * (digits + 2
+        return digit_width * (digits + 2)
 
     def update_line_number_area_width(self):
         """Update the margins to accommodate the line numbers."""
