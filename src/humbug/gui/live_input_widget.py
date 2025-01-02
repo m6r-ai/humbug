@@ -5,6 +5,7 @@ from PySide6.QtGui import QKeyEvent
 
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.chat_text_edit import ChatTextEdit
+from humbug.gui.color_role import ColorRole
 
 
 class LiveInputWidget(MessageWidget):
@@ -40,8 +41,21 @@ class LiveInputWidget(MessageWidget):
         """Update the header text based on current state."""
         if self._is_streaming:
             self._role_label.setText("Processing your request (Esc to cancel)")
+            self._set_role_style(ColorRole.TEXT_DISABLED)
         else:
             self._role_label.setText("Please add a message (Ctrl-J to submit)")
+            self._set_role_style(ColorRole.MESSAGE_USER)
+
+    def _set_role_style(self, color_role: ColorRole):
+        """Set the role label color."""
+        self._role_label.setStyleSheet(f"""
+            QLabel {{
+                font-weight: bold;
+                color: {self._style_manager.get_color_str(color_role)};
+                margin: 0;
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+        """)
 
     def _create_text_area(self) -> ChatTextEdit:
         """Create and configure the input text area."""
@@ -60,13 +74,15 @@ class LiveInputWidget(MessageWidget):
         """Handle special key events."""
 #        print(f"event: {event.key()}, {event.modifiers()}")
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
-            text = self._text_area.toPlainText().strip()
-            if text:
-                if text not in self._input_history:
-                    self._input_history.append(text)
-                self._history_index = -1
-                self.clear()
-            return
+            if not self._is_streaming:
+                text = self._text_area.toPlainText().strip()
+                if text:
+                    if text not in self._input_history:
+                        self._input_history.append(text)
+                    self._history_index = -1
+                    self.clear()
+
+                return
 
         if self._text_area.textCursor().atStart() and not self._text_area.textCursor().hasSelection():
             if event.key() == Qt.Key_Up and self._input_history:
