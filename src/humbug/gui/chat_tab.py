@@ -16,6 +16,7 @@ from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
 from humbug.conversation.usage import Usage
+from humbug.gui.chat_text_edit import ScrollDirection
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
@@ -120,6 +121,9 @@ class ChatTab(TabBase):
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
+
+        # Handle scrolling requests from input area
+        self._input.pageScrollRequested.connect(self._handle_page_scroll)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
@@ -340,6 +344,16 @@ class ChatTab(TabBase):
             f"Last response - Input: {input_tokens} ({self._settings.context_window}) | "
             f"Output: {output_tokens}"
         )
+
+    def _handle_page_scroll(self, direction: ScrollDirection) -> None:
+        """
+        Handle page up/down scroll requests.
+
+        Args:
+            direction: The direction to scroll (PAGE_UP or PAGE_DOWN)
+        """
+        # Input cursor has already moved - just ensure it's visible
+        self._ensure_cursor_visible()
 
     def _get_insertion_point(self):
         """Determine where streaming responses will insert in the scroll area"""

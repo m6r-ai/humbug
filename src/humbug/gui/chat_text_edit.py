@@ -1,11 +1,12 @@
 """Widget for displaying parts of individual chat messages."""
 
+from enum import Enum, auto
 import logging
 
 from PySide6.QtWidgets import (
-    QFrame, QTextEdit, QSizePolicy
+    QFrame, QTextEdit, QSizePolicy, QScrollArea
 )
-from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
+from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot, QPoint
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent
 )
@@ -13,10 +14,17 @@ from PySide6.QtGui import (
 from humbug.gui.style_manager import StyleManager
 
 
+class ScrollDirection(Enum):
+    """Enumeration for scroll direction requests."""
+    PAGE_UP = auto()
+    PAGE_DOWN = auto()
+
+
 class ChatTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
 
     mouseReleased = Signal(QMouseEvent)
+    pageScrollRequested = Signal(ScrollDirection)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -108,6 +116,46 @@ class ChatTextEdit(QTextEdit):
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.EndOfLine)
             self.setTextCursor(cursor)
+            event.accept()
+            return
+
+        # Handle page up/down
+        if event.key() in (Qt.Key_PageUp, Qt.Key_PageDown):
+            # Find the scroll area viewport by walking up hierarchy
+            widget = self
+            viewport = None
+            while widget:
+                if isinstance(widget.parent(), QScrollArea):
+                    viewport = widget.parent().viewport()
+                    break
+                widget = widget.parent()
+
+            if viewport:
+                # Map our position to viewport coordinates
+                our_pos = self.mapTo(viewport, QPoint(0, 0))
+                visible_height = viewport.height() - our_pos.y()
+                if visible_height > 0:
+                    # Calculate visible lines based on cursor height
+                    cursor_rect = self.cursorRect()
+                    line_height = cursor_rect.height()
+                    visible_lines = max(1, visible_height // line_height)
+
+                    # Move cursor by calculated lines
+                    cursor = self.textCursor()
+                    orig_pos = cursor.position()
+
+                    movement = QTextCursor.Up if event.key() == Qt.Key_PageUp else QTextCursor.Down
+                    cursor.movePosition(movement, QTextCursor.MoveAnchor, visible_lines)
+
+                    # Only set cursor if it actually moved
+                    if cursor.position() != orig_pos:
+                        self.setTextCursor(cursor)
+                        # Signal for scroll - ChatTab will handle ensuring cursor visibility
+                        self.pageScrollRequested.emit(
+                            ScrollDirection.PAGE_UP if event.key() == Qt.Key_PageUp
+                            else ScrollDirection.PAGE_DOWN
+                        )
+
             event.accept()
             return
 
