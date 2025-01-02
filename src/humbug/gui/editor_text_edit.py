@@ -43,8 +43,8 @@ class EditorTextEdit(QPlainTextEdit):
             max_num //= 10
             digits += 1
 
-        space = 3 + self.fontMetrics().horizontalAdvance('9') * digits
-        return space
+        digit_width = self.fontMetrics().horizontalAdvance('9')
+        return digit_width * (digits + 2
 
     def update_line_number_area_width(self):
         """Update the margins to accommodate the line numbers."""
@@ -76,7 +76,6 @@ class EditorTextEdit(QPlainTextEdit):
         bg_color = self._style_manager.get_color(ColorRole.BACKGROUND_SECONDARY)
         painter.fillRect(event.rect(), bg_color)
 
-        # Use the editor's current font for line numbers
         painter.setFont(self.font())
 
         block = self.firstVisibleBlock()
@@ -85,17 +84,22 @@ class EditorTextEdit(QPlainTextEdit):
         top = self.blockBoundingGeometry(block).translated(offset).top()
         bottom = top + self.blockBoundingRect(block).height()
 
-        # Scale the right margin with zoom
-        right_margin = self._style_manager.get_scaled_size(3)
+        # Use one space width for left padding
+        left_padding = self.fontMetrics().horizontalAdvance('9')
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
                 text_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
                 painter.setPen(text_color)
-                painter.drawText(0, int(top), self._line_number_area.width() - right_margin,
+                painter.drawText(
+                    left_padding,
+                    int(top),
+                    self._line_number_area.width() - (2 * left_padding),
                     self.fontMetrics().height(),
-                    Qt.AlignRight, number)
+                    Qt.AlignRight,
+                    number
+                )
 
             block = block.next()
             top = bottom
