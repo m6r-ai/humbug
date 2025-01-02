@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.line_number_area import LineNumberArea
@@ -101,3 +101,21 @@ class EditorTextEdit(QPlainTextEdit):
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
             block_number += 1
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle special key events."""
+        if event.key() == Qt.Key_Home:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.StartOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
+            return
+
+        if event.key() == Qt.Key_End:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.EndOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
+            return
+
+        super().keyPressEvent(event)

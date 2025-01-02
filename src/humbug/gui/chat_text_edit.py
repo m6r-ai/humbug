@@ -97,7 +97,20 @@ class ChatTextEdit(QTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
-#        print(f"event: {event.key()}, {event.modifiers()}")
+        if event.key() == Qt.Key_Home:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.StartOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
+            return
+
+        if event.key() == Qt.Key_End:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.EndOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
+            return
+
         super().keyPressEvent(event)
 
     @Slot()
