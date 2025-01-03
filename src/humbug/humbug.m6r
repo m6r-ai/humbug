@@ -210,6 +210,151 @@ Context: humbug application
                 - Button padding of 6px
                 - 4px margin between buttons
 
+    Context: Workspace structure
+        A workspace represents a project-specific environment containing its own settings and state.
+
+        Every workspace is identified by a ".humbug" directory within the project directory.
+
+        The ".humbug" directory contains:
+
+        - settings.json: Project-specific configuration
+        - recents.json: State of active elements
+
+        Context: Settings file
+            The settings.json file contains workspace-specific configuration:
+
+            ```json
+            {
+                "editor": {
+                    "useSoftTabs": true,
+                    "tabSize": 4
+                }
+            }
+            ```
+
+            The application validates this file on workspace load:
+
+            - useSoftTabs must be boolean
+            - tabSize must be positive integer
+
+            If validation fails:
+
+            - Show error dialog with specific issues
+            - Use defaults: soft tabs (true) and 4 spaces
+            - Continue loading workspace
+
+        Context: Recents file
+            The recents.json file tracks workspace state for restoration:
+
+            ```json
+            {
+                "tabs": [
+                    {
+                        "type": "conversation",
+                        "path": "conversations/2024-01-03-12-34-56-789.conv"
+                    },
+                    {
+                        "type": "editor",
+                        "path": "src/main.py",
+                        "cursorPosition": {
+                            "line": 10,
+                            "column": 15
+                        }
+                    }
+                ]
+            }
+            ```
+
+            The file is:
+
+            - Read on workspace load to restore state
+            - Updated when workspace closes
+            - Updated when application exits
+
+            During restoration:
+
+            - Attempt to restore each element
+            - Skip elements that cannot be restored
+            - Continue with remaining elements
+            - No error shown for skipped elements
+
+    Context: Home directory configuration
+        The application maintains a ".humbug" directory in the user's home directory.
+
+        This contains workspace.json tracking the last open workspace:
+
+        ```json
+        {
+            "lastWorkspace": "/path/to/project/.humbug"
+        }
+        ```
+
+        This workspace is restored on application startup if:
+
+        - The workspace path exists
+        - The workspace is accessible
+        - The workspace contains valid settings.json
+
+    Context: Workspace operations
+        Context: Creating workspaces
+            When creating a new workspace:
+
+            - Show directory selection dialog
+            - Validate no existing ".humbug" directory
+            - Create ".humbug" directory if valid
+            - Create default settings.json
+            - Create empty recents.json
+            - Show error if creation fails
+
+        Context: Opening workspaces
+            When opening a workspace:
+
+            - Show directory selection dialog
+            - Filter for directories with ".humbug" subdirectory
+            - Close current workspace if one exists
+            - Load selected workspace
+            - Restore workspace state
+            - Update home directory tracking
+
+        Context: Closing workspaces
+            When closing a workspace:
+
+            - Save current state to recents.json
+            - Close all workspace elements
+            - Clear workspace state
+            - Update home directory tracking
+
+    Context: State handling
+        Context: Workspace management
+            The application requires an active workspace for most operations:
+
+            - Conversations are stored within the workspace
+            - Editor files are opened relative to workspace
+            - Settings are loaded from workspace
+            - Application state persists in workspace
+
+            Without an active workspace:
+
+            - New conversation operations disabled
+            - File operations disabled
+            - Only workspace creation/open enabled
+            - Welcome message displays workspace instructions
+
+            On startup:
+
+            1. Check home directory for last workspace
+            2. If found, attempt to restore
+            3. If restore fails, start without workspace
+            4. Show welcome with workspace options
+
+            On workspace change:
+
+            1. Save current workspace state
+            2. Close all active elements
+            3. Load new workspace settings
+            4. Restore workspace elements
+            5. Update home directory tracking
+
     Context: Menus
         The application will have a series of top-level Menus.
 
@@ -236,12 +381,22 @@ Context: humbug application
             Context: New Conversation
                 The "New Conversation" menu item will create a new conversation tab.
 
-                This will be matched with a keyboard shortcut "Ctrl+Shift+N".
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+N" for Windows).
 
             Context: New File
                 The "New File" menu item will create a new empty editor tab.
 
                 This will be matched with a keyboard shortcut "Ctrl+N".
+
+            Context: New Workspace
+                The "New Workspace" menu item creates a new workspace:
+
+                - Shows directory selection dialog
+                - Creates ".humbug" directory and files
+
+                We cannot create a ".humbug" directory where one already exists.
+
+                This will be matched with keyboard shortcut "Ctrl+Alt+N"
 
             Context: Separator
                 There will be a horizontal Separator
@@ -265,6 +420,16 @@ Context: humbug application
                 an existing file in a new editor tab.
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+O" for Windows).
+
+            Context: Open Workspace
+                The "Open Workspace" menu item opens an existing workspace:
+
+                - Shows directory selection dialog
+                - Filters for ".humbug" directories
+                - Closes current workspace
+                - Opens selected workspace
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+O" for Windows).
 
             Context: Separator
                 There will be a horizontal Separator
@@ -301,6 +466,14 @@ Context: humbug application
                 The "Close Tab" menu item with close the current tab, if a tab is active.
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+W" for Windows).
+
+            Context: Close Workspace
+                The "Close Workspace" menu item closes current workspace:
+
+                - Saves state to recents.json
+                - Closes all workspace elements
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+W" for Windows).
 
         Context: Edit
             The "Edit" menu handles edit capabilities.  When clicked it contains the following:
@@ -684,9 +857,6 @@ Context: humbug application
                 1. Log error to stderr.
                 2. Create backup file.
                 3. Continue with new file.
-
-    Context: State handling
-        No state is preserved between different invocations of the application.
 
     Context: AI interactions
         The AI backend supports streaming responses that arrive incrementally.  These should be displayed
