@@ -25,7 +25,7 @@ from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.transcript.transcript_loader import TranscriptLoader
-from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.workspace.workspace_manager import WorkspaceManager, WorkspaceSettings
 
 
 class MainWindow(QMainWindow):
@@ -205,9 +205,6 @@ class MainWindow(QMainWindow):
         self.tab_manager = TabManager(self)
         layout.addWidget(self.tab_manager)
 
-        # Create initial conversation tab
-        self._new_conversation()
-
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
@@ -219,15 +216,17 @@ class MainWindow(QMainWindow):
         self._menu_timer.start()
 
         self._workspace_manager = WorkspaceManager()
-        self._restore_workspace()
+        self._restore_last_workspace()
 
-    def _restore_workspace(self):
+    def _restore_last_workspace(self):
+        """Restore last workspace on startup if available."""
         try:
             with open(os.path.expanduser("~/.humbug/workspace.json")) as f:
                 data = json.load(f)
                 workspace_path = data.get("lastWorkspace")
                 if workspace_path and os.path.exists(workspace_path):
-                    self._open_workspace(workspace_path)
+                    self._open_workspace_internal(workspace_path)
+                    self._restore_workspace_state()
         except (FileNotFoundError, json.JSONDecodeError):
             pass
 
@@ -252,11 +251,10 @@ class MainWindow(QMainWindow):
         self._open_workspace(dir_path)
 
     def _open_workspace(self, path: str = None):
+        """Open a new workspace."""
         if not path:
             self._menu_timer.stop()
-            dir_path = QFileDialog.getExistingDirectory(
-                self, "Open Workspace"
-            )
+            dir_path = QFileDialog.getExistingDirectory(self, "Open Workspace")
             self._menu_timer.start()
             if not dir_path:
                 return
@@ -274,7 +272,15 @@ class MainWindow(QMainWindow):
 
         self._save_workspace_state()
         self._close_all_tabs()
-        self._restore_workspace_state()
+        self._open_workspace_internal(path)
+
+    def _open_workspace_internal(self, path: str):
+        """Internal function to set up workspace state."""
+        self._workspace_manager._workspace_path = path
+        self._workspace_manager._settings = WorkspaceSettings.load(
+            os.path.join(path, ".humbug/settings.json")
+        )
+        self._workspace_manager._update_home_tracking()
 
     def _close_workspace(self):
         if self._workspace_manager._workspace_path:
@@ -318,6 +324,7 @@ class MainWindow(QMainWindow):
         try:
             messages, error, metadata = TranscriptLoader.load_transcript(path)
             if error:
+                self._logger.error("Failed to restore conversation %s: %s", path, error)
                 return None
 
             conversation_id = os.path.splitext(os.path.basename(path))[0]
@@ -331,14 +338,15 @@ class MainWindow(QMainWindow):
             self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
             return chat_tab
 
-        except Exception:
-            self._logger.debug("Skipping restoration of conversation: %s", path)
+        except Exception as e:
+            self._logger.error("Error restoring conversation %s: %s", path, str(e))
             return None
 
     def _restore_file(self, path: str) -> Optional[EditorTab]:
         """Attempt to restore file from workspace, returning None if failed."""
         try:
             if not os.path.exists(path):
+                self._logger.debug("Failed to restore file: not found: %s", path)
                 return None
 
             existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
@@ -354,8 +362,8 @@ class MainWindow(QMainWindow):
             self.tab_manager.add_tab(editor, os.path.basename(path))
             return editor
 
-        except Exception:
-            self._logger.debug("Skipping restoration of file: %s", path)
+        except Exception as e:
+            self._logger.error("Error restoring file %s: %s", path, str(e))
             return None
 
     def _restore_workspace_state(self):
@@ -381,8 +389,8 @@ class MainWindow(QMainWindow):
                                 cursor.movePosition(cursor.NextBlock)
                             cursor.movePosition(cursor.Right, cursor.MoveAnchor, pos.get("column", 0))
                             editor._editor.setTextCursor(cursor)
-        except Exception:
-            self._logger.warning("Failed to restore workspace state")
+        except Exception as e:
+            self._logger.error("Error restoring workspace:", self._workspace_manager._workspace_path, str(e))
 
     def _close_all_tabs(self):
         for tab in self.tab_manager.get_all_tabs():
@@ -426,14 +434,23 @@ class MainWindow(QMainWindow):
     def _open_file(self):
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
+        start_path = self._workspace_manager._workspace_path or os.path.expanduser("~/")
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
-            os.path.expanduser("~/")
+            start_path
         )
         self._menu_timer.start()
 
         if file_path:
+            # Make path relative to workspace if possible
+            if self._workspace_manager._workspace_path:
+                try:
+                    rel_path = os.path.relpath(file_path, self._workspace_manager._workspace_path)
+                    file_path = rel_path
+                except ValueError:
+                    pass  # Keep absolute path if file is outside workspace
+
             # Check if file is already open
             existing_tab = self.tab_manager.find_editor_tab_by_filename(file_path)
             if existing_tab:
@@ -483,6 +500,13 @@ class MainWindow(QMainWindow):
     def _update_menu_state(self):
         """Update enabled/disabled state of menu items."""
         current_tab = self.tab_manager.get_current_tab()
+
+        has_workspace = bool(self._workspace_manager._workspace_path)
+
+        # Update workspace-specific actions
+        self._close_workspace_action.setEnabled(has_workspace)
+        self._new_conv_action.setEnabled(has_workspace)
+        self._new_file_action.setEnabled(has_workspace)
 
         # Disable all actions by default
         self._fork_conv_action.setEnabled(False)
@@ -868,4 +892,5 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
 
+        self._save_workspace_state()
         event.accept()
