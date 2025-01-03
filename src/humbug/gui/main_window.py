@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog
 )
 from PySide6.QtCore import Qt, QTimer, Slot
-from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
+from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QTextCursor
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
@@ -307,12 +307,13 @@ class MainWindow(QMainWindow):
                     "path": f"conversations/{tab.tab_id}.conv"
                 })
             elif isinstance(tab, EditorTab):
+                cursor = tab._editor.textCursor()
                 tabs.append({
                     "type": "editor",
                     "path": tab.filename,
                     "cursorPosition": {
-                        "line": tab._editor.textCursor().blockNumber(),
-                        "column": tab._editor.textCursor().columnNumber()
+                        "line": cursor.blockNumber(),
+                        "column": cursor.columnNumber()
                     }
                 })
 
@@ -384,13 +385,17 @@ class MainWindow(QMainWindow):
                         if editor and "cursorPosition" in tab:
                             cursor = editor._editor.textCursor()
                             pos = tab["cursorPosition"]
-                            cursor.movePosition(cursor.Start)
+                            cursor.movePosition(QTextCursor.Start)
+
+                            # Move down line by line
                             for _ in range(pos.get("line", 0)):
-                                cursor.movePosition(cursor.NextBlock)
-                            cursor.movePosition(cursor.Right, cursor.MoveAnchor, pos.get("column", 0))
+                                cursor.movePosition(QTextCursor.NextBlock)
+
+                            # Move right to column
+                            cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, pos.get("column", 0))
                             editor._editor.setTextCursor(cursor)
         except Exception as e:
-            self._logger.error("Error restoring workspace:", self._workspace_manager._workspace_path, str(e))
+            self._logger.error("Error restoring workspace %s: %s", self._workspace_manager._workspace_path, str(e))
 
     def _close_all_tabs(self):
         for tab in self.tab_manager.get_all_tabs():
