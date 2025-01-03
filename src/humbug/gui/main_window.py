@@ -2,9 +2,10 @@
 
 import asyncio
 from datetime import datetime
+import json
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 import uuid
 
 from PySide6.QtWidgets import (
@@ -24,6 +25,7 @@ from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.transcript.transcript_loader import TranscriptLoader
+from humbug.workspace.workspace_manager import WorkspaceManager
 
 
 class MainWindow(QMainWindow):
@@ -58,9 +60,9 @@ class MainWindow(QMainWindow):
         self._new_file_action.setShortcut(QKeySequence.New)
         self._new_file_action.triggered.connect(self._new_file)
 
-        self._close_tab_action = QAction("Close Tab", self)
-        self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
-        self._close_tab_action.triggered.connect(self._close_current_tab)
+        self._new_workspace_action = QAction("New Workspace", self)
+        self._new_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
+        self._new_workspace_action.triggered.connect(self._new_workspace)
 
         self._open_conv_action = QAction("Open Conversation...", self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
@@ -69,6 +71,10 @@ class MainWindow(QMainWindow):
         self._open_file_action = QAction("Open File...", self)
         self._open_file_action.setShortcut(QKeySequence.Open)
         self._open_file_action.triggered.connect(self._open_file)
+
+        self._open_workspace_action = QAction("Open Workspace", self)
+        self._open_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
+        self._open_workspace_action.triggered.connect(self._open_workspace)
 
         self._fork_conv_action = QAction("Fork Conversation", self)
         self._fork_conv_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
@@ -81,6 +87,14 @@ class MainWindow(QMainWindow):
         self._save_as_action = QAction("Save As...", self)
         self._save_as_action.setShortcut(QKeySequence.SaveAs)
         self._save_as_action.triggered.connect(self._save_file_as)
+
+        self._close_tab_action = QAction("Close Tab", self)
+        self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
+        self._close_tab_action.triggered.connect(self._close_current_tab)
+
+        self._close_workspace_action = QAction("Close Workspace", self)
+        self._close_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+W"))
+        self._close_workspace_action.triggered.connect(self._close_workspace)
 
         # Edit menu actions
         self._submit_action = QAction("Submit", self)
@@ -142,9 +156,11 @@ class MainWindow(QMainWindow):
         file_menu = self._menu_bar.addMenu("&File")
         file_menu.addAction(self._new_conv_action)
         file_menu.addAction(self._new_file_action)
+        file_menu.addAction(self._new_workspace_action)
         file_menu.addSeparator()
         file_menu.addAction(self._open_conv_action)
         file_menu.addAction(self._open_file_action)
+        file_menu.addAction(self._open_workspace_action)
         file_menu.addSeparator()
         file_menu.addAction(self._fork_conv_action)
         file_menu.addSeparator()
@@ -152,6 +168,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self._save_as_action)
         file_menu.addSeparator()
         file_menu.addAction(self._close_tab_action)
+        file_menu.addAction(self._close_workspace_action)
 
         # Edit menu
         edit_menu = self._menu_bar.addMenu("&Edit")
@@ -200,6 +217,172 @@ class MainWindow(QMainWindow):
         self._menu_timer.setInterval(50)
         self._menu_timer.timeout.connect(self._update_menu_state)
         self._menu_timer.start()
+
+        self._workspace_manager = WorkspaceManager()
+        self._restore_workspace()
+
+    def _restore_workspace(self):
+        try:
+            with open(os.path.expanduser("~/.humbug/workspace.json")) as f:
+                data = json.load(f)
+                workspace_path = data.get("lastWorkspace")
+                if workspace_path and os.path.exists(workspace_path):
+                    self._open_workspace(workspace_path)
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+
+    def _new_workspace(self):
+        dir_path = QFileDialog.getExistingDirectory(
+            self, "Create New Workspace"
+        )
+        if not dir_path:
+            return
+
+        if not self._workspace_manager.create_workspace(dir_path):
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Workspace Error",
+                "Workspace already exists in selected directory."
+            )
+            return
+
+        self._open_workspace(dir_path)
+
+    def _open_workspace(self, path: str = None):
+        if not path:
+            dir_path = QFileDialog.getExistingDirectory(
+                self, "Open Workspace"
+            )
+            if not dir_path:
+                return
+            path = dir_path
+
+        settings = self._workspace_manager.open_workspace(path)
+        if not settings:
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Workspace Error",
+                "Invalid workspace selected."
+            )
+            return
+
+        self._save_workspace_state()
+        self._close_all_tabs()
+        self._restore_workspace_state()
+
+    def _close_workspace(self):
+        if self._workspace_manager._workspace_path:
+            self._save_workspace_state()
+            self._close_all_tabs()
+            self._workspace_manager._workspace_path = None
+            self._workspace_manager._settings = None
+            self._workspace_manager._update_home_tracking()
+
+    def _save_workspace_state(self):
+        if not self._workspace_manager._workspace_path:
+            return
+
+        recents_path = os.path.join(
+            self._workspace_manager._workspace_path,
+            ".humbug/recents.json"
+        )
+
+        tabs = []
+        for tab in self.tab_manager.get_all_tabs():
+            if isinstance(tab, ChatTab):
+                tabs.append({
+                    "type": "conversation",
+                    "path": f"conversations/{tab.tab_id}.conv"
+                })
+            elif isinstance(tab, EditorTab):
+                tabs.append({
+                    "type": "editor",
+                    "path": tab.filename,
+                    "cursorPosition": {
+                        "line": tab._editor.textCursor().blockNumber(),
+                        "column": tab._editor.textCursor().columnNumber()
+                    }
+                })
+
+        with open(recents_path, "w") as f:
+            json.dump({"tabs": tabs}, f, indent=2)
+
+    def _restore_conversation(self, path: str) -> Optional[ChatTab]:
+        """Attempt to restore conversation from workspace, returning None if failed."""
+        try:
+            messages, error, metadata = TranscriptLoader.load_transcript(path)
+            if error:
+                return None
+
+            conversation_id = os.path.splitext(os.path.basename(path))[0]
+            existing_tab = self.tab_manager.find_chat_tab_by_id(conversation_id)
+            if existing_tab:
+                return existing_tab
+
+            timestamp = datetime.fromisoformat(metadata["timestamp"])
+            chat_tab = ChatTab(conversation_id, path, timestamp, self)
+            chat_tab.load_message_history(messages)
+            self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
+            return chat_tab
+
+        except Exception:
+            self._logger.debug("Skipping restoration of conversation: %s", path)
+            return None
+
+    def _restore_file(self, path: str) -> Optional[EditorTab]:
+        """Attempt to restore file from workspace, returning None if failed."""
+        try:
+            if not os.path.exists(path):
+                return None
+
+            existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
+            if existing_tab:
+                return existing_tab
+
+            tab_id = str(uuid.uuid4())
+            editor = EditorTab(tab_id, self)
+            editor.set_filename(path)
+            editor.close_requested.connect(self._handle_tab_close_requested)
+            editor.title_changed.connect(self._handle_tab_title_changed)
+            editor.modified_state_changed.connect(self._handle_tab_modified)
+            self.tab_manager.add_tab(editor, os.path.basename(path))
+            return editor
+
+        except Exception:
+            self._logger.debug("Skipping restoration of file: %s", path)
+            return None
+
+    def _restore_workspace_state(self):
+        """Restore previously open tabs from workspace state."""
+        if not self._workspace_manager._workspace_path:
+            return
+
+        try:
+            with open(os.path.join(self._workspace_manager._workspace_path, ".humbug/recents.json")) as f:
+                data = json.load(f)
+                for tab in data.get("tabs", []):
+                    full_path = os.path.join(self._workspace_manager._workspace_path, tab["path"])
+
+                    if tab["type"] == "conversation":
+                        self._restore_conversation(full_path)
+                    elif tab["type"] == "editor":
+                        editor = self._restore_file(full_path)
+                        if editor and "cursorPosition" in tab:
+                            cursor = editor._editor.textCursor()
+                            pos = tab["cursorPosition"]
+                            cursor.movePosition(cursor.Start)
+                            for _ in range(pos.get("line", 0)):
+                                cursor.movePosition(cursor.NextBlock)
+                            cursor.movePosition(cursor.Right, cursor.MoveAnchor, pos.get("column", 0))
+                            editor._editor.setTextCursor(cursor)
+        except Exception:
+            self._logger.warning("Failed to restore workspace state")
+
+    def _close_all_tabs(self):
+        for tab in self.tab_manager.get_all_tabs():
+            self.tab_manager.close_tab(tab.tab_id)
 
     def _undo(self):
         self.tab_manager.get_current_tab().undo()
