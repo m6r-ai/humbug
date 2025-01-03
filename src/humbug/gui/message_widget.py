@@ -114,8 +114,7 @@ class MessageWidget(QFrame):
                 role_text = {
                     'user': "You",
                     'ai': "Assistant",
-                    'system': "System Message",
-                    'error': "Error"
+                    'system': "System Message"
                 }.get(style, "Unknown")
 
                 # Format the timestamp if provided, otherwise use current time
