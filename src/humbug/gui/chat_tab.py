@@ -273,7 +273,7 @@ class ChatTab(TabBase):
 
         Args:
             message: The message text
-            style: The style type ('user', 'ai', 'system', or 'error')
+            style: The style type ('user', 'ai', or 'system')
             timestamp: Optional ISO format timestamp string
         """
         msg_widget = MessageWidget(self)
@@ -494,7 +494,7 @@ class ChatTab(TabBase):
         Returns:
             List of Message objects representing the conversation history
         """
-        return self._conversation._messages.copy()
+        return self._conversation.get_messages()
 
     def load_message_history(self, messages: List[Message]):
         """
@@ -518,10 +518,10 @@ class ChatTab(TabBase):
             # Update settings and status if AI message
             if message.source == MessageSource.AI:
                 if message.usage:
-                    self._conversation._last_response_tokens = {
-                        "input": message.usage.prompt_tokens,
-                        "output": message.usage.completion_tokens
-                    }
+                    self._conversation.update_last_tokens(
+                        message.usage.prompt_tokens,
+                        message.usage.completion_tokens
+                    )
                 if message.model:
                     self.update_settings(ConversationSettings(
                         model=message.model,

@@ -42,6 +42,14 @@ class ConversationHistory:
                 return message
         return None
 
+    def get_messages(self) -> List[Message]:
+        """Get a copy of all messages in the conversation history.
+
+        Returns:
+            List[Message]: Copy of all messages
+        """
+        return self._messages.copy()
+
     def get_messages_for_context(self) -> List[str]:
         """
         Get messages formatted for AI context.
@@ -81,3 +89,15 @@ class ConversationHistory:
     def get_token_counts(self) -> Dict[str, int]:
         """Get token counts from last response."""
         return self._last_response_tokens
+
+    def update_last_tokens(self, input_tokens: int, output_tokens: int) -> None:
+        """Update token counts for the last response.
+
+        Args:
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+        """
+        self._last_response_tokens = {
+            "input": input_tokens,
+            "output": output_tokens
+        }
