@@ -232,9 +232,11 @@ class MainWindow(QMainWindow):
             pass
 
     def _new_workspace(self):
+        self._menu_timer.stop()
         dir_path = QFileDialog.getExistingDirectory(
             self, "Create New Workspace"
         )
+        self._menu_timer.start()
         if not dir_path:
             return
 
@@ -251,9 +253,11 @@ class MainWindow(QMainWindow):
 
     def _open_workspace(self, path: str = None):
         if not path:
+            self._menu_timer.stop()
             dir_path = QFileDialog.getExistingDirectory(
                 self, "Open Workspace"
             )
+            self._menu_timer.start()
             if not dir_path:
                 return
             path = dir_path
