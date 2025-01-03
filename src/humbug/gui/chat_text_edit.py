@@ -98,10 +98,12 @@ class ChatTextEdit(QTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
-        # Is this a read-only widget?  If it is then we don't want to process any key events,
-        # and we'll leave it to the parent to handle them.
+        # Is this a read-only widget?  If it is then we don't want to process certain key events,
+        # leaving it to the parent to handle them.
         if self.isReadOnly():
-            event.ignore()
+            if event.key() in (Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Up, Qt.Key_Down):
+                event.ignore()
+
             return
 
         if event.key() == Qt.Key_Home:
