@@ -600,8 +600,13 @@ class MainWindow(QMainWindow):
         timestamp = datetime.utcnow()
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
-        # Create transcript file based on same ID
-        filename = f"conversations/{conversation_id}.conv"
+        # Create conversations directory in workspace
+        conversations_dir = "~/.humbug/conversations"
+        if self._workspace_manager._workspace_path:
+            conversations_dir = os.path.join(self._workspace_manager._workspace_path, "conversations")
+
+        os.makedirs(conversations_dir, exist_ok=True)
+        filename = os.path.join(conversations_dir, f"{conversation_id}.conv")
 
         # Create tab using same ID
         chat_tab = ChatTab(conversation_id, filename, timestamp, self)

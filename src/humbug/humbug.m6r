@@ -785,7 +785,7 @@ Context: humbug application
         mm, dd, hh, mm, ss, ttt (year, numeric month, day-of-month, hours, minutes, seconds, and thousandths of
         seconds respectively).
 
-        Transcript files will be written to a "conversations" directory of the current working directory.  If this
+        Transcript files will be written to a "conversations" directory of the current workspace directory.  If this
         does not exist then the application should create it.
 
         On closing a conversation tab the matching file must be fully closed.
@@ -1264,7 +1264,7 @@ Context: humbug application
         for yyyy, mm, dd, hh, mm, ss, ttt (year, numeric month, day-of-month, hours, minutes, seconds, and thousandths of
         seconds respectively).
 
-        The log file will be written to a "logs" directory of the current working directory.  If this
+        The log file will be written to a "logs" directory of the ".humbug" directory in the user's home directory.  If this
         does not exist then the application should create it.
 
     Context: GUI
