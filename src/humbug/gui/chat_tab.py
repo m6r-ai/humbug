@@ -16,7 +16,6 @@ from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
 from humbug.conversation.usage import Usage
-from humbug.gui.chat_text_edit import ScrollDirection
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
@@ -123,7 +122,7 @@ class ChatTab(TabBase):
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
         # Handle scrolling requests from input area
-        self._input.pageScrollRequested.connect(self._handle_page_scroll)
+        self._input.pageScrollRequested.connect(self._handle_edit_page_scroll)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
@@ -345,7 +344,7 @@ class ChatTab(TabBase):
             f"Output: {output_tokens}"
         )
 
-    def _handle_page_scroll(self, direction: ScrollDirection) -> None:
+    def _handle_edit_page_scroll(self) -> None:
         """
         Handle page up/down scroll requests.
 

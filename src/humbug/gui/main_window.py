@@ -653,8 +653,10 @@ class MainWindow(QMainWindow):
                     for task in self._current_tasks[tab_id]:
                         if not task.done():
                             task.cancel()
-        else:
-            super().keyPressEvent(event)
+
+            return
+
+        super().keyPressEvent(event)
 
     def _handle_dark_mode(self, _):
         """Handle dark mode enable/disable requests."""

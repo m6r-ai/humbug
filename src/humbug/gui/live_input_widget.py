@@ -4,7 +4,7 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent
 
 from humbug.gui.message_widget import MessageWidget
-from humbug.gui.chat_text_edit import ChatTextEdit, ScrollDirection
+from humbug.gui.chat_text_edit import ChatTextEdit
 from humbug.gui.color_role import ColorRole
 
 
@@ -13,7 +13,7 @@ class LiveInputWidget(MessageWidget):
 
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
-    pageScrollRequested = Signal(ScrollDirection)
+    pageScrollRequested = Signal()
 
     def __init__(self, parent=None):
         """Initialize the live input widget."""
@@ -74,7 +74,6 @@ class LiveInputWidget(MessageWidget):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
-#        print(f"event: {event.key()}, {event.modifiers()}")
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
             if not self._is_streaming:
                 text = self._text_area.toPlainText().strip()

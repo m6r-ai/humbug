@@ -1,12 +1,11 @@
 """Widget for displaying parts of individual chat messages."""
 
-from enum import Enum, auto
 import logging
 
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy, QScrollArea
 )
-from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot, QPoint
+from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent
 )
@@ -14,17 +13,11 @@ from PySide6.QtGui import (
 from humbug.gui.style_manager import StyleManager
 
 
-class ScrollDirection(Enum):
-    """Enumeration for scroll direction requests."""
-    PAGE_UP = auto()
-    PAGE_DOWN = auto()
-
-
 class ChatTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
 
     mouseReleased = Signal(QMouseEvent)
-    pageScrollRequested = Signal(ScrollDirection)
+    pageScrollRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -105,6 +98,12 @@ class ChatTextEdit(QTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
+        # Is this a read-only widget?  If it is then we don't want to process any key events,
+        # and we'll leave it to the parent to handle them.
+        if self.isReadOnly():
+            event.ignore()
+            return
+
         if event.key() == Qt.Key_Home:
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.StartOfLine)
@@ -146,10 +145,7 @@ class ChatTextEdit(QTextEdit):
                 if cursor.position() != orig_pos:
                     self.setTextCursor(cursor)
                     # Signal for scroll - ChatTab will handle ensuring cursor visibility
-                    self.pageScrollRequested.emit(
-                        ScrollDirection.PAGE_UP if event.key() == Qt.Key_PageUp
-                        else ScrollDirection.PAGE_DOWN
-                    )
+                    self.pageScrollRequested.emit()
 
             event.accept()
             return
