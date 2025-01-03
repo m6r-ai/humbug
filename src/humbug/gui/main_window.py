@@ -280,7 +280,7 @@ class MainWindow(QMainWindow):
         self._workspace_manager._settings = WorkspaceSettings.load(
             os.path.join(path, ".humbug/settings.json")
         )
-        self._workspace_manager._update_home_tracking()
+        self._workspace_manager.update_home_tracking()
 
     def _close_workspace(self):
         if self._workspace_manager._workspace_path:
@@ -288,7 +288,7 @@ class MainWindow(QMainWindow):
             self._close_all_tabs()
             self._workspace_manager._workspace_path = None
             self._workspace_manager._settings = None
-            self._workspace_manager._update_home_tracking()
+            self._workspace_manager.update_home_tracking()
 
     def _save_workspace_state(self):
         if not self._workspace_manager._workspace_path:
@@ -320,7 +320,7 @@ class MainWindow(QMainWindow):
         with open(recents_path, "w") as f:
             json.dump({"tabs": tabs}, f, indent=2)
 
-    def _restore_conversation(self, path: str) -> Optional[ChatTab]:
+    def _restore_conversation(self, path: str) -> None:
         """Attempt to restore conversation from workspace, returning None if failed."""
         try:
             messages, error, metadata = TranscriptLoader.load_transcript(path)
@@ -337,22 +337,20 @@ class MainWindow(QMainWindow):
             chat_tab = ChatTab(conversation_id, path, timestamp, self)
             chat_tab.load_message_history(messages)
             self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
-            return chat_tab
 
         except Exception as e:
             self._logger.error("Error restoring conversation %s: %s", path, str(e))
-            return None
 
-    def _restore_file(self, path: str) -> Optional[EditorTab]:
+    def _restore_file(self, path: str, tab: json) -> None:
         """Attempt to restore file from workspace, returning None if failed."""
         try:
             if not os.path.exists(path):
-                self._logger.debug("Failed to restore file: not found: %s", path)
-                return None
+                self._logger.error("Failed to restore file: not found: %s", path)
+                return
 
             existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
             if existing_tab:
-                return existing_tab
+                return
 
             tab_id = str(uuid.uuid4())
             editor = EditorTab(tab_id, self)
@@ -361,11 +359,22 @@ class MainWindow(QMainWindow):
             editor.title_changed.connect(self._handle_tab_title_changed)
             editor.modified_state_changed.connect(self._handle_tab_modified)
             self.tab_manager.add_tab(editor, os.path.basename(path))
-            return editor
+
+            if "cursorPosition" in tab:
+                cursor = editor._editor.textCursor()
+                pos = tab["cursorPosition"]
+                cursor.movePosition(QTextCursor.Start)
+
+                # Move down line by line
+                for _ in range(pos.get("line", 0)):
+                    cursor.movePosition(QTextCursor.NextBlock)
+
+                # Move right to column
+                cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, pos.get("column", 0))
+                editor._editor.setTextCursor(cursor)
 
         except Exception as e:
             self._logger.error("Error restoring file %s: %s", path, str(e))
-            return None
 
     def _restore_workspace_state(self):
         """Restore previously open tabs from workspace state."""
@@ -381,19 +390,8 @@ class MainWindow(QMainWindow):
                     if tab["type"] == "conversation":
                         self._restore_conversation(full_path)
                     elif tab["type"] == "editor":
-                        editor = self._restore_file(full_path)
-                        if editor and "cursorPosition" in tab:
-                            cursor = editor._editor.textCursor()
-                            pos = tab["cursorPosition"]
-                            cursor.movePosition(QTextCursor.Start)
+                        self._restore_file(full_path, tab)
 
-                            # Move down line by line
-                            for _ in range(pos.get("line", 0)):
-                                cursor.movePosition(QTextCursor.NextBlock)
-
-                            # Move right to column
-                            cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, pos.get("column", 0))
-                            editor._editor.setTextCursor(cursor)
         except Exception as e:
             self._logger.error("Error restoring workspace %s: %s", self._workspace_manager._workspace_path, str(e))
 

@@ -55,12 +55,12 @@ class WorkspaceManager:
             settings = WorkspaceSettings.load(os.path.join(workspace_dir, "settings.json"))
             self._workspace_path = path
             self._settings = settings
-            self._update_home_tracking()
+            self.update_home_tracking()
             return settings
         except Exception:
             return None
 
-    def _update_home_tracking(self):
+    def update_home_tracking(self):
         os.makedirs(os.path.dirname(self._home_config), exist_ok=True)
         with open(self._home_config, 'w', encoding='utf-8' ) as f:
             json.dump({"lastWorkspace": self._workspace_path}, f, indent=2)
