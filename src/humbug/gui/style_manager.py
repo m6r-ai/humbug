@@ -176,10 +176,6 @@ class StyleManager(QObject):
             },
 
             # Syntax highlighting
-            ColorRole.SYNTAX_BACKGROUND_CODE: {
-                ColorMode.DARK: "#141414",
-                ColorMode.LIGHT: "#f8f8f8"
-            },
             ColorRole.SYNTAX_CODE: {
                 ColorMode.DARK: "#804040",
                 ColorMode.LIGHT: "#c04040"
@@ -228,6 +224,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#ffc0eb",
                 ColorMode.LIGHT: "#c000a0"
             },
+            ColorRole.SYNTAX_LANGUAGE: {
+                ColorMode.DARK: "#b0d0f0",
+                ColorMode.LIGHT: "#4080c0"
+            },
             ColorRole.SYNTAX_NUMBER: {
                 ColorMode.DARK: "#c08040",
                 ColorMode.LIGHT: "#804000"
@@ -268,6 +268,7 @@ class StyleManager(QObject):
             "HTML_TAG": ColorRole.SYNTAX_HTML_TAG,
             "IDENTIFIER": ColorRole.SYNTAX_IDENTIFIER,
             "KEYWORD": ColorRole.SYNTAX_KEYWORD,
+            "LANGUAGE": ColorRole.SYNTAX_LANGUAGE,
             "NUMBER": ColorRole.SYNTAX_NUMBER,
             "OPERATOR": ColorRole.SYNTAX_OPERATOR,
             "PREPROCESSOR": ColorRole.SYNTAX_PREPROCESSOR,

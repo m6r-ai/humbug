@@ -43,7 +43,6 @@ class ChatHighlighter(QSyntaxHighlighter):
         self._code_format.setFontFamilies(self._code_font_families)
         self._code_format.setFontFixedPitch(True)
         self._code_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_CODE))
-        self._code_format.setBackground(self._style_manager.get_color(ColorRole.SYNTAX_BACKGROUND_CODE))
 
         # For fenced format
         self._fence_format = QTextCharFormat()

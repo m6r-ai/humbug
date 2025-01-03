@@ -50,7 +50,6 @@ class ColorRole(Enum):
                                         # Hover state close button background
 
     # Syntax highlighting
-    SYNTAX_BACKGROUND_CODE = auto()     # Code block background
     SYNTAX_CODE = auto()                # Code block
     SYNTAX_COMMENT = auto()
     SYNTAX_CSS_AT_RULE = auto()
@@ -63,6 +62,7 @@ class ColorRole(Enum):
     SYNTAX_HTML_TAG = auto()
     SYNTAX_IDENTIFIER = auto()
     SYNTAX_KEYWORD = auto()
+    SYNTAX_LANGUAGE = auto()
     SYNTAX_NUMBER = auto()
     SYNTAX_OPERATOR = auto()
     SYNTAX_PREPROCESSOR = auto()
