@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 import uuid
 
 from PySide6.QtWidgets import (
