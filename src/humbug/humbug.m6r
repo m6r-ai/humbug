@@ -343,7 +343,7 @@ Context: humbug application
             On startup:
 
             1. Check home directory for last workspace
-            2. If found, attempt to restore
+            2. If found, attempt to restore.  If any previous tabs cannot be restored then ignore them.
             3. If restore fails, start without workspace
             4. Show welcome with workspace options
 
@@ -1420,3 +1420,4 @@ Action: Build the software
     Embed: src/humbug/conversation/*.py
     Embed: src/humbug/gui/*.py
     Embed: src/humbug/transcript/*.py
+    Embed: src/humbug/workspace/*.py
