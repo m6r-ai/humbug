@@ -1,8 +1,8 @@
 Role:
     You are a world-class python programmer with a flair for building brilliant software
 
-Context: humbug application
-    humbug is a GUI-based application that allows a user to interact with one or more AI backends.
+Context: Humbug application
+    Humbug is a GUI-based application that allows a user to interact with one or more AI backends.
 
     Navigation is done using a keyboard and mouse.
 
@@ -383,10 +383,14 @@ Context: humbug application
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+N" for Windows).
 
+                This option is only valid if a workspace is open.
+
             Context: New File
                 The "New File" menu item will create a new empty editor tab.
 
                 This will be matched with a keyboard shortcut "Ctrl+N".
+
+                This option is only valid if a workspace is open.
 
             Context: New Workspace
                 The "New Workspace" menu item creates a new workspace:
@@ -415,11 +419,15 @@ Context: humbug application
 
                 This will be matched with a keyboard shortcut "Ctrl+Shift+O".
 
+                This option is only valid if a workspace is open.
+
             Context: Open File
                 The "Open File..." menu item will show a file selection dialog allowing the user to open
                 an existing file in a new editor tab.
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+O" for Windows).
+
+                This option is only valid if a workspace is open.
 
             Context: Open Workspace
                 The "Open Workspace" menu item opens an existing workspace:
@@ -474,6 +482,8 @@ Context: humbug application
                 - Closes all workspace elements
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+W" for Windows).
+
+                This option is only valid if a workspace is open.
 
         Context: Edit
             The "Edit" menu handles edit capabilities.  When clicked it contains the following:

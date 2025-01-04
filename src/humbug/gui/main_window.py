@@ -488,6 +488,8 @@ class MainWindow(QMainWindow):
         self._close_workspace_action.setEnabled(has_workspace)
         self._new_conv_action.setEnabled(has_workspace)
         self._new_file_action.setEnabled(has_workspace)
+        self._open_conv_action.setEnabled(has_workspace)
+        self._open_file_action.setEnabled(has_workspace)
 
         # Disable all actions by default
         self._fork_conv_action.setEnabled(False)
