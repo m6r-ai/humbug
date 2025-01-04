@@ -484,10 +484,6 @@ class ChatTab(TabBase):
         """Set the input text."""
         self._input.setPlainText(text)
 
-    def clear_input(self):
-        """Clear the input area."""
-        self._input.clear()
-
     def _set_initial_focus(self):
         """Set initial focus to input area."""
         self._input.setFocus()
@@ -760,3 +756,9 @@ class ChatTab(TabBase):
     def can_submit(self) -> bool:
         has_text = bool(self.get_input_text())
         return has_text and not self._is_streaming
+
+    def submit(self, message: str):
+        """Clear the input area."""
+        self._input.clear()
+        self._input.set_streaming(True)  # Set streaming state immediately
+        self.add_user_message(message)

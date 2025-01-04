@@ -678,12 +678,7 @@ class MainWindow(QMainWindow):
         if not message:
             return
 
-        # Clear input area and set streaming state
-        chat_tab.clear_input()
-        chat_tab._input.set_streaming(True)  # Set streaming state immediately
-
-        # Add user message and get the message object
-        chat_tab.add_user_message(message)
+        chat_tab.submit(message)
 
         # Start AI response
         task = asyncio.create_task(
