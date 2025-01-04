@@ -170,6 +170,15 @@ class WorkspaceManager:
         if not self.has_workspace:
             raise WorkspaceNotFoundError("No workspace is currently open")
 
+        # Convert paths that are within the workspace to relative paths
+        # Keep paths outside the workspace as absolute
+        for tab in tabs:
+            if tab.get('path') and os.path.isabs(tab['path']):
+                relative_path = self.make_relative_path(tab['path'])
+                if relative_path:  # Path is inside workspace
+                    tab['path'] = relative_path
+                # If relative_path is None, path is outside workspace - keep it absolute
+
         recents_path = os.path.join(self._workspace_path, self.WORKSPACE_DIR, self.RECENTS_FILE)
         try:
             with open(recents_path, "w", encoding='utf-8') as f:
@@ -195,7 +204,16 @@ class WorkspaceManager:
             recents_path = os.path.join(self._workspace_path, self.WORKSPACE_DIR, self.RECENTS_FILE)
             with open(recents_path, encoding='utf-8') as f:
                 data = json.load(f)
-                return data.get("tabs", [])
+                tabs = data.get("tabs", [])
+
+                # Handle paths based on whether they are relative or absolute
+                for tab in tabs:
+                    if tab.get('path'):
+                        if not os.path.isabs(tab['path']):
+                            # Convert relative paths to absolute within the workspace
+                            tab['path'] = os.path.join(self._workspace_path, tab['path'])
+
+                return tabs
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logger.error("Error loading workspace state: %s", str(e))
             return None
@@ -249,9 +267,20 @@ class WorkspaceManager:
             return None
 
         try:
-            return os.path.relpath(path, self._workspace_path)
+            # Normalize both paths for comparison
+            abs_path = os.path.abspath(path)
+            workspace_path = os.path.abspath(self._workspace_path)
+
+            # Check if the path is actually within the workspace
+            # by comparing the normalized path beginnings
+            common_path = os.path.commonpath([abs_path, workspace_path])
+            if common_path != workspace_path:
+                return None  # Path is outside workspace
+
+            # If we get here, the path is within the workspace, so make it relative
+            return os.path.relpath(abs_path, workspace_path)
         except ValueError:
-            return None  # Path is outside workspace
+            return None  # Path is on different
 
     def ensure_workspace_dir(self, dir_path: str) -> str:
         """

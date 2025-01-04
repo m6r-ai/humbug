@@ -542,14 +542,17 @@ class MainWindow(QMainWindow):
         # Create conversations directory in workspace
         if self._workspace_manager.has_workspace:
             conversations_dir = self._workspace_manager.ensure_workspace_dir("conversations")
-            filename = os.path.join(conversations_dir, f"{conversation_id}.conv")
+            # Save path relative to workspace root
+            filename = os.path.join("conversations", f"{conversation_id}.conv")
         else:
             conversations_dir = os.path.expanduser("~/.humbug/conversations")
             os.makedirs(conversations_dir, exist_ok=True)
             filename = os.path.join(conversations_dir, f"{conversation_id}.conv")
 
         # Create tab using same ID
-        chat_tab = ChatTab(conversation_id, filename, timestamp, self)
+        full_path = filename if not self._workspace_manager.has_workspace else \
+                self._workspace_manager.get_workspace_path(filename)
+        chat_tab = ChatTab(conversation_id, full_path, timestamp, self)
         self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
         return conversation_id
 
