@@ -1277,6 +1277,10 @@ Context: Humbug application
         The log file will be written to a "logs" directory of the ".humbug" directory in the user's home directory.  If this
         does not exist then the application should create it.
 
+        The application will maintain the last 50 log files but delete any older ones.
+
+        If any log file exceeds 1 MByte in size then it will be rotated.
+
     Context: GUI
         The GUI must be built using the latest version of PySide6, and with qasync to support the integration of this
         and async IO operations.
