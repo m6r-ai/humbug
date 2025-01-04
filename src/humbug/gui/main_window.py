@@ -421,7 +421,7 @@ class MainWindow(QMainWindow):
     def _open_file(self):
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
-        start_path = self._workspace_manager._workspace_path or os.path.expanduser("~/")
+        start_path = self._workspace_manager.workspace_path or os.path.expanduser("~/")
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
@@ -431,12 +431,10 @@ class MainWindow(QMainWindow):
 
         if file_path:
             # Make path relative to workspace if possible
-            if self._workspace_manager._workspace_path:
-                try:
-                    rel_path = os.path.relpath(file_path, self._workspace_manager._workspace_path)
-                    file_path = rel_path
-                except ValueError:
-                    pass  # Keep absolute path if file is outside workspace
+            if self._workspace_manager.workspace_path:
+                relative_path = self._workspace_manager.make_relative_path(file_path)
+                if relative_path:
+                    file_path = relative_path
 
             # Check if file is already open
             existing_tab = self.tab_manager.find_editor_tab_by_filename(file_path)
@@ -488,7 +486,7 @@ class MainWindow(QMainWindow):
         """Update enabled/disabled state of menu items."""
         current_tab = self.tab_manager.get_current_tab()
 
-        has_workspace = bool(self._workspace_manager._workspace_path)
+        has_workspace = self._workspace_manager.has_workspace
 
         # Update workspace-specific actions
         self._close_workspace_action.setEnabled(has_workspace)
@@ -583,12 +581,13 @@ class MainWindow(QMainWindow):
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
         # Create conversations directory in workspace
-        conversations_dir = "~/.humbug/conversations"
-        if self._workspace_manager._workspace_path:
-            conversations_dir = os.path.join(self._workspace_manager._workspace_path, "conversations")
-
-        os.makedirs(conversations_dir, exist_ok=True)
-        filename = os.path.join(conversations_dir, f"{conversation_id}.conv")
+        if self._workspace_manager.has_workspace:
+            conversations_dir = self._workspace_manager.ensure_workspace_dir("conversations")
+            filename = os.path.join(conversations_dir, f"{conversation_id}.conv")
+        else:
+            conversations_dir = os.path.expanduser("~/.humbug/conversations")
+            os.makedirs(conversations_dir, exist_ok=True)
+            filename = os.path.join(conversations_dir, f"{conversation_id}.conv")
 
         # Create tab using same ID
         chat_tab = ChatTab(conversation_id, filename, timestamp, self)
