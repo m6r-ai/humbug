@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 )
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QIcon, QPixmap, QPainter
+from PySide6.QtGui import QPixmap, QPainter
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -121,7 +121,7 @@ class MessageBox(QDialog):
 
         if default_button:
             default_button.setDefault(True)
-        
+
         # Store escape button for key handling
         self._escape_button = escape_button
 
