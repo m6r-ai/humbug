@@ -45,9 +45,9 @@ class TabState:
         # Convert string back to TabType enum
         if 'type' in data and isinstance(data['type'], str):
             data['type'] = TabType[data['type']]
-            
+
         # Convert timestamp string back to datetime if present
         if data.get('timestamp'):
             data['timestamp'] = datetime.fromisoformat(data['timestamp'])
-            
+
         return cls(**data)
