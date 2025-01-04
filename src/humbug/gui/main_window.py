@@ -262,6 +262,12 @@ class MainWindow(QMainWindow):
                 return
             path = dir_path
 
+        # If we're switching workspaces, save the current one first
+        if self._workspace_manager.has_workspace:
+            self._save_workspace_state()
+            self._close_all_tabs()
+
+        # Open the new workspace
         settings = self._workspace_manager.open_workspace(path)
         if not settings:
             MessageBox.show_message(
@@ -272,9 +278,8 @@ class MainWindow(QMainWindow):
             )
             return
 
-        self._save_workspace_state()
-        self._close_all_tabs()
-        self._workspace_manager.open_workspace(path)
+        # Restore the state of the newly opened workspace
+        self._restore_workspace_state()
 
     def _close_workspace(self):
         if self._workspace_manager.has_workspace:
@@ -302,11 +307,13 @@ class MainWindow(QMainWindow):
     def _restore_workspace_state(self):
         """Restore previously open tabs from workspace state."""
         if not self._workspace_manager.has_workspace:
+            self._logger.debug("No workspace active, skipping state restore")
             return
 
         # Load saved states
         saved_states = self._workspace_manager.load_workspace_state()
         if not saved_states:
+            self._logger.debug("No saved states found")
             return
 
         # Restore each tab
