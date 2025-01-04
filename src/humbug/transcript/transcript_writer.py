@@ -2,8 +2,8 @@
 
 from datetime import datetime
 import json
+import logging
 import os
-import sys
 from typing import Dict, List
 
 from humbug.transcript.float_one_decimal_encoder import FloatOneDecimalEncoder
@@ -21,6 +21,7 @@ class TranscriptWriter:
         """
         self._filename = filename
         self._timestamp: datetime = timestamp
+        self._logger = logging.getLogger("TranscriptWriter")
 
         # Only initialize if file doesn't exist
         if not os.path.exists(filename):
@@ -60,8 +61,8 @@ class TranscriptWriter:
             # Atomic replace
             os.replace(temp_file, self._filename)
 
-        except Exception as e:
-            print(f"Error writing transcript: {str(e)}", file=sys.stderr)
+        except Exception:
+            self._logger.exception("Error writing transcript")
             # Create backup of current file if possible
             try:
                 if os.path.exists(self._filename):

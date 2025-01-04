@@ -782,14 +782,13 @@ class MainWindow(QMainWindow):
             self._logger.debug("AI response cancelled for conv %s", tab_id)
             if chat_tab:
                 # Complete any ongoing AI response
-                if chat_tab._current_ai_message:
-                    await chat_tab.update_streaming_response(
-                        content=chat_tab._current_ai_message.content,
-                        error={
-                            "code": "cancelled",
-                            "message": "Request cancelled by user"
-                        }
-                    )
+                await chat_tab.update_streaming_response(
+                    content="",
+                    error={
+                        "code": "cancelled",
+                        "message": "Request cancelled by user"
+                    }
+                )
 
             return
 

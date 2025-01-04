@@ -507,7 +507,7 @@ class ChatTab(TabBase):
             if error.get("code") == "cancelled" and self._current_ai_message:
                 message = self._conversation.update_message(
                     self._current_ai_message.id,
-                    content,
+                    content=self._current_ai_message.content,
                     completed=False
                 )
                 if message:

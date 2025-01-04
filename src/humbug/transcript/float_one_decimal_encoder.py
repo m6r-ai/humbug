@@ -8,4 +8,5 @@ class FloatOneDecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, float):
             return round(o, 1)
+
         return super().default(o)
