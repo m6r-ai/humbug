@@ -225,7 +225,7 @@ class MainWindow(QMainWindow):
                 data = json.load(f)
                 workspace_path = data.get("lastWorkspace")
                 if workspace_path and os.path.exists(workspace_path):
-                    self._open_workspace_internal(workspace_path)
+                    self._workspace_manager.open_workspace(workspace_path)
                     self._restore_workspace_state()
         except (FileNotFoundError, json.JSONDecodeError):
             pass
@@ -272,10 +272,6 @@ class MainWindow(QMainWindow):
 
         self._save_workspace_state()
         self._close_all_tabs()
-        self._open_workspace_internal(path)
-
-    def _open_workspace_internal(self, path: str):
-        """Internal function to set up workspace state."""
         self._workspace_manager.open_workspace(path)
 
     def _close_workspace(self):
