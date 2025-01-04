@@ -1,5 +1,9 @@
+from typing import Dict, Optional
+
 from PySide6.QtWidgets import QFrame
 from PySide6.QtCore import Signal
+
+from humbug.gui.tab_state import TabState
 
 
 class TabBase(QFrame):
@@ -21,11 +25,17 @@ class TabBase(QFrame):
         super().__init__(parent)
         self._tab_id = tab_id
         self._is_modified = False
+        self._path: Optional[str] = None
 
     @property
     def tab_id(self) -> str:
         """Get the tab's unique identifier."""
         return self._tab_id
+
+    @property
+    def path(self) -> Optional[str]:
+        """Get the tab's associated file path."""
+        return self._path
 
     @property
     def is_modified(self) -> bool:
@@ -37,6 +47,51 @@ class TabBase(QFrame):
         if modified != self._is_modified:
             self._is_modified = modified
             self.modified_state_changed.emit(self._tab_id, modified)
+
+    def get_state(self) -> TabState:
+        """Get serializable state for workspace persistence.
+
+        Must be implemented by subclasses to provide their specific state.
+
+        Returns:
+            TabState object containing serializable state
+        """
+        raise NotImplementedError("Subclasses must implement get_state")
+
+    @classmethod
+    def restore_from_state(cls, state: TabState, parent=None) -> 'TabBase':
+        """Create and restore a tab from serialized state.
+
+        Must be implemented by subclasses to handle their specific state.
+
+        Args:
+            state: TabState object containing serialized state
+                (note: state.type will be string, not TabType enum)
+            parent: Optional parent widget
+
+        Returns:
+            Newly created and restored tab instance
+
+        Raises:
+            ValueError: If state is invalid for this tab type
+        """
+        raise NotImplementedError("Subclasses must implement restore_from_state")
+
+    def set_cursor_position(self, position: Dict[str, int]) -> None:
+        """Set the cursor position in the tab's content.
+
+        Args:
+            position: Dictionary with cursor position information
+        """
+        raise NotImplementedError("Subclasses must implement set_cursor_position")
+
+    def get_cursor_position(self) -> Dict[str, int]:
+        """Get the current cursor position from the tab's content.
+
+        Returns:
+            Dictionary with cursor position information
+        """
+        raise NotImplementedError("Subclasses must implement get_cursor_position")
 
     def can_close(self) -> bool:
         """

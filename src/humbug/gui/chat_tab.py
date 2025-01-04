@@ -1,15 +1,16 @@
 """Unified chat tab implementation with correct scrolling and input expansion."""
 
-from datetime import datetime
-from typing import Dict, List, Optional
 import asyncio
+from datetime import datetime
 import logging
+import os
+from typing import Dict, List, Optional
 
 from PySide6.QtWidgets import (
     QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Slot
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.conversation.conversation_history import ConversationHistory
@@ -21,29 +22,39 @@ from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
+from humbug.gui.tab_state import TabState
+from humbug.gui.tab_type import TabType
+from humbug.transcript.transcript_loader import TranscriptLoader
 from humbug.transcript.transcript_writer import TranscriptWriter
 
 
 class ChatTab(TabBase):
     """Unified chat tab implementing single-window feel with distinct regions."""
 
-    def __init__(self, tab_id: str, transcript_filename: str, timestamp: datetime,
-                 parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        tab_id: str,
+        path: str,
+        timestamp: datetime,
+        parent: Optional[QWidget] = None
+    ) -> None:
         """
         Initialize the unified chat tab.
 
         Args:
             tab_id: Unique identifier for this tab
-            transcript_filename: Full path to transcript file
+            path: Full path to transcript file
             timestamp: ISO format timestamp for the conversation
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ChatTab")
+        self._path = path
+        self._timestamp = timestamp
 
         # Create transcript writer with provided filename
         self._transcript_writer = TranscriptWriter(
-            transcript_filename,
+            path,
             timestamp
         )
 
@@ -126,6 +137,99 @@ class ChatTab(TabBase):
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
+
+    def get_state(self) -> TabState:
+        """Get serializable state for workspace persistence.
+
+        Returns:
+            TabState containing chat-specific state
+        """
+        return TabState(
+            type=TabType.CHAT,
+            path=self._path,
+            timestamp=self._timestamp,
+            metadata={
+                "messages": [msg.to_transcript_dict() for msg in self._conversation.get_messages()],
+                "settings": {
+                    "model": self._settings.model,
+                    "temperature": self._settings.temperature
+                }
+            }
+        )
+
+    @classmethod
+    def restore_from_state(cls, state: TabState, parent=None) -> 'ChatTab':
+        """Create and restore a chat tab from serialized state.
+
+        Args:
+            state: TabState containing chat-specific state
+            parent: Optional parent widget
+
+        Returns:
+            Newly created and restored chat tab
+
+        Raises:
+            ValueError: If state is invalid for chat tab
+        """
+        if state.type != TabType.CHAT:
+            raise ValueError(f"Invalid tab type for ChatTab: {state.type}")
+
+        if not state.timestamp:
+            raise ValueError("Chat tab requires timestamp")
+
+        # Create new tab instance
+        conversation_id = os.path.splitext(os.path.basename(state.path))[0]
+        tab = cls(conversation_id, state.path, state.timestamp, parent)
+
+        # Load conversation from transcript
+        try:
+            messages, error, _metadata = TranscriptLoader.load_transcript(state.path)
+            if error:
+                raise ValueError(f"Failed to load transcript: {error}")
+
+            # Load the message history
+            tab.load_message_history(messages)
+
+            return tab
+
+        except Exception as e:
+            raise ValueError(f"Failed to restore chat tab: {str(e)}") from e
+
+    def set_cursor_position(self, position: Dict[str, int]) -> None:
+        """Set cursor position in input area.
+
+        Args:
+            position: Dictionary with 'line' and 'column' keys
+        """
+        if not position:
+            return
+
+        cursor = self._input.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+
+        # Move cursor to specified position
+        for _ in range(position.get("line", 0)):
+            cursor.movePosition(QTextCursor.NextBlock)
+
+        cursor.movePosition(
+            QTextCursor.Right,
+            QTextCursor.MoveAnchor,
+            position.get("column", 0)
+        )
+
+        self._input.setTextCursor(cursor)
+
+    def get_cursor_position(self) -> Dict[str, int]:
+        """Get current cursor position from input area.
+
+        Returns:
+            Dictionary with 'line' and 'column' keys
+        """
+        cursor = self._input.textCursor()
+        return {
+            "line": cursor.blockNumber(),
+            "column": cursor.columnNumber()
+        }
 
     async def _write_transcript(self, messages: List[Dict]) -> None:
         """

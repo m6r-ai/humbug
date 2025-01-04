@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog
 )
 from PySide6.QtCore import Qt, QTimer, Slot
-from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QTextCursor
+from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
@@ -24,6 +24,8 @@ from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
+from humbug.gui.tab_state import TabState
+from humbug.gui.tab_type import TabType
 from humbug.transcript.transcript_loader import TranscriptLoader
 from humbug.workspace.workspace_manager import WorkspaceManager
 
@@ -282,98 +284,57 @@ class MainWindow(QMainWindow):
 
     def _save_workspace_state(self):
         """Save current workspace state."""
-        tabs = []
+        if not self._workspace_manager.has_workspace:
+            return
+
+        # Get state from all tabs
+        tab_states = []
         for tab in self.tab_manager.get_all_tabs():
-            if isinstance(tab, ChatTab):
-                tabs.append({
-                    "type": "conversation",
-                    "path": f"conversations/{tab.tab_id}.conv"
-                })
-            elif isinstance(tab, EditorTab):
-                cursor = tab._editor.textCursor()
-                tabs.append({
-                    "type": "editor",
-                    "path": tab.filename,
-                    "cursorPosition": {
-                        "line": cursor.blockNumber(),
-                        "column": cursor.columnNumber()
-                    }
-                })
+            try:
+                state = tab.get_state()
+                tab_states.append(state.to_dict())
+            except Exception as e:
+                self._logger.error("Failed to save state for tab %s: %s", tab.tab_id, e)
 
-        self._workspace_manager.save_workspace_state(tabs)
-
-    def _restore_conversation(self, path: str) -> None:
-        """Attempt to restore conversation from workspace, returning None if failed."""
-        try:
-            messages, error, metadata = TranscriptLoader.load_transcript(path)
-            if error:
-                self._logger.error("Failed to restore conversation %s: %s", path, error)
-                return None
-
-            conversation_id = os.path.splitext(os.path.basename(path))[0]
-            existing_tab = self.tab_manager.find_chat_tab_by_id(conversation_id)
-            if existing_tab:
-                return existing_tab
-
-            timestamp = datetime.fromisoformat(metadata["timestamp"])
-            chat_tab = ChatTab(conversation_id, path, timestamp, self)
-            chat_tab.load_message_history(messages)
-            self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
-
-        except Exception as e:
-            self._logger.error("Error restoring conversation %s: %s", path, str(e))
-
-    def _restore_file(self, path: str, tab: json) -> None:
-        """Attempt to restore file from workspace, returning None if failed."""
-        try:
-            if not os.path.exists(path):
-                self._logger.error("Failed to restore file: not found: %s", path)
-                return
-
-            existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
-            if existing_tab:
-                return
-
-            tab_id = str(uuid.uuid4())
-            editor = EditorTab(tab_id, self)
-            editor.set_filename(path)
-            editor.close_requested.connect(self._handle_tab_close_requested)
-            editor.title_changed.connect(self._handle_tab_title_changed)
-            editor.modified_state_changed.connect(self._handle_tab_modified)
-            self.tab_manager.add_tab(editor, os.path.basename(path))
-
-            if "cursorPosition" in tab:
-                cursor = editor._editor.textCursor()
-                pos = tab["cursorPosition"]
-                cursor.movePosition(QTextCursor.Start)
-
-                # Move down line by line
-                for _ in range(pos.get("line", 0)):
-                    cursor.movePosition(QTextCursor.NextBlock)
-
-                # Move right to column
-                cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, pos.get("column", 0))
-                editor._editor.setTextCursor(cursor)
-
-        except Exception as e:
-            self._logger.error("Error restoring file %s: %s", path, str(e))
+        # Save to workspace
+        self._workspace_manager.save_workspace_state(tab_states)
 
     def _restore_workspace_state(self):
         """Restore previously open tabs from workspace state."""
         if not self._workspace_manager.has_workspace:
             return
 
-        tabs = self._workspace_manager.load_workspace_state()
-        if not tabs:
+        # Load saved states
+        saved_states = self._workspace_manager.load_workspace_state()
+        if not saved_states:
             return
 
-        for tab in tabs:
-            full_path = self._workspace_manager.get_workspace_path(tab["path"])
+        # Restore each tab
+        for state_dict in saved_states:
+            try:
+                # Convert dict back to TabState
+                state = TabState.from_dict(state_dict)
 
-            if tab["type"] == "conversation":
-                self._restore_conversation(full_path)
-            elif tab["type"] == "editor":
-                self._restore_file(full_path, tab)
+                # Convert relative paths to absolute
+                if not os.path.isabs(state.path):
+                    state.path = self._workspace_manager.get_workspace_path(state.path)
+
+                # Create appropriate tab type
+                if state.type == TabType.CHAT:
+                    tab = ChatTab.restore_from_state(state, self)
+                    self.tab_manager.add_tab(tab, f"Conv: {tab.tab_id}")
+                elif state.type == TabType.EDITOR:
+                    tab = EditorTab.restore_from_state(state, self)
+                    title = os.path.basename(state.path)
+                    self.tab_manager.add_tab(tab, title)
+
+                    # Connect editor signals
+                    tab.close_requested.connect(self._handle_tab_close_requested)
+                    tab.title_changed.connect(self._handle_tab_title_changed)
+                    tab.modified_state_changed.connect(self._handle_tab_modified)
+
+            except Exception as e:
+                self._logger.error("Failed to restore tab state: %s", e)
 
     def _close_all_tabs(self):
         for tab in self.tab_manager.get_all_tabs():

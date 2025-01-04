@@ -1,19 +1,22 @@
 import os
 import time
+import uuid
 from typing import Dict, Optional
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QLabel, QFileDialog
 )
 from PySide6.QtCore import QTimer
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QTextCursor
 
-from humbug.gui.tab_base import TabBase
 from humbug.gui.editor_highlighter import EditorHighlighter
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_text_edit import EditorTextEdit
-from humbug.gui.style_manager import StyleManager
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
+from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab_base import TabBase
+from humbug.gui.tab_state import TabState
+from humbug.gui.tab_type import TabType
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
@@ -56,7 +59,6 @@ class EditorTab(TabBase):
         """
         super().__init__(tab_id, parent)
 
-        self._filename: Optional[str] = None
         self._untitled_number: Optional[int] = None
         self._style_manager = StyleManager()
         self._last_save_content = ""
@@ -89,6 +91,83 @@ class EditorTab(TabBase):
 
         self._update_status()
 
+    def get_state(self) -> TabState:
+        """Get serializable state for workspace persistence."""
+        return TabState(
+            type=TabType.EDITOR,
+            path=self._path if self._path else f"untitled-{self._untitled_number}",
+            cursor_position=self.get_cursor_position(),
+            metadata={
+                "language": self._current_language.name
+            }
+        )
+
+    @classmethod
+    def restore_from_state(cls, state: TabState, parent=None) -> 'EditorTab':
+        """Create and restore an editor tab from serialized state."""
+        if state.type != TabType.EDITOR:
+            raise ValueError(f"Invalid tab type for EditorTab: {state.type}")
+
+        if not os.path.exists(state.path):
+            raise FileNotFoundError(f"File not found: {state.path}")
+
+        # Create new tab instance
+        tab = cls(str(uuid.uuid4()), parent)
+
+        # Set filename and load content
+        if state.path.startswith("untitled-"):
+            number = int(state.path.split("-")[1])
+            tab.set_filename(None, number)
+        else:
+            tab.set_filename(state.path)
+
+        # Restore cursor position if present
+        if state.cursor_position:
+            tab.set_cursor_position(state.cursor_position)
+
+        # Restore language if specified
+        if state.metadata and "language" in state.metadata:
+            language = ProgrammingLanguage[state.metadata["language"]]
+            tab._update_language(language)
+
+        return tab
+
+    def set_cursor_position(self, position: Dict[str, int]) -> None:
+        """Set cursor position in editor.
+
+        Args:
+            position: Dictionary with 'line' and 'column' keys
+        """
+        if not position:
+            return
+
+        cursor = self._editor.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+
+        # Move cursor to specified position
+        for _ in range(position.get("line", 0)):
+            cursor.movePosition(QTextCursor.NextBlock)
+
+        cursor.movePosition(
+            QTextCursor.Right,
+            QTextCursor.MoveAnchor,
+            position.get("column", 0)
+        )
+
+        self._editor.setTextCursor(cursor)
+        self._editor.ensureCursorVisible()
+
+    def get_cursor_position(self) -> Dict[str, int]:
+        """Get current cursor position from editor.
+
+        Returns:
+            Dictionary with 'line' and 'column' keys
+        """
+        cursor = self._editor.textCursor()
+        return {
+            "line": cursor.blockNumber(),
+            "column": cursor.columnNumber()
+        }
 
     def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
         """
@@ -178,7 +257,7 @@ class EditorTab(TabBase):
     @property
     def filename(self) -> str:
         """Get the name of the file being edited."""
-        return self._filename
+        return self._path
 
     def set_filename(self, filename: Optional[str], untitled_number: Optional[int] = None) -> None:
         """
@@ -188,7 +267,7 @@ class EditorTab(TabBase):
             filename: Path to file or None for new file
             untitled_number: Number to use for untitled file
         """
-        self._filename = filename
+        self._path = filename
         self._untitled_number = untitled_number
 
         # Update syntax highlighting based on file extension
@@ -213,8 +292,8 @@ class EditorTab(TabBase):
 
     def _update_title(self) -> None:
         """Update the tab title based on filename and modified state."""
-        if self._filename:
-            title = os.path.basename(self._filename)
+        if self._path:
+            title = os.path.basename(self._path)
         else:
             title = f"Untitled-{self._untitled_number}"
 
@@ -267,7 +346,7 @@ class EditorTab(TabBase):
         if not self._is_modified:
             return
 
-        if not self._filename:
+        if not self._path:
             backup_dir = os.path.expanduser("~/.humbug/backups")
             os.makedirs(backup_dir, exist_ok=True)
             backup_file = os.path.join(
@@ -275,7 +354,7 @@ class EditorTab(TabBase):
                 f"backup-{self._untitled_number}-{int(time.time())}.txt"
             )
         else:
-            backup_file = f"{self._filename}.backup"
+            backup_file = f"{self._path}.backup"
 
         try:
             with open(backup_file, 'w', encoding='utf-8') as f:
@@ -292,7 +371,7 @@ class EditorTab(TabBase):
             self,
             MessageBoxType.QUESTION,
             "Save Changes?",
-            f"Do you want to save changes to {self._filename or f'Untitled-{self._untitled_number}'}?",
+            f"Do you want to save changes to {self._path or f'Untitled-{self._untitled_number}'}?",
             [MessageBoxButton.SAVE, MessageBoxButton.DISCARD, MessageBoxButton.CANCEL]
         )
 
@@ -314,12 +393,12 @@ class EditorTab(TabBase):
         Returns:
             bool: True if save was successful
         """
-        if not self._filename:
+        if not self._path:
             return self.save_as()
 
         try:
             content = self._editor.toPlainText()
-            with open(self._filename, 'w', encoding='utf-8') as f:
+            with open(self._path, 'w', encoding='utf-8') as f:
                 f.write(content)
 
             self._last_save_content = content
@@ -330,7 +409,7 @@ class EditorTab(TabBase):
                 self,
                 MessageBoxType.CRITICAL,
                 "Error Saving File",
-                f"Could not save {self._filename}: {str(e)}"
+                f"Could not save {self._path}: {str(e)}"
             )
             return False
 
@@ -347,12 +426,12 @@ class EditorTab(TabBase):
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save As",
-            self._filename or os.path.expanduser("~/")
+            self._path or os.path.expanduser("~/")
         )
         if not filename:
             return False
 
-        self._filename = filename
+        self._path = filename
         self._untitled_number = None
         self._update_title()
 
