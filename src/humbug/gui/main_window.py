@@ -621,7 +621,7 @@ class MainWindow(QMainWindow):
             return
 
         # Get original conversation's metadata timestamp
-        original_timestamp = current_tab._transcript_writer._timestamp
+        original_timestamp = current_tab._timestamp
 
         # Generate new conversation ID using current time (for filename)
         timestamp = datetime.utcnow()
