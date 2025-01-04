@@ -256,7 +256,7 @@ class StyleManager(QObject):
 
     def _initialize_highlights(self):
         # Mapping from token type to colour
-        COLOUR_MAPPING = {
+        colour_mapping = {
             "COMMENT": ColorRole.SYNTAX_COMMENT,
             "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,
             "ELEMENT": ColorRole.SYNTAX_ELEMENT,
@@ -278,7 +278,7 @@ class StyleManager(QObject):
             "WHITESPACE": ColorRole.SYNTAX_TEXT
         }
 
-        for token_type, role in COLOUR_MAPPING.items():
+        for token_type, role in colour_mapping.items():
             text_format = self._create_highlight(role)
             self._highlights[token_type] = text_format
 
