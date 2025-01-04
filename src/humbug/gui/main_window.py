@@ -25,7 +25,7 @@ from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.transcript.transcript_loader import TranscriptLoader
-from humbug.workspace.workspace_manager import WorkspaceManager, WorkspaceSettings
+from humbug.workspace.workspace_manager import WorkspaceManager
 
 
 class MainWindow(QMainWindow):
@@ -221,7 +221,7 @@ class MainWindow(QMainWindow):
     def _restore_last_workspace(self):
         """Restore last workspace on startup if available."""
         try:
-            with open(os.path.expanduser("~/.humbug/workspace.json")) as f:
+            with open(os.path.expanduser("~/.humbug/workspace.json"), encoding='utf-8') as f:
                 data = json.load(f)
                 workspace_path = data.get("lastWorkspace")
                 if workspace_path and os.path.exists(workspace_path):
@@ -276,29 +276,16 @@ class MainWindow(QMainWindow):
 
     def _open_workspace_internal(self, path: str):
         """Internal function to set up workspace state."""
-        self._workspace_manager._workspace_path = path
-        self._workspace_manager._settings = WorkspaceSettings.load(
-            os.path.join(path, ".humbug/settings.json")
-        )
-        self._workspace_manager.update_home_tracking()
+        self._workspace_manager.open_workspace(path)
 
     def _close_workspace(self):
-        if self._workspace_manager._workspace_path:
+        if self._workspace_manager.has_workspace:
             self._save_workspace_state()
             self._close_all_tabs()
-            self._workspace_manager._workspace_path = None
-            self._workspace_manager._settings = None
-            self._workspace_manager.update_home_tracking()
+            self._workspace_manager.close_workspace()
 
     def _save_workspace_state(self):
-        if not self._workspace_manager._workspace_path:
-            return
-
-        recents_path = os.path.join(
-            self._workspace_manager._workspace_path,
-            ".humbug/recents.json"
-        )
-
+        """Save current workspace state."""
         tabs = []
         for tab in self.tab_manager.get_all_tabs():
             if isinstance(tab, ChatTab):
@@ -317,8 +304,7 @@ class MainWindow(QMainWindow):
                     }
                 })
 
-        with open(recents_path, "w") as f:
-            json.dump({"tabs": tabs}, f, indent=2)
+        self._workspace_manager.save_workspace_state(tabs)
 
     def _restore_conversation(self, path: str) -> None:
         """Attempt to restore conversation from workspace, returning None if failed."""
@@ -378,22 +364,20 @@ class MainWindow(QMainWindow):
 
     def _restore_workspace_state(self):
         """Restore previously open tabs from workspace state."""
-        if not self._workspace_manager._workspace_path:
+        if not self._workspace_manager.has_workspace:
             return
 
-        try:
-            with open(os.path.join(self._workspace_manager._workspace_path, ".humbug/recents.json")) as f:
-                data = json.load(f)
-                for tab in data.get("tabs", []):
-                    full_path = os.path.join(self._workspace_manager._workspace_path, tab["path"])
+        tabs = self._workspace_manager.load_workspace_state()
+        if not tabs:
+            return
 
-                    if tab["type"] == "conversation":
-                        self._restore_conversation(full_path)
-                    elif tab["type"] == "editor":
-                        self._restore_file(full_path, tab)
+        for tab in tabs:
+            full_path = self._workspace_manager.get_workspace_path(tab["path"])
 
-        except Exception as e:
-            self._logger.error("Error restoring workspace %s: %s", self._workspace_manager._workspace_path, str(e))
+            if tab["type"] == "conversation":
+                self._restore_conversation(full_path)
+            elif tab["type"] == "editor":
+                self._restore_file(full_path, tab)
 
     def _close_all_tabs(self):
         for tab in self.tab_manager.get_all_tabs():
