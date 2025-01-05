@@ -5,6 +5,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 """
 
 from enum import Enum, auto
+import os
 from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion
@@ -57,6 +58,7 @@ class StyleManager(QObject):
 
             self._code_font_families = ["Lucida Console", "Menlo", "Consolas", "Monaco", "Courier New", "monospace"]
             self._initialize_highlights()
+            self._create_theme_icons()
 
     def _initialize_colors(self) -> Dict[ColorRole, Dict[ColorMode, str]]:
         """Initialize the application colours for both light and dark modes."""
@@ -297,6 +299,34 @@ class StyleManager(QObject):
         text_highlight.setForeground(QColor(self._colors[role][self._color_mode]))
 
         return text_highlight
+
+    def _create_theme_icons(self):
+        """Create theme-specific icons in the user's .humbug directory."""
+        icon_dir = os.path.expanduser("~/.humbug/icons")
+        os.makedirs(icon_dir, exist_ok=True)
+
+        def write_icon(name: str, svg_data: str):
+            with open(os.path.join(icon_dir, name), 'w', encoding='utf-8') as f:
+                f.write(svg_data)
+
+        # Create collapsed and expanded arrows for both themes
+        for mode in ColorMode:
+            color = self._colors[ColorRole.TEXT_PRIMARY][mode]
+            suffix = mode.name.lower()
+
+            # Collapsed (right-pointing) arrow
+            write_icon(f'arrow-collapsed-{suffix}.svg', f'''
+                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="0.5" fill="none" d="M2,1 L4,3 L2,5"/>
+                </svg>
+            ''')
+
+            # Expanded (down-pointing) arrow
+            write_icon(f'arrow-expanded-{suffix}.svg', f'''
+                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="0.5" fill="none" d="M1,2 L3,4 L5,2"/>
+                </svg>
+            ''')
 
     def get_color(self, role: ColorRole) -> QColor:
         """

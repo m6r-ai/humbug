@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, QModelIndex, QSortFilterProxyModel
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import StyleManager
+from humbug.gui.style_manager import StyleManager, ColorMode
 
 
 class WorkspaceFileModel(QSortFilterProxyModel):
@@ -151,6 +151,9 @@ class WorkspaceFileTree(QWidget):
 
     def _handle_style_changed(self):
         """Update styling when application style changes."""
+        icon_dir = os.path.expanduser("~/.humbug/icons")
+        theme = "dark" if self._style_manager.color_mode == ColorMode.DARK else "light"
+
         self.setStyleSheet(f"""
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
@@ -168,6 +171,14 @@ class WorkspaceFileTree(QWidget):
             }}
             QTreeView::branch {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+            }}
+            QTreeView::branch:has-children:!has-siblings:closed,
+            QTreeView::branch:closed:has-children:has-siblings {{
+                image: url("{icon_dir}/arrow-collapsed-{theme}.svg");
+            }}
+            QTreeView::branch:open:has-children:!has-siblings,
+            QTreeView::branch:open:has-children:has-siblings {{
+                image: url("{icon_dir}/arrow-expanded-{theme}.svg");
             }}
             QScrollBar:vertical {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
