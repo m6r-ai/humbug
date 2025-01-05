@@ -620,38 +620,16 @@ class MainWindow(QMainWindow):
         if not isinstance(current_tab, ChatTab):
             return
 
-        # Get original conversation's metadata timestamp
-        original_timestamp = current_tab._timestamp
+        async def fork_and_add_tab():
+            # Fork the conversation
+            new_tab = await current_tab.fork_conversation()
 
-        # Generate new conversation ID using current time (for filename)
-        timestamp = datetime.utcnow()
-        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+            # Add new tab to manager
+            self.tab_manager.add_tab(new_tab, f"Conv: {new_tab.tab_id}")
+            self._chat_tabs[new_tab.tab_id] = new_tab
 
-        # Create new transcript file
-        filename = f"conversations/{conversation_id}.conv"
-
-        # Create new tab
-        chat_tab = ChatTab(conversation_id, filename, original_timestamp, self)
-
-        # Copy all messages, preserving original timestamps
-        messages = current_tab.get_message_history()
-
-        # Convert messages to transcript dictionaries
-        transcript_messages = [msg.to_transcript_dict() for msg in messages]
-
-        # Write the full history to the new transcript file
-        async def write_full_history():
-            await chat_tab._write_transcript(transcript_messages)
-
-        # Create task to write transcript
-        asyncio.create_task(write_full_history())
-
-        # Load messages into the new tab
-        chat_tab.load_message_history(messages)
-
-        # Add tab
-        self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
-        self._chat_tabs[conversation_id] = chat_tab
+        # Create task to fork conversation
+        asyncio.create_task(fork_and_add_tab())
 
     def _close_current_tab(self):
         """Close the current conversation tab."""

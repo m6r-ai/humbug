@@ -138,6 +138,36 @@ class ChatTab(TabBase):
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
 
+    async def fork_conversation(self) -> None:
+        """Create a copy of this conversation with the same history."""
+        # Generate new conversation ID using current time
+        timestamp = datetime.utcnow()
+        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+
+        # Create new file in same directory as current conversation
+        base_dir = os.path.dirname(self._path)
+        new_path = os.path.join(base_dir, f"{conversation_id}.conv")
+
+        # Create new tab using same history
+        forked_tab = ChatTab(conversation_id, new_path, self._timestamp, self.parent())
+
+        # Get all messages and write to new transcript
+        messages = self.get_message_history()
+        transcript_messages = [msg.to_transcript_dict() for msg in messages]
+
+        # Write history to new transcript file
+        await forked_tab._transcript_writer.write(transcript_messages)
+
+        # Load messages into the new tab
+        forked_tab.load_message_history(messages)
+
+        return forked_tab
+
+    @property
+    def timestamp(self) -> datetime:
+        """Get the timestamp of the conversation."""
+        return self._timestamp
+
     def get_state(self) -> TabState:
         """Get serializable state for workspace persistence.
 

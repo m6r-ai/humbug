@@ -1,12 +1,9 @@
 """Load and validate conversation transcripts."""
 
 import json
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from humbug.conversation.message import Message
-from humbug.conversation.message_source import MessageSource
-from humbug.conversation.usage import Usage
 
 
 class TranscriptLoader:
@@ -55,54 +52,9 @@ class TranscriptLoader:
         messages = []
         for msg in conversation:
             try:
-                # Required fields
-                if not all(k in msg for k in ["id", "timestamp", "type", "content"]):
-                    return [], f"Message missing required field: {msg}", None
-
-                # Parse timestamp
-                try:
-                    timestamp = datetime.fromisoformat(msg["timestamp"])
-                except ValueError:
-                    return [], f"Invalid timestamp format: {msg['timestamp']}", None
-
-                # Map message type to source
-                type_to_source = {
-                    "user_message": MessageSource.USER,
-                    "ai_response": MessageSource.AI,
-                    "system_message": MessageSource.SYSTEM
-                }
-                if msg["type"] not in type_to_source:
-                    return [], f"Invalid message type: {msg['type']}", None
-
-                source = type_to_source[msg["type"]]
-
-                # Handle usage data if present
-                usage = None
-                if "usage" in msg:
-                    usage_data = msg["usage"]
-                    if not all(k in usage_data for k in ["prompt_tokens", "completion_tokens", "total_tokens"]):
-                        return [], f"Invalid usage data format: {usage_data}", None
-                    usage = Usage(
-                        prompt_tokens=usage_data["prompt_tokens"],
-                        completion_tokens=usage_data["completion_tokens"],
-                        total_tokens=usage_data["total_tokens"]
-                    )
-
-                # Create message object
-                message = Message(
-                    id=msg["id"],
-                    source=source,
-                    content=msg["content"],
-                    timestamp=timestamp,
-                    usage=usage,
-                    error=msg.get("error"),
-                    model=msg.get("model"),
-                    temperature=msg.get("temperature"),
-                    completed=msg.get("completed", True)
-                )
+                message = Message.from_transcript_dict(msg)
                 messages.append(message)
-
-            except Exception as e:
+            except ValueError as e:
                 return [], f"Error parsing message: {str(e)}", None
 
         return messages, None, metadata
