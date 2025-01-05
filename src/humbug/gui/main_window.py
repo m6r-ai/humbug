@@ -398,9 +398,8 @@ class MainWindow(QMainWindow):
 
             except Exception as e:
                 self._logger.error(
-                    "Failed to restore tab state: %s. State data: %s",
+                    "Failed to restore tab state: %s",
                     str(e),
-                    json.dumps(state_dict, indent=2)
                 )
 
     def _close_all_tabs(self):
