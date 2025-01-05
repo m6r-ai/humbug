@@ -73,7 +73,7 @@ class SettingsDialog(QDialog):
         self.context_value = QLabel()
         self.context_value.setMinimumWidth(300)  # Match combo box width
         self.context_value.setMinimumHeight(40)  # Match label height
-        self.context_value.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.context_value.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         context_layout.addWidget(context_label)
         context_layout.addStretch()
         context_layout.addWidget(self.context_value)
@@ -86,7 +86,7 @@ class SettingsDialog(QDialog):
         self.output_value = QLabel()
         self.output_value.setMinimumWidth(300)  # Match combo box width
         self.output_value.setMinimumHeight(40)  # Match label height
-        self.output_value.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.output_value.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         output_layout.addWidget(output_label)
         output_layout.addStretch()
         output_layout.addWidget(self.output_value)
@@ -156,7 +156,7 @@ class SettingsDialog(QDialog):
                 height: 12px;
             }}
             QComboBox::down-arrow:on {{
-                image: url("{icon_dir}/arrow-left-{theme}.svg");
+                image: url("{icon_dir}/arrow-up-{theme}.svg");
                 width: 12px;
                 height: 12px;
             }}
