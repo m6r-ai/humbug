@@ -444,23 +444,13 @@ class MainWindow(QMainWindow):
 
     def _handle_file_activation(self, path: str):
         """Handle file activation from the file tree."""
-        # Check if file is already open
-        existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
-        if existing_tab:
-            self.tab_manager.set_current_tab(existing_tab.tab_id)
+        # Are we opening a conversation or a file?
+        ext = os.path.splitext(path)[1].lower()
+        if ext == ".conv":
+            self._open_conversation_path(path)
             return
 
-        # Create new editor tab
-        tab_id = str(uuid.uuid4())
-        editor = EditorTab(tab_id, self)
-        editor.set_filename(path)
-
-        # Connect editor signals
-        editor.close_requested.connect(self._handle_tab_close_requested)
-        editor.title_changed.connect(self._handle_tab_title_changed)
-        editor.modified_state_changed.connect(self._handle_tab_modified)
-
-        self.tab_manager.add_tab(editor, os.path.basename(path))
+        self._open_file_path(path)
 
     def _open_file(self):
         """Show open file dialog and create editor tab."""
@@ -472,23 +462,28 @@ class MainWindow(QMainWindow):
         )
         self._menu_timer.start()
 
-        if file_path:
-            # Check if file is already open
-            existing_tab = self.tab_manager.find_editor_tab_by_filename(file_path)
-            if existing_tab:
-                self.tab_manager.set_current_tab(existing_tab.tab_id)
-                return
+        if not file_path:
+            return
 
-            tab_id = str(uuid.uuid4())
-            editor = EditorTab(tab_id, self)
-            editor.set_filename(file_path)
+        self._open_file_path(file_path)
 
-            # Connect editor signals
-            editor.close_requested.connect(self._handle_tab_close_requested)
-            editor.title_changed.connect(self._handle_tab_title_changed)
-            editor.modified_state_changed.connect(self._handle_tab_modified)
+    def _open_file_path(self, path: str) -> None:
+        # Check if file is already open
+        existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
+        if existing_tab:
+            self.tab_manager.set_current_tab(existing_tab.tab_id)
+            return
 
-            self.tab_manager.add_tab(editor, os.path.basename(file_path))
+        tab_id = str(uuid.uuid4())
+        editor = EditorTab(tab_id, self)
+        editor.set_filename(path)
+
+        # Connect editor signals
+        editor.close_requested.connect(self._handle_tab_close_requested)
+        editor.title_changed.connect(self._handle_tab_title_changed)
+        editor.modified_state_changed.connect(self._handle_tab_modified)
+
+        self.tab_manager.add_tab(editor, os.path.basename(path))
 
     def _save_file(self):
         """Save the current file."""
@@ -677,21 +672,24 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
+        self._open_conversation_path(file_path)
+
+    def _open_conversation_path(self, path: str) -> None:
         # Check if conversation is already open
-        conversation_id = os.path.splitext(os.path.basename(file_path))[0]
+        conversation_id = os.path.splitext(os.path.basename(path))[0]
         if self.tab_manager.find_chat_tab_by_id(conversation_id):
             self.tab_manager.set_current_tab(conversation_id)
             return
 
         try:
-            messages, error, metadata = TranscriptReader.read(file_path)
+            messages, error, metadata = TranscriptReader.read(path)
             if error:
-                self._logger.exception("Error opening conversation: %s: %s", file_path, error)
+                self._logger.exception("Error opening conversation: %s: %s", path, error)
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
                     "Error Loading Conversation",
-                    f"Could not load {file_path}: {error}"
+                    f"Could not load {path}: {error}"
                 )
                 return
 
@@ -699,20 +697,18 @@ class MainWindow(QMainWindow):
             timestamp = datetime.fromisoformat(metadata["timestamp"])
 
             # Create chat tab with original file
-            chat_tab = ChatTab(conversation_id, file_path, timestamp, self)
+            chat_tab = ChatTab(conversation_id, path, timestamp, self)
             chat_tab.load_message_history(messages)
             self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
 
         except Exception as e:
-            self._logger.exception("Error opening conversation: %s: %s", file_path, str(e))
+            self._logger.exception("Error opening conversation: %s: %s", path, str(e))
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
                 "Error Loading Conversation",
-                f"Could not load {file_path}: {str(e)}"
+                f"Could not load {path}: {str(e)}"
             )
-
-    # In MainWindow._fork_conversation():
 
     def _fork_conversation(self):
         """Create a new conversation tab with the history of the current conversation."""
