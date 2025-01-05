@@ -175,10 +175,12 @@ class WorkspaceFileTree(QWidget):
             QTreeView::branch:has-children:!has-siblings:closed,
             QTreeView::branch:closed:has-children:has-siblings {{
                 image: url("{icon_dir}/arrow-collapsed-{theme}.svg");
+                padding: 4px;
             }}
             QTreeView::branch:open:has-children:!has-siblings,
             QTreeView::branch:open:has-children:has-siblings {{
                 image: url("{icon_dir}/arrow-expanded-{theme}.svg");
+                padding: 4px;
             }}
             QScrollBar:vertical {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
