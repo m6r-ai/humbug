@@ -382,7 +382,11 @@ class MainWindow(QMainWindow):
                     tab.modified_state_changed.connect(self._handle_tab_modified)
 
             except Exception as e:
-                self._logger.error("Failed to restore tab state: %s", e)
+                self._logger.error(
+                    "Failed to restore tab state: %s. State data: %s",
+                    str(e),
+                    json.dumps(state_dict, indent=2)
+                )
 
     def _close_all_tabs(self):
         for tab in self.tab_manager.get_all_tabs():
@@ -830,7 +834,12 @@ class MainWindow(QMainWindow):
             return
 
         except Exception as e:
-            self._logger.exception("Error processing AI response for conv %s", tab_id)
+            self._logger.exception(
+                "Error processing AI response for conversation %s with model %s: %s",
+                tab_id,
+                settings.model,
+                str(e)
+            )
             if chat_tab:
                 error = {
                     "code": "process_error",

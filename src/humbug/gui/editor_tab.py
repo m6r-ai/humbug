@@ -360,7 +360,7 @@ class EditorTab(TabBase):
             with open(backup_file, 'w', encoding='utf-8') as f:
                 f.write(self._editor.toPlainText())
         except Exception as e:
-            self._logger.error("Failed to create backup: %s", str(e))
+            self._logger.error("Failed to create backup file '%s': %s", backup_file, str(e))
 
     def can_close(self) -> bool:
         """Check if the file can be closed."""

@@ -61,12 +61,12 @@ class TranscriptWriter:
             # Atomic replace
             os.replace(temp_file, self._filename)
 
-        except Exception:
-            self._logger.exception("Error writing transcript")
+        except Exception as e:
+            self._logger.exception("Error writing transcript: %s", str(e))
             # Create backup of current file if possible
             try:
                 if os.path.exists(self._filename):
                     backup = f"{self._filename}.backup"
                     os.replace(self._filename, backup)
             except Exception:
-                pass
+                self._logger.error("Failed to create backup file")
