@@ -24,7 +24,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
-from humbug.transcript.transcript_loader import TranscriptLoader
+from humbug.transcript.transcript_reader import TranscriptReader
 from humbug.transcript.transcript_writer import TranscriptWriter
 
 
@@ -213,7 +213,7 @@ class ChatTab(TabBase):
 
         # Load conversation from transcript
         try:
-            messages, error, _metadata = TranscriptLoader.load_transcript(state.path)
+            messages, error, _metadata = TranscriptReader.read(state.path)
             if error:
                 raise ValueError(f"Failed to load transcript: {error}")
 
@@ -726,7 +726,7 @@ class ChatTab(TabBase):
         return True
 
     def close(self) -> None:
-        self._transcript_writer.close()
+        pass
 
     def can_save(self) -> bool:
         return False

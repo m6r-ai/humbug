@@ -70,7 +70,3 @@ class TranscriptWriter:
                     os.replace(self._filename, backup)
             except Exception:
                 pass
-
-    def close(self) -> None:
-        """Close the transcript file."""
-        # Nothing to do as we don't keep file handles open

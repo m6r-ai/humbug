@@ -6,13 +6,13 @@ from typing import Dict, List, Optional, Tuple
 from humbug.conversation.message import Message
 
 
-class TranscriptLoader:
+class TranscriptReader:
     """Handles loading and validating conversation transcripts."""
 
     @staticmethod
-    def load_transcript(filename: str) -> Tuple[List[Message], Optional[str], Optional[Dict]]:
+    def read(filename: str) -> Tuple[List[Message], Optional[str], Optional[Dict]]:
         """
-        Load and validate a transcript file.
+        Read and validate a transcript file.
 
         Args:
             filename: Path to transcript file

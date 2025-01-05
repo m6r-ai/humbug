@@ -26,7 +26,7 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
-from humbug.transcript.transcript_loader import TranscriptLoader
+from humbug.transcript.transcript_reader import TranscriptReader
 from humbug.workspace.workspace_manager import (
     WorkspaceManager, WorkspaceError, WorkspaceExistsError
 )
@@ -282,6 +282,7 @@ class MainWindow(QMainWindow):
         if self._workspace_manager.has_workspace:
             self._save_workspace_state()
             self._close_all_tabs()
+            self._workspace_manager.close_workspace()
 
         # Open the new workspace
         try:
@@ -642,7 +643,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            messages, error, metadata = TranscriptLoader.load_transcript(file_path)
+            messages, error, metadata = TranscriptReader.read(file_path)
             if error:
                 self._logger.exception("Error opening conversation: %s: %s", file_path, error)
                 MessageBox.show_message(
