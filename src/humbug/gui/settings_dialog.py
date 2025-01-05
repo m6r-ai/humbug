@@ -164,8 +164,7 @@ class SettingsDialog(QDialog):
                 image: none;
             }}
             QComboBox QAbstractItemView {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
                 selection-color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
