@@ -314,17 +314,31 @@ class StyleManager(QObject):
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
             suffix = mode.name.lower()
 
-            # Collapsed (right-pointing) arrow
-            write_icon(f'arrow-collapsed-{suffix}.svg', f'''
+            # Right-pointing arrow
+            write_icon(f'arrow-right-{suffix}.svg', f'''
                 <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.5" fill="none" d="M2,1 L4,3 L2,5"/>
+                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M2,1 L4,3 L2,5"/>
                 </svg>
             ''')
 
-            # Expanded (down-pointing) arrow
-            write_icon(f'arrow-expanded-{suffix}.svg', f'''
+            # Left-pointing arrow
+            write_icon(f'arrow-left-{suffix}.svg', f'''
                 <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.5" fill="none" d="M1,2 L3,4 L5,2"/>
+                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M4,1 L2,3 L4,5"/>
+                </svg>
+            ''')
+
+            # Up-pointing arrow
+            write_icon(f'arrow-up-{suffix}.svg', f'''
+                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1,4 L3,2 L5,4"/>
+                </svg>
+            ''')
+
+            # Down-pointing arrow
+            write_icon(f'arrow-down-{suffix}.svg', f'''
+                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1,2 L3,4 L5,2"/>
                 </svg>
             ''')
 

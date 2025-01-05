@@ -174,12 +174,12 @@ class WorkspaceFileTree(QWidget):
             }}
             QTreeView::branch:has-children:!has-siblings:closed,
             QTreeView::branch:closed:has-children:has-siblings {{
-                image: url("{icon_dir}/arrow-collapsed-{theme}.svg");
+                image: url("{icon_dir}/arrow-right-{theme}.svg");
                 padding: 4px;
             }}
             QTreeView::branch:open:has-children:!has-siblings,
             QTreeView::branch:open:has-children:has-siblings {{
-                image: url("{icon_dir}/arrow-expanded-{theme}.svg");
+                image: url("{icon_dir}/arrow-down-{theme}.svg");
                 padding: 4px;
             }}
             QScrollBar:vertical {{

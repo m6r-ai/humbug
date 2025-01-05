@@ -1,6 +1,8 @@
 """Dialog for configuring conversation-specific settings."""
 
+import os
 from typing import List
+
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QDoubleSpinBox
@@ -9,7 +11,7 @@ from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import StyleManager
+from humbug.gui.style_manager import StyleManager, ColorMode
 
 
 class SettingsDialog(QDialog):
@@ -122,6 +124,9 @@ class SettingsDialog(QDialog):
         self.setLayout(layout)
 
         # Apply consistent dialog styling
+        icon_dir = os.path.expanduser("~/.humbug/icons")
+        theme = "dark" if style_manager.color_mode == ColorMode.DARK else "light"
+
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
@@ -143,6 +148,20 @@ class SettingsDialog(QDialog):
             }}
             QComboBox::drop-down {{
                 border: none;
+                width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: url("{icon_dir}/arrow-down-{theme}.svg");
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox::down-arrow:on {{
+                image: url("{icon_dir}/arrow-left-{theme}.svg");
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox::down-arrow:disabled {{
+                image: none;
             }}
             QComboBox QAbstractItemView {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
@@ -160,6 +179,26 @@ class SettingsDialog(QDialog):
             QDoubleSpinBox:disabled {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
+                border: none;
+                width: 20px;
+            }}
+            QDoubleSpinBox::up-arrow {{
+                image: url("{icon_dir}/arrow-up-{theme}.svg");
+                width: 12px;
+                height: 12px;
+            }}
+            QDoubleSpinBox::up-arrow:disabled {{
+                image: none;
+            }}
+            QDoubleSpinBox::down-arrow {{
+                image: url("{icon_dir}/arrow-down-{theme}.svg");
+                width: 12px;
+                height: 12px;
+            }}
+            QDoubleSpinBox::down-arrow:disabled {{
+                image: none;
             }}
             QLabel[valueDisplay="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
