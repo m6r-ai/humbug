@@ -67,7 +67,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#e0e0e0"
             },
             ColorRole.BACKGROUND_SECONDARY: {
-                ColorMode.DARK: "#2d2d2d",
+                ColorMode.DARK: "#141414",
                 ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.BACKGROUND_DIALOG: {
@@ -133,6 +133,12 @@ class StyleManager(QObject):
             ColorRole.MENU_HOVER: {
                 ColorMode.DARK: "#3d3d3d",
                 ColorMode.LIGHT: "#e0e0e0"
+            },
+
+            # Splitter bars
+            ColorRole.SPLITTER: {
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#c0c0c0"
             },
 
             # Scroll bar elements

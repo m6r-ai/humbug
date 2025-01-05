@@ -627,8 +627,9 @@ class MainWindow(QMainWindow):
 
         self._splitter.setStyleSheet(f"""
             QSplitter::handle {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-                margin: 1px;
+                background-color: {style_manager.get_color_str(ColorRole.SPLITTER)};
+                margin: 0;
+                width: 1px;
             }}
         """)
 

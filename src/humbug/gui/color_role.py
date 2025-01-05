@@ -32,6 +32,9 @@ class ColorRole(Enum):
     MENU_BACKGROUND = auto()            # Menu background
     MENU_HOVER = auto()                 # Menu item hover
 
+    # Splitter bars
+    SPLITTER = auto()                   # Splitter bar
+
     # Scroll bar elements
     SCROLLBAR_BACKGROUND = auto()       # Scrollbar background
     SCROLLBAR_HANDLE = auto()           # Scrollbar handle

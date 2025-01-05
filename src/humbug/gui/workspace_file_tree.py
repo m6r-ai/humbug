@@ -1,12 +1,12 @@
 """File tree view implementation for workspace files."""
 
+import os
 from typing import Optional
 
 from PySide6.QtWidgets import (
     QTreeView, QFileSystemModel, QWidget, QVBoxLayout
 )
 from PySide6.QtCore import Signal, QModelIndex, QSortFilterProxyModel
-import os
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -163,5 +163,16 @@ class WorkspaceFileTree(QWidget):
             }}
             QTreeView::branch {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+            }}
+            QScrollBar:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
             }}
         """)
