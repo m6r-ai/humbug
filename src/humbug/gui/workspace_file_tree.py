@@ -26,6 +26,10 @@ class WorkspaceFileModel(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         """Filter out .humbug directory and other hidden files."""
+        # If no workspace is open, don't show any files
+        if not self._workspace_root:
+            return False
+
         source_model = self.sourceModel()
         if not source_model:
             return False
@@ -112,6 +116,7 @@ class WorkspaceFileTree(QWidget):
         if not path:
             # Clear the model when no workspace is active
             self._fs_model.setRootPath("")
+            self._filter_model.set_workspace_root(None)
             self._tree_view.setRootIndex(self._filter_model.mapFromSource(
                 self._fs_model.index("")
             ))
