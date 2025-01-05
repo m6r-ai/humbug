@@ -282,14 +282,18 @@ class MainWindow(QMainWindow):
         self._restore_workspace_state()
 
     def _close_workspace(self):
-        if self._workspace_manager.has_workspace:
-            self._save_workspace_state()
-            self._close_all_tabs()
-            self._workspace_manager.close_workspace()
+        if not self._workspace_manager.has_workspace:
+            self._logger.error("No workspace active, cannot close")
+            return
+
+        self._save_workspace_state()
+        self._close_all_tabs()
+        self._workspace_manager.close_workspace()
 
     def _save_workspace_state(self):
         """Save current workspace state."""
         if not self._workspace_manager.has_workspace:
+            self._logger.error("No workspace active, cannot save")
             return
 
         # Get state from all tabs
@@ -306,10 +310,6 @@ class MainWindow(QMainWindow):
 
     def _restore_workspace_state(self):
         """Restore previously open tabs from workspace state."""
-        if not self._workspace_manager.has_workspace:
-            self._logger.debug("No workspace active, skipping state restore")
-            return
-
         # Load saved states
         saved_states = self._workspace_manager.load_workspace_state()
         if not saved_states:
@@ -542,23 +542,22 @@ class MainWindow(QMainWindow):
 
     def _new_conversation(self) -> str:
         """Create a new conversation tab and return its ID."""
+        if not self._workspace_manager.has_workspace:
+            self._logger.error("Cannot create conversation without active workspace")
+            return
+
         # Generate timestamp and use it for both ID and metadata
         timestamp = datetime.utcnow()
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
-        # Create conversations directory in workspace
-        if self._workspace_manager.has_workspace:
-            conversations_dir = self._workspace_manager.ensure_workspace_dir("conversations")
-            # Save path relative to workspace root
-            filename = os.path.join("conversations", f"{conversation_id}.conv")
-        else:
-            conversations_dir = os.path.expanduser("~/.humbug/conversations")
-            os.makedirs(conversations_dir, exist_ok=True)
-            filename = os.path.join(conversations_dir, f"{conversation_id}.conv")
+        # Ensure we have a conversations directory in the workspace
+        self._workspace_manager.ensure_workspace_dir("conversations")
+
+        # Save path relative to workspace root
+        filename = os.path.join("conversations", f"{conversation_id}.conv")
 
         # Create tab using same ID
-        full_path = filename if not self._workspace_manager.has_workspace else \
-                self._workspace_manager.get_workspace_path(filename)
+        full_path = self._workspace_manager.get_workspace_path(filename)
         chat_tab = ChatTab(conversation_id, full_path, timestamp, self)
         self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
         return conversation_id
