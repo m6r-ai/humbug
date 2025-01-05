@@ -300,8 +300,11 @@ class WorkspaceManager:
             raise WorkspaceNotFoundError("No workspace is currently open")
 
         abs_path = self.get_workspace_path(dir_path)
-        os.makedirs(abs_path, exist_ok=True)
-        return abs_path
+        try:
+            os.makedirs(abs_path, exist_ok=True)
+            return abs_path
+        except OSError as e:
+            raise WorkspaceError(f"Failed to create directory '{dir_path}' in workspace: {e}") from e
 
     def _update_home_tracking(self) -> None:
         """Update the home directory tracking file with current workspace path."""
