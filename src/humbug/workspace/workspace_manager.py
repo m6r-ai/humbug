@@ -119,7 +119,7 @@ class WorkspaceManager:
                     pass  # Ignore cleanup errors
             raise
 
-    def open_workspace(self, path: str) -> WorkspaceSettings:
+    def open_workspace(self, path: str) -> None:
         """
         Open an existing workspace.
 
@@ -143,7 +143,6 @@ class WorkspaceManager:
             self._workspace_path = path
             self._settings = settings
             self._update_home_tracking()
-            return settings
 
         except Exception as e:
             logger.error("Failed to open workspace at %s: %s", path, str(e))

@@ -27,7 +27,9 @@ from humbug.gui.tab_manager import TabManager
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.transcript.transcript_loader import TranscriptLoader
-from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.workspace.workspace_manager import (
+    WorkspaceManager, WorkspaceError, WorkspaceExistsError
+)
 
 
 class MainWindow(QMainWindow):
@@ -227,8 +229,12 @@ class MainWindow(QMainWindow):
                 data = json.load(f)
                 workspace_path = data.get("lastWorkspace")
                 if workspace_path and os.path.exists(workspace_path):
-                    self._workspace_manager.open_workspace(workspace_path)
-                    self._restore_workspace_state()
+                    try:
+                        self._workspace_manager.open_workspace(workspace_path)
+                        self._restore_workspace_state()
+                    except WorkspaceError as e:
+                        self._logger.error("Failed to restore workspace: %s", str(e))
+                        # Don't show error dialog on startup, just log it
         except (FileNotFoundError, json.JSONDecodeError):
             pass
 
@@ -241,12 +247,22 @@ class MainWindow(QMainWindow):
         if not dir_path:
             return
 
-        if not self._workspace_manager.create_workspace(dir_path):
+        try:
+            self._workspace_manager.create_workspace(dir_path)
+        except WorkspaceExistsError:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
                 "Workspace Error",
                 "Workspace already exists in selected directory."
+            )
+            return
+        except WorkspaceError as e:
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Workspace Error",
+                f"Failed to create workspace: {str(e)}"
             )
             return
 
@@ -268,13 +284,14 @@ class MainWindow(QMainWindow):
             self._close_all_tabs()
 
         # Open the new workspace
-        settings = self._workspace_manager.open_workspace(path)
-        if not settings:
+        try:
+            self._workspace_manager.open_workspace(path)
+        except WorkspaceError as e:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
                 "Workspace Error",
-                "Invalid workspace selected."
+                f"Failed to open workspace: {str(e)}"
             )
             return
 
@@ -306,14 +323,33 @@ class MainWindow(QMainWindow):
                 self._logger.error("Failed to save state for tab %s: %s", tab.tab_id, e)
 
         # Save to workspace
-        self._workspace_manager.save_workspace_state(tab_states)
+        try:
+            self._workspace_manager.save_workspace_state(tab_states)
+        except WorkspaceError as e:
+            self._logger.error("Failed to save workspace state: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Workspace Error",
+                f"Failed to save workspace state: {str(e)}"
+            )
 
     def _restore_workspace_state(self):
         """Restore previously open tabs from workspace state."""
         # Load saved states
-        saved_states = self._workspace_manager.load_workspace_state()
-        if not saved_states:
-            self._logger.debug("No saved states found")
+        try:
+            saved_states = self._workspace_manager.load_workspace_state()
+            if not saved_states:
+                self._logger.debug("No saved states found")
+                return
+        except WorkspaceError as e:
+            self._logger.error("Failed to load workspace state: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Workspace Error",
+                f"Failed to load workspace state: {str(e)}"
+            )
             return
 
         # Restore each tab
@@ -324,7 +360,11 @@ class MainWindow(QMainWindow):
 
                 # Convert relative paths to absolute
                 if not os.path.isabs(state.path):
-                    state.path = self._workspace_manager.get_workspace_path(state.path)
+                    try:
+                        state.path = self._workspace_manager.get_workspace_path(state.path)
+                    except WorkspaceError as e:
+                        self._logger.error("Failed to resolve path for tab state: %s", str(e))
+                        continue
 
                 # Create appropriate tab type
                 if state.type == TabType.CHAT:
@@ -385,11 +425,10 @@ class MainWindow(QMainWindow):
     def _open_file(self):
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
-        start_path = self._workspace_manager.workspace_path or os.path.expanduser("~/")
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
-            start_path
+            self._workspace_manager.workspace_path
         )
         self._menu_timer.start()
 
@@ -550,17 +589,37 @@ class MainWindow(QMainWindow):
         timestamp = datetime.utcnow()
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
-        # Ensure we have a conversations directory in the workspace
-        self._workspace_manager.ensure_workspace_dir("conversations")
+        try:
+            # Ensure we have a conversations directory in the workspace
+            self._workspace_manager.ensure_workspace_dir("conversations")
+        except WorkspaceError as e:
+            self._logger.error("Failed to create conversations directory: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Workspace Error",
+                f"Failed to create conversations directory: {str(e)}"
+            )
+            return None
 
         # Save path relative to workspace root
         filename = os.path.join("conversations", f"{conversation_id}.conv")
 
-        # Create tab using same ID
-        full_path = self._workspace_manager.get_workspace_path(filename)
-        chat_tab = ChatTab(conversation_id, full_path, timestamp, self)
-        self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
-        return conversation_id
+        try:
+            # Create tab using same ID
+            full_path = self._workspace_manager.get_workspace_path(filename)
+            chat_tab = ChatTab(conversation_id, full_path, timestamp, self)
+            self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
+            return conversation_id
+        except WorkspaceError as e:
+            self._logger.error("Failed to create conversation: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Workspace Error",
+                f"Failed to create conversation: {str(e)}"
+            )
+            return None
 
     def _open_conversation(self):
         """Show open conversation dialog and create chat tab."""
@@ -568,7 +627,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Conversation",
-            os.path.expanduser("~/"),
+            self._workspace_manager.workspace_path,
             "Transcript Files (*.conv);;All Files (*.*)"
         )
         self._menu_timer.start()
