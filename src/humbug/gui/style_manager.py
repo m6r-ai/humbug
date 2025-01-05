@@ -186,7 +186,7 @@ class StyleManager(QObject):
             # Line numbers
             ColorRole.LINE_NUMBER: {
                 ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#808080"
+                ColorMode.LIGHT: "#c0c0c0"
             },
 
             # Syntax highlighting
