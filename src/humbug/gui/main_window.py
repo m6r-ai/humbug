@@ -9,7 +9,7 @@ from typing import Dict, List
 import uuid
 
 from PySide6.QtWidgets import (
-    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog
+    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -26,6 +26,7 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
+from humbug.gui.workspace_file_tree import WorkspaceFileTree
 from humbug.transcript.transcript_reader import TranscriptReader
 from humbug.workspace.workspace_manager import (
     WorkspaceManager, WorkspaceError, WorkspaceExistsError
@@ -205,10 +206,21 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Create tab manager
-        self.tab_manager = TabManager(self)
-        layout.addWidget(self.tab_manager)
+        # Create splitter
+        self._splitter = QSplitter(Qt.Horizontal)
+        layout.addWidget(self._splitter)
 
+        # Create and add file tree
+        self._file_tree = WorkspaceFileTree(self)
+        self._file_tree.file_activated.connect(self._handle_file_activation)
+        self._splitter.addWidget(self._file_tree)
+
+        # Create tab manager in splitter
+        self.tab_manager = TabManager(self)
+        self._splitter.addWidget(self.tab_manager)
+
+        # Set initial splitter sizes (30% file tree, 70% tabs)
+        self._splitter.setSizes([300, 700])
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
@@ -231,6 +243,7 @@ class MainWindow(QMainWindow):
                 if workspace_path and os.path.exists(workspace_path):
                     try:
                         self._workspace_manager.open_workspace(workspace_path)
+                        self._file_tree.set_workspace(workspace_path)
                         self._restore_workspace_state()
                     except WorkspaceError as e:
                         self._logger.error("Failed to restore workspace: %s", str(e))
@@ -287,6 +300,7 @@ class MainWindow(QMainWindow):
         # Open the new workspace
         try:
             self._workspace_manager.open_workspace(path)
+            self._file_tree.set_workspace(path)
         except WorkspaceError as e:
             MessageBox.show_message(
                 self,
@@ -306,6 +320,7 @@ class MainWindow(QMainWindow):
 
         self._save_workspace_state()
         self._close_all_tabs()
+        self._file_tree.set_workspace(None)
         self._workspace_manager.close_workspace()
 
     def _save_workspace_state(self):
@@ -426,6 +441,32 @@ class MainWindow(QMainWindow):
 
         self.tab_manager.add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
+
+    def _handle_file_activation(self, path: str):
+        """Handle file activation from the file tree."""
+        # Make path relative to workspace if possible
+        if self._workspace_manager.workspace_path:
+            relative_path = self._workspace_manager.make_relative_path(path)
+            if relative_path:
+                path = relative_path
+
+        # Check if file is already open
+        existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
+        if existing_tab:
+            self.tab_manager.set_current_tab(existing_tab.tab_id)
+            return
+
+        # Create new editor tab
+        tab_id = str(uuid.uuid4())
+        editor = EditorTab(tab_id, self)
+        editor.set_filename(path)
+
+        # Connect editor signals
+        editor.close_requested.connect(self._handle_tab_close_requested)
+        editor.title_changed.connect(self._handle_tab_title_changed)
+        editor.modified_state_changed.connect(self._handle_tab_modified)
+
+        self.tab_manager.add_tab(editor, os.path.basename(path))
 
     def _open_file(self):
         """Show open file dialog and create editor tab."""
@@ -581,6 +622,13 @@ class MainWindow(QMainWindow):
             }}
             QMenu::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)}
+            }}
+        """)
+
+        self._splitter.setStyleSheet(f"""
+            QSplitter::handle {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                margin: 1px;
             }}
         """)
 

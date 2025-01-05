@@ -9,182 +9,215 @@ Context: Humbug application
     Context: Version
         This is version 0.1 of the application.
 
-    Context: Screen display
-        The primary screen display is a tabbed interface, where the tabs correspond to either conversations being
-        had with one or more AI backends, or files being edited.
+    Context: Application window
+        The main window is divided into two primary regions: a file tree view on the left side, and a tabbed
+        interface on the right side. The two regions are separated by a resizable splitter that allows the user
+        to adjust the relative widths.
 
-        Selecting a tab brings that conversation to the front of the tab group.
+        Context: File tree view
+            The file tree displays the contents of the current workspace:
 
-        When there are no tabs open, the application displays a welcome message in the main window area.
+            - Shows all files and folders in the workspace directory
+            - Excludes the .humbug directory and other hidden files/folders
+            - Directories are shown before files in the tree
+            - Files and directories are sorted alphabetically within their sections
+            - The tree supports keyboard navigation using arrow keys
+            - Double-clicking or pressing Enter on a file opens it in a new editor tab
+            - If the file is already open, its tab becomes active instead
+            - Directory nodes can be expanded/collapsed using arrow keys or mouse
+            - Initial view is set to 30% of the window width, but can be resized
+            - Styling matches the current application theme (light/dark mode)
+            - The tree view updates automatically when files are added or removed
 
-        The welcome message appears in a styled box with dialog-style spacing that shows:
+            Context: File tree styling
+                The file tree view must maintain consistent styling:
 
-        - The application name "Humbug" in a font twice the size of the default application font
-        - The version number underneath in the default font size
+                - Background color matches the application theme
+                - Tree items use primary text color
+                - Selected items use tab active background color
+                - Hover state uses tab hover background color
+                - Tree lines and expander icons match theme colors
+                - Splitter handle uses 1px width with theme background
+                - All colors follow the dark/light mode selection
+                - Font sizes scale with application zoom level
+                - Padding and spacing match the theme metrics
 
-        Both pieces of text are centered within the styled box.
+        Context: Tab view
+            The tabbed interface has tabs that correspond to either conversations being
+            had with one or more AI backends, or files being edited.
 
-        The welcome message is automatically hidden when tabs are created and reappears when all tabs are closed.
+            Selecting a tab brings that conversation to the front of the tab group.
 
-        Context: Tab types
-            There are two distinct types of tabs:
+            When there are no tabs open, the application displays a welcome message in the main window area.
 
-            - Conversation tabs: For AI interactions
-            - Editor tabs: For file editing
+            The welcome message appears in a styled box with dialog-style spacing that shows:
 
-            Each type has its own distinct visual appearance and behavior.
+            - The application name "Humbug" in a font twice the size of the default application font
+            - The version number underneath in the default font size
 
-            Active tabs are a different colour to inactive tabs, and the active tab has a 2px border at the top to
-            highlight that it is the active tab.
+            Both pieces of text are centered within the styled box.
 
-            Context: Conversation tabs
-                Each tab will be named with a conversation name.  This will default to "Conv: ID" where <ID> is a
-                based on the date and time at which the conversation started.  The ID format will be:
-                "yyyy-mm-dd-hh-mm-ss-ttt", substituting the conversation start date and time (in UTC) for yyyy,
-                mm, dd, hh, mm, ss, ttt (year, numeric month, day-of-month, hours, minutes, seconds, and thousandths of
-                seconds respectively).
+            The welcome message is automatically hidden when tabs are created and reappears when all tabs are closed.
 
-                Each tab will have a close button (typically rendered as an "x" icon) that appears after the conversation
-                name.  Clicking this close button will close the tab in the same way as clicking the "Close Conversation"
-                menu item.
+            Context: Tab types
+                There are two distinct types of tabs:
 
-                The close button will be:
+                - Conversation tabs: For AI interactions
+                - Editor tabs: For file editing
 
-                - Always visible but not highlighted on the currently selected tab.
-                - Hidden by default on non-selected tabs, appearing only when the tab is hovered over.
-                - Use a transparent background when not hovered
-                - Highlighted in red (#ff4444) when the mouse hovers over the close button itself.
+                Each type has its own distinct visual appearance and behavior.
 
-                Context: History display
-                    Each message in the history appears as a distinct "card" that spans the full width of the history view.
+                Active tabs are a different colour to inactive tabs, and the active tab has a 2px border at the top to
+                highlight that it is the active tab.
 
-                    Each card has:
+                Context: Conversation tabs
+                    Each tab will be named with a conversation name.  This will default to "Conv: ID" where <ID> is a
+                    based on the date and time at which the conversation started.  The ID format will be:
+                    "yyyy-mm-dd-hh-mm-ss-ttt", substituting the conversation start date and time (in UTC) for yyyy,
+                    mm, dd, hh, mm, ss, ttt (year, numeric month, day-of-month, hours, minutes, seconds, and thousandths of
+                    seconds respectively).
 
-                    - A header section containing the sender name ("You", "Assistant", or "System Message"), colour coded
-                      to show these in different colours based on the role.
-                    - A content section.
-                    - 8px spacing between cards
-                    - 8px padding within the content area
-                    - 8px rounded border around each card
+                    Each tab will have a close button (typically rendered as an "x" icon) that appears after the conversation
+                    name.  Clicking this close button will close the tab in the same way as clicking the "Close Conversation"
+                    menu item.
 
-                    The cards dynamically resize with the window:
+                    The close button will be:
 
-                    - The width always matches the window width (minus margins and scroll bar)
-                    - The height adjusts automatically based on the content
-                    - Text wraps within the card boundaries
-                    - Code blocks maintain their formatting while wrapping where possible
+                    - Always visible but not highlighted on the currently selected tab.
+                    - Hidden by default on non-selected tabs, appearing only when the tab is hovered over.
+                    - Use a transparent background when not hovered
+                    - Highlighted in red (#ff4444) when the mouse hovers over the close button itself.
 
-                    Context: Example layout
-                        Here's an ASCII representation of the layout:
+                    Context: History display
+                        Each message in the history appears as a distinct "card" that spans the full width of the history view.
 
-                        ```plaintext
-                        +------------------------------------------+
-                        |  You                                     |
-                        |                                          |
-                        |  This is a user message that wraps       |
-                        |  across multiple lines as needed.        |
-                        +------------------------------------------+
-                                        ↕ 10px
-                        +------------------------------------------+
-                        |  Assistant                               |
-                        |                                          |
-                        |  This is an AI response that also wraps  |
-                        |  across multiple lines as needed.        |
-                        |                                          |
-                        |  ```python                               |
-                        |  def example():                          |
-                        |      print("Code blocks maintain their   |
-                        |            formatting")                  |
-                        |  ```                                     |
-                        +------------------------------------------+
-                                        ↕ 10px
-                        +------------------------------------------+
-                        |  System Message                          |
-                        |                                          |
-                        |  This is a system message that wraps     |
-                        |  across multiple lines as needed.        |
-                        +------------------------------------------+
-                        ```
+                        Each card has:
 
-                Context: Input box behavior
-                    The input box starts with a single line and expands vertically as content is added.
+                        - A header section containing the sender name ("You", "Assistant", or "System Message"), colour coded
+                        to show these in different colours based on the role.
+                        - A content section.
+                        - 8px spacing between cards
+                        - 8px padding within the content area
+                        - 8px rounded border around each card
 
-                    The input box supports:
-                        - Home key: Moves cursor to start of current line
-                        - End key: Moves cursor to end of current line
-                        - Ctrl+Home: Moves cursor to start of message
-                        - Ctrl+End: Moves cursor to end of message
-                        - Page Up/Down: Scroll by viewport height
+                        The cards dynamically resize with the window:
 
-                Context: Selection behaviour
-                    Selection of text is limited to within a single message - it cannot span across multiple
-                    messages or between the input area and message history.
+                        - The width always matches the window width (minus margins and scroll bar)
+                        - The height adjusts automatically based on the content
+                        - Text wraps within the card boundaries
+                        - Code blocks maintain their formatting while wrapping where possible
 
-                    When selecting text near the top or bottom of the visible area, the view will
-                    automatically scroll to follow the selection.
+                        Context: Example layout
+                            Here's an ASCII representation of the layout:
 
-                    The scroll speed increases based on how far outside the visible area the cursor is.
+                            ```plaintext
+                            +------------------------------------------+
+                            |  You                                     |
+                            |                                          |
+                            |  This is a user message that wraps       |
+                            |  across multiple lines as needed.        |
+                            +------------------------------------------+
+                                            ↕ 10px
+                            +------------------------------------------+
+                            |  Assistant                               |
+                            |                                          |
+                            |  This is an AI response that also wraps  |
+                            |  across multiple lines as needed.        |
+                            |                                          |
+                            |  ```python                               |
+                            |  def example():                          |
+                            |      print("Code blocks maintain their   |
+                            |            formatting")                  |
+                            |  ```                                     |
+                            +------------------------------------------+
+                                            ↕ 10px
+                            +------------------------------------------+
+                            |  System Message                          |
+                            |                                          |
+                            |  This is a system message that wraps     |
+                            |  across multiple lines as needed.        |
+                            +------------------------------------------+
+                            ```
 
-                    The maximum scroll speed is reached when the cursor is twice the viewport height away.
+                    Context: Input box behavior
+                        The input box starts with a single line and expands vertically as content is added.
 
-            Context: Editor tabs
-                Each editor tab will be named with the filename being edited.
+                        The input box supports:
+                            - Home key: Moves cursor to start of current line
+                            - End key: Moves cursor to end of current line
+                            - Ctrl+Home: Moves cursor to start of message
+                            - Ctrl+End: Moves cursor to end of message
+                            - Page Up/Down: Scroll by viewport height
 
-                For new unsaved files this will be "Untitled-<num>" where <num> is a simple incrementing number
-                starting from 1 for each new file created during the current run of the application.
+                    Context: Selection behaviour
+                        Selection of text is limited to within a single message - it cannot span across multiple
+                        messages or between the input area and message history.
 
-                Like conversation tabs, editor tabs will have a close button that appears after the filename.
+                        When selecting text near the top or bottom of the visible area, the view will
+                        automatically scroll to follow the selection.
 
-                If there are unsaved changes in the file, an asterisk (*) will appear after the filename.
+                        The scroll speed increases based on how far outside the visible area the cursor is.
 
-                The close button behavior matches that of conversation tabs.
+                        The maximum scroll speed is reached when the cursor is twice the viewport height away.
 
-                Context: Navigation
-                    The editor supports:
-                        - Home key: Moves cursor to start of current line
-                        - End key: Moves cursor to end of current line
-                        - Ctrl+Home: Moves cursor to start of message
-                        - Ctrl+End: Moves cursor to end of message
-                        - Page Up/Down: Scroll by viewport height
+                Context: Editor tabs
+                    Each editor tab will be named with the filename being edited.
 
-        Context: Syntax highlighting
-            Code blocks and inline code will be syntax highlighted based on the programming language:
+                    For new unsaved files this will be "Untitled-<num>" where <num> is a simple incrementing number
+                    starting from 1 for each new file created during the current run of the application.
 
-            - Keywords appear in pink (#ffc0eb)
-            - Comments appear in green (#68d068)
-            - Strings appear in red (#f06060)
-            - Numbers appear in orange (#c08040)
-            - Operators appear in light grey (#c0c0c0)
-            - Functions and methods appear in light yellow (#e0e080)
-            - Class and type names appear in light blue (#80b0f0)
-            - Regular expressions appear in orange-brown (#c87050)
-            - Element access appears in light blue (#90e0e8)
-            - HTML/CSS-specific:
-                - HTML tags appear in pink (#ffc0eb)
-                - HTML attributes appear in light blue (#90e0e8)
-                - CSS at-rules appear in pink (#ffc0eb)
-                - DOCTYPE declarations appear in grey (#808080)
-            - Preprocessor directives appear in grey (#808080)
-            - Error text appears in red (#ff0000)
+                    Like conversation tabs, editor tabs will have a close button that appears after the filename.
 
-            The syntax highlighting is updated in real-time as text is entered or changed.
+                    If there are unsaved changes in the file, an asterisk (*) will appear after the filename.
 
-            Context: Language detection
-                When a code block starts with a language identifier (e.g., ```python), the
-                appropriate syntax highlighting rules for that language are applied.
-                If no language is specified, the code is treated as plain text with no highlighting.
+                    The close button behavior matches that of conversation tabs.
 
-            Context: Supported languages
-                Syntax highlighting is supported for:
+                    Context: Navigation
+                        The editor supports:
+                            - Home key: Moves cursor to start of current line
+                            - End key: Moves cursor to end of current line
+                            - Ctrl+Home: Moves cursor to start of message
+                            - Ctrl+End: Moves cursor to end of message
+                            - Page Up/Down: Scroll by viewport height
 
-                - C
-                - C++
-                - CSS
-                - HTML
-                - JavaScript
-                - Metaphor
-                - Python
-                - TypeScript
+            Context: Syntax highlighting
+                Code blocks and inline code will be syntax highlighted based on the programming language:
+
+                - Keywords appear in pink (#ffc0eb)
+                - Comments appear in green (#68d068)
+                - Strings appear in red (#f06060)
+                - Numbers appear in orange (#c08040)
+                - Operators appear in light grey (#c0c0c0)
+                - Functions and methods appear in light yellow (#e0e080)
+                - Class and type names appear in light blue (#80b0f0)
+                - Regular expressions appear in orange-brown (#c87050)
+                - Element access appears in light blue (#90e0e8)
+                - HTML/CSS-specific:
+                    - HTML tags appear in pink (#ffc0eb)
+                    - HTML attributes appear in light blue (#90e0e8)
+                    - CSS at-rules appear in pink (#ffc0eb)
+                    - DOCTYPE declarations appear in grey (#808080)
+                - Preprocessor directives appear in grey (#808080)
+                - Error text appears in red (#ff0000)
+
+                The syntax highlighting is updated in real-time as text is entered or changed.
+
+                Context: Language detection
+                    When a code block starts with a language identifier (e.g., ```python), the
+                    appropriate syntax highlighting rules for that language are applied.
+                    If no language is specified, the code is treated as plain text with no highlighting.
+
+                Context: Supported languages
+                    Syntax highlighting is supported for:
+
+                    - C
+                    - C++
+                    - CSS
+                    - HTML
+                    - JavaScript
+                    - Metaphor
+                    - Python
+                    - TypeScript
 
         Context: Dialog styling
             Modal dialogs must maintain visual consistency with the application theme:
@@ -296,6 +329,24 @@ Context: Humbug application
         - The workspace contains valid settings.json
 
     Context: Workspace operations
+        Context: File tree interaction
+            When a workspace is opened:
+
+            - The file tree root is set to the workspace directory
+            - The tree expands to show first level of contents
+            - Previous expansion state is not preserved
+
+            When a workspace is closed:
+
+            - The file tree is cleared
+
+            The file tree supports:
+
+            - Display filtering to hide .humbug and hidden files
+            - Automatic refresh when files change on disk
+            - Files opened through the tree are tracked in workspace state
+            - Path handling for both absolute and workspace-relative paths
+
         Context: Creating workspaces
             When creating a new workspace:
 
@@ -354,6 +405,21 @@ Context: Humbug application
             3. Load new workspace settings
             4. Restore workspace elements
             5. Update home directory tracking
+
+        Context: File tree state
+            The file tree maintains a visual state that includes:
+
+            - Current workspace root directory
+            - Expanded/collapsed state of directories
+            - Selected item (if any)
+            - Column widths and sorting order
+
+            This state is not persisted between sessions.
+
+            Files opened through the tree are tracked in:
+
+            - The workspace recents file for persistence
+            - Active tab management for the current session
 
     Context: Menus
         The application will have a series of top-level Menus.
