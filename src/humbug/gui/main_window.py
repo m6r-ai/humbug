@@ -444,12 +444,6 @@ class MainWindow(QMainWindow):
 
     def _handle_file_activation(self, path: str):
         """Handle file activation from the file tree."""
-        # Make path relative to workspace if possible
-        if self._workspace_manager.workspace_path:
-            relative_path = self._workspace_manager.make_relative_path(path)
-            if relative_path:
-                path = relative_path
-
         # Check if file is already open
         existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
         if existing_tab:
@@ -479,12 +473,6 @@ class MainWindow(QMainWindow):
         self._menu_timer.start()
 
         if file_path:
-            # Make path relative to workspace if possible
-            if self._workspace_manager.workspace_path:
-                relative_path = self._workspace_manager.make_relative_path(file_path)
-                if relative_path:
-                    file_path = relative_path
-
             # Check if file is already open
             existing_tab = self.tab_manager.find_editor_tab_by_filename(file_path)
             if existing_tab:
