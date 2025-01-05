@@ -52,12 +52,6 @@ def cleanup_old_logs(log_dir: str, max_logs: int):
             pass  # Ignore errors removing old logs
 
 
-def setup_conversations():
-    """Establish conversations directory."""
-    # Create conversations directory if it doesn't exist
-    os.makedirs("conversations", exist_ok=True)
-
-
 def format_version() -> str:
     """Format version number, showing patch number only if non-zero."""
     parts = __version__.split('.')
@@ -68,4 +62,3 @@ def format_version() -> str:
 
 # Setup when module is imported
 setup_logging()
-setup_conversations()
