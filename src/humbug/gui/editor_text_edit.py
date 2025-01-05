@@ -44,7 +44,7 @@ class EditorTextEdit(QPlainTextEdit):
             digits += 1
 
         digit_width = self.fontMetrics().horizontalAdvance('9')
-        return digit_width * (digits + 2)
+        return digit_width * (digits + 4)
 
     def update_line_number_area_width(self):
         """Update the margins to accommodate the line numbers."""
@@ -73,7 +73,7 @@ class EditorTextEdit(QPlainTextEdit):
     def line_number_area_paint_event(self, event):
         """Paint the line number area."""
         painter = QPainter(self._line_number_area)
-        bg_color = self._style_manager.get_color(ColorRole.BACKGROUND_SECONDARY)
+        bg_color = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
         painter.fillRect(event.rect(), bg_color)
 
         painter.setFont(self.font())
@@ -90,12 +90,12 @@ class EditorTextEdit(QPlainTextEdit):
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
-                text_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
+                text_color = self._style_manager.get_color(ColorRole.LINE_NUMBER)
                 painter.setPen(text_color)
                 painter.drawText(
                     left_padding,
                     int(top),
-                    self._line_number_area.width() - (2 * left_padding),
+                    self._line_number_area.width() - (3 * left_padding),
                     self.fontMetrics().height(),
                     Qt.AlignRight,
                     number

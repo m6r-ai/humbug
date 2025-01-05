@@ -52,6 +52,9 @@ class ColorRole(Enum):
     CLOSE_BUTTON_BACKGROUND_HOVER = auto()
                                         # Hover state close button background
 
+    # Editor line numbers
+    LINE_NUMBER = auto()                # Line number
+
     # Syntax highlighting
     SYNTAX_CODE = auto()                # Code block
     SYNTAX_COMMENT = auto()
