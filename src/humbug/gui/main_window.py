@@ -664,7 +664,7 @@ class MainWindow(QMainWindow):
             self,
             "Open Conversation",
             self._workspace_manager.workspace_path,
-            "Transcript Files (*.conv);;All Files (*.*)"
+            "Conversation Files (*.conv);;All Files (*.*)"
         )
         self._menu_timer.start()
 
