@@ -17,6 +17,7 @@ from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
 from humbug.conversation.usage import Usage
+from humbug.gui.chat_error import ChatError
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
@@ -155,8 +156,11 @@ class ChatTab(TabBase):
         messages = self.get_message_history()
         transcript_messages = [msg.to_transcript_dict() for msg in messages]
 
-        # Write history to new transcript file
-        await forked_tab._transcript_writer.write(transcript_messages)
+        try:
+            # Write history to new transcript file
+            await forked_tab._transcript_writer.write(transcript_messages)
+        except Exception as e:
+            raise ChatError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
         # Load messages into the new tab
         forked_tab.load_message_history(messages)
@@ -188,6 +192,40 @@ class ChatTab(TabBase):
         )
 
     @classmethod
+    def load_from_file(cls, path: str, parent=None) -> 'ChatTab':
+        """
+        Load a chat tab from a transcript file.
+
+        Args:
+            path: Path to transcript file
+            parent: Optional parent widget
+
+        Returns:
+            Created ChatTab instance
+
+        Raises:
+            ChatError: If the chat tab cannot be loaded
+        """
+        try:
+            # Read transcript
+            messages, error, metadata = TranscriptReader.read(path)
+            if error:
+                raise ValueError(f"Invalid transcript format: {error}")
+
+            conversation_id = os.path.splitext(os.path.basename(path))[0]
+            timestamp = datetime.fromisoformat(metadata["timestamp"])
+
+            # Create chat tab
+            chat_tab = cls(conversation_id, path, timestamp, parent)
+            chat_tab.load_message_history(messages)
+
+            return chat_tab
+        except ValueError as e:
+            raise ChatError(f"Failed to load conversation transcript: {str(e)}") from e
+        except Exception as e:
+            raise ChatError(f"Failed to create chat tab: {str(e)}") from e
+
+    @classmethod
     def restore_from_state(cls, state: TabState, parent=None) -> 'ChatTab':
         """Create and restore a chat tab from serialized state.
 
@@ -202,10 +240,10 @@ class ChatTab(TabBase):
             ValueError: If state is invalid for chat tab
         """
         if state.type != TabType.CHAT:
-            raise ValueError(f"Invalid tab type for ChatTab: {state.type}")
+            raise ChatError(f"Invalid tab type for ChatTab: {state.type}")
 
         if not state.timestamp:
-            raise ValueError("Chat tab requires timestamp")
+            raise ChatError("Chat tab requires timestamp")
 
         # Create new tab instance
         conversation_id = os.path.splitext(os.path.basename(state.path))[0]
@@ -222,6 +260,8 @@ class ChatTab(TabBase):
 
             return tab
 
+        except ValueError as e:
+            raise ChatError(f"Failed to restore chat tab: {str(e)}") from e
         except Exception as e:
             raise ValueError(f"Failed to restore chat tab: {str(e)}") from e
 

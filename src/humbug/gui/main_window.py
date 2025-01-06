@@ -17,6 +17,7 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
+from humbug.gui.chat_error import ChatError
 from humbug.gui.chat_tab import ChatTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
@@ -27,7 +28,6 @@ from humbug.gui.tab_manager import TabManager
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.gui.workspace_file_tree import WorkspaceFileTree
-from humbug.transcript.transcript_reader import TranscriptReader
 from humbug.workspace.workspace_manager import (
     WorkspaceManager, WorkspaceError, WorkspaceExistsError
 )
@@ -681,27 +681,11 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            messages, error, metadata = TranscriptReader.read(path)
-            if error:
-                self._logger.exception("Error opening conversation: %s: %s", path, error)
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    "Error Loading Conversation",
-                    f"Could not load {path}: {error}"
-                )
-                return
-
-            # Use original timestamp from metadata
-            timestamp = datetime.fromisoformat(metadata["timestamp"])
-
-            # Create chat tab with original file
-            chat_tab = ChatTab(conversation_id, path, timestamp, self)
-            chat_tab.load_message_history(messages)
+            # Load chat tab from file
+            chat_tab = ChatTab.load_from_file(path, self)
             self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
-
-        except Exception as e:
-            self._logger.exception("Error opening conversation: %s: %s", path, str(e))
+        except ChatError as e:
+            self._logger.error("Error opening conversation: %s: %s", path, str(e))
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
