@@ -14,13 +14,13 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager, ColorMode
 
 
-class SettingsDialog(QDialog):
+class ConversationSettingsDialog(QDialog):
     """Dialog for editing conversation settings."""
 
     settings_changed = Signal(ConversationSettings)
 
     def __init__(self, parent=None):
-        """Initialize the settings dialog."""
+        """Initialize the conversation settings dialog."""
         super().__init__(parent)
         self.setWindowTitle("Conversation Settings")
         self.setMinimumWidth(500)

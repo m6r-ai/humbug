@@ -3,7 +3,7 @@ from typing import Callable, Optional
 from humbug.syntax.lexer import Lexer, LexerState, Token
 
 
-class ChatLexer(Lexer):
+class ConversationLexer(Lexer):
     def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
         """
         Lex all the tokens in the input.

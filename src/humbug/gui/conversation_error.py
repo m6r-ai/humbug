@@ -1,12 +1,12 @@
-"""Exception classes for chat operations."""
+"""Exception classes for conversation operations."""
 
 
-class ChatError(Exception):
-    """Base class for chat-related exceptions."""
+class ConversationError(Exception):
+    """Base class for conversation-related exceptions."""
 
     def __init__(self, message: str, details: dict = None):
         """
-        Initialize chat error.
+        Initialize conversation error.
 
         Args:
             message: Error message

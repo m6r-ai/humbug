@@ -1,4 +1,4 @@
-"""Chat code highlighter."""
+"""Conversation code highlighter."""
 
 import logging
 from typing import Optional
@@ -11,19 +11,19 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.chat_parser import ChatParser, ChatParserState
+from humbug.syntax.conversation_parser import ConversationParser, ConversationParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
-class ChatHighlighterBlockData(QTextBlockUserData):
+class ConversationHighlighterBlockData(QTextBlockUserData):
     def __init__(self):
         super().__init__()
         self.fence_depth = 0
         self.parser_state = None
 
 
-class ChatHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for Chat code blocks."""
+class ConversationHighlighter(QSyntaxHighlighter):
+    """Syntax highlighter for Conversation code blocks."""
 
     # Signal emitted when code block state changes
     codeBlockStateChanged = Signal(bool)
@@ -49,7 +49,7 @@ class ChatHighlighter(QSyntaxHighlighter):
         self._fence_format.setFontFamilies(self._code_font_families)
         self._fence_format.setFontFixedPitch(True)
 
-        self._logger = logging.getLogger("ChatHighlighter")
+        self._logger = logging.getLogger("ConversationHighlighter")
 
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
@@ -57,7 +57,7 @@ class ChatHighlighter(QSyntaxHighlighter):
             current_block = self.currentBlock()
             prev_block = current_block.previous()
 
-            prev_block_data: ChatHighlighterBlockData = None
+            prev_block_data: ConversationHighlighterBlockData = None
             prev_parser_state = None
             fence_depth = 0
             if prev_block:
@@ -69,16 +69,16 @@ class ChatHighlighter(QSyntaxHighlighter):
             language = ProgrammingLanguage.UNKNOWN
             contination_state = -1
             current_fence_depth = 0
-            current_block_data: ChatHighlighterBlockData = current_block.userData()
+            current_block_data: ConversationHighlighterBlockData = current_block.userData()
             if current_block_data:
                 current_fence_depth = current_block_data.fence_depth
-                current_parser_data: ChatParserState = current_block_data.parser_state
+                current_parser_data: ConversationParserState = current_block_data.parser_state
                 if current_parser_data:
                     language = current_parser_data.language
                     contination_state = current_parser_data.continuation_state
 
-            parser = ChatParser()
-            parser_state: ChatParserState = parser.parse(prev_parser_state, text)
+            parser = ConversationParser()
+            parser_state: ConversationParserState = parser.parse(prev_parser_state, text)
 
             in_code_block = False
 
@@ -115,7 +115,7 @@ class ChatHighlighter(QSyntaxHighlighter):
                 # It doesn't matter what we set this to, it just needs to be different to what it was before
                 self.setCurrentBlockState(self.currentBlockState() + 1)
 
-            block_data = ChatHighlighterBlockData()
+            block_data = ConversationHighlighterBlockData()
             block_data.parser_state = parser_state
             block_data.fence_depth = fence_depth
             current_block.setUserData(block_data)

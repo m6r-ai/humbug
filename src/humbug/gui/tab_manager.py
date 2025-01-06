@@ -1,4 +1,4 @@
-"""Updated TabManager implementation to support both chat and editor tabs"""
+"""Updated TabManager implementation to support both conversation and editor tabs"""
 
 import os
 from typing import Optional, Dict, List, cast
@@ -6,7 +6,7 @@ from typing import Optional, Dict, List, cast
 from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Signal
 
-from humbug.gui.chat_tab import ChatTab
+from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
 from humbug.gui.style_manager import StyleManager, ColorMode
@@ -218,14 +218,14 @@ class TabManager(QWidget):
         current_tab = self.get_current_tab()
         self.current_tab_changed.emit(current_tab)
 
-    def get_chat_tabs(self) -> List[ChatTab]:
+    def get_conversation_tabs(self) -> List[ConversationTab]:
         """
-        Get all chat tabs.
+        Get all conversation tabs.
 
         Returns:
-            List of all ChatTab instances
+            List of all ConversationTab instances
         """
-        return [tab for tab in self._tabs.values() if isinstance(tab, ChatTab)]
+        return [tab for tab in self._tabs.values() if isinstance(tab, ConversationTab)]
 
     def get_editor_tabs(self) -> List[EditorTab]:
         """
@@ -236,18 +236,18 @@ class TabManager(QWidget):
         """
         return [tab for tab in self._tabs.values() if isinstance(tab, EditorTab)]
 
-    def find_chat_tab_by_id(self, conversation_id: str) -> Optional[ChatTab]:
+    def find_conversation_tab_by_id(self, conversation_id: str) -> Optional[ConversationTab]:
         """
-        Find a chat tab by its conversation ID.
+        Find a conversation tab by its conversation ID.
 
         Args:
             conversation_id: The ID to search for
 
         Returns:
-            The ChatTab if found, None otherwise
+            The ConversationTab if found, None otherwise
         """
         tab = self._tabs.get(conversation_id)
-        return tab if isinstance(tab, ChatTab) else None
+        return tab if isinstance(tab, ConversationTab) else None
 
     def find_editor_tab_by_filename(self, filename: str) -> Optional[EditorTab]:
         """

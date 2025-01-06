@@ -441,6 +441,16 @@ Context: Capabilities
         Context: File
             The "File" menu handles new files and tabs.  When clicked it contains the following:
 
+            Context: New Workspace
+                The "New Workspace" menu item creates a new workspace:
+
+                - Shows directory selection dialog
+                - Creates ".humbug" directory and files
+
+                We cannot create a ".humbug" directory where one already exists.
+
+                This will be matched with keyboard shortcut "Ctrl+Alt+N"
+
             Context: New Conversation
                 The "New Conversation" menu item will create a new conversation tab.
 
@@ -455,18 +465,18 @@ Context: Capabilities
 
                 This option is only valid if a workspace is open.
 
-            Context: New Workspace
-                The "New Workspace" menu item creates a new workspace:
-
-                - Shows directory selection dialog
-                - Creates ".humbug" directory and files
-
-                We cannot create a ".humbug" directory where one already exists.
-
-                This will be matched with keyboard shortcut "Ctrl+Alt+N"
-
             Context: Separator
                 There will be a horizontal Separator
+
+            Context: Open Workspace
+                The "Open Workspace" menu item opens an existing workspace:
+
+                - Shows directory selection dialog
+                - Filters for ".humbug" directories
+                - Closes current workspace
+                - Opens selected workspace
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+O" for Windows).
 
             Context: Open Conversation
                 The "Open Conversation..." menu item will show a file selection dialog allowing the user to open
@@ -491,16 +501,6 @@ Context: Capabilities
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+O" for Windows).
 
                 This option is only valid if a workspace is open.
-
-            Context: Open Workspace
-                The "Open Workspace" menu item opens an existing workspace:
-
-                - Shows directory selection dialog
-                - Filters for ".humbug" directories
-                - Closes current workspace
-                - Opens selected workspace
-
-                This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+O" for Windows).
 
             Context: Separator
                 There will be a horizontal Separator
@@ -533,11 +533,6 @@ Context: Capabilities
             Context: Separator
                 There will be a horizontal Separator
 
-            Context: Close Tab
-                The "Close Tab" menu item with close the current tab, if a tab is active.
-
-                This will be matched with a keyboard shortcut (e.g. "Ctrl+W" for Windows).
-
             Context: Close Workspace
                 The "Close Workspace" menu item closes current workspace:
 
@@ -547,6 +542,11 @@ Context: Capabilities
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+W" for Windows).
 
                 This option is only valid if a workspace is open.
+
+            Context: Close Tab
+                The "Close Tab" menu item with close the current tab, if a tab is active.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+W" for Windows).
 
         Context: Edit
             The "Edit" menu handles edit capabilities.  When clicked it contains the following:
@@ -602,6 +602,11 @@ Context: Capabilities
 
             Context: Separator
                 There will be a horizontal Separator
+
+            Context: Workspace Settings
+                The "Workspace Settings" menu item will support setting the current workspace's settings.
+
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Alt+," for Windows).
 
             Context: Conversation Settings
                 The "Conversation Settings" menu item will support setting the conversation settings of
@@ -669,7 +674,7 @@ Context: Capabilities
 
         Context: Syntax highlighting
             The editor automatically detects and applies syntax highlighting based on file extension
-            and content, using the same highlighting rules defined for chat code blocks.
+            and content, using the same highlighting rules defined for conversation code blocks.
 
         Context: Save state handling
             The editor tracks changes and maintains a 'dirty' state:
@@ -687,14 +692,14 @@ Context: Capabilities
             - File type based on extension or content
 
         Context: Editor styling
-            The editor uses the same color scheme as the chat interface:
+            The editor uses the same color scheme as the conversation interface:
 
             - Background and text colors match the current theme
-            - Selection highlighting matches chat selection behavior
+            - Selection highlighting matches conversation selection behavior
             - Line numbers and gutters use complementary colors
 
     Context: User/AI interactions
-        Each conversation comprises a chat between a user and one or more AI backends.
+        Each conversation is an interaction between a user and one or more AI backends.
 
         Interactions occur in a turn-by-turn fashion, where the user edits a message, until they hit "Ctrl+J".  On
         hitting "Ctrl+J" the application will add the user's message to the conversation transcript and process the

@@ -18,12 +18,12 @@ from PySide6.QtWidgets import QStatusBar
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
-from humbug.gui.chat_error import ChatError
-from humbug.gui.chat_tab import ChatTab
+from humbug.gui.conversation_error import ConversationError
+from humbug.gui.conversation_settings_dialog import ConversationSettingsDialog
+from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
 from humbug.gui.message_box import MessageBox, MessageBoxType
-from humbug.gui.settings_dialog import SettingsDialog
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
@@ -59,6 +59,10 @@ class MainWindow(QMainWindow):
         self._quit_action.triggered.connect(self.close)
 
         # File menu actions
+        self._new_workspace_action = QAction("New Workspace", self)
+        self._new_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
+        self._new_workspace_action.triggered.connect(self._new_workspace)
+
         self._new_conv_action = QAction("New Conversation", self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self._new_conv_action.triggered.connect(self._new_conversation)
@@ -67,9 +71,9 @@ class MainWindow(QMainWindow):
         self._new_file_action.setShortcut(QKeySequence.New)
         self._new_file_action.triggered.connect(self._new_file)
 
-        self._new_workspace_action = QAction("New Workspace", self)
-        self._new_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
-        self._new_workspace_action.triggered.connect(self._new_workspace)
+        self._open_workspace_action = QAction("Open Workspace", self)
+        self._open_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
+        self._open_workspace_action.triggered.connect(self._open_workspace)
 
         self._open_conv_action = QAction("Open Conversation...", self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
@@ -78,10 +82,6 @@ class MainWindow(QMainWindow):
         self._open_file_action = QAction("Open File...", self)
         self._open_file_action.setShortcut(QKeySequence.Open)
         self._open_file_action.triggered.connect(self._open_file)
-
-        self._open_workspace_action = QAction("Open Workspace", self)
-        self._open_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
-        self._open_workspace_action.triggered.connect(self._open_workspace)
 
         self._fork_conv_action = QAction("Fork Conversation", self)
         self._fork_conv_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
@@ -132,9 +132,9 @@ class MainWindow(QMainWindow):
         self._workspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
         self._workspace_settings_action.triggered.connect(self._show_workspace_settings_dialog)
 
-        self._settings_action = QAction("Conversation Settings", self)
-        self._settings_action.setShortcut(QKeySequence("Ctrl+,"))
-        self._settings_action.triggered.connect(self._show_settings_dialog)
+        self._conv_settings_action = QAction("Conversation Settings", self)
+        self._conv_settings_action.setShortcut(QKeySequence("Ctrl+,"))
+        self._conv_settings_action.triggered.connect(self._show_conversation_settings_dialog)
 
         # View menu actions
         self._dark_mode_action = QAction("&Dark Mode", self)
@@ -165,21 +165,21 @@ class MainWindow(QMainWindow):
 
         # File menu
         file_menu = self._menu_bar.addMenu("&File")
+        file_menu.addAction(self._new_workspace_action)
         file_menu.addAction(self._new_conv_action)
         file_menu.addAction(self._new_file_action)
-        file_menu.addAction(self._new_workspace_action)
         file_menu.addSeparator()
+        file_menu.addAction(self._open_workspace_action)
         file_menu.addAction(self._open_conv_action)
         file_menu.addAction(self._open_file_action)
-        file_menu.addAction(self._open_workspace_action)
         file_menu.addSeparator()
         file_menu.addAction(self._fork_conv_action)
         file_menu.addSeparator()
         file_menu.addAction(self._save_action)
         file_menu.addAction(self._save_as_action)
         file_menu.addSeparator()
-        file_menu.addAction(self._close_tab_action)
         file_menu.addAction(self._close_workspace_action)
+        file_menu.addAction(self._close_tab_action)
 
         # Edit menu
         edit_menu = self._menu_bar.addMenu("&Edit")
@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self._paste_action)
         edit_menu.addSeparator()
         edit_menu.addAction(self._workspace_settings_action)
-        edit_menu.addAction(self._settings_action)
+        edit_menu.addAction(self._conv_settings_action)
 
         # View menu
         view_menu = self._menu_bar.addMenu("&View")
@@ -262,7 +262,6 @@ class MainWindow(QMainWindow):
 
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
-        print(f"Status message: {message}")
         self._status_bar.showMessage(message.text, message.timeout if message.timeout else 0)
 
     def _restore_last_workspace(self):
@@ -414,8 +413,8 @@ class MainWindow(QMainWindow):
                         continue
 
                 # Create appropriate tab type
-                if state.type == TabType.CHAT:
-                    tab = ChatTab.restore_from_state(state, self)
+                if state.type == TabType.CONVERSATION:
+                    tab = ConversationTab.restore_from_state(state, self)
                     self.tab_manager.add_tab(tab, f"Conv: {tab.tab_id}")
                 elif state.type == TabType.EDITOR:
                     tab = EditorTab.restore_from_state(state, self)
@@ -529,7 +528,7 @@ class MainWindow(QMainWindow):
 
     def _handle_tab_close_requested(self, tab_id: str) -> None:
         """Handle tab close request."""
-        tab = self._chat_tabs.get(tab_id)
+        tab = self._conversation_tabs.get(tab_id)
         if tab:
             tab.close()
 
@@ -569,7 +568,7 @@ class MainWindow(QMainWindow):
         self._copy_action.setEnabled(False)
         self._paste_action.setEnabled(False)
         self._submit_action.setEnabled(False)
-        self._settings_action.setEnabled(False)
+        self._conv_settings_action.setEnabled(False)
 
         if not current_tab:
             return
@@ -585,10 +584,10 @@ class MainWindow(QMainWindow):
         self._paste_action.setEnabled(current_tab.can_paste())
         self._submit_action.setEnabled(current_tab.can_submit())
 
-        # Enable chat-specific operations for chat tabs
-        if isinstance(current_tab, ChatTab):
+        # Enable conversation-specific operations for conversation tabs
+        if isinstance(current_tab, ConversationTab):
             self._fork_conv_action.setEnabled(True)
-            self._settings_action.setEnabled(True)
+            self._conv_settings_action.setEnabled(True)
 
         # Update zoom actions
         current_zoom = self._style_manager.zoom_factor
@@ -685,8 +684,8 @@ class MainWindow(QMainWindow):
         try:
             # Create tab using same ID
             full_path = self._workspace_manager.get_workspace_path(filename)
-            chat_tab = ChatTab(conversation_id, full_path, timestamp, self)
-            self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
+            conversation_tab = ConversationTab(conversation_id, full_path, timestamp, self)
+            self.tab_manager.add_tab(conversation_tab, f"Conv: {conversation_id}")
             return conversation_id
         except WorkspaceError as e:
             self._logger.error("Failed to create conversation: %s", str(e))
@@ -699,7 +698,7 @@ class MainWindow(QMainWindow):
             return None
 
     def _open_conversation(self):
-        """Show open conversation dialog and create chat tab."""
+        """Show open conversation dialog and create conversation tab."""
         self._menu_timer.stop()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
@@ -717,15 +716,15 @@ class MainWindow(QMainWindow):
     def _open_conversation_path(self, path: str) -> None:
         # Check if conversation is already open
         conversation_id = os.path.splitext(os.path.basename(path))[0]
-        if self.tab_manager.find_chat_tab_by_id(conversation_id):
+        if self.tab_manager.find_conversation_tab_by_id(conversation_id):
             self.tab_manager.set_current_tab(conversation_id)
             return
 
         try:
-            # Load chat tab from file
-            chat_tab = ChatTab.load_from_file(path, self)
-            self.tab_manager.add_tab(chat_tab, f"Conv: {conversation_id}")
-        except ChatError as e:
+            # Load conversation tab from file
+            conversation_tab = ConversationTab.load_from_file(path, self)
+            self.tab_manager.add_tab(conversation_tab, f"Conv: {conversation_id}")
+        except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
             MessageBox.show_message(
                 self,
@@ -737,7 +736,7 @@ class MainWindow(QMainWindow):
     def _fork_conversation(self):
         """Create a new conversation tab with the history of the current conversation."""
         current_tab = self.tab_manager.get_current_tab()
-        if not isinstance(current_tab, ChatTab):
+        if not isinstance(current_tab, ConversationTab):
             return
 
         async def fork_and_add_tab():
@@ -746,18 +745,18 @@ class MainWindow(QMainWindow):
 
             # Add new tab to manager
             self.tab_manager.add_tab(new_tab, f"Conv: {new_tab.tab_id}")
-            self._chat_tabs[new_tab.tab_id] = new_tab
+            self._conversation_tabs[new_tab.tab_id] = new_tab
 
         # Create task to fork conversation
         asyncio.create_task(fork_and_add_tab())
 
     def _close_current_tab(self):
         """Close the current conversation tab."""
-        chat_tab = self.tab_manager.get_current_tab()
-        if not chat_tab:
+        conversation_tab = self.tab_manager.get_current_tab()
+        if not conversation_tab:
             return
 
-        self.tab_manager.close_tab(chat_tab.tab_id)
+        self.tab_manager.close_tab(conversation_tab.tab_id)
 
     def _sanitize_input(self, text: str) -> str:
         """Strip control characters from input text, preserving newlines."""
@@ -765,35 +764,35 @@ class MainWindow(QMainWindow):
 
     def _submit_message(self):
         """Handle message submission."""
-        chat_tab = self.tab_manager.get_current_tab()
-        if not chat_tab:
+        conversation_tab = self.tab_manager.get_current_tab()
+        if not conversation_tab:
             return
 
-        if not chat_tab.can_submit():
+        if not conversation_tab.can_submit():
             return
 
-        message = self._sanitize_input(chat_tab.get_input_text().strip())
+        message = self._sanitize_input(conversation_tab.get_input_text().strip())
         if not message:
             return
 
-        chat_tab.submit(message)
+        conversation_tab.submit(message)
 
         # Start AI response
         task = asyncio.create_task(
-            self.process_ai_response(message, chat_tab.tab_id)
+            self.process_ai_response(message, conversation_tab.tab_id)
         )
 
-        if chat_tab.tab_id not in self._current_tasks:
-            self._current_tasks[chat_tab.tab_id] = []
+        if conversation_tab.tab_id not in self._current_tasks:
+            self._current_tasks[conversation_tab.tab_id] = []
 
-        self._current_tasks[chat_tab.tab_id].append(task)
+        self._current_tasks[conversation_tab.tab_id].append(task)
 
         def task_done_callback(task):
-            if chat_tab.tab_id in self._current_tasks:
+            if conversation_tab.tab_id in self._current_tasks:
                 try:
-                    self._current_tasks[chat_tab.tab_id].remove(task)
+                    self._current_tasks[conversation_tab.tab_id].remove(task)
                 except ValueError as e:
-                    self._logger.debug("Value Error: %d: %s", chat_tab.tab_id, e)
+                    self._logger.debug("Value Error: %d: %s", conversation_tab.tab_id, e)
 
         task.add_done_callback(task_done_callback)
 
@@ -835,47 +834,47 @@ class MainWindow(QMainWindow):
         dialog.settings_changed.connect(handle_settings_changed)
         dialog.exec()
 
-    def _show_settings_dialog(self):
+    def _show_conversation_settings_dialog(self):
         """Show the conversation settings dialog."""
-        chat_tab = self.tab_manager.get_current_tab()
-        if not chat_tab:
+        conversation_tab = self.tab_manager.get_current_tab()
+        if not conversation_tab:
             return
 
-        dialog = SettingsDialog(self)
+        dialog = ConversationSettingsDialog(self)
         # Pass available models to dialog
         dialog.set_available_models(self._available_models)
-        dialog.set_settings(chat_tab.get_settings())
+        dialog.set_settings(conversation_tab.get_settings())
 
         if dialog.exec() == QDialog.Accepted:
             new_settings = dialog.get_settings()
-            chat_tab.update_settings(new_settings)
+            conversation_tab.update_settings(new_settings)
             # Get the appropriate backend for the selected model
             provider = ConversationSettings.get_provider(new_settings.model)
             backend = self._ai_backends.get(provider)
             if backend:
                 backend.update_conversation_settings(
-                    chat_tab.tab_id,
+                    conversation_tab.tab_id,
                     new_settings
                 )
 
     async def process_ai_response(self, message: str, tab_id: str):
         """Process AI response with streaming."""
-        chat_tab = self.tab_manager.find_chat_tab_by_id(tab_id)
-        if not chat_tab:
-            self._logger.error("No chat tab found for conversation %s", tab_id)
+        conversation_tab = self.tab_manager.find_conversation_tab_by_id(tab_id)
+        if not conversation_tab:
+            self._logger.error("No conversation tab found for conversation %s", tab_id)
             return
 
         try:
             self._logger.debug("=== Starting new AI response for conv %s ===", tab_id)
 
             # Get the appropriate backend for the conversation
-            settings = chat_tab.get_settings()
+            settings = conversation_tab.get_settings()
             provider = ConversationSettings.get_provider(settings.model)
             backend = self._ai_backends.get(provider)
 
             if not backend:
                 error_msg = f"No backend available for provider: {provider}"
-                chat_tab.add_system_message(
+                conversation_tab.add_system_message(
                     error_msg,
                     error={"code": "backend_error", "message": error_msg}
                 )
@@ -883,13 +882,13 @@ class MainWindow(QMainWindow):
 
             stream = backend.stream_message(
                 message,
-                chat_tab.get_message_context(),
+                conversation_tab.get_message_context(),
                 tab_id
             )
 
             async for response in stream:
                 try:
-                    message = await chat_tab.update_streaming_response(
+                    message = await conversation_tab.update_streaming_response(
                         content=response.content,
                         usage=response.usage,
                         error=response.error
@@ -907,9 +906,9 @@ class MainWindow(QMainWindow):
 
         except (asyncio.CancelledError, GeneratorExit):
             self._logger.debug("AI response cancelled for conv %s", tab_id)
-            if chat_tab:
+            if conversation_tab:
                 # Complete any ongoing AI response
-                await chat_tab.update_streaming_response(
+                await conversation_tab.update_streaming_response(
                     content="",
                     error={
                         "code": "cancelled",
@@ -926,13 +925,13 @@ class MainWindow(QMainWindow):
                 settings.model,
                 str(e)
             )
-            if chat_tab:
+            if conversation_tab:
                 error = {
                     "code": "process_error",
                     "message": str(e),
                     "details": {"type": type(e).__name__}
                 }
-                await chat_tab.update_streaming_response(
+                await conversation_tab.update_streaming_response(
                     content="",
                     error=error
                 )
@@ -943,9 +942,9 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
         if event.key() == Qt.Key_Escape:
-            chat_tab = self.tab_manager.get_current_tab()
-            if chat_tab and isinstance(chat_tab, ChatTab):
-                tab_id = chat_tab.tab_id
+            conversation_tab = self.tab_manager.get_current_tab()
+            if conversation_tab and isinstance(conversation_tab, ConversationTab):
+                tab_id = conversation_tab.tab_id
                 if tab_id in self._current_tasks:
                     for task in self._current_tasks[tab_id]:
                         if not task.done():

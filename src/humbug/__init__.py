@@ -1,4 +1,4 @@
-"""Humbug - A terminal-based AI chat application."""
+"""Humbug - An AI interaction application."""
 from datetime import datetime
 import glob
 import logging

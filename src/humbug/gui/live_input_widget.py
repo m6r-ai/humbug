@@ -4,7 +4,7 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent
 
 from humbug.gui.message_widget import MessageWidget
-from humbug.gui.chat_text_edit import ChatTextEdit
+from humbug.gui.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 
 
@@ -59,7 +59,7 @@ class LiveInputWidget(MessageWidget):
             }}
         """)
 
-    def _create_text_area(self) -> ChatTextEdit:
+    def _create_text_area(self) -> ConversationTextEdit:
         """Create and configure the input text area."""
         text_area = super()._create_text_area()
         # Override paste behavior to strip formatting

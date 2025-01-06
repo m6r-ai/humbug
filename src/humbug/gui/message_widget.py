@@ -1,18 +1,18 @@
-"""Widget for displaying individual chat messages."""
+"""Widget for displaying individual conversation messages."""
 
 from datetime import datetime
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QCursor
 
-from humbug.gui.chat_highlighter import ChatHighlighter
-from humbug.gui.chat_text_edit import ChatTextEdit
+from humbug.gui.conversation_highlighter import ConversationHighlighter
+from humbug.gui.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 
 
 class MessageWidget(QFrame):
-    """Widget for displaying a single message in the chat history with header."""
+    """Widget for displaying a single message in the conversation history with header."""
 
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
@@ -51,7 +51,7 @@ class MessageWidget(QFrame):
         # Add header widget to main layout
         self._layout.addWidget(self._header)
 
-        # Create content area using custom ChatTextEdit
+        # Create content area using custom ConversationTextEdit
         self._text_area = self._create_text_area()
         self._text_area.setReadOnly(not self._is_input)
 
@@ -62,8 +62,8 @@ class MessageWidget(QFrame):
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
-        # Add chat highlighter
-        self._highlighter = ChatHighlighter(self._text_area.document())
+        # Add conversation highlighter
+        self._highlighter = ConversationHighlighter(self._text_area.document())
         self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
 
         # Get style manager
@@ -79,13 +79,13 @@ class MessageWidget(QFrame):
             'system': ColorRole.MESSAGE_SYSTEM
         }
 
-    def _create_text_area(self) -> ChatTextEdit:
+    def _create_text_area(self) -> ConversationTextEdit:
         """Create and configure the text area.
         
         Returns:
-            Configured ChatTextEdit instance
+            Configured ConversationTextEdit instance
         """
-        text_area = ChatTextEdit()
+        text_area = ConversationTextEdit()
         text_area.setAcceptRichText(False)
         text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)

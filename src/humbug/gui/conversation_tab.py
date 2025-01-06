@@ -1,4 +1,4 @@
-"""Unified chat tab implementation with correct scrolling and input expansion."""
+"""Unified conversation tab implementation with correct scrolling and input expansion."""
 
 import asyncio
 from datetime import datetime
@@ -17,7 +17,7 @@ from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
 from humbug.conversation.usage import Usage
-from humbug.gui.chat_error import ChatError
+from humbug.gui.conversation_error import ConversationError
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
@@ -32,8 +32,8 @@ from humbug.transcript.transcript_error import (
 from humbug.transcript.transcript_handler import TranscriptHandler
 
 
-class ChatTab(TabBase):
-    """Unified chat tab implementing single-window feel with distinct regions."""
+class ConversationTab(TabBase):
+    """Unified conversation tab implementing single-window feel with distinct regions."""
 
     def __init__(
         self,
@@ -43,7 +43,7 @@ class ChatTab(TabBase):
         parent: Optional[QWidget] = None
     ) -> None:
         """
-        Initialize the unified chat tab.
+        Initialize the unified conversation tab.
 
         Args:
             tab_id: Unique identifier for this tab
@@ -52,7 +52,7 @@ class ChatTab(TabBase):
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
-        self._logger = logging.getLogger("ChatTab")
+        self._logger = logging.getLogger("ConversationTab")
         self._path = path
         self._timestamp = timestamp
 
@@ -69,8 +69,8 @@ class ChatTab(TabBase):
         self._message_with_selection: Optional[MessageWidget] = None
         self._is_streaming = False
 
-        chat_layout = QVBoxLayout(self)
-        self.setLayout(chat_layout)
+        conversation_layout = QVBoxLayout(self)
+        self.setLayout(conversation_layout)
 
         self._scroll_area = QScrollArea()
 
@@ -106,9 +106,9 @@ class ChatTab(TabBase):
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Main layout
-        chat_layout.setContentsMargins(0, 1, 0, 0)
-        chat_layout.setSpacing(0)
-        chat_layout.addWidget(self._scroll_area)
+        conversation_layout.setContentsMargins(0, 1, 0, 0)
+        conversation_layout.setSpacing(0)
+        conversation_layout.addWidget(self._scroll_area)
 
         zoom_factor = self._style_manager.zoom_factor
 
@@ -149,7 +149,7 @@ class ChatTab(TabBase):
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
-        forked_tab = ChatTab(conversation_id, new_path, self._timestamp, self.parent())
+        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, self.parent())
 
         # Get all messages and write to new transcript
         messages = self.get_message_history()
@@ -159,7 +159,7 @@ class ChatTab(TabBase):
             # Write history to new transcript file
             await forked_tab._transcript_handler.write(transcript_messages)
         except Exception as e:
-            raise ChatError(f"Failed to write transcript for forked conversation: {str(e)}") from e
+            raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
         # Load messages into the new tab
         forked_tab.load_message_history(messages)
@@ -175,10 +175,10 @@ class ChatTab(TabBase):
         """Get serializable state for workspace persistence.
 
         Returns:
-            TabState containing chat-specific state
+            TabState containing conversation-specific state
         """
         return TabState(
-            type=TabType.CHAT,
+            type=TabType.CONVERSATION,
             path=self._path,
             timestamp=self._timestamp,
             metadata={
@@ -191,19 +191,19 @@ class ChatTab(TabBase):
         )
 
     @classmethod
-    def load_from_file(cls, path: str, parent=None) -> 'ChatTab':
+    def load_from_file(cls, path: str, parent=None) -> 'ConversationTab':
         """
-        Load a chat tab from a transcript file.
+        Load a conversation tab from a transcript file.
 
         Args:
             path: Path to transcript file
             parent: Optional parent widget
 
         Returns:
-            Created ChatTab instance
+            Created ConversationTab instance
 
         Raises:
-            ChatError: If the chat tab cannot be loaded
+            ConversationError: If the conversation tab cannot be loaded
         """
         try:
             # Read transcript
@@ -213,38 +213,38 @@ class ChatTab(TabBase):
             conversation_id = os.path.splitext(os.path.basename(path))[0]
             timestamp = transcript_data.timestamp
 
-            # Create chat tab
-            chat_tab = cls(conversation_id, path, timestamp, parent)
-            chat_tab.load_message_history(transcript_data.messages)
+            # Create conversation tab
+            conversation_tab = cls(conversation_id, path, timestamp, parent)
+            conversation_tab.load_message_history(transcript_data.messages)
 
-            return chat_tab
+            return conversation_tab
 
         except TranscriptFormatError as e:
-            raise ChatError(f"Failed to load conversation transcript: {str(e)}") from e
+            raise ConversationError(f"Failed to load conversation transcript: {str(e)}") from e
         except TranscriptIOError as e:
-            raise ChatError(f"Failed to read conversation transcript: {str(e)}") from e
+            raise ConversationError(f"Failed to read conversation transcript: {str(e)}") from e
         except Exception as e:
-            raise ChatError(f"Failed to create chat tab: {str(e)}") from e
+            raise ConversationError(f"Failed to create conversation tab: {str(e)}") from e
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent=None) -> 'ChatTab':
-        """Create and restore a chat tab from serialized state.
+    def restore_from_state(cls, state: TabState, parent=None) -> 'ConversationTab':
+        """Create and restore a conversation tab from serialized state.
 
         Args:
-            state: TabState containing chat-specific state
+            state: TabState containing conversation-specific state
             parent: Optional parent widget
 
         Returns:
-            Newly created and restored chat tab
+            Newly created and restored conversation tab
 
         Raises:
-            ValueError: If state is invalid for chat tab
+            ValueError: If state is invalid for conversation tab
         """
-        if state.type != TabType.CHAT:
-            raise ChatError(f"Invalid tab type for ChatTab: {state.type}")
+        if state.type != TabType.CONVERSATION:
+            raise ConversationError(f"Invalid tab type for ConversationTab: {state.type}")
 
         if not state.timestamp:
-            raise ChatError("Chat tab requires timestamp")
+            raise ConversationError("Conversation tab requires timestamp")
 
         # Create new tab instance
         conversation_id = os.path.splitext(os.path.basename(state.path))[0]
@@ -257,7 +257,7 @@ class ChatTab(TabBase):
 
             # Validate timestamp matches state
             if state.timestamp != transcript_data.timestamp:
-                raise ChatError("Timestamp mismatch in transcript metadata")
+                raise ConversationError("Timestamp mismatch in transcript metadata")
 
             # Load the message history
             tab.load_message_history(transcript_data.messages)
@@ -265,9 +265,9 @@ class ChatTab(TabBase):
             return tab
 
         except ValueError as e:
-            raise ChatError(f"Failed to restore chat tab: {str(e)}") from e
+            raise ConversationError(f"Failed to restore conversation tab: {str(e)}") from e
         except Exception as e:
-            raise ValueError(f"Failed to restore chat tab: {str(e)}") from e
+            raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
 
     def set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position in input area.

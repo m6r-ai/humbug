@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.lexer import Token
-from humbug.syntax.chat_lexer import ChatLexer
+from humbug.syntax.conversation_lexer import ConversationLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_registry import ParserRegistry
@@ -23,9 +23,9 @@ LANGUAGE_MAPPING = {
 
 
 @dataclass
-class ChatParserState(ParserState):
+class ConversationParserState(ParserState):
     """
-    State information for the Chat parser.
+    State information for the Conversation parser.
 
     Attributes:
         in_fence_block: Indicates if we're currently in a code fence block
@@ -37,11 +37,11 @@ class ChatParserState(ParserState):
     embedded_parser_state: ParserState = None
 
 
-class ChatParser(Parser):
+class ConversationParser(Parser):
     """
-    Parser for chat content with embedded code blocks.
+    Parser for conversation content with embedded code blocks.
 
-    This parser processes chat content and delegates embedded code blocks to
+    This parser processes conversation content and delegates embedded code blocks to
     appropriate language-specific parsers.
     """
 
@@ -84,9 +84,9 @@ class ChatParser(Parser):
 
         return embedded_parser_state
 
-    def parse(self, prev_parser_state: Optional[ChatParserState], input_str: str) -> ChatParserState:
+    def parse(self, prev_parser_state: Optional[ConversationParserState], input_str: str) -> ConversationParserState:
         """
-        Parse chat content including embedded code blocks.
+        Parse conversation content including embedded code blocks.
 
         Args:
             prev_parser_state: Optional previous parser state
@@ -96,7 +96,7 @@ class ChatParser(Parser):
             The updated parser state after parsing
 
         Note:
-            Handles transitions between regular chat content and code fence blocks,
+            Handles transitions between regular conversation content and code fence blocks,
             delegating code blocks to appropriate language parsers.
         """
         in_fence_block = False
@@ -107,7 +107,7 @@ class ChatParser(Parser):
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
 
-        lexer = ChatLexer()
+        lexer = ConversationLexer()
         lexer.lex(None, input_str)
 
         seen_text = False
@@ -155,7 +155,7 @@ class ChatParser(Parser):
 
             self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
 
-        parser_state = ChatParserState()
+        parser_state = ConversationParserState()
         parser_state.in_fence_block = in_fence_block
         parser_state.language = language
         if parse_embedded:

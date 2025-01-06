@@ -1,4 +1,4 @@
-"""Widget for displaying parts of individual chat messages."""
+"""Widget for displaying parts of individual conversation messages."""
 
 import logging
 
@@ -13,7 +13,7 @@ from PySide6.QtGui import (
 from humbug.gui.style_manager import StyleManager
 
 
-class ChatTextEdit(QTextEdit):
+class ConversationTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
 
     mouseReleased = Signal(QMouseEvent)
@@ -50,7 +50,7 @@ class ChatTextEdit(QTextEdit):
         # Track code block state
         self._has_code_block = False
 
-        self._logger = logging.getLogger("ChatTextEdit")
+        self._logger = logging.getLogger("ConversationTextEdit")
 
     def _handle_style_changed(self, _factor: float) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
@@ -146,7 +146,7 @@ class ChatTextEdit(QTextEdit):
                 # Only set cursor if it actually moved
                 if cursor.position() != orig_pos:
                     self.setTextCursor(cursor)
-                    # Signal for scroll - ChatTab will handle ensuring cursor visibility
+                    # Signal for scroll - ConversationTab will handle ensuring cursor visibility
                     self.pageScrollRequested.emit()
 
             event.accept()

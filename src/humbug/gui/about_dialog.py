@@ -42,7 +42,7 @@ class AboutDialog(QDialog):
         ))
         icon_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(icon_label)
-        layout.addSpacing(24)  # Space between icon and title
+        layout.addSpacing(8)  # Space between icon and title
 
         # Title with version
         title_label = QLabel(f"Humbug v{format_version()}")
@@ -53,9 +53,7 @@ class AboutDialog(QDialog):
 
         # Description with hyperlink
         desc_label = QLabel(
-            "Humbug is a GUI-based application that allows users to "
-            "interact with AI backends through a simple chat interface. "
-            'Visit <a href="https://m6r.ai">m6r.ai</a> to learn more.'
+            "Visit <a href='https://m6r.ai'>m6r.ai</a> to learn more."
         )
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignCenter)
@@ -68,7 +66,7 @@ class AboutDialog(QDialog):
         close_button.clicked.connect(self.accept)
         close_button.setMinimumWidth(80)
         close_button.setContentsMargins(6, 6, 6, 6)
-        layout.addSpacing(16)  # Add spacing before button
+        layout.addSpacing(24)  # Add spacing before button
         layout.addWidget(close_button, alignment=Qt.AlignCenter)
         layout.addSpacing(16)  # Space at the bottom
 
