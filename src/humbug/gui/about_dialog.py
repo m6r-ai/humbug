@@ -5,8 +5,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QDesktopServices
-from PySide6.QtCore import QUrl
+from PySide6.QtGui import QPixmap
 
 from humbug import format_version
 from humbug.gui.color_role import ColorRole
