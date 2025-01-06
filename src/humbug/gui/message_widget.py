@@ -106,8 +106,6 @@ class MessageWidget(QFrame):
         if style != self._current_style:
             # Style changed - update header and styling
             if self._is_input:
-                # For input box, show "Please add a message"
-                self._role_label.setText("Please add a message (Ctrl-J to submit)")
                 self._timestamp_label.setText("")  # No timestamp for input
             else:
                 # For history messages, show role with timestamp

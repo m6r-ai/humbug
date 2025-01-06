@@ -1,5 +1,7 @@
 """Input widget that matches history message styling."""
 
+import sys
+
 from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent
 
@@ -39,13 +41,20 @@ class LiveInputWidget(MessageWidget):
         self._is_streaming = streaming
         self._update_header_text()
 
+    def _get_submit_key_text(self):
+        """Get the appropriate submit key text based on the platform."""
+        if sys.platform == "darwin":
+            return "⌘J"
+        return "Ctrl+J"
+
     def _update_header_text(self):
         """Update the header text based on current state."""
         if self._is_streaming:
             self._role_label.setText("Processing your request (Esc to cancel)")
             self._set_role_style(ColorRole.TEXT_DISABLED)
         else:
-            self._role_label.setText("Please add a message (Ctrl-J to submit)")
+            submit_key = self._get_submit_key_text()
+            self._role_label.setText(f"Please add a message ({submit_key} to submit)")
             self._set_role_style(ColorRole.MESSAGE_USER)
 
     def _set_role_style(self, color_role: ColorRole):
