@@ -356,6 +356,14 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            # Checkbox check mark
+            write_icon(f'check-{suffix}.svg', f'''
+                <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="1.5" fill="none"
+                        d="M2,6 L5,9 L10,3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            ''')
+
             # Message box icons
             write_icon(f'info-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">

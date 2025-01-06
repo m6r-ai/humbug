@@ -10,22 +10,11 @@ import os
 import shutil
 from typing import Dict, List, Optional
 
+from humbug.workspace.workspace_error import WorkspaceError
 from humbug.workspace.workspace_settings import WorkspaceSettings
 
 
 logger = logging.getLogger(__name__)
-
-
-class WorkspaceError(Exception):
-    """Base exception for workspace-related errors."""
-
-
-class WorkspaceNotFoundError(WorkspaceError):
-    """Raised when attempting to access a non-existent workspace."""
-
-
-class WorkspaceExistsError(WorkspaceError):
-    """Raised when attempting to create a workspace that already exists."""
 
 
 class WorkspaceManager:

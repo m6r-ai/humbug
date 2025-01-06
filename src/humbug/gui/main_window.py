@@ -29,10 +29,10 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
+from humbug.gui.workspace_settings_dialog import WorkspaceSettingsDialog
 from humbug.gui.workspace_file_tree import WorkspaceFileTree
-from humbug.workspace.workspace_manager import (
-    WorkspaceManager, WorkspaceError, WorkspaceExistsError
-)
+from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.workspace.workspace_error import WorkspaceError, WorkspaceExistsError
 
 
 class MainWindow(QMainWindow):
@@ -128,6 +128,10 @@ class MainWindow(QMainWindow):
         self._paste_action.setShortcut(QKeySequence("Ctrl+V"))
         self._paste_action.triggered.connect(self._paste)
 
+        self._workspace_settings_action = QAction("Workspace Settings", self)
+        self._workspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
+        self._workspace_settings_action.triggered.connect(self._show_workspace_settings_dialog)
+
         self._settings_action = QAction("Conversation Settings", self)
         self._settings_action.setShortcut(QKeySequence("Ctrl+,"))
         self._settings_action.triggered.connect(self._show_settings_dialog)
@@ -188,6 +192,7 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self._copy_action)
         edit_menu.addAction(self._paste_action)
         edit_menu.addSeparator()
+        edit_menu.addAction(self._workspace_settings_action)
         edit_menu.addAction(self._settings_action)
 
         # View menu
@@ -551,6 +556,7 @@ class MainWindow(QMainWindow):
         self._new_file_action.setEnabled(has_workspace)
         self._open_conv_action.setEnabled(has_workspace)
         self._open_file_action.setEnabled(has_workspace)
+        self._workspace_settings_action.setEnabled(has_workspace)
 
         # Disable all actions by default
         self._fork_conv_action.setEnabled(False)
@@ -799,6 +805,35 @@ class MainWindow(QMainWindow):
             if provider in self._ai_backends:
                 models.append(model)
         return models
+
+    def _show_workspace_settings_dialog(self):
+        """Show the workspace settings dialog."""
+        if not self._workspace_manager.has_workspace:
+            return
+
+        dialog = WorkspaceSettingsDialog(self)
+        dialog.set_settings(self._workspace_manager.settings)
+
+        def handle_settings_changed(new_settings):
+            try:
+                settings_path = os.path.join(
+                    self._workspace_manager.workspace_path,
+                    self._workspace_manager.WORKSPACE_DIR,
+                    self._workspace_manager.SETTINGS_FILE
+                )
+                new_settings.save(settings_path)
+                self._workspace_manager._settings = new_settings  # Update current settings
+            except OSError as e:
+                self._logger.error("Failed to save workspace settings: %s", str(e))
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    "Settings Error",
+                    f"Failed to save workspace settings: {str(e)}"
+                )
+
+        dialog.settings_changed.connect(handle_settings_changed)
+        dialog.exec()
 
     def _show_settings_dialog(self):
         """Show the conversation settings dialog."""
