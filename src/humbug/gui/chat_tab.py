@@ -25,8 +25,10 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
-from humbug.transcript.transcript_reader import TranscriptReader
-from humbug.transcript.transcript_writer import TranscriptWriter
+from humbug.transcript.transcript_error import (
+    TranscriptError, TranscriptFormatError, TranscriptIOError
+)
+from humbug.transcript.transcript_handler import TranscriptHandler
 
 
 class ChatTab(TabBase):
@@ -53,8 +55,8 @@ class ChatTab(TabBase):
         self._path = path
         self._timestamp = timestamp
 
-        # Create transcript writer with provided filename
-        self._transcript_writer = TranscriptWriter(
+        # Create transcript handler with provided filename
+        self._transcript_handler = TranscriptHandler(
             path,
             timestamp
         )
@@ -158,7 +160,7 @@ class ChatTab(TabBase):
 
         try:
             # Write history to new transcript file
-            await forked_tab._transcript_writer.write(transcript_messages)
+            await forked_tab._transcript_handler.write(transcript_messages)
         except Exception as e:
             raise ChatError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
@@ -208,20 +210,22 @@ class ChatTab(TabBase):
         """
         try:
             # Read transcript
-            messages, error, metadata = TranscriptReader.read(path)
-            if error:
-                raise ValueError(f"Invalid transcript format: {error}")
+            transcript = TranscriptHandler(path)
+            transcript_data = transcript.read()
 
             conversation_id = os.path.splitext(os.path.basename(path))[0]
-            timestamp = datetime.fromisoformat(metadata["timestamp"])
+            timestamp = transcript_data.timestamp
 
             # Create chat tab
             chat_tab = cls(conversation_id, path, timestamp, parent)
-            chat_tab.load_message_history(messages)
+            chat_tab.load_message_history(transcript_data.messages)
 
             return chat_tab
-        except ValueError as e:
+
+        except TranscriptFormatError as e:
             raise ChatError(f"Failed to load conversation transcript: {str(e)}") from e
+        except TranscriptIOError as e:
+            raise ChatError(f"Failed to read conversation transcript: {str(e)}") from e
         except Exception as e:
             raise ChatError(f"Failed to create chat tab: {str(e)}") from e
 
@@ -251,12 +255,15 @@ class ChatTab(TabBase):
 
         # Load conversation from transcript
         try:
-            messages, error, _metadata = TranscriptReader.read(state.path)
-            if error:
-                raise ValueError(f"Failed to load transcript: {error}")
+            transcript = TranscriptHandler(state.path)
+            transcript_data = transcript.read()
+
+            # Validate timestamp matches state
+            if state.timestamp != transcript_data.timestamp:
+                raise ChatError("Timestamp mismatch in transcript metadata")
 
             # Load the message history
-            tab.load_message_history(messages)
+            tab.load_message_history(transcript_data.messages)
 
             return tab
 
@@ -312,8 +319,8 @@ class ChatTab(TabBase):
             IOError: If writing to transcript file fails
         """
         try:
-            await self._transcript_writer.write(messages)
-        except Exception as e:
+            await self._transcript_handler.write(messages)
+        except TranscriptError as e:
             self._logger.error("Failed to write to transcript: %s", e)
             # Add error message to conversation
             error_msg = f"Failed to write to transcript: {str(e)}"
