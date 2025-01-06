@@ -28,16 +28,11 @@ class WelcomeWidget(QFrame):
         layout.addSpacing(20)  # Space between icon and title
 
         # Application name
-        self._title_label = QLabel("Humbug")
+        self._title_label = QLabel(f"Humbug v{format_version()}")
         self._title_label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-
-        # Version number
-        self._version_label = QLabel(f"Version {format_version()}")
-        self._version_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
 
         # Add widgets to layout
         layout.addWidget(self._title_label)
-        layout.addWidget(self._version_label)
         layout.addStretch()
 
         # Set margins for dialog-style spacing
@@ -56,22 +51,12 @@ class WelcomeWidget(QFrame):
         # Update icon size
         icon_path = self._style_manager.get_icon_path("app-icon-disabled")
         icon_pixmap = QPixmap(icon_path)
-        scaled_size = int(128 * zoom_factor)  # 128px base size for welcome screen
+        scaled_size = int(160 * zoom_factor)  # 160px base size for welcome screen
         self._icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.KeepAspectRatio,
             Qt.SmoothTransformation
         ))
-
-        # Update title font size (2x default)
-        title_font = self._title_label.font()
-        title_font.setPointSizeF(base_font_size * 2 * zoom_factor)
-        self._title_label.setFont(title_font)
-
-        # Update version font size (default size)
-        version_font = self._version_label.font()
-        version_font.setPointSizeF(base_font_size * zoom_factor)
-        self._version_label.setFont(version_font)
 
         # Update colors and frame style
         self.setStyleSheet(f"""
@@ -83,5 +68,7 @@ class WelcomeWidget(QFrame):
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
                 background: none;
+                font-size: {base_font_size * 1.5}pt;
+                font-weight: bold;
             }}
         """)

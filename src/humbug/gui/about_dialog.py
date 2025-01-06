@@ -1,10 +1,12 @@
 """Dialog box for About Humbug."""
 
 import os
+from typing import Optional
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QDesktopServices
+from PySide6.QtCore import QUrl
 
 from humbug import format_version
 from humbug.gui.color_role import ColorRole
@@ -14,7 +16,7 @@ from humbug.gui.style_manager import StyleManager
 class AboutDialog(QDialog):
     """About dialog for Humbug application."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QDialog] = None) -> None:
         """Initialize the About dialog."""
         super().__init__(parent)
         self.setWindowTitle("About Humbug")
@@ -33,7 +35,7 @@ class AboutDialog(QDialog):
         icon_label = QLabel()
         icon_path = os.path.expanduser("~/.humbug/icons/app-icon.svg")
         icon_pixmap = QPixmap(icon_path)
-        scaled_size = int(96 * style_manager.zoom_factor)  # 96px base size
+        scaled_size = int(160 * style_manager.zoom_factor)  # 160px base size
         icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.KeepAspectRatio,
@@ -50,14 +52,16 @@ class AboutDialog(QDialog):
         title_label.setMinimumHeight(40)
         layout.addWidget(title_label)
 
-        # Description
+        # Description with hyperlink
         desc_label = QLabel(
             "Humbug is a GUI-based application that allows users to "
-            "interact with AI backends through a simple chat interface."
+            "interact with AI backends through a simple chat interface. "
+            'Visit <a href="https://m6r.ai">m6r.ai</a> to learn more.'
         )
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignCenter)
         desc_label.setMinimumHeight(40)
+        desc_label.setOpenExternalLinks(True)
         layout.addWidget(desc_label)
 
         # Close button with proper styling and sizing
@@ -72,6 +76,7 @@ class AboutDialog(QDialog):
         self.setLayout(layout)
 
         # Apply dialog styling
+        link_color = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
@@ -84,6 +89,13 @@ class AboutDialog(QDialog):
                 font-size: {base_font_size * 1.5}pt;
                 font-weight: bold;
                 margin: 10px;
+            }}
+            QLabel a {{
+                color: {link_color};
+                text-decoration: none;
+            }}
+            QLabel a:hover {{
+                text-decoration: underline;
             }}
             QPushButton {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
