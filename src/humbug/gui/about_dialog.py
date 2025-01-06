@@ -1,7 +1,10 @@
 """Dialog box for About Humbug."""
 
+import os
+
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 
 from humbug import format_version
 from humbug.gui.color_role import ColorRole
@@ -24,7 +27,21 @@ class AboutDialog(QDialog):
         # Main layout with proper spacing
         layout = QVBoxLayout()
         layout.setSpacing(8)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.addSpacing(24)  # Space at the top
+
+        # Add application icon
+        icon_label = QLabel()
+        icon_path = os.path.expanduser("~/.humbug/icons/app-icon.svg")
+        icon_pixmap = QPixmap(icon_path)
+        scaled_size = int(96 * style_manager.zoom_factor)  # 96px base size
+        icon_label.setPixmap(icon_pixmap.scaled(
+            scaled_size, scaled_size,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        ))
+        icon_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(icon_label)
+        layout.addSpacing(24)  # Space between icon and title
 
         # Title with version
         title_label = QLabel(f"Humbug v{format_version()}")
@@ -48,8 +65,9 @@ class AboutDialog(QDialog):
         close_button.clicked.connect(self.accept)
         close_button.setMinimumWidth(80)
         close_button.setContentsMargins(6, 6, 6, 6)
-        layout.addSpacing(8)  # Add spacing before button
+        layout.addSpacing(16)  # Add spacing before button
         layout.addWidget(close_button, alignment=Qt.AlignCenter)
+        layout.addSpacing(16)  # Space at the bottom
 
         self.setLayout(layout)
 

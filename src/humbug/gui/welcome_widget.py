@@ -2,6 +2,7 @@
 
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QFrame
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 
 from humbug import format_version
 from humbug.gui.color_role import ColorRole
@@ -19,6 +20,13 @@ class WelcomeWidget(QFrame):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        # Add application icon
+        self._icon_label = QLabel()
+        self._icon_label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        layout.addStretch()
+        layout.addWidget(self._icon_label)
+        layout.addSpacing(20)  # Space between icon and title
+
         # Application name
         self._title_label = QLabel("Humbug")
         self._title_label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
@@ -28,7 +36,6 @@ class WelcomeWidget(QFrame):
         self._version_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
 
         # Add widgets to layout
-        layout.addStretch()
         layout.addWidget(self._title_label)
         layout.addWidget(self._version_label)
         layout.addStretch()
@@ -45,6 +52,16 @@ class WelcomeWidget(QFrame):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor
         base_font_size = self._style_manager.base_font_size
+
+        # Update icon size
+        icon_path = self._style_manager.get_icon_path("app-icon-disabled")
+        icon_pixmap = QPixmap(icon_path)
+        scaled_size = int(128 * zoom_factor)  # 128px base size for welcome screen
+        self._icon_label.setPixmap(icon_pixmap.scaled(
+            scaled_size, scaled_size,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        ))
 
         # Update title font size (2x default)
         title_font = self._title_label.font()
@@ -64,7 +81,7 @@ class WelcomeWidget(QFrame):
                 border-radius: {4 * zoom_factor}px;
             }}
             QLabel {{
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
                 background: none;
             }}
         """)
