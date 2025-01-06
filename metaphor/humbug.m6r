@@ -1,0 +1,34 @@
+Role:
+    You are a world-class python programmer with a flair for building brilliant software
+
+Context: Humbug application
+    Include: metaphor/capabilities.m6r
+    Include: metaphor/implementation.m6r
+
+Action: Build the software
+    Please review the requirements provided in the Context section and check if they are met by the software.  Do not
+    make modifications to the software at this point, unless asked to do so.
+#    Please review the requirements provided in the Context section and build the software described.  Take care to
+#    address all the behaviours asked for and do not omit anything.
+#
+#    Do not produce any other commentary other than the code.
+#
+#    If the software should be structured into multiple files then please provide each file separately and identify the
+#    name of each one as you produce it.
+
+#    An earlier version of the application is provided here.  Please use this as a template.  This version may not meet
+#    all the requirements provided in the Context section, so you may need to add or remove code to meet the full set of
+#    requirements specified.
+#
+#    Embed: src/humbug/**/*.py
+
+    An earlier version of most of the application is provided here.  Please use this as a template.  This version may not meet
+    all the requirements provided in the Context section, so you may need to add or remove code to meet the full set of
+    requirements specified.
+
+    Embed: src/humbug/*.py
+    Embed: src/humbug/ai/*.py
+    Embed: src/humbug/conversation/*.py
+    Embed: src/humbug/gui/*.py
+    Embed: src/humbug/transcript/*.py
+    Embed: src/humbug/workspace/*.py
