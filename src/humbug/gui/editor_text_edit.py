@@ -131,63 +131,13 @@ class EditorTextEdit(QPlainTextEdit):
         """
         cursor.insertText("\t")
 
-    def _outdent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> int:
-        """
-        Outdent a single line using soft tabs.
-
-        Args:
-            cursor: The current text cursor
-            tab_size: Number of spaces to use for indentation
-
-        Returns:
-            int: Number of spaces removed
-        """
-        # Select the entire line
-        cursor.movePosition(QTextCursor.StartOfLine)
-        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-        line_text = cursor.selectedText()
-
-        # Count leading spaces
-        leading_spaces = len(line_text) - len(line_text.lstrip())
-        if leading_spaces == 0:
-            return 0
-
-        # Calculate how many spaces to remove
-        spaces_to_remove = min(leading_spaces, tab_size)
-        new_text = line_text[spaces_to_remove:]
-        cursor.insertText(new_text)
-        return spaces_to_remove
-
-    def _outdent_single_line_hard_tabs(self, cursor: QTextCursor) -> bool:
-        """
-        Outdent a single line using hard tabs.
-
-        Args:
-            cursor: The current text cursor
-
-        Returns:
-            bool: True if a tab was removed, False otherwise
-        """
-        cursor.movePosition(QTextCursor.StartOfLine)
-        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-        line_text = cursor.selectedText()
-
-        if not line_text.startswith('\t'):
-            return False
-
-        cursor.insertText(line_text[1:])
-        return True
-
-    def _indent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> Tuple[int, int]:
+    def _indent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
         """
         Indent a block of text using soft tabs.
 
         Args:
             cursor: The current text cursor
             tab_size: Number of spaces to use for indentation
-
-        Returns:
-            Tuple[int, int]: (First line position, End position)
         """
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
@@ -206,17 +156,15 @@ class EditorTextEdit(QPlainTextEdit):
             if not cursor.movePosition(QTextCursor.NextBlock):
                 break
 
-        return first_line_pos, end
+        cursor.setPosition(first_line_pos)
+        cursor.setPosition(end, QTextCursor.KeepAnchor)
 
-    def _indent_block_hard_tabs(self, cursor: QTextCursor) -> Tuple[int, int]:
+    def _indent_block_hard_tabs(self, cursor: QTextCursor) -> None:
         """
         Indent a block of text using hard tabs.
 
         Args:
             cursor: The current text cursor
-
-        Returns:
-            Tuple[int, int]: (First line position, End position)
         """
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
@@ -235,7 +183,69 @@ class EditorTextEdit(QPlainTextEdit):
             if not cursor.movePosition(QTextCursor.NextBlock):
                 break
 
-        return first_line_pos, end
+        cursor.setPosition(first_line_pos)
+        cursor.setPosition(end, QTextCursor.KeepAnchor)
+
+    def _outdent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
+        """
+        Outdent a single line using soft tabs.
+
+        Args:
+            cursor: The current text cursor
+            tab_size: Number of spaces to use for indentation
+        """
+        # Store initial column for cursor restoration
+        initial_pos = cursor.position()
+        line_start_pos = cursor.block().position()
+        current_column = initial_pos - line_start_pos
+
+        # Select the entire line
+        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+        line_text = cursor.selectedText()
+
+        # Count leading spaces
+        leading_spaces = len(line_text) - len(line_text.lstrip())
+        if leading_spaces == 0:
+            return
+
+        # Calculate how many spaces to remove
+        spaces_to_remove = min(leading_spaces, tab_size)
+        new_text = line_text[spaces_to_remove:]
+        cursor.insertText(new_text)
+
+        # Restore cursor position
+        new_column = max(0, current_column - spaces_to_remove)
+        cursor.setPosition(line_start_pos + new_column)
+
+    def _outdent_single_line_hard_tabs(self, cursor: QTextCursor) -> None:
+        """
+        Outdent a single line using hard tabs.
+
+        Args:
+            cursor: The current text cursor
+
+        Returns:
+            bool: True if a tab was removed, False otherwise
+        """
+        # Store initial column for cursor restoration
+        initial_pos = cursor.position()
+        line_start_pos = cursor.block().position()
+        current_column = initial_pos - line_start_pos
+
+        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+        line_text = cursor.selectedText()
+
+        if not line_text.startswith('\t'):
+            return
+
+        spaces_to_remove = 1
+        cursor.insertText(line_text[1:])
+
+        # Restore cursor position
+        new_column = max(0, current_column - spaces_to_remove)
+        cursor.setPosition(line_start_pos + new_column)
 
     def _outdent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> Tuple[int, int]:
         """
@@ -274,7 +284,9 @@ class EditorTextEdit(QPlainTextEdit):
             if not cursor.movePosition(QTextCursor.NextBlock):
                 break
 
-        return first_line_pos, end - total_chars_removed
+        end -= total_chars_removed
+        cursor.setPosition(first_line_pos)
+        cursor.setPosition(end, QTextCursor.KeepAnchor)
 
     def _outdent_block_hard_tabs(self, cursor: QTextCursor) -> Tuple[int, int]:
         """
@@ -310,7 +322,9 @@ class EditorTextEdit(QPlainTextEdit):
             if not cursor.movePosition(QTextCursor.NextBlock):
                 break
 
-        return first_line_pos, end - tabs_removed
+        end -= tabs_removed
+        cursor.setPosition(first_line_pos)
+        cursor.setPosition(end, QTextCursor.KeepAnchor)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """
@@ -336,13 +350,10 @@ class EditorTextEdit(QPlainTextEdit):
                     else:
                         self._indent_single_line_hard_tabs(cursor)
                 else:
-                    first_line_pos, end = (
+                    if settings.use_soft_tabs:
                         self._indent_block_soft_tabs(cursor, settings.tab_size)
-                        if settings.use_soft_tabs
-                        else self._indent_block_hard_tabs(cursor)
-                    )
-                    cursor.setPosition(first_line_pos)
-                    cursor.setPosition(end, QTextCursor.KeepAnchor)
+                    else:
+                        self._indent_block_hard_tabs(cursor)
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)
@@ -353,29 +364,16 @@ class EditorTextEdit(QPlainTextEdit):
             cursor.beginEditBlock()
             try:
                 if not cursor.hasSelection():
-                    # Store initial column for cursor restoration
-                    initial_pos = cursor.position()
-                    line_start_pos = cursor.block().position()
-                    current_column = initial_pos - line_start_pos
-
-                    # Perform outdent
-                    spaces_removed = (
+                    if settings.use_soft_tabs:
                         self._outdent_single_line_soft_tabs(cursor, settings.tab_size)
-                        if settings.use_soft_tabs
-                        else self._outdent_single_line_hard_tabs(cursor)
-                    )
-
-                    # Restore cursor position
-                    new_column = max(0, current_column - spaces_removed)
-                    cursor.setPosition(line_start_pos + new_column)
+                    else:
+                        self._outdent_single_line_hard_tabs(cursor)
                 else:
-                    first_line_pos, end = (
+                    if settings.use_soft_tabs:
                         self._outdent_block_soft_tabs(cursor, settings.tab_size)
-                        if settings.use_soft_tabs
-                        else self._outdent_block_hard_tabs(cursor)
-                    )
-                    cursor.setPosition(first_line_pos)
-                    cursor.setPosition(end, QTextCursor.KeepAnchor)
+                    else:
+                        self._outdent_block_hard_tabs(cursor)
+
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)
