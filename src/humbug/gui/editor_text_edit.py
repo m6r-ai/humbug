@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
@@ -247,16 +245,13 @@ class EditorTextEdit(QPlainTextEdit):
         new_column = max(0, current_column - spaces_to_remove)
         cursor.setPosition(line_start_pos + new_column)
 
-    def _outdent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> Tuple[int, int]:
+    def _outdent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
         """
         Outdent a block of text using soft tabs.
 
         Args:
             cursor: The current text cursor
             tab_size: Number of spaces to use for indentation
-
-        Returns:
-            Tuple[int, int]: (First line position, End position)
         """
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
@@ -288,15 +283,12 @@ class EditorTextEdit(QPlainTextEdit):
         cursor.setPosition(first_line_pos)
         cursor.setPosition(end, QTextCursor.KeepAnchor)
 
-    def _outdent_block_hard_tabs(self, cursor: QTextCursor) -> Tuple[int, int]:
+    def _outdent_block_hard_tabs(self, cursor: QTextCursor) -> None:
         """
         Outdent a block of text using hard tabs.
 
         Args:
             cursor: The current text cursor
-
-        Returns:
-            Tuple[int, int]: (First line position, End position)
         """
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
