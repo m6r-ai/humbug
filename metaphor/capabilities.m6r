@@ -177,18 +177,29 @@ Context: Capabilities
                             - Ctrl+End: Moves cursor to end of message
                             - Page Up/Down: Scroll by viewport height
 
-                    Context: Tab operations
-                        If the user has highlighted a block of text and then presses Tab then all of that block of code
-                        should be indented.  If the workspace is configured to use not use soft tabs then all the
-                        highlighted lines should be indented by one tab character.  If the workspace is configured to
-                        use soft tabs then all the highlighted lines should be indented by "tabSize" spaces.
+                    Context: Tab key operations
+                        The Tab key indents one or more lines of code.  If the workspace is configured to use not use soft
+                        tabs then indenting is by one tab character.  If the workspace is configured to use soft tabs then
+                        indenting is by "tabSize" spaces.
 
-                        If the user has highlighted a block of text and then presses Shift+Tab then all of that block of code
-                        should be outdented.  If the workspace is configured to use not use soft tabs then all the
-                        highlighted lines should have their first leading tab character removed.  If any lines do not have
-                        leading tab characters then they are ignored.  If the workspace is configured to use soft tabs
-                        then all the highlighted lines should be outdented by "tabSize" spaces, unless they do not have
-                        enough leading spaces, in which case all available leading spaces will be removed.
+                        The Shift+Tab key combination key outdents one or more lines of code.  If the workspace is configured
+                        to use not use soft tabs then outdenting is by one tab character, unless there are no leading tab
+                        characters in which case no outdenting occurs.  If the workspace is configured to use soft tabs then
+                        outdenting is by "tabSize" spaces, unless there are not enough leading spaces, in which case all
+                        available leading spaces will be removed.
+
+                        If the user has highlighted a block of text and then presses Tab or Shift+Tab then all of that block
+                        of code should be indented or outdented.  The cursor position should move to the next or previous
+                        tab stop.
+
+                        If the user has not highlighted a block of text then the Tab operation works from the current column
+                        and will result in moving everything to the right of the cursor to start at the next tab stop.  The
+                        cursor will also move to match the amoutn indented.
+
+                        If the user has not highlighted a block of text then the Shift+Tab operation works from the current
+                        column and will attempt to outdent everything to the right of the cursor to start at the previous
+                        tab stop, or to the next non-whitespace character if this occurs before the previous tab stop.  The
+                        cursor will move to match the amount outdented.
 
             Context: Syntax highlighting
                 Code blocks and inline code will be syntax highlighted based on the programming language:
