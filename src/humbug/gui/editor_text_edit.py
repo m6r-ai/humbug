@@ -144,7 +144,14 @@ class EditorTextEdit(QPlainTextEdit):
         cursor.movePosition(QTextCursor.StartOfLine)
         first_line_pos = cursor.position()
 
-        while cursor.position() <= end:
+        # If selection ends at start of line, don't indent that line
+        actual_end = end
+        check_cursor = QTextCursor(cursor)
+        check_cursor.setPosition(end)
+        if check_cursor.atBlockStart():
+            actual_end = end - 1
+
+        while cursor.position() <= actual_end:
             if not cursor.atBlockStart():
                 cursor.movePosition(QTextCursor.StartOfLine)
 
@@ -171,7 +178,14 @@ class EditorTextEdit(QPlainTextEdit):
         cursor.movePosition(QTextCursor.StartOfLine)
         first_line_pos = cursor.position()
 
-        while cursor.position() <= end:
+        # If selection ends at start of line, don't indent that line
+        actual_end = end
+        check_cursor = QTextCursor(cursor)
+        check_cursor.setPosition(end)
+        if check_cursor.atBlockStart():
+            actual_end = end - 1
+
+        while cursor.position() <= actual_end:
             if not cursor.atBlockStart():
                 cursor.movePosition(QTextCursor.StartOfLine)
 
