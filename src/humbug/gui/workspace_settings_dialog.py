@@ -47,11 +47,15 @@ class WorkspaceSettingsDialog(QDialog):
 
         # Soft tabs setting
         soft_tabs_layout = QHBoxLayout()
-        self._soft_tabs_check = QCheckBox("Use Soft Tabs")
+        soft_tabs_label = QLabel("Use Soft Tabs:")
+        soft_tabs_label.setMinimumHeight(40)
+        self._soft_tabs_check = QCheckBox()
         self._soft_tabs_check.setMinimumHeight(40)
+        self._soft_tabs_check.setMinimumWidth(300)
         self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
-        soft_tabs_layout.addWidget(self._soft_tabs_check)
+        soft_tabs_layout.addWidget(soft_tabs_label)
         soft_tabs_layout.addStretch()
+        soft_tabs_layout.addWidget(self._soft_tabs_check)
         layout.addLayout(soft_tabs_layout)
 
         # Tab size setting
