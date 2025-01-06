@@ -139,19 +139,19 @@ class EditorTextEdit(QPlainTextEdit):
         """
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
+        reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
         cursor.movePosition(QTextCursor.StartOfLine)
-        first_line_pos = cursor.position()
 
         # If selection ends at start of line, don't indent that line
-        actual_end = end
+        end_offs = 0
         check_cursor = QTextCursor(cursor)
         check_cursor.setPosition(end)
         if check_cursor.atBlockStart():
-            actual_end = end - 1
+            end_offs = 1
 
-        while cursor.position() <= actual_end:
+        while cursor.position() <= end - end_offs:
             if not cursor.atBlockStart():
                 cursor.movePosition(QTextCursor.StartOfLine)
 
@@ -161,8 +161,8 @@ class EditorTextEdit(QPlainTextEdit):
             if not cursor.movePosition(QTextCursor.NextBlock):
                 break
 
-        cursor.setPosition(first_line_pos)
-        cursor.setPosition(end, QTextCursor.KeepAnchor)
+        cursor.setPosition(start if not reverse else end)
+        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
 
     def _indent_block_hard_tabs(self, cursor: QTextCursor) -> None:
         """
@@ -173,19 +173,19 @@ class EditorTextEdit(QPlainTextEdit):
         """
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
+        reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
         cursor.movePosition(QTextCursor.StartOfLine)
-        first_line_pos = cursor.position()
 
         # If selection ends at start of line, don't indent that line
-        actual_end = end
+        end_offs = 0
         check_cursor = QTextCursor(cursor)
         check_cursor.setPosition(end)
         if check_cursor.atBlockStart():
-            actual_end = end - 1
+            end_offs = 1
 
-        while cursor.position() <= actual_end:
+        while cursor.position() <= end - end_offs:
             if not cursor.atBlockStart():
                 cursor.movePosition(QTextCursor.StartOfLine)
 
@@ -195,8 +195,8 @@ class EditorTextEdit(QPlainTextEdit):
             if not cursor.movePosition(QTextCursor.NextBlock):
                 break
 
-        cursor.setPosition(first_line_pos)
-        cursor.setPosition(end, QTextCursor.KeepAnchor)
+        cursor.setPosition(start if not reverse else end)
+        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
 
     def _outdent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
         """
@@ -363,6 +363,7 @@ class EditorTextEdit(QPlainTextEdit):
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)
+
             event.accept()
             return
 
@@ -383,6 +384,7 @@ class EditorTextEdit(QPlainTextEdit):
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)
+
             event.accept()
             return
 
