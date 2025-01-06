@@ -109,7 +109,7 @@ class WorkspaceFileTree(QWidget):
             }}
             QTreeView::item {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 4px;
+                padding: 1px;
             }}
             QTreeView::item:selected {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
