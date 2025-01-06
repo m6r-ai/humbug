@@ -57,7 +57,7 @@ class SettingsDialog(QDialog):
         temp_label.setMinimumHeight(40)
         self.temp_spin = QDoubleSpinBox()
         self.temp_spin.setRange(0.0, 1.0)
-        self.temp_spin.setSingleStep(0.1)
+        self.temp_spin.setSingleStep(0.100000000001)  # Increased step size to avoid FP issues
         self.temp_spin.setDecimals(1)
         self.temp_spin.setMinimumWidth(300)  # Match combo box width
         self.temp_spin.setMinimumHeight(40)  # Match label height
@@ -188,7 +188,7 @@ class SettingsDialog(QDialog):
                 width: 12px;
                 height: 12px;
             }}
-            QDoubleSpinBox::up-arrow:disabled {{
+            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
                 image: none;
             }}
             QDoubleSpinBox::down-arrow {{
@@ -196,7 +196,7 @@ class SettingsDialog(QDialog):
                 width: 12px;
                 height: 12px;
             }}
-            QDoubleSpinBox::down-arrow:disabled {{
+            QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
                 image: none;
             }}
             QLabel[valueDisplay="true"] {{
