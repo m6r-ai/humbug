@@ -173,8 +173,8 @@ class StyleManager(QObject):
 
             # Status bar elements
             ColorRole.STATUS_BAR_BACKGROUND: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d4d4d4"
+                ColorMode.DARK: "#121212",
+                ColorMode.LIGHT: "#e8e8e8"
             },
 
             # Close button states

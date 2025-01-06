@@ -4,7 +4,7 @@ import uuid
 from typing import Dict, Optional
 
 from PySide6.QtWidgets import (
-    QVBoxLayout, QLabel, QFileDialog
+    QVBoxLayout, QFileDialog
 )
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QTextCursor
@@ -13,6 +13,7 @@ from humbug.gui.editor_highlighter import EditorHighlighter
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_text_edit import EditorTextEdit
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
+from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
@@ -75,12 +76,8 @@ class EditorTab(TabBase):
         # Create editor
         self._editor = EditorTextEdit()
         self._editor.textChanged.connect(self._handle_text_changed)
-        self._editor.cursorPositionChanged.connect(self._update_status)
+        self._editor.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor)
-
-        # Add status bar
-        self._status_bar = QLabel()
-        layout.addWidget(self._status_bar)
 
         # Set up syntax highlighter
         self._highlighter = EditorHighlighter(self._editor.document())
@@ -89,7 +86,7 @@ class EditorTab(TabBase):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed(self._style_manager.zoom_factor)
 
-        self._update_status()
+        self.update_status()
 
     def get_state(self) -> TabState:
         """Get serializable state for workspace persistence."""
@@ -211,15 +208,6 @@ class EditorTab(TabBase):
             }}
         """)
 
-        # Update status bar styling
-        self._status_bar.setStyleSheet(f"""
-            QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: {2 * zoom_factor}px;
-            }}
-        """)
-
         # Scale line number area
         self._editor.update_line_number_area_width()
 
@@ -252,7 +240,7 @@ class EditorTab(TabBase):
         if self._current_language != new_language:
             self._current_language = new_language
             self._highlighter.set_language(new_language)
-            self._update_status()
+            self.update_status()
 
     @property
     def filename(self) -> str:
@@ -313,8 +301,8 @@ class EditorTab(TabBase):
         elif not is_modified:
             self._auto_save_timer.stop()
 
-    def _update_status(self) -> None:
-        """Update the status bar with current cursor position."""
+    def update_status(self) -> None:
+        """Update status bar with current cursor position."""
         cursor = self._editor.textCursor()
         line = cursor.blockNumber() + 1
         column = cursor.columnNumber() + 1
@@ -337,9 +325,10 @@ class EditorTab(TabBase):
         }
         file_type = language_names.get(self._current_language, "Text")
 
-        self._status_bar.setText(
+        message = StatusMessage(
             f"Line {line}, Column {column} | {encoding} | {line_ending} | {file_type}"
         )
+        self.status_message.emit(message)
 
     def _auto_save(self) -> None:
         """Handle auto-save functionality."""

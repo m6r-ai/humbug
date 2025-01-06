@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
+from PySide6.QtWidgets import QStatusBar
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
@@ -23,6 +24,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.settings_dialog import SettingsDialog
+from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.tab_state import TabState
@@ -223,7 +225,6 @@ class MainWindow(QMainWindow):
         self._splitter.setSizes([300, 700])
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
 
         # Create a timer that fires every 50ms to keep our menu states correct
         self._menu_timer = QTimer()
@@ -231,8 +232,33 @@ class MainWindow(QMainWindow):
         self._menu_timer.timeout.connect(self._update_menu_state)
         self._menu_timer.start()
 
+        # Create status bar
+        self._status_bar = QStatusBar()
+        self.setStatusBar(self._status_bar)
+        self.tab_manager.current_tab_changed.connect(self._handle_tab_changed)
+
+        self._handle_style_changed()
+
         self._workspace_manager = WorkspaceManager()
         self._restore_last_workspace()
+
+    def _handle_tab_changed(self) -> None:
+        """Handle tab change by connecting status message signal."""
+        current_tab = self.tab_manager.get_current_tab()
+        if current_tab:
+            # Disconnect any existing connections to avoid duplicates
+            try:
+                current_tab.status_message.disconnect()
+            except RuntimeError:
+                pass  # No existing connections
+
+            current_tab.status_message.connect(self._handle_status_message)
+            current_tab.update_status()
+
+    def _handle_status_message(self, message: StatusMessage) -> None:
+        """Update status bar with new message."""
+        print(f"Status message: {message}")
+        self._status_bar.showMessage(message.text, message.timeout if message.timeout else 0)
 
     def _restore_last_workspace(self):
         """Restore last workspace on startup if available."""
@@ -604,6 +630,15 @@ class MainWindow(QMainWindow):
             }}
             QMenu::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)}
+            }}
+        """)
+
+        self._status_bar.setStyleSheet(f"""
+            QStatusBar {{
+                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: 2px;
+                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
         """)
 

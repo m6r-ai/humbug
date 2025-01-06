@@ -3,6 +3,7 @@ from typing import Dict, Optional
 from PySide6.QtWidgets import QFrame
 from PySide6.QtCore import Signal
 
+from humbug.gui.status_message import StatusMessage
 from humbug.gui.tab_state import TabState
 
 
@@ -13,6 +14,7 @@ class TabBase(QFrame):
     close_requested = Signal(str)  # Emits tab_id
     title_changed = Signal(str, str)  # Emits (tab_id, new_title)
     modified_state_changed = Signal(str, bool)  # Emits (tab_id, is_modified)
+    status_message = Signal(StatusMessage)
 
     def __init__(self, tab_id: str, parent=None):
         """
@@ -234,3 +236,11 @@ class TabBase(QFrame):
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement can_submit")
+
+    def update_status(self) -> None:
+        """
+        Update status bar with tab-specific status information.
+
+        Must be implemented by subclasses to provide their specific status.
+        """
+        raise NotImplementedError("Subclasses must implement update_status")

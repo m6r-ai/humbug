@@ -7,7 +7,7 @@ import os
 from typing import Dict, List, Optional
 
 from PySide6.QtWidgets import (
-    QLabel, QVBoxLayout, QWidget, QScrollArea, QSizePolicy
+    QVBoxLayout, QWidget, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Slot
 from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
@@ -21,6 +21,7 @@ from humbug.gui.chat_error import ChatError
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
+from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
@@ -104,18 +105,14 @@ class ChatTab(TabBase):
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        # Set up the status bar
-        self._status_bar = QLabel()
-
         # Main layout
         chat_layout.setContentsMargins(0, 1, 0, 0)
         chat_layout.setSpacing(0)
         chat_layout.addWidget(self._scroll_area)
-        chat_layout.addWidget(self._status_bar)
 
         zoom_factor = self._style_manager.zoom_factor
 
-        self.update_status(0, 0)
+        self.update_status()
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed(zoom_factor)
@@ -400,7 +397,7 @@ class ChatTab(TabBase):
     def update_settings(self, settings: ConversationSettings) -> None:
         """Update conversation settings."""
         self._settings = settings
-        self._update_status_display()
+        self.update_status()
 
     @Slot(int)
     def _on_scroll_value_changed(self, value: int):
@@ -507,23 +504,17 @@ class ChatTab(TabBase):
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
-    def _update_status_display(self):
-        """Update status bar with current settings and token counts."""
+    def update_status(self) -> None:
+        """Update status bar with token counts and settings."""
         counts = self._conversation.get_token_counts()
-        self.update_status(
-            counts['input'],
-            counts['output']
-        )
-
-    def update_status(self, input_tokens: int, output_tokens: int):
-        """Update the status bar with token counts and settings."""
         temp_display = f"Temp: {self._settings.temperature:.1f}" if self._settings.temperature is not None else "Temp: N/A"
-        self._status_bar.setText(
+        message = StatusMessage(
             f"Model: {self._settings.model} | "
             f"{temp_display} | "
-            f"Last response - Input: {input_tokens} ({self._settings.context_window}) | "
-            f"Output: {output_tokens}"
+            f"Last response - Input: {counts['input']} ({self._settings.context_window}) | "
+            f"Output: {counts['output']}"
         )
+        self.status_message.emit(message)
 
     def _handle_edit_page_scroll(self) -> None:
         """
@@ -632,7 +623,7 @@ class ChatTab(TabBase):
         if usage:
             self._is_streaming = False
             self._input.set_streaming(False)
-            self._update_status_display()
+            self.update_status()
             self._current_ai_message = None
             await self._write_transcript([message.to_transcript_dict()])
             return message
@@ -706,7 +697,7 @@ class ChatTab(TabBase):
                     ))
 
         # Update display with final state
-        self._update_status_display()
+        self.update_status()
 
         # Ensure we're scrolled to the end
         self._auto_scroll = True
@@ -744,13 +735,6 @@ class ChatTab(TabBase):
             }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 height: 0px;
-            }}
-        """)
-        self._status_bar.setStyleSheet(f"""
-            QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 2px 2px;
             }}
         """)
         self.setStyleSheet(f"""

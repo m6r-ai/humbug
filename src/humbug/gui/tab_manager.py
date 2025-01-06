@@ -19,6 +19,7 @@ class TabManager(QWidget):
     """Manages multiple tabs for conversations and editors."""
 
     tab_closed = Signal(str)  # Emits tab_id
+    current_tab_changed = Signal(TabBase)
 
     def __init__(self, parent=None):
         """Initialize the tab manager."""
@@ -212,6 +213,10 @@ class TabManager(QWidget):
             tab = self._tabs[tab_id]
             is_current = tab == self._tab_widget.widget(index)
             label.set_current(is_current)
+
+        # Emit our new signal with current tab
+        current_tab = self.get_current_tab()
+        self.current_tab_changed.emit(current_tab)
 
     def get_chat_tabs(self) -> List[ChatTab]:
         """

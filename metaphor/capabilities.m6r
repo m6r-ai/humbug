@@ -9,7 +9,7 @@ Context: Capabilities
     Context: Application window
         The main window is divided into two primary regions: a file tree view on the left side, and a tabbed
         interface on the right side. The two regions are separated by a resizable splitter that allows the user
-        to adjust the relative widths.
+        to adjust the relative widths.  At the bottom of the main window is an application status bar.
 
         Context: File tree view
             The file tree displays the contents of the current workspace:
@@ -679,7 +679,6 @@ Context: Capabilities
             - Auto-save backups are maintained every 5 minutes if the file has unsaved changes
 
         Context: Status bar
-
             The editor status bar shows:
 
             - Current line and column numbers
@@ -726,13 +725,11 @@ Context: Capabilities
             Unsaved partial responses are preserved in transcript on error
 
     Context: Conversations
-        The bottom line of each conversation window has a status bar.
-
         The top part of the conversation window will show a history of everything that has happened, including
         messages, responses from the application, and responses from the AI.  Historical messages cannot be edited
 
-        Below the conversation history and above the status bar is a user input editor.  This input area will increase
-        in size upwards as the user adds more content.  This editable region can be arbitrarily large.
+        Below the conversation history is a user input editor.  This input area will increase in size upwards as
+        the user adds more content.  This editable region can be arbitrarily large.
 
         To the user, the historical details and the editable region must feel like they're one window.  Where they
         are required, there is only one vertical scroll bar to cover both the history and editable area.
