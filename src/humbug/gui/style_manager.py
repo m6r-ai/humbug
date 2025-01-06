@@ -8,9 +8,9 @@ from enum import Enum, auto
 import os
 from typing import Dict, List
 
-from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion
+from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
 from PySide6.QtGui import (
-    QTextCharFormat, QFontDatabase, QGuiApplication, QColor, QFontMetricsF, QFont
+    QTextCharFormat, QFontDatabase, QGuiApplication, QColor, QFontMetricsF, QFont, QPixmap
 )
 
 from humbug.gui.color_role import ColorRole
@@ -347,6 +347,78 @@ class StyleManager(QObject):
                     <path stroke="{color}" stroke-width="0.75" fill="none" d="M1,2 L3,4 L5,2"/>
                 </svg>
             ''')
+
+            # Close button - visible version
+            write_icon(f'close-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="4" fill="none"
+                        d="M16,16 L48,48 M48,16 L16,48"/>
+                </svg>
+            ''')
+
+            # Message box icons
+            write_icon(f'info-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
+                    <text x="32" y="40" text-anchor="middle"
+                        font-size="36" fill="{color}" font-family="sans-serif">i</text>
+                </svg>
+            ''')
+
+            write_icon(f'warning-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M32 4 L60 56 L4 56 Z" stroke="{color}" stroke-width="4" fill="none"/>
+                    <text x="32" y="48" text-anchor="middle"
+                        font-size="36" fill="{color}" font-family="sans-serif">!</text>
+                </svg>
+            ''')
+
+            write_icon(f'critical-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
+                    <path stroke="{color}" stroke-width="4" fill="none"
+                        d="M20,20 L44,44 M44,20 L20,44"/>
+                </svg>
+            ''')
+
+            write_icon(f'question-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
+                    <text x="32" y="44" text-anchor="middle"
+                        font-size="36" fill="{color}" font-family="sans-serif">?</text>
+                </svg>
+            ''')
+
+    def get_icon_path(self, name: str) -> str:
+        """
+        Get the path to a theme-appropriate icon.
+
+        Args:
+            name: Base name of the icon (without theme suffix or extension)
+
+        Returns:
+            Full path to the icon file
+        """
+        icon_dir = os.path.expanduser("~/.humbug/icons")
+        theme = "dark" if self._color_mode == ColorMode.DARK else "light"
+        return os.path.join(icon_dir, f"{name}-{theme}.svg")
+
+    def scale_icon(self, icon_path: str, target_size: int) -> QPixmap:
+        """
+        Load and scale an icon to the appropriate size.
+
+        Args:
+            icon_path: Path to the icon file
+            target_size: Desired size in pixels
+
+        Returns:
+            Scaled QPixmap of the icon
+        """
+        pixmap = QPixmap(icon_path)
+        scaled_size = self.get_scaled_size(target_size)
+        return pixmap.scaled(
+            scaled_size, scaled_size, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
 
     def get_color(self, role: ColorRole) -> QColor:
         """

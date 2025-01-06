@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy
 )
 from PySide6.QtCore import Signal, QSize, Qt
-from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
+from PySide6.QtGui import QIcon, QPixmap
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -50,30 +50,11 @@ class TabLabel(QWidget):
         self.setMouseTracking(True)
 
     def _create_visible_close_icon(self) -> QIcon:
-        """Create and set the close icon for the button."""
         icon = QIcon()
-        base_size = 64  # High resolution for scaling
-        pixmap = QPixmap(base_size, base_size)
-        pixmap.fill(Qt.transparent)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
-        pen = painter.pen()
-        pen.setWidth(4)
-        pen.setColor(QColor(self._style_manager.get_color(ColorRole.TEXT_PRIMARY)))
-        painter.setPen(pen)
-
-        margin = base_size // 4
-        painter.drawLine(margin, margin, base_size - margin, base_size - margin)
-        painter.drawLine(base_size - margin, margin, margin, base_size - margin)
-        painter.end()
-
-        # Scale to current zoom level
-        target_size = self._style_manager.get_scaled_size(16)
-        scaled_pixmap = pixmap.scaled(target_size, target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        icon.addPixmap(scaled_pixmap, QIcon.Normal, QIcon.Off)
-        icon.addPixmap(scaled_pixmap, QIcon.Active, QIcon.Off)
-
+        icon_path = self._style_manager.get_icon_path("close")
+        pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
+        icon.addPixmap(pixmap, QIcon.Normal, QIcon.Off)
+        icon.addPixmap(pixmap, QIcon.Active, QIcon.Off)
         return icon
 
     def _create_invisible_close_icon(self) -> QIcon:
@@ -95,7 +76,7 @@ class TabLabel(QWidget):
         self._update_font_size()
 
         # Update close button size
-        button_size = 18 * factor
+        button_size = 16 * factor
         self._close_button.setFixedSize(button_size, button_size)
 
         # Update icon size

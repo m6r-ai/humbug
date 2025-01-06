@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 )
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QPixmap, QPainter
+from PySide6.QtGui import QPixmap
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -136,54 +136,20 @@ class MessageBox(QDialog):
 
     def _create_icon(self, msg_type: MessageBoxType) -> Optional[QPixmap]:
         """Create appropriate icon for message type."""
-        size = int(32 * self._style_manager.zoom_factor)
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.transparent)
+        # Map message types to icon names
+        icon_names = {
+            MessageBoxType.INFORMATION: "info",
+            MessageBoxType.WARNING: "warning",
+            MessageBoxType.CRITICAL: "critical",
+            MessageBoxType.QUESTION: "question"
+        }
 
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
+        icon_name = icon_names.get(msg_type)
+        if not icon_name:
+            return None
 
-        # Get appropriate color
-        icon_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
-        pen = painter.pen()
-        pen.setColor(icon_color)
-        painter.setPen(pen)
-
-        # Draw appropriate icon
-        if msg_type == MessageBoxType.INFORMATION:
-            # Draw info circle with 'i'
-            pen.setWidth(2)
-            painter.setPen(pen)
-            painter.drawEllipse(4, 4, size-8, size-8)
-            painter.drawText(size//2-2, size//2+4, "i")
-        elif msg_type == MessageBoxType.WARNING:
-            # Draw warning triangle
-            pen.setWidth(2)
-            painter.setPen(pen)
-            points = [
-                (size//2, 4),
-                (size-4, size-4),
-                (4, size-4)
-            ]
-            painter.drawPolygon(*points)
-            painter.drawText(size//2-2, size-8, "!")
-        elif msg_type == MessageBoxType.CRITICAL:
-            # Draw X in circle
-            pen.setWidth(2)
-            painter.setPen(pen)
-            painter.drawEllipse(4, 4, size-8, size-8)
-            margin = size//4
-            painter.drawLine(margin, margin, size-margin, size-margin)
-            painter.drawLine(size-margin, margin, margin, size-margin)
-        elif msg_type == MessageBoxType.QUESTION:
-            # Draw question mark in circle
-            pen.setWidth(2)
-            painter.setPen(pen)
-            painter.drawEllipse(4, 4, size-8, size-8)
-            painter.drawText(size//2-4, size//2+4, "?")
-
-        painter.end()
-        return pixmap
+        icon_path = self._style_manager.get_icon_path(icon_name)
+        return self._style_manager.scale_icon(icon_path, 32)
 
     def _get_button_text(self, button: MessageBoxButton) -> str:
         """Get display text for button type."""
