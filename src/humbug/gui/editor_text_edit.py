@@ -206,29 +206,17 @@ class EditorTextEdit(QPlainTextEdit):
             cursor: The current text cursor
             tab_size: Number of spaces to use for indentation
         """
-        # Store initial column for cursor restoration
-        initial_pos = cursor.position()
-        line_start_pos = cursor.block().position()
-        current_column = initial_pos - line_start_pos
+        current_column = cursor.position() - cursor.block().position()
+        deletes_needed = 1 + ((current_column - 1) % tab_size)
+        deletes_needed = min(deletes_needed, current_column)
 
-        # Select the entire line
-        cursor.movePosition(QTextCursor.StartOfLine)
-        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-        line_text = cursor.selectedText()
+        while deletes_needed > 0:
+            text = cursor.block().text()
+            if text[current_column - 1] == " ":
+                cursor.deletePreviousChar()
 
-        # Count leading spaces
-        leading_spaces = len(line_text) - len(line_text.lstrip())
-        if leading_spaces == 0:
-            return
-
-        # Calculate how many spaces to remove
-        spaces_to_remove = min(leading_spaces, tab_size)
-        new_text = line_text[spaces_to_remove:]
-        cursor.insertText(new_text)
-
-        # Restore cursor position
-        new_column = max(0, current_column - spaces_to_remove)
-        cursor.setPosition(line_start_pos + new_column)
+            current_column -= 1
+            deletes_needed -= 1
 
     def _outdent_single_line_hard_tabs(self, cursor: QTextCursor) -> None:
         """
@@ -236,28 +224,12 @@ class EditorTextEdit(QPlainTextEdit):
 
         Args:
             cursor: The current text cursor
-
-        Returns:
-            bool: True if a tab was removed, False otherwise
         """
-        # Store initial column for cursor restoration
-        initial_pos = cursor.position()
-        line_start_pos = cursor.block().position()
-        current_column = initial_pos - line_start_pos
-
-        cursor.movePosition(QTextCursor.StartOfLine)
-        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-        line_text = cursor.selectedText()
-
-        if not line_text.startswith('\t'):
-            return
-
-        spaces_to_remove = 1
-        cursor.insertText(line_text[1:])
-
-        # Restore cursor position
-        new_column = max(0, current_column - spaces_to_remove)
-        cursor.setPosition(line_start_pos + new_column)
+        current_column = cursor.position() - cursor.block().position()
+        if current_column > 0:
+            text = cursor.block().text()
+            if text[current_column - 1] == "\t":
+                cursor.deletePreviousChar()
 
     def _outdent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
         """
