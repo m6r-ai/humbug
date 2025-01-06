@@ -177,6 +177,19 @@ Context: Capabilities
                             - Ctrl+End: Moves cursor to end of message
                             - Page Up/Down: Scroll by viewport height
 
+                    Context: Tab operations
+                        If the user has highlighted a block of text and then presses Tab then all of that block of code
+                        should be indented.  If the workspace is configured to use not use soft tabs then all the
+                        highlighted lines should be indented by one tab character.  If the workspace is configured to
+                        use soft tabs then all the highlighted lines should be indented by "tabSize" spaces.
+
+                        If the user has highlighted a block of text and then presses Shift+Tab then all of that block of code
+                        should be outdented.  If the workspace is configured to use not use soft tabs then all the
+                        highlighted lines should have their first leading tab character removed.  If any lines do not have
+                        leading tab characters then they are ignored.  If the workspace is configured to use soft tabs
+                        then all the highlighted lines should be outdented by "tabSize" spaces, unless they do not have
+                        enough leading spaces, in which case all available leading spaces will be removed.
+
             Context: Syntax highlighting
                 Code blocks and inline code will be syntax highlighted based on the programming language:
 

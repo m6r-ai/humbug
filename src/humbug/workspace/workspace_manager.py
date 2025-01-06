@@ -10,19 +10,20 @@ import os
 import shutil
 from typing import Dict, List, Optional
 
-from humbug.workspace.workspace_error import WorkspaceError
+from PySide6.QtCore import QObject, Signal
+
+from humbug.workspace.workspace_error import WorkspaceError, WorkspaceExistsError, WorkspaceNotFoundError
 from humbug.workspace.workspace_settings import WorkspaceSettings
 
 
-logger = logging.getLogger(__name__)
-
-
-class WorkspaceManager:
+class WorkspaceManager(QObject):
     """
     Manages Humbug application workspaces.
 
     A workspace is a directory containing project-specific settings and data. Each workspace
     has a .humbug subdirectory containing configuration files and conversation history.
+
+    Implements singleton pattern to provide global access to workspace state.
 
     Attributes:
         WORKSPACE_DIR: Name of the workspace configuration directory
@@ -30,15 +31,31 @@ class WorkspaceManager:
         RECENTS_FILE: Name of the file storing recent tabs
     """
 
+    # Signal emitted when workspace settings change
+    settings_changed = Signal()
+
     WORKSPACE_DIR = ".humbug"
     SETTINGS_FILE = "settings.json"
     RECENTS_FILE = "recents.json"
 
+    _instance = None
+    _logger = logging.getLogger("WorkspaceManager")
+
+    def __new__(cls):
+        """Create or return singleton instance."""
+        if cls._instance is None:
+            cls._instance = super(WorkspaceManager, cls).__new__(cls)
+            # Note: Don't initialize here - wait for __init__
+        return cls._instance
+
     def __init__(self):
-        """Initialize the workspace manager."""
-        self._workspace_path: Optional[str] = None
-        self._settings: Optional[WorkspaceSettings] = None
-        self._home_config = os.path.expanduser("~/.humbug/workspace.json")
+        """Initialize workspace manager if not already initialized."""
+        if not hasattr(self, '_initialized'):
+            super().__init__()
+            self._workspace_path: Optional[str] = None
+            self._settings: Optional[WorkspaceSettings] = None
+            self._home_config = os.path.expanduser("~/.humbug/workspace.json")
+            self._initialized = True
 
     @property
     def workspace_path(self) -> Optional[str]:
@@ -99,7 +116,7 @@ class WorkspaceManager:
                 json.dump({"tabs": []}, f, indent=2)
 
         except OSError as e:
-            logger.error("Failed to create workspace at %s: %s", path, str(e))
+            self._logger.error("Failed to create workspace at %s: %s", path, str(e))
             # Clean up any partially created workspace
             if os.path.exists(workspace_dir):
                 try:
@@ -132,9 +149,10 @@ class WorkspaceManager:
             self._workspace_path = path
             self._settings = settings
             self._update_home_tracking()
+            self.settings_changed.emit()
 
         except Exception as e:
-            logger.error("Failed to open workspace at %s: %s", path, str(e))
+            self._logger.error("Failed to open workspace at %s: %s", path, str(e))
             raise WorkspaceError(f"Failed to open workspace: {str(e)}") from e
 
     def close_workspace(self) -> None:
@@ -143,6 +161,7 @@ class WorkspaceManager:
             self._workspace_path = None
             self._settings = None
             self._update_home_tracking()
+            self.settings_changed.emit()
 
     def save_workspace_state(self, tabs: List[Dict]) -> None:
         """
@@ -172,7 +191,7 @@ class WorkspaceManager:
             with open(recents_path, "w", encoding='utf-8') as f:
                 json.dump({"tabs": tabs}, f, indent=2)
         except OSError as e:
-            logger.error("Failed to save workspace state: %s", str(e))
+            self._logger.error("Failed to save workspace state: %s", str(e))
             raise
 
     def load_workspace_state(self) -> Optional[List[Dict]]:
@@ -203,7 +222,7 @@ class WorkspaceManager:
 
                 return tabs
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            logger.error("Error loading workspace state: %s", str(e))
+            self._logger.error("Error loading workspace state: %s", str(e))
             return None
 
     def get_last_workspace(self) -> Optional[str]:
@@ -301,5 +320,5 @@ class WorkspaceManager:
             with open(self._home_config, 'w', encoding='utf-8') as f:
                 json.dump({"lastWorkspace": self._workspace_path}, f, indent=2)
         except OSError as e:
-            logger.error("Failed to update home tracking: %s", str(e))
+            self._logger.error("Failed to update home tracking: %s", str(e))
             # Non-critical error, don't raise

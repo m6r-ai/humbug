@@ -5,6 +5,7 @@ from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
 from humbug.gui.color_role import ColorRole
 from humbug.gui.line_number_area import LineNumberArea
 from humbug.gui.style_manager import StyleManager
+from humbug.workspace.workspace_manager import WorkspaceManager
 
 
 class EditorTextEdit(QPlainTextEdit):
@@ -108,6 +109,127 @@ class EditorTextEdit(QPlainTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
+        if event.key() == Qt.Key_Tab:
+            cursor = self.textCursor()
+            if cursor.hasSelection():
+                workspace_manager = WorkspaceManager()
+                if not workspace_manager.has_workspace:
+                    super().keyPressEvent(event)
+                    return
+
+                settings = workspace_manager.settings
+
+                # Store initial selection
+                start = cursor.selectionStart()
+                end = cursor.selectionEnd()
+
+                # Move cursor to start of selection
+                cursor.setPosition(start)
+                cursor.movePosition(QTextCursor.StartOfLine)
+
+                # Begin editing block
+                cursor.beginEditBlock()
+
+                try:
+                    # Keep track of the first line's position
+                    first_line_pos = cursor.position()
+
+                    while cursor.position() <= end:
+                        # Move to start of line if not already there
+                        if not cursor.atBlockStart():
+                            cursor.movePosition(QTextCursor.StartOfLine)
+
+                        # Insert appropriate indentation
+                        if settings.use_soft_tabs:
+                            cursor.insertText(" " * settings.tab_size)
+                            # Adjust end position for inserted spaces
+                            end += settings.tab_size
+                        else:
+                            cursor.insertText("\t")
+                            # Adjust end position for inserted tab
+                            end += 1
+
+                        # Move to next line
+                        if not cursor.movePosition(QTextCursor.NextBlock):
+                            break
+
+                    # Restore selection
+                    cursor.setPosition(first_line_pos)
+                    cursor.setPosition(end, QTextCursor.KeepAnchor)
+
+                finally:
+                    cursor.endEditBlock()
+                    self.setTextCursor(cursor)
+
+                event.accept()
+                return
+
+        if event.key() == Qt.Key_Backtab:  # Shift+Tab
+            cursor = self.textCursor()
+            if cursor.hasSelection():
+                workspace_manager = WorkspaceManager()
+                if not workspace_manager.has_workspace:
+                    super().keyPressEvent(event)
+                    return
+
+                settings = workspace_manager.settings
+
+                # Store initial selection
+                start = cursor.selectionStart()
+                end = cursor.selectionEnd()
+
+                # Move cursor to start of selection
+                cursor.setPosition(start)
+                cursor.movePosition(QTextCursor.StartOfLine)
+
+                # Begin editing block
+                cursor.beginEditBlock()
+
+                try:
+                    # Keep track of the first line's position
+                    first_line_pos = cursor.position()
+
+                    while cursor.position() <= end:
+                        # Move to start of line if not already there
+                        if not cursor.atBlockStart():
+                            cursor.movePosition(QTextCursor.StartOfLine)
+
+                        # Get current line text
+                        current_line = cursor.block().text()
+
+                        if settings.use_soft_tabs:
+                            # Count leading spaces
+                            leading_spaces = len(current_line) - len(current_line.lstrip(" "))
+                            # Remove up to tabSize spaces
+                            if leading_spaces > 0:
+                                chars_to_remove = min(leading_spaces, settings.tab_size)
+                                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, chars_to_remove)
+                                cursor.removeSelectedText()
+                                # Adjust end position
+                                end -= chars_to_remove
+                        else:
+                            # Remove one leading tab if present
+                            if current_line.startswith("\t"):
+                                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+                                cursor.removeSelectedText()
+                                # Adjust end position
+                                end -= 1
+
+                        # Move to next line
+                        if not cursor.movePosition(QTextCursor.NextBlock):
+                            break
+
+                    # Restore selection
+                    cursor.setPosition(first_line_pos)
+                    cursor.setPosition(end, QTextCursor.KeepAnchor)
+
+                finally:
+                    cursor.endEditBlock()
+                    self.setTextCursor(cursor)
+
+                event.accept()
+                return
+
         if event.key() == Qt.Key_Home:
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.StartOfLine)
