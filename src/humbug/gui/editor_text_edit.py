@@ -323,6 +323,8 @@ class EditorTextEdit(QPlainTextEdit):
         cursor = self.textCursor()
 
         if event.key() == Qt.Key_Tab:
+            scrollbar = self.verticalScrollBar()
+            current_scroll = scrollbar.value()
             cursor.beginEditBlock()
             try:
                 if not cursor.hasSelection():
@@ -338,11 +340,14 @@ class EditorTextEdit(QPlainTextEdit):
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)
+                scrollbar.setValue(current_scroll)
 
             event.accept()
             return
 
         if event.key() == Qt.Key_Backtab:  # Shift+Tab
+            scrollbar = self.verticalScrollBar()
+            current_scroll = scrollbar.value()
             cursor.beginEditBlock()
             try:
                 if not cursor.hasSelection():
@@ -359,6 +364,7 @@ class EditorTextEdit(QPlainTextEdit):
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)
+                scrollbar.setValue(current_scroll)
 
             event.accept()
             return
