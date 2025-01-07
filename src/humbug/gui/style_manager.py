@@ -57,7 +57,7 @@ class StyleManager(QObject):
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[str, QTextCharFormat] = {}
 
-            self._code_font_families = ["Lucida Console", "Menlo", "Consolas", "Monaco", "monospace"]
+            self._code_font_families = ["Consolas", "Menlo", "Monaco", "monospace"]
             self._initialize_highlights()
             self._create_theme_icons()
 
