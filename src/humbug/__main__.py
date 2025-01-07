@@ -1,6 +1,7 @@
 """Main entry point for the Humbug application."""
 
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -22,6 +23,70 @@ from humbug.syntax.python_parser import PythonParser  # noqa: F401
 from humbug.syntax.text_parser import TextParser  # noqa: F401
 from humbug.syntax.typescript_parser import TypeScriptParser  # noqa: F401
 from humbug.syntax.parser_registry import ParserRegistry
+
+
+def get_api_keys() -> dict[str, str | None]:
+    """
+    Get API keys from configuration file and environment variables.
+
+    The function will first check for a ~/.humbug/api-keys.json file and create it
+    if it doesn't exist. Keys from this file will override environment variables.
+
+    Returns:
+        dict: Dictionary containing API keys for OpenAI, Google, and Anthropic
+
+    Raises:
+        json.JSONDecodeError: If the API keys file exists but contains invalid JSON
+    """
+    logger = logging.getLogger(__name__)
+
+    # Initialize with environment variables
+    api_keys = {
+        "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
+        "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
+        "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY")
+    }
+
+    # Define the config directory and file path
+    config_dir = os.path.expanduser("~/.humbug")
+    config_file = os.path.join(config_dir, "api-keys.json")
+
+    # Create directory if it doesn't exist
+    try:
+        os.makedirs(config_dir, mode=0o700, exist_ok=True)
+    except PermissionError:
+        logger.error("Failed to create config directory", exc_info=True)
+        return api_keys
+
+    # Create or read the config file
+    try:
+        if not os.path.exists(config_file):
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    "OPENAI_API_KEY": "",
+                    "GOOGLE_API_KEY": "",
+                    "ANTHROPIC_API_KEY": ""
+                }, f, indent=4)
+            os.chmod(config_file, 0o600)
+        else:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+                if file_content.strip():  # Only parse if file is not empty
+                    file_keys = json.loads(file_content)
+                    # Override environment variables with non-empty file values
+                    for key in api_keys:
+                        if key in file_keys and file_keys[key]:
+                            api_keys[key] = file_keys[key]
+
+    except json.JSONDecodeError:
+        logger.error("Failed to parse API keys file", exc_info=True)
+        raise
+    except PermissionError:
+        logger.error("Failed to access API keys file", exc_info=True)
+    except OSError:
+        logger.error("Failed to read/write API keys file", exc_info=True)
+
+    return api_keys
 
 
 def install_global_exception_handler():
@@ -66,13 +131,14 @@ class HumbugApplication(QApplication):
 async def main():
     install_global_exception_handler()
 
-    # Check for API keys
-    openai_key = os.environ.get("OPENAI_API_KEY")
-    google_key = os.environ.get("GOOGLE_API_KEY")
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    # Get API keys from config and environment
+    api_keys = get_api_keys()
+    openai_key = api_keys["OPENAI_API_KEY"]
+    google_key = api_keys["GOOGLE_API_KEY"]
+    anthropic_key = api_keys["ANTHROPIC_API_KEY"]
 
     if not any([openai_key, google_key, anthropic_key]):
-        print("Error: No API keys found. At least one of OPENAI_API_KEY, GOOGLE_API_KEY, or ANTHROPIC_API_KEY must be set")
+        print("Error: No API keys found. Please set keys in ~/.humbug/api-keys.json or environment variables")
         return 1
 
     # Initialize components

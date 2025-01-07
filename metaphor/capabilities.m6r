@@ -269,7 +269,7 @@ Context: Capabilities
 
         Every workspace is identified by a ".humbug" directory within the project directory.
 
-        The ".humbug" directory contains:
+        The workspace ".humbug" directory contains:
 
         - settings.json: Project-specific configuration
         - recents.json: State of active elements
@@ -373,6 +373,55 @@ Context: Capabilities
         - The workspace path exists
         - The workspace is accessible
         - The workspace contains valid settings.json
+
+        Context: API key configuration
+            The application supports loading API keys from both environment variables and a configuration file.
+
+            The configuration file "api-keys.json" is stored in the ".humbug" directory in the user's home directory.
+
+            Context: API keys file
+                The api-keys.json file contains API keys for different providers:
+
+                ```json
+                {
+                    "OPENAI_API_KEY": "",
+                    "GOOGLE_API_KEY": "",
+                    "ANTHROPIC_API_KEY": ""
+                }
+                ```
+
+                The file is:
+
+                - Created automatically if it doesn't exist
+                - Set to mode 0o600 (user read/write only) for security
+                - Read during application startup
+
+                Context: Key precedence
+                    API keys are loaded with the following precedence:
+
+                    1. Non-empty values from api-keys.json
+                    2. Environment variables if corresponding file value is empty
+
+                    The environment variables checked are:
+
+                    - OPENAI_API_KEY for OpenAI models
+                    - GOOGLE_API_KEY for Google models
+                    - ANTHROPIC_API_KEY for Anthropic models
+
+                Context: File permissions
+                    For security:
+
+                    - The .humbug directory is created with mode 0o700 (user access only)
+                    - The api-keys.json file is created with mode 0o600 (user read/write only)
+
+                Context: Error handling
+                    If the api-keys.json file:
+
+                    - Cannot be created: Log error and fall back to environment variables
+                    - Contains invalid JSON: Log error and raise exception
+                    - Has permission issues: Log error and fall back to environment variables
+
+                    The application requires at least one valid API key to start.
 
     Context: Workspace operations
         Context: File tree interaction
@@ -1036,11 +1085,7 @@ Context: Capabilities
             - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"
 
         Context: Provider configuration
-            Each provider requires its own API key:
-
-            - OpenAI models require OPENAI_API_KEY environment variable
-            - Google models require GOOGLE_API_KEY environment variable
-            - Anthropic models require ANTHROPIC_API_KEY environment variable
+            Each provider requires its own API key, as noted in the section about API key configuration.
 
             At least one provider must be configured for the application to start.
 
