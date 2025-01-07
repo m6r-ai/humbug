@@ -630,14 +630,14 @@ class MainWindow(QMainWindow):
             }}
             QMenuBar {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
-                padding: {4 * zoom_factor}px;
-                font-size: {base_font_size * zoom_factor}pt;
+                padding: 4px;
+                font-size: {base_font_size}pt;
             }}
             QMenuBar::item {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border-radius: 4px;
-                padding: {4 * zoom_factor}px {8 * zoom_factor}px {4 * zoom_factor}px {8 * zoom_factor}px;
+                padding: 4px 8px 4px 8px;
             }}
             QMenuBar::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
@@ -646,13 +646,13 @@ class MainWindow(QMainWindow):
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
-                border-width: {1 * zoom_factor}px;
+                border-width: 1px;
                 border-style: solid;
-                border-radius: {4 * zoom_factor}px;
+                border-radius: 4px;
             }}
             QMenu::item {{
-                margin: {3 * zoom_factor}px {5 * zoom_factor}px;
-                padding: {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px {4 * zoom_factor}px;
+                margin: 3px 5px;
+                padding: 4px 4px 4px 4px;
             }}
             QMenu::item:disabled {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
@@ -662,11 +662,17 @@ class MainWindow(QMainWindow):
             }}
         """)
 
+        # Update status bar font
+        status_font = self.font()
+        status_font.setPointSizeF(base_font_size * zoom_factor)
+        self._status_bar.setFont(status_font)
+        self._status_message_label.setFont(status_font)
+
         self._status_bar.setStyleSheet(f"""
             QStatusBar {{
                 background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 2px;
+                padding: {2 * zoom_factor}px;
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
             QStatusBar::item {{

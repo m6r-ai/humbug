@@ -102,6 +102,14 @@ class WorkspaceFileTree(QWidget):
 
     def _handle_style_changed(self):
         """Update styling when application style changes."""
+        zoom_factor = self._style_manager.zoom_factor
+        base_font_size = self._style_manager.base_font_size
+
+        # Update font size
+        font = self.font()
+        font.setPointSizeF(base_font_size * zoom_factor)
+        self.setFont(font)
+        self._tree_view.setFont(font)
 
         self.setStyleSheet(f"""
             QTreeView {{
