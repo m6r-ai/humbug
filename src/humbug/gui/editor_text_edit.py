@@ -247,9 +247,11 @@ class EditorTextEdit(QPlainTextEdit):
             end_offs = 1
 
         # Work out how far to move the start postion
+        current_column = start - cursor.block().position()
         first_line = cursor.block().text()
         first_line_spaces = len(first_line) - len(first_line.lstrip(" "))
         first_line_spaces = min(first_line_spaces, tab_size)
+        first_line_spaces = min(first_line_spaces, current_column)
         start -= first_line_spaces
 
         while cursor.position() <= end - end_offs:
@@ -291,8 +293,9 @@ class EditorTextEdit(QPlainTextEdit):
             end_offs = 1
 
         # Work out how far to move the start postion
+        current_column = start - cursor.block().position()
         first_line = cursor.block().text()
-        if first_line and first_line[0] == "\t":
+        if first_line and first_line[0] == "\t" and current_column > 0:
             start -= 1
 
         while cursor.position() <= end - end_offs:
