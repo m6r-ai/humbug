@@ -300,11 +300,10 @@ class EditorTextEdit(QPlainTextEdit):
 
         while cursor.position() <= end - end_offs:
             text = cursor.block().text()
-            if not text or text[0] != "\t":
-                break
+            if text and text[0] == "\t":
+                cursor.deleteChar()
+                end -= 1
 
-            cursor.deleteChar()
-            end -= 1
             cursor.movePosition(QTextCursor.NextBlock)
 
         cursor.setPosition(start if not reverse else end)
