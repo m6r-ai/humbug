@@ -198,8 +198,10 @@ class EditorTab(TabBase):
                 min-height: 20px;
                 min-width: 20px;
             }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+            QScrollBar::add-page, QScrollBar::sub-page {{
+                background: none;
+            }}
+            QScrollBar::add-line, QScrollBar::sub-line {{
                 height: 0px;
                 width: 0px;
             }}

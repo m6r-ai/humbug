@@ -148,6 +148,9 @@ class WorkspaceFileTree(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-height: 20px;
             }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 height: 0px;
             }}
