@@ -9,7 +9,7 @@ from typing import Dict, List
 import uuid
 
 from PySide6.QtWidgets import (
-    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter
+    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -237,8 +237,21 @@ class MainWindow(QMainWindow):
         self._menu_timer.timeout.connect(self._update_menu_state)
         self._menu_timer.start()
 
-        # Create status bar
+        # Create status bar with left and right widgets
         self._status_bar = QStatusBar()
+        self._status_left = QWidget()
+        self._status_right = QWidget()
+
+        # Set up left widget (empty for now)
+        self._status_bar.addWidget(self._status_left, 1)
+
+        # Set up right widget for status messages
+        self._status_right_layout = QVBoxLayout(self._status_right)
+        self._status_right_layout.setContentsMargins(0, 0, 0, 0)
+        self._status_message_label = QLabel()
+        self._status_right_layout.addWidget(self._status_message_label)
+        self._status_bar.addPermanentWidget(self._status_right)
+
         self.setStatusBar(self._status_bar)
         self.tab_manager.current_tab_changed.connect(self._handle_tab_changed)
 
@@ -262,7 +275,9 @@ class MainWindow(QMainWindow):
 
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
-        self._status_bar.showMessage(message.text, message.timeout if message.timeout else 0)
+        self._status_message_label.setText(message.text)
+        if message.timeout:
+            QTimer.singleShot(message.timeout, self._status_message_label.clear)
 
     def _restore_last_workspace(self):
         """Restore last workspace on startup if available."""
@@ -644,6 +659,10 @@ class MainWindow(QMainWindow):
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 padding: 2px;
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+            }}
+            QLabel {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: 0;
             }}
         """)
 
