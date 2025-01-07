@@ -57,7 +57,7 @@ class StyleManager(QObject):
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[str, QTextCharFormat] = {}
 
-            self._code_font_families = ["Lucida Console", "Menlo", "Consolas", "Monaco", "Courier New", "monospace"]
+            self._code_font_families = ["Lucida Console", "Menlo", "Consolas", "Monaco", "monospace"]
             self._initialize_highlights()
             self._create_theme_icons()
 
@@ -645,4 +645,4 @@ class StyleManager(QObject):
     @property
     def monospace_font_families(self) -> List[str]:
         """Get the standard monospace font family fallback sequence."""
-        return ["Lucida Console", "Menlo", "Consolas", "Monaco", "Courier New", "monospace"]
+        return self._code_font_families

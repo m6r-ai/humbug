@@ -27,9 +27,9 @@ class EditorTextEdit(QPlainTextEdit):
 
         # Setup line number area
         self._line_number_area = LineNumberArea(self)
-        self._monospace_font_families = self._style_manager.monospace_font_families
         font = self._line_number_area.font()
-        font.setFamilies(self._monospace_font_families)
+        font.setFamilies(self._style_manager.monospace_font_families)
+        self.setFont(font)
         self._line_number_area.setFont(font)
 
         self.blockCountChanged.connect(self.update_line_number_area_width)
