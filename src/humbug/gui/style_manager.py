@@ -6,6 +6,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 
 from enum import Enum, auto
 import os
+from pathlib import Path
 from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
@@ -463,7 +464,7 @@ class StyleManager(QObject):
         """
         icon_dir = os.path.expanduser("~/.humbug/icons")
         theme = "dark" if self._color_mode == ColorMode.DARK else "light"
-        return os.path.join(icon_dir, f"{name}-{theme}.svg")
+        return Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
 
     def scale_icon(self, icon_path: str, target_size: int) -> QPixmap:
         """

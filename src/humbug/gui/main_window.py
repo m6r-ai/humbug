@@ -339,6 +339,7 @@ class MainWindow(QMainWindow):
             self._menu_timer.start()
             if not dir_path:
                 return
+
             path = dir_path
 
         # If we're switching workspaces, save the current one first

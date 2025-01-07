@@ -1,6 +1,5 @@
 """Updated TabManager implementation to support both conversation and editor tabs"""
 
-import os
 from typing import Optional, Dict, List, cast
 
 from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QStackedWidget
@@ -9,7 +8,7 @@ from PySide6.QtCore import Signal
 from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
-from humbug.gui.style_manager import StyleManager, ColorMode
+from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_label import TabLabel
 from humbug.gui.welcome_widget import WelcomeWidget
@@ -271,9 +270,6 @@ class TabManager(QWidget):
         Args:
             factor: New zoom factor
         """
-        icon_dir = os.path.expanduser("~/.humbug/icons")
-        theme = "dark" if self._style_manager.color_mode == ColorMode.DARK else "light"
-
         self._tab_widget.setStyleSheet(f"""
             QTabWidget::pane {{
                 border: none;
@@ -301,12 +297,12 @@ class TabManager(QWidget):
                 border: none;
             }}
             QTabBar QToolButton::right-arrow {{
-                image: url("{icon_dir}/arrow-right-{theme}.svg");
+                image: url({self._style_manager.get_icon_path('arrow-right')});
                 width: 12px;
                 height: 12px;
             }}
             QTabBar QToolButton::left-arrow {{
-                image: url("{icon_dir}/arrow-left-{theme}.svg");
+                image: url({self._style_manager.get_icon_path('arrow-left')});
                 width: 12px;
                 height: 12px;
             }}

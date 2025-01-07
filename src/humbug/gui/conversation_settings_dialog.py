@@ -1,6 +1,5 @@
 """Dialog for configuring conversation-specific settings."""
 
-import os
 from typing import List
 
 from PySide6.QtWidgets import (
@@ -11,7 +10,7 @@ from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import StyleManager, ColorMode
+from humbug.gui.style_manager import StyleManager
 
 
 class ConversationSettingsDialog(QDialog):
@@ -124,9 +123,6 @@ class ConversationSettingsDialog(QDialog):
         self.setLayout(layout)
 
         # Apply consistent dialog styling
-        icon_dir = os.path.expanduser("~/.humbug/icons")
-        theme = "dark" if style_manager.color_mode == ColorMode.DARK else "light"
-
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
@@ -151,12 +147,12 @@ class ConversationSettingsDialog(QDialog):
                 width: 20px;
             }}
             QComboBox::down-arrow {{
-                image: url("{icon_dir}/arrow-down-{theme}.svg");
+                image: url({style_manager.get_icon_path("arrow-down")});
                 width: 12px;
                 height: 12px;
             }}
             QComboBox::down-arrow:on {{
-                image: url("{icon_dir}/arrow-up-{theme}.svg");
+                image: url({style_manager.get_icon_path('arrow-up')});
                 width: 12px;
                 height: 12px;
             }}
@@ -184,7 +180,7 @@ class ConversationSettingsDialog(QDialog):
                 width: 20px;
             }}
             QDoubleSpinBox::up-arrow {{
-                image: url("{icon_dir}/arrow-up-{theme}.svg");
+                image: url({style_manager.get_icon_path('arrow-up')});
                 width: 12px;
                 height: 12px;
             }}
@@ -192,7 +188,7 @@ class ConversationSettingsDialog(QDialog):
                 image: none;
             }}
             QDoubleSpinBox::down-arrow {{
-                image: url("{icon_dir}/arrow-down-{theme}.svg");
+                image: url({style_manager.get_icon_path('arrow-down')});
                 width: 12px;
                 height: 12px;
             }}
@@ -273,7 +269,7 @@ class ConversationSettingsDialog(QDialog):
 
         self.apply_button.setEnabled(
             current_model != self._current_settings.model or
-            current_temp != self._current_settings.temperature
+            abs(current_temp - self._current_settings.temperature) > 0.01
         )
 
     def set_available_models(self, models: List[str]):

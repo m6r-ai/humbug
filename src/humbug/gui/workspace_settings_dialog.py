@@ -5,7 +5,6 @@ This dialog allows users to configure workspace settings such as tab behavior an
 Settings are persisted to the workspace's settings.json file.
 """
 
-import os
 from typing import Optional
 
 from PySide6.QtWidgets import (
@@ -15,7 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import StyleManager, ColorMode
+from humbug.gui.style_manager import StyleManager
 from humbug.workspace.workspace_settings import WorkspaceSettings
 
 
@@ -101,9 +100,6 @@ class WorkspaceSettingsDialog(QDialog):
         self.setLayout(layout)
 
         # Apply consistent dialog styling
-        icon_dir = os.path.expanduser("~/.humbug/icons")
-        theme = "dark" if style_manager.color_mode == ColorMode.DARK else "light"
-
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
@@ -126,7 +122,7 @@ class WorkspaceSettingsDialog(QDialog):
             }}
             QCheckBox::indicator:checked {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                image: url("{icon_dir}/check-{theme}.svg");
+                image: url({style_manager.get_icon_path('check')});
             }}
             QCheckBox::indicator:unchecked {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
@@ -143,7 +139,7 @@ class WorkspaceSettingsDialog(QDialog):
                 width: 20px;
             }}
             QSpinBox::up-arrow {{
-                image: url("{icon_dir}/arrow-up-{theme}.svg");
+                image: url({style_manager.get_icon_path('arrow-up')});
                 width: 12px;
                 height: 12px;
             }}
@@ -151,7 +147,7 @@ class WorkspaceSettingsDialog(QDialog):
                 image: none;
             }}
             QSpinBox::down-arrow {{
-                image: url("{icon_dir}/arrow-down-{theme}.svg");
+                image: url({style_manager.get_icon_path('arrow-down')});
                 width: 12px;
                 height: 12px;
             }}
