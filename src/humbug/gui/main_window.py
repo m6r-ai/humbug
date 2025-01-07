@@ -226,8 +226,13 @@ class MainWindow(QMainWindow):
         self.tab_manager = TabManager(self)
         self._splitter.addWidget(self.tab_manager)
 
-        # Set initial splitter sizes (30% file tree, 70% tabs)
-        self._splitter.setSizes([300, 700])
+        # Set initial file tree width
+        self._splitter.setSizes([240, self.width() - 240])
+
+        # Set the stretch factors: 0 for file tree (no stretch) and 1 for tab manager (stretch to fill)
+        self._splitter.setStretchFactor(0, 0)
+        self._splitter.setStretchFactor(1, 1)
+
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
