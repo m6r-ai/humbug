@@ -666,6 +666,10 @@ class MainWindow(QMainWindow):
                 padding: 2px;
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
+            QStatusBar::item {{
+                border: 0;
+                padding: 0;
+            }}
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 padding: 0;
