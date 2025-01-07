@@ -7,7 +7,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 from enum import Enum, auto
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
 from PySide6.QtGui import (
@@ -52,6 +52,7 @@ class StyleManager(QObject):
             super().__init__()
             self._zoom_factor = 1.0
             self._base_font_size = self._determine_base_font_size()
+            self._workspace_font_size = None
             self._initialized = True
             self._color_mode = ColorMode.DARK  # Default to dark mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
@@ -551,7 +552,13 @@ class StyleManager(QObject):
     @property
     def base_font_size(self) -> float:
         """Get the base font size for the current system."""
-        return self._base_font_size
+        return self._workspace_font_size or self._base_font_size
+
+    def set_workspace_font_size(self, size: Optional[float]) -> None:
+        """Set workspace-specific font size override."""
+        if size != self._workspace_font_size:
+            self._workspace_font_size = size
+            self.style_changed.emit(self._zoom_factor)
 
     @property
     def color_mode(self) -> ColorMode:

@@ -294,6 +294,7 @@ class MainWindow(QMainWindow):
                     try:
                         self._workspace_manager.open_workspace(workspace_path)
                         self._file_tree.set_workspace(workspace_path)
+                        self._style_manager.set_workspace_font_size(self._workspace_manager.settings.font_size)
                         self._restore_workspace_state()
                     except WorkspaceError as e:
                         self._logger.error("Failed to restore workspace: %s", str(e))
@@ -352,6 +353,7 @@ class MainWindow(QMainWindow):
         try:
             self._workspace_manager.open_workspace(path)
             self._file_tree.set_workspace(path)
+            self._style_manager.set_workspace_font_size(self._workspace_manager.settings.font_size)
         except WorkspaceError as e:
             MessageBox.show_message(
                 self,
@@ -372,6 +374,7 @@ class MainWindow(QMainWindow):
         self._save_workspace_state()
         self._close_all_tabs()
         self._file_tree.set_workspace(None)
+        self._style_manager.set_workspace_font_size(None)
         self._workspace_manager.close_workspace()
 
     def _save_workspace_state(self):
@@ -851,6 +854,7 @@ class MainWindow(QMainWindow):
                 )
                 new_settings.save(settings_path)
                 self._workspace_manager._settings = new_settings  # Update current settings
+                self._style_manager.set_workspace_font_size(new_settings.font_size)
             except OSError as e:
                 self._logger.error("Failed to save workspace settings: %s", str(e))
                 MessageBox.show_message(

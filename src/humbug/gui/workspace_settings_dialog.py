@@ -9,7 +9,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QSpinBox, QCheckBox
+    QPushButton, QSpinBox, QCheckBox, QDoubleSpinBox
 )
 from PySide6.QtCore import Signal
 
@@ -37,7 +37,7 @@ class WorkspaceSettingsDialog(QDialog):
         self._initial_settings: Optional[WorkspaceSettings] = None
         self._current_settings: Optional[WorkspaceSettings] = None
 
-        style_manager = StyleManager()
+        self._style_manager = StyleManager()
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
@@ -71,6 +71,22 @@ class WorkspaceSettingsDialog(QDialog):
         tab_size_layout.addWidget(self._tab_size_spin)
         layout.addLayout(tab_size_layout)
 
+        font_size_layout = QHBoxLayout()
+        font_size_label = QLabel("Font Size:")
+        font_size_label.setMinimumHeight(40)
+        self._font_size_spin = QDoubleSpinBox()
+        self._font_size_spin.setRange(8.0, 24.0)
+        self._font_size_spin.setSingleStep(0.5)
+        self._font_size_spin.setDecimals(1)
+        self._font_size_spin.setMinimumWidth(300)
+        self._font_size_spin.setMinimumHeight(40)
+        self._font_size_spin.setContentsMargins(8, 8, 8, 8)
+        self._font_size_spin.valueChanged.connect(self._handle_value_change)
+        font_size_layout.addWidget(font_size_label)
+        font_size_layout.addStretch()
+        font_size_layout.addWidget(self._font_size_spin)
+        layout.addLayout(font_size_layout)
+
         # Add spacing before buttons
         layout.addSpacing(24)
         layout.addStretch()
@@ -102,15 +118,15 @@ class WorkspaceSettingsDialog(QDialog):
         # Apply consistent dialog styling
         self.setStyleSheet(f"""
             QDialog {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
             }}
             QLabel {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
             }}
             QCheckBox {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 spacing: 8px;
             }}
             QCheckBox::indicator {{
@@ -118,28 +134,59 @@ class WorkspaceSettingsDialog(QDialog):
                 height: 18px;
                 border: none;
                 border-radius: 4px;
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
             }}
             QCheckBox::indicator:checked {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                image: url({style_manager.get_icon_path('check')});
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                image: url({self._style_manager.get_icon_path('check')});
             }}
             QCheckBox::indicator:unchecked {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
             }}
             QSpinBox {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+            }}
+            QDoubleSpinBox {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+            }}
+            QDoubleSpinBox:disabled {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
+                border: none;
+                width: 20px;
+            }}
+            QDoubleSpinBox::up-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
+                image: none;
+            }}
+            QDoubleSpinBox::down-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-down')});
+                width: 12px;
+                height: 12px;
+            }}
+            QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
+                image: none;
             }}
             QSpinBox::up-button, QSpinBox::down-button {{
                 border: none;
                 width: 20px;
             }}
             QSpinBox::up-arrow {{
-                image: url({style_manager.get_icon_path('arrow-up')});
+                image: url({self._style_manager.get_icon_path('arrow-up')});
                 width: 12px;
                 height: 12px;
             }}
@@ -147,7 +194,7 @@ class WorkspaceSettingsDialog(QDialog):
                 image: none;
             }}
             QSpinBox::down-arrow {{
-                image: url({style_manager.get_icon_path('arrow-down')});
+                image: url({self._style_manager.get_icon_path('arrow-down')});
                 width: 12px;
                 height: 12px;
             }}
@@ -155,21 +202,21 @@ class WorkspaceSettingsDialog(QDialog):
                 image: none;
             }}
             QPushButton {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
             }}
             QPushButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
             QPushButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
             QPushButton:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
         """)
 
@@ -180,14 +227,16 @@ class WorkspaceSettingsDialog(QDialog):
 
         self.apply_button.setEnabled(
             self._soft_tabs_check.isChecked() != self._current_settings.use_soft_tabs or
-            self._tab_size_spin.value() != self._current_settings.tab_size
+            self._tab_size_spin.value() != self._current_settings.tab_size or
+            self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
         )
 
     def get_settings(self) -> WorkspaceSettings:
         """Get the current settings from the dialog."""
         return WorkspaceSettings(
             use_soft_tabs=self._soft_tabs_check.isChecked(),
-            tab_size=self._tab_size_spin.value()
+            tab_size=self._tab_size_spin.value(),
+            font_size=self._font_size_spin.value()
         )
 
     def set_settings(self, settings: WorkspaceSettings) -> None:
@@ -198,15 +247,18 @@ class WorkspaceSettingsDialog(QDialog):
         """
         self._initial_settings = WorkspaceSettings(
             use_soft_tabs=settings.use_soft_tabs,
-            tab_size=settings.tab_size
+            tab_size=settings.tab_size,
+            font_size=settings.font_size
         )
         self._current_settings = WorkspaceSettings(
             use_soft_tabs=settings.use_soft_tabs,
-            tab_size=settings.tab_size
+            tab_size=settings.tab_size,
+            font_size=settings.font_size
         )
 
         self._soft_tabs_check.setChecked(settings.use_soft_tabs)
         self._tab_size_spin.setValue(settings.tab_size)
+        self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
         self.apply_button.setEnabled(False)
 
     def _handle_apply(self) -> None:

@@ -281,7 +281,8 @@ Context: Capabilities
             {
                 "editor": {
                     "useSoftTabs": true,
-                    "tabSize": 4
+                    "tabSize": 4,
+                    "fontSize": 12
                 }
             }
             ```
@@ -331,6 +332,30 @@ Context: Capabilities
             - Skip elements that cannot be restored
             - Continue with remaining elements
             - No error shown for skipped elements
+
+        Context: Workspace settings
+            As an engineer maintaining the application, I want to ensure settings are documented so I can understand
+            all configuration options.
+
+            Context: Settings Dialog
+                Context: Editor settings
+                    The editor supports configurable settings.
+
+                    Context: Tab settings
+                        The editor supports configurable tab behavior.
+
+                        Context: Soft tabs
+                            The useSoftTabs setting controls whether pressing the tab key inserts literal
+                            tab characters or equivalent spaces.
+
+                        Context: Tab size
+                            The tabSize setting controls how many spaces wide a tab or soft tab will be.
+
+                    Context: Font size
+                        The fontSize setting controls the base font size used in editors and related text areas.
+                        When not specified, the system default font size will be used.
+
+                        The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
 
     Context: Home directory configuration
         The application maintains a ".humbug" directory in the user's home directory.
