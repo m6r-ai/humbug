@@ -151,15 +151,11 @@ class EditorTextEdit(QPlainTextEdit):
         if check_cursor.atBlockStart():
             end_offs = 1
 
+        start += tab_size
         while cursor.position() <= end - end_offs:
-            if not cursor.atBlockStart():
-                cursor.movePosition(QTextCursor.StartOfLine)
-
             cursor.insertText(" " * tab_size)
             end += tab_size
-
-            if not cursor.movePosition(QTextCursor.NextBlock):
-                break
+            cursor.movePosition(QTextCursor.NextBlock)
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -185,15 +181,11 @@ class EditorTextEdit(QPlainTextEdit):
         if check_cursor.atBlockStart():
             end_offs = 1
 
+        start += 1
         while cursor.position() <= end - end_offs:
-            if not cursor.atBlockStart():
-                cursor.movePosition(QTextCursor.StartOfLine)
-
             cursor.insertText("\t")
             end += 1
-
-            if not cursor.movePosition(QTextCursor.NextBlock):
-                break
+            cursor.movePosition(QTextCursor.NextBlock)
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -212,9 +204,10 @@ class EditorTextEdit(QPlainTextEdit):
 
         while deletes_needed > 0:
             text = cursor.block().text()
-            if text[current_column - 1] == " ":
-                cursor.deletePreviousChar()
+            if not text or text[current_column - 1] != " ":
+                break
 
+            cursor.deletePreviousChar()
             current_column -= 1
             deletes_needed -= 1
 
@@ -228,7 +221,7 @@ class EditorTextEdit(QPlainTextEdit):
         current_column = cursor.position() - cursor.block().position()
         if current_column > 0:
             text = cursor.block().text()
-            if text[current_column - 1] == "\t":
+            if text and text[current_column - 1] == "\t":
                 cursor.deletePreviousChar()
 
     def _outdent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
@@ -241,33 +234,40 @@ class EditorTextEdit(QPlainTextEdit):
         """
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
+        reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
         cursor.movePosition(QTextCursor.StartOfLine)
-        first_line_pos = cursor.position()
 
-        total_chars_removed = 0
+        # If selection ends at start of line, don't outdent that line
+        end_offs = 0
+        check_cursor = QTextCursor(cursor)
+        check_cursor.setPosition(end)
+        if check_cursor.atBlockStart():
+            end_offs = 1
 
-        while cursor.position() <= end:
-            if not cursor.atBlockStart():
-                cursor.movePosition(QTextCursor.StartOfLine)
+        # Work out how far to move the start postion
+        first_line = cursor.block().text()
+        first_line_spaces = len(first_line) - len(first_line.lstrip(" "))
+        first_line_spaces = min(first_line_spaces, tab_size)
+        start -= first_line_spaces
 
-            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-            line_text = cursor.selectedText()
-            leading_spaces = len(line_text) - len(line_text.lstrip(" "))
+        while cursor.position() <= end - end_offs:
+            deletes_needed = tab_size
 
-            if leading_spaces > 0:
-                chars_to_remove = min(leading_spaces, tab_size)
-                cursor.insertText(line_text[chars_to_remove:])
-                end -= chars_to_remove
-                total_chars_removed += chars_to_remove
+            while deletes_needed > 0:
+                text = cursor.block().text()
+                if not text or text[0] != " ":
+                    break
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
-                break
+                cursor.deleteChar()
+                deletes_needed -= 1
+                end -= 1
 
-        end -= total_chars_removed
-        cursor.setPosition(first_line_pos)
-        cursor.setPosition(end, QTextCursor.KeepAnchor)
+            cursor.movePosition(QTextCursor.NextBlock)
+
+        cursor.setPosition(start if not reverse else end)
+        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
 
     def _outdent_block_hard_tabs(self, cursor: QTextCursor) -> None:
         """
@@ -278,31 +278,34 @@ class EditorTextEdit(QPlainTextEdit):
         """
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
+        reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
         cursor.movePosition(QTextCursor.StartOfLine)
-        first_line_pos = cursor.position()
 
-        tabs_removed = 0
+        # If selection ends at start of line, don't outdent that line
+        end_offs = 0
+        check_cursor = QTextCursor(cursor)
+        check_cursor.setPosition(end)
+        if check_cursor.atBlockStart():
+            end_offs = 1
 
-        while cursor.position() <= end:
-            if not cursor.atBlockStart():
-                cursor.movePosition(QTextCursor.StartOfLine)
+        # Work out how far to move the start postion
+        first_line = cursor.block().text()
+        if first_line and first_line[0] == "\t":
+            start -= 1
 
-            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-            line_text = cursor.selectedText()
-
-            if line_text.startswith('\t'):
-                cursor.insertText(line_text[1:])
-                end -= 1
-                tabs_removed += 1
-
-            if not cursor.movePosition(QTextCursor.NextBlock):
+        while cursor.position() <= end - end_offs:
+            text = cursor.block().text()
+            if not text or text[0] != "\t":
                 break
 
-        end -= tabs_removed
-        cursor.setPosition(first_line_pos)
-        cursor.setPosition(end, QTextCursor.KeepAnchor)
+            cursor.deleteChar()
+            end -= 1
+            cursor.movePosition(QTextCursor.NextBlock)
+
+        cursor.setPosition(start if not reverse else end)
+        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """
