@@ -6,7 +6,7 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QTreeView, QFileSystemModel, QWidget, QVBoxLayout
 )
-from PySide6.QtCore import Signal, QModelIndex
+from PySide6.QtCore import Signal, QModelIndex, Qt
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -51,6 +51,9 @@ class WorkspaceFileTree(QWidget):
 
         # Add to layout
         layout.addWidget(self._tree_view)
+
+        # Hide horizontal scrollbar
+        self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Apply styling
         self._handle_style_changed()
@@ -105,6 +108,7 @@ class WorkspaceFileTree(QWidget):
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
+                padding: 4px;
             }}
             QTreeView::item {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
