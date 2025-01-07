@@ -103,16 +103,15 @@ class WorkspaceFileTree(QWidget):
     def _handle_style_changed(self):
         """Update styling when application style changes."""
 
-        print(f"{self._style_manager.get_icon_path('arrow-right')}")
         self.setStyleSheet(f"""
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
-                padding: 4px;
+                padding: 8px;
             }}
             QTreeView::item {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 1px;
+                padding: 2px;
             }}
             QTreeView::item:selected {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
