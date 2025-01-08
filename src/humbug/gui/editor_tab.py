@@ -64,8 +64,8 @@ class EditorTab(TabBase):
         self._untitled_number: Optional[int] = None
         self._style_manager = StyleManager()
         self._last_save_content = ""
-        self._auto_save_timer = QTimer(self)
-        self._auto_save_timer.timeout.connect(self._auto_save)
+        self._auto_backup_timer = QTimer(self)
+        self._auto_backup_timer.timeout.connect(self._auto_backup)
         self._current_language = ProgrammingLanguage.TEXT
 
         # Set up layout
@@ -107,34 +107,15 @@ class EditorTab(TabBase):
     def update_auto_backup_settings(self, enabled: bool, interval: int) -> None:
         """Update auto-backup settings."""
         if enabled:
-            self._auto_save_timer.setInterval(interval * 1000)  # Convert to milliseconds
+            self._auto_backup_timer.setInterval(interval * 1000)  # Convert to milliseconds
             if self._is_modified:
                 # If we have unsaved changes, start backup immediately
-                self._auto_save_timer.start()
-
+                self._auto_backup_timer.start()
             return
 
-        self._auto_save_timer.stop()
+        self._auto_backup_timer.stop()
         # Clean up any existing backups since auto-backup is disabled
-        if self._path:
-            backup_file = f"{self._path}.backup"
-            try:
-                if os.path.exists(backup_file):
-                    os.remove(backup_file)
-            except OSError as e:
-                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
-        elif self._untitled_number:
-            backup_dir = os.path.expanduser("~/.humbug/backups")
-            prefix = f"backup-{self._untitled_number}-"
-            try:
-                for file in os.listdir(backup_dir):
-                    if file.startswith(prefix):
-                        try:
-                            os.remove(os.path.join(backup_dir, file))
-                        except OSError as e:
-                            self._logger.warning("Failed to remove backup %s: %s", file, str(e))
-            except OSError as e:
-                self._logger.warning("Failed to clean up backups: %s", str(e))
+        self._cleanup_backup_files()
 
     def get_state(self) -> TabState:
         """Get serializable state for workspace persistence."""
@@ -348,10 +329,10 @@ class EditorTab(TabBase):
 
         workspace_manager = WorkspaceManager()
         if workspace_manager.has_workspace and workspace_manager.settings.auto_backup:
-            if is_modified and not self._auto_save_timer.isActive():
-                self._auto_save_timer.start()
+            if is_modified and not self._auto_backup_timer.isActive():
+                self._auto_backup_timer.start()
             elif not is_modified:
-                self._auto_save_timer.stop()
+                self._auto_backup_timer.stop()
 
     def update_status(self) -> None:
         """Update status bar with current cursor position."""
@@ -382,19 +363,25 @@ class EditorTab(TabBase):
         )
         self.status_message.emit(message)
 
-    def _auto_save(self) -> None:
-        """Handle auto-save functionality."""
+    def _auto_backup(self) -> None:
+        """Handle auto-backup functionality."""
         if not self._is_modified:
             return
 
-        if not self._path:
-            backup_dir = os.path.expanduser("~/.humbug/backups")
-            os.makedirs(backup_dir, exist_ok=True)
+        # All backups should now go in workspace .humbug/backups
+        workspace_manager = WorkspaceManager()
+        if not workspace_manager.has_workspace:
+            return  # No backups without a workspace
 
-            # Clean up old backups for this untitled file
+        backup_dir = workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
+        os.makedirs(backup_dir, exist_ok=True)
+
+        if not self._path:
+            # For untitled files, use timestamp-based backup in workspace
             prefix = f"backup-{self._untitled_number}-"
             current_time = int(time.time())
             try:
+                # Clean up old backups for this untitled file
                 for file in os.listdir(backup_dir):
                     if file.startswith(prefix):
                         file_path = os.path.join(backup_dir, file)
@@ -432,6 +419,34 @@ class EditorTab(TabBase):
         except Exception as e:
             self._logger.error("Failed to create backup file '%s': %s", backup_file, str(e))
 
+    def _cleanup_backup_files(self) -> None:
+        """Clean up any backup files for this editor."""
+        workspace_manager = WorkspaceManager()
+        if not workspace_manager.has_workspace:
+            return
+
+        if self._path:
+            # Clean up backup for saved file
+            backup_file = f"{self._path}.backup"
+            try:
+                if os.path.exists(backup_file):
+                    os.remove(backup_file)
+            except OSError as e:
+                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
+        elif self._untitled_number:
+            # Clean up backups for untitled file
+            backup_dir = workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
+            prefix = f"backup-{self._untitled_number}-"
+            try:
+                for file in os.listdir(backup_dir):
+                    if file.startswith(prefix):
+                        try:
+                            os.remove(os.path.join(backup_dir, file))
+                        except OSError as e:
+                            self._logger.warning("Failed to remove backup %s: %s", file, str(e))
+            except OSError as e:
+                self._logger.warning("Failed to clean up backups: %s", str(e))
+
     def can_close(self) -> bool:
         """Check if the file can be closed."""
         if not self._is_modified:
@@ -448,9 +463,14 @@ class EditorTab(TabBase):
         if result == MessageBoxButton.SAVE:
             return self.save()
 
-        return result == MessageBoxButton.DISCARD
+        if result == MessageBoxButton.DISCARD:
+            # Delete any backup files when discarding changes
+            self._cleanup_backup_files()
+            return True
 
-    def close(self) -> bool:
+        return False
+
+    def close(self) -> None:
         pass
 
     def can_save(self) -> bool:

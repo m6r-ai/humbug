@@ -15,7 +15,7 @@ Context: Capabilities
             The file tree displays the contents of the current workspace:
 
             - Shows all files and folders in the workspace directory
-            - Excludes the .humbug directory and other hidden files/folders
+            - Excludes the ".humbug" directory and other hidden files/folders
             - Directories are shown before files in the tree
             - Files and directories are sorted alphabetically within their sections
             - The tree supports keyboard navigation using arrow keys
@@ -374,7 +374,7 @@ Context: Capabilities
                         Default interval is 300 seconds (5 minutes).
 
                     Context: Backup location
-                        For untitled files, backups are stored in "~/.humbug/backups" with timestamp.
+                        For untitled files, backups are stored in the workspace ".humbug/backups" directory with timestamp.
 
                         For saved files, backups are stored alongside the original with ".backup" extension.
 
@@ -826,7 +826,7 @@ Context: Capabilities
 
             - Modified files are marked with an asterisk in the tab name
             - Attempting to close a modified file prompts for save
-            - Auto-save backups are maintained every 5 minutes if the file has unsaved changes
+            - Auto-save backups are maintained periodically if the file has unsaved changes and auto-backup is enabled.
 
         Context: Status bar
             The editor status bar shows:
