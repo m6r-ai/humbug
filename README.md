@@ -1,55 +1,126 @@
 # Humbug
 
-Humbug is a GUI-based application that enables interaction with AI backends through a tabbed chat interface. It supports multiple conversations, streaming responses, and configurable AI models.
+Humbug is a versatile, GUI-based application designed to facilitate interaction with various AI backends. It offers a user-friendly tabbed interface for managing multiple conversations and editing files, all while maintaining a consistent user experience across platforms.
 
 ## Features
 
-- Multi-tab conversation interface
-- Real-time streaming of AI responses
-- Configurable AI model settings
-- Command support
-- Conversation transcript logging
-- Cross-platform support (Windows, MacOS, Linux)
+- **Multi-Tab Interface:**
+    - Supports multiple concurrent conversations with AI backends.
+    - Allows for editing of text files with syntax highlighting.
+    - Tabs can be easily rearranged and closed.
+- **AI Interaction:**
+    - Real-time streaming of AI responses.
+    - Configurable AI model settings per conversation.
+    - Supports OpenAI, Google Gemini, and Anthropic models.
+    - Configurable temperature settings for supported models.
+    - Error handling and retry mechanisms for API requests.
+- **File Editing:**
+    - Syntax highlighting for various programming languages.
+    - Line number display and cursor position tracking.
+    - Auto-backup functionality for unsaved changes.
+    - Configurable tab and font settings.
+- **Workspace Management:**
+    - Project-specific environments with their own settings and state.
+    - Workspace settings include soft tabs, tab size, font size, and auto-backup options.
+    - Workspace state persistence for restoring open tabs and cursor positions.
+    - Home directory tracking of last opened workspace.
+- **User Interface:**
+    - Keyboard navigation and mouse support.
+    - Resizable splitter between file tree and tab view.
+    - Consistent styling with light/dark mode themes.
+    - Modal dialogs with visual consistency.
+    - Status bar for application information.
+- **Conversation Features:**
+    - Markdown-style code formatting in input and history.
+    - Message history with distinct cards for user, AI, and system messages.
+    - Input area that expands vertically as content is added.
+    - Full vertical scrollbar for history and input area.
+    - Conversation transcript logging.
+- **File Tree:**
+    - Displays all files and folders in the workspace directory.
+    - Excludes the ".humbug" directory and other hidden files/folders.
+    - Supports keyboard navigation and automatic refresh when files change.
+- **Menu System:**
+    - Top-level menus for Humbug, File, Edit, and View.
+    - Keyboard shortcuts for all menu items.
+    - Dynamic menu item state updates based on application context.
+- **Cross-Platform Support:**
+    - Compatible with MacOS X (2020+), Linux (2020+), and Windows 10/11.
+- **Asynchronous Design:**
+    - Utilizes asynchronous operations to ensure responsiveness.
 
 ## Requirements
 
 - Python 3.10 or higher
-- OpenAI API key
+- API keys for at least one of the supported AI providers (OpenAI, Google, Anthropic)
 - PySide6
 - aiohttp
+- m6rclib
+- qasync
 
 ## Installation
 
 1. Create and activate a virtual environment:
 
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/MacOS
-# or
-venv\Scripts\activate     # Windows
-```
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/MacOS
+   # or
+   venv\Scripts\activate     # Windows
+   ```
 
 2. Install build tools:
 
-```bash
-pip install build
-```
+   ```bash
+   pip install build
+   ```
 
 3. Install in development mode:
 
-```bash
-pip install -e .
-```
+   ```bash
+   pip install -e .
+   ```
 
 ## Configuration
 
-Set your OpenAI API key as an environment variable:
+1. **API Keys:**
 
-```bash
-export OPENAI_API_KEY='your-api-key'  # Linux/MacOS
-# or
-set OPENAI_API_KEY=your-api-key       # Windows
-```
+   - Create a file named `api-keys.json` in the `~/.humbug` directory.
+   - Add your API keys in the following format:
+
+     ```json
+     {
+       "OPENAI_API_KEY": "your-openai-api-key",
+       "GOOGLE_API_KEY": "your-google-api-key",
+       "ANTHROPIC_API_KEY": "your-anthropic-api-key"
+     }
+     ```
+
+   - Alternatively, you can set the API keys as environment variables:
+
+     ```bash
+     export OPENAI_API_KEY='your-openai-api-key'  # Linux/MacOS
+     export GOOGLE_API_KEY='your-google-api-key'
+     export ANTHROPIC_API_KEY='your-anthropic-api-key'
+     # or
+     set OPENAI_API_KEY=your-openai-api-key       # Windows
+     set GOOGLE_API_KEY=your-google-api-key
+     set ANTHROPIC_API_KEY=your-anthropic-api-key
+     ```
+
+   - The application will prioritize API keys from `api-keys.json` over environment variables.
+   - Ensure the `api-keys.json` file has permissions set to `0o600` for security.
+   - Ensure the `~/.humbug` directory has permissions set to `0o700` for security.
+
+2. **Workspace Settings:**
+
+   - Workspace settings are stored in `settings.json` within the workspace's `.humbug` directory.
+   - Settings include:
+     - `useSoftTabs`: boolean, whether to use soft tabs (spaces) or hard tabs.
+     - `tabSize`: integer, number of spaces for a tab.
+     - `fontSize`: float, base font size for text editors.
+     - `autoBackup`: boolean, whether to enable automatic backups.
+     - `autoBackupInterval`: integer, interval in seconds between automatic backups.
 
 ## Usage
 
@@ -61,24 +132,57 @@ python -m humbug
 
 ### Keyboard Shortcuts
 
-- `Ctrl+J` - Submit message
-- `Ctrl+,` - Open conversation settings
-- `Esc` - Cancel current AI response
-- Standard editing shortcuts (Cut, Copy, Paste, Undo, Redo)
+- **General**
+    - `Ctrl+Q` - Quit Humbug
+    - `Ctrl+Alt+N` - New Workspace
+    - `Ctrl+Alt+O` - Open Workspace
+    - `Ctrl+Alt+W` - Close Workspace
+    - `Ctrl+Alt+,` - Workspace Settings
+- **File Operations**
+    - `Ctrl+N` - New File
+    - `Ctrl+O` - Open File
+    - `Ctrl+Shift+N` - New Conversation
+    - `Ctrl+Shift+O` - Open Conversation
+    - `Ctrl+Shift+M` - New Metaphor Conversation
+    - `Ctrl+S` - Save
+    - `Ctrl+Shift+S` - Save As
+    - `Ctrl+W` - Close Tab
+    - `Ctrl+Shift+F` - Fork Conversation
+- **Edit Operations**
+    - `Ctrl+J` - Submit message
+    - `Ctrl+Z` - Undo
+    - `Ctrl+Shift+Z` - Redo
+    - `Ctrl+X` - Cut
+    - `Ctrl+C` - Copy
+    - `Ctrl+V` - Paste
+    - `Ctrl+,` - Open conversation settings
+- **View Operations**
+    - `Ctrl+=` - Zoom In
+    - `Ctrl+-` - Zoom Out
+    - `Ctrl+0` - Reset Zoom
+- **Other**
+    - `Esc` - Cancel current AI response
 
 ## Development
 
 Project structure:
+
 ```
 src/humbug/
 ├── ai/            # AI backend implementations
-├── commands/      # Command processing
 ├── conversation/  # Conversation management
 ├── gui/           # GUI components
+├── syntax/        # Syntax highlighting and parsing
 ├── transcript/    # Transcript handling
-└── utils/         # Utility functions
+├── workspace/     # Workspace management
+└── __main__.py    # Main entry point
 ```
 
 ## Logging
 
-Debug logs are written to `logs/humbug_debug.log`
+Debug logs are written to `~/.humbug/logs/` with timestamped filenames. The application maintains the last 50 log files, rotating them when they exceed 1MB.
+
+## Contributing
+
+Contributions are welcome! Please submit a pull request with your proposed changes.
+
