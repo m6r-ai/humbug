@@ -39,7 +39,7 @@ class MessageWidget(QFrame):
         self._header = QWidget(self)
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
-        self._header_layout.setSpacing(4)
+        self._header_layout.setSpacing(0)
 
         # Create role and timestamp labels
         self._role_label = QLabel(self)
@@ -123,7 +123,7 @@ class MessageWidget(QFrame):
 
                 self._role_label.setText(role_text)
                 timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                self._timestamp_label.setText(timestamp_str)
+                self._timestamp_label.setText(f"@ {timestamp_str}")
 
             self._current_style = style
             self.handle_style_changed()
