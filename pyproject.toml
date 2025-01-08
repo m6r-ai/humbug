@@ -15,3 +15,6 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/humbug"]
+
+[tool.pyinstaller]
+excludes = ["build", "dist", "*.egg-info"]
