@@ -1,6 +1,26 @@
 # Humbug
 
-Humbug is a versatile, GUI-based application designed to facilitate interaction with various AI backends. It offers a user-friendly tabbed interface for managing multiple conversations and editing files, all while maintaining a consistent user experience across platforms.
+Humbug is a versatile, GUI-based application designed to facilitate interaction with various AI backends.
+It offers a user-friendly tabbed interface for managing multiple conversations and editing files, all
+while maintaining a consistent user experience across platforms.
+
+## Designed for AI, built by AI!
+
+The application is designed to support building things using AI, but is itself largely built by AI.  It uses
+an approach of providing a very large amount of context to an AI backend about the intent behind the
+application.  This is done using a [Metaphor](https://m6r.ai/metaphor) description of the application and
+some elements of its implementation.  It includes a Metaphor prompt compiler as one option for starting a
+conversation with an AI backend.
+
+While AI builds the software it also helps maintain the Metaphor description so we end up with a virtuous
+circle where we have a definition of what the software is supposed to do, and the code that implements it.
+This means the AIs working on the code know what's there by intent, rather than just what ended up being
+coded.  That helps us keep the implementation on track, but also makes it possible to discuss what the
+software does, why it does it, and how it does it.
+
+One demonstration of this approach is that with the exception of this section of the README file, all the
+rest of the README was created by Google Gemini 2.0 Flash, based on the Metaphor description and the
+source code for the app.
 
 ## Features
 
@@ -15,7 +35,7 @@ Humbug is a versatile, GUI-based application designed to facilitate interaction 
     - Configurable temperature settings for supported models.
     - Error handling and retry mechanisms for API requests.
 - **File Editing:**
-    - Syntax highlighting for various programming languages.
+    - Syntax highlighting for various languages (C, C++, CSS, HTML, JavaScript, Metaphor, Python, TypeScript).
     - Line number display and cursor position tracking.
     - Auto-backup functionality for unsaved changes.
     - Configurable tab and font settings.
@@ -182,7 +202,10 @@ src/humbug/
 
 Debug logs are written to `~/.humbug/logs/` with timestamped filenames. The application maintains the last 50 log files, rotating them when they exceed 1MB.
 
+## Licensing
+
+The software is released under an Apache 2.0 open source license.
+
 ## Contributing
 
 Contributions are welcome! Please submit a pull request with your proposed changes.
-
