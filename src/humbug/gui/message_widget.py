@@ -123,7 +123,7 @@ class MessageWidget(QFrame):
 
                 self._role_label.setText(role_text)
                 timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                self._timestamp_label.setText(f"@ {timestamp_str}")
+                self._timestamp_label.setText(f" @ {timestamp_str}")
 
             self._current_style = style
             self.handle_style_changed()
@@ -190,6 +190,7 @@ class MessageWidget(QFrame):
                 font-weight: bold;
                 color: {label_color};
                 margin: 0;
+                padding: 0;
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
         """)
@@ -212,6 +213,7 @@ class MessageWidget(QFrame):
                 border: none;
                 border-radius: 0;
                 padding: 1px;
+                margin: 0;
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
         """)
@@ -223,7 +225,8 @@ class MessageWidget(QFrame):
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
                 border-radius: 0;
-                padding: 0;
+                padding: 1px;
+                margin: 0;
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
             QScrollBar:horizontal {{
