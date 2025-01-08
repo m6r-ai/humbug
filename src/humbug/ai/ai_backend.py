@@ -69,7 +69,7 @@ class AIBackend(ABC):
                 post_timeout = aiohttp.ClientTimeout(
                     total=None,
                     sock_connect=20,
-                    sock_read=60
+                    sock_read=120
                 )
 
                 async with aiohttp.ClientSession() as session:

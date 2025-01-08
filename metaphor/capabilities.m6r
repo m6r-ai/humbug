@@ -1167,7 +1167,7 @@ Context: Capabilities
             - System: File IO, memory, permissions
 
         Context: Network timeouts
-            If the AI does not respond within 60 seconds of being sent a request, then the application should treat this as
+            If the AI does not respond within 120 seconds of being sent a request, then the application should treat this as
             a timeout and retry up to 3 times.  Each time it retries, it should report that it is retrying.
 
         Context: Error response strategy
