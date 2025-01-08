@@ -38,7 +38,7 @@ class MessageWidget(QFrame):
         # Create header area with horizontal layout
         self._header = QWidget(self)
         self._header_layout = QHBoxLayout(self._header)
-        self._header_layout.setContentsMargins(0, 0, 0, 0)
+        self._header_layout.setContentsMargins(1, 1, 1, 1)
         self._header_layout.setSpacing(0)
 
         # Create role and timestamp labels
