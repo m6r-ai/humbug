@@ -910,11 +910,6 @@ Context: Capabilities
 
                     The dialog is modal, preventing interaction with the main window while open.
 
-        Context: UI navigation
-            Context: Input box navigation
-                If the input area has not yet been edited and the cursor is at the top left of the input area, then
-                the user can pull up previous historical messages to the AI by using the up and down keys.
-
         Context: Input formatting
             The input box supports Markdown-style code formatting:
 
@@ -1058,9 +1053,6 @@ Context: Capabilities
             - Updating display incrementally as content arrives
             - Removing previous content before adding updates
             - Maintaining newline format and text wrapping
-
-    Context: Message history
-        Maintain conversation context by including all previous messages in the session.
 
     Context: AI models
         The following AI models are available:

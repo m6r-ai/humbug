@@ -28,11 +28,6 @@ class LiveInputWidget(MessageWidget):
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
         self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
-        # Initialize input history
-        self._input_history = []
-        self._history_index = -1
-        self._current_index = ""
-
         self._is_streaming = False
         self._update_header_text()
 
@@ -87,29 +82,8 @@ class LiveInputWidget(MessageWidget):
             if not self._is_streaming:
                 text = self._text_area.toPlainText().strip()
                 if text:
-                    if text not in self._input_history:
-                        self._input_history.append(text)
-                    self._history_index = -1
                     self.clear()
 
-                return
-
-        if self._text_area.textCursor().atStart() and not self._text_area.textCursor().hasSelection():
-            if event.key() == Qt.Key_Up and self._input_history:
-                if self._history_index == -1:
-                    self._current_index = self._text_area.toPlainText()
-                self._history_index = min(len(self._input_history) - 1,
-                                       self._history_index + 1)
-                self._text_area.setPlainText(self._input_history[-self._history_index - 1])
-                return
-
-            if event.key() == Qt.Key_Down:
-                if self._history_index > 0:
-                    self._history_index -= 1
-                    self._text_area.setPlainText(self._input_history[-self._history_index - 1])
-                elif self._history_index == 0:
-                    self._history_index = -1
-                    self._text_area.setPlainText(self._current_index)
                 return
 
         super().keyPressEvent(event)
