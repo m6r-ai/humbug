@@ -46,6 +46,9 @@ class MetaphorLexer(Lexer):
         if self._is_whitespace(ch):
             return self._read_whitespace
 
+        if ch == '`':
+            return self._read_backtick
+
         if ch == '#':
             return self._read_comment
 
@@ -104,6 +107,18 @@ class MetaphorLexer(Lexer):
             value='\n',
             start=start
         ))
+
+    def _read_backtick(self) -> None:
+        start: int = self._position
+
+        # Do we have 3 backticks?  If yes, we have code fence and the next word after that
+        # is the (optional) name of the language
+        if self._input[self._position:].startswith('```'):
+            self._position += 3
+            self._tokens.append(Token(type='FENCE', value='```', start=start))
+            return
+
+        self._read_text_or_keyword()
 
     def _read_comment(self) -> None:
         """

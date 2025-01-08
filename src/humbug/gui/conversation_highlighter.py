@@ -48,6 +48,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
         self._fence_format = QTextCharFormat()
         self._fence_format.setFontFamilies(self._code_font_families)
         self._fence_format.setFontFixedPitch(True)
+        self._fence_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_LANGUAGE))
 
         self._logger = logging.getLogger("ConversationHighlighter")
 

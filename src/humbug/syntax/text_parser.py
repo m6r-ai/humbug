@@ -32,7 +32,7 @@ class TextParser(Parser):
             The updated parser state after parsing
         """
         self._tokens.append(Token(
-            type='TEXT',
+            type='CODE',
             value=input_str,
             start=0
         ))

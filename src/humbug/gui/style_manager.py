@@ -193,8 +193,8 @@ class StyleManager(QObject):
 
             # Syntax highlighting
             ColorRole.SYNTAX_CODE: {
-                ColorMode.DARK: "#804040",
-                ColorMode.LIGHT: "#c04040"
+                ColorMode.DARK: "#f0f0f0",
+                ColorMode.LIGHT: "#202020"
             },
             ColorRole.SYNTAX_COMMENT: {
                 ColorMode.DARK: "#68d068",
@@ -217,8 +217,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#806000"
             },
             ColorRole.SYNTAX_HEADING: {
-                ColorMode.DARK: "#f06060",
-                ColorMode.LIGHT: "#c04040"
+                ColorMode.DARK: "#9090f0",
+                ColorMode.LIGHT: "#4040c0"
             },
             ColorRole.SYNTAX_HTML_ATTRIBUTE: {
                 ColorMode.DARK: "#90e0e8",
@@ -241,8 +241,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c000a0"
             },
             ColorRole.SYNTAX_LANGUAGE: {
-                ColorMode.DARK: "#b0d0f0",
-                ColorMode.LIGHT: "#4080c0"
+                ColorMode.DARK: "#f0e060",
+                ColorMode.LIGHT: "#a09040"
             },
             ColorRole.SYNTAX_NUMBER: {
                 ColorMode.DARK: "#c08040",
@@ -265,14 +265,15 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c04040"
             },
             ColorRole.SYNTAX_TEXT: {
-                ColorMode.DARK: "#d0d0d0",
-                ColorMode.LIGHT: "#404040"
+                ColorMode.DARK: "#c8c8c8",
+                ColorMode.LIGHT: "#484848"
             }
         }
 
     def _initialize_highlights(self):
         # Mapping from token type to colour
         colour_mapping = {
+            "CODE": ColorRole. SYNTAX_CODE,
             "COMMENT": ColorRole.SYNTAX_COMMENT,
             "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,
             "ELEMENT": ColorRole.SYNTAX_ELEMENT,
