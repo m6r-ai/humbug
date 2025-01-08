@@ -313,6 +313,9 @@ Context: Implementation
             Context: HTTP interations
                 Use the aiohttp library for HTTP interactions (e.g. the REST API).
 
+            Context: Metaphor compilation
+                Use the m6rclib library for Metaphor file compilation.
+
         Context: Exception handling philosophy
             Context: Exception documentation
                 Document what exceptions each function may raise in its docstring.

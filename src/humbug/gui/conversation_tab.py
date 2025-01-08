@@ -551,6 +551,7 @@ class ConversationTab(TabBase):
     def set_input_text(self, text: str):
         """Set the input text."""
         self._input.setPlainText(text)
+        self._input.setFocus()
 
     def _set_initial_focus(self):
         """Set initial focus to input area."""

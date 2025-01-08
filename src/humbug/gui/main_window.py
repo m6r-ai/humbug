@@ -8,6 +8,10 @@ import os
 from typing import Dict, List
 import uuid
 
+from m6rclib import (
+    MetaphorParser, MetaphorParserError, format_ast, format_errors
+)
+
 from PySide6.QtWidgets import (
     QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel
 )
@@ -66,6 +70,10 @@ class MainWindow(QMainWindow):
         self._new_conv_action = QAction("New Conversation", self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self._new_conv_action.triggered.connect(self._new_conversation)
+
+        self._new_metaphor_conv_action = QAction("New Metaphor Conversation...", self)
+        self._new_metaphor_conv_action.setShortcut(QKeySequence("Ctrl+Shift+M"))
+        self._new_metaphor_conv_action.triggered.connect(self._new_metaphor_conversation)
 
         self._new_file_action = QAction("New File", self)
         self._new_file_action.setShortcut(QKeySequence.New)
@@ -167,6 +175,7 @@ class MainWindow(QMainWindow):
         file_menu = self._menu_bar.addMenu("&File")
         file_menu.addAction(self._new_workspace_action)
         file_menu.addAction(self._new_conv_action)
+        file_menu.addAction(self._new_metaphor_conv_action)
         file_menu.addAction(self._new_file_action)
         file_menu.addSeparator()
         file_menu.addAction(self._open_workspace_action)
@@ -576,6 +585,7 @@ class MainWindow(QMainWindow):
         # Update workspace-specific actions
         self._close_workspace_action.setEnabled(has_workspace)
         self._new_conv_action.setEnabled(has_workspace)
+        self._new_metaphor_conv_action.setEnabled(has_workspace)
         self._new_file_action.setEnabled(has_workspace)
         self._open_conv_action.setEnabled(has_workspace)
         self._open_file_action.setEnabled(has_workspace)
@@ -734,6 +744,52 @@ class MainWindow(QMainWindow):
                 f"Failed to create conversation: {str(e)}"
             )
             return None
+
+    def _new_metaphor_conversation(self):
+        """Create new conversation from Metaphor file."""
+        if not self._workspace_manager.has_workspace:
+            MessageBox.show_message(
+                self,
+                MessageBoxType.WARNING,
+                "Workspace Required",
+                "Please open a workspace before creating a Metaphor conversation."
+            )
+            return
+
+        # Show file dialog
+        self._menu_timer.stop()
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Metaphor File",
+            self._workspace_manager.workspace_path,
+            "Metaphor Files (*.m6r);;All Files (*.*)"
+        )
+        self._menu_timer.start()
+
+        if not file_path:
+            return
+
+        search_paths = [self._workspace_manager.workspace_path]
+
+        metaphor_parser = MetaphorParser()
+        try:
+            syntax_tree = metaphor_parser.parse_file(file_path, search_paths)
+            prompt = format_ast(syntax_tree)
+
+            # Create conversation with prompt
+            conversation_id = self._new_conversation()
+            if conversation_id:
+                # Get the tab and set input text
+                conversation_tab = self.tab_manager.find_conversation_tab_by_id(conversation_id)
+                if conversation_tab:
+                    conversation_tab.set_input_text(prompt)
+        except MetaphorParserError as e:
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Metaphor Processing Error",
+                f"Failed to process Metaphor file:\n\n{format_errors(e.errors)}"
+            )
 
     def _open_conversation(self):
         """Show open conversation dialog and create conversation tab."""

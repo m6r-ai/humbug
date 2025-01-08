@@ -556,6 +556,23 @@ Context: Capabilities
 
                 This option is only valid if a workspace is open.
 
+            Context: New Metaphor Conversation
+                The "New Metaphor Conversation" menu item will create new conversation tab based on a
+                Metaphor file.
+
+                When invoked the user will be prompted with a file selection dialog allowing them to
+                select a "*.m6r" file to use to start the conversation.  Once a file is selected then
+                it will be compiled using the m6rclib compiler.  If compilation fails then a message
+                box will indicate the problem/problems to the user.
+
+                On successful compilation of the Metaphor file a new conversation will be opened, and
+                the compiled prompt will be inserted into the input control, with the cursor placed at
+                the end of the input.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+M" for Windows).
+
+                This option is only valid if a worksapce is open.
+
             Context: New File
                 The "New File" menu item will create a new empty editor tab.
 
