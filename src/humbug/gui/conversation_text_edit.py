@@ -184,12 +184,37 @@ class ConversationTextEdit(QTextEdit):
             self._current_length = 0
             return
 
-        # Only insert the new content
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.End)
+        # Store the current cursor position and selection
+        current_cursor = self.textCursor()
+        position = current_cursor.position()
+        has_selection = current_cursor.hasSelection()
+        selection_start = current_cursor.selectionStart()
+        selection_end = current_cursor.selectionEnd()
+
+        # Create a new cursor for inserting text at the end
+        insert_cursor = QTextCursor(self.document())
+        insert_cursor.movePosition(QTextCursor.End)
+        self.setTextCursor(insert_cursor)
+
+        # Insert the new text
         new_text = text[self._current_length:]
-        cursor.insertText(new_text)
+        insert_cursor.insertText(new_text)
         self._current_length = len(text)
+
+        # Restore the original cursor position and selection
+        restored_cursor = self.textCursor()
+        restored_cursor.setPosition(position)
+        if has_selection:
+            # If there was a selection, restore it
+            if position == selection_end:
+                # Cursor was at end of selection
+                restored_cursor.setPosition(selection_start, QTextCursor.MoveAnchor)
+                restored_cursor.setPosition(selection_end, QTextCursor.KeepAnchor)
+            else:
+                # Cursor was at start of selection
+                restored_cursor.setPosition(selection_end, QTextCursor.KeepAnchor)
+
+        self.setTextCursor(restored_cursor)
 
     def clear(self):
         """Override clear to reset current length."""
