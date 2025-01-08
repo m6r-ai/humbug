@@ -1,4 +1,5 @@
-"""Message box dialog with consistent styling.
+"""
+Message box dialog with consistent styling and scrollable content.
 
 Example usage:
     result = MessageBox.show_message(
@@ -18,7 +19,8 @@ from enum import Enum, auto
 from typing import Optional, List
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QPlainTextEdit, QSizePolicy
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap
@@ -46,7 +48,7 @@ class MessageBoxButton(Enum):
 
 
 class MessageBox(QDialog):
-    """Custom message box dialog with consistent styling."""
+    """Custom message box dialog with consistent styling and scrollable content."""
 
     def __init__(self, msg_type: MessageBoxType, title: str, text: str,
                  buttons: List[MessageBoxButton], parent=None):
@@ -73,9 +75,10 @@ class MessageBox(QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Create header with icon and text
+        # Create header layout for icon and text
         header_layout = QHBoxLayout()
         header_layout.setSpacing(12)
+        header_layout.setContentsMargins(0, 0, 0, 0)
 
         # Add icon if appropriate
         icon = self._create_icon(msg_type)
@@ -84,12 +87,24 @@ class MessageBox(QDialog):
             icon_label.setPixmap(icon)
             header_layout.addWidget(icon_label, alignment=Qt.AlignTop)
 
-        # Add message text
-        message_label = QLabel(text)
-        message_label.setWordWrap(True)
-        message_label.setMinimumHeight(40)
-        header_layout.addWidget(message_label, stretch=1)
+        # Add message text using QPlainTextEdit
+        self._text_edit = QPlainTextEdit()
+        self._text_edit.setPlainText(text)
+        self._text_edit.setReadOnly(True)
+        self._text_edit.setFrameStyle(0)  # No frame
+        self._text_edit.setMaximumHeight(int(self.screen().geometry().height() * 0.8))
+        self._text_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
+        # Calculate approximate initial height based on content
+        doc = self._text_edit.document()
+        margins = self._text_edit.contentsMargins()
+        line_count = min(doc.lineCount(), 20)  # Cap at 20 lines for initial size
+        font_metrics = self._text_edit.fontMetrics()
+        line_height = font_metrics.lineSpacing()
+        initial_height = (line_count * line_height) + margins.top() + margins.bottom()
+        self._text_edit.setMinimumHeight(max(40, initial_height))
+
+        header_layout.addWidget(self._text_edit, stretch=1)
         layout.addLayout(header_layout)
         layout.addStretch()
 
@@ -110,9 +125,9 @@ class MessageBox(QDialog):
             button_layout.addWidget(btn)
 
             # Set default and escape buttons appropriately
-            if button == MessageBoxButton.OK or button == MessageBoxButton.YES:
+            if button in (MessageBoxButton.OK, MessageBoxButton.YES):
                 default_button = btn
-            elif button == MessageBoxButton.CANCEL or button == MessageBoxButton.NO:
+            elif button in (MessageBoxButton.CANCEL, MessageBoxButton.NO):
                 escape_button = btn
 
         # If no default button set, use first button
@@ -173,8 +188,8 @@ class MessageBox(QDialog):
         if event.key() == Qt.Key_Escape and self._escape_button:
             self.result_button = self._button_results[self._escape_button]
             self.reject()
-        else:
-            super().keyPressEvent(event)
+
+        return super().keyPressEvent(event)
 
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
@@ -186,6 +201,30 @@ class MessageBox(QDialog):
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
+
+        # Apply scrollbar styling
+        self._text_edit.setStyleSheet(f"""
+            QPlainTextEdit {{
+                border: none;
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QScrollBar:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+        """)
 
         # Apply consistent dialog styling
         self.setStyleSheet(f"""
