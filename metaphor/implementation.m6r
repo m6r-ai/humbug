@@ -293,14 +293,16 @@ Context: Implementation
 
             For example, do this:
 
-            ```
+            ```python
             if condition:
                 return
 
             next_statement()
             ```
+
             instead of this:
-            ```
+
+            ```python
             if condition:
                 return
             else:
