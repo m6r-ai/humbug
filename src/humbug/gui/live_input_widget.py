@@ -49,7 +49,7 @@ class LiveInputWidget(MessageWidget):
             self._set_role_style(ColorRole.TEXT_DISABLED)
         else:
             submit_key = self._get_submit_key_text()
-            self._role_label.setText(f"Please add a message ({submit_key} to submit)")
+            self._role_label.setText(f"Add your next message... ({submit_key} to submit)")
             self._set_role_style(ColorRole.MESSAGE_USER)
 
     def _set_role_style(self, color_role: ColorRole):
