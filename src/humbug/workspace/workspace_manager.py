@@ -77,6 +77,33 @@ class WorkspaceManager(QObject):
         """
         return self._settings
 
+    def update_settings(self, new_settings: WorkspaceSettings) -> None:
+        """
+        Update workspace settings and notify listeners.
+
+        Args:
+            new_settings: New settings to apply
+
+        Raises:
+            WorkspaceError: If settings cannot be saved
+            WorkspaceNotFoundError: If no workspace is open
+        """
+        if not self.has_workspace:
+            raise WorkspaceNotFoundError("No workspace is currently open")
+
+        # Save settings to file
+        settings_path = os.path.join(
+            self._workspace_path,
+            self.WORKSPACE_DIR,
+            self.SETTINGS_FILE
+        )
+        try:
+            new_settings.save(settings_path)
+            self._settings = new_settings
+            self.settings_changed.emit()
+        except OSError as e:
+            raise WorkspaceError(f"Failed to save workspace settings: {str(e)}") from e
+
     @property
     def has_workspace(self) -> bool:
         """

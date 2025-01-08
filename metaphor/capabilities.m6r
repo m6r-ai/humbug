@@ -357,6 +357,36 @@ Context: Capabilities
 
                         The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
 
+                Context: Auto backup settings
+                    The editor supports automatic backup of unsaved changes.
+
+                    Context: Auto backup
+                        The "Auto Backup" setting controls whether automatic backup is enabled.
+
+                        When enabled, unsaved changes are automatically backed up at regular intervals.
+                        By default, this setting is disabled.
+
+                    Context: Backup interval
+                        The "Backup Interval" setting controls how frequently backups occur.
+
+                        The interval can be set between 60 seconds (1 minute) and 3600 seconds (1 hour).
+
+                        Default interval is 300 seconds (5 minutes).
+
+                    Context: Backup location
+                        For untitled files, backups are stored in "~/.humbug/backups" with timestamp.
+
+                        For saved files, backups are stored alongside the original with ".backup" extension.
+
+                    Context: Backup behavior
+                        Backups only occur when:
+
+                        - Auto backup is enabled in workspace settings
+                        - The file has unsaved changes
+                        - The specified backup interval has elapsed since last backup
+
+                        Backups do not replace the original file and are preserved until the file is saved.
+
     Context: Home directory configuration
         The application maintains a ".humbug" directory in the user's home directory.
 

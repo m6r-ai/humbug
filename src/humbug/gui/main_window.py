@@ -909,13 +909,7 @@ class MainWindow(QMainWindow):
 
         def handle_settings_changed(new_settings):
             try:
-                settings_path = os.path.join(
-                    self._workspace_manager.workspace_path,
-                    self._workspace_manager.WORKSPACE_DIR,
-                    self._workspace_manager.SETTINGS_FILE
-                )
-                new_settings.save(settings_path)
-                self._workspace_manager._settings = new_settings  # Update current settings
+                self._workspace_manager.update_settings(new_settings)
                 self._style_manager.set_workspace_font_size(new_settings.font_size)
             except OSError as e:
                 self._logger.error("Failed to save workspace settings: %s", str(e))

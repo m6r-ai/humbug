@@ -19,6 +19,7 @@ from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.workspace.workspace_manager import WorkspaceManager
 
 
 # Map file extensions to programming languages
@@ -64,7 +65,6 @@ class EditorTab(TabBase):
         self._style_manager = StyleManager()
         self._last_save_content = ""
         self._auto_save_timer = QTimer(self)
-        self._auto_save_timer.setInterval(5 * 60 * 1000)  # 5 minutes
         self._auto_save_timer.timeout.connect(self._auto_save)
         self._current_language = ProgrammingLanguage.TEXT
 
@@ -87,6 +87,54 @@ class EditorTab(TabBase):
         self._handle_style_changed(self._style_manager.zoom_factor)
 
         self.update_status()
+
+        # Update auto-backup based on current workspace settings
+        workspace_manager = WorkspaceManager()
+        if workspace_manager.has_workspace:
+            settings = workspace_manager.settings
+            self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
+
+        # Connect to workspace settings changes
+        workspace_manager.settings_changed.connect(self._handle_workspace_settings_changed)
+
+    def _handle_workspace_settings_changed(self):
+        """Handle workspace settings changes."""
+        workspace_manager = WorkspaceManager()
+        if workspace_manager.has_workspace:
+            settings = workspace_manager.settings
+            self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
+
+    def update_auto_backup_settings(self, enabled: bool, interval: int) -> None:
+        """Update auto-backup settings."""
+        if enabled:
+            self._auto_save_timer.setInterval(interval * 1000)  # Convert to milliseconds
+            if self._is_modified:
+                # If we have unsaved changes, start backup immediately
+                self._auto_save_timer.start()
+
+            return
+
+        self._auto_save_timer.stop()
+        # Clean up any existing backups since auto-backup is disabled
+        if self._path:
+            backup_file = f"{self._path}.backup"
+            try:
+                if os.path.exists(backup_file):
+                    os.remove(backup_file)
+            except OSError as e:
+                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
+        elif self._untitled_number:
+            backup_dir = os.path.expanduser("~/.humbug/backups")
+            prefix = f"backup-{self._untitled_number}-"
+            try:
+                for file in os.listdir(backup_dir):
+                    if file.startswith(prefix):
+                        try:
+                            os.remove(os.path.join(backup_dir, file))
+                        except OSError as e:
+                            self._logger.warning("Failed to remove backup %s: %s", file, str(e))
+            except OSError as e:
+                self._logger.warning("Failed to clean up backups: %s", str(e))
 
     def get_state(self) -> TabState:
         """Get serializable state for workspace persistence."""
@@ -298,10 +346,12 @@ class EditorTab(TabBase):
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
 
-        if is_modified and not self._auto_save_timer.isActive():
-            self._auto_save_timer.start()
-        elif not is_modified:
-            self._auto_save_timer.stop()
+        workspace_manager = WorkspaceManager()
+        if workspace_manager.has_workspace and workspace_manager.settings.auto_backup:
+            if is_modified and not self._auto_save_timer.isActive():
+                self._auto_save_timer.start()
+            elif not is_modified:
+                self._auto_save_timer.stop()
 
     def update_status(self) -> None:
         """Update status bar with current cursor position."""
@@ -340,12 +390,41 @@ class EditorTab(TabBase):
         if not self._path:
             backup_dir = os.path.expanduser("~/.humbug/backups")
             os.makedirs(backup_dir, exist_ok=True)
+
+            # Clean up old backups for this untitled file
+            prefix = f"backup-{self._untitled_number}-"
+            current_time = int(time.time())
+            try:
+                for file in os.listdir(backup_dir):
+                    if file.startswith(prefix):
+                        file_path = os.path.join(backup_dir, file)
+
+                        # Keep only backups from last hour
+                        if current_time - os.path.getctime(file_path) > 3600:
+                            try:
+                                os.remove(file_path)
+                            except OSError as e:
+                                self._logger.warning("Failed to remove old backup %s: %s", file_path, str(e))
+            except OSError as e:
+                self._logger.warning("Failed to clean up old backups: %s", str(e))
+
             backup_file = os.path.join(
                 backup_dir,
-                f"backup-{self._untitled_number}-{int(time.time())}.txt"
+                f"{prefix}{current_time}.txt"
             )
         else:
             backup_file = f"{self._path}.backup"
+
+            # Clean up any very old backups that might have been left behind
+            try:
+                if os.path.exists(backup_file):
+                    if time.time() - os.path.getctime(backup_file) > 86400:  # 24 hours
+                        try:
+                            os.remove(backup_file)
+                        except OSError:
+                            pass  # Ignore cleanup errors for old files
+            except OSError:
+                pass  # Ignore stat errors
 
         try:
             with open(backup_file, 'w', encoding='utf-8') as f:
@@ -394,6 +473,15 @@ class EditorTab(TabBase):
 
             self._last_save_content = content
             self._set_modified(False)
+
+            # Delete any backup files
+            backup_file = f"{self._path}.backup"
+            try:
+                if os.path.exists(backup_file):
+                    os.remove(backup_file)
+            except OSError as e:
+                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
+
             return True
         except Exception as e:
             MessageBox.show_message(

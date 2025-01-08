@@ -87,6 +87,33 @@ class WorkspaceSettingsDialog(QDialog):
         font_size_layout.addWidget(self._font_size_spin)
         layout.addLayout(font_size_layout)
 
+        # Add auto-backup settings
+        auto_backup_layout = QHBoxLayout()
+        auto_backup_label = QLabel("Auto Backup:")
+        auto_backup_label.setMinimumHeight(40)
+        self._auto_backup_check = QCheckBox()
+        self._auto_backup_check.setMinimumHeight(40)
+        self._auto_backup_check.setMinimumWidth(300)
+        self._auto_backup_check.stateChanged.connect(self._handle_value_change)
+        auto_backup_layout.addWidget(auto_backup_label)
+        auto_backup_layout.addStretch()
+        auto_backup_layout.addWidget(self._auto_backup_check)
+        layout.addLayout(auto_backup_layout)
+
+        # Add auto-backup interval setting
+        backup_interval_layout = QHBoxLayout()
+        backup_interval_label = QLabel("Backup Interval (seconds):")
+        backup_interval_label.setMinimumHeight(40)
+        self._backup_interval_spin = QSpinBox()
+        self._backup_interval_spin.setRange(60, 3600)  # 1 minute to 1 hour
+        self._backup_interval_spin.setMinimumWidth(300)
+        self._backup_interval_spin.setMinimumHeight(40)
+        self._backup_interval_spin.valueChanged.connect(self._handle_value_change)
+        backup_interval_layout.addWidget(backup_interval_label)
+        backup_interval_layout.addStretch()
+        backup_interval_layout.addWidget(self._backup_interval_spin)
+        layout.addLayout(backup_interval_layout)
+
         # Add spacing before buttons
         layout.addSpacing(24)
         layout.addStretch()
@@ -236,29 +263,33 @@ class WorkspaceSettingsDialog(QDialog):
         return WorkspaceSettings(
             use_soft_tabs=self._soft_tabs_check.isChecked(),
             tab_size=self._tab_size_spin.value(),
-            font_size=self._font_size_spin.value()
+            font_size=self._font_size_spin.value(),
+            auto_backup=self._auto_backup_check.isChecked(),
+            auto_backup_interval=self._backup_interval_spin.value()
         )
 
     def set_settings(self, settings: WorkspaceSettings) -> None:
-        """Set the current settings in the dialog.
-
-        Args:
-            settings: The workspace settings to display
-        """
+        """Set the current settings in the dialog."""
         self._initial_settings = WorkspaceSettings(
             use_soft_tabs=settings.use_soft_tabs,
             tab_size=settings.tab_size,
-            font_size=settings.font_size
+            font_size=settings.font_size,
+            auto_backup=settings.auto_backup,
+            auto_backup_interval=settings.auto_backup_interval
         )
         self._current_settings = WorkspaceSettings(
             use_soft_tabs=settings.use_soft_tabs,
             tab_size=settings.tab_size,
-            font_size=settings.font_size
+            font_size=settings.font_size,
+            auto_backup=settings.auto_backup,
+            auto_backup_interval=settings.auto_backup_interval
         )
 
         self._soft_tabs_check.setChecked(settings.use_soft_tabs)
         self._tab_size_spin.setValue(settings.tab_size)
         self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
+        self._auto_backup_check.setChecked(settings.auto_backup)
+        self._backup_interval_spin.setValue(settings.auto_backup_interval)
         self.apply_button.setEnabled(False)
 
     def _handle_apply(self) -> None:
