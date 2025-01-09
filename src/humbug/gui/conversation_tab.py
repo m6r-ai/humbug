@@ -110,12 +110,10 @@ class ConversationTab(TabBase):
         conversation_layout.setSpacing(0)
         conversation_layout.addWidget(self._scroll_area)
 
-        zoom_factor = self._style_manager.zoom_factor
-
         self.update_status()
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(zoom_factor)
+        self._handle_style_changed(self._style_manager.zoom_factor)
 
         # Create timer for smooth scrolling
         self._scroll_timer = QTimer(self)
@@ -747,15 +745,6 @@ class ConversationTab(TabBase):
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
         """)
-
-        # Apply to all widgets in the hierarchy
-        for widget in self.findChildren(QWidget):
-            widget.setFont(font)
-
-        for widget in self.findChildren(MessageWidget):
-            widget.handle_style_changed()
-
-        self.updateGeometry()
 
     def can_close(self) -> bool:
         return True

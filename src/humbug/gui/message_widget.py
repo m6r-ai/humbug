@@ -79,6 +79,9 @@ class MessageWidget(QFrame):
             'system': ColorRole.MESSAGE_SYSTEM
         }
 
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_style_changed(self._style_manager.zoom_factor)
+
     def _create_text_area(self) -> ConversationTextEdit:
         """Create and configure the text area.
         
@@ -126,7 +129,7 @@ class MessageWidget(QFrame):
                 self._timestamp_label.setText(f" @ {timestamp_str}")
 
             self._current_style = style
-            self.handle_style_changed()
+            self._handle_style_changed(self._style_manager.zoom_factor)
 
             # Full reset needed for style change
             self._text_area.clear()
@@ -179,12 +182,18 @@ class MessageWidget(QFrame):
         """Check if this is an AI response message."""
         return self._current_style == 'ai'
 
-    def handle_style_changed(self):
+    def _handle_style_changed(self, factor: float):
         """Handle the style changing"""
+        font = self.font()
+        base_font_size = self._style_manager.base_font_size
+        font.setPointSizeF(base_font_size * factor)
+        self.setFont(font)
+
         role = self.background_roles.get(self._current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
 
         # Role label styling (bold)
+        self._role_label.setFont(font)
         self._role_label.setStyleSheet(f"""
             QLabel {{
                 font-weight: bold;
@@ -196,6 +205,7 @@ class MessageWidget(QFrame):
         """)
 
         # Timestamp label styling (normal weight)
+        self._timestamp_label.setFont(font)
         self._timestamp_label.setStyleSheet(f"""
             QLabel {{
                 font-weight: normal;
@@ -219,6 +229,7 @@ class MessageWidget(QFrame):
         """)
 
         # Content area styling
+        self._text_area.setFont(font)
         self._text_area.setStyleSheet(f"""
             QTextEdit {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};

@@ -19,6 +19,7 @@ class LiveInputWidget(MessageWidget):
 
     def __init__(self, parent=None):
         """Initialize the live input widget."""
+        self._is_streaming = False
         super().__init__(parent, is_input=True)
 
         # Set up the header initial text
@@ -28,7 +29,6 @@ class LiveInputWidget(MessageWidget):
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
         self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
-        self._is_streaming = False
         self._update_header_text()
 
     def set_streaming(self, streaming: bool):
@@ -40,25 +40,30 @@ class LiveInputWidget(MessageWidget):
         """Get the appropriate submit key text based on the platform."""
         if sys.platform == "darwin":
             return "⌘J"
+
         return "Ctrl+J"
 
     def _update_header_text(self):
         """Update the header text based on current state."""
         if self._is_streaming:
             self._role_label.setText("Processing your request (Esc to cancel)")
-            self._set_role_style(ColorRole.TEXT_DISABLED)
         else:
             submit_key = self._get_submit_key_text()
             self._role_label.setText(f"Add your next message... ({submit_key} to submit)")
-            self._set_role_style(ColorRole.MESSAGE_USER)
 
-    def _set_role_style(self, color_role: ColorRole):
+        self._set_role_style()
+
+    def _set_role_style(self):
         """Set the role label color."""
+        colour = ColorRole.TEXT_DISABLED if self._is_streaming else ColorRole.MESSAGE_USER
+
+        # WARNING: This needs to stay in sync with MessageWidget
         self._role_label.setStyleSheet(f"""
             QLabel {{
                 font-weight: bold;
-                color: {self._style_manager.get_color_str(color_role)};
+                color: {self._style_manager.get_color_str(colour)};
                 margin: 0;
+                padding: 0;
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
         """)
