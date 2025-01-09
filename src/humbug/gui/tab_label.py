@@ -102,7 +102,7 @@ class TabLabel(QWidget):
         font = self._label.font()
         base_size = self._style_manager.base_font_size
         scaled_size = self._style_manager.get_scaled_size(base_size)
-        font.setPointSize(scaled_size)
+        font.setPointSizeF(scaled_size)
         self._label.setFont(font)
 
     def enterEvent(self, event):
