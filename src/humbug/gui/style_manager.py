@@ -658,7 +658,7 @@ class StyleManager(QObject):
 
     def get_space_width(self) -> float:
         font = QFont(self.monospace_font_families)
-        font.setPointSizeF(self._base_font_size * self._zoom_factor)
+        font.setPointSizeF(self.base_font_size * self._zoom_factor)
         font_metrics = QFontMetricsF(font)
         space_width = font_metrics.horizontalAdvance('        ') / 8
         return space_width
