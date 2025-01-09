@@ -1107,7 +1107,7 @@ Context: Capabilities
         - "gpt-4o-mini": OpenAI GPT-4 Mini model
         - "gpt-4o": OpenAI GPT-4 model
         - "o1-mini": OpenAI O1 Mini model
-        - "o1": OpenAI O1 model
+        - "o1-preview": OpenAI O1 model
         - "gemini-1.5-flash": Google Gemini 1.5 Flash model
         - "gemini-1.5-pro": Google Gemini 1.5 Pro model
         - "gemini-2.0-flash-exp": Google Gemini 2.0 Flash experimental model
@@ -1119,7 +1119,7 @@ Context: Capabilities
         Context: Model providers
             Models are provided by different AI services:
 
-            - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1"
+            - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"
             - Google models: "gemini-1.5-flash", "gemini-1.5-pro"
             - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"
 
@@ -1136,7 +1136,7 @@ Context: Capabilities
         - gpt-4o-mini: Supports temperature 0.0-1.0
         - gpt-4o: Supports temperature 0.0-1.0
         - o1-mini: No temperature setting
-        - o1: No temperature setting
+        - o1-preview: No temperature setting
         - gemini-1.5-flash: Supports temperature 0.0-1.0
         - gemini-1.5-pro: Supports temperature 0.0-1.0
         - gemini-2.0-flash-exp: Supports temperature 0.0-1.0
