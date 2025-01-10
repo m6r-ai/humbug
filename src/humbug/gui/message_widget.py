@@ -165,11 +165,6 @@ class MessageWidget(QFrame):
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
 
-    @property
-    def is_ai(self) -> bool:
-        """Check if this is an AI response message."""
-        return self._current_style == MessageSource.AI
-
     def _handle_style_changed(self, factor: float):
         """Handle the style changing"""
         font = self.font()

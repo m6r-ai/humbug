@@ -559,7 +559,7 @@ class ConversationTab(TabBase):
             self._input.set_streaming(True)
 
         # If our last message was not from the AI then create a new one.
-        if not self._messages or not self._messages[-1].is_ai:
+        if not self._current_ai_message:
             # Create and add initial message
 
             settings = self.get_settings()
