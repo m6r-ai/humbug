@@ -433,7 +433,7 @@ class ConversationTab(TabBase):
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
-    def _add_message(self, message: str, style: str, timestamp: datetime = None) -> None:
+    def _add_message(self, message: Message) -> None:
         """
         Add a message to history with appropriate styling.
 
@@ -448,7 +448,7 @@ class ConversationTab(TabBase):
         )
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
-        msg_widget.set_content(message, style, timestamp)
+        msg_widget.set_content(message.content, message.source, message.timestamp)
 
         # Add widget before input
         self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
@@ -457,6 +457,8 @@ class ConversationTab(TabBase):
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
         self._scroll_to_bottom()
+
+        self._conversation.add_message(message)
 
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
@@ -547,7 +549,8 @@ class ConversationTab(TabBase):
                 error_msg,
                 error=error
             )
-            self._add_system_message(error_msg, error=error)
+            self._add_message(error_message)
+            asyncio.create_task(self._write_transcript([error_message.to_transcript_dict()]))
             self._logger.warning("AI response error: %s", error_msg)
             return error_message
 
@@ -567,8 +570,7 @@ class ConversationTab(TabBase):
                 temperature=settings.temperature,
                 completed=False
             )
-            self._add_message(content, 'ai', message.timestamp)
-            self._conversation.add_message(message)
+            self._add_message(message)
             self._current_ai_message = message
         else:
             # Store current scroll position before appending.  If this insertion triggers a change
@@ -579,7 +581,7 @@ class ConversationTab(TabBase):
             self._last_insertion_point =  total_height - input_height - 2 * self._messages_layout.spacing()
 
             # Update our message
-            self._messages[-1].set_content(content, 'ai', self._current_ai_message.timestamp)
+            self._messages[-1].set_content(content, MessageSource.AI, self._current_ai_message.timestamp)
 
             # Update existing message
             message = self._conversation.update_message(
@@ -601,17 +603,6 @@ class ConversationTab(TabBase):
 
         return message
 
-    def _add_system_message(self, content: str, error: Optional[Dict] = None) -> None:
-        """Add a system message to the conversation."""
-        message = Message.create(
-            MessageSource.SYSTEM,
-            content,
-            error=error
-        )
-        self._add_message(content, "system", message.timestamp)
-        self._conversation.add_message(message)
-        asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
-
     def load_message_history(self, messages: List[Message]):
         """
         Load existing message history from transcript.
@@ -620,15 +611,7 @@ class ConversationTab(TabBase):
             messages: List of Message objects to load
         """
         for message in messages:
-            # Display message with appropriate style
-            style = {
-                MessageSource.USER: "user",
-                MessageSource.AI: "ai",
-                MessageSource.SYSTEM: "system"
-            }[message.source]
-
-            self._add_message(message.content, style, message.timestamp)
-            self._conversation.add_message(message)
+            self._add_message(message)
 
             # Update settings and status if AI message
             if message.source == MessageSource.AI:
@@ -674,10 +657,13 @@ class ConversationTab(TabBase):
             if not backend:
                 error_msg = f"No backend available for provider: {provider}"
                 self._logger.error(error_msg)
-                self._add_system_message(
+                error_message = Message.create(
+                    MessageSource.SYSTEM,
                     error_msg,
-                    error={"code": "backend_error", "message": error_msg}
+                    {"code": "backend_error", "message": error_msg}
                 )
+                self._add_message(error_message)
+                asyncio.create_task(self._write_transcript([error_message.to_transcript_dict()]))
                 return
 
             stream = backend.stream_message(
@@ -861,8 +847,7 @@ class ConversationTab(TabBase):
 
         # Add the user message to the conversation
         message = Message.create(MessageSource.USER, content)
-        self._add_message(content, "user", message.timestamp)
-        self._conversation.add_message(message)
+        self._add_message(message)
         asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
 
         # Start AI response
