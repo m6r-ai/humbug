@@ -4,7 +4,7 @@ Context: Capabilities
     Navigation is done using a keyboard and mouse.
 
     Context: Version
-        This is version 0.1 of the application.
+        This is version 0.2 of the application.
 
     Context: Application window
         The main window is divided into two primary regions: a file tree view on the left side, and a tabbed
