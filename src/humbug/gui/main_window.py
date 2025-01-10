@@ -334,23 +334,24 @@ class MainWindow(QMainWindow):
             )
             return
 
-        self._open_workspace(dir_path)
+        self._open_workspace_path(dir_path)
 
-    def _open_workspace(self, path: str = None):
+    def _open_workspace(self):
         """Open a new workspace."""
-        if not path:
-            self._menu_timer.stop()
-            dir_path = QFileDialog.getExistingDirectory(self, "Open Workspace")
-            self._menu_timer.start()
-            if not dir_path:
-                return
+        self._menu_timer.stop()
+        dir_path = QFileDialog.getExistingDirectory(self, "Open Workspace")
+        self._menu_timer.start()
+        if not dir_path:
+            return
 
-            path = dir_path
+        self._open_workspace_path(dir_path)
 
+    def _open_workspace_path(self, path: str) -> None:
         # If we're switching workspaces, save the current one first
         if self._workspace_manager.has_workspace:
             self._save_workspace_state()
             self._close_all_tabs()
+            self._style_manager.set_workspace_font_size(None)
             self._workspace_manager.close_workspace()
 
         # Open the new workspace
