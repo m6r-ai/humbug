@@ -1,9 +1,9 @@
-"""Updated TabManager implementation to support both conversation and editor tabs"""
+"""Updated TabManager implementation to support multiple tab columns"""
 
 from typing import Optional, Dict, List, cast
 
-from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QStackedWidget
-from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QStackedWidget, QSplitter
+from PySide6.QtCore import Signal, Qt
 
 from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
@@ -14,8 +14,23 @@ from humbug.gui.tab_label import TabLabel
 from humbug.gui.welcome_widget import WelcomeWidget
 
 
+class ColumnTabWidget(QTabWidget):
+    """Enhanced QTabWidget for use in columns."""
+
+    def __init__(self, parent=None):
+        """Initialize the tab widget."""
+        super().__init__(parent)
+        self.setMovable(True)
+        self.setDocumentMode(True)
+
+        # Configure tab bar
+        tab_bar = self.tabBar()
+        tab_bar.setDrawBase(False)
+        tab_bar.setUsesScrollButtons(True)
+
+
 class TabManager(QWidget):
-    """Manages multiple tabs for conversations and editors."""
+    """Manages multiple tabs across one or two columns."""
 
     tab_closed = Signal(str)  # Emits tab_id
     current_tab_changed = Signal(TabBase)
@@ -37,11 +52,20 @@ class TabManager(QWidget):
         self._welcome_widget = WelcomeWidget()
         self._stack.addWidget(self._welcome_widget)
 
-        # Create tab widget
-        self._tab_widget = QTabWidget()
-        self._tab_widget.setMovable(True)
-        self._tab_widget.setDocumentMode(True)
-        self._stack.addWidget(self._tab_widget)
+        # Create widget to hold columns
+        self._columns_widget = QWidget()
+        self._columns_layout = QVBoxLayout(self._columns_widget)
+        self._columns_layout.setContentsMargins(0, 0, 0, 0)
+        self._columns_layout.setSpacing(0)
+        self._stack.addWidget(self._columns_widget)
+
+        # Create splitter for columns
+        self._column_splitter = QSplitter(Qt.Horizontal)
+        self._columns_layout.addWidget(self._column_splitter)
+
+        # Create initial column
+        self._tab_columns: List[ColumnTabWidget] = []
+        self._create_column()
 
         # Set initial state
         self._stack.setCurrentWidget(self._welcome_widget)
@@ -53,15 +77,20 @@ class TabManager(QWidget):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
-        # Configure tab bar
-        tab_bar = self._tab_widget.tabBar()
-        tab_bar.setDrawBase(False)
-        tab_bar.setUsesScrollButtons(True)
-
-        # Connect signals
-        self._tab_widget.currentChanged.connect(self._on_tab_changed)
-
         self._handle_style_changed(self._style_manager.zoom_factor)
+
+        # Track active column
+        self._active_column = self._tab_columns[0]
+
+    def _create_column(self) -> ColumnTabWidget:
+        """Create a new tab column."""
+        tab_widget = ColumnTabWidget()
+        tab_widget.currentChanged.connect(self._on_tab_changed)
+
+        self._column_splitter.addWidget(tab_widget)
+        self._tab_columns.append(tab_widget)
+
+        return tab_widget
 
     def add_tab(self, tab: TabBase, title: str) -> None:
         """
@@ -79,16 +108,16 @@ class TabManager(QWidget):
         tab_label.close_clicked.connect(lambda: self.close_tab(tab_id))
         self._tab_labels[tab_id] = tab_label
 
-        # Add tab with custom label
-        index = self._tab_widget.addTab(tab, "")
-        self._tab_widget.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+        # Add tab with custom label to active column
+        index = self._active_column.addTab(tab, "")
+        self._active_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
 
         # Set initial state
-        if self._tab_widget.count() == 1:  # If this is the first tab
+        if len(self._tabs) == 1:  # If this is the first tab
             tab_label.set_current(True)
-            self._stack.setCurrentWidget(self._tab_widget)
+            self._stack.setCurrentWidget(self._columns_widget)
 
-        self._tab_widget.setCurrentWidget(tab)
+        self._active_column.setCurrentWidget(tab)
 
     def close_tab(self, tab_id: str) -> None:
         """
@@ -105,9 +134,14 @@ class TabManager(QWidget):
         if not tab.can_close():
             return
 
+        # Find which column contains the tab
+        column = self._find_column_for_tab(tab)
+        if not column:
+            return
+
         # Remove tab
-        index = self._tab_widget.indexOf(tab)
-        self._tab_widget.removeTab(index)
+        index = column.indexOf(tab)
+        column.removeTab(index)
         del self._tabs[tab_id]
 
         # Clean up label
@@ -119,9 +153,20 @@ class TabManager(QWidget):
         self.tab_closed.emit(tab_id)
         tab.deleteLater()
 
+        # Check if we need to remove empty column
+        if column.count() == 0 and len(self._tab_columns) > 1:
+            self.switch_to_single_column()
+
         # Show welcome message if no tabs remain
         if not self._tabs:
             self._stack.setCurrentWidget(self._welcome_widget)
+
+    def _find_column_for_tab(self, tab: TabBase) -> Optional[ColumnTabWidget]:
+        """Find which column contains the given tab."""
+        for column in self._tab_columns:
+            if column.indexOf(tab) != -1:
+                return column
+        return None
 
     def get_current_tab(self) -> Optional[TabBase]:
         """
@@ -130,7 +175,7 @@ class TabManager(QWidget):
         Returns:
             The current tab or None if no tabs exist
         """
-        widget = self._tab_widget.currentWidget()
+        widget = self._active_column.currentWidget()
         return cast(TabBase, widget) if widget else None
 
     def get_tab(self, tab_id: str) -> Optional[TabBase]:
@@ -162,8 +207,14 @@ class TabManager(QWidget):
             tab_id: ID of the tab to make current
         """
         tab = self._tabs.get(tab_id)
-        if tab:
-            self._tab_widget.setCurrentWidget(tab)
+        if not tab:
+            return
+
+        # Find which column contains the tab
+        column = self._find_column_for_tab(tab)
+        if column:
+            column.setCurrentWidget(tab)
+            self._active_column = column
 
     def update_tab_title(self, tab_id: str, title: str) -> None:
         """
@@ -207,15 +258,72 @@ class TabManager(QWidget):
         Args:
             index: Index of the newly selected tab
         """
-        # Update current states for all tabs
-        for tab_id, label in self._tab_labels.items():
-            tab = self._tabs[tab_id]
-            is_current = tab == self._tab_widget.widget(index)
-            label.set_current(is_current)
+        # Find which column triggered the change
+        sender = self.sender()
+        if isinstance(sender, ColumnTabWidget):
+            self._active_column = sender
+
+        # Update current states for all tabs in all columns
+        for column in self._tab_columns:
+            for tab_id, label in self._tab_labels.items():
+                tab = self._tabs[tab_id]
+                is_current = tab == column.widget(column.currentIndex()) and column == self._active_column
+                label.set_current(is_current)
 
         # Emit our new signal with current tab
         current_tab = self.get_current_tab()
         self.current_tab_changed.emit(current_tab)
+
+    def switch_to_single_column(self) -> None:
+        """Convert from two columns to one."""
+        if len(self._tab_columns) <= 1:
+            return
+
+        # Move all tabs from second column to first
+        while self._tab_columns[1].count() > 0:
+            tab = self._tab_columns[1].widget(0)
+            index = self._tab_columns[0].addTab(tab, "")
+            # Restore tab label
+            if isinstance(tab, TabBase):
+                label = self._tab_labels.get(tab.tab_id)
+                if label:
+                    self._tab_columns[0].tabBar().setTabButton(index, QTabBar.LeftSide, label)
+
+        # Remove and delete second column
+        self._tab_columns[1].deleteLater()
+        self._tab_columns.pop(1)
+
+        # Ensure first column is active
+        self._active_column = self._tab_columns[0]
+
+    def switch_to_double_column(self) -> None:
+        """Convert from one column to two."""
+        if len(self._tab_columns) > 1:
+            return
+
+        # Create second column
+        new_column = self._create_column()
+
+        # Move active tab to new column if we have one
+        current_tab = self.get_current_tab()
+        if current_tab:
+            # Get the tab label
+            label = self._tab_labels.get(current_tab.tab_id)
+
+            # Remove from first column
+            self._tab_columns[0].removeTab(self._tab_columns[0].indexOf(current_tab))
+
+            # Add to second column
+            index = new_column.addTab(current_tab, "")
+            if label:
+                new_column.tabBar().setTabButton(index, QTabBar.LeftSide, label)
+
+            # Make second column active
+            self._active_column = new_column
+            new_column.setCurrentWidget(current_tab)
+
+        # Set initial splitter sizes
+        self._column_splitter.setSizes([self.width() // 2, self.width() // 2])
 
     def get_conversation_tabs(self) -> List[ConversationTab]:
         """
@@ -270,7 +378,7 @@ class TabManager(QWidget):
         Args:
             factor: New zoom factor
         """
-        self._tab_widget.setStyleSheet(f"""
+        style = f"""
             QTabWidget::pane {{
                 border: none;
                 background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
@@ -306,8 +414,19 @@ class TabManager(QWidget):
                 width: 12px;
                 height: 12px;
             }}
-        """)
+        """
+
+        for column in self._tab_columns:
+            column.setStyleSheet(style)
 
         # Update all tab labels
         for label in self._tab_labels.values():
             label.handle_style_changed(factor)
+
+        self._column_splitter.setStyleSheet(f"""
+            QSplitter::handle {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+                margin: 0;
+                width: 1px;
+            }}
+        """)

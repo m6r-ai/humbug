@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
         self._untitled_count = 0
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
+        self._column_states: Dict[str, int] = {}  # Maps tab_id to column index
 
         # Humbug menu actions
         self._about_action = QAction("About Humbug", self)
@@ -157,6 +158,11 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
+        self._split_view_action = QAction("Split View", self)
+        self._split_view_action.setCheckable(True)
+        self._split_view_action.setChecked(False)
+        self._split_view_action.triggered.connect(self._handle_column_mode)
+
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
 
@@ -206,6 +212,8 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self._zoom_in_action)
         view_menu.addAction(self._zoom_out_action)
         view_menu.addAction(self._reset_zoom_action)
+        view_menu.addSeparator()
+        view_menu.addAction(self._split_view_action)
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(800, 600)
@@ -268,6 +276,23 @@ class MainWindow(QMainWindow):
 
         self._workspace_manager = WorkspaceManager()
         self._restore_last_workspace()
+
+    def _handle_column_mode(self, checked: bool) -> None:
+        """Handle column mode changes.
+
+        Args:
+            checked: True if two columns should be enabled, False for single column
+        """
+        if checked:
+            self.tab_manager.switch_to_double_column()
+        else:
+            self.tab_manager.switch_to_single_column()
+
+        # Update menu state
+        self._split_view_action.setChecked(checked)
+
+        # Save state
+        self._save_workspace_state()
 
     def _handle_tab_changed(self) -> None:
         """Handle tab change by connecting status message signal."""
@@ -390,12 +415,17 @@ class MainWindow(QMainWindow):
 
         # Get state from all tabs
         tab_states = []
-        for tab in self.tab_manager.get_all_tabs():
-            try:
-                state = tab.get_state()
-                tab_states.append(state.to_dict())
-            except Exception as e:
-                self._logger.error("Failed to save state for tab %s: %s", tab.tab_id, e)
+        for column_index, column in enumerate(self.tab_manager._tab_columns):
+            for index in range(column.count()):
+                tab = column.widget(index)
+                try:
+                    state = tab.get_state()
+                    state_dict = state.to_dict()
+                    # Add column information
+                    state_dict['column'] = column_index
+                    tab_states.append(state_dict)
+                except Exception as e:
+                    self._logger.error("Failed to save state for tab %s: %s", tab.tab_id, e)
 
         # Save to workspace
         try:
@@ -427,39 +457,55 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # Restore each tab
-        for state_dict in saved_states:
-            try:
-                # Convert dict back to TabState
-                state = TabState.from_dict(state_dict)
+        # Check if we need two columns
+        needs_two_columns = any(state.get('column', 0) == 1 for state in saved_states)
+        if needs_two_columns:
+            self.tab_manager.switch_to_double_column()
+            self._split_view_action.setChecked(True)
 
-                # Convert relative paths to absolute
-                if not os.path.isabs(state.path):
-                    try:
-                        state.path = self._workspace_manager.get_workspace_path(state.path)
-                    except WorkspaceError as e:
-                        self._logger.error("Failed to resolve path for tab state: %s", str(e))
+            # Restore each tab
+            for state_dict in saved_states:
+                try:
+                    # Convert dict back to TabState
+                    state = TabState.from_dict(state_dict)
+
+                    # Convert relative paths to absolute
+                    if not os.path.isabs(state.path):
+                        try:
+                            state.path = self._workspace_manager.get_workspace_path(state.path)
+                        except WorkspaceError as e:
+                            self._logger.error("Failed to resolve path for tab state: %s", str(e))
+                            continue
+
+                    # Create appropriate tab type
+                    if state.type == TabType.CONVERSATION:
+                        tab = ConversationTab.restore_from_state(state, self, ai_backends=self._ai_backends)
+                        title = f"Conv: {tab.tab_id}"
+                    elif state.type == TabType.EDITOR:
+                        tab = EditorTab.restore_from_state(state, self)
+                        title = os.path.basename(state.path)
+                    else:
                         continue
 
-                # Create appropriate tab type
-                if state.type == TabType.CONVERSATION:
-                    tab = ConversationTab.restore_from_state(state, self, ai_backends=self._ai_backends)
-                    self.tab_manager.add_tab(tab, f"Conv: {tab.tab_id}")
-                elif state.type == TabType.EDITOR:
-                    tab = EditorTab.restore_from_state(state, self)
-                    title = os.path.basename(state.path)
+                    # Set active column before adding tab
+                    column_index = state_dict.get('column', 0)
+                    if column_index < len(self.tab_manager._tab_columns):
+                        self.tab_manager._active_column = self.tab_manager._tab_columns[column_index]
+
+                    # Add tab
                     self.tab_manager.add_tab(tab, title)
 
-                    # Connect editor signals
-                    tab.close_requested.connect(self._handle_tab_close_requested)
-                    tab.title_changed.connect(self._handle_tab_title_changed)
-                    tab.modified_state_changed.connect(self._handle_tab_modified)
+                    # Connect editor signals if needed
+                    if isinstance(tab, EditorTab):
+                        tab.close_requested.connect(self._handle_tab_close_requested)
+                        tab.title_changed.connect(self._handle_tab_title_changed)
+                        tab.modified_state_changed.connect(self._handle_tab_modified)
 
-            except Exception as e:
-                self._logger.error(
-                    "Failed to restore tab state: %s",
-                    str(e),
-                )
+                except Exception as e:
+                    self._logger.error(
+                        "Failed to restore tab state: %s",
+                        str(e),
+                    )
 
     def _close_all_tabs(self):
         for tab in self.tab_manager.get_all_tabs():
@@ -729,7 +775,7 @@ class MainWindow(QMainWindow):
             # Create tab using same ID
             full_path = self._workspace_manager.get_workspace_path(filename)
             conversation_tab = ConversationTab(
-                conversation_id, 
+                conversation_id,
                 full_path,
                 timestamp,
                 self._ai_backends,
