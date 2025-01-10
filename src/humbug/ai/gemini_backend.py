@@ -56,11 +56,10 @@ class GeminiBackend(AIBackend):
 
     def _get_api_url(self, settings: ConversationSettings) -> str:
         """Get the Gemini API URL."""
-        return f"{self._api_base}/{settings.model}:streamGenerateContent?alt=sse"
+        return f"{self._api_base}/{settings.model}:streamGenerateContent?alt=sse&key={self._api_key}"
 
     def _get_headers(self) -> dict:
         """Get the Gemini API headers."""
         return {
-            "Content-Type": "application/json",
-            "x-goog-api-key": self._api_key
+            "Content-Type": "application/json"
         }
