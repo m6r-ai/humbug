@@ -47,7 +47,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._ai_backends = ai_backends
         self._untitled_count = 0
-        self._current_tasks: Dict[str, List[asyncio.Task]] = {}
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
 
@@ -447,7 +446,7 @@ class MainWindow(QMainWindow):
 
                 # Create appropriate tab type
                 if state.type == TabType.CONVERSATION:
-                    tab = ConversationTab.restore_from_state(state, self)
+                    tab = ConversationTab.restore_from_state(state, self, ai_backends=self._ai_backends)
                     self.tab_manager.add_tab(tab, f"Conv: {tab.tab_id}")
                 elif state.type == TabType.EDITOR:
                     tab = EditorTab.restore_from_state(state, self)
@@ -732,7 +731,13 @@ class MainWindow(QMainWindow):
         try:
             # Create tab using same ID
             full_path = self._workspace_manager.get_workspace_path(filename)
-            conversation_tab = ConversationTab(conversation_id, full_path, timestamp, self)
+            conversation_tab = ConversationTab(
+                conversation_id, 
+                full_path,
+                timestamp,
+                self._ai_backends,
+                self
+            )
             self.tab_manager.add_tab(conversation_tab, f"Conv: {conversation_id}")
             return conversation_id
         except WorkspaceError as e:
@@ -808,7 +813,7 @@ class MainWindow(QMainWindow):
         self._open_conversation_path(file_path)
 
     def _open_conversation_path(self, path: str) -> None:
-        # Check if conversation is already open
+        """Open an existing conversation file."""
         conversation_id = os.path.splitext(os.path.basename(path))[0]
         if self.tab_manager.find_conversation_tab_by_id(conversation_id):
             self.tab_manager.set_current_tab(conversation_id)
@@ -816,7 +821,11 @@ class MainWindow(QMainWindow):
 
         try:
             # Load conversation tab from file
-            conversation_tab = ConversationTab.load_from_file(path, self)
+            conversation_tab = ConversationTab.load_from_file(
+                path,
+                self._ai_backends,
+                self
+            )
             self.tab_manager.add_tab(conversation_tab, f"Conv: {conversation_id}")
         except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
@@ -852,43 +861,13 @@ class MainWindow(QMainWindow):
 
         self.tab_manager.close_tab(conversation_tab.tab_id)
 
-    def _sanitize_input(self, text: str) -> str:
-        """Strip control characters from input text, preserving newlines."""
-        return ''.join(char for char in text if char == '\n' or (ord(char) >= 32 and ord(char) != 127))
-
     def _submit_message(self):
         """Handle message submission."""
         conversation_tab = self.tab_manager.get_current_tab()
-        if not conversation_tab:
+        if not conversation_tab or not conversation_tab.can_submit():
             return
 
-        if not conversation_tab.can_submit():
-            return
-
-        message = self._sanitize_input(conversation_tab.get_input_text().strip())
-        if not message:
-            return
-
-        conversation_tab.submit(message)
-
-        # Start AI response
-        task = asyncio.create_task(
-            self.process_ai_response(message, conversation_tab.tab_id)
-        )
-
-        if conversation_tab.tab_id not in self._current_tasks:
-            self._current_tasks[conversation_tab.tab_id] = []
-
-        self._current_tasks[conversation_tab.tab_id].append(task)
-
-        def task_done_callback(task):
-            if conversation_tab.tab_id in self._current_tasks:
-                try:
-                    self._current_tasks[conversation_tab.tab_id].remove(task)
-                except ValueError as e:
-                    self._logger.debug("Value Error: %d: %s", conversation_tab.tab_id, e)
-
-        task.add_done_callback(task_done_callback)
+        conversation_tab.submit()
 
     def _get_available_models(self) -> List[str]:
         """Get list of available models based on active backends."""
@@ -897,6 +876,7 @@ class MainWindow(QMainWindow):
             provider = ConversationSettings.get_provider(model)
             if provider in self._ai_backends:
                 models.append(model)
+
         return models
 
     def _show_workspace_settings_dialog(self):
@@ -935,110 +915,14 @@ class MainWindow(QMainWindow):
         dialog.set_settings(conversation_tab.get_settings())
 
         if dialog.exec() == QDialog.Accepted:
-            new_settings = dialog.get_settings()
-            conversation_tab.update_settings(new_settings)
-            # Get the appropriate backend for the selected model
-            provider = ConversationSettings.get_provider(new_settings.model)
-            backend = self._ai_backends.get(provider)
-            if backend:
-                backend.update_conversation_settings(
-                    conversation_tab.tab_id,
-                    new_settings
-                )
-
-    async def process_ai_response(self, message: str, tab_id: str):
-        """Process AI response with streaming."""
-        conversation_tab = self.tab_manager.find_conversation_tab_by_id(tab_id)
-        if not conversation_tab:
-            self._logger.error("No conversation tab found for conversation %s", tab_id)
-            return
-
-        try:
-            self._logger.debug("=== Starting new AI response for conv %s ===", tab_id)
-
-            # Get the appropriate backend for the conversation
-            settings = conversation_tab.get_settings()
-            provider = ConversationSettings.get_provider(settings.model)
-            backend = self._ai_backends.get(provider)
-
-            if not backend:
-                error_msg = f"No backend available for provider: {provider}"
-                conversation_tab.add_system_message(
-                    error_msg,
-                    error={"code": "backend_error", "message": error_msg}
-                )
-                return
-
-            stream = backend.stream_message(
-                message,
-                conversation_tab.get_message_context(),
-                tab_id
-            )
-
-            async for response in stream:
-                try:
-                    message = await conversation_tab.update_streaming_response(
-                        content=response.content,
-                        usage=response.usage,
-                        error=response.error
-                    )
-
-                    # Handle retryable errors by checking if we should continue
-                    if response.error:
-                        if response.error['code'] in ['network_error', 'timeout']:
-                            continue  # Continue to next retry attempt
-
-                        return  # Non-retryable error, stop processing
-
-                except StopAsyncIteration:
-                    break
-
-        except (asyncio.CancelledError, GeneratorExit):
-            self._logger.debug("AI response cancelled for conv %s", tab_id)
-            if conversation_tab:
-                # Complete any ongoing AI response
-                await conversation_tab.update_streaming_response(
-                    content="",
-                    error={
-                        "code": "cancelled",
-                        "message": "Request cancelled by user"
-                    }
-                )
-
-            return
-
-        except Exception as e:
-            self._logger.exception(
-                "Error processing AI response for conversation %s with model %s: %s",
-                tab_id,
-                settings.model,
-                str(e)
-            )
-            if conversation_tab:
-                error = {
-                    "code": "process_error",
-                    "message": str(e),
-                    "details": {"type": type(e).__name__}
-                }
-                await conversation_tab.update_streaming_response(
-                    content="",
-                    error=error
-                )
-
-        finally:
-            self._logger.debug("=== Finished AI response for conv %s ===", tab_id)
+            conversation_tab.update_conversation_settings(dialog.get_settings())
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
         if event.key() == Qt.Key_Escape:
             conversation_tab = self.tab_manager.get_current_tab()
             if conversation_tab and isinstance(conversation_tab, ConversationTab):
-                tab_id = conversation_tab.tab_id
-                if tab_id in self._current_tasks:
-                    for task in self._current_tasks[tab_id]:
-                        if not task.done():
-                            task.cancel()
-
+                conversation_tab.cancel_current_tasks()
             return
 
         super().keyPressEvent(event)

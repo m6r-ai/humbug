@@ -13,6 +13,7 @@ from PySide6.QtCore import QTimer, QPoint, Qt, Slot
 from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
 
 from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.ai_backend import AIBackend
 from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
@@ -40,6 +41,7 @@ class ConversationTab(TabBase):
         tab_id: str,
         path: str,
         timestamp: datetime,
+        ai_backends: Dict[str, AIBackend],
         parent: Optional[QWidget] = None
     ) -> None:
         """
@@ -49,12 +51,15 @@ class ConversationTab(TabBase):
             tab_id: Unique identifier for this tab
             path: Full path to transcript file
             timestamp: ISO format timestamp for the conversation
+            ai_backends: AI backend map
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
         self._path = path
         self._timestamp = timestamp
+        self._ai_backends = ai_backends
+        self._current_tasks: List[asyncio.Task] = []
 
         # Create transcript handler with provided filename
         self._transcript_handler = TranscriptHandler(
@@ -189,12 +194,13 @@ class ConversationTab(TabBase):
         )
 
     @classmethod
-    def load_from_file(cls, path: str, parent=None) -> 'ConversationTab':
+    def load_from_file(cls, path: str, ai_backends: Dict[str, AIBackend], parent=None) -> 'ConversationTab':
         """
         Load a conversation tab from a transcript file.
 
         Args:
             path: Path to transcript file
+            ai_backends: Dictionary mapping provider names to AI backend instances
             parent: Optional parent widget
 
         Returns:
@@ -212,7 +218,7 @@ class ConversationTab(TabBase):
             timestamp = transcript_data.timestamp
 
             # Create conversation tab
-            conversation_tab = cls(conversation_id, path, timestamp, parent)
+            conversation_tab = cls(conversation_id, path, timestamp, ai_backends, parent)
             conversation_tab.load_message_history(transcript_data.messages)
 
             return conversation_tab
@@ -225,11 +231,12 @@ class ConversationTab(TabBase):
             raise ConversationError(f"Failed to create conversation tab: {str(e)}") from e
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent=None) -> 'ConversationTab':
+    def restore_from_state(cls, state: TabState, parent=None, ai_backends: Dict[str, AIBackend] = None) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state.
 
         Args:
             state: TabState containing conversation-specific state
+            ai_backends: Dictionary mapping provider names to AI backend instances
             parent: Optional parent widget
 
         Returns:
@@ -246,7 +253,7 @@ class ConversationTab(TabBase):
 
         # Create new tab instance
         conversation_id = os.path.splitext(os.path.basename(state.path))[0]
-        tab = cls(conversation_id, state.path, state.timestamp, parent)
+        tab = cls(conversation_id, state.path, state.timestamp, ai_backends, parent)
 
         # Load conversation from transcript
         try:
@@ -317,18 +324,6 @@ class ConversationTab(TabBase):
             await self._transcript_handler.write(messages)
         except TranscriptError as e:
             self._logger.error("Failed to write to transcript: %s", e)
-            # Add error message to conversation
-            error_msg = f"Failed to write to transcript: {str(e)}"
-            self.add_system_message(
-                error_msg,
-                error={
-                    "code": "transcript_error",
-                    "message": error_msg,
-                    "details": {
-                        "type": type(e).__name__
-                    }
-                }
-            )
 
     def _handle_selection_scroll(self, mouse_pos: QPoint):
         """Begin scroll handling for selection drag."""
@@ -391,11 +386,6 @@ class ConversationTab(TabBase):
     def get_message_context(self) -> List[str]:
         """Get messages formatted for AI context."""
         return self._conversation.get_messages_for_context()
-
-    def update_settings(self, settings: ConversationSettings) -> None:
-        """Update conversation settings."""
-        self._settings = settings
-        self.update_status()
 
     @Slot(int)
     def _on_scroll_value_changed(self, value: int):
@@ -589,7 +579,8 @@ class ConversationTab(TabBase):
                 error=error
             )
             self._conversation.add_message(error_message)
-            self.add_system_message(error_msg, error=error)
+            self._add_system_message(error_msg, error=error)
+            self._logger.warning("AI response error: %s", error_msg)
             return error_message
 
         # Update display
@@ -629,19 +620,7 @@ class ConversationTab(TabBase):
 
         return message
 
-    def add_user_message(self, content: str, timestamp: datetime = None) -> Message:
-        """Add a user message to the conversation."""
-        self._add_message(content, "user")
-        message = Message.create(
-            MessageSource.USER,
-            content,
-            timestamp=timestamp
-        )
-        self._conversation.add_message(message)
-        asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
-        return message
-
-    def add_system_message(self, content: str, error: Optional[Dict] = None, timestamp: datetime = None) -> Message:
+    def _add_system_message(self, content: str, error: Optional[Dict] = None, timestamp: datetime = None) -> None:
         """Add a system message to the conversation."""
         self._add_message(content, "system")
         message = Message.create(
@@ -652,7 +631,6 @@ class ConversationTab(TabBase):
         )
         self._conversation.add_message(message)
         asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
-        return message
 
     def get_message_history(self) -> List[Message]:
         """
@@ -690,7 +668,7 @@ class ConversationTab(TabBase):
                         message.usage.completion_tokens
                     )
                 if message.model:
-                    self.update_settings(ConversationSettings(
+                    self.update_conversation_settings(ConversationSettings(
                         model=message.model,
                         temperature=message.temperature
                     ))
@@ -708,6 +686,97 @@ class ConversationTab(TabBase):
 
         if self._auto_scroll:
             self._scroll_to_bottom()
+
+    def _sanitize_input(self, text: str) -> str:
+        """Strip control characters from input text, preserving newlines."""
+        return ''.join(char for char in text if char == '\n' or (ord(char) >= 32 and ord(char) != 127))
+
+    async def _process_ai_response(self, message: str):
+        """Process AI response with streaming."""
+        try:
+            self._logger.debug("=== Starting new AI response ===")
+
+            # Get appropriate backend for conversation
+            settings = self.get_settings()
+            provider = ConversationSettings.get_provider(settings.model)
+            backend = self._ai_backends.get(provider)
+
+            if not backend:
+                error_msg = f"No backend available for provider: {provider}"
+                self._logger.error(error_msg)
+                self._add_system_message(
+                    error_msg,
+                    error={"code": "backend_error", "message": error_msg}
+                )
+                return
+
+            stream = backend.stream_message(
+                message,
+                self.get_message_context(),
+                self.tab_id
+            )
+
+            async for response in stream:
+                try:
+                    message = await self.update_streaming_response(
+                        content=response.content,
+                        usage=response.usage,
+                        error=response.error
+                    )
+
+                    # Handle retryable errors
+                    if response.error:
+                        if response.error['code'] in ['network_error', 'timeout']:
+                            continue  # Continue to next retry attempt
+                        return  # Non-retryable error
+
+                except StopAsyncIteration:
+                    break
+
+        except (asyncio.CancelledError, GeneratorExit):
+            self._logger.debug("AI response cancelled")
+            await self.update_streaming_response(
+                content="",
+                error={
+                    "code": "cancelled",
+                    "message": "Request cancelled by user"
+                }
+            )
+            return
+
+        except Exception as e:
+            self._logger.exception(
+                "Error processing AI response with model %s: %s",
+                settings.model,
+                str(e)
+            )
+            error = {
+                "code": "process_error",
+                "message": str(e),
+                "details": {"type": type(e).__name__}
+            }
+            await self.update_streaming_response(
+                content="",
+                error=error
+            )
+
+        finally:
+            self._logger.debug("=== Finished AI response ===")
+
+    def cancel_current_tasks(self):
+        """Cancel any ongoing AI response tasks."""
+        for task in self._current_tasks:
+            if not task.done():
+                task.cancel()
+
+    def update_conversation_settings(self, new_settings: ConversationSettings):
+        """Update conversation settings and associated backend."""
+        self._settings = new_settings
+        self.update_status()
+        provider = ConversationSettings.get_provider(new_settings.model)
+        backend = self._ai_backends.get(provider)
+        if backend:
+            backend.update_conversation_settings(self.tab_id, new_settings)
 
     def _handle_style_changed(self, factor: float) -> None:
         font = self.font()
@@ -811,8 +880,29 @@ class ConversationTab(TabBase):
         has_text = bool(self.get_input_text())
         return has_text and not self._is_streaming
 
-    def submit(self, message: str):
-        """Clear the input area."""
+    def submit(self):
+        """Submit current input text."""
+        content = self._sanitize_input(self.get_input_text().strip())
+        if not content:
+            return
+
         self._input.clear()
-        self._input.set_streaming(True)  # Set streaming state immediately
-        self.add_user_message(message)
+        self._input.set_streaming(True)
+
+        # Add the user message to the conversation
+        self._add_message(content, "user")
+        message = Message.create(MessageSource.USER, content)
+        self._conversation.add_message(message)
+        asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
+
+        # Start AI response
+        task = asyncio.create_task(self._process_ai_response(content))
+        self._current_tasks.append(task)
+
+        def task_done_callback(task):
+            try:
+                self._current_tasks.remove(task)
+            except ValueError:
+                self._logger.debug("Task already removed")
+
+        task.add_done_callback(task_done_callback)
