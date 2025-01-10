@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 import logging
 import os
-from typing import Dict, List
+from typing import Dict
 import uuid
 
 from m6rclib import (
@@ -19,7 +19,6 @@ from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 from PySide6.QtWidgets import QStatusBar
 
-from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.conversation_error import ConversationError
@@ -49,9 +48,6 @@ class MainWindow(QMainWindow):
         self._untitled_count = 0
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
-
-        # Initialize available models based on active backends
-        self._available_models = self._get_available_models()
 
         # Humbug menu actions
         self._about_action = QAction("About Humbug", self)
@@ -869,16 +865,6 @@ class MainWindow(QMainWindow):
 
         conversation_tab.submit()
 
-    def _get_available_models(self) -> List[str]:
-        """Get list of available models based on active backends."""
-        models = []
-        for model in ConversationSettings.AVAILABLE_MODELS:
-            provider = ConversationSettings.get_provider(model)
-            if provider in self._ai_backends:
-                models.append(model)
-
-        return models
-
     def _show_workspace_settings_dialog(self):
         """Show the workspace settings dialog."""
         if not self._workspace_manager.has_workspace:
@@ -909,9 +895,7 @@ class MainWindow(QMainWindow):
         if not conversation_tab:
             return
 
-        dialog = ConversationSettingsDialog(self)
-        # Pass available models to dialog
-        dialog.set_available_models(self._available_models)
+        dialog = ConversationSettingsDialog(self, self._ai_backends)
         dialog.set_settings(conversation_tab.get_settings())
 
         if dialog.exec() == QDialog.Accepted:
