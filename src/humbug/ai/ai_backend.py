@@ -92,7 +92,6 @@ class AIBackend(ABC):
 
                             self._logger.debug("API error: %d: %s", response.status, error_data)
 
-
                             # Map Gemini error codes to consistent format
                             if "error" in error_data and "status" in error_data["error"]:
                                 error_code = error_data["error"]["status"]
