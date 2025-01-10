@@ -310,7 +310,7 @@ class ConversationTab(TabBase):
             "column": cursor.columnNumber()
         }
 
-    async def _write_transcript(self, messages: List[Dict]) -> None:
+    async def _write_transcript(self, message: Message) -> None:
         """
         Write messages to transcript file.
 
@@ -321,7 +321,7 @@ class ConversationTab(TabBase):
             IOError: If writing to transcript file fails
         """
         try:
-            await self._transcript_handler.write(messages)
+            await self._transcript_handler.write([message.to_transcript_dict()])
         except TranscriptError as e:
             self._logger.error("Failed to write to transcript: %s", e)
 
@@ -539,7 +539,7 @@ class ConversationTab(TabBase):
                     completed=False
                 )
                 if message:
-                    await self._write_transcript([message.to_transcript_dict()])
+                    await self._write_transcript(message)
                 self._current_ai_message = None
 
             # Then add the error message
@@ -550,7 +550,7 @@ class ConversationTab(TabBase):
                 error=error
             )
             self._add_message(error_message)
-            asyncio.create_task(self._write_transcript([error_message.to_transcript_dict()]))
+            asyncio.create_task(self._write_transcript(error_message))
             self._logger.warning("AI response error: %s", error_msg)
             return error_message
 
@@ -598,7 +598,7 @@ class ConversationTab(TabBase):
             self._input.set_streaming(False)
             self.update_status()
             self._current_ai_message = None
-            await self._write_transcript([message.to_transcript_dict()])
+            await self._write_transcript(message)
             return message
 
         return message
@@ -663,7 +663,7 @@ class ConversationTab(TabBase):
                     {"code": "backend_error", "message": error_msg}
                 )
                 self._add_message(error_message)
-                asyncio.create_task(self._write_transcript([error_message.to_transcript_dict()]))
+                asyncio.create_task(self._write_transcript(error_message))
                 return
 
             stream = backend.stream_message(
@@ -848,7 +848,7 @@ class ConversationTab(TabBase):
         # Add the user message to the conversation
         message = Message.create(MessageSource.USER, content)
         self._add_message(message)
-        asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
+        asyncio.create_task(self._write_transcript(message))
 
         # Start AI response
         task = asyncio.create_task(self._process_ai_response(content))
