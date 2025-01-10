@@ -28,6 +28,16 @@ class ColumnTabWidget(QTabWidget):
         tab_bar.setDrawBase(False)
         tab_bar.setUsesScrollButtons(True)
 
+    def mousePressEvent(self, event):
+        """Handle mouse press to activate column."""
+        super().mousePressEvent(event)
+        # Inform parent TabManager that we want to be active
+        parent = self.parent()
+        while parent and not isinstance(parent, TabManager):
+            parent = parent.parent()
+        if parent:
+            parent.activate_column(self)
+
 
 class TabManager(QWidget):
     """Manages multiple tabs across one or two columns."""
@@ -67,6 +77,9 @@ class TabManager(QWidget):
         self._tab_columns: List[ColumnTabWidget] = []
         self._create_column()
 
+        # Track active column
+        self._active_column = self._tab_columns[0]
+
         # Set initial state
         self._stack.setCurrentWidget(self._welcome_widget)
 
@@ -79,9 +92,6 @@ class TabManager(QWidget):
 
         self._handle_style_changed(self._style_manager.zoom_factor)
 
-        # Track active column
-        self._active_column = self._tab_columns[0]
-
     def _create_column(self) -> ColumnTabWidget:
         """Create a new tab column."""
         tab_widget = ColumnTabWidget()
@@ -91,6 +101,30 @@ class TabManager(QWidget):
         self._tab_columns.append(tab_widget)
 
         return tab_widget
+
+    def activate_column(self, column: ColumnTabWidget) -> None:
+        """
+        Make the specified column active.
+
+        Args:
+            column: The column widget to activate
+        """
+        if column in self._tab_columns and column != self._active_column:
+            self._active_column = column
+            # Update current states for all tabs in all columns
+            for tab_id, label in self._tab_labels.items():
+                tab = self._tabs[tab_id]
+                for col in self._tab_columns:
+                    is_current = (tab == col.widget(col.currentIndex()) and
+                                col == self._active_column)
+                    label.set_current(is_current)
+
+            # Force style refresh to show active state
+            self._handle_style_changed(self._style_manager.zoom_factor)
+
+            # Emit signal with current tab
+            current_tab = self.get_current_tab()
+            self.current_tab_changed.emit(current_tab)
 
     def add_tab(self, tab: TabBase, title: str) -> None:
         """
@@ -378,45 +412,48 @@ class TabManager(QWidget):
         Args:
             factor: New zoom factor
         """
-        style = f"""
-            QTabWidget::pane {{
-                border: none;
-                background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-            }}
-            QTabBar::tab {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                border: none;
-                margin-right: 2px;
-                border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-            }}
-            QTabBar::tab:selected {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border-top: 2px solid {self._style_manager.get_color_str(ColorRole.TAB_BORDER_ACTIVE)};
-                border-bottom: none;
-            }}
-            QTabBar::tab:hover {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
-            }}
-            QTabBar::scroller {{
-                width: 20px;
-            }}
-            QTabBar QToolButton {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                border: none;
-            }}
-            QTabBar QToolButton::right-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-right')});
-                width: 12px;
-                height: 12px;
-            }}
-            QTabBar QToolButton::left-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-left')});
-                width: 12px;
-                height: 12px;
-            }}
-        """
-
         for column in self._tab_columns:
+            is_active = column == self._active_column
+            column_bg = (ColorRole.TAB_BACKGROUND_ACTIVE if is_active
+                        else ColorRole.BACKGROUND_PRIMARY)
+
+            style = f"""
+                QTabWidget::pane {{
+                    border: none;
+                    background: {self._style_manager.get_color_str(column_bg)};
+                }}
+                QTabBar::tab {{
+                    background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+                    border: none;
+                    margin-right: 2px;
+                    border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                }}
+                QTabBar::tab:selected {{
+                    background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                    border-top: 2px solid {self._style_manager.get_color_str(ColorRole.TAB_BORDER_ACTIVE)};
+                    border-bottom: none;
+                }}
+                QTabBar::tab:hover {{
+                    background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
+                }}
+                QTabBar::scroller {{
+                    width: 20px;
+                }}
+                QTabBar QToolButton {{
+                    background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+                    border: none;
+                }}
+                QTabBar QToolButton::right-arrow {{
+                    image: url({self._style_manager.get_icon_path('arrow-right')});
+                    width: 12px;
+                    height: 12px;
+                }}
+                QTabBar QToolButton::left-arrow {{
+                    image: url({self._style_manager.get_icon_path('arrow-left')});
+                    width: 12px;
+                    height: 12px;
+                }}
+            """
             column.setStyleSheet(style)
 
         # Update all tab labels
