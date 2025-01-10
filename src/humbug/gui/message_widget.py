@@ -98,7 +98,7 @@ class MessageWidget(QFrame):
         """Handle mouse release from text area."""
         self.mouseReleased.emit()
 
-    def set_content(self, text: str, style: str, timestamp: datetime = None):
+    def set_content(self, text: str, style: str, timestamp: datetime):
         """Set content with style, handling incremental updates for AI responses.
         
         Args:
@@ -118,14 +118,8 @@ class MessageWidget(QFrame):
                     'system': "System Message"
                 }.get(style, "Unknown")
 
-                # Format the timestamp if provided, otherwise use current time
-                dt = timestamp
-                if not dt:
-                    # Default to current time if no timestamp provided
-                    dt = datetime.utcnow()
-
                 self._role_label.setText(role_text)
-                timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                 self._timestamp_label.setText(f" @ {timestamp_str}")
 
             self._current_style = style

@@ -155,7 +155,7 @@ class ConversationTab(TabBase):
         forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, self.parent())
 
         # Get all messages and write to new transcript
-        messages = self.get_message_history()
+        messages = self._conversation.get_messages()
         transcript_messages = [msg.to_transcript_dict() for msg in messages]
 
         try:
@@ -458,21 +458,6 @@ class ConversationTab(TabBase):
         self._auto_scroll = True
         self._scroll_to_bottom()
 
-    def _update_last_ai_response(self, content: str, timestamp: datetime = None):
-        """Update the last AI response in the history."""
-        # If our last message was not from the AI then create a new one.
-        if not self._messages or not self._messages[-1].is_ai:
-            self._add_message(content, 'ai', timestamp)
-            return
-
-        # Store current scroll position before appending.  If this insertion triggers a change
-        # in scrolling state then we'll get a signal and will adjust the scrollbar state based
-        # on this.
-        self._last_insertion_point = self._get_insertion_point()
-
-        # Update our message
-        self._messages[-1].set_content(content, 'ai')
-
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
         if has_selection:
@@ -480,12 +465,6 @@ class ConversationTab(TabBase):
                 self._message_with_selection.clear_selection()
             self._message_with_selection = message_widget
         elif message_widget == self._message_with_selection:
-            self._message_with_selection = None
-
-    def clear_selection(self):
-        """Clear all message selections."""
-        if self._message_with_selection:
-            self._message_with_selection.clear_selection()
             self._message_with_selection = None
 
     def has_selection(self) -> bool:
@@ -513,12 +492,6 @@ class ConversationTab(TabBase):
         """
         # Input cursor has already moved - just ensure it's visible
         self._ensure_cursor_visible()
-
-    def _get_insertion_point(self):
-        """Determine where streaming responses will insert in the scroll area"""
-        total_height = self._messages_container.height()
-        input_height = self._input.height()
-        return total_height - input_height - 2 * self._messages_layout.spacing()
 
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""
@@ -552,10 +525,6 @@ class ConversationTab(TabBase):
         error: Optional[Dict] = None
     ) -> Optional[Message]:
         """Update the current AI response in the conversation."""
-        if not self._is_streaming:
-            self._is_streaming = True
-            self._input.set_streaming(True)
-
         if error:
             self._is_streaming = False
             self._input.set_streaming(False)
@@ -578,18 +547,19 @@ class ConversationTab(TabBase):
                 error_msg,
                 error=error
             )
-            self._conversation.add_message(error_message)
             self._add_system_message(error_msg, error=error)
             self._logger.warning("AI response error: %s", error_msg)
             return error_message
 
-        # Update display
-        self._update_last_ai_response(content, self._current_ai_message.timestamp if self._current_ai_message else None)
+        if not self._is_streaming:
+            self._is_streaming = True
+            self._input.set_streaming(True)
 
-        # Update or create AI message in conversation
-        settings = self.get_settings()
-        if not self._current_ai_message:
+        # If our last message was not from the AI then create a new one.
+        if not self._messages or not self._messages[-1].is_ai:
             # Create and add initial message
+
+            settings = self.get_settings()
             message = Message.create(
                 MessageSource.AI,
                 content,
@@ -597,9 +567,20 @@ class ConversationTab(TabBase):
                 temperature=settings.temperature,
                 completed=False
             )
+            self._add_message(content, 'ai', message.timestamp)
             self._conversation.add_message(message)
             self._current_ai_message = message
         else:
+            # Store current scroll position before appending.  If this insertion triggers a change
+            # in scrolling state then we'll get a signal and will adjust the scrollbar state based
+            # on this.
+            total_height = self._messages_container.height()
+            input_height = self._input.height()
+            self._last_insertion_point =  total_height - input_height - 2 * self._messages_layout.spacing()
+
+            # Update our message
+            self._messages[-1].set_content(content, 'ai', self._current_ai_message.timestamp)
+
             # Update existing message
             message = self._conversation.update_message(
                 self._current_ai_message.id,
@@ -620,26 +601,16 @@ class ConversationTab(TabBase):
 
         return message
 
-    def _add_system_message(self, content: str, error: Optional[Dict] = None, timestamp: datetime = None) -> None:
+    def _add_system_message(self, content: str, error: Optional[Dict] = None) -> None:
         """Add a system message to the conversation."""
-        self._add_message(content, "system")
         message = Message.create(
             MessageSource.SYSTEM,
             content,
-            error=error,
-            timestamp=timestamp
+            error=error
         )
+        self._add_message(content, "system", message.timestamp)
         self._conversation.add_message(message)
         asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
-
-    def get_message_history(self) -> List[Message]:
-        """
-        Retrieve the full message history for this conversation.
-
-        Returns:
-            List of Message objects representing the conversation history
-        """
-        return self._conversation.get_messages()
 
     def load_message_history(self, messages: List[Message]):
         """
@@ -655,9 +626,8 @@ class ConversationTab(TabBase):
                 MessageSource.AI: "ai",
                 MessageSource.SYSTEM: "system"
             }[message.source]
-            self._add_message(message.content, style, message.timestamp)
 
-            # Add to conversation history
+            self._add_message(message.content, style, message.timestamp)
             self._conversation.add_message(message)
 
             # Update settings and status if AI message
@@ -890,8 +860,8 @@ class ConversationTab(TabBase):
         self._input.set_streaming(True)
 
         # Add the user message to the conversation
-        self._add_message(content, "user")
         message = Message.create(MessageSource.USER, content)
+        self._add_message(content, "user", message.timestamp)
         self._conversation.add_message(message)
         asyncio.create_task(self._write_transcript([message.to_transcript_dict()]))
 
