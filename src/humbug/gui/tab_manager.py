@@ -9,6 +9,7 @@ from humbug.gui.editor_tab import EditorTab
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_label import TabLabel
+from humbug.gui.tab_type import TabType
 from humbug.gui.welcome_widget import WelcomeWidget
 
 
@@ -23,27 +24,39 @@ class ColumnTabWidget(QTabWidget):
         self.setMovable(True)
         self.setDocumentMode(True)
 
-        # Install event filter to catch activation events
-        self.installEventFilter(self)
-
         # Configure tab bar
         tab_bar = self.tabBar()
         tab_bar.setDrawBase(False)
         tab_bar.setUsesScrollButtons(True)
 
+        # Install event filter on all child widgets
+        self.installEventFilter(self)
+        tab_bar.installEventFilter(self)
+
     def eventFilter(self, obj, event) -> bool:
         """Handle window activation and mouse events to detect active column."""
-        if event.type() == QEvent.WindowActivate:
-            # Emit our activation signal
-            self.column_activated.emit(self)
-            return True
-
-        if event.type() == QEvent.MouseButtonPress:
-            # Emit activation on mouse press
+        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
+            # Emit activation on mouse press or focus
             self.column_activated.emit(self)
             return False  # Don't consume the event
 
         return super().eventFilter(obj, event)
+
+    def addTab(self, widget, *args, **kwargs):
+        """Override addTab to install event filter on new tabs."""
+        result = super().addTab(widget, *args, **kwargs)
+        # Install event filter on the widget to catch focus/mouse events
+        widget.installEventFilter(self)
+        return result
+
+    def removeTab(self, index):
+        """Override removeTab to properly clean up event filters."""
+        widget = self.widget(index)
+        if widget:
+            widget.removeEventFilter(self)
+
+        super().removeTab(index)
+
 
 class TabManager(QWidget):
     """Manages multiple tabs across one or two columns."""
@@ -191,10 +204,6 @@ class TabManager(QWidget):
         self.tab_closed.emit(tab_id)
         tab.deleteLater()
 
-        # Check if we need to remove empty column
-        if column.count() == 0 and len(self._tab_columns) > 1:
-            self.switch_to_single_column()
-
         # Show welcome message if no tabs remain
         if not self._tabs:
             self._stack.setCurrentWidget(self._welcome_widget)
@@ -317,17 +326,55 @@ class TabManager(QWidget):
         if len(self._tab_columns) <= 1:
             return
 
-        # Move all tabs from second column to first
-        while self._tab_columns[1].count() > 0:
-            tab = self._tab_columns[1].widget(0)
-            index = self._tab_columns[0].addTab(tab, "")
-            label = self._tab_labels.get(tab.tab_id)
-            if label:
-                self._tab_columns[0].tabBar().setTabButton(index, QTabBar.LeftSide, label)
+        second_column = self._tab_columns[1]
 
-        # Remove and delete second column
-        self._tab_columns[1].deleteLater()
+        # Record tab states and labels from second column
+        tab_states = []
+        for i in range(second_column.count()):
+            tab = second_column.widget(i)
+            tab_states.append((
+                tab.tab_id,
+                tab.get_state(),
+                self._tab_labels[tab.tab_id].text()
+            ))
+
+        # Delete all widgets in second column
+        while second_column.count() > 0:
+            tab = second_column.widget(0)
+            second_column.removeTab(0)
+            tab.deleteLater()
+
+        # Remove and delete second column widget
+        second_column.deleteLater()
         self._tab_columns.pop(1)
+
+        # Recreate each tab in first column
+        first_column = self._tab_columns[0]
+        for tab_id, state, title in tab_states:
+            # Create appropriate tab type
+            if state.type == TabType.CONVERSATION:
+                tab = ConversationTab.restore_from_state(state, self, ai_backends=self._ai_backends)
+            elif state.type == TabType.EDITOR:
+                tab = EditorTab.restore_from_state(state, self)
+            else:
+                continue
+
+            # Add to first column
+            self._tabs[tab_id] = tab
+
+            # Create new label
+            tab_label = TabLabel(title)
+            tab_label.close_clicked.connect(lambda tid=tab_id: self.close_tab(tid))
+            self._tab_labels[tab_id] = tab_label
+
+            # Add to column
+            index = first_column.addTab(tab, "")
+            first_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+
+            if isinstance(tab, EditorTab):
+                tab.close_requested.connect(self._handle_tab_close_requested)
+                tab.title_changed.connect(self._handle_tab_title_changed)
+                tab.modified_state_changed.connect(self._handle_tab_modified)
 
         # Ensure first column is active
         self._active_column = self._tab_columns[0]
@@ -415,8 +462,10 @@ class TabManager(QWidget):
         """
         for column in self._tab_columns:
             is_active = column == self._active_column
-            column_bg = (ColorRole.TAB_BACKGROUND_ACTIVE if is_active
+            column_bg = (ColorRole.SYNTAX_KEYWORD if is_active
                         else ColorRole.BACKGROUND_PRIMARY)
+#            column_bg = (ColorRole.TAB_BACKGROUND_ACTIVE if is_active
+#                        else ColorRole.BACKGROUND_PRIMARY)
 
             style = f"""
                 QTabWidget::pane {{
