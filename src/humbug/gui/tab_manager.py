@@ -1,8 +1,6 @@
-"""Updated TabManager implementation to support multiple tab columns"""
-
 from typing import Optional, Dict, List, cast
 
-from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QStackedWidget, QSplitter
+from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QSplitter, QStackedWidget
 from PySide6.QtCore import Signal, Qt
 
 from humbug.gui.conversation_tab import ConversationTab
@@ -44,6 +42,7 @@ class TabManager(QWidget):
 
     tab_closed = Signal(str)  # Emits tab_id
     current_tab_changed = Signal(TabBase)
+    column_state_changed = Signal(bool)  # Emits True for two columns, False for one
 
     def __init__(self, parent=None):
         """Initialize the tab manager."""
@@ -330,6 +329,9 @@ class TabManager(QWidget):
         # Ensure first column is active
         self._active_column = self._tab_columns[0]
 
+        # Emit signal about column state change
+        self.column_state_changed.emit(False)
+
     def switch_to_double_column(self) -> None:
         """Convert from one column to two."""
         if len(self._tab_columns) > 1:
@@ -358,6 +360,20 @@ class TabManager(QWidget):
 
         # Set initial splitter sizes
         self._column_splitter.setSizes([self.width() // 2, self.width() // 2])
+
+        # Emit signal about column state change
+        self.column_state_changed.emit(True)
+
+    def get_current_column(self) -> int:
+        """Get index of currently active column."""
+        return self._tab_columns.index(self._active_column)
+
+    def get_tab_column(self, tab: TabBase) -> Optional[int]:
+        """Get column index containing the specified tab."""
+        for i, column in enumerate(self._tab_columns):
+            if column.indexOf(tab) != -1:
+                return i
+        return None
 
     def get_conversation_tabs(self) -> List[ConversationTab]:
         """

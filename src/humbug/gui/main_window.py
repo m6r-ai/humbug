@@ -271,11 +271,19 @@ class MainWindow(QMainWindow):
 
         self.setStatusBar(self._status_bar)
         self.tab_manager.current_tab_changed.connect(self._handle_tab_changed)
+        self.tab_manager.column_state_changed.connect(self._handle_column_state_changed)
 
         self._handle_style_changed()
 
         self._workspace_manager = WorkspaceManager()
         self._restore_last_workspace()
+
+    def _handle_column_state_changed(self, has_two_columns: bool):
+        """Handle column state changes from tab manager."""
+        self._split_view_action.setChecked(has_two_columns)
+
+        # Save workspace state when column configuration changes
+        self._save_workspace_state()
 
     def _handle_column_mode(self, checked: bool) -> None:
         """Handle column mode changes.
@@ -414,22 +422,29 @@ class MainWindow(QMainWindow):
             return
 
         # Get state from all tabs
-        tab_states = []
-        for column_index, column in enumerate(self.tab_manager._tab_columns):
+        tab_columns = []
+        for _, column in enumerate(self.tab_manager._tab_columns):
+            tab_states = []
             for index in range(column.count()):
                 tab = column.widget(index)
                 try:
                     state = tab.get_state()
                     state_dict = state.to_dict()
-                    # Add column information
-                    state_dict['column'] = column_index
                     tab_states.append(state_dict)
                 except Exception as e:
                     self._logger.error("Failed to save state for tab %s: %s", tab.tab_id, e)
 
+            tab_columns.append(tab_states)
+
+        # Get split view state
+        workspace_state = {
+            'columns': tab_columns,
+            'split_view': len(self.tab_manager._tab_columns) > 1
+        }
+
         # Save to workspace
         try:
-            self._workspace_manager.save_workspace_state(tab_states)
+            self._workspace_manager.save_workspace_state(workspace_state)
         except WorkspaceError as e:
             self._logger.error("Failed to save workspace state: %s", str(e))
             MessageBox.show_message(
@@ -443,8 +458,8 @@ class MainWindow(QMainWindow):
         """Restore previously open tabs from workspace state."""
         # Load saved states
         try:
-            saved_states = self._workspace_manager.load_workspace_state()
-            if not saved_states:
+            saved_state = self._workspace_manager.load_workspace_state()
+            if not saved_state:
                 self._logger.debug("No saved states found")
                 return
         except WorkspaceError as e:
@@ -457,14 +472,17 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # Check if we need two columns
-        needs_two_columns = any(state.get('column', 0) == 1 for state in saved_states)
+        saved_columns = saved_state.get('columns', [])
+        needs_two_columns = saved_state.get('split_view', False)
+
+        # Restore split view state first
         if needs_two_columns:
             self.tab_manager.switch_to_double_column()
             self._split_view_action.setChecked(True)
 
-            # Restore each tab
-            for state_dict in saved_states:
+        # Restore each column
+        for column_index, tab_state in enumerate(saved_columns):
+            for state_dict in tab_state:
                 try:
                     # Convert dict back to TabState
                     state = TabState.from_dict(state_dict)
@@ -478,6 +496,7 @@ class MainWindow(QMainWindow):
                             continue
 
                     # Create appropriate tab type
+                    print(f"create type: {state.type}")
                     if state.type == TabType.CONVERSATION:
                         tab = ConversationTab.restore_from_state(state, self, ai_backends=self._ai_backends)
                         title = f"Conv: {tab.tab_id}"
@@ -488,11 +507,10 @@ class MainWindow(QMainWindow):
                         continue
 
                     # Set active column before adding tab
-                    column_index = state_dict.get('column', 0)
-                    if column_index < len(self.tab_manager._tab_columns):
-                        self.tab_manager._active_column = self.tab_manager._tab_columns[column_index]
+                    self.tab_manager._active_column = self.tab_manager._tab_columns[column_index]
 
                     # Add tab
+                    print(f"add tab {title} to {column_index}")
                     self.tab_manager.add_tab(tab, title)
 
                     # Connect editor signals if needed

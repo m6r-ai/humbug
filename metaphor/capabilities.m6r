@@ -11,6 +11,41 @@ Context: Capabilities
         interface on the right side. The two regions are separated by a resizable splitter that allows the user
         to adjust the relative widths.  At the bottom of the main window is an application status bar.
 
+        Tabs can be arranged as either single column of tabs, or have a split view that has two columns of tabs
+        side-by-side.
+
+        Context: Tab columns
+            Context: Column layout options
+                The editor supports both single and dual-column layouts.
+
+                The layout can be toggled via the View menu or keyboard shortcuts.
+
+                When switching from single to dual columns, the active tab moves to the second column.
+
+                When switching from dual to single columns, all tabs merge into a single column.
+
+            Context: Column behavior
+                Each column maintains its own set of tabs.
+
+                One column is always the active column.
+
+                The active column receives new tabs by default.
+
+                The active column is visually distinguished from inactive columns.
+
+                Clicking in a column or its tabs makes it the active column.
+
+                Keyboard focus changes also update the active column.
+
+                When a column becomes empty, the view reverts to single column layout.
+
+            Context: Column persistence
+                The column layout is persisted with the workspace.
+
+                Each tab's column position is restored when reopening a workspace.
+
+                Column sizes are preserved between sessions.
+
         Context: File tree view
             The file tree displays the contents of the current workspace:
 
@@ -272,7 +307,7 @@ Context: Capabilities
         The workspace ".humbug" directory contains:
 
         - settings.json: Project-specific configuration
-        - recents.json: State of active elements
+        - session.json: State of active elements
 
         Context: Settings file
             The settings.json file contains workspace-specific configuration:
@@ -299,7 +334,7 @@ Context: Capabilities
             - Continue loading workspace
 
         Context: Recents file
-            The recents.json file tracks workspace state for restoration:
+            The session.json file tracks workspace state for restoration:
 
             ```json
             {
@@ -479,7 +514,7 @@ Context: Capabilities
             - Validate no existing ".humbug" directory
             - Create ".humbug" directory if valid
             - Create default settings.json
-            - Create empty recents.json
+            - Create empty session.json
             - Show error if creation fails
 
         Context: Opening workspaces
@@ -495,7 +530,7 @@ Context: Capabilities
         Context: Closing workspaces
             When closing a workspace:
 
-            - Save current state to recents.json
+            - Save current state to session.json
             - Close all workspace elements
             - Clear workspace state
             - Update home directory tracking
@@ -681,7 +716,7 @@ Context: Capabilities
             Context: Close Workspace
                 The "Close Workspace" menu item closes current workspace:
 
-                - Saves state to recents.json
+                - Saves state to session.json
                 - Closes all workspace elements
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+W" for Windows).
@@ -790,6 +825,13 @@ Context: Capabilities
                 of 0.5
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+0" for Windows).
+
+            Context: Separator
+                There will be a horizontal Separator
+
+            Context: Split View
+                The "Split View" menu item will support selecting either a single column of tabs or two columns of tabs.
+                This will have a checkbox next to it that will be checked if we are using a multi-column view.
 
         Context: Menu styling
             Menus and menu items must have consistent visual styling:

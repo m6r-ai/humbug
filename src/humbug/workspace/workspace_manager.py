@@ -1,4 +1,5 @@
-"""Manages Humbug application workspaces.
+"""
+Manages Humbug application workspaces.
 
 This module provides functionality for creating, opening, and managing Humbug workspaces.
 A workspace contains project-specific settings, recent files, and conversation history.
@@ -8,7 +9,7 @@ import json
 import logging
 import os
 import shutil
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from PySide6.QtCore import QObject, Signal
 
@@ -36,7 +37,7 @@ class WorkspaceManager(QObject):
 
     WORKSPACE_DIR = ".humbug"
     SETTINGS_FILE = "settings.json"
-    RECENTS_FILE = "recents.json"
+    SESSION_FILE = "session.json"
 
     _instance = None
     _logger = logging.getLogger("WorkspaceManager")
@@ -190,67 +191,76 @@ class WorkspaceManager(QObject):
             self._update_home_tracking()
             self.settings_changed.emit()
 
-    def save_workspace_state(self, tabs: List[Dict]) -> None:
+    def save_workspace_state(self, state: Dict) -> None:
         """
-        Save the current workspace state including open tabs.
+        Save workspace state to disk.
 
         Args:
-            tabs: List of dictionaries containing tab information to save.
+            state: Dictionary containing tabs and layout state
 
         Raises:
-            WorkspaceNotFoundError: If no workspace is currently open.
-            OSError: If there are errors writing the state file.
+            WorkspaceError: If saving state fails
         """
         if not self.has_workspace:
-            raise WorkspaceNotFoundError("No workspace is currently open")
+            raise WorkspaceError("No workspace is active")
 
-        # Convert paths that are within the workspace to relative paths
-        # Keep paths outside the workspace as absolute
-        for tab in tabs:
-            if tab.get('path') and os.path.isabs(tab['path']):
-                relative_path = self.make_relative_path(tab['path'])
-                if relative_path:  # Path is inside workspace
-                    tab['path'] = relative_path
-                # If relative_path is None, path is outside workspace - keep it absolute
-
-        recents_path = os.path.join(self._workspace_path, self.WORKSPACE_DIR, self.RECENTS_FILE)
         try:
-            with open(recents_path, "w", encoding='utf-8') as f:
-                json.dump({"tabs": tabs}, f, indent=2)
-        except OSError as e:
-            self._logger.error("Failed to save workspace state: %s", str(e))
-            raise
+            # Ensure .humbug directory exists
+            self.ensure_workspace_dir(".humbug")
 
-    def load_workspace_state(self) -> Optional[List[Dict]]:
+            for tab_state in state.get('tabs', []):
+                if 'path' in tab_state and os.path.isabs(tab_state['path']):
+                    try:
+                        tab_state['path'] = os.path.relpath(
+                            tab_state['path'],
+                            self.workspace_path
+                        )
+                    except ValueError:
+                        # Path is outside workspace, keep as absolute
+                        pass
+
+            # Write session file
+            session_file = os.path.join(self.workspace_path, self.WORKSPACE_DIR, self.SESSION_FILE)
+            with open(session_file, 'w', encoding='utf-8') as f:
+                json.dump(state, f)
+
+        except OSError as e:
+            raise WorkspaceError(f"Failed to save workspace state: {str(e)}") from e
+
+    def load_workspace_state(self) -> Dict:
         """
-        Load the workspace state including previously open tabs.
+        Load workspace state from disk.
 
         Returns:
-            List of dictionaries containing tab information, or None if state cannot be loaded.
+            Dictionary containing tabs and layout state
 
         Raises:
-            WorkspaceNotFoundError: If no workspace is currently open.
+            WorkspaceError: If loading state fails
         """
         if not self.has_workspace:
-            raise WorkspaceNotFoundError("No workspace is currently open")
+            raise WorkspaceError("No workspace is active")
 
         try:
-            recents_path = os.path.join(self._workspace_path, self.WORKSPACE_DIR, self.RECENTS_FILE)
-            with open(recents_path, encoding='utf-8') as f:
-                data = json.load(f)
-                tabs = data.get("tabs", [])
+            session_file = os.path.join(self.workspace_path, self.WORKSPACE_DIR, self.SESSION_FILE)
+            if not os.path.exists(session_file):
+                return []
 
-                # Handle paths based on whether they are relative or absolute
-                for tab in tabs:
-                    if tab.get('path'):
-                        if not os.path.isabs(tab['path']):
-                            # Convert relative paths to absolute within the workspace
-                            tab['path'] = os.path.join(self._workspace_path, tab['path'])
+            with open(session_file, encoding='utf-8') as f:
+                state = json.load(f)
 
-                return tabs
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            self._logger.error("Error loading workspace state: %s", str(e))
-            return None
+            for tab_state in state.get('tabs', []):
+                if 'path' in tab_state and not os.path.isabs(tab_state['path']):
+                    tab_state['path'] = os.path.join(
+                        self.workspace_path,
+                        tab_state['path']
+                    )
+
+            return state
+
+        except json.JSONDecodeError as e:
+            raise WorkspaceError(f"Failed to parse workspace state: {str(e)}") from e
+        except OSError as e:
+            raise WorkspaceError(f"Failed to load workspace state: {str(e)}") from e
 
     def get_last_workspace(self) -> Optional[str]:
         """
