@@ -20,8 +20,6 @@ Context: Capabilities
 
                 The layout can be toggled via the View menu or keyboard shortcuts.
 
-                When switching from single to dual columns, the active tab moves to the second column.
-
                 When switching from dual to single columns, all tabs merge into a single column.
 
             Context: Column behavior

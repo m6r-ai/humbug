@@ -496,7 +496,6 @@ class MainWindow(QMainWindow):
                             continue
 
                     # Create appropriate tab type
-                    print(f"create type: {state.type}")
                     if state.type == TabType.CONVERSATION:
                         tab = ConversationTab.restore_from_state(state, self, ai_backends=self._ai_backends)
                         title = f"Conv: {tab.tab_id}"
@@ -510,7 +509,6 @@ class MainWindow(QMainWindow):
                     self.tab_manager._active_column = self.tab_manager._tab_columns[column_index]
 
                     # Add tab
-                    print(f"add tab {title} to {column_index}")
                     self.tab_manager.add_tab(tab, title)
 
                     # Connect editor signals if needed

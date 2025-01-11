@@ -1,7 +1,7 @@
 from typing import Optional, Dict, List, cast
 
 from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QSplitter, QStackedWidget
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, QEvent
 
 from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
@@ -15,27 +15,35 @@ from humbug.gui.welcome_widget import WelcomeWidget
 class ColumnTabWidget(QTabWidget):
     """Enhanced QTabWidget for use in columns."""
 
+    column_activated = Signal(QTabWidget)
+
     def __init__(self, parent=None):
         """Initialize the tab widget."""
         super().__init__(parent)
         self.setMovable(True)
         self.setDocumentMode(True)
 
+        # Install event filter to catch activation events
+        self.installEventFilter(self)
+
         # Configure tab bar
         tab_bar = self.tabBar()
         tab_bar.setDrawBase(False)
         tab_bar.setUsesScrollButtons(True)
 
-    def mousePressEvent(self, event):
-        """Handle mouse press to activate column."""
-        super().mousePressEvent(event)
-        # Inform parent TabManager that we want to be active
-        parent = self.parent()
-        while parent and not isinstance(parent, TabManager):
-            parent = parent.parent()
-        if parent:
-            parent.activate_column(self)
+    def eventFilter(self, obj, event) -> bool:
+        """Handle window activation and mouse events to detect active column."""
+        if event.type() == QEvent.WindowActivate:
+            # Emit our activation signal
+            self.column_activated.emit(self)
+            return True
 
+        if event.type() == QEvent.MouseButtonPress:
+            # Emit activation on mouse press
+            self.column_activated.emit(self)
+            return False  # Don't consume the event
+
+        return super().eventFilter(obj, event)
 
 class TabManager(QWidget):
     """Manages multiple tabs across one or two columns."""
@@ -95,21 +103,18 @@ class TabManager(QWidget):
         """Create a new tab column."""
         tab_widget = ColumnTabWidget()
         tab_widget.currentChanged.connect(self._on_tab_changed)
+        tab_widget.column_activated.connect(self._handle_column_activated)
 
         self._column_splitter.addWidget(tab_widget)
         self._tab_columns.append(tab_widget)
 
         return tab_widget
 
-    def activate_column(self, column: ColumnTabWidget) -> None:
-        """
-        Make the specified column active.
-
-        Args:
-            column: The column widget to activate
-        """
+    def _handle_column_activated(self, column: ColumnTabWidget) -> None:
+        """Handle column activation."""
         if column in self._tab_columns and column != self._active_column:
             self._active_column = column
+
             # Update current states for all tabs in all columns
             for tab_id, label in self._tab_labels.items():
                 tab = self._tabs[tab_id]
@@ -316,11 +321,9 @@ class TabManager(QWidget):
         while self._tab_columns[1].count() > 0:
             tab = self._tab_columns[1].widget(0)
             index = self._tab_columns[0].addTab(tab, "")
-            # Restore tab label
-            if isinstance(tab, TabBase):
-                label = self._tab_labels.get(tab.tab_id)
-                if label:
-                    self._tab_columns[0].tabBar().setTabButton(index, QTabBar.LeftSide, label)
+            label = self._tab_labels.get(tab.tab_id)
+            if label:
+                self._tab_columns[0].tabBar().setTabButton(index, QTabBar.LeftSide, label)
 
         # Remove and delete second column
         self._tab_columns[1].deleteLater()
@@ -339,24 +342,6 @@ class TabManager(QWidget):
 
         # Create second column
         new_column = self._create_column()
-
-        # Move active tab to new column if we have one
-        current_tab = self.get_current_tab()
-        if current_tab:
-            # Get the tab label
-            label = self._tab_labels.get(current_tab.tab_id)
-
-            # Remove from first column
-            self._tab_columns[0].removeTab(self._tab_columns[0].indexOf(current_tab))
-
-            # Add to second column
-            index = new_column.addTab(current_tab, "")
-            if label:
-                new_column.tabBar().setTabButton(index, QTabBar.LeftSide, label)
-
-            # Make second column active
-            self._active_column = new_column
-            new_column.setCurrentWidget(current_tab)
 
         # Set initial splitter sizes
         self._column_splitter.setSizes([self.width() // 2, self.width() // 2])
