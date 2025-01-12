@@ -81,6 +81,8 @@ class EditorTab(TabBase):
         self._editor.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor)
 
+        self._install_activation_tracking(self._editor)
+
         # Set up syntax highlighter
         self._highlighter = EditorHighlighter(self._editor.document())
 

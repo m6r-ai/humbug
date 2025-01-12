@@ -149,7 +149,7 @@ class TabManager(QWidget):
         current_tab = self.get_current_tab()
         self.current_tab_changed.emit(current_tab)
 
-    def _handle_tab_changed(self, index: int) -> None:
+    def _handle_tab_changed(self, _index: int) -> None:
         """
         Handle tab selection changes.
 
@@ -157,10 +157,24 @@ class TabManager(QWidget):
             index: Index of the newly selected tab
         """
         # Find which column triggered the change
-        print(f"Tab change: {index}")
         sender = self.sender()
         self._active_column = sender
+        self._update_tabs()
 
+    def _handle_tab_activated(self, tab: TabBase) -> None:
+        """
+        Handle tab activation from widget focus.
+
+        Args:
+            tab: The tab that was activated
+        """
+        # Find which column contains the tab
+        column = self._find_column_for_tab(tab)
+        if not column or column == self._active_column:
+            return
+
+        # Update active column
+        self._active_column = column
         self._update_tabs()
 
     def _handle_column_activated(self, column: ColumnTabWidget) -> None:
@@ -171,9 +185,7 @@ class TabManager(QWidget):
         if column == self._active_column:
             return
 
-        print(f"Column activated")
         self._active_column = column
-
         self._update_tabs()
 
     def add_tab(self, tab: TabBase, title: str) -> None:
@@ -186,6 +198,8 @@ class TabManager(QWidget):
         """
         tab_id = tab.tab_id
         self._tabs[tab_id] = tab
+
+        tab.activated.connect(lambda: self._handle_tab_activated(tab))
 
         # Create custom tab label
         tab_label = TabLabel(title)

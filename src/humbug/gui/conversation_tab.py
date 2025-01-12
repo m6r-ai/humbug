@@ -98,6 +98,8 @@ class ConversationTab(TabBase):
         self._messages_layout.addStretch()
         self._messages_layout.addWidget(self._input)
 
+        self._install_activation_tracking(self._input)
+
         self._style_manager = StyleManager()
 
         self._messages_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -453,6 +455,8 @@ class ConversationTab(TabBase):
         # Add widget before input
         self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
         self._messages.append(msg_widget)
+
+        self._install_activation_tracking(msg_widget)
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
