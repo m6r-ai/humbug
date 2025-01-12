@@ -126,7 +126,7 @@ class TabManager(QWidget):
     def _create_column(self) -> ColumnTabWidget:
         """Create a new tab column."""
         tab_widget = ColumnTabWidget()
-        tab_widget.currentChanged.connect(self._on_tab_changed)
+        tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
 
         self._column_splitter.addWidget(tab_widget)
@@ -134,25 +134,47 @@ class TabManager(QWidget):
 
         return tab_widget
 
-    def _handle_column_activated(self, column: ColumnTabWidget) -> None:
-        """Handle column activation."""
-        if column in self._tab_columns and column != self._active_column:
-            self._active_column = column
-
-            # Update current states for all tabs in all columns
+    def _update_tabs(self) -> None:
+        # Update current states for all tabs in all columns
+        for column in self._tab_columns:
             for tab_id, label in self._tab_labels.items():
                 tab = self._tabs[tab_id]
-                for col in self._tab_columns:
-                    is_current = (tab == col.widget(col.currentIndex()) and
-                                col == self._active_column)
-                    label.set_current(is_current)
+                is_current = tab == column.widget(column.currentIndex()) and column == self._active_column
+                label.set_current(is_current)
 
-            # Force style refresh to show active state
-            self._handle_style_changed(self._style_manager.zoom_factor)
+        # Force style refresh to show active state
+        self._handle_style_changed(self._style_manager.zoom_factor)
 
-            # Emit signal with current tab
-            current_tab = self.get_current_tab()
-            self.current_tab_changed.emit(current_tab)
+        # Emit our new signal with current tab
+        current_tab = self.get_current_tab()
+        self.current_tab_changed.emit(current_tab)
+
+    def _handle_tab_changed(self, index: int) -> None:
+        """
+        Handle tab selection changes.
+
+        Args:
+            index: Index of the newly selected tab
+        """
+        # Find which column triggered the change
+        print(f"Tab change: {index}")
+        sender = self.sender()
+        self._active_column = sender
+
+        self._update_tabs()
+
+    def _handle_column_activated(self, column: ColumnTabWidget) -> None:
+        """Handle column activation."""
+        if column not in self._tab_columns:
+            return
+
+        if column == self._active_column:
+            return
+
+        print(f"Column activated")
+        self._active_column = column
+
+        self._update_tabs()
 
     def add_tab(self, tab: TabBase, title: str) -> None:
         """
@@ -308,29 +330,6 @@ class TabManager(QWidget):
                 label.update_text(current_text[:-1])
 
             self.adjustSize()
-
-    def _on_tab_changed(self, index: int) -> None:
-        """
-        Handle tab selection changes.
-
-        Args:
-            index: Index of the newly selected tab
-        """
-        # Find which column triggered the change
-        sender = self.sender()
-        if isinstance(sender, ColumnTabWidget):
-            self._active_column = sender
-
-        # Update current states for all tabs in all columns
-        for column in self._tab_columns:
-            for tab_id, label in self._tab_labels.items():
-                tab = self._tabs[tab_id]
-                is_current = tab == column.widget(column.currentIndex()) and column == self._active_column
-                label.set_current(is_current)
-
-        # Emit our new signal with current tab
-        current_tab = self.get_current_tab()
-        self.current_tab_changed.emit(current_tab)
 
     def switch_to_single_column(self) -> None:
         """Convert from two columns to one."""
@@ -639,14 +638,8 @@ class TabManager(QWidget):
             is_active = column == self._active_column
             column_bg = (ColorRole.SYNTAX_KEYWORD if is_active
                         else ColorRole.BACKGROUND_PRIMARY)
-#            column_bg = (ColorRole.TAB_BACKGROUND_ACTIVE if is_active
-#                        else ColorRole.BACKGROUND_PRIMARY)
 
             style = f"""
-                QTabWidget::pane {{
-                    border: none;
-                    background: {self._style_manager.get_color_str(column_bg)};
-                }}
                 QTabBar::tab {{
                     background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
                     border: none;
