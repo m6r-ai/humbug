@@ -1,12 +1,10 @@
 """Main window implementation for Humbug application."""
 
 import asyncio
-from datetime import datetime
 import json
 import logging
 import os
-from typing import Dict
-import uuid
+from typing import Dict, Optional
 
 from m6rclib import (
     MetaphorParser, MetaphorParserError, format_ast, format_errors
@@ -30,8 +28,6 @@ from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
-from humbug.gui.tab_state import TabState
-from humbug.gui.tab_type import TabType
 from humbug.gui.workspace_settings_dialog import WorkspaceSettingsDialog
 from humbug.gui.workspace_file_tree import WorkspaceFileTree
 from humbug.workspace.workspace_manager import WorkspaceManager
@@ -45,10 +41,8 @@ class MainWindow(QMainWindow):
         """Initialize the main window."""
         super().__init__()
         self._ai_backends = ai_backends
-        self._untitled_count = 0
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
-        self._column_states: Dict[str, int] = {}  # Maps tab_id to column index
 
         # Humbug menu actions
         self._about_action = QAction("About Humbug", self)
@@ -235,8 +229,8 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._file_tree)
 
         # Create tab manager in splitter
-        self.tab_manager = TabManager(self)
-        self._splitter.addWidget(self.tab_manager)
+        self._tab_manager = TabManager(ai_backends, self)
+        self._splitter.addWidget(self._tab_manager)
 
         # Set initial file tree width
         self._splitter.setSizes([240, self.width() - 240])
@@ -270,8 +264,8 @@ class MainWindow(QMainWindow):
         self._status_bar.addPermanentWidget(self._status_right)
 
         self.setStatusBar(self._status_bar)
-        self.tab_manager.current_tab_changed.connect(self._handle_tab_changed)
-        self.tab_manager.column_state_changed.connect(self._handle_column_state_changed)
+        self._tab_manager.current_tab_changed.connect(self._handle_tab_changed)
+        self._tab_manager.column_state_changed.connect(self._handle_column_state_changed)
 
         self._handle_style_changed()
 
@@ -292,9 +286,9 @@ class MainWindow(QMainWindow):
             checked: True if two columns should be enabled, False for single column
         """
         if checked:
-            self.tab_manager.switch_to_double_column()
+            self._tab_manager.switch_to_double_column()
         else:
-            self.tab_manager.switch_to_single_column()
+            self._tab_manager.switch_to_single_column()
 
         # Update menu state
         self._split_view_action.setChecked(checked)
@@ -304,7 +298,7 @@ class MainWindow(QMainWindow):
 
     def _handle_tab_changed(self) -> None:
         """Handle tab change by connecting status message signal."""
-        current_tab = self.tab_manager.get_current_tab()
+        current_tab = self._tab_manager.get_current_tab()
         if current_tab:
             # Disconnect any existing connections to avoid duplicates
             try:
@@ -421,29 +415,8 @@ class MainWindow(QMainWindow):
             self._logger.error("No workspace active, cannot save")
             return
 
-        # Get state from all tabs
-        tab_columns = []
-        for _, column in enumerate(self.tab_manager._tab_columns):
-            tab_states = []
-            for index in range(column.count()):
-                tab = column.widget(index)
-                try:
-                    state = tab.get_state()
-                    state_dict = state.to_dict()
-                    tab_states.append(state_dict)
-                except Exception as e:
-                    self._logger.error("Failed to save state for tab %s: %s", tab.tab_id, e)
-
-            tab_columns.append(tab_states)
-
-        # Get split view state
-        workspace_state = {
-            'columns': tab_columns,
-            'split_view': len(self.tab_manager._tab_columns) > 1
-        }
-
-        # Save to workspace
         try:
+            workspace_state = self._tab_manager.save_state()
             self._workspace_manager.save_workspace_state(workspace_state)
         except WorkspaceError as e:
             self._logger.error("Failed to save workspace state: %s", str(e))
@@ -456,91 +429,40 @@ class MainWindow(QMainWindow):
 
     def _restore_workspace_state(self):
         """Restore previously open tabs from workspace state."""
-        # Load saved states
+        saved_state = self._workspace_manager.load_workspace_state()
+        if not saved_state:
+            self._logger.debug("No saved states found")
+            return
+
         try:
-            saved_state = self._workspace_manager.load_workspace_state()
-            if not saved_state:
-                self._logger.debug("No saved states found")
-                return
+            self._tab_manager.restore_state(saved_state)
         except WorkspaceError as e:
-            self._logger.error("Failed to load workspace state: %s", str(e))
+            self._logger.error("Failed to restore workspace state: %s", str(e))
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
                 "Workspace Error",
-                f"Failed to load workspace state: {str(e)}"
+                f"Failed to restore workspace state: {str(e)}"
             )
-            return
-
-        saved_columns = saved_state.get('columns', [])
-        needs_two_columns = saved_state.get('split_view', False)
-
-        # Restore split view state first
-        if needs_two_columns:
-            self.tab_manager.switch_to_double_column()
-            self._split_view_action.setChecked(True)
-
-        # Restore each column
-        for column_index, tab_state in enumerate(saved_columns):
-            for state_dict in tab_state:
-                try:
-                    # Convert dict back to TabState
-                    state = TabState.from_dict(state_dict)
-
-                    # Convert relative paths to absolute
-                    if not os.path.isabs(state.path):
-                        try:
-                            state.path = self._workspace_manager.get_workspace_path(state.path)
-                        except WorkspaceError as e:
-                            self._logger.error("Failed to resolve path for tab state: %s", str(e))
-                            continue
-
-                    # Create appropriate tab type
-                    if state.type == TabType.CONVERSATION:
-                        tab = ConversationTab.restore_from_state(state, self, ai_backends=self._ai_backends)
-                        title = f"Conv: {tab.tab_id}"
-                    elif state.type == TabType.EDITOR:
-                        tab = EditorTab.restore_from_state(state, self)
-                        title = os.path.basename(state.path)
-                    else:
-                        continue
-
-                    # Set active column before adding tab
-                    self.tab_manager._active_column = self.tab_manager._tab_columns[column_index]
-
-                    # Add tab
-                    self.tab_manager.add_tab(tab, title)
-
-                    # Connect editor signals if needed
-                    if isinstance(tab, EditorTab):
-                        tab.close_requested.connect(self._handle_tab_close_requested)
-                        tab.title_changed.connect(self._handle_tab_title_changed)
-                        tab.modified_state_changed.connect(self._handle_tab_modified)
-
-                except Exception as e:
-                    self._logger.error(
-                        "Failed to restore tab state: %s",
-                        str(e),
-                    )
 
     def _close_all_tabs(self):
-        for tab in self.tab_manager.get_all_tabs():
-            self.tab_manager.close_tab(tab.tab_id)
+        for tab in self._tab_manager.get_all_tabs():
+            self._tab_manager.close_tab(tab.tab_id)
 
     def _undo(self):
-        self.tab_manager.get_current_tab().undo()
+        self._tab_manager.get_current_tab().undo()
 
     def _redo(self):
-        self.tab_manager.get_current_tab().redo()
+        self._tab_manager.get_current_tab().redo()
 
     def _cut(self):
-        self.tab_manager.get_current_tab().cut()
+        self._tab_manager.get_current_tab().cut()
 
     def _copy(self):
-        self.tab_manager.get_current_tab().copy()
+        self._tab_manager.get_current_tab().copy()
 
     def _paste(self):
-        self.tab_manager.get_current_tab().paste()
+        self._tab_manager.get_current_tab().paste()
 
     def _show_about_dialog(self):
         """Show the About dialog."""
@@ -549,18 +471,10 @@ class MainWindow(QMainWindow):
 
     def _new_file(self):
         """Create a new empty editor tab."""
-        self._untitled_count += 1
-        tab_id = str(uuid.uuid4())
-        editor = EditorTab(tab_id, self)
-        editor.set_filename(None, self._untitled_count)
+        if not self._workspace_manager.has_workspace:
+            return
 
-        # Connect editor signals
-        editor.close_requested.connect(self._handle_tab_close_requested)
-        editor.title_changed.connect(self._handle_tab_title_changed)
-        editor.modified_state_changed.connect(self._handle_tab_modified)
-
-        self.tab_manager.add_tab(editor, f"Untitled-{self._untitled_count}")
-        return editor
+        self._tab_manager.new_file()
 
     def _handle_file_activation(self, path: str):
         """Handle file activation from the file tree."""
@@ -588,55 +502,33 @@ class MainWindow(QMainWindow):
         self._open_file_path(file_path)
 
     def _open_file_path(self, path: str) -> None:
-        # Check if file is already open
-        existing_tab = self.tab_manager.find_editor_tab_by_filename(path)
-        if existing_tab:
-            self.tab_manager.set_current_tab(existing_tab.tab_id)
-            return
-
-        tab_id = str(uuid.uuid4())
-        editor = EditorTab(tab_id, self)
-        editor.set_filename(path)
-
-        # Connect editor signals
-        editor.close_requested.connect(self._handle_tab_close_requested)
-        editor.title_changed.connect(self._handle_tab_title_changed)
-        editor.modified_state_changed.connect(self._handle_tab_modified)
-
-        self.tab_manager.add_tab(editor, os.path.basename(path))
+        """Open file in editor tab."""
+        try:
+            self._tab_manager.open_file(path)
+        except OSError as e:
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Error Opening File",
+                f"Could not open {path}: {str(e)}"
+            )
 
     def _save_file(self):
         """Save the current file."""
-        current_tab = self.tab_manager.get_current_tab()
+        current_tab = self._tab_manager.get_current_tab()
         if isinstance(current_tab, EditorTab):
             current_tab.save()
 
     def _save_file_as(self):
         """Save the current file with a new name."""
-        current_tab = self.tab_manager.get_current_tab()
+        current_tab = self._tab_manager.get_current_tab()
         if isinstance(current_tab, EditorTab):
             current_tab.save_as()
-
-    def _handle_tab_close_requested(self, tab_id: str) -> None:
-        """Handle tab close request."""
-        tab = self._conversation_tabs.get(tab_id)
-        if tab:
-            tab.close()
-
-        self.tab_manager.close_tab(tab_id)
-
-    def _handle_tab_title_changed(self, tab_id: str, title: str) -> None:
-        """Update UI to reflect a tab title has changed."""
-        self.tab_manager.update_tab_title(tab_id, title)
-
-    def _handle_tab_modified(self, tab_id: str, modified: bool) -> None:
-        """Update UI to reflect tab modified state."""
-        self.tab_manager.set_tab_modified(tab_id, modified)
 
     @Slot()
     def _update_menu_state(self):
         """Update enabled/disabled state of menu items."""
-        current_tab = self.tab_manager.get_current_tab()
+        current_tab = self._tab_manager.get_current_tab()
 
         has_workspace = self._workspace_manager.has_workspace
 
@@ -761,46 +653,17 @@ class MainWindow(QMainWindow):
             }}
         """)
 
-    def _new_conversation(self) -> str:
-        """Create a new conversation tab and return its ID."""
+    def _new_conversation(self) -> Optional[str]:
+        """Create new conversation tab."""
         if not self._workspace_manager.has_workspace:
-            self._logger.error("Cannot create conversation without active workspace")
-            return
-
-        # Generate timestamp and use it for both ID and metadata
-        timestamp = datetime.utcnow()
-        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-
-        try:
-            # Ensure we have a conversations directory in the workspace
-            self._workspace_manager.ensure_workspace_dir("conversations")
-        except WorkspaceError as e:
-            self._logger.error("Failed to create conversations directory: %s", str(e))
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                "Workspace Error",
-                f"Failed to create conversations directory: {str(e)}"
-            )
             return None
 
-        # Save path relative to workspace root
-        filename = os.path.join("conversations", f"{conversation_id}.conv")
-
         try:
-            # Create tab using same ID
-            full_path = self._workspace_manager.get_workspace_path(filename)
-            conversation_tab = ConversationTab(
-                conversation_id,
-                full_path,
-                timestamp,
-                self._ai_backends,
-                self
+            self._workspace_manager.ensure_workspace_dir("conversations")
+            return self._tab_manager.new_conversation(
+                self._workspace_manager.workspace_path
             )
-            self.tab_manager.add_tab(conversation_tab, f"Conv: {conversation_id}")
-            return conversation_id
         except WorkspaceError as e:
-            self._logger.error("Failed to create conversation: %s", str(e))
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -844,7 +707,7 @@ class MainWindow(QMainWindow):
             conversation_id = self._new_conversation()
             if conversation_id:
                 # Get the tab and set input text
-                conversation_tab = self.tab_manager.find_conversation_tab_by_id(conversation_id)
+                conversation_tab = self._tab_manager.find_conversation_tab_by_id(conversation_id)
                 if conversation_tab:
                     conversation_tab.set_input_text(prompt)
         except MetaphorParserError as e:
@@ -873,19 +736,8 @@ class MainWindow(QMainWindow):
 
     def _open_conversation_path(self, path: str) -> None:
         """Open an existing conversation file."""
-        conversation_id = os.path.splitext(os.path.basename(path))[0]
-        if self.tab_manager.find_conversation_tab_by_id(conversation_id):
-            self.tab_manager.set_current_tab(conversation_id)
-            return
-
         try:
-            # Load conversation tab from file
-            conversation_tab = ConversationTab.load_from_file(
-                path,
-                self._ai_backends,
-                self
-            )
-            self.tab_manager.add_tab(conversation_tab, f"Conv: {conversation_id}")
+            self._tab_manager.open_conversation(path)
         except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
             MessageBox.show_message(
@@ -897,32 +749,35 @@ class MainWindow(QMainWindow):
 
     def _fork_conversation(self):
         """Create a new conversation tab with the history of the current conversation."""
-        current_tab = self.tab_manager.get_current_tab()
+        current_tab = self._tab_manager.get_current_tab()
         if not isinstance(current_tab, ConversationTab):
             return
 
-        async def fork_and_add_tab():
-            # Fork the conversation
-            new_tab = await current_tab.fork_conversation()
-
-            # Add new tab to manager
-            self.tab_manager.add_tab(new_tab, f"Conv: {new_tab.tab_id}")
-            self._conversation_tabs[new_tab.tab_id] = new_tab
+        async def fork_and_handle_errors():
+            try:
+                await self._tab_manager.fork_conversation(current_tab)
+            except ConversationError as e:
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    "Error Forking Conversation",
+                    f"Could not fork conversation: {str(e)}"
+                )
 
         # Create task to fork conversation
-        asyncio.create_task(fork_and_add_tab())
+        asyncio.create_task(fork_and_handle_errors())
 
     def _close_current_tab(self):
         """Close the current conversation tab."""
-        conversation_tab = self.tab_manager.get_current_tab()
+        conversation_tab = self._tab_manager.get_current_tab()
         if not conversation_tab:
             return
 
-        self.tab_manager.close_tab(conversation_tab.tab_id)
+        self._tab_manager.close_tab(conversation_tab.tab_id)
 
     def _submit_message(self):
         """Handle message submission."""
-        conversation_tab = self.tab_manager.get_current_tab()
+        conversation_tab = self._tab_manager.get_current_tab()
         if not conversation_tab or not conversation_tab.can_submit():
             return
 
@@ -954,7 +809,7 @@ class MainWindow(QMainWindow):
 
     def _show_conversation_settings_dialog(self):
         """Show the conversation settings dialog."""
-        conversation_tab = self.tab_manager.get_current_tab()
+        conversation_tab = self._tab_manager.get_current_tab()
         if not conversation_tab:
             return
 
@@ -967,7 +822,7 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
         if event.key() == Qt.Key_Escape:
-            conversation_tab = self.tab_manager.get_current_tab()
+            conversation_tab = self._tab_manager.get_current_tab()
             if conversation_tab and isinstance(conversation_tab, ConversationTab):
                 conversation_tab.cancel_current_tasks()
             return
@@ -992,7 +847,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         """Handle application close request."""
         # Check each tab in turn
-        for tab in self.tab_manager.get_all_tabs():
+        for tab in self._tab_manager.get_all_tabs():
             if tab.is_modified and not tab.can_close():
                 event.ignore()
                 return

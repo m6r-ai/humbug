@@ -1,16 +1,23 @@
+from datetime import datetime
+import os
 from typing import Optional, Dict, List, cast
+import uuid
 
 from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QSplitter, QStackedWidget
 from PySide6.QtCore import Signal, Qt, QEvent
 
+from humbug.ai.ai_backend import AIBackend
+from humbug.gui.conversation_error import ConversationError
 from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_label import TabLabel
+from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.gui.welcome_widget import WelcomeWidget
+from humbug.workspace.workspace_manager import WorkspaceManager
 
 
 class ColumnTabWidget(QTabWidget):
@@ -65,9 +72,13 @@ class TabManager(QWidget):
     current_tab_changed = Signal(TabBase)
     column_state_changed = Signal(bool)  # Emits True for two columns, False for one
 
-    def __init__(self, parent=None):
+    def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
         """Initialize the tab manager."""
         super().__init__(parent)
+
+        self._untitled_count = 0
+        self._ai_backends = ai_backends
+        self._workspace_manager = WorkspaceManager()
 
         # Create main layout
         main_layout = QVBoxLayout(self)
@@ -263,7 +274,7 @@ class TabManager(QWidget):
             column.setCurrentWidget(tab)
             self._active_column = column
 
-    def update_tab_title(self, tab_id: str, title: str) -> None:
+    def _handle_tab_title_changed(self, tab_id: str, title: str) -> None:
         """
         Update a tab's title.
 
@@ -276,7 +287,7 @@ class TabManager(QWidget):
             label.update_text(title)
             self.adjustSize()
 
-    def set_tab_modified(self, tab_id: str, modified: bool) -> None:
+    def _handle_tab_modified(self, tab_id: str, modified: bool) -> None:
         """
         Update a tab's modified state.
 
@@ -372,9 +383,7 @@ class TabManager(QWidget):
             first_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
 
             if isinstance(tab, EditorTab):
-                tab.close_requested.connect(self._handle_tab_close_requested)
-                tab.title_changed.connect(self._handle_tab_title_changed)
-                tab.modified_state_changed.connect(self._handle_tab_modified)
+                self._connect_editor_signals(tab)
 
         # Ensure first column is active
         self._active_column = self._tab_columns[0]
@@ -452,6 +461,172 @@ class TabManager(QWidget):
             if isinstance(tab, EditorTab) and tab.filename == filename:
                 return tab
         return None
+
+    def new_file(self) -> EditorTab:
+        """Create a new empty editor tab."""
+        self._untitled_count += 1
+        tab_id = str(uuid.uuid4())
+        editor = EditorTab(tab_id, self)
+        editor.set_filename(None, self._untitled_count)
+
+        self._connect_editor_signals(editor)
+        self.add_tab(editor, f"Untitled-{self._untitled_count}")
+        return editor
+
+    def open_file(self, path: str) -> Optional[EditorTab]:
+        """Open a file in a new or existing editor tab."""
+        # Check if file is already open
+        existing_tab = self.find_editor_tab_by_filename(path)
+        if existing_tab:
+            self.set_current_tab(existing_tab.tab_id)
+            return existing_tab
+
+        tab_id = str(uuid.uuid4())
+        editor = EditorTab(tab_id, self)
+        editor.set_filename(path)
+
+        self._connect_editor_signals(editor)
+        self.add_tab(editor, os.path.basename(path))
+        return editor
+
+    def new_conversation(self, workspace_path: str) -> Optional[str]:
+        """Create a new conversation tab and return its ID."""
+        # Generate timestamp for ID
+        timestamp = datetime.utcnow()
+        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+
+        # Create path relative to workspace
+        filename = os.path.join("conversations", f"{conversation_id}.conv")
+        full_path = os.path.join(workspace_path, filename)
+
+        conversation_tab = ConversationTab(
+            conversation_id,
+            full_path,
+            timestamp,
+            self._ai_backends,
+            self
+        )
+
+        self.add_tab(conversation_tab, f"Conv: {conversation_id}")
+        return conversation_id
+
+    def open_conversation(self, path: str) -> Optional[ConversationTab]:
+        """Open an existing conversation file."""
+        conversation_id = os.path.splitext(os.path.basename(path))[0]
+
+        # Check if already open
+        existing_tab = self.find_conversation_tab_by_id(conversation_id)
+        if existing_tab:
+            self.set_current_tab(conversation_id)
+            return existing_tab
+
+        try:
+            conversation_tab = ConversationTab.load_from_file(
+                path,
+                self._ai_backends,
+                self
+            )
+            self.add_tab(conversation_tab, f"Conv: {conversation_id}")
+            return conversation_tab
+        except ConversationError:
+            raise
+
+    async def fork_conversation(self, conversation_tab: ConversationTab) -> None:
+        """Fork an existing conversation into a new tab.
+
+        Args:
+            conversation_tab: The conversation tab to fork
+        """
+        if not isinstance(conversation_tab, ConversationTab):
+            return
+
+        try:
+            # Fork the conversation
+            new_tab = await conversation_tab.fork_conversation()
+
+            # Add new tab to manager
+            self.add_tab(new_tab, f"Conv: {new_tab.tab_id}")
+
+        except ConversationError as e:
+            self._logger.error("Failed to fork conversation: %s", str(e))
+            raise
+
+    def save_state(self) -> Dict:
+        """Get current state of all tabs."""
+        tab_columns = []
+        for column in self._tab_columns:
+            tab_states = []
+            for index in range(column.count()):
+                tab = column.widget(index)
+                try:
+                    state = tab.get_state()
+                    state_dict = state.to_dict()
+                    tab_states.append(state_dict)
+                except Exception as e:
+                    self._logger.error("Failed to save tab manager state: %s", str(e))
+                    continue
+            tab_columns.append(tab_states)
+
+        return {
+            'columns': tab_columns,
+            'split_view': len(self._tab_columns) > 1
+        }
+
+    def restore_state(self, saved_state: Dict) -> None:
+        """Restore tabs from saved state."""
+        saved_columns = saved_state.get('columns', [])
+        needs_two_columns = saved_state.get('split_view', False)
+
+        if needs_two_columns:
+            self.switch_to_double_column()
+
+        for column_index, tab_state in enumerate(saved_columns):
+            self._restore_column_state(column_index, tab_state)
+
+    def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
+        """Restore state for a single column of tabs."""
+        for state_dict in tab_states:
+            try:
+                state = TabState.from_dict(state_dict)
+
+                if not os.path.isabs(state.path):
+                    state.path = self._workspace_manager.get_workspace_path(state.path)
+
+                tab = self._restore_tab_from_state(state)
+                if not tab:
+                    continue
+
+                self._active_column = self._tab_columns[column_index]
+                title = self._get_tab_title(tab, state)
+                self.add_tab(tab, title)
+
+            except Exception as e:
+                self._logger.error("Failed to restore tab manager state: %s", str(e))
+                continue
+
+    def _restore_tab_from_state(self, state: TabState) -> Optional[TabBase]:
+        """Create appropriate tab type from state."""
+        if state.type == TabType.CONVERSATION:
+            return ConversationTab.restore_from_state(
+                state, self, ai_backends=self._ai_backends
+            )
+        elif state.type == TabType.EDITOR:
+            tab = EditorTab.restore_from_state(state, self)
+            self._connect_editor_signals(tab)
+            return tab
+        return None
+
+    def _connect_editor_signals(self, editor: EditorTab) -> None:
+        """Connect standard editor tab signals."""
+        editor.close_requested.connect(lambda tab_id: self.close_tab(tab_id))
+        editor.title_changed.connect(self._handle_tab_title_changed)
+        editor.modified_state_changed.connect(self._handle_tab_modified)
+
+    def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
+        """Get appropriate title for tab type."""
+        if isinstance(tab, ConversationTab):
+            return f"Conv: {tab.tab_id}"
+        return os.path.basename(state.path)
 
     def _handle_style_changed(self, factor: float = 1.0) -> None:
         """

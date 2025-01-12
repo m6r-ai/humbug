@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import uuid
@@ -67,6 +68,7 @@ class EditorTab(TabBase):
         self._auto_backup_timer = QTimer(self)
         self._auto_backup_timer.timeout.connect(self._auto_backup)
         self._current_language = ProgrammingLanguage.TEXT
+        self._logger = logging.getLogger("EditorTab")
 
         # Set up layout
         layout = QVBoxLayout(self)

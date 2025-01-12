@@ -152,7 +152,7 @@ class ConversationTab(TabBase):
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
-        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, self.parent())
+        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, self._ai_backends, self.parent())
 
         # Get all messages and write to new transcript
         messages = self._conversation.get_messages()
