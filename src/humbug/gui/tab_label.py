@@ -45,7 +45,7 @@ class TabLabel(QWidget):
         self._close_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._layout.addWidget(self._close_button)
 
-        self.handle_style_changed(self._style_manager.zoom_factor)
+        self.handle_style_changed(self._style_manager.zoom_factor, False)
 
         self.setMouseTracking(True)
 
@@ -64,14 +64,15 @@ class TabLabel(QWidget):
         transparent_pixmap.fill(Qt.transparent)
         return QIcon(transparent_pixmap)
 
-    def handle_style_changed(self, factor: float):
+    def handle_style_changed(self, factor: float, is_active: bool):
         """
         Handle style changes from StyleManager.
 
         Args:
             factor: New zoom factor
         """
-        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)}")
+        colour = ColorRole.TEXT_PRIMARY if is_active else ColorRole.TEXT_SECONDARY
+        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(colour)}")
 
         self._update_font_size()
 

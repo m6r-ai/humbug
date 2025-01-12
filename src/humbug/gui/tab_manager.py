@@ -186,6 +186,7 @@ class TabManager(QWidget):
             return
 
         self._active_column = column
+        print("_handle_column_activated")
         self._update_tabs()
 
     def add_tab(self, tab: TabBase, title: str) -> None:
@@ -688,9 +689,12 @@ class TabManager(QWidget):
             """
             column.setStyleSheet(style)
 
-        # Update all tab labels
-        for label in self._tab_labels.values():
-            label.handle_style_changed(factor)
+        # Update all tab labels, setting active state only for the current active tab.
+        for tab_id, label in self._tab_labels.items():
+            tab = self._tabs[tab_id]
+            column = self._find_column_for_tab(tab)
+            is_label_active = column == self._active_column and tab == column.currentWidget()
+            label.handle_style_changed(factor, is_label_active)
 
         self._column_splitter.setStyleSheet(f"""
             QSplitter::handle {{

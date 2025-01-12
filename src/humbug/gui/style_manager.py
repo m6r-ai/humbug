@@ -84,6 +84,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#000000"
             },
+            ColorRole.TEXT_SECONDARY: {
+                ColorMode.DARK: "#909090",
+                ColorMode.LIGHT: "#707070"
+            },
             ColorRole.TEXT_DISABLED: {
                 ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#a0a0a0"

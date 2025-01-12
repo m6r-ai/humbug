@@ -12,6 +12,7 @@ class ColorRole(Enum):
 
     # Text colours
     TEXT_PRIMARY = auto()               # Primary text color
+    TEXT_SECONDARY = auto()             # Secondary text color
     TEXT_DISABLED = auto()              # Disabled text color
     TEXT_SELECTED = auto()              # Selected text background
 
