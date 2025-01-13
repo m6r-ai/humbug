@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import os
 from typing import Optional, Dict, List, cast
 import uuid
@@ -26,8 +27,7 @@ from humbug.workspace.workspace_manager import WorkspaceManager
 class TabManager(QWidget):
     """Manages multiple tabs across one or two columns."""
 
-    tab_closed = Signal(str)  # Emits tab_id
-    column_state_changed = Signal(bool)  # Emits True for two columns, False for one
+    column_state_changed = Signal()
     status_message = Signal(StatusMessage)
 
     def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
@@ -37,6 +37,7 @@ class TabManager(QWidget):
         self._untitled_count = 0
         self._ai_backends = ai_backends
         self._workspace_manager = WorkspaceManager()
+        self._logger = logging.getLogger("TabManager")
 
         # Create main layout
         main_layout = QVBoxLayout(self)
@@ -64,7 +65,7 @@ class TabManager(QWidget):
 
         # Create initial column
         self._tab_columns: List[TabColumn] = []
-        self._create_column()
+        self._create_column(0)
 
         # Track active column
         self._active_column = self._tab_columns[0]
@@ -81,14 +82,15 @@ class TabManager(QWidget):
 
         self._handle_style_changed(self._style_manager.zoom_factor)
 
-    def _create_column(self) -> TabColumn:
+    def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
         tab_widget = TabColumn()
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
 
-        self._column_splitter.addWidget(tab_widget)
-        self._tab_columns.append(tab_widget)
+        self._column_splitter.insertWidget(index, tab_widget)
+        self._tab_columns.insert(index, tab_widget)
+        self._logger.debug(f"insertd new column at {index}")
 
         return tab_widget
 
@@ -97,7 +99,9 @@ class TabManager(QWidget):
         for tab_id, label in self._tab_labels.items():
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
-            is_current = tab == column.widget(column.currentIndex()) and column == self._active_column
+            self._logger.debug(f"update tabs: {column}: {tab_id}")
+            column_index = column.currentIndex()
+            is_current = column_index != -1 and tab == column.widget(column_index) and column == self._active_column
             label.set_current(is_current)
 
         # Force style refresh to show active state
@@ -105,6 +109,8 @@ class TabManager(QWidget):
 
         # Emit our new signal with current tab
         current_tab = self._get_current_tab()
+        if not current_tab:
+            return
 
         # Disconnect any existing connections to avoid duplicates
         try:
@@ -124,7 +130,12 @@ class TabManager(QWidget):
         """
         # Find which column triggered the change
         sender = self.sender()
+        if not sender:
+            self._logger.debug("SENDER None")
+            return
+
         self._active_column = sender
+        self._logger.debug("TM: tab changed")
         self._update_tabs()
 
     def _handle_tab_activated(self, tab: TabBase) -> None:
@@ -141,6 +152,7 @@ class TabManager(QWidget):
 
         # Update active column
         self._active_column = column
+        self._logger.debug("TM: tab activated")
         self._update_tabs()
 
     def _handle_column_activated(self, column: TabColumn) -> None:
@@ -152,6 +164,7 @@ class TabManager(QWidget):
             return
 
         self._active_column = column
+        self._logger.debug("TM: column activated")
         self._update_tabs()
 
     def add_tab(self, tab: TabBase, title: str) -> None:
@@ -204,18 +217,25 @@ class TabManager(QWidget):
             return
 
         # Remove tab
+        tab_label = self._tab_labels.pop(tab_id)
+        del self._tabs[tab_id]
         index = column.indexOf(tab)
         column.removeTab(index)
-        del self._tabs[tab_id]
-
-        # Clean up label
-        if tab_id in self._tab_labels:
-            self._tab_labels[tab_id].deleteLater()
-            del self._tab_labels[tab_id]
-
-        # Emit signal
-        self.tab_closed.emit(tab_id)
+        tab_label.deleteLater()
         tab.deleteLater()
+
+        # If we closed the last tab in the column, close the column unless it's the last column
+        if column.count() == 0:
+            if len(self._tab_columns) > 1:
+                column_number = self._tab_columns.index(column)
+                del self._tab_columns[column_number]
+                column.deleteLater()
+
+                if self._active_column == column:
+                    new_active_column = 0 if column_number == 0 else column_number - 1
+                    self._active_column = self._tab_columns[new_active_column]
+
+                self.column_state_changed.emit()
 
         # Show welcome message if no tabs remain
         if not self._tabs:
@@ -291,35 +311,139 @@ class TabManager(QWidget):
 
             self.adjustSize()
 
-    def switch_to_single_column(self) -> None:
-        """Convert from two columns to one."""
+    def can_split_column(self) -> bool:
+        """Can the current column be split in two?"""
+        if len(self._tab_columns) >= 6:
+            return False
+
+        current_column_number = self._get_current_column()
+        current_column = self._tab_columns[current_column_number]
+        return current_column.count() > 1
+
+    def split_column(self, split_left: bool) -> None:
+        """Split the current column in two."""
+        if len(self._tab_columns) >= 6:
+            return
+
+        self._logger.debug("split column")
+        self._logger.debug(f"{self._tab_columns}")
+
+        current_column_number = self._get_current_column()
+        current_column = self._tab_columns[current_column_number]
+        if current_column.count() <= 1:
+            return
+
+        target_column_number = current_column_number + (0 if split_left else 1)
+        target_column = self._create_column(target_column_number)
+
+        # Delete the current tab from the current column and recreate it in the new column
+        old_tab = self._get_current_tab()
+        old_tab_id = old_tab.tab_id
+        old_tab_state = old_tab.get_state()
+        self._logger.debug(f"{old_tab_id}")
+        self._logger.debug(f"{self._tab_labels}")
+        old_tab_title = self._tab_labels[old_tab_id].text()
+
+        tab_label = self._tab_labels.pop(old_tab_id)
+        del self._tabs[old_tab_id]
+        index = current_column.indexOf(old_tab)
+        current_column.removeTab(index)
+        tab_label.deleteLater()
+        old_tab.deleteLater()
+
+        # Create appropriate tab type
+        if old_tab_state.type == TabType.CONVERSATION:
+            tab = ConversationTab.restore_from_state(old_tab_state, self, ai_backends=self._ai_backends)
+        elif old_tab_state.type == TabType.EDITOR:
+            tab = EditorTab.restore_from_state(old_tab_state, self)
+        else:
+            return
+
+        # Add to first column
+        self._tabs[old_tab_id] = tab
+
+        # Create new label
+        tab_label = TabLabel(old_tab_title)
+        tab_label.close_clicked.connect(lambda tid=old_tab_id: self._close_tab_by_id(tid))
+        self._tab_labels[old_tab_id] = tab_label
+
+        # Add to column
+        index = target_column.addTab(tab, "")
+        target_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+
+        if isinstance(tab, EditorTab):
+            self._connect_editor_signals(tab)
+
+        # Resize splitter
+        num_columns = len(self._tab_columns)
+        sizes = [(self.width() // num_columns) for _ in range(num_columns)]
+        self._column_splitter.setSizes(sizes)
+
+        self._active_column = target_column
+
+        self._logger.debug("post split column")
+        self._logger.debug(f"{self._tab_columns}")
+
+        # Emit signal about column state change
+        self.column_state_changed.emit()
+
+    def can_merge_column(self, merge_left: bool) -> bool:
+        """Can the current column be merged?"""
+        if len(self._tab_columns) <= 1:
+            return False
+
+        current_column_number = self._get_current_column()
+        if (merge_left and current_column_number == 0) or (not merge_left and current_column_number == len(self._tab_columns) -1):
+            return False
+
+        return True
+
+    def merge_column(self, merge_left: bool) -> None:
+        """Merge with adjacent column."""
         if len(self._tab_columns) <= 1:
             return
 
-        second_column = self._tab_columns[1]
+        self._logger.debug("merge column")
+        self._logger.debug(f"{self._tab_columns}")
 
-        # Record tab states and labels from second column
+        current_column_number = self._get_current_column()
+        if (merge_left and current_column_number == 0) or (not merge_left and current_column_number == len(self._tab_columns) -1):
+            return
+
+        target_column_number = current_column_number + (-1 if merge_left else 1)
+        target_column = self._tab_columns[target_column_number]
+        current_column = self._active_column
+        self._logger.debug(f"current {current_column_number}, target {target_column_number}, {self._active_column}")
+        self._logger.debug(f"{self._tab_columns}")
+
+        # Ensure target column is active
+        self._active_column = target_column
+
+        # Record tab states and labels from current column
         tab_states = []
-        for i in range(second_column.count()):
-            tab = second_column.widget(i)
+        for i in range(current_column.count()):
+            tab = current_column.widget(i)
+            self._logger.debug(f"Tab ID: {tab.tab_id}")
             tab_states.append((
                 tab.tab_id,
                 tab.get_state(),
                 self._tab_labels[tab.tab_id].text()
             ))
 
-        # Delete all widgets in second column
-        while second_column.count() > 0:
-            tab = second_column.widget(0)
-            second_column.removeTab(0)
+        # Delete all widgets in current column
+        while current_column.count() > 0:
+            tab = current_column.widget(0)
+            tab_label = self._tab_labels.pop(tab.tab_id)
+            del self._tabs[tab.tab_id]
+            current_column.removeTab(0)
+            tab_label.deleteLater()
             tab.deleteLater()
 
-        # Remove and delete second column widget
-        second_column.deleteLater()
-        self._tab_columns.pop(1)
+        # Remove and delete current column widget
+        current_column.deleteLater()
+        del self._tab_columns[current_column_number]
 
-        # Recreate each tab in first column
-        first_column = self._tab_columns[0]
+        # Recreate each tab in target column
         for tab_id, state, title in tab_states:
             # Create appropriate tab type
             if state.type == TabType.CONVERSATION:
@@ -338,43 +462,28 @@ class TabManager(QWidget):
             self._tab_labels[tab_id] = tab_label
 
             # Add to column
-            index = first_column.addTab(tab, "")
-            first_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+            index = target_column.addTab(tab, "")
+            target_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
 
             if isinstance(tab, EditorTab):
                 self._connect_editor_signals(tab)
 
-        # Ensure first column is active
-        self._active_column = self._tab_columns[0]
+        # Resize splitter
+        num_columns = len(self._tab_columns)
+        sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
+        self._column_splitter.setSizes(sizes)
+
+        self._logger.debug(f"new active col: {target_column}")
+
+        self._logger.debug("post merge column")
+        self._logger.debug(f"{self._tab_columns}")
 
         # Emit signal about column state change
-        self.column_state_changed.emit(False)
+        self.column_state_changed.emit()
 
-    def switch_to_double_column(self) -> None:
-        """Convert from one column to two."""
-        if len(self._tab_columns) > 1:
-            return
-
-        # Create second column
-        new_column = self._create_column()
-
-        # Set initial splitter sizes
-        self._column_splitter.setSizes([self.width() // 2, self.width() // 2])
-
-        # Emit signal about column state change
-        self.column_state_changed.emit(True)
-
-    def get_current_column(self) -> int:
+    def _get_current_column(self) -> int:
         """Get index of currently active column."""
         return self._tab_columns.index(self._active_column)
-
-    def get_tab_column(self, tab: TabBase) -> Optional[int]:
-        """Get column index containing the specified tab."""
-        for i, column in enumerate(self._tab_columns):
-            if column.indexOf(tab) != -1:
-                return i
-
-        return None
 
     def find_conversation_tab_by_id(self, conversation_id: str) -> Optional[ConversationTab]:
         """
@@ -475,7 +584,10 @@ class TabManager(QWidget):
 
     def can_fork_conversation(self) -> bool:
         tab = self._get_current_tab()
-        return tab and isinstance(tab, ConversationTab)
+        if not tab or not isinstance(tab, ConversationTab):
+            return False
+
+        return True
 
     async def fork_conversation(self) -> None:
         """Fork an existing conversation into a new tab.
@@ -516,16 +628,15 @@ class TabManager(QWidget):
 
         return {
             'columns': tab_columns,
-            'split_view': len(self._tab_columns) > 1
         }
 
     def restore_state(self, saved_state: Dict) -> None:
         """Restore tabs from saved state."""
         saved_columns = saved_state.get('columns', [])
-        needs_two_columns = saved_state.get('split_view', False)
 
-        if needs_two_columns:
-            self.switch_to_double_column()
+        num_columns = len(saved_columns)
+        for index in range(1, num_columns):
+            self._create_column(index)
 
         for column_index, tab_state in enumerate(saved_columns):
             self._restore_column_state(column_index, tab_state)

@@ -16,11 +16,12 @@ Context: Capabilities
 
         Context: Tab columns
             Context: Column layout options
-                The editor supports both single and dual-column layouts.
+                The editor supports both single-column and multi-column layouts.
 
-                The layout can be toggled via the View menu or keyboard shortcuts.
+                The currently-active column can be split, with the current open tab moving to the new column.
 
-                When switching from dual to single columns, all tabs merge into a single column.
+                We can also close any current column other than the left-most column, with all tabs in that
+                column moving to the column on their left
 
             Context: Column behavior
                 Each column maintains its own set of tabs.
@@ -29,13 +30,14 @@ Context: Capabilities
 
                 The active column receives new tabs by default.
 
-                The active column is visually distinguished from inactive columns.
+                The active column is visually distinguished from inactive columns because the active tab is
+                clearly visible.
 
                 Clicking in a column or its tabs makes it the active column.
 
                 Keyboard focus changes also update the active column.
 
-                When a column becomes empty, the view reverts to single column layout.
+                When a column becomes empty, that column becomes closed and is removed.
 
             Context: Column persistence
                 The column layout is persisted with the workspace.
@@ -827,9 +829,14 @@ Context: Capabilities
             Context: Separator
                 There will be a horizontal Separator
 
-            Context: Split View
-                The "Split View" menu item will support selecting either a single column of tabs or two columns of tabs.
-                This will have a checkbox next to it that will be checked if we are using a multi-column view.
+            Context: Split Column
+                The "Split Column" menu item will support selecting either a single column of tabs or two columns of tabs.
+                This will have a checkbox next to it that will be checked if we are using a multi-column view.  We support
+                a maximum of 6 columns.
+
+            Context: Merge Column
+                The "Merge Column" menu item will support merging the current column with the one to its left as long as
+                the current active column is not the left hand column.
 
         Context: Menu styling
             Menus and menu items must have consistent visual styling:

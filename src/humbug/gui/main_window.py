@@ -149,10 +149,17 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
-        self._split_view_action = QAction("Split View", self)
-        self._split_view_action.setCheckable(True)
-        self._split_view_action.setChecked(False)
-        self._split_view_action.triggered.connect(self._handle_column_mode)
+        self._split_left_action = QAction("Split Left", self)
+        self._split_left_action.triggered.connect(lambda: self._split_column(True))
+
+        self._split_right_action = QAction("Split Right", self)
+        self._split_right_action.triggered.connect(lambda: self._split_column(False))
+
+        self._merge_left_action = QAction("Merge Left", self)
+        self._merge_left_action.triggered.connect(lambda: self._merge_column(True))
+
+        self._merge_right_action = QAction("Merge Right", self)
+        self._merge_right_action.triggered.connect(lambda: self._merge_column(False))
 
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
@@ -204,7 +211,10 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self._zoom_out_action)
         view_menu.addAction(self._reset_zoom_action)
         view_menu.addSeparator()
-        view_menu.addAction(self._split_view_action)
+        view_menu.addAction(self._split_left_action)
+        view_menu.addAction(self._split_right_action)
+        view_menu.addAction(self._merge_left_action)
+        view_menu.addAction(self._merge_right_action)
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(800, 600)
@@ -270,28 +280,10 @@ class MainWindow(QMainWindow):
 
         self._tab_manager.status_message.connect(self._handle_status_message)
 
-    def _handle_column_state_changed(self, has_two_columns: bool):
+    def _handle_column_state_changed(self):
         """Handle column state changes from tab manager."""
-        self._split_view_action.setChecked(has_two_columns)
-
         # Save workspace state when column configuration changes
-        self._save_workspace_state()
-
-    def _handle_column_mode(self, checked: bool) -> None:
-        """Handle column mode changes.
-
-        Args:
-            checked: True if two columns should be enabled, False for single column
-        """
-        if checked:
-            self._tab_manager.switch_to_double_column()
-        else:
-            self._tab_manager.switch_to_single_column()
-
-        # Update menu state
-        self._split_view_action.setChecked(checked)
-
-        # Save state
+        print("column state change")
         self._save_workspace_state()
 
     def _handle_status_message(self, message: StatusMessage) -> None:
@@ -505,6 +497,14 @@ class MainWindow(QMainWindow):
         """Save the current file with a new name."""
         self._tab_manager.save_file_as()
 
+    def _split_column(self, split_left: bool) -> None:
+        """Split the current column."""
+        self._tab_manager.split_column(split_left)
+
+    def _merge_column(self, merge_left: bool) -> None:
+        """Merge the current column."""
+        self._tab_manager.merge_column(merge_left)
+
     @Slot()
     def _update_menu_state(self):
         """Update enabled/disabled state of menu items."""
@@ -532,10 +532,14 @@ class MainWindow(QMainWindow):
         self._submit_action.setEnabled(tab_manager.can_submit_message())
         self._conv_settings_action.setEnabled(tab_manager.can_show_conversation_settings_dialog())
 
-        # Update zoom actions
+        # Update view actions
         current_zoom = self._style_manager.zoom_factor
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
+        self._split_left_action.setEnabled(tab_manager.can_split_column())
+        self._split_right_action.setEnabled(tab_manager.can_split_column())
+        self._merge_left_action.setEnabled(tab_manager.can_merge_column(True))
+        self._merge_right_action.setEnabled(tab_manager.can_merge_column(False))
 
     def _handle_style_changed(self) -> None:
         style_manager = self._style_manager
