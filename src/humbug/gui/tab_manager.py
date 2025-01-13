@@ -376,24 +376,6 @@ class TabManager(QWidget):
                 return i
         return None
 
-    def get_conversation_tabs(self) -> List[ConversationTab]:
-        """
-        Get all conversation tabs.
-
-        Returns:
-            List of all ConversationTab instances
-        """
-        return [tab for tab in self._tabs.values() if isinstance(tab, ConversationTab)]
-
-    def get_editor_tabs(self) -> List[EditorTab]:
-        """
-        Get all editor tabs.
-
-        Returns:
-            List of all EditorTab instances
-        """
-        return [tab for tab in self._tabs.values() if isinstance(tab, EditorTab)]
-
     def find_conversation_tab_by_id(self, conversation_id: str) -> Optional[ConversationTab]:
         """
         Find a conversation tab by its conversation ID.
