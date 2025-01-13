@@ -4,8 +4,7 @@ from enum import Enum, auto
 from typing import Optional, List
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QPlainTextEdit, QSizePolicy
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QPlainTextEdit
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap
