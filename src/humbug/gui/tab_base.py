@@ -29,7 +29,6 @@ class TabBase(QFrame):
     """Base class for all tab content."""
 
     # Common signals that both conversation and editor tabs will need
-    close_requested = Signal(str)  # Emits tab_id
     title_changed = Signal(str, str)  # Emits (tab_id, new_title)
     modified_state_changed = Signal(str, bool)  # Emits (tab_id, is_modified)
     status_message = Signal(StatusMessage)

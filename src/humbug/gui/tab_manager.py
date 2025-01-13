@@ -565,7 +565,6 @@ class TabManager(QWidget):
 
     def _connect_editor_signals(self, editor: EditorTab) -> None:
         """Connect standard editor tab signals."""
-        editor.close_requested.connect(lambda tab_id: self._close_tab_by_id(tab_id))
         editor.title_changed.connect(self._handle_tab_title_changed)
         editor.modified_state_changed.connect(self._handle_tab_modified)
 
