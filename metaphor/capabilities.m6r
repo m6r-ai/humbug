@@ -16,14 +16,10 @@ Context: Capabilities
 
         Context: Tab columns
             Context: Column layout options
-                The editor supports both single-column and multi-column layouts.
+                The application supports both single-column and multi-column layouts.
 
-                The currently-active column can be split, with the current open tab moving to the new column.
+                We support a maximum of 6 columns.
 
-                We can also close any current column other than the left-most column, with all tabs in that
-                column moving to the column on their left
-
-            Context: Column behavior
                 Each column maintains its own set of tabs.
 
                 One column is always the active column.
@@ -38,6 +34,15 @@ Context: Capabilities
                 Keyboard focus changes also update the active column.
 
                 When a column becomes empty, that column becomes closed and is removed.
+
+                If all tabs in a column are closed then the colum is also closed.
+
+            Context: Column merging and splitting
+                Provided there is more than one tab open in the currently-active column, then the currently-active
+                column can be split, with the current open tab moving to the new column.
+
+                Provided there is more than one column open, then the current column can be merged with any
+                adjacent column, with all tabs moving to that column and the current column being closed.
 
             Context: Column persistence
                 The column layout is persisted with the workspace.
@@ -829,14 +834,33 @@ Context: Capabilities
             Context: Separator
                 There will be a horizontal Separator
 
-            Context: Split Column
-                The "Split Column" menu item will support selecting either a single column of tabs or two columns of tabs.
-                This will have a checkbox next to it that will be checked if we are using a multi-column view.  We support
-                a maximum of 6 columns.
+            Context: Split Column Left
+                The "Split Column Left" menu item will support splitting the current column and moving the current
+                tab to a new column to the left of the current one.
 
-            Context: Merge Column
-                The "Merge Column" menu item will support merging the current column with the one to its left as long as
-                the current active column is not the left hand column.
+                This will only be supported if we have not reached the maximum number of columns.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+[" for Windows).
+
+            Context: Split Column Right
+                The "Split Column Right" menu item will support splitting the current column and moving the current
+                tab to a new column to the right of the current one.
+
+                This will only be supported if we have not reached the maximum number of columns.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+]" for Windows).
+
+            Context: Merge Column Left
+                The "Merge Column Left" menu item will support merging the current column with the one to its left as
+                long as the current active column is not the left hand column.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+[" for Windows).
+
+            Context: Merge Column Right
+                The "Merge Column Right" menu item will support merging the current column with the one to its right as
+                long as the current active column is not the right hand column.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+]" for Windows).
 
         Context: Menu styling
             Menus and menu items must have consistent visual styling:

@@ -149,17 +149,21 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
-        self._split_left_action = QAction("Split Left", self)
-        self._split_left_action.triggered.connect(lambda: self._split_column(True))
+        self._split_column_left_action = QAction("Split Column Left", self)
+        self._split_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+["))
+        self._split_column_left_action.triggered.connect(lambda: self._split_column(True))
 
-        self._split_right_action = QAction("Split Right", self)
-        self._split_right_action.triggered.connect(lambda: self._split_column(False))
+        self._split_column_right_action = QAction("Split Column Right", self)
+        self._split_column_right_action.setShortcut(QKeySequence("Ctrl+Shift+]"))
+        self._split_column_right_action.triggered.connect(lambda: self._split_column(False))
 
-        self._merge_left_action = QAction("Merge Left", self)
-        self._merge_left_action.triggered.connect(lambda: self._merge_column(True))
+        self._merge_column_left_action = QAction("Merge Column Left", self)
+        self._merge_column_left_action.setShortcut(QKeySequence("Ctrl+["))
+        self._merge_column_left_action.triggered.connect(lambda: self._merge_column(True))
 
-        self._merge_right_action = QAction("Merge Right", self)
-        self._merge_right_action.triggered.connect(lambda: self._merge_column(False))
+        self._merge_column_right_action = QAction("Merge Column Right", self)
+        self._merge_column_right_action.setShortcut(QKeySequence("Ctrl+]"))
+        self._merge_column_right_action.triggered.connect(lambda: self._merge_column(False))
 
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
@@ -211,10 +215,10 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self._zoom_out_action)
         view_menu.addAction(self._reset_zoom_action)
         view_menu.addSeparator()
-        view_menu.addAction(self._split_left_action)
-        view_menu.addAction(self._split_right_action)
-        view_menu.addAction(self._merge_left_action)
-        view_menu.addAction(self._merge_right_action)
+        view_menu.addAction(self._split_column_left_action)
+        view_menu.addAction(self._split_column_right_action)
+        view_menu.addAction(self._merge_column_left_action)
+        view_menu.addAction(self._merge_column_right_action)
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(800, 600)
@@ -283,7 +287,6 @@ class MainWindow(QMainWindow):
     def _handle_column_state_changed(self):
         """Handle column state changes from tab manager."""
         # Save workspace state when column configuration changes
-        print("column state change")
         self._save_workspace_state()
 
     def _handle_status_message(self, message: StatusMessage) -> None:
@@ -536,10 +539,10 @@ class MainWindow(QMainWindow):
         current_zoom = self._style_manager.zoom_factor
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
-        self._split_left_action.setEnabled(tab_manager.can_split_column())
-        self._split_right_action.setEnabled(tab_manager.can_split_column())
-        self._merge_left_action.setEnabled(tab_manager.can_merge_column(True))
-        self._merge_right_action.setEnabled(tab_manager.can_merge_column(False))
+        self._split_column_left_action.setEnabled(tab_manager.can_split_column())
+        self._split_column_right_action.setEnabled(tab_manager.can_split_column())
+        self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(True))
+        self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(False))
 
     def _handle_style_changed(self) -> None:
         style_manager = self._style_manager

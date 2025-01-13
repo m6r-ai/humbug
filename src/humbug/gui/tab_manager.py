@@ -339,15 +339,14 @@ class TabManager(QWidget):
         old_tab.deleteLater()
 
         # Create appropriate tab type
-        if old_tab_state.type == TabType.CONVERSATION:
-            tab = ConversationTab.restore_from_state(old_tab_state, self, ai_backends=self._ai_backends)
-        elif old_tab_state.type == TabType.EDITOR:
-            tab = EditorTab.restore_from_state(old_tab_state, self)
-        else:
+        tab = self._restore_tab_from_state(old_tab_state)
+        if not tab:
             return
 
         # Add to first column
         self._tabs[old_tab_id] = tab
+
+        tab.activated.connect(lambda: self._handle_tab_activated(tab))
 
         # Create new label
         tab_label = TabLabel(old_tab_title)
@@ -357,9 +356,6 @@ class TabManager(QWidget):
         # Add to column
         index = target_column.addTab(tab, "")
         target_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
-
-        if isinstance(tab, EditorTab):
-            self._connect_editor_signals(tab)
 
         # Resize splitter
         num_columns = len(self._tab_columns)
@@ -424,16 +420,14 @@ class TabManager(QWidget):
 
         # Recreate each tab in target column
         for tab_id, state, title in tab_states:
-            # Create appropriate tab type
-            if state.type == TabType.CONVERSATION:
-                tab = ConversationTab.restore_from_state(state, self, ai_backends=self._ai_backends)
-            elif state.type == TabType.EDITOR:
-                tab = EditorTab.restore_from_state(state, self)
-            else:
+            tab = self._restore_tab_from_state(state)
+            if not tab:
                 continue
 
             # Add to first column
             self._tabs[tab_id] = tab
+
+            tab.activated.connect(lambda: self._handle_tab_activated(tab))
 
             # Create new label
             tab_label = TabLabel(title)
@@ -443,9 +437,6 @@ class TabManager(QWidget):
             # Add to column
             index = target_column.addTab(tab, "")
             target_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
-
-            if isinstance(tab, EditorTab):
-                self._connect_editor_signals(tab)
 
         # Resize splitter
         num_columns = len(self._tab_columns)
@@ -647,6 +638,7 @@ class TabManager(QWidget):
             tab = EditorTab.restore_from_state(state, self)
             self._connect_editor_signals(tab)
             return tab
+
         return None
 
     def _connect_editor_signals(self, editor: EditorTab) -> None:
