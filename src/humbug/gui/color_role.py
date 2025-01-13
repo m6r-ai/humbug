@@ -12,12 +12,12 @@ class ColorRole(Enum):
 
     # Text colours
     TEXT_PRIMARY = auto()               # Primary text color
-    TEXT_SECONDARY = auto()             # Secondary text color
     TEXT_DISABLED = auto()              # Disabled text color
     TEXT_SELECTED = auto()              # Selected text background
 
     # Tab colours
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background
+    TAB_INACTIVE = auto()               # Inactive tab text colour
     TAB_BACKGROUND_INACTIVE = auto()    # Inactive tab background
     TAB_BACKGROUND_HOVER = auto()       # Tab hover background
     TAB_BORDER_ACTIVE = auto()          # Active tab border
@@ -57,7 +57,8 @@ class ColorRole(Enum):
     LINE_NUMBER = auto()                # Line number
 
     # Syntax highlighting
-    SYNTAX_CODE = auto()                # Code block
+    SYNTAX_BACKTICK_CODE = auto()
+    SYNTAX_CODE = auto()
     SYNTAX_COMMENT = auto()
     SYNTAX_CSS_AT_RULE = auto()
     SYNTAX_ELEMENT = auto()

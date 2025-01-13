@@ -71,7 +71,7 @@ class TabLabel(QWidget):
         Args:
             factor: New zoom factor
         """
-        colour = ColorRole.TEXT_PRIMARY if is_active else ColorRole.TEXT_SECONDARY
+        colour = ColorRole.TEXT_PRIMARY if is_active else ColorRole.TAB_INACTIVE
         self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(colour)}")
 
         self._update_font_size()

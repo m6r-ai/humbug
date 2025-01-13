@@ -38,18 +38,6 @@ class ConversationHighlighter(QSyntaxHighlighter):
         self._code_font_families = self._style_manager.monospace_font_families
         self._has_code_block = False
 
-        # For inline code
-        self._code_format = QTextCharFormat()
-        self._code_format.setFontFamilies(self._code_font_families)
-        self._code_format.setFontFixedPitch(True)
-        self._code_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_CODE))
-
-        # For fenced format
-        self._fence_format = QTextCharFormat()
-        self._fence_format.setFontFamilies(self._code_font_families)
-        self._fence_format.setFontFixedPitch(True)
-        self._fence_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_LANGUAGE))
-
         self._logger = logging.getLogger("ConversationHighlighter")
 
     def highlightBlock(self, text: str) -> None:
@@ -90,12 +78,12 @@ class ConversationHighlighter(QSyntaxHighlighter):
 
                 match token.type:
                     case 'FENCE_START':
-                        self.setFormat(0, len(text), self._fence_format)
+                        self.setFormat(0, len(text), self._style_manager.get_highlight("LANGUAGE"))
                         fence_depth += 1
                         continue
 
                     case 'FENCE_END':
-                        self.setFormat(0, len(text), self._fence_format)
+                        self.setFormat(0, len(text), self._style_manager.get_highlight("LANGUAGE"))
                         fence_depth -= 1
                         continue
 
@@ -109,7 +97,8 @@ class ConversationHighlighter(QSyntaxHighlighter):
                     continue
 
                 if in_code_block:
-                    self.setFormat(token.start, len(token.value), self._code_format)
+                    self.setFormat(token.start, len(token.value), self._style_manager.get_highlight("BACKTICK_CODE"))
+                    continue
 
             # Check if we need to rehighlight everything from this block onwards.
             if (contination_state != parser_state.continuation_state) or (current_fence_depth != fence_depth) or (language != parser_state.language):

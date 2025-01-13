@@ -582,7 +582,7 @@ class TabManager(QWidget):
             factor: New zoom factor
         """
         for column in self._tab_columns:
-            selected_border = 2 if column == self._active_column else 0
+            selected_border = ColorRole.TAB_BORDER_ACTIVE if column == self._active_column else ColorRole.TAB_BACKGROUND_ACTIVE
 
             style = f"""
                 QTabBar::tab {{
@@ -593,7 +593,7 @@ class TabManager(QWidget):
                 }}
                 QTabBar::tab:selected {{
                     background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                    border-top: {selected_border}px solid {self._style_manager.get_color_str(ColorRole.TAB_BORDER_ACTIVE)};
+                    border-top: 2px solid {self._style_manager.get_color_str(selected_border)};
                     border-bottom: none;
                 }}
                 QTabBar::tab:hover {{
