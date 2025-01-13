@@ -686,7 +686,7 @@ class TabManager(QWidget):
 
     def can_close_tab(self) -> bool:
         tab = self._get_current_tab()
-        return False if not tab else tab.can_close()
+        return False if not tab else True
 
     def close_tab(self) -> None:
         """Close the currently active tab."""
