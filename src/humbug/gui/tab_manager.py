@@ -3,16 +3,19 @@ import os
 from typing import Optional, Dict, List, cast
 import uuid
 
-from PySide6.QtWidgets import QTabWidget, QTabBar, QWidget, QVBoxLayout, QSplitter, QStackedWidget
-from PySide6.QtCore import Signal, Qt, QEvent
+from PySide6.QtWidgets import QDialog, QTabBar, QWidget, QVBoxLayout, QSplitter, QStackedWidget
+from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.conversation_error import ConversationError
+from humbug.gui.conversation_settings_dialog import ConversationSettingsDialog
 from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
+from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
+from humbug.gui.tab_column import TabColumn
 from humbug.gui.tab_label import TabLabel
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
@@ -20,57 +23,12 @@ from humbug.gui.welcome_widget import WelcomeWidget
 from humbug.workspace.workspace_manager import WorkspaceManager
 
 
-class ColumnTabWidget(QTabWidget):
-    """Enhanced QTabWidget for use in columns."""
-
-    column_activated = Signal(QTabWidget)
-
-    def __init__(self, parent=None):
-        """Initialize the tab widget."""
-        super().__init__(parent)
-        self.setMovable(True)
-        self.setDocumentMode(True)
-
-        # Configure tab bar
-        tab_bar = self.tabBar()
-        tab_bar.setDrawBase(False)
-        tab_bar.setUsesScrollButtons(True)
-
-        # Install event filter on all child widgets
-        self.installEventFilter(self)
-        tab_bar.installEventFilter(self)
-
-    def eventFilter(self, obj, event) -> bool:
-        """Handle window activation and mouse events to detect active column."""
-        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
-            # Emit activation on mouse press or focus
-            self.column_activated.emit(self)
-            return False  # Don't consume the event
-
-        return super().eventFilter(obj, event)
-
-    def addTab(self, widget, *args, **kwargs):
-        """Override addTab to install event filter on new tabs."""
-        result = super().addTab(widget, *args, **kwargs)
-        # Install event filter on the widget to catch focus/mouse events
-        widget.installEventFilter(self)
-        return result
-
-    def removeTab(self, index):
-        """Override removeTab to properly clean up event filters."""
-        widget = self.widget(index)
-        if widget:
-            widget.removeEventFilter(self)
-
-        super().removeTab(index)
-
-
 class TabManager(QWidget):
     """Manages multiple tabs across one or two columns."""
 
     tab_closed = Signal(str)  # Emits tab_id
-    current_tab_changed = Signal(TabBase)
     column_state_changed = Signal(bool)  # Emits True for two columns, False for one
+    status_message = Signal(StatusMessage)
 
     def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
         """Initialize the tab manager."""
@@ -105,7 +63,7 @@ class TabManager(QWidget):
         self._columns_layout.addWidget(self._column_splitter)
 
         # Create initial column
-        self._tab_columns: List[ColumnTabWidget] = []
+        self._tab_columns: List[TabColumn] = []
         self._create_column()
 
         # Track active column
@@ -123,9 +81,9 @@ class TabManager(QWidget):
 
         self._handle_style_changed(self._style_manager.zoom_factor)
 
-    def _create_column(self) -> ColumnTabWidget:
+    def _create_column(self) -> TabColumn:
         """Create a new tab column."""
-        tab_widget = ColumnTabWidget()
+        tab_widget = TabColumn()
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
 
@@ -146,8 +104,16 @@ class TabManager(QWidget):
         self._handle_style_changed(self._style_manager.zoom_factor)
 
         # Emit our new signal with current tab
-        current_tab = self.get_current_tab()
-        self.current_tab_changed.emit(current_tab)
+        current_tab = self._get_current_tab()
+
+        # Disconnect any existing connections to avoid duplicates
+        try:
+            current_tab.status_message.disconnect()
+        except RuntimeError:
+            pass  # No existing connections
+
+        current_tab.status_message.connect(self.status_message)
+        current_tab.update_status()
 
     def _handle_tab_changed(self, _index: int) -> None:
         """
@@ -177,7 +143,7 @@ class TabManager(QWidget):
         self._active_column = column
         self._update_tabs()
 
-    def _handle_column_activated(self, column: ColumnTabWidget) -> None:
+    def _handle_column_activated(self, column: TabColumn) -> None:
         """Handle column activation."""
         if column not in self._tab_columns:
             return
@@ -204,7 +170,7 @@ class TabManager(QWidget):
 
         # Create custom tab label
         tab_label = TabLabel(title)
-        tab_label.close_clicked.connect(lambda: self.close_tab(tab_id))
+        tab_label.close_clicked.connect(lambda: self._close_tab_by_id(tab_id))
         self._tab_labels[tab_id] = tab_label
 
         # Add tab with custom label to active column
@@ -218,7 +184,7 @@ class TabManager(QWidget):
 
         self._active_column.setCurrentWidget(tab)
 
-    def close_tab(self, tab_id: str) -> None:
+    def _close_tab_by_id(self, tab_id: str) -> None:
         """
         Close a tab by its ID.
 
@@ -256,14 +222,15 @@ class TabManager(QWidget):
         if not self._tabs:
             self._stack.setCurrentWidget(self._welcome_widget)
 
-    def _find_column_for_tab(self, tab: TabBase) -> Optional[ColumnTabWidget]:
+    def _find_column_for_tab(self, tab: TabBase) -> Optional[TabColumn]:
         """Find which column contains the given tab."""
         for column in self._tab_columns:
             if column.indexOf(tab) != -1:
                 return column
+
         return None
 
-    def get_current_tab(self) -> Optional[TabBase]:
+    def _get_current_tab(self) -> Optional[TabBase]:
         """
         Get the currently active tab.
 
@@ -273,28 +240,7 @@ class TabManager(QWidget):
         widget = self._active_column.currentWidget()
         return cast(TabBase, widget) if widget else None
 
-    def get_tab(self, tab_id: str) -> Optional[TabBase]:
-        """
-        Get a tab by its ID.
-
-        Args:
-            tab_id: ID of the tab to retrieve
-
-        Returns:
-            The tab or None if not found
-        """
-        return self._tabs.get(tab_id)
-
-    def get_all_tabs(self) -> List[TabBase]:
-        """
-        Get all tabs.
-
-        Returns:
-            List of all tab instances
-        """
-        return list(self._tabs.values())
-
-    def set_current_tab(self, tab_id: str) -> None:
+    def _set_current_tab(self, tab_id: str) -> None:
         """
         Set the current tab by ID.
 
@@ -389,7 +335,7 @@ class TabManager(QWidget):
 
             # Create new label
             tab_label = TabLabel(title)
-            tab_label.close_clicked.connect(lambda tid=tab_id: self.close_tab(tid))
+            tab_label.close_clicked.connect(lambda tid=tab_id: self._close_tab_by_id(tid))
             self._tab_labels[tab_id] = tab_label
 
             # Add to column
@@ -492,7 +438,7 @@ class TabManager(QWidget):
         # Check if file is already open
         existing_tab = self.find_editor_tab_by_filename(path)
         if existing_tab:
-            self.set_current_tab(existing_tab.tab_id)
+            self._set_current_tab(existing_tab.tab_id)
             return existing_tab
 
         tab_id = str(uuid.uuid4())
@@ -531,7 +477,7 @@ class TabManager(QWidget):
         # Check if already open
         existing_tab = self.find_conversation_tab_by_id(conversation_id)
         if existing_tab:
-            self.set_current_tab(conversation_id)
+            self._set_current_tab(conversation_id)
             return existing_tab
 
         try:
@@ -545,12 +491,17 @@ class TabManager(QWidget):
         except ConversationError:
             raise
 
-    async def fork_conversation(self, conversation_tab: ConversationTab) -> None:
+    def can_fork_conversation(self) -> bool:
+        tab = self._get_current_tab()
+        return tab and isinstance(tab, ConversationTab)
+
+    async def fork_conversation(self) -> None:
         """Fork an existing conversation into a new tab.
 
         Args:
             conversation_tab: The conversation tab to fork
         """
+        conversation_tab = self._get_current_tab()
         if not isinstance(conversation_tab, ConversationTab):
             return
 
@@ -632,7 +583,7 @@ class TabManager(QWidget):
 
     def _connect_editor_signals(self, editor: EditorTab) -> None:
         """Connect standard editor tab signals."""
-        editor.close_requested.connect(lambda tab_id: self.close_tab(tab_id))
+        editor.close_requested.connect(lambda tab_id: self._close_tab_by_id(tab_id))
         editor.title_changed.connect(self._handle_tab_title_changed)
         editor.modified_state_changed.connect(self._handle_tab_modified)
 
@@ -703,3 +654,122 @@ class TabManager(QWidget):
                 width: 1px;
             }}
         """)
+
+    def can_undo(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_undo()
+
+    def undo(self):
+        self._get_current_tab().undo()
+
+    def can_redo(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_redo()
+
+    def redo(self):
+        self._get_current_tab().redo()
+
+    def can_cut(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_cut()
+
+    def cut(self):
+        self._get_current_tab().cut()
+
+    def can_copy(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_copy()
+
+    def copy(self):
+        self._get_current_tab().copy()
+
+    def can_paste(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_paste()
+
+    def paste(self):
+        self._get_current_tab().paste()
+
+    def can_close_all_tabs(self) -> bool:
+        """Can we close all the tabs that are open?"""
+        all_tabs = list(self._tabs.values())
+        for tab in all_tabs:
+            if tab.is_modified and not tab.can_close():
+                return False
+
+        return True
+
+    def close_all_tabs(self) -> None:
+        """Close all open tabs."""
+        all_tabs = list(self._tabs.values())
+        for tab in all_tabs:
+            self._close_tab_by_id(tab.tab_id)
+
+    def can_close_tab(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_close()
+
+    def close_tab(self) -> None:
+        """Close the currently active tab."""
+        tab = self._get_current_tab()
+        if not tab:
+            return
+
+        self._close_tab_by_id(tab.tab_id)
+
+    def can_save_file(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_save()
+
+    def save_file(self) -> None:
+        """Save the current file."""
+        current_tab = self._get_current_tab()
+        if isinstance(current_tab, EditorTab):
+            current_tab.save()
+
+    def can_save_file_as(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_save_as()
+
+    def save_file_as(self) -> None:
+        """Save the current file with a new name."""
+        current_tab = self._get_current_tab()
+        if isinstance(current_tab, EditorTab):
+            current_tab.save_as()
+
+    def can_submit_message(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_submit()
+
+    def submit_message(self) -> None:
+        """Handle message submission."""
+        tab = self._get_current_tab()
+        if not tab or not tab.can_submit():
+            return
+
+        tab.submit()
+
+    def can_show_conversation_settings_dialog(self) -> bool:
+        tab = self._get_current_tab()
+        return tab and isinstance(tab, ConversationTab)
+
+    def show_conversation_settings_dialog(self) -> None:
+        """Show the conversation settings dialog."""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return
+
+        dialog = ConversationSettingsDialog(self, self._ai_backends)
+        dialog.set_settings(tab.get_settings())
+
+        if dialog.exec() == QDialog.Accepted:
+            tab.update_conversation_settings(dialog.get_settings())
+
+    def handle_esc_key(self) -> bool:
+        """Handle processing of the "Esc" key."""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return False
+
+        tab.cancel_current_tasks()
+        return True

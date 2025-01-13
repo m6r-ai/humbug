@@ -11,7 +11,7 @@ from m6rclib import (
 )
 
 from PySide6.QtWidgets import (
-    QMainWindow, QDialog, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel
+    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -20,10 +20,7 @@ from PySide6.QtWidgets import QStatusBar
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.conversation_error import ConversationError
-from humbug.gui.conversation_settings_dialog import ConversationSettingsDialog
-from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
-from humbug.gui.editor_tab import EditorTab
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
@@ -95,7 +92,7 @@ class MainWindow(QMainWindow):
 
         self._close_tab_action = QAction("Close Tab", self)
         self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
-        self._close_tab_action.triggered.connect(self._close_current_tab)
+        self._close_tab_action.triggered.connect(self._close_tab)
 
         self._close_workspace_action = QAction("Close Workspace", self)
         self._close_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+W"))
@@ -264,13 +261,14 @@ class MainWindow(QMainWindow):
         self._status_bar.addPermanentWidget(self._status_right)
 
         self.setStatusBar(self._status_bar)
-        self._tab_manager.current_tab_changed.connect(self._handle_tab_changed)
         self._tab_manager.column_state_changed.connect(self._handle_column_state_changed)
 
         self._handle_style_changed()
 
         self._workspace_manager = WorkspaceManager()
         self._restore_last_workspace()
+
+        self._tab_manager.status_message.connect(self._handle_status_message)
 
     def _handle_column_state_changed(self, has_two_columns: bool):
         """Handle column state changes from tab manager."""
@@ -295,19 +293,6 @@ class MainWindow(QMainWindow):
 
         # Save state
         self._save_workspace_state()
-
-    def _handle_tab_changed(self) -> None:
-        """Handle tab change by connecting status message signal."""
-        current_tab = self._tab_manager.get_current_tab()
-        if current_tab:
-            # Disconnect any existing connections to avoid duplicates
-            try:
-                current_tab.status_message.disconnect()
-            except RuntimeError:
-                pass  # No existing connections
-
-            current_tab.status_message.connect(self._handle_status_message)
-            current_tab.update_status()
 
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
@@ -446,23 +431,22 @@ class MainWindow(QMainWindow):
             )
 
     def _close_all_tabs(self):
-        for tab in self._tab_manager.get_all_tabs():
-            self._tab_manager.close_tab(tab.tab_id)
+        self._tab_manager.close_all_tabs()
 
     def _undo(self):
-        self._tab_manager.get_current_tab().undo()
+        self._tab_manager.undo()
 
     def _redo(self):
-        self._tab_manager.get_current_tab().redo()
+        self._tab_manager.redo()
 
     def _cut(self):
-        self._tab_manager.get_current_tab().cut()
+        self._tab_manager.cut()
 
     def _copy(self):
-        self._tab_manager.get_current_tab().copy()
+        self._tab_manager.copy()
 
     def _paste(self):
-        self._tab_manager.get_current_tab().paste()
+        self._tab_manager.paste()
 
     def _show_about_dialog(self):
         """Show the About dialog."""
@@ -515,24 +499,17 @@ class MainWindow(QMainWindow):
 
     def _save_file(self):
         """Save the current file."""
-        current_tab = self._tab_manager.get_current_tab()
-        if isinstance(current_tab, EditorTab):
-            current_tab.save()
+        self._tab_manager.save_file()
 
     def _save_file_as(self):
         """Save the current file with a new name."""
-        current_tab = self._tab_manager.get_current_tab()
-        if isinstance(current_tab, EditorTab):
-            current_tab.save_as()
+        self._tab_manager.save_file_as()
 
     @Slot()
     def _update_menu_state(self):
         """Update enabled/disabled state of menu items."""
-        current_tab = self._tab_manager.get_current_tab()
-
-        has_workspace = self._workspace_manager.has_workspace
-
         # Update workspace-specific actions
+        has_workspace = self._workspace_manager.has_workspace
         self._close_workspace_action.setEnabled(has_workspace)
         self._new_conv_action.setEnabled(has_workspace)
         self._new_metaphor_conv_action.setEnabled(has_workspace)
@@ -541,37 +518,19 @@ class MainWindow(QMainWindow):
         self._open_file_action.setEnabled(has_workspace)
         self._workspace_settings_action.setEnabled(has_workspace)
 
-        # Disable all actions by default
-        self._fork_conv_action.setEnabled(False)
-        self._save_action.setEnabled(False)
-        self._save_as_action.setEnabled(False)
-        self._close_tab_action.setEnabled(False)
-        self._undo_action.setEnabled(False)
-        self._redo_action.setEnabled(False)
-        self._cut_action.setEnabled(False)
-        self._copy_action.setEnabled(False)
-        self._paste_action.setEnabled(False)
-        self._submit_action.setEnabled(False)
-        self._conv_settings_action.setEnabled(False)
-
-        if not current_tab:
-            return
-
-        # Enable common edit operations based on tab state
-        self._save_action.setEnabled(current_tab.can_save())
-        self._save_as_action.setEnabled(current_tab.can_save_as())
-        self._close_tab_action.setEnabled(True)
-        self._undo_action.setEnabled(current_tab.can_undo())
-        self._redo_action.setEnabled(current_tab.can_redo())
-        self._cut_action.setEnabled(current_tab.can_cut())
-        self._copy_action.setEnabled(current_tab.can_copy())
-        self._paste_action.setEnabled(current_tab.can_paste())
-        self._submit_action.setEnabled(current_tab.can_submit())
-
-        # Enable conversation-specific operations for conversation tabs
-        if isinstance(current_tab, ConversationTab):
-            self._fork_conv_action.setEnabled(True)
-            self._conv_settings_action.setEnabled(True)
+        # Update tab-specific actions
+        tab_manager = self._tab_manager
+        self._fork_conv_action.setEnabled(tab_manager.can_fork_conversation())
+        self._save_action.setEnabled(tab_manager.can_save_file())
+        self._save_as_action.setEnabled(tab_manager.can_save_file_as())
+        self._close_tab_action.setEnabled(tab_manager.can_close_tab())
+        self._undo_action.setEnabled(tab_manager.can_undo())
+        self._redo_action.setEnabled(tab_manager.can_redo())
+        self._cut_action.setEnabled(tab_manager.can_cut())
+        self._copy_action.setEnabled(tab_manager.can_copy())
+        self._paste_action.setEnabled(tab_manager.can_paste())
+        self._submit_action.setEnabled(tab_manager.can_submit_message())
+        self._conv_settings_action.setEnabled(tab_manager.can_show_conversation_settings_dialog())
 
         # Update zoom actions
         current_zoom = self._style_manager.zoom_factor
@@ -749,13 +708,9 @@ class MainWindow(QMainWindow):
 
     def _fork_conversation(self):
         """Create a new conversation tab with the history of the current conversation."""
-        current_tab = self._tab_manager.get_current_tab()
-        if not isinstance(current_tab, ConversationTab):
-            return
-
         async def fork_and_handle_errors():
             try:
-                await self._tab_manager.fork_conversation(current_tab)
+                await self._tab_manager.fork_conversation()
             except ConversationError as e:
                 MessageBox.show_message(
                     self,
@@ -767,21 +722,13 @@ class MainWindow(QMainWindow):
         # Create task to fork conversation
         asyncio.create_task(fork_and_handle_errors())
 
-    def _close_current_tab(self):
-        """Close the current conversation tab."""
-        conversation_tab = self._tab_manager.get_current_tab()
-        if not conversation_tab:
-            return
-
-        self._tab_manager.close_tab(conversation_tab.tab_id)
+    def _close_tab(self):
+        """Close the current tab."""
+        self._tab_manager.close_tab()
 
     def _submit_message(self):
         """Handle message submission."""
-        conversation_tab = self._tab_manager.get_current_tab()
-        if not conversation_tab or not conversation_tab.can_submit():
-            return
-
-        conversation_tab.submit()
+        self._tab_manager.submit_message()
 
     def _show_workspace_settings_dialog(self):
         """Show the workspace settings dialog."""
@@ -809,23 +756,13 @@ class MainWindow(QMainWindow):
 
     def _show_conversation_settings_dialog(self):
         """Show the conversation settings dialog."""
-        conversation_tab = self._tab_manager.get_current_tab()
-        if not conversation_tab:
-            return
-
-        dialog = ConversationSettingsDialog(self, self._ai_backends)
-        dialog.set_settings(conversation_tab.get_settings())
-
-        if dialog.exec() == QDialog.Accepted:
-            conversation_tab.update_conversation_settings(dialog.get_settings())
+        self._tab_manager.show_conversation_settings_dialog()
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle global key events."""
         if event.key() == Qt.Key_Escape:
-            conversation_tab = self._tab_manager.get_current_tab()
-            if conversation_tab and isinstance(conversation_tab, ConversationTab):
-                conversation_tab.cancel_current_tasks()
-            return
+            if self._tab_manager.handle_esc_key():
+                return
 
         super().keyPressEvent(event)
 
@@ -846,11 +783,9 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """Handle application close request."""
-        # Check each tab in turn
-        for tab in self._tab_manager.get_all_tabs():
-            if tab.is_modified and not tab.can_close():
-                event.ignore()
-                return
+        if not self._tab_manager.can_close_all_tabs():
+            event.ignore()
+            return
 
         self._save_workspace_state()
         event.accept()
