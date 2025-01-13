@@ -90,7 +90,6 @@ class TabManager(QWidget):
 
         self._column_splitter.insertWidget(index, tab_widget)
         self._tab_columns.insert(index, tab_widget)
-        self._logger.debug(f"insertd new column at {index}")
 
         return tab_widget
 
@@ -99,7 +98,6 @@ class TabManager(QWidget):
         for tab_id, label in self._tab_labels.items():
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
-            self._logger.debug(f"update tabs: {column}: {tab_id}")
             column_index = column.currentIndex()
             is_current = column_index != -1 and tab == column.widget(column_index) and column == self._active_column
             label.set_current(is_current)
@@ -130,12 +128,7 @@ class TabManager(QWidget):
         """
         # Find which column triggered the change
         sender = self.sender()
-        if not sender:
-            self._logger.debug("SENDER None")
-            return
-
         self._active_column = sender
-        self._logger.debug("TM: tab changed")
         self._update_tabs()
 
     def _handle_tab_activated(self, tab: TabBase) -> None:
@@ -152,7 +145,6 @@ class TabManager(QWidget):
 
         # Update active column
         self._active_column = column
-        self._logger.debug("TM: tab activated")
         self._update_tabs()
 
     def _handle_column_activated(self, column: TabColumn) -> None:
@@ -164,7 +156,6 @@ class TabManager(QWidget):
             return
 
         self._active_column = column
-        self._logger.debug("TM: column activated")
         self._update_tabs()
 
     def add_tab(self, tab: TabBase, title: str) -> None:
@@ -235,6 +226,7 @@ class TabManager(QWidget):
                     new_active_column = 0 if column_number == 0 else column_number - 1
                     self._active_column = self._tab_columns[new_active_column]
 
+                self._update_tabs()
                 self.column_state_changed.emit()
 
         # Show welcome message if no tabs remain
@@ -325,9 +317,6 @@ class TabManager(QWidget):
         if len(self._tab_columns) >= 6:
             return
 
-        self._logger.debug("split column")
-        self._logger.debug(f"{self._tab_columns}")
-
         current_column_number = self._get_current_column()
         current_column = self._tab_columns[current_column_number]
         if current_column.count() <= 1:
@@ -340,8 +329,6 @@ class TabManager(QWidget):
         old_tab = self._get_current_tab()
         old_tab_id = old_tab.tab_id
         old_tab_state = old_tab.get_state()
-        self._logger.debug(f"{old_tab_id}")
-        self._logger.debug(f"{self._tab_labels}")
         old_tab_title = self._tab_labels[old_tab_id].text()
 
         tab_label = self._tab_labels.pop(old_tab_id)
@@ -381,10 +368,8 @@ class TabManager(QWidget):
 
         self._active_column = target_column
 
-        self._logger.debug("post split column")
-        self._logger.debug(f"{self._tab_columns}")
-
         # Emit signal about column state change
+        self._update_tabs()
         self.column_state_changed.emit()
 
     def can_merge_column(self, merge_left: bool) -> bool:
@@ -403,9 +388,6 @@ class TabManager(QWidget):
         if len(self._tab_columns) <= 1:
             return
 
-        self._logger.debug("merge column")
-        self._logger.debug(f"{self._tab_columns}")
-
         current_column_number = self._get_current_column()
         if (merge_left and current_column_number == 0) or (not merge_left and current_column_number == len(self._tab_columns) -1):
             return
@@ -413,17 +395,11 @@ class TabManager(QWidget):
         target_column_number = current_column_number + (-1 if merge_left else 1)
         target_column = self._tab_columns[target_column_number]
         current_column = self._active_column
-        self._logger.debug(f"current {current_column_number}, target {target_column_number}, {self._active_column}")
-        self._logger.debug(f"{self._tab_columns}")
-
-        # Ensure target column is active
-        self._active_column = target_column
 
         # Record tab states and labels from current column
         tab_states = []
         for i in range(current_column.count()):
             tab = current_column.widget(i)
-            self._logger.debug(f"Tab ID: {tab.tab_id}")
             tab_states.append((
                 tab.tab_id,
                 tab.get_state(),
@@ -438,6 +414,9 @@ class TabManager(QWidget):
             current_column.removeTab(0)
             tab_label.deleteLater()
             tab.deleteLater()
+
+        # Ensure target column is active because we're about to delete the current one
+        self._active_column = target_column
 
         # Remove and delete current column widget
         current_column.deleteLater()
@@ -473,12 +452,8 @@ class TabManager(QWidget):
         sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
         self._column_splitter.setSizes(sizes)
 
-        self._logger.debug(f"new active col: {target_column}")
-
-        self._logger.debug("post merge column")
-        self._logger.debug(f"{self._tab_columns}")
-
         # Emit signal about column state change
+        self._update_tabs()
         self.column_state_changed.emit()
 
     def _get_current_column(self) -> int:
