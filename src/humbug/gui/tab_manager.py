@@ -93,12 +93,12 @@ class TabManager(QWidget):
         return tab_widget
 
     def _update_tabs(self) -> None:
-        # Update current states for all tabs in all columns
-        for column in self._tab_columns:
-            for tab_id, label in self._tab_labels.items():
-                tab = self._tabs[tab_id]
-                is_current = tab == column.widget(column.currentIndex()) and column == self._active_column
-                label.set_current(is_current)
+        # Update current states for all tabs
+        for tab_id, label in self._tab_labels.items():
+            tab = self._tabs[tab_id]
+            column = self._find_column_for_tab(tab)
+            is_current = tab == column.widget(column.currentIndex()) and column == self._active_column
+            label.set_current(is_current)
 
         # Force style refresh to show active state
         self._handle_style_changed(self._style_manager.zoom_factor)
@@ -152,7 +152,6 @@ class TabManager(QWidget):
             return
 
         self._active_column = column
-        print("_handle_column_activated")
         self._update_tabs()
 
     def add_tab(self, tab: TabBase, title: str) -> None:
@@ -374,6 +373,7 @@ class TabManager(QWidget):
         for i, column in enumerate(self._tab_columns):
             if column.indexOf(tab) != -1:
                 return i
+
         return None
 
     def find_conversation_tab_by_id(self, conversation_id: str) -> Optional[ConversationTab]:
