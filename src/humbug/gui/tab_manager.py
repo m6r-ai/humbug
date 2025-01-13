@@ -683,6 +683,7 @@ class TabManager(QWidget):
         """Get appropriate title for tab type."""
         if isinstance(tab, ConversationTab):
             return f"Conv: {tab.tab_id}"
+
         return os.path.basename(state.path)
 
     def _handle_style_changed(self, factor: float = 1.0) -> None:
@@ -841,7 +842,10 @@ class TabManager(QWidget):
 
     def can_show_conversation_settings_dialog(self) -> bool:
         tab = self._get_current_tab()
-        return tab and isinstance(tab, ConversationTab)
+        if not tab or not isinstance(tab, ConversationTab):
+            return False
+
+        return True
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""

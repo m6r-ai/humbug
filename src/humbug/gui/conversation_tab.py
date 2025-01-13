@@ -184,6 +184,7 @@ class ConversationTab(TabBase):
         """
         return TabState(
             type=TabType.CONVERSATION,
+            tab_id=self._tab_id,
             path=self._path,
             timestamp=self._timestamp,
             metadata={
@@ -254,8 +255,7 @@ class ConversationTab(TabBase):
             raise ConversationError("Conversation tab requires timestamp")
 
         # Create new tab instance
-        conversation_id = os.path.splitext(os.path.basename(state.path))[0]
-        tab = cls(conversation_id, state.path, state.timestamp, ai_backends, parent)
+        tab = cls(state.tab_id, state.path, state.timestamp, ai_backends, parent)
 
         # Load conversation from transcript
         try:

@@ -125,6 +125,7 @@ class EditorTab(TabBase):
         """Get serializable state for workspace persistence."""
         return TabState(
             type=TabType.EDITOR,
+            tab_id=self.tab_id,
             path=self._path if self._path else f"untitled-{self._untitled_number}",
             cursor_position=self.get_cursor_position(),
             metadata={
@@ -142,7 +143,7 @@ class EditorTab(TabBase):
             raise FileNotFoundError(f"File not found: {state.path}")
 
         # Create new tab instance
-        tab = cls(str(uuid.uuid4()), parent)
+        tab = cls(state.tab_id, parent)
 
         # Set filename and load content
         if state.path.startswith("untitled-"):

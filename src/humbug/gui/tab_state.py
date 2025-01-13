@@ -9,6 +9,7 @@ from humbug.gui.tab_type import TabType
 class TabState:
     """Container for serializable tab state."""
     type: TabType
+    tab_id: str
     path: str
     cursor_position: Optional[Dict[str, int]] = None
     timestamp: Optional[datetime] = None
