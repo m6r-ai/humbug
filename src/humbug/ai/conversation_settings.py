@@ -115,7 +115,7 @@ class ConversationSettings:
 
         # Finally OpenAI
         if "openai" in ai_backends:
-            return "gpt-4o-mini"
+            return "o1-mini"
 
         # Shouldn't happen as we require at least one backend
         return "gemini-1.5-flash"
