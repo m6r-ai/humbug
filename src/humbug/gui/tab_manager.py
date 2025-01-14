@@ -146,6 +146,11 @@ class TabManager(QWidget):
         target_column.tabBar().setTabButton(index, QTabBar.LeftSide, new_tab_label)
         target_column.setCurrentWidget(new_tab)
 
+        # Did we remove the last tab from our source column?  If yes then close the column
+        if source_column.count() == 0:
+            del self._tab_columns[source_index]
+            source_column.deleteLater()
+
         # Update active states
         self._active_column = target_column
         self._update_tabs()

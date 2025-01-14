@@ -117,6 +117,8 @@ class TabLabel(QWidget):
         if event.button() == Qt.LeftButton:
             self._drag_start_pos = event.pos()
 
+        super().mousePressEvent(event)
+
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle mouse move events for drag operations."""
         if not self._drag_start_pos:
