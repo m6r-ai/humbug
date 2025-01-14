@@ -144,9 +144,9 @@ class TabManager(QWidget):
             del self._tab_columns[column_number]
             source_column.deleteLater()
 
-            # Resize splitter
+            # Resize splitter.  Note +1 on column count because we won't have lost the deleted column yet!
             num_columns = len(self._tab_columns)
-            sizes = [(self.width() // num_columns) for _ in range(num_columns)]
+            sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
             self._column_splitter.setSizes(sizes)
 
         # Update active states
@@ -506,7 +506,7 @@ class TabManager(QWidget):
             index = target_column.addTab(tab, "")
             target_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
 
-        # Resize splitter
+        # Resize splitter.  Note +1 on column count because we won't have lost the deleted column yet!
         num_columns = len(self._tab_columns)
         sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
         self._column_splitter.setSizes(sizes)
@@ -888,7 +888,7 @@ class TabManager(QWidget):
         if not tab or not isinstance(tab, ConversationTab):
             return
 
-        dialog = ConversationSettingsDialog(self, self._ai_backends)
+        dialog = ConversationSettingsDialog(self._ai_backends, self)
         dialog.set_settings(tab.get_settings())
 
         if dialog.exec() == QDialog.Accepted:
