@@ -86,10 +86,14 @@ class TabBase(QFrame):
             self._is_modified = modified
             self.modified_state_changed.emit(self._tab_id, modified)
 
-    def get_state(self) -> TabState:
+    def get_state(self, temp_state: bool) -> TabState:
         """Get serializable state for workspace persistence.
 
         Must be implemented by subclasses to provide their specific state.
+
+        Args:
+            temp_state: True if we're saving temporary state to restore locally,
+                False if we're persisting state
 
         Returns:
             TabState object containing serializable state

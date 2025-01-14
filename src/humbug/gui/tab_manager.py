@@ -108,7 +108,7 @@ class TabManager(QWidget):
             return
 
         tab_id = tab.tab_id
-        tab_state = tab.get_state()
+        tab_state = tab.get_state(True)
         tab_title = self._tab_labels[tab_id].text()
 
         tab_label = self._tab_labels.pop(tab_id)
@@ -401,7 +401,7 @@ class TabManager(QWidget):
         # Delete the current tab from the current column and recreate it in the new column
         old_tab = self._get_current_tab()
         old_tab_id = old_tab.tab_id
-        old_tab_state = old_tab.get_state()
+        old_tab_state = old_tab.get_state(True)
         old_tab_title = self._tab_labels[old_tab_id].text()
 
         tab_label = self._tab_labels.pop(old_tab_id)
@@ -469,7 +469,7 @@ class TabManager(QWidget):
             tab = current_column.widget(i)
             tab_states.append((
                 tab.tab_id,
-                tab.get_state(),
+                tab.get_state(True),
                 self._tab_labels[tab.tab_id].text()
             ))
 
@@ -659,7 +659,7 @@ class TabManager(QWidget):
             for index in range(column.count()):
                 tab = column.widget(index)
                 try:
-                    state = tab.get_state()
+                    state = tab.get_state(False)
                     state_dict = state.to_dict()
                     tab_states.append(state_dict)
                 except Exception as e:

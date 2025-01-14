@@ -123,16 +123,21 @@ class EditorTab(TabBase):
         if clear_backups:
             self._cleanup_backup_files()
 
-    def get_state(self) -> TabState:
+    def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for workspace persistence."""
+        metadata_state = {
+            "language": self._current_language.name
+        }
+
+        if temp_state:
+            metadata_state["content"] = self._editor.toPlainText()
+
         return TabState(
             type=TabType.EDITOR,
             tab_id=self.tab_id,
             path=self._path if self._path else f"untitled-{self._untitled_number}",
             cursor_position=self.get_cursor_position(),
-            metadata={
-                "language": self._current_language.name
-            }
+            metadata=metadata_state
         )
 
     @classmethod
@@ -140,9 +145,6 @@ class EditorTab(TabBase):
         """Create and restore an editor tab from serialized state."""
         if state.type != TabType.EDITOR:
             raise ValueError(f"Invalid tab type for EditorTab: {state.type}")
-
-        if not os.path.exists(state.path):
-            raise FileNotFoundError(f"File not found: {state.path}")
 
         # Create new tab instance
         tab = cls(state.tab_id, parent)
@@ -154,14 +156,18 @@ class EditorTab(TabBase):
         else:
             tab.set_filename(state.path)
 
-        # Restore cursor position if present
-        if state.cursor_position:
-            tab.set_cursor_position(state.cursor_position)
-
         # Restore language if specified
         if state.metadata and "language" in state.metadata:
             language = ProgrammingLanguage[state.metadata["language"]]
             tab._update_language(language)
+
+        # Restore content if specified
+        if state.metadata and "content" in state.metadata:
+            tab._editor.setPlainText(state.metadata["content"])
+
+        # Restore cursor position if present
+        if state.cursor_position:
+            tab.set_cursor_position(state.cursor_position)
 
         return tab
 
