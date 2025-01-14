@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QDialog, QTabBar, QWidget, QVBoxLayout, QSplitter,
 from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.ai_backend import AIBackend
+from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.conversation_error import ConversationError
 from humbug.gui.conversation_settings_dialog import ConversationSettingsDialog
 from humbug.gui.conversation_tab import ConversationTab
@@ -591,6 +592,10 @@ class TabManager(QWidget):
             self._ai_backends,
             self
         )
+
+        # Set default model based on available backends for any new conversation
+        default_model = ConversationSettings.get_default_model(self._ai_backends)
+        conversation_tab.update_conversation_settings(ConversationSettings(model=default_model))
 
         self.add_tab(conversation_tab, f"Conv: {conversation_id}")
         return conversation_id

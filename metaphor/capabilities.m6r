@@ -998,8 +998,6 @@ Context: Capabilities
 
                     Available models should be configurable at application startup.
 
-                    The default model is "gpt-4o-mini".
-
                     Any change to the model selection takes effect on the next message sent to the AI.
 
                     If a model's provider is not available (no API key), that model should be disabled in the
@@ -1180,15 +1178,13 @@ Context: Capabilities
 
         - "gpt-4o-mini": OpenAI GPT-4 Mini model
         - "gpt-4o": OpenAI GPT-4 model
-        - "o1-mini": OpenAI O1 Mini model
+        - "o1-mini": OpenAI O1 Mini model (default for OpenAI)
         - "o1-preview": OpenAI O1 model
-        - "gemini-1.5-flash": Google Gemini 1.5 Flash model
+        - "gemini-1.5-flash": Google Gemini 1.5 Flash model (default for Google Gemini)
         - "gemini-1.5-pro": Google Gemini 1.5 Pro model
         - "gemini-2.0-flash-exp": Google Gemini 2.0 Flash experimental model
-        - "claude-3-5-haiku-20241022": Anthropic Claude 3.5 Haiku model
+        - "claude-3-5-haiku-20241022": Anthropic Claude 3.5 Haiku model (default for Anthropic)
         - "claude-3-5-sonnet-20241022": Anthropic Claude 3.5 Sonnet model
-
-        The AI model is configurable via the settings dialog.  It it set to "gpt-4o-mini" by default.
 
         Context: Model providers
             Models are provided by different AI services:
@@ -1196,6 +1192,9 @@ Context: Capabilities
             - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"
             - Google models: "gemini-1.5-flash", "gemini-1.5-pro"
             - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"
+
+            The AI model is configurable via the settings dialog.  If Google's model is available then we default
+            to it, then to Anthropic, and finally OpenAI.
 
         Context: Provider configuration
             Each provider requires its own API key, as noted in the section about API key configuration.
@@ -1221,7 +1220,7 @@ Context: Capabilities
 
         The temperature control in the Settings dialog is automatically:
 
-        - Enabled and set to 0.7 by default for GPT-4o models.
+        - Enabled and set to 0.7 by default for models that support temperature.
         - Disabled for models that do not support a temperature setting.
         - Preserves previous temperature when switching between models that support temperatures.
         - Reverts to default when switching from models that do not support temperatures to a model that does.

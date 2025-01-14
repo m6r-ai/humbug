@@ -1,15 +1,12 @@
 """Class to handle conversation settings."""
 
+from typing import Dict
+
+
 class ConversationSettings:
     """Data class for conversation settings."""
 
     AVAILABLE_MODELS = [
-        # OpenAI models
-        "gpt-4o-mini",
-        "gpt-4o",
-        "o1-mini",
-        "o1-preview",
-
         # Gemini models
         "gemini-1.5-flash",
         "gemini-1.5-pro",
@@ -17,7 +14,13 @@ class ConversationSettings:
 
         # Anthropic models
         "claude-3-5-haiku-20241022",
-        "claude-3-5-sonnet-20241022"
+        "claude-3-5-sonnet-20241022",
+
+        # OpenAI models
+        "gpt-4o-mini",
+        "gpt-4o",
+        "o1-mini",
+        "o1-preview"
     ]
 
     PROVIDER_MAP = {
@@ -56,8 +59,15 @@ class ConversationSettings:
         "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192}
     }
 
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
-        """Initialize conversation settings with defaults."""
+    def __init__(self, model: str="gemini-1.5-flash", temperature: float=0.7):
+        """
+        Initialize conversation settings with defaults.
+
+        Args:
+            model: Optional model name. If None, must be set later based on available backends
+            temperature: Temperature setting (0.0-1.0)
+        """
+        # Default to Gemini but this should be overridden based on available backends
         self.model = model
         self.temperature = temperature if self.supports_temperature(model) else None
         model_limits = self.MODEL_LIMITS.get(model, {"context_window": 8192, "max_output_tokens": 2048})
@@ -83,3 +93,29 @@ class ConversationSettings:
     def get_model_limits(cls, model: str) -> dict:
         """Get the context window and max output tokens for a model."""
         return cls.MODEL_LIMITS.get(model, {"context_window": 8192, "max_output_tokens": 2048})
+
+    @classmethod
+    def get_default_model(cls, ai_backends: Dict[str, any]) -> str:
+        """
+        Get the default model based on available backends.
+
+        Args:
+            ai_backends: Dictionary of available AI backends
+
+        Returns:
+            The name of the default model to use
+        """
+        # Try Google first
+        if "google" in ai_backends:
+            return "gemini-1.5-flash"
+
+        # Then Anthropic
+        if "anthropic" in ai_backends:
+            return "claude-3-5-haiku-20241022"
+
+        # Finally OpenAI
+        if "openai" in ai_backends:
+            return "gpt-4o-mini"
+
+        # Shouldn't happen as we require at least one backend
+        return "gemini-1.5-flash"
