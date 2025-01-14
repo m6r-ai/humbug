@@ -82,15 +82,6 @@ class TabManager(QWidget):
 
         self._handle_style_changed(self._style_manager.zoom_factor)
 
-    def _handle_tab_drag_started(self, tab_id: str) -> None:
-        """Handle a tab starting to be dragged.
-
-        Args:
-            tab_id: ID of the tab being dragged
-        """
-        # Optionally handle drag start (e.g. to track drag state)
-        pass
-
     def _handle_tab_drop(self, tab_id: str, target_column: TabColumn, target_index: int) -> None:
         """Handle a tab being dropped into a new position.
 
@@ -131,9 +122,7 @@ class TabManager(QWidget):
         if not new_tab:
             return
 
-        # Add to first column
         self._tabs[tab_id] = new_tab
-
         new_tab.activated.connect(lambda: self._handle_tab_activated(new_tab))
 
         # Create new label
@@ -146,13 +135,21 @@ class TabManager(QWidget):
         target_column.tabBar().setTabButton(index, QTabBar.LeftSide, new_tab_label)
         target_column.setCurrentWidget(new_tab)
 
+        # Set our new active column before we possibly delete the previous one
+        self._active_column = target_column
+
         # Did we remove the last tab from our source column?  If yes then close the column
         if source_column.count() == 0:
-            del self._tab_columns[source_index]
+            column_number = self._tab_columns.index(source_column)
+            del self._tab_columns[column_number]
             source_column.deleteLater()
 
+            # Resize splitter
+            num_columns = len(self._tab_columns)
+            sizes = [(self.width() // num_columns) for _ in range(num_columns)]
+            self._column_splitter.setSizes(sizes)
+
         # Update active states
-        self._active_column = target_column
         self._update_tabs()
         self.column_state_changed.emit()
 
@@ -249,15 +246,11 @@ class TabManager(QWidget):
         # Create custom tab label
         tab_label = TabLabel(title, tab_id)
         tab_label.close_clicked.connect(lambda: self._close_tab_by_id(tab_id))
-        tab_label.drag_started.connect(lambda: self._handle_tab_drag_started(tab_id))
         self._tab_labels[tab_id] = tab_label
 
         # Add tab with custom label to active column
         index = self._active_column.addTab(tab, "")
         self._active_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
-
-        # Connect column drag and drop signals
-        self._active_column.tab_drop.connect(self._handle_tab_drop)
 
         # Set initial state
         if len(self._tabs) == 1:  # If this is the first tab
@@ -297,13 +290,13 @@ class TabManager(QWidget):
         # If we closed the last tab in the column, close the column unless it's the last column
         if column.count() == 0:
             if len(self._tab_columns) > 1:
+                if self._active_column == column:
+                    new_active_column = 1 if column_number == 0 else column_number - 1
+                    self._active_column = self._tab_columns[new_active_column]
+
                 column_number = self._tab_columns.index(column)
                 del self._tab_columns[column_number]
                 column.deleteLater()
-
-                if self._active_column == column:
-                    new_active_column = 0 if column_number == 0 else column_number - 1
-                    self._active_column = self._tab_columns[new_active_column]
 
                 self._update_tabs()
                 self.column_state_changed.emit()
@@ -422,9 +415,7 @@ class TabManager(QWidget):
         if not tab:
             return
 
-        # Add to first column
         self._tabs[old_tab_id] = tab
-
         tab.activated.connect(lambda: self._handle_tab_activated(tab))
 
         # Create new label
@@ -503,10 +494,8 @@ class TabManager(QWidget):
             if not tab:
                 continue
 
-            # Add to first column
             self._tabs[tab_id] = tab
-
-            tab.activated.connect(lambda: self._handle_tab_activated(tab))
+            tab.activated.connect(lambda handle_tab=tab: self._handle_tab_activated(handle_tab))
 
             # Create new label
             tab_label = TabLabel(title, tab_id)

@@ -10,7 +10,6 @@ class TabColumn(QTabWidget):
 
     column_activated = Signal(QTabWidget)
     tab_drop = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
-    tab_drag_start = Signal(str)  # tab_id
 
     def __init__(self, parent=None):
         """Initialize the tab widget."""
@@ -93,7 +92,3 @@ class TabColumn(QTabWidget):
             event.acceptProposedAction()
         else:
             event.ignore()
-
-    def notify_drag_start(self, tab_id: str):
-        """Notify that a tab has started dragging."""
-        self.tab_drag_start.emit(tab_id)
