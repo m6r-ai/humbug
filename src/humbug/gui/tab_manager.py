@@ -82,11 +82,59 @@ class TabManager(QWidget):
 
         self._handle_style_changed(self._style_manager.zoom_factor)
 
+    def _handle_tab_drag_started(self, tab_id: str) -> None:
+        """Handle a tab starting to be dragged.
+
+        Args:
+            tab_id: ID of the tab being dragged
+        """
+        # Optionally handle drag start (e.g. to track drag state)
+        pass
+
+    def _handle_tab_drop(self, tab_id: str, target_column: TabColumn, target_index: int) -> None:
+        """Handle a tab being dropped into a new position.
+
+        Args:
+            tab_id: ID of the tab being moved
+            target_column: Column where the tab was dropped
+            target_index: Target position in the column
+        """
+        # Find source column and index
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return
+
+        source_column = self._find_column_for_tab(tab)
+        if not source_column:
+            return
+
+        source_index = source_column.indexOf(tab)
+
+        # Don't process if dropped on itself
+        if (source_column == target_column and
+            (source_index == target_index or source_index == target_index - 1)):
+            return
+
+        # Remove from source
+        tab_label = self._tab_labels[tab_id]
+        source_column.removeTab(source_index)
+
+        # Insert at target position
+        target_column.insertTab(target_index, tab, "")
+        target_column.tabBar().setTabButton(target_index, QTabBar.LeftSide, tab_label)
+        target_column.setCurrentWidget(tab)
+
+        # Update active states
+        self._active_column = target_column
+        self._update_tabs()
+        self.column_state_changed.emit()
+
     def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
         tab_widget = TabColumn()
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
+        tab_widget.tab_drop.connect(self._handle_tab_drop)
 
         self._column_splitter.insertWidget(index, tab_widget)
         self._tab_columns.insert(index, tab_widget)
@@ -172,13 +220,17 @@ class TabManager(QWidget):
         tab.activated.connect(lambda: self._handle_tab_activated(tab))
 
         # Create custom tab label
-        tab_label = TabLabel(title)
+        tab_label = TabLabel(title, tab_id)
         tab_label.close_clicked.connect(lambda: self._close_tab_by_id(tab_id))
+        tab_label.drag_started.connect(lambda: self._handle_tab_drag_started(tab_id))
         self._tab_labels[tab_id] = tab_label
 
         # Add tab with custom label to active column
         index = self._active_column.addTab(tab, "")
         self._active_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+
+        # Connect column drag and drop signals
+        self._active_column.tab_drop.connect(self._handle_tab_drop)
 
         # Set initial state
         if len(self._tabs) == 1:  # If this is the first tab
@@ -349,7 +401,7 @@ class TabManager(QWidget):
         tab.activated.connect(lambda: self._handle_tab_activated(tab))
 
         # Create new label
-        tab_label = TabLabel(old_tab_title)
+        tab_label = TabLabel(old_tab_title, old_tab_id)
         tab_label.close_clicked.connect(lambda tid=old_tab_id: self._close_tab_by_id(tid))
         self._tab_labels[old_tab_id] = tab_label
 
@@ -430,7 +482,7 @@ class TabManager(QWidget):
             tab.activated.connect(lambda: self._handle_tab_activated(tab))
 
             # Create new label
-            tab_label = TabLabel(title)
+            tab_label = TabLabel(title, tab_id)
             tab_label.close_clicked.connect(lambda tid=tab_id: self._close_tab_by_id(tid))
             self._tab_labels[tab_id] = tab_label
 
