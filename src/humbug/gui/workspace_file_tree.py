@@ -33,6 +33,7 @@ class WorkspaceFileTree(QWidget):
         self._tree_view = QTreeView()
         self._tree_view.setHeaderHidden(True)
         self._tree_view.setAnimated(True)
+        self._tree_view.header().setSortIndicator(0, Qt.AscendingOrder)
         self._tree_view.setSortingEnabled(True)
 
         # Create file system model

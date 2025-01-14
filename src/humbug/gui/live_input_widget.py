@@ -22,9 +22,6 @@ class LiveInputWidget(MessageWidget):
         self._is_streaming = False
         super().__init__(parent, is_input=True)
 
-        # Set up the header initial text
-        self.set_content("", "user")
-
         # Connect text cursor signals
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
         self._text_area.pageScrollRequested.connect(self.pageScrollRequested)

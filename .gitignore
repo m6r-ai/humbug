@@ -22,5 +22,8 @@ venv
 # Ignore conversation and log files
 conversations
 
+# Ignore humbug workspace files
+.humbug
+
 # Ignore Mac system files
 .DS_Store

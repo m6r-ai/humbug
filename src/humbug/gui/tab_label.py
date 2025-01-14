@@ -1,33 +1,39 @@
 """Tab label management for the Humbug application."""
 
+from typing import Optional
+
 from PySide6.QtWidgets import (
-    QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy
+    QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy, QApplication
 )
-from PySide6.QtCore import Signal, QSize, Qt
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import Signal, QSize, Qt, QMimeData, QPoint
+from PySide6.QtGui import QIcon, QPixmap, QDrag, QMouseEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 
 
 class TabLabel(QWidget):
-    """Custom widget for tab labels with close button."""
+    """Custom widget for tab labels with close button and drag support."""
 
     close_clicked = Signal()
+    drag_started = Signal()
 
-    def __init__(self, text: str, parent=None):
+    def __init__(self, text: str, tab_id: str, parent=None):
         """
         Initialize the tab label widget.
 
         Args:
             text: The text to display in the tab
+            tab_id: Unique identifier for the associated tab
             parent: Optional parent widget
         """
         super().__init__(parent)
 
+        self._tab_id = tab_id
         self._is_current = False
         self._is_hovered = False
         self._style_manager = StyleManager()
+        self._drag_start_pos: Optional[QPoint] = None
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
@@ -45,7 +51,7 @@ class TabLabel(QWidget):
         self._close_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._layout.addWidget(self._close_button)
 
-        self.handle_style_changed(self._style_manager.zoom_factor)
+        self.handle_style_changed(self._style_manager.zoom_factor, False)
 
         self.setMouseTracking(True)
 
@@ -64,14 +70,15 @@ class TabLabel(QWidget):
         transparent_pixmap.fill(Qt.transparent)
         return QIcon(transparent_pixmap)
 
-    def handle_style_changed(self, factor: float):
+    def handle_style_changed(self, factor: float, is_active: bool):
         """
         Handle style changes from StyleManager.
 
         Args:
             factor: New zoom factor
         """
-        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)}")
+        colour = ColorRole.TEXT_PRIMARY if is_active else ColorRole.TAB_INACTIVE
+        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(colour)}")
 
         self._update_font_size()
 
@@ -104,6 +111,49 @@ class TabLabel(QWidget):
         scaled_size = self._style_manager.get_scaled_size(base_size)
         font.setPointSizeF(scaled_size)
         self._label.setFont(font)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        """Handle mouse press events for drag initiation."""
+        if event.button() == Qt.LeftButton:
+            self._drag_start_pos = event.pos()
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        """Handle mouse move events for drag operations."""
+        if not self._drag_start_pos:
+            return
+
+        # Check if we've moved far enough to start a drag
+        if (event.pos() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            return
+
+        # Create drag object
+        drag = QDrag(self)
+        mime_data = QMimeData()
+        # Store the tab ID for identification
+        mime_data.setData("application/x-humbug-tab", self._tab_id.encode())
+        drag.setMimeData(mime_data)
+
+        # Create pixmap for drag visual feedback
+        pixmap = QPixmap(self.size())
+        self.render(pixmap)
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(self._drag_start_pos)
+
+        # Clear drag tracking
+        self._drag_start_pos = None
+
+        # Emit signal before starting drag
+        self.drag_started.emit()
+
+        # Execute drag operation
+        drag.exec_(Qt.MoveAction)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        """Handle mouse release events."""
+        self._drag_start_pos = None
+        super().mouseReleaseEvent(event)
 
     def enterEvent(self, event):
         """Handle mouse entering the tab label."""
@@ -158,6 +208,11 @@ class TabLabel(QWidget):
         """Update the current state of the tab."""
         self._is_current = is_current
         self._update_close_button()
+
+    @property
+    def tab_id(self) -> str:
+        """Get the tab's unique identifier."""
+        return self._tab_id
 
     def text(self) -> str:
         """

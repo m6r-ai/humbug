@@ -80,8 +80,18 @@ class AIBackend(ABC):
                         timeout=post_timeout
                     ) as response:
                         if response.status != 200:
-                            error_data = await response.json()
-                            error_msg = error_data.get("error", {}).get("message", "Unknown error")
+                            response_message = await response.text()
+
+                            try:
+                                error_data = json.loads(response_message)
+                                error_msg = error_data.get("error", {}).get("message", "Unknown error")
+                            except json.JSONDecodeError as e:
+                                self._logger.warning("Unable to parse: %s (%s)", response_message, str(e))
+                                error_data = {}
+                                error_msg = "Unknown error"
+
+                            self._logger.debug("API error: %d: %s", response.status, error_data)
+
                             # Map Gemini error codes to consistent format
                             if "error" in error_data and "status" in error_data["error"]:
                                 error_code = error_data["error"]["status"]
@@ -111,7 +121,7 @@ class AIBackend(ABC):
                                 content="",
                                 error={
                                     "code": str(response.status),
-                                    "message": f"API error: {error_msg}",
+                                    "message": f"API error {response.status}: {error_msg}",
                                     "details": error_data
                                 }
                             )

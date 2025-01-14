@@ -1,6 +1,6 @@
 """Dialog for configuring conversation-specific settings."""
 
-from typing import List
+from typing import Dict, List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Qt
 
+from humbug.ai.ai_backend import AIBackend
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -18,13 +19,14 @@ class ConversationSettingsDialog(QDialog):
 
     settings_changed = Signal(ConversationSettings)
 
-    def __init__(self, parent=None):
+    def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
         """Initialize the conversation settings dialog."""
         super().__init__(parent)
         self.setWindowTitle("Conversation Settings")
         self.setMinimumWidth(500)
         self.setModal(True)
 
+        self._ai_backends = ai_backends
         self._available_models: List[str] = []
         self._initial_settings = None
         self._current_settings = None
@@ -272,17 +274,6 @@ class ConversationSettingsDialog(QDialog):
             abs(current_temp - self._current_settings.temperature) > 0.01
         )
 
-    def set_available_models(self, models: List[str]):
-        """
-        Set the list of available models.
-
-        Args:
-            models: List of model names that are available for use
-        """
-        self._available_models = models
-        self._model_combo.clear()
-        self._model_combo.addItems(models)
-
     def get_settings(self) -> ConversationSettings:
         """Get the current settings from the dialog."""
         model = self._model_combo.currentText()
@@ -291,6 +282,16 @@ class ConversationSettingsDialog(QDialog):
 
     def set_settings(self, settings: ConversationSettings):
         """Set the current settings in the dialog."""
+        models = []
+        for model in ConversationSettings.AVAILABLE_MODELS:
+            provider = ConversationSettings.get_provider(model)
+            if provider in self._ai_backends:
+                models.append(model)
+
+        self._available_models = models
+        self._model_combo.clear()
+        self._model_combo.addItems(models)
+
         self._initial_settings = ConversationSettings(
             model=settings.model,
             temperature=settings.temperature

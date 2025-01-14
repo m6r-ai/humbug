@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import uuid
@@ -67,6 +68,7 @@ class EditorTab(TabBase):
         self._auto_backup_timer = QTimer(self)
         self._auto_backup_timer.timeout.connect(self._auto_backup)
         self._current_language = ProgrammingLanguage.TEXT
+        self._logger = logging.getLogger("EditorTab")
 
         # Set up layout
         layout = QVBoxLayout(self)
@@ -78,6 +80,8 @@ class EditorTab(TabBase):
         self._editor.textChanged.connect(self._handle_text_changed)
         self._editor.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor)
+
+        self._install_activation_tracking(self._editor)
 
         # Set up syntax highlighter
         self._highlighter = EditorHighlighter(self._editor.document())
@@ -113,14 +117,18 @@ class EditorTab(TabBase):
                 self._auto_backup_timer.start()
             return
 
+        clear_backups = self._auto_backup_timer.isActive()
         self._auto_backup_timer.stop()
+
         # Clean up any existing backups since auto-backup is disabled
-        self._cleanup_backup_files()
+        if clear_backups:
+            self._cleanup_backup_files()
 
     def get_state(self) -> TabState:
         """Get serializable state for workspace persistence."""
         return TabState(
             type=TabType.EDITOR,
+            tab_id=self.tab_id,
             path=self._path if self._path else f"untitled-{self._untitled_number}",
             cursor_position=self.get_cursor_position(),
             metadata={
@@ -138,7 +146,7 @@ class EditorTab(TabBase):
             raise FileNotFoundError(f"File not found: {state.path}")
 
         # Create new tab instance
-        tab = cls(str(uuid.uuid4()), parent)
+        tab = cls(state.tab_id, parent)
 
         # Set filename and load content
         if state.path.startswith("untitled-"):
@@ -465,7 +473,9 @@ class EditorTab(TabBase):
 
         if result == MessageBoxButton.DISCARD:
             # Delete any backup files when discarding changes
-            self._cleanup_backup_files()
+            if self._auto_backup_timer.isActive():
+                self._cleanup_backup_files()
+
             return True
 
         return False

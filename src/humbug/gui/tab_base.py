@@ -1,20 +1,38 @@
 from typing import Dict, Optional
 
-from PySide6.QtWidgets import QFrame
-from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QFrame, QWidget
+from PySide6.QtCore import Signal, QObject, QEvent
 
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.tab_state import TabState
+
+
+class TabEventFilter(QObject):
+    """Event filter to track activation events from child widgets."""
+
+    widget_activated = Signal()
+
+    def __init__(self, parent=None):
+        """Initialize the event filter."""
+        super().__init__(parent)
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        """Filter events to detect widget activation."""
+        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
+            self.widget_activated.emit()
+            return False  # Don't consume the event
+
+        return super().eventFilter(obj, event)
 
 
 class TabBase(QFrame):
     """Base class for all tab content."""
 
     # Common signals that both conversation and editor tabs will need
-    close_requested = Signal(str)  # Emits tab_id
     title_changed = Signal(str, str)  # Emits (tab_id, new_title)
     modified_state_changed = Signal(str, bool)  # Emits (tab_id, is_modified)
     status_message = Signal(StatusMessage)
+    activated = Signal()  # Emits when tab is activated by user interaction
 
     def __init__(self, tab_id: str, parent=None):
         """
@@ -28,6 +46,24 @@ class TabBase(QFrame):
         self._tab_id = tab_id
         self._is_modified = False
         self._path: Optional[str] = None
+
+        # Set up activation tracking
+        self._event_filter = TabEventFilter(self)
+        self._event_filter.widget_activated.connect(self.activated)
+        self.installEventFilter(self._event_filter)
+
+    def _install_activation_tracking(self, widget: QWidget) -> None:
+        """
+        Install event filter on widget and all its children recursively.
+
+        Call this for any new widgets added to the tab that should trigger activation.
+
+        Args:
+            widget: Widget to track for activation events
+        """
+        widget.installEventFilter(self._event_filter)
+        for child in widget.findChildren(QWidget):
+            child.installEventFilter(self._event_filter)
 
     @property
     def tab_id(self) -> str:

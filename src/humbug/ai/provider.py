@@ -28,8 +28,10 @@ class AIProvider:
         backends = {}
         if openai_key:
             backends["openai"] = OpenAIBackend(openai_key)
+
         if google_key:
             backends["google"] = GeminiBackend(google_key)
+
         if anthropic_key:
             backends["anthropic"] = AnthropicBackend(anthropic_key)
 

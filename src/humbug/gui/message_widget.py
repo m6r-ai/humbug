@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QCursor
 
+from humbug.conversation.message_source import MessageSource
 from humbug.gui.conversation_highlighter import ConversationHighlighter
 from humbug.gui.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
@@ -70,14 +71,7 @@ class MessageWidget(QFrame):
         self._style_manager = StyleManager()
 
         # Track current message style
-        self._current_style = None
-
-        # Map message types to background color roles
-        self.background_roles = {
-            'user': ColorRole.MESSAGE_USER,
-            'ai': ColorRole.MESSAGE_AI,
-            'system': ColorRole.MESSAGE_SYSTEM
-        }
+        self._current_style: MessageSource = None
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed(self._style_manager.zoom_factor)
@@ -98,7 +92,7 @@ class MessageWidget(QFrame):
         """Handle mouse release from text area."""
         self.mouseReleased.emit()
 
-    def set_content(self, text: str, style: str, timestamp: datetime = None):
+    def set_content(self, text: str, style: MessageSource, timestamp: datetime):
         """Set content with style, handling incremental updates for AI responses.
         
         Args:
@@ -113,19 +107,13 @@ class MessageWidget(QFrame):
             else:
                 # For history messages, show role with timestamp
                 role_text = {
-                    'user': "You",
-                    'ai': "Assistant",
-                    'system': "System Message"
+                    MessageSource.USER: "You",
+                    MessageSource.AI: "Assistant",
+                    MessageSource.SYSTEM: "System Message"
                 }.get(style, "Unknown")
 
-                # Format the timestamp if provided, otherwise use current time
-                dt = timestamp
-                if not dt:
-                    # Default to current time if no timestamp provided
-                    dt = datetime.utcnow()
-
                 self._role_label.setText(role_text)
-                timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                 self._timestamp_label.setText(f" @ {timestamp_str}")
 
             self._current_style = style
@@ -177,11 +165,6 @@ class MessageWidget(QFrame):
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
 
-    @property
-    def is_ai(self) -> bool:
-        """Check if this is an AI response message."""
-        return self._current_style == 'ai'
-
     def _handle_style_changed(self, factor: float):
         """Handle the style changing"""
         font = self.font()
@@ -189,7 +172,14 @@ class MessageWidget(QFrame):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        role = self.background_roles.get(self._current_style, ColorRole.MESSAGE_USER)
+        # Map message types to role colors
+        role_colours = {
+            MessageSource.USER: ColorRole.MESSAGE_USER,
+            MessageSource.AI: ColorRole.MESSAGE_AI,
+            MessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM
+        }
+
+        role = role_colours.get(self._current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
 
         # Role label styling (bold)

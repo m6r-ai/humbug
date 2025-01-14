@@ -27,6 +27,7 @@ source code for the app.
 - **Multi-Tab Interface:**
     - Supports multiple concurrent conversations with AI backends.
     - Allows for editing of text files with syntax highlighting.
+    - Tabs can be arranged into multiple columns, with columns being able to split and merge.
     - Tabs can be easily rearranged and closed.
 - **AI Interaction:**
     - Real-time streaming of AI responses.
@@ -169,7 +170,7 @@ python -m humbug
     - `Ctrl+W` - Close Tab
     - `Ctrl+Shift+F` - Fork Conversation
 - **Edit Operations**
-    - `Ctrl+J` - Submit message
+    - `Ctrl+J` - Submit Message
     - `Ctrl+Z` - Undo
     - `Ctrl+Shift+Z` - Redo
     - `Ctrl+X` - Cut
@@ -180,6 +181,11 @@ python -m humbug
     - `Ctrl+=` - Zoom In
     - `Ctrl+-` - Zoom Out
     - `Ctrl+0` - Reset Zoom
+    - 'Ctrl+\' - Show All Columns
+    - 'Ctrl+Shift+[' - Split Column Left
+    - 'Ctrl+Shift+]' - Split Column Right
+    - 'Ctrl+[' - Merge Column Left
+    - 'Ctrl+]' - Merge Column Right
 - **Other**
     - `Esc` - Cancel current AI response
 

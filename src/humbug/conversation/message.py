@@ -33,7 +33,8 @@ class Message:
     @classmethod
     def create(
         cls,
-        source: MessageSource, content: str,
+        source: MessageSource,
+        content: str,
         usage: Optional[Usage] = None,
         error: Optional[Dict] = None,
         model: Optional[str] = None,

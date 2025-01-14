@@ -4,12 +4,55 @@ Context: Capabilities
     Navigation is done using a keyboard and mouse.
 
     Context: Version
-        This is version 0.1 of the application.
+        This is version 0.2 of the application.
 
     Context: Application window
         The main window is divided into two primary regions: a file tree view on the left side, and a tabbed
         interface on the right side. The two regions are separated by a resizable splitter that allows the user
         to adjust the relative widths.  At the bottom of the main window is an application status bar.
+
+        Tabs can be arranged as either single column of tabs, or have a split view that has two columns of tabs
+        side-by-side.
+
+        Context: Tab columns
+            Context: Column layout options
+                The application supports both single-column and multi-column layouts.
+
+                We support a maximum of 6 columns.
+
+                Each column maintains its own set of tabs.
+
+                One column is always the active column.
+
+                The active column receives new tabs by default.
+
+                The active column is visually distinguished from inactive columns because the active tab is
+                clearly visible.
+
+                Clicking in a column or its tabs makes it the active column.
+
+                Keyboard focus changes also updates the active column.
+
+                When a column becomes empty, that column becomes closed and is removed.
+
+                If all tabs in a column are closed then the column is also closed.
+
+                If multiple columns are open then tabs can be moved from one column to another by dragging and
+                dropping them with the mouse.
+
+            Context: Column merging and splitting
+                Provided there is more than one tab open in the currently-active column, then the currently-active
+                column can be split, with the current open tab moving to the new column.
+
+                Provided there is more than one column open, then the current column can be merged with any
+                adjacent column, with all tabs moving to that column and the current column being closed.
+
+            Context: Column persistence
+                The column layout is persisted with the workspace.
+
+                Each tab's column position is restored when reopening a workspace.
+
+                Column sizes are preserved between sessions.
 
         Context: File tree view
             The file tree displays the contents of the current workspace:
@@ -272,7 +315,7 @@ Context: Capabilities
         The workspace ".humbug" directory contains:
 
         - settings.json: Project-specific configuration
-        - recents.json: State of active elements
+        - session.json: State of active elements
 
         Context: Settings file
             The settings.json file contains workspace-specific configuration:
@@ -299,7 +342,7 @@ Context: Capabilities
             - Continue loading workspace
 
         Context: Recents file
-            The recents.json file tracks workspace state for restoration:
+            The session.json file tracks workspace state for restoration:
 
             ```json
             {
@@ -479,7 +522,7 @@ Context: Capabilities
             - Validate no existing ".humbug" directory
             - Create ".humbug" directory if valid
             - Create default settings.json
-            - Create empty recents.json
+            - Create empty session.json
             - Show error if creation fails
 
         Context: Opening workspaces
@@ -495,7 +538,7 @@ Context: Capabilities
         Context: Closing workspaces
             When closing a workspace:
 
-            - Save current state to recents.json
+            - Save current state to session.json
             - Close all workspace elements
             - Clear workspace state
             - Update home directory tracking
@@ -681,7 +724,7 @@ Context: Capabilities
             Context: Close Workspace
                 The "Close Workspace" menu item closes current workspace:
 
-                - Saves state to recents.json
+                - Saves state to session.json
                 - Closes all workspace elements
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+W" for Windows).
@@ -696,8 +739,8 @@ Context: Capabilities
         Context: Edit
             The "Edit" menu handles edit capabilities.  When clicked it contains the following:
 
-            Context: Submit
-                The "Submit" menu item will submit the current user input message to the AI, where there is
+            Context: Submit Message
+                The "Submit Message" menu item will submit the current user input message to the AI, where there is
                 an input message to be submitted.
 
                 This will be matched with a keyboard shortcut, "Ctrl+J".
@@ -790,6 +833,43 @@ Context: Capabilities
                 of 0.5
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+0" for Windows).
+
+            Context: Separator
+                There will be a horizontal Separator
+
+            Context Show All Columns
+                The "Show All Columns" menu item will support showing all active columns, by making them all visible
+                and the same width.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+\" for Windows).
+
+            Context: Split Column Left
+                The "Split Column Left" menu item will support splitting the current column and moving the current
+                tab to a new column to the left of the current one.
+
+                This will only be supported if we have not reached the maximum number of columns.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+[" for Windows).
+
+            Context: Split Column Right
+                The "Split Column Right" menu item will support splitting the current column and moving the current
+                tab to a new column to the right of the current one.
+
+                This will only be supported if we have not reached the maximum number of columns.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+]" for Windows).
+
+            Context: Merge Column Left
+                The "Merge Column Left" menu item will support merging the current column with the one to its left as
+                long as the current active column is not the left hand column.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+[" for Windows).
+
+            Context: Merge Column Right
+                The "Merge Column Right" menu item will support merging the current column with the one to its right as
+                long as the current active column is not the right hand column.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+]" for Windows).
 
         Context: Menu styling
             Menus and menu items must have consistent visual styling:
@@ -923,8 +1003,6 @@ Context: Capabilities
                     The AI model is selected via a dropdown menu.
 
                     Available models should be configurable at application startup.
-
-                    The default model is "gpt-4o-mini".
 
                     Any change to the model selection takes effect on the next message sent to the AI.
 
@@ -1106,15 +1184,13 @@ Context: Capabilities
 
         - "gpt-4o-mini": OpenAI GPT-4 Mini model
         - "gpt-4o": OpenAI GPT-4 model
-        - "o1-mini": OpenAI O1 Mini model
+        - "o1-mini": OpenAI O1 Mini model (default for OpenAI)
         - "o1-preview": OpenAI O1 model
-        - "gemini-1.5-flash": Google Gemini 1.5 Flash model
+        - "gemini-1.5-flash": Google Gemini 1.5 Flash model (default for Google Gemini)
         - "gemini-1.5-pro": Google Gemini 1.5 Pro model
         - "gemini-2.0-flash-exp": Google Gemini 2.0 Flash experimental model
-        - "claude-3-5-haiku-20241022": Anthropic Claude 3.5 Haiku model
+        - "claude-3-5-haiku-20241022": Anthropic Claude 3.5 Haiku model (default for Anthropic)
         - "claude-3-5-sonnet-20241022": Anthropic Claude 3.5 Sonnet model
-
-        The AI model is configurable via the settings dialog.  It it set to "gpt-4o-mini" by default.
 
         Context: Model providers
             Models are provided by different AI services:
@@ -1122,6 +1198,9 @@ Context: Capabilities
             - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"
             - Google models: "gemini-1.5-flash", "gemini-1.5-pro"
             - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"
+
+            The AI model is configurable via the settings dialog.  If Google's model is available then we default
+            to it, then to Anthropic, and finally OpenAI.
 
         Context: Provider configuration
             Each provider requires its own API key, as noted in the section about API key configuration.
@@ -1147,7 +1226,7 @@ Context: Capabilities
 
         The temperature control in the Settings dialog is automatically:
 
-        - Enabled and set to 0.7 by default for GPT-4o models.
+        - Enabled and set to 0.7 by default for models that support temperature.
         - Disabled for models that do not support a temperature setting.
         - Preserves previous temperature when switching between models that support temperatures.
         - Reverts to default when switching from models that do not support temperatures to a model that does.

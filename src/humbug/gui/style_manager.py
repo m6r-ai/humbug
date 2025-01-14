@@ -98,6 +98,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#242424",
                 ColorMode.LIGHT: "#ffffff"
             },
+            ColorRole.TAB_INACTIVE: {
+                ColorMode.DARK: "#909090",
+                ColorMode.LIGHT: "#707070"
+            },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
                 ColorMode.DARK: "#1c1c1c",
                 ColorMode.LIGHT: "#f0f0f0"
@@ -192,6 +196,10 @@ class StyleManager(QObject):
             },
 
             # Syntax highlighting
+            ColorRole.SYNTAX_BACKTICK_CODE: {
+                ColorMode.DARK: "#8080f0",
+                ColorMode.LIGHT: "#3030c0"
+            },
             ColorRole.SYNTAX_CODE: {
                 ColorMode.DARK: "#f0f0f0",
                 ColorMode.LIGHT: "#202020"
@@ -273,6 +281,7 @@ class StyleManager(QObject):
     def _initialize_highlights(self):
         # Mapping from token type to colour
         colour_mapping = {
+            "BACKTICK_CODE": ColorRole.SYNTAX_BACKTICK_CODE,
             "CODE": ColorRole. SYNTAX_CODE,
             "COMMENT": ColorRole.SYNTAX_COMMENT,
             "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,

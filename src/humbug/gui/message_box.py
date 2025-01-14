@@ -1,26 +1,10 @@
-"""
-Message box dialog with consistent styling and scrollable content.
-
-Example usage:
-    result = MessageBox.show_message(
-        self,
-        MessageBoxType.QUESTION,
-        "Save Changes?",
-        "Do you want to save your changes?",
-        [MessageBoxButton.SAVE, MessageBoxButton.DISCARD, MessageBoxButton.CANCEL]
-    )
-    if result == MessageBoxButton.SAVE:
-        self.save()
-    elif result == MessageBoxButton.DISCARD:
-        self.close()
-"""
+"""Custom message box dialog with consistent styling and scrollable content."""
 
 from enum import Enum, auto
 from typing import Optional, List
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QPlainTextEdit, QSizePolicy
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QPlainTextEdit
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap
@@ -92,21 +76,28 @@ class MessageBox(QDialog):
         self._text_edit.setPlainText(text)
         self._text_edit.setReadOnly(True)
         self._text_edit.setFrameStyle(0)  # No frame
-        self._text_edit.setMaximumHeight(int(self.screen().geometry().height() * 0.8))
-        self._text_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        # Calculate approximate initial height based on content
+        # Calculate size based on content
         doc = self._text_edit.document()
         margins = self._text_edit.contentsMargins()
-        line_count = min(doc.lineCount(), 20)  # Cap at 20 lines for initial size
+        line_count = doc.lineCount()
         font_metrics = self._text_edit.fontMetrics()
         line_height = font_metrics.lineSpacing()
-        initial_height = (line_count * line_height) + margins.top() + margins.bottom()
-        self._text_edit.setMinimumHeight(max(40, initial_height))
+
+        # For short messages (1-2 lines), use fixed height with small margin
+        if line_count <= 2:
+            content_height = ((line_count + 2) * line_height) + margins.top() + margins.bottom()
+            self._text_edit.setFixedHeight(content_height)
+            self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        else:
+            # For longer messages, set reasonable max height with scrollbar
+            content_height = min(30 * line_height, int(self.screen().geometry().height() * 0.8))
+            self._text_edit.setMinimumHeight(40)  # Minimum 2 lines
+            self._text_edit.setMaximumHeight(content_height)
+            self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         header_layout.addWidget(self._text_edit, stretch=1)
         layout.addLayout(header_layout)
-        layout.addStretch()
 
         # Add buttons
         button_layout = QHBoxLayout()
@@ -139,6 +130,10 @@ class MessageBox(QDialog):
 
         # Store escape button for key handling
         self._escape_button = escape_button
+
+        # Add spacing before buttons only if we have a scrollbar
+        if line_count > 2:
+            layout.addSpacing(12)
 
         layout.addLayout(button_layout)
         self.setLayout(layout)

@@ -51,6 +51,7 @@ class WorkspaceFileModel(QSortFilterProxyModel):
         # Directories come before files
         if left_info.isDir() and not right_info.isDir():
             return True
+
         if not left_info.isDir() and right_info.isDir():
             return False
 
