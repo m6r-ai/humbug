@@ -115,14 +115,36 @@ class TabManager(QWidget):
             (source_index == target_index or source_index == target_index - 1)):
             return
 
-        # Remove from source
-        tab_label = self._tab_labels[tab_id]
-        source_column.removeTab(source_index)
+        tab_id = tab.tab_id
+        tab_state = tab.get_state()
+        tab_title = self._tab_labels[tab_id].text()
 
-        # Insert at target position
-        target_column.insertTab(target_index, tab, "")
-        target_column.tabBar().setTabButton(target_index, QTabBar.LeftSide, tab_label)
-        target_column.setCurrentWidget(tab)
+        tab_label = self._tab_labels.pop(tab_id)
+        del self._tabs[tab_id]
+        index = source_column.indexOf(tab)
+        source_column.removeTab(index)
+        tab_label.deleteLater()
+        tab.deleteLater()
+
+        # Create appropriate tab type
+        new_tab = self._restore_tab_from_state(tab_state)
+        if not new_tab:
+            return
+
+        # Add to first column
+        self._tabs[tab_id] = new_tab
+
+        new_tab.activated.connect(lambda: self._handle_tab_activated(new_tab))
+
+        # Create new label
+        new_tab_label = TabLabel(tab_title, tab_id)
+        new_tab_label.close_clicked.connect(lambda tid=tab_id: self._close_tab_by_id(tid))
+        self._tab_labels[tab_id] = new_tab_label
+
+        # Add to column
+        index = target_column.addTab(new_tab, "")
+        target_column.tabBar().setTabButton(index, QTabBar.LeftSide, new_tab_label)
+        target_column.setCurrentWidget(new_tab)
 
         # Update active states
         self._active_column = target_column
