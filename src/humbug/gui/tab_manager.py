@@ -291,11 +291,11 @@ class TabManager(QWidget):
         # If we closed the last tab in the column, close the column unless it's the last column
         if column.count() == 0:
             if len(self._tab_columns) > 1:
+                column_number = self._tab_columns.index(column)
                 if self._active_column == column:
                     new_active_column = 1 if column_number == 0 else column_number - 1
                     self._active_column = self._tab_columns[new_active_column]
 
-                column_number = self._tab_columns.index(column)
                 del self._tab_columns[column_number]
                 column.deleteLater()
 
