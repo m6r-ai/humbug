@@ -29,7 +29,7 @@ class WorkspaceManager(QObject):
     Attributes:
         WORKSPACE_DIR: Name of the workspace configuration directory
         SETTINGS_FILE: Name of the workspace settings file
-        RECENTS_FILE: Name of the file storing recent tabs
+        SESSION_FILE: Name of the file storing recent tabs
     """
 
     # Signal emitted when workspace settings change
@@ -138,9 +138,9 @@ class WorkspaceManager(QObject):
             settings = WorkspaceSettings()
             settings.save(os.path.join(workspace_dir, self.SETTINGS_FILE))
 
-            # Create empty recents file
-            recents_path = os.path.join(workspace_dir, self.RECENTS_FILE)
-            with open(recents_path, 'w', encoding='utf-8') as f:
+            # Create empty session file
+            session_path = os.path.join(workspace_dir, self.SESSION_FILE)
+            with open(session_path, 'w', encoding='utf-8') as f:
                 json.dump({"tabs": []}, f, indent=2)
 
         except OSError as e:
