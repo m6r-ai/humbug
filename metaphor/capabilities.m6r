@@ -837,7 +837,7 @@ Context: Capabilities
             Context: Separator
                 There will be a horizontal Separator
 
-            Context Show All Columns
+            Context: Show All Columns
                 The "Show All Columns" menu item will support showing all active columns, by making them all visible
                 and the same width.
 
