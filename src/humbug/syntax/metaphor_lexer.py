@@ -150,7 +150,7 @@ class MetaphorLexer(Lexer):
             'Action:',
             'Context:',
             'Embed:',
-            'Import:',
+            'Include:',
             'Role:'
         }
         return value in keywords
