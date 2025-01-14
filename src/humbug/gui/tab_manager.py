@@ -618,7 +618,9 @@ class TabManager(QWidget):
             )
             self.add_tab(conversation_tab, f"Conv: {conversation_id}")
             return conversation_tab
-        except ConversationError:
+
+        except ConversationError as e:
+            self._logger.error("Failed to open conversation: %s", str(e))
             raise
 
     def can_fork_conversation(self) -> bool:
