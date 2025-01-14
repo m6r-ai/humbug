@@ -868,6 +868,17 @@ class TabManager(QWidget):
         if isinstance(current_tab, EditorTab):
             current_tab.save_as()
 
+    def can_show_all_columns(self) -> bool:
+        return False if len(self._tab_columns) == 0 else True
+
+    def show_all_columns(self) -> None:
+        if len(self._tab_columns) < 1:
+            return
+
+        num_columns = len(self._tab_columns)
+        sizes = [(self.width() // num_columns) for _ in range(num_columns)]
+        self._column_splitter.setSizes(sizes)
+
     def can_submit_message(self) -> bool:
         tab = self._get_current_tab()
         return False if not tab else tab.can_submit()

@@ -739,8 +739,8 @@ Context: Capabilities
         Context: Edit
             The "Edit" menu handles edit capabilities.  When clicked it contains the following:
 
-            Context: Submit
-                The "Submit" menu item will submit the current user input message to the AI, where there is
+            Context: Submit Message
+                The "Submit Message" menu item will submit the current user input message to the AI, where there is
                 an input message to be submitted.
 
                 This will be matched with a keyboard shortcut, "Ctrl+J".
@@ -836,6 +836,12 @@ Context: Capabilities
 
             Context: Separator
                 There will be a horizontal Separator
+
+            Context Show All Columns
+                The "Show All Columns" menu item will support showing all active columns, by making them all visible
+                and the same width.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+\" for Windows).
 
             Context: Split Column Left
                 The "Split Column Left" menu item will support splitting the current column and moving the current

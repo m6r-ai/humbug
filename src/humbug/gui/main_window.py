@@ -99,9 +99,9 @@ class MainWindow(QMainWindow):
         self._close_workspace_action.triggered.connect(self._close_workspace)
 
         # Edit menu actions
-        self._submit_action = QAction("Submit", self)
-        self._submit_action.setShortcut(QKeySequence("Ctrl+J"))
-        self._submit_action.triggered.connect(self._submit_message)
+        self._submit_message_action = QAction("Submit Message", self)
+        self._submit_message_action.setShortcut(QKeySequence("Ctrl+J"))
+        self._submit_message_action.triggered.connect(self._submit_message)
 
         self._undo_action = QAction("Undo", self)
         self._undo_action.setShortcut(QKeySequence("Ctrl+Z"))
@@ -149,6 +149,10 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
+        self._show_all_columns_action = QAction("Show All Columns", self)
+        self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
+        self._show_all_columns_action.triggered.connect(self._show_all_columns)
+
         self._split_column_left_action = QAction("Split Column Left", self)
         self._split_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+["))
         self._split_column_left_action.triggered.connect(lambda: self._split_column(True))
@@ -195,7 +199,7 @@ class MainWindow(QMainWindow):
 
         # Edit menu
         edit_menu = self._menu_bar.addMenu("&Edit")
-        edit_menu.addAction(self._submit_action)
+        edit_menu.addAction(self._submit_message_action)
         edit_menu.addSeparator()
         edit_menu.addAction(self._undo_action)
         edit_menu.addAction(self._redo_action)
@@ -215,6 +219,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self._zoom_out_action)
         view_menu.addAction(self._reset_zoom_action)
         view_menu.addSeparator()
+        view_menu.addAction(self._show_all_columns_action)
         view_menu.addAction(self._split_column_left_action)
         view_menu.addAction(self._split_column_right_action)
         view_menu.addAction(self._merge_column_left_action)
@@ -500,6 +505,10 @@ class MainWindow(QMainWindow):
         """Save the current file with a new name."""
         self._tab_manager.save_file_as()
 
+    def _show_all_columns(self) -> None:
+        """Show all columns equally."""
+        self._tab_manager.show_all_columns()
+
     def _split_column(self, split_left: bool) -> None:
         """Split the current column."""
         self._tab_manager.split_column(split_left)
@@ -532,13 +541,14 @@ class MainWindow(QMainWindow):
         self._cut_action.setEnabled(tab_manager.can_cut())
         self._copy_action.setEnabled(tab_manager.can_copy())
         self._paste_action.setEnabled(tab_manager.can_paste())
-        self._submit_action.setEnabled(tab_manager.can_submit_message())
+        self._submit_message_action.setEnabled(tab_manager.can_submit_message())
         self._conv_settings_action.setEnabled(tab_manager.can_show_conversation_settings_dialog())
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
+        self._show_all_columns_action.setEnabled(tab_manager.can_show_all_columns())
         self._split_column_left_action.setEnabled(tab_manager.can_split_column())
         self._split_column_right_action.setEnabled(tab_manager.can_split_column())
         self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(True))
