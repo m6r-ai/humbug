@@ -1,7 +1,7 @@
 """Columns for managing tabs with drag and drop support."""
 
 from PySide6.QtWidgets import QTabWidget
-from PySide6.QtCore import Signal, QEvent, Qt
+from PySide6.QtCore import Signal, QEvent
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
 
