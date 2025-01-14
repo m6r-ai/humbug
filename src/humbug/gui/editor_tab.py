@@ -117,9 +117,12 @@ class EditorTab(TabBase):
                 self._auto_backup_timer.start()
             return
 
+        clear_backups = self._auto_backup_timer.isActive()
         self._auto_backup_timer.stop()
+
         # Clean up any existing backups since auto-backup is disabled
-        self._cleanup_backup_files()
+        if clear_backups:
+            self._cleanup_backup_files()
 
     def get_state(self) -> TabState:
         """Get serializable state for workspace persistence."""
@@ -470,7 +473,9 @@ class EditorTab(TabBase):
 
         if result == MessageBoxButton.DISCARD:
             # Delete any backup files when discarding changes
-            self._cleanup_backup_files()
+            if self._auto_backup_timer.isActive():
+                self._cleanup_backup_files()
+
             return True
 
         return False
