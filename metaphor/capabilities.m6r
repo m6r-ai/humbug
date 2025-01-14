@@ -31,11 +31,14 @@ Context: Capabilities
 
                 Clicking in a column or its tabs makes it the active column.
 
-                Keyboard focus changes also update the active column.
+                Keyboard focus changes also updates the active column.
 
                 When a column becomes empty, that column becomes closed and is removed.
 
-                If all tabs in a column are closed then the colum is also closed.
+                If all tabs in a column are closed then the column is also closed.
+
+                If multiple columns are open then tabs can be moved from one column to another by dragging and
+                dropping them with the mouse.
 
             Context: Column merging and splitting
                 Provided there is more than one tab open in the currently-active column, then the currently-active
