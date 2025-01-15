@@ -388,10 +388,10 @@ class KotlinLexer(Lexer):
         Read an operator or punctuation token.
         """
         operators = [
-            '..', '::', '?.', '?:', '!!', '++', '--', '&&', '||',
-            '+=', '-=', '*=', '/=', '%=', '===', '!==', '==', '!=', '<=',
-            '>=', '->', '=>', '+', '-', '*', '/', '%', '=', '<', '>',
-            '!', '?', ':', '.', '(', ')', '{', '}', '[', ']', ',', ';'
+            '..<', '===', '!==', '..', '::', '?.', '?:', '!!', '++', '--',
+            '&&', '||', '+=', '-=', '*=', '/=', '%=', '==', '!=', '<=',
+            '>=', '->', '=>', '+', '-', '*', '/', '%', '=', '<', '>', '_'
+            '@', '$', '!', '?', ':', '.', '(', ')', '{', '}', '[', ']', ',', ';'
         ]
 
         for operator in operators:
@@ -525,7 +525,7 @@ class KotlinLexer(Lexer):
             'receiver', 'set', 'setparam', 'where',
 
             # Modifier keywords
-            'actual', 'abstract', 'annotation', 'companion', 'const',
+            'abstract', 'actual', 'annotation', 'companion', 'const',
             'crossinline', 'data', 'enum', 'expect', 'external', 'final',
             'infix', 'inline', 'inner', 'internal', 'lateinit', 'noinline',
             'open', 'operator', 'out', 'override', 'private', 'protected',
