@@ -217,6 +217,16 @@ Debug logs are written to `~/.humbug/logs/` with timestamped filenames. The appl
 
 The software is released under an Apache 2.0 open source license.
 
+## More Information
+
+You can find out more about Metaphor and some of the things we've done with it here:
+
+- [Hello, Metaphr (A brief tutorial)](https://github.com:/m6r-ai/hello-metaphor)
+- [m6rclib (Metaphor compiler library)](https://github.com:/m6r-ai/m6rclib)
+- [m6rc (Stand-alone Metaphor compiler)](https://github.com:/m6r-ai/m6rc)
+- [commit-critic (Code review tool)](https://github.com:/m6r-ai/commit-critic)
+- [demo-blog-editor (How we code up blog posts)](https://github.com:/m6r-ai/demo-blog-editor)
+
 ## Contributing
 
 Contributions are welcome! Please submit a pull request with your proposed changes.
