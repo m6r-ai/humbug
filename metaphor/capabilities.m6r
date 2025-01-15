@@ -65,12 +65,20 @@ Context: Capabilities
             - Double-clicking or pressing Enter on a file opens it in a new editor tab, unless the file
               is a conversation file ("*.conv") in which case it is opened as a new conversation.
             - Dragging a file into the tab column view opens it in a new editor tab, unless the file is
-            a conversation file ("*.conv") in which case it is opened as a new conversation.
+              a conversation file ("*.conv") in which case it is opened as a new conversation.
             - If the file is already open, its tab becomes active instead
             - Directory nodes can be expanded/collapsed using arrow keys or mouse
             - Initial view is set to 30% of the window width, but can be resized
             - Styling matches the current application theme (light/dark mode)
             - The tree view updates automatically when files are added or removed
+
+            Context: File deletion
+                If the user clicks the right mouse button while a file is highlighted then they will be
+                given a pop-up menu.  If they select "Delete File" then the system will confirm they
+                want to delete it via a message box.  The message box will warn that deleting the file
+                will also close any tabs based on the file and will discard any unsaved changes.  If the
+                user agrees then the tabs will be closed and the file deleted.  If the user does not
+                agree then the action will be cancelled.
 
             Context: File tree styling
                 The file tree view must maintain consistent styling:
