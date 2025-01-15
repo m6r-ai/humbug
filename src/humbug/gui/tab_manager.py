@@ -154,12 +154,49 @@ class TabManager(QWidget):
         self._update_tabs()
         self.column_state_changed.emit()
 
+    def _handle_file_drop(self, file_path: str, target_column: TabColumn, target_index: int) -> None:
+        """
+        Handle a file being dropped into a column.
+
+        Args:
+            file_path: Path to the dropped file
+            target_column: Column where the file was dropped
+            target_index: Target position in the column
+        """
+        # Check file extension
+        ext = os.path.splitext(file_path)[1].lower()
+
+        # Set the target column as active
+        self._active_column = target_column
+
+        try:
+            if ext == '.conv':
+                # Open conversation file
+                conversation_tab = self.open_conversation(file_path)
+                if conversation_tab:
+                    # Move the tab to the target position if not already there
+                    current_index = target_column.indexOf(conversation_tab)
+                    if current_index != target_index:
+                        target_column.tabBar().moveTab(current_index, target_index)
+            else:
+                # Open regular file
+                editor_tab = self.open_file(file_path)
+                if editor_tab:
+                    # Move the tab to the target position if not already there
+                    current_index = target_column.indexOf(editor_tab)
+                    if current_index != target_index:
+                        target_column.tabBar().moveTab(current_index, target_index)
+
+        except (ConversationError, OSError) as e:
+            self._logger.error("Failed to open dropped file '%s': %s", file_path, str(e))
+
     def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
         tab_widget = TabColumn()
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
         tab_widget.tab_drop.connect(self._handle_tab_drop)
+        tab_widget.file_drop.connect(self._handle_file_drop)
 
         self._column_splitter.insertWidget(index, tab_widget)
         self._tab_columns.insert(index, tab_widget)
