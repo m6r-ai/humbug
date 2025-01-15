@@ -30,45 +30,51 @@ class FileTreeIconProvider(QFileIconProvider):
         self._svg_paths = {
             "folder": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M10 25 L40 25 L50 15 L90 15 L90 85 L10 85 Z" fill="currentColor"/>
+                    <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
+                        fill="#4B89DC" stroke="none"/>
                 </svg>
             ''',
             "folder_open": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M10 25 L40 25 L50 15 L90 15 L90 35 L80 85 L5 85 L15 35 Z" fill="currentColor"/>
+                    <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 35 L80 85 L5 85 L15 35 L10 25"
+                        fill="#4B89DC" stroke="none"/>
                 </svg>
             ''',
             "file": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M20 10 L60 10 L80 30 L80 90 L20 90 Z" fill="currentColor"/>
-                    <path d="M60 10 L60 30 L80 30" stroke="currentColor" fill="none"/>
+                    <path d="M25 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L25 90 Z"
+                        fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M60 10 L80 30" stroke="currentColor" stroke-width="2" fill="none"/>
                 </svg>
             ''',
             "conversation": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M10 10 Q10 10 90 10 Q90 10 90 60 Q90 60 70 60 L50 85 L50 60 Q10 60 10 60 Q10 60 10 10"
-                        fill="currentColor"/>
+                    <path d="M15 15 C15 15 85 15 85 15 C85 15 85 55 85 55 C85 55 70 55 70 55 L50 80 L50 55 C50 55 15 55 15 55 Z"
+                        fill="none" stroke="currentColor" stroke-width="2"/>
                 </svg>
             ''',
             "metaphor": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M10 90 L10 10 L50 50 L90 10 L90 90" fill="currentColor"/>
+                    <path d="M15 85 L15 15 L50 50 L85 15 L85 85"
+                        fill="none" stroke="currentColor" stroke-width="2"/>
                 </svg>
             ''',
             "code": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M20 10 L60 10 L80 30 L80 90 L20 90 Z" fill="currentColor"/>
-                    <path d="M60 10 L60 30 L80 30" stroke="currentColor" fill="none"/>
-                    <path d="M35 45 L25 60 L35 75" stroke="accentColor" fill="none" stroke-width="3"/>
-                    <path d="M65 45 L75 60 L65 75" stroke="accentColor" fill="none" stroke-width="3"/>
+                    <path d="M25 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L25 90 Z"
+                        fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M60 10 L80 30" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <path d="M40 45 C35 50 30 55 30 60 C30 65 35 70 40 75" stroke="accentColor" fill="none" stroke-width="2"/>
+                    <path d="M60 45 C65 50 70 55 70 60 C70 65 65 70 60 75" stroke="accentColor" fill="none" stroke-width="2"/>
                 </svg>
             ''',
             "text": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M20 10 L80 10 L80 90 L20 90 Z" fill="currentColor"/>
-                    <path d="M30 30 L70 30" stroke="currentColor"/>
-                    <path d="M30 50 L70 50" stroke="currentColor"/>
-                    <path d="M30 70 L70 70" stroke="currentColor"/>
+                    <path d="M25 10 L75 10 L75 90 L25 90 Z"
+                        fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M35 30 L65 30" stroke="currentColor" stroke-width="2"/>
+                    <path d="M35 50 L65 50" stroke="currentColor" stroke-width="2"/>
+                    <path d="M35 70 L65 70" stroke="currentColor" stroke-width="2"/>
                 </svg>
             '''
         }
