@@ -8,6 +8,11 @@ This release adds the following new features:
 - Added new icons for the file view and made them scalable if you zoom in and out.
 - Added the ability to delete files in the file view by right clicking and selecting "Delete File".
 
+Te release fixes the following bugs:
+
+- Detect the end of file correctly so block tab operations don't crash.
+- Don't indent empty lines when we do a block indent.
+
 ## v0.2 (2025-01-14)
 
 This release adds the following new features:
