@@ -12,6 +12,7 @@ from PySide6.QtGui import QDrag
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.workspace_file_model import WorkspaceFileModel
+from humbug.gui.file_tree_icon_provider import FileTreeIconProvider
 
 
 class FileTreeView(QTreeView):
@@ -110,7 +111,9 @@ class WorkspaceFileTree(QWidget):
         self._tree_view.setSortingEnabled(True)
 
         # Create file system model
+        self._icon_provider = FileTreeIconProvider()
         self._fs_model = QFileSystemModel()
+        self._fs_model.setIconProvider(self._icon_provider)
         self._fs_model.setReadOnly(True)
 
         # Create filter model
@@ -178,6 +181,8 @@ class WorkspaceFileTree(QWidget):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor
         base_font_size = self._style_manager.base_font_size
+
+        self._icon_provider.update_icons()
 
         # Update font size
         font = self.font()
