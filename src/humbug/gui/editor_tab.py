@@ -477,15 +477,15 @@ class EditorTab(TabBase):
             return self.save()
 
         if result == MessageBoxButton.DISCARD:
-            # Delete any backup files when discarding changes
-            if self._auto_backup_timer.isActive():
-                self._cleanup_backup_files()
-
             return True
 
         return False
 
     def close(self) -> None:
+        # Delete any backup files when we close
+        if self._auto_backup_timer.isActive():
+            self._cleanup_backup_files()
+
         pass
 
     def can_save(self) -> bool:

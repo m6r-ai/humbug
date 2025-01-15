@@ -318,7 +318,7 @@ class TabManager(QWidget):
 
         self._active_column.setCurrentWidget(tab)
 
-    def _close_tab_by_id(self, tab_id: str) -> None:
+    def _close_tab_by_id(self, tab_id: str, force_close: bool=False) -> None:
         """
         Close a tab by its ID.
 
@@ -330,8 +330,10 @@ class TabManager(QWidget):
             return
 
         # Check if tab can be closed
-        if not tab.can_close():
+        if not force_close and not tab.can_close():
             return
+
+        tab.close()
 
         # Find which column contains the tab
         column = self._find_column_for_tab(tab)

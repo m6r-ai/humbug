@@ -480,14 +480,14 @@ class MainWindow(QMainWindow):
         # Find and close any editor tab for this file
         editor = self._tab_manager.find_editor_tab_by_filename(path)
         if editor:
-            self._tab_manager._close_tab_by_id(editor.tab_id)
+            self._tab_manager._close_tab_by_id(editor.tab_id, True)
             
         # Also check for conversation files
         if path.endswith('.conv'):
             conversation_id = os.path.splitext(os.path.basename(path))[0]
             conversation = self._tab_manager.find_conversation_tab_by_id(conversation_id)
             if conversation:
-                self._tab_manager._close_tab_by_id(conversation.tab_id)
+                self._tab_manager._close_tab_by_id(conversation.tab_id, True)
 
     def _open_file(self):
         """Show open file dialog and create editor tab."""
