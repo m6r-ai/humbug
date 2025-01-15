@@ -5,6 +5,8 @@
 This release adds the following new features:
 
 - Drag and drop of files and conversations into the tab column view.
+- Added new icons for the file view and made them scalable if you zoom in and out.
+- Added the ability to delete files in the file view by right clicking and selecting "Delete File".
 
 ## v0.2 (2025-01-14)
 
