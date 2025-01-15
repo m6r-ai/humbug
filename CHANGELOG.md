@@ -1,5 +1,11 @@
 # Changelog for Humbug
 
+## v0.3 (2025-01-xx)
+
+This release adds the following new features:
+
+- Drag and drop of files and conversations into the tab column view.
+
 ## v0.2 (2025-01-14)
 
 This release adds the following new features:
