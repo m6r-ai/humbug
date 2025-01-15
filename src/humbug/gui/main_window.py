@@ -242,6 +242,7 @@ class MainWindow(QMainWindow):
         # Create and add file tree
         self._file_tree = WorkspaceFileTree(self)
         self._file_tree.file_activated.connect(self._handle_file_activation)
+        self._file_tree.file_deleted.connect(self._handle_file_deletion)
         self._splitter.addWidget(self._file_tree)
 
         # Create tab manager in splitter
@@ -469,6 +470,24 @@ class MainWindow(QMainWindow):
             return
 
         self._open_file_path(path)
+        
+    def _handle_file_deletion(self, path: str):
+        """Handle deletion of a file by closing any open tab.
+        
+        Args:
+            path: Path of file being deleted
+        """
+        # Find and close any editor tab for this file
+        editor = self._tab_manager.find_editor_tab_by_filename(path)
+        if editor:
+            self._tab_manager._close_tab_by_id(editor.tab_id)
+            
+        # Also check for conversation files
+        if path.endswith('.conv'):
+            conversation_id = os.path.splitext(os.path.basename(path))[0]
+            conversation = self._tab_manager.find_conversation_tab_by_id(conversation_id)
+            if conversation:
+                self._tab_manager._close_tab_by_id(conversation.tab_id)
 
     def _open_file(self):
         """Show open file dialog and create editor tab."""

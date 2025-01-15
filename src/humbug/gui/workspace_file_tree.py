@@ -3,12 +3,13 @@
 import os
 from typing import Optional
 
-from PySide6.QtWidgets import QFileSystemModel, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QFileSystemModel, QWidget, QVBoxLayout, QMenu
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.file_tree_icon_provider import FileTreeIconProvider
 from humbug.gui.file_tree_view import FileTreeView
+from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.workspace_file_model import WorkspaceFileModel
 
@@ -17,6 +18,7 @@ class WorkspaceFileTree(QWidget):
     """Tree view widget for displaying workspace files."""
 
     file_activated = Signal(str)  # Emits path when file is activated
+    file_deleted = Signal(str)  # Emits path when file is deleted
 
     def __init__(self, parent=None):
         """Initialize the file tree widget."""
@@ -35,6 +37,8 @@ class WorkspaceFileTree(QWidget):
         self._tree_view.setAnimated(True)
         self._tree_view.header().setSortIndicator(0, Qt.AscendingOrder)
         self._tree_view.setSortingEnabled(True)
+        self._tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
 
         # Create file system model
         self._icon_provider = FileTreeIconProvider()
@@ -63,6 +67,62 @@ class WorkspaceFileTree(QWidget):
         # Track current workspace
         self._workspace_path: Optional[str] = None
         self._style_manager.style_changed.connect(self._handle_style_changed)
+
+    def _show_context_menu(self, position):
+        """Show context menu for file tree items."""
+        # Get the index at the clicked position
+        index = self._tree_view.indexAt(position)
+        if not index.isValid():
+            return
+
+        # Get the file path
+        source_index = self._filter_model.mapToSource(index)
+        path = self._fs_model.filePath(source_index)
+
+        # Don't show menu for directories
+        if os.path.isdir(path):
+            return
+
+        # Create context menu
+        menu = QMenu(self)
+        delete_action = menu.addAction("Delete File")
+
+        # Show menu and handle selection
+        action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
+        if action == delete_action:
+            self._handle_delete_file(path)
+
+    def _handle_delete_file(self, path: str):
+        """Handle request to delete a file.
+        
+        Args:
+            path: Path to the file to delete
+        """
+        # Show confirmation dialog using MessageBox
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.WARNING,
+            "Confirm Delete",
+            f"Are you sure you want to delete {os.path.basename(path)}?\n\n"
+            "Any open tab for this file will be closed without saving.",
+            [MessageBoxButton.YES, MessageBoxButton.NO]
+        )
+
+        if result == MessageBoxButton.YES:
+            try:
+                # First emit signal so tabs can be closed
+                self.file_deleted.emit(path)
+
+                # Then delete the file
+                os.remove(path)
+            except OSError as e:
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    "Error",
+                    f"Could not delete file: {str(e)}",
+                    [MessageBoxButton.OK]
+                )
 
     def set_workspace(self, path: str):
         """Set the workspace root directory."""
