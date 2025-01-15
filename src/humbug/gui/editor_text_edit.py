@@ -140,6 +140,7 @@ class EditorTextEdit(QPlainTextEdit):
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
         reverse: bool = start == cursor.position()
+        iters = 0
 
         cursor.setPosition(start)
         cursor.movePosition(QTextCursor.StartOfLine)
@@ -153,9 +154,13 @@ class EditorTextEdit(QPlainTextEdit):
 
         start += tab_size
         while cursor.position() <= end - end_offs:
-            cursor.insertText(" " * tab_size)
-            end += tab_size
-            cursor.movePosition(QTextCursor.NextBlock)
+            if not cursor.atBlockEnd():
+                cursor.insertText(" " * tab_size)
+                end += tab_size
+
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                # We hit the end of the file
+                break
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -183,9 +188,13 @@ class EditorTextEdit(QPlainTextEdit):
 
         start += 1
         while cursor.position() <= end - end_offs:
-            cursor.insertText("\t")
-            end += 1
-            cursor.movePosition(QTextCursor.NextBlock)
+            if not cursor.atBlockEnd():
+                cursor.insertText("\t")
+                end += 1
+
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                # We hit the end of the file
+                break
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -266,7 +275,9 @@ class EditorTextEdit(QPlainTextEdit):
                 deletes_needed -= 1
                 end -= 1
 
-            cursor.movePosition(QTextCursor.NextBlock)
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                # We hit the end of the block
+                break
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -304,7 +315,9 @@ class EditorTextEdit(QPlainTextEdit):
                 cursor.deleteChar()
                 end -= 1
 
-            cursor.movePosition(QTextCursor.NextBlock)
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                # We hit the end of the block
+                break
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
