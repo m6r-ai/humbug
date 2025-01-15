@@ -51,6 +51,7 @@ class TabManager(QWidget):
 
         # Create welcome widget
         self._welcome_widget = WelcomeWidget()
+        self._welcome_widget.file_dropped.connect(self._handle_welcome_file_drop)
         self._stack.addWidget(self._welcome_widget)
 
         # Create widget to hold columns
@@ -82,6 +83,26 @@ class TabManager(QWidget):
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
         self._handle_style_changed(self._style_manager.zoom_factor)
+
+    def _handle_welcome_file_drop(self, file_path: str) -> None:
+        """Handle file drops when only welcome widget is visible."""
+        # Create first column if it doesn't exist
+        if not self._tab_columns:
+            self._create_column(0)
+
+        # Set as active column
+        self._active_column = self._tab_columns[0]
+
+        # Handle the file drop
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == '.conv':
+            conversation_tab = self.open_conversation(file_path)
+            if conversation_tab:
+                self._stack.setCurrentWidget(self._columns_widget)
+        else:
+            editor_tab = self.open_file(file_path)
+            if editor_tab:
+                self._stack.setCurrentWidget(self._columns_widget)
 
     def _handle_tab_drop(self, tab_id: str, target_column: TabColumn, target_index: int) -> None:
         """Handle a tab being dropped into a new position.

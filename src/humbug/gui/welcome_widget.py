@@ -1,8 +1,8 @@
 """Welcome message widget implementation."""
 
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QFrame
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
 
 from humbug import format_version
 from humbug.gui.color_role import ColorRole
@@ -11,10 +11,13 @@ from humbug.gui.style_manager import StyleManager
 
 class WelcomeWidget(QFrame):
     """Widget showing welcome message when no tabs are open."""
+    file_dropped = Signal(str)
 
     def __init__(self, parent=None):
         """Initialize welcome widget."""
         super().__init__(parent)
+
+        self.setAcceptDrops(True)
 
         # Create layout
         layout = QVBoxLayout()
@@ -42,6 +45,22 @@ class WelcomeWidget(QFrame):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
+
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        """Accept file drops."""
+        if event.mimeData().hasFormat("application/x-humbug-file"):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event: QDropEvent):
+        """Handle file drops by emitting signal."""
+        if event.mimeData().hasFormat("application/x-humbug-file"):
+            file_path = event.mimeData().data("application/x-humbug-file").data().decode()
+            self.file_dropped.emit(file_path)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
