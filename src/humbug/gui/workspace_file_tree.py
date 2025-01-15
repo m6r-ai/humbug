@@ -6,7 +6,7 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QTreeView, QFileSystemModel, QWidget, QVBoxLayout, QApplication
 )
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSortFilterProxyModel, QMimeData
+from PySide6.QtCore import Signal, QModelIndex, Qt, QSortFilterProxyModel, QMimeData, QSize
 from PySide6.QtGui import QDrag
 
 from humbug.gui.color_role import ColorRole
@@ -113,7 +113,6 @@ class WorkspaceFileTree(QWidget):
         # Create file system model
         self._icon_provider = FileTreeIconProvider()
         self._fs_model = QFileSystemModel()
-        self._fs_model.setIconProvider(self._icon_provider)
         self._fs_model.setReadOnly(True)
 
         # Create filter model
@@ -183,6 +182,8 @@ class WorkspaceFileTree(QWidget):
         base_font_size = self._style_manager.base_font_size
 
         self._icon_provider.update_icons()
+        self._fs_model.setIconProvider(self._icon_provider)
+        self._tree_view.setIconSize(QSize(16 * zoom_factor, 16 * zoom_factor))
 
         # Update font size
         font = self.font()

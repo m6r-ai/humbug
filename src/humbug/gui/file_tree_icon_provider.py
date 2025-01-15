@@ -1,280 +1,178 @@
-"""Workspace file tree icon management."""
+"""Workspace file tree icon management with scalable SVG icons."""
 
 import os
-from typing import Dict
+from typing import Dict, Optional
 
 from PySide6.QtCore import Qt, QFileInfo
-from PySide6.QtGui import QIcon, QPainter, QPainterPath, QPixmap, QColor
+from PySide6.QtGui import QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QFileIconProvider
+from PySide6.QtSvg import QSvgRenderer
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 
 
 class FileTreeIconProvider(QFileIconProvider):
-    """Custom file icon provider with scalable icons."""
+    """Custom file icon provider with scalable SVG icons."""
 
     def __init__(self):
         """Initialize the icon provider."""
         super().__init__()
         self._style_manager = StyleManager()
         self._cached_icons: Dict[str, QIcon] = {}
-        self._current_size = 16
 
-        # Initialize standard icons
-        self._initialize_standard_icons()
+        # Initialize icon cache
+        self._initialize_icons()
 
-    def _initialize_standard_icons(self):
-        """Create standard icons for different file types."""
-        # Base folder icon (closed)
-        self._folder_icon = self._create_folder_icon(False)
-        self._folder_open_icon = self._create_folder_icon(True)
-
-        # Base file icon
-        self._file_icon = self._create_file_icon()
-
-        # Special file type icons
-        self._icons = {
-            '.conv': self._create_conversation_icon(),
-            '.m6r': self._create_metaphor_icon(),
-            '.py': self._create_code_icon('#3572A5'),  # Python blue
-            '.js': self._create_code_icon('#f1e05a'),  # JavaScript yellow
-            '.ts': self._create_code_icon('#3178c6'),  # TypeScript blue
-            '.html': self._create_code_icon('#e34c26'),  # HTML orange
-            '.css': self._create_code_icon('#563d7c'),  # CSS purple
-            '.md': self._create_text_icon(),
-            '.txt': self._create_text_icon()
+    def _initialize_icons(self):
+        """Create and cache standard icons."""
+        # Create path shapes for each icon type in SVG format
+        self._svg_paths = {
+            "folder": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M10 25 L40 25 L50 15 L90 15 L90 85 L10 85 Z"/>
+                </svg>
+            ''',
+            "folder_open": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M10 25 L40 25 L50 15 L90 15 L90 35 L80 85 L5 85 L15 35 Z"/>
+                </svg>
+            ''',
+            "file": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M20 10 L60 10 L80 30 L80 90 L20 90 Z"/>
+                    <path d="M60 10 L60 30 L80 30"/>
+                </svg>
+            ''',
+            "conversation": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M10 10 Q10 10 90 10 Q90 10 90 60 Q90 60 70 60 L50 85 L50 60 Q10 60 10 60 Q10 60 10 10"/>
+                </svg>
+            ''',
+            "metaphor": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M10 90 L10 10 L50 50 L90 10 L90 90"/>
+                </svg>
+            ''',
+            "code": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M20 10 L60 10 L80 30 L80 90 L20 90 Z"/>
+                    <path d="M60 10 L60 30 L80 30"/>
+                    <circle cx="50" cy="60" r="15"/>
+                </svg>
+            ''',
+            "text": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M20 10 L80 10 L80 90 L20 90 Z"/>
+                    <path d="M30 30 L70 30"/>
+                    <path d="M30 50 L70 50"/>
+                    <path d="M30 70 L70 70"/>
+                </svg>
+            '''
         }
 
-    def _create_folder_icon(self, open_state: bool) -> QIcon:
-        """Create a folder icon."""
+        # Map file extensions to icon types
+        self._extension_map = {
+            '.c': ('code', '#3572A5'),    # Python blue
+            '.cc': ('code', '#f34b7d'),   # C++ pink
+            '.cpp': ('code', '#f34b7d'),  # C++ pink
+            '.css': ('code', '#563d7c'),  # CSS purple
+            '.cxx': ('code', '#f34b7d'),  # C++ pink
+            '.h': ('code', '#3572A5'),    # Python blue
+            '.hh': ('code', '#f34b7d'),   # C++ pink
+            '.hpp': ('code', '#f34b7d'),  # C++ pink
+            '.html': ('code', '#e34c26'), # HTML orange
+            '.htm': ('code', '#e34c26'),  # HTML orange
+            '.hxx': ('code', '#f34b7d'),  # C++ pink
+            '.js': ('code', '#f1e05a'),   # JavaScript yellow
+            '.jsx': ('code', '#f1e05a'),  # JavaScript yellow
+            '.m6r': ('metaphor', None),   # Metaphor files
+            '.md': ('text', None),        # Markdown files
+            '.py': ('code', '#3572A5'),   # Python blue
+            '.pyw': ('code', '#3572A5'),  # Python blue
+            '.pyi': ('code', '#3572A5'),  # Python blue
+            '.ts': ('code', '#3178c6'),   # TypeScript blue
+            '.tsx': ('code', '#3178c6'),  # TypeScript blue
+            '.txt': ('text', None),       # Text files
+            '.conv': ('conversation', None),  # Conversation files
+        }
+
+        self._clear_cache()
+
+    def _clear_cache(self):
+        """Clear the icon cache to force regeneration."""
+        self._cached_icons.clear()
+
+    def _create_svg_icon(self, svg_data: str, accent_color: Optional[str] = None) -> QIcon:
+        """Create an icon from SVG data with optional accent color.
+
+        Args:
+            svg_data: SVG markup defining the icon
+            accent_color: Optional hex color for language-specific accents
+
+        Returns:
+            QIcon instance with the rendered SVG at multiple sizes
+        """
         icon = QIcon()
-        sizes = [16, 24, 32, 48, 64]
+        base_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
 
-        for size in sizes:
-            pixmap = QPixmap(size, size)
-            pixmap.fill(Qt.transparent)
+        # Replace placeholder colors in SVG
+        svg_data = svg_data.replace('currentColor', base_color.name())
+        if accent_color:
+            svg_data = svg_data.replace('accentColor', accent_color)
 
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
+        # Create renderer from SVG data
+        renderer = QSvgRenderer()
+        renderer.load(svg_data.encode('utf-8'))
 
-            # Draw folder shape
-            path = QPainterPath()
-            if open_state:
-                # Open folder shape
-                path.moveTo(2, size * 0.3)
-                path.lineTo(size * 0.4, size * 0.3)
-                path.lineTo(size * 0.5, size * 0.15)
-                path.lineTo(size - 2, size * 0.15)
-                path.lineTo(size * 0.8, size - 2)
-                path.lineTo(2, size - 2)
-            else:
-                # Closed folder shape
-                path.moveTo(2, size * 0.2)
-                path.lineTo(size * 0.4, size * 0.2)
-                path.lineTo(size * 0.5, size * 0.1)
-                path.lineTo(size - 2, size * 0.1)
-                path.lineTo(size - 2, size - 2)
-                path.lineTo(2, size - 2)
+        # We use a base size of 16px, which will be scaled by the zoom factor.
+        # The zoom factor ranges from 0.5 to 2.0, giving us an effective size range of 8px to 32px
+        base_size = 16
+        scaled_size = int(base_size * self._style_manager.zoom_factor)
 
-            path.closeSubpath()
+        # Create transparent pixmap
+        pixmap = QPixmap(scaled_size, scaled_size)
+        pixmap.fill(Qt.transparent)
 
-            color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
-            painter.setPen(color)
-            painter.setBrush(color)
-            painter.drawPath(path)
-
-            painter.end()
-            icon.addPixmap(pixmap)
+        # Paint the SVG onto the pixmap
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        renderer.render(painter)
+        painter.end()
+        icon.addPixmap(pixmap)
 
         return icon
 
-    def _create_file_icon(self) -> QIcon:
-        """Create a generic file icon."""
-        icon = QIcon()
-        sizes = [16, 24, 32, 48, 64]
+    def icon(self, info: QFileInfo) -> QIcon:
+        """Get the appropriate icon for a file type.
 
-        for size in sizes:
-            pixmap = QPixmap(size, size)
-            pixmap.fill(Qt.transparent)
+        Args:
+            info: File information to get icon for
 
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
-
-            # Draw file shape
-            path = QPainterPath()
-            path.moveTo(2, 2)
-            path.lineTo(size * 0.7, 2)
-            path.lineTo(size - 2, size * 0.3)
-            path.lineTo(size - 2, size - 2)
-            path.lineTo(2, size - 2)
-            path.closeSubpath()
-
-            # Draw dog-ear
-            fold = QPainterPath()
-            fold.moveTo(size * 0.7, 2)
-            fold.lineTo(size * 0.7, size * 0.3)
-            fold.lineTo(size - 2, size * 0.3)
-
-            color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
-            painter.setPen(color)
-            painter.setBrush(color)
-            painter.drawPath(path)
-            painter.drawPath(fold)
-
-            painter.end()
-            icon.addPixmap(pixmap)
-
-        return icon
-
-    def _create_conversation_icon(self) -> QIcon:
-        """Create conversation file icon."""
-        icon = QIcon()
-        sizes = [16, 24, 32, 48, 64]
-
-        for size in sizes:
-            pixmap = QPixmap(size, size)
-            pixmap.fill(Qt.transparent)
-
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
-
-            # Draw speech bubble shape
-            path = QPainterPath()
-            path.addRoundedRect(2, 2, size - 4, size * 0.7, size * 0.2, size * 0.2)
-
-            # Add pointer
-            point_path = QPainterPath()
-            point_path.moveTo(size * 0.2, size * 0.7)
-            point_path.lineTo(size * 0.3, size - 2)
-            point_path.lineTo(size * 0.4, size * 0.7)
-
-            color = self._style_manager.get_color(ColorRole.MESSAGE_AI)
-            painter.setPen(color)
-            painter.setBrush(color)
-            painter.drawPath(path)
-            painter.drawPath(point_path)
-
-            painter.end()
-            icon.addPixmap(pixmap)
-
-        return icon
-
-    def _create_metaphor_icon(self) -> QIcon:
-        """Create Metaphor file icon."""
-        icon = QIcon()
-        sizes = [16, 24, 32, 48, 64]
-
-        for size in sizes:
-            pixmap = QPixmap(size, size)
-            pixmap.fill(Qt.transparent)
-
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
-
-            # Draw stylized 'M' shape
-            path = QPainterPath()
-            path.moveTo(2, size - 2)
-            path.lineTo(2, 2)
-            path.lineTo(size/2, size * 0.6)
-            path.lineTo(size - 2, 2)
-            path.lineTo(size - 2, size - 2)
-
-            color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
-            painter.setPen(color)
-            painter.setBrush(color)
-            painter.drawPath(path)
-
-            painter.end()
-            icon.addPixmap(pixmap)
-
-        return icon
-
-    def _create_code_icon(self, lang_color: str) -> QIcon:
-        """Create programming language file icon."""
-        icon = QIcon()
-        sizes = [16, 24, 32, 48, 64]
-
-        for size in sizes:
-            pixmap = QPixmap(size, size)
-            pixmap.fill(Qt.transparent)
-
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
-
-            # Draw base file shape first
-            path = QPainterPath()
-            path.moveTo(2, 2)
-            path.lineTo(size * 0.7, 2)
-            path.lineTo(size - 2, size * 0.3)
-            path.lineTo(size - 2, size - 2)
-            path.lineTo(2, size - 2)
-            path.closeSubpath()
-
-            color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
-            painter.setPen(color)
-            painter.setBrush(color)
-            painter.drawPath(path)
-
-            # Draw colored dot for language
-            dot_path = QPainterPath()
-            dot_path.addEllipse(size/2 - size*0.15, size/2 - size*0.15, size*0.3, size*0.3)
-
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(lang_color))
-            painter.drawPath(dot_path)
-
-            painter.end()
-            icon.addPixmap(pixmap)
-
-        return icon
-
-    def _create_text_icon(self) -> QIcon:
-        """Create text file icon."""
-        icon = QIcon()
-        sizes = [16, 24, 32, 48, 64]
-
-        for size in sizes:
-            pixmap = QPixmap(size, size)
-            pixmap.fill(Qt.transparent)
-
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
-
-            # Draw file shape
-            path = QPainterPath()
-            path.moveTo(2, 2)
-            path.lineTo(size - 2, 2)
-            path.lineTo(size - 2, size - 2)
-            path.lineTo(2, size - 2)
-            path.closeSubpath()
-
-            color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
-            painter.setPen(color)
-            painter.setBrush(color)
-            painter.drawPath(path)
-
-            # Draw text lines
-            line_color = self._style_manager.get_color(ColorRole.BACKGROUND_PRIMARY)
-            painter.setPen(line_color)
-            line_spacing = size * 0.2
-            for y in range(int(size * 0.2), int(size * 0.8), int(line_spacing)):
-                painter.drawLine(size * 0.2, y, size * 0.8, y)
-
-            painter.end()
-            icon.addPixmap(pixmap)
-
-        return icon
-
-    def icon(self, info: QFileInfo):
-        """Get the appropriate icon for a file type."""
-        print(f"icon called for: {info}")
+        Returns:
+            QIcon instance for the file type
+        """
+        # Check if it's a directory first
         if info.isDir():
-            return self._folder_icon
+            cache_key = 'folder'
+            if cache_key not in self._cached_icons:
+                self._cached_icons[cache_key] = self._create_svg_icon(self._svg_paths['folder'])
+            return self._cached_icons[cache_key]
 
+        # Get file extension and map to icon type
         ext = os.path.splitext(info.fileName())[1].lower()
-        return self._icons.get(ext, self._file_icon)
+        icon_type, accent_color = self._extension_map.get(ext, ('file', None))
+
+        # Create cache key from type and accent color
+        cache_key = f"{icon_type}_{accent_color}" if accent_color else icon_type
+
+        # Create icon if not in cache
+        if cache_key not in self._cached_icons:
+            svg_data = self._svg_paths[icon_type]
+            self._cached_icons[cache_key] = self._create_svg_icon(svg_data, accent_color)
+
+        return self._cached_icons[cache_key]
 
     def update_icons(self):
-        """Update icons when style changes."""
-        self._initialize_standard_icons()
+        """Update icons when style or zoom changes."""
+        self._clear_cache()
