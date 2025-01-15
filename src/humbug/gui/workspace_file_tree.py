@@ -183,7 +183,7 @@ class WorkspaceFileTree(QWidget):
 
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
-        self._tree_view.setIconSize(QSize(16 * zoom_factor, 16 * zoom_factor))
+        self._tree_view.setIconSize(QSize(13 * zoom_factor, 13 * zoom_factor))
 
         # Update font size
         font = self.font()
@@ -195,11 +195,11 @@ class WorkspaceFileTree(QWidget):
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
-                padding: 0px;
+                padding: 4px;
             }}
             QTreeView::item {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 4px;
+                padding: 2px;
             }}
             QTreeView::item:selected {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
@@ -213,12 +213,12 @@ class WorkspaceFileTree(QWidget):
             QTreeView::branch:has-children:!has-siblings:closed,
             QTreeView::branch:closed:has-children:has-siblings {{
                 image: url("{self._style_manager.get_icon_path("arrow-right")}");
-                padding: 4px;
+                padding: 2px;
             }}
             QTreeView::branch:open:has-children:!has-siblings,
             QTreeView::branch:open:has-children:has-siblings {{
                 image: url("{self._style_manager.get_icon_path("arrow-down")}");
-                padding: 4px;
+                padding: 2px;
             }}
             QScrollBar:vertical {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};

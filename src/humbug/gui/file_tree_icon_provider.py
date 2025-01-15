@@ -147,7 +147,7 @@ class FileTreeIconProvider(QFileIconProvider):
         renderer.load(svg_data.encode('utf-8'))
 
         # Create icon at base size scaled by zoom factor
-        base_size = 16
+        base_size = 13
         scaled_size = int(base_size * self._style_manager.zoom_factor)
 
         # Create transparent pixmap
