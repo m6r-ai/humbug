@@ -62,7 +62,10 @@ Context: Capabilities
             - Directories are shown before files in the tree
             - Files and directories are sorted alphabetically within their sections
             - The tree supports keyboard navigation using arrow keys
-            - Double-clicking or pressing Enter on a file opens it in a new editor tab
+            - Double-clicking or pressing Enter on a file opens it in a new editor tab, unless the file
+              is a conversation file ("*.conv") in which case it is opened as a new conversation.
+            - Dragging a file into the tab column view opens it in a new editor tab, unless the file is
+            a conversation file ("*.conv") in which case it is opened as a new conversation.
             - If the file is already open, its tab becomes active instead
             - Directory nodes can be expanded/collapsed using arrow keys or mouse
             - Initial view is set to 30% of the window width, but can be resized
