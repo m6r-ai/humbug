@@ -3,13 +3,9 @@
 import logging
 from typing import Optional
 
-from PySide6.QtGui import (
-    QTextCharFormat, QSyntaxHighlighter,
-    QTextDocument, QTextBlockUserData
-)
+from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 from PySide6.QtCore import Signal
 
-from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.syntax.conversation_parser import ConversationParser, ConversationParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
