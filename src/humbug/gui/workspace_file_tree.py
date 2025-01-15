@@ -183,7 +183,7 @@ class WorkspaceFileTree(QWidget):
 
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
-        self._tree_view.setIconSize(QSize(13 * zoom_factor, 13 * zoom_factor))
+        self._tree_view.setIconSize(QSize(16 * zoom_factor, 16 * zoom_factor))
 
         # Update font size
         font = self.font()
