@@ -18,6 +18,7 @@ from humbug.syntax.cpp_parser import CppParser  # noqa: F401
 from humbug.syntax.css_parser import CSSParser  # noqa: F401
 from humbug.syntax.html_parser import HTMLParser  # noqa: F401
 from humbug.syntax.javascript_parser import JavaScriptParser  # noqa: F401
+from humbug.syntax.kotlin_parser import KotlinParser  # noqa: F401
 from humbug.syntax.metaphor_parser import MetaphorParser  # noqa: F401
 from humbug.syntax.python_parser import PythonParser  # noqa: F401
 from humbug.syntax.text_parser import TextParser  # noqa: F401

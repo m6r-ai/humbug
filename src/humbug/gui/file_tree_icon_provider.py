@@ -90,6 +90,8 @@ class FileTreeIconProvider(QFileIconProvider):
             '.hxx': ('code', '#f34b7d'),  # C++ pink
             '.js': ('code', '#f1e05a'),   # JavaScript yellow
             '.jsx': ('code', '#f1e05a'),  # JavaScript yellow
+            '.kt': ('code', '#f120aa'),   # Kotlin pink
+            '.kts': ('code', '#f120aa'),  # Kotlin pink
             '.m6r': ('metaphor', None),   # Metaphor files
             '.md': ('text', None),        # Markdown files
             '.py': ('code', '#3572A5'),   # Python blue

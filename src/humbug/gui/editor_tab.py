@@ -37,6 +37,8 @@ LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.hxx': ProgrammingLanguage.CPP,
     '.js': ProgrammingLanguage.JAVASCRIPT,
     '.jsx': ProgrammingLanguage.JAVASCRIPT,
+    '.kt': ProgrammingLanguage.KOTLIN,
+    '.kts': ProgrammingLanguage.KOTLIN,
     '.m6r': ProgrammingLanguage.METAPHOR,
     '.md': ProgrammingLanguage.TEXT,
     '.py': ProgrammingLanguage.PYTHON,
