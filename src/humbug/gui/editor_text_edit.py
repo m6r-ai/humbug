@@ -140,7 +140,6 @@ class EditorTextEdit(QPlainTextEdit):
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
         reverse: bool = start == cursor.position()
-        iters = 0
 
         cursor.setPosition(start)
         cursor.movePosition(QTextCursor.StartOfLine)
