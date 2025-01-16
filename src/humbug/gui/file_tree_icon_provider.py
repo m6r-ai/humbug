@@ -145,7 +145,6 @@ class FileTreeIconProvider(QFileIconProvider):
         # Replace placeholder colors in SVG
         svg_data = svg_data.replace('currentColor', base_color.name())
         svg_data = svg_data.replace('accentColor', accent.name())
-        print(f"create: {svg_data}")
 
         # Create renderer from SVG data
         renderer = QSvgRenderer()
