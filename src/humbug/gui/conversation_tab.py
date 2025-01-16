@@ -645,8 +645,8 @@ class ConversationTab(TabBase):
             self._scroll_to_bottom()
 
     def _sanitize_input(self, text: str) -> str:
-        """Strip control characters from input text, preserving newlines."""
-        return ''.join(char for char in text if char == '\n' or (ord(char) >= 32 and ord(char) != 127))
+        """Strip control characters from input text, preserving newlines and tabs."""
+        return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
 
     async def _process_ai_response(self, message: str):
         """Process AI response with streaming."""
