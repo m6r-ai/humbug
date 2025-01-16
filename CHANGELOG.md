@@ -11,8 +11,10 @@ This release adds the following new features:
 
 Te release fixes the following bugs:
 
-- Detect the end of file correctly so block tab operations don't crash.
+- End of file was not correctly detected so block tab operations could crash.
 - Don't indent empty lines when we do a block indent.
+- Hard tabs were being stripped from prompts to the AI backends.
+- Drag and drop labels could end up illegible in light mode.
 
 ## v0.2 (2025-01-14)
 
