@@ -675,7 +675,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Metaphor File",
-            self._workspace_manager.conversations_directory,
+            self._workspace_manager.file_dialog_directory,
             "Metaphor Files (*.m6r);;All Files (*.*)"
         )
         self._menu_timer.start()
@@ -683,7 +683,7 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
-        self._workspace_manager.update_conversations_directory(file_path)
+        self._workspace_manager.update_file_dialog_directory(file_path)
         search_paths = [self._workspace_manager.workspace_path]
 
         metaphor_parser = MetaphorParser()
