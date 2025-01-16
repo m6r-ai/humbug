@@ -226,13 +226,7 @@ class TabManager(QWidget):
         self._active_column = target_column
         if source_column.count() == 0:
             column_number = self._tab_columns.index(source_column)
-            del self._tab_columns[column_number]
-            source_column.deleteLater()
-
-            # Resize splitter.  Note +1 on column count because we won't have lost the deleted column yet!
-            num_columns = len(self._tab_columns)
-            sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
-            self._column_splitter.setSizes(sizes)
+            self._remove_column_and_resize(column_number, source_column)
 
         # Update active states
         self._update_tabs()
@@ -286,6 +280,23 @@ class TabManager(QWidget):
         self._tab_columns.insert(index, tab_widget)
 
         return tab_widget
+
+    def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
+        """
+        Remove a column and resize the remaining columns.
+
+        Args:
+            column_number: Index of the column to remove
+            column: Column widget to remove
+        """
+        del self._tab_columns[column_number]
+        column.deleteLater()
+
+        # Resize splitter to evenly distribute space
+        # Note: We add 1 to column count because deletion hasn't processed yet
+        num_columns = len(self._tab_columns)
+        sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
+        self._column_splitter.setSizes(sizes)
 
     def _update_tabs(self) -> None:
         # Update current states for all tabs
@@ -400,13 +411,7 @@ class TabManager(QWidget):
                     new_active_column = 1 if column_number == 0 else column_number - 1
                     self._active_column = self._tab_columns[new_active_column]
 
-                del self._tab_columns[column_number]
-                column.deleteLater()
-
-                # Resize splitter.  Note +1 on column count because we won't have lost the deleted column yet!
-                num_columns = len(self._tab_columns)
-                sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
-                self._column_splitter.setSizes(sizes)
+                self._remove_column_and_resize(column_number, column)
 
                 self._update_tabs()
                 self.column_state_changed.emit()
@@ -556,15 +561,7 @@ class TabManager(QWidget):
 
         self._active_column = target_column
         column_number = self._tab_columns.index(current_column)
-
-        del self._tab_columns[column_number]
-        current_column.deleteLater()
-
-        # Resize splitter.  Note +1 on column count because we won't have lost the deleted column yet!
-        num_columns = len(self._tab_columns)
-        sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
-        self._column_splitter.setSizes(sizes)
-
+        self._remove_column_and_resize(column_number, current_column)
         # Emit signal about column state change
         self._update_tabs()
         self.column_state_changed.emit()
