@@ -137,7 +137,24 @@ class TabLabel(QWidget):
 
         # Create pixmap for drag visual feedback
         pixmap = QPixmap(self.size())
+
+        # Save original styles
+        original_widget_style = self.styleSheet()
+        original_label_style = self._label.styleSheet()
+        original_button_style = self._close_button.styleSheet()
+
+        # Set temporary style for drag visual
+        self.setStyleSheet(f"""
+            QWidget {{
+                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+        """)
         self.render(pixmap)
+
+        # Restore original styles
+        self.setStyleSheet(original_widget_style)
+        self._label.setStyleSheet(original_label_style)
+        self._close_button.setStyleSheet(original_button_style)
         drag.setPixmap(pixmap)
         drag.setHotSpot(self._drag_start_pos)
 
