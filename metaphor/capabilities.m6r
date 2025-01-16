@@ -290,6 +290,7 @@ Context: Capabilities
                     - CSS
                     - HTML
                     - JavaScript
+                    - Kotlin
                     - Metaphor
                     - Python
                     - TypeScript
