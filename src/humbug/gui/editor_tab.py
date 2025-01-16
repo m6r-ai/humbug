@@ -94,19 +94,18 @@ class EditorTab(TabBase):
         self.update_status()
 
         # Update auto-backup based on current workspace settings
-        workspace_manager = WorkspaceManager()
-        if workspace_manager.has_workspace:
-            settings = workspace_manager.settings
+        self._workspace_manager = WorkspaceManager()
+        if self._workspace_manager.has_workspace:
+            settings = self._workspace_manager.settings
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
         # Connect to workspace settings changes
-        workspace_manager.settings_changed.connect(self._handle_workspace_settings_changed)
+        self._workspace_manager.settings_changed.connect(self._handle_workspace_settings_changed)
 
     def _handle_workspace_settings_changed(self):
         """Handle workspace settings changes."""
-        workspace_manager = WorkspaceManager()
-        if workspace_manager.has_workspace:
-            settings = workspace_manager.settings
+        if self._workspace_manager.has_workspace:
+            settings = self._workspace_manager.settings
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
     def update_auto_backup_settings(self, enabled: bool, interval: int) -> None:
@@ -342,8 +341,7 @@ class EditorTab(TabBase):
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
 
-        workspace_manager = WorkspaceManager()
-        if workspace_manager.has_workspace and workspace_manager.settings.auto_backup:
+        if self._workspace_manager.has_workspace and self._workspace_manager.settings.auto_backup:
             if is_modified and not self._auto_backup_timer.isActive():
                 self._auto_backup_timer.start()
             elif not is_modified:
@@ -384,11 +382,10 @@ class EditorTab(TabBase):
             return
 
         # All backups should now go in workspace .humbug/backups
-        workspace_manager = WorkspaceManager()
-        if not workspace_manager.has_workspace:
+        if not self._workspace_manager.has_workspace:
             return  # No backups without a workspace
 
-        backup_dir = workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
+        backup_dir = self._workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
         os.makedirs(backup_dir, exist_ok=True)
 
         if not self._path:
@@ -436,8 +433,7 @@ class EditorTab(TabBase):
 
     def _cleanup_backup_files(self) -> None:
         """Clean up any backup files for this editor."""
-        workspace_manager = WorkspaceManager()
-        if not workspace_manager.has_workspace:
+        if not self._workspace_manager.has_workspace:
             return
 
         if self._path:
@@ -450,7 +446,7 @@ class EditorTab(TabBase):
                 self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
         elif self._untitled_number:
             # Clean up backups for untitled file
-            backup_dir = workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
+            backup_dir = self._workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
             prefix = f"backup-{self._untitled_number}-"
             try:
                 for file in os.listdir(backup_dir):
@@ -485,10 +481,10 @@ class EditorTab(TabBase):
 
     def close(self) -> None:
         # Delete any backup files when we close
-        if self._auto_backup_timer.isActive():
-            self._cleanup_backup_files()
+        if not self._auto_backup_timer.isActive():
+            return
 
-        pass
+        self._cleanup_backup_files()
 
     def can_save(self) -> bool:
         return self._is_modified
@@ -542,10 +538,12 @@ class EditorTab(TabBase):
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save As",
-            self._path or os.path.expanduser("~/")
+            self._path or self._workspace_manager.file_dialog_directory
         )
         if not filename:
             return False
+
+        self._workspace_manager.update_file_dialog_directory(filename)
 
         self._path = filename
         self._untitled_number = None

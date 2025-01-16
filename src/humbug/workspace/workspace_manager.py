@@ -13,6 +13,7 @@ from typing import Dict, Optional
 
 from PySide6.QtCore import QObject, Signal
 
+from humbug.workspace.directory_tracker import DirectoryTracker
 from humbug.workspace.workspace_error import WorkspaceError, WorkspaceExistsError, WorkspaceNotFoundError
 from humbug.workspace.workspace_settings import WorkspaceSettings
 
@@ -56,6 +57,7 @@ class WorkspaceManager(QObject):
             self._workspace_path: Optional[str] = None
             self._settings: Optional[WorkspaceSettings] = None
             self._home_config = os.path.expanduser("~/.humbug/workspace.json")
+            self._directory_tracker = DirectoryTracker()
             self._initialized = True
 
     @property
@@ -176,6 +178,7 @@ class WorkspaceManager(QObject):
             settings = WorkspaceSettings.load(settings_path)
             self._workspace_path = path
             self._settings = settings
+            self._directory_tracker.load_tracking(path)
             self._update_home_tracking()
             self.settings_changed.emit()
 
@@ -186,8 +189,10 @@ class WorkspaceManager(QObject):
     def close_workspace(self) -> None:
         """Close the current workspace."""
         if self.has_workspace:
+            self._directory_tracker.save_tracking(self._workspace_path)
             self._workspace_path = None
             self._settings = None
+            self._directory_tracker.clear_tracking()
             self._update_home_tracking()
             self.settings_changed.emit()
 
@@ -359,3 +364,25 @@ class WorkspaceManager(QObject):
         except OSError as e:
             self._logger.error("Failed to update home tracking: %s", str(e))
             # Non-critical error, don't raise
+
+    def update_file_dialog_directory(self, path: str) -> None:
+        """Update the last used file dialog directory."""
+        if self.has_workspace:
+            self._directory_tracker.update_file_dialog_directory(path)
+            self._directory_tracker.save_tracking(self._workspace_path)
+
+    def update_conversations_directory(self, path: str) -> None:
+        """Update the last used conversations directory."""
+        if self.has_workspace:
+            self._directory_tracker.update_conversations_directory(path)
+            self._directory_tracker.save_tracking(self._workspace_path)
+
+    @property
+    def file_dialog_directory(self) -> Optional[str]:
+        """Get the last used file dialog directory."""
+        return self._directory_tracker.file_dialog_directory
+
+    @property
+    def conversations_directory(self) -> Optional[str]:
+        """Get the last used conversations directory."""
+        return self._directory_tracker.conversations_directory

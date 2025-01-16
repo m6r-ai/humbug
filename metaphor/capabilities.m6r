@@ -326,67 +326,9 @@ Context: Capabilities
 
         The workspace ".humbug" directory contains:
 
-        - settings.json: Project-specific configuration
+        - settings.json: Workspace-specific configuration
         - session.json: State of active elements
-
-        Context: Settings file
-            The settings.json file contains workspace-specific configuration:
-
-            ```json
-            {
-                "editor": {
-                    "useSoftTabs": true,
-                    "tabSize": 4,
-                    "fontSize": 12
-                }
-            }
-            ```
-
-            The application validates this file on workspace load:
-
-            - useSoftTabs must be boolean
-            - tabSize must be positive integer
-
-            If validation fails:
-
-            - Show error dialog with specific issues
-            - Use defaults: soft tabs (true) and 4 spaces
-            - Continue loading workspace
-
-        Context: Recents file
-            The session.json file tracks workspace state for restoration:
-
-            ```json
-            {
-                "tabs": [
-                    {
-                        "type": "conversation",
-                        "path": "conversations/2024-01-03-12-34-56-789.conv"
-                    },
-                    {
-                        "type": "editor",
-                        "path": "src/main.py",
-                        "cursorPosition": {
-                            "line": 10,
-                            "column": 15
-                        }
-                    }
-                ]
-            }
-            ```
-
-            The file is:
-
-            - Read on workspace load to restore state
-            - Updated when workspace closes
-            - Updated when application exits
-
-            During restoration:
-
-            - Attempt to restore each element
-            - Skip elements that cannot be restored
-            - Continue with remaining elements
-            - No error shown for skipped elements
+        - directories.json: Previously used directory paths
 
         Context: Workspace settings
             As an engineer maintaining the application, I want to ensure settings are documented so I can understand
@@ -442,10 +384,41 @@ Context: Capabilities
 
                         Backups do not replace the original file and are preserved until the file is saved.
 
+        Context: Settings file
+            The settings.json file contains workspace-specific configuration.  The application validates this file
+            on workspace load.
+
+            If validation fails:
+
+            - Show error dialog with specific issues
+            - Use defaults: soft tabs (true) and 4 spaces
+            - Continue loading workspace
+
+        Context: Session file
+            The session.json file tracks workspace state for restoration.
+
+            The file is:
+
+            - Read on workspace load to restore state
+            - Updated when workspace closes
+            - Updated when application exits
+
+            During restoration:
+
+            - Attempt to restore each element
+            - Skip elements that cannot be restored
+            - Continue with remaining elements
+            - No error shown for skipped elements
+
+        Context: Directories file
+            The directories.json file tracks the previously used directories for files and
+            conversations.  This ensures the user gets the best experience when they want to
+            interact with multiple files in the same place.
+
     Context: Home directory configuration
         The application maintains a ".humbug" directory in the user's home directory.
 
-        This contains workspace.json tracking the last open workspace:
+        This contains "workspace.json" tracking the last open workspace:
 
         ```json
         {
@@ -598,7 +571,7 @@ Context: Capabilities
 
             Files opened through the tree are tracked in:
 
-            - The workspace recents file for persistence
+            - The workspace sessions file for persistence
             - Active tab management for the current session
 
     Context: Menus

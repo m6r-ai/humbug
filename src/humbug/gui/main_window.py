@@ -470,7 +470,7 @@ class MainWindow(QMainWindow):
             return
 
         self._open_file_path(path)
-        
+
     def _handle_file_deletion(self, path: str):
         """Handle deletion of a file by closing any open tab.
         
@@ -481,7 +481,7 @@ class MainWindow(QMainWindow):
         editor = self._tab_manager.find_editor_tab_by_filename(path)
         if editor:
             self._tab_manager._close_tab_by_id(editor.tab_id, True)
-            
+
         # Also check for conversation files
         if path.endswith('.conv'):
             conversation_id = os.path.splitext(os.path.basename(path))[0]
@@ -495,13 +495,14 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
-            self._workspace_manager.workspace_path
+            self._workspace_manager.file_dialog_directory
         )
         self._menu_timer.start()
 
         if not file_path:
             return
 
+        self._workspace_manager.update_file_dialog_directory(file_path)
         self._open_file_path(file_path)
 
     def _open_file_path(self, path: str) -> None:
@@ -669,21 +670,12 @@ class MainWindow(QMainWindow):
 
     def _new_metaphor_conversation(self):
         """Create new conversation from Metaphor file."""
-        if not self._workspace_manager.has_workspace:
-            MessageBox.show_message(
-                self,
-                MessageBoxType.WARNING,
-                "Workspace Required",
-                "Please open a workspace before creating a Metaphor conversation."
-            )
-            return
-
         # Show file dialog
         self._menu_timer.stop()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Metaphor File",
-            self._workspace_manager.workspace_path,
+            self._workspace_manager.conversations_directory,
             "Metaphor Files (*.m6r);;All Files (*.*)"
         )
         self._menu_timer.start()
@@ -691,6 +683,7 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
+        self._workspace_manager.update_conversations_directory(file_path)
         search_paths = [self._workspace_manager.workspace_path]
 
         metaphor_parser = MetaphorParser()
@@ -719,7 +712,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Conversation",
-            self._workspace_manager.workspace_path,
+            self._workspace_manager.conversations_directory,
             "Conversation Files (*.conv);;All Files (*.*)"
         )
         self._menu_timer.start()
@@ -727,6 +720,7 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
+        self._workspace_manager.update_conversations_directory(file_path)
         self._open_conversation_path(file_path)
 
     def _open_conversation_path(self, path: str) -> None:
