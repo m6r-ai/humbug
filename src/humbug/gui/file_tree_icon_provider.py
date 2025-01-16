@@ -49,8 +49,9 @@ class FileTreeIconProvider(QFileIconProvider):
             ''',
             "metaphor": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M15 85 L15 15 L50 50 L85 15 L85 85"
-                        fill="none" stroke="currentColor" stroke-width="5"/>
+                    <path d="M75 85 L71 45 L70.5 45 L55 84.5 L45 84.5 L29.5 45 L29 45 L25 85
+                            L10 85 L16 20 L33 20 L50 60 L67 20 L84 20 L90 85 Z"
+                        fill="currentColor"/>
                 </svg>
             ''',
             "code": '''
