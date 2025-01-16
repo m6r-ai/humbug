@@ -41,6 +41,7 @@ LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.kts': ProgrammingLanguage.KOTLIN,
     '.m6r': ProgrammingLanguage.METAPHOR,
     '.md': ProgrammingLanguage.TEXT,
+    '.move': ProgrammingLanguage.MOVE,
     '.py': ProgrammingLanguage.PYTHON,
     '.pyw': ProgrammingLanguage.PYTHON,
     '.pyi': ProgrammingLanguage.PYTHON,

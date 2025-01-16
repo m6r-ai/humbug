@@ -196,6 +196,10 @@ class StyleManager(QObject):
             },
 
             # Syntax highlighting
+            ColorRole.SYNTAX_ADDRESS: {
+                ColorMode.DARK: "#80e0d0",
+                ColorMode.LIGHT: "#007070"
+            },
             ColorRole.SYNTAX_BACKTICK_CODE: {
                 ColorMode.DARK: "#8080f0",
                 ColorMode.LIGHT: "#3030c0"
@@ -275,12 +279,17 @@ class StyleManager(QObject):
             ColorRole.SYNTAX_TEXT: {
                 ColorMode.DARK: "#c8c8c8",
                 ColorMode.LIGHT: "#484848"
+            },
+            ColorRole.SYNTAX_TYPE: {
+                ColorMode.DARK: "#e0a0ff",
+                ColorMode.LIGHT: "#8000c0"
             }
         }
 
     def _initialize_highlights(self):
         # Mapping from token type to colour
         colour_mapping = {
+            "ADDRESS": ColorRole.SYNTAX_ADDRESS,
             "BACKTICK_CODE": ColorRole.SYNTAX_BACKTICK_CODE,
             "CODE": ColorRole. SYNTAX_CODE,
             "COMMENT": ColorRole.SYNTAX_COMMENT,
@@ -301,6 +310,7 @@ class StyleManager(QObject):
             "REGEXP": ColorRole.SYNTAX_REGEXP,
             "STRING": ColorRole.SYNTAX_STRING,
             "TEXT": ColorRole.SYNTAX_TEXT,
+            "TYPE": ColorRole.SYNTAX_TYPE,
             "WHITESPACE": ColorRole.SYNTAX_TEXT
         }
 

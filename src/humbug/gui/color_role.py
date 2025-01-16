@@ -57,6 +57,7 @@ class ColorRole(Enum):
     LINE_NUMBER = auto()                # Line number
 
     # Syntax highlighting
+    SYNTAX_ADDRESS = auto()
     SYNTAX_BACKTICK_CODE = auto()
     SYNTAX_CODE = auto()
     SYNTAX_COMMENT = auto()
@@ -77,3 +78,4 @@ class ColorRole(Enum):
     SYNTAX_REGEXP = auto()
     SYNTAX_STRING = auto()
     SYNTAX_TEXT = auto()
+    SYNTAX_TYPE = auto()

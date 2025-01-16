@@ -10,6 +10,7 @@ class ProgrammingLanguage(IntEnum):
     JAVASCRIPT = 4
     KOTLIN = 5
     METAPHOR = 6
-    PYTHON = 7
-    TEXT = 8
-    TYPESCRIPT = 9
+    MOVE = 7
+    PYTHON = 8
+    TEXT = 9
+    TYPESCRIPT = 10

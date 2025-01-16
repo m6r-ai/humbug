@@ -18,6 +18,7 @@ LANGUAGE_MAPPING = {
     "javascript": ProgrammingLanguage.JAVASCRIPT,
     "kotlin": ProgrammingLanguage.KOTLIN,
     "metaphor": ProgrammingLanguage.METAPHOR,
+    "move": ProgrammingLanguage.MOVE,
     "python": ProgrammingLanguage.PYTHON,
     "typescript": ProgrammingLanguage.TYPESCRIPT
 }
