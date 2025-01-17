@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 from typing import List, AsyncGenerator, Dict
+
 import aiohttp
 from aiohttp import ClientConnectorError, ClientError
 
@@ -19,7 +20,8 @@ class AIBackend(ABC):
     def __init__(self):
         """Initialize common attributes."""
         self._conversation_settings: Dict[str, ConversationSettings] = {}
-        self._default_settings = ConversationSettings()  # Default settings
+        self._default_settings = ConversationSettings()
+        self._uses_data = True  # Indicates that we default to normal SSE encoding
         self._max_retries = 3
         self._base_delay = 2
         self._rate_limiter = RateLimiter()
@@ -71,6 +73,9 @@ class AIBackend(ABC):
                     sock_connect=20,
                     sock_read=120
                 )
+
+                # Use explicit IPv4 for local connections as localhost can cause SSL issues!
+                url = url.replace("localhost", "127.0.0.1")
 
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
@@ -130,17 +135,19 @@ class AIBackend(ABC):
                         response_handler = self._create_stream_response_handler()
                         async for line in response.content:
                             try:
+                                print(f"got line: {line}")
                                 line = line.decode('utf-8').strip()
                                 if not line:
                                     continue
 
-                                if not line.startswith("data: "):
-                                    continue
+                                if self._uses_data:
+                                    if not line.startswith("data: "):
+                                        continue
 
-                                line = line[6:]
+                                    line = line[6:]
 
-                                if line == "[DONE]":
-                                    break
+                                    if line == "[DONE]":
+                                        break
 
                                 chunk = json.loads(line)
                                 response_handler.update_from_chunk(chunk)

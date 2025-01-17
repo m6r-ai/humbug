@@ -139,10 +139,6 @@ async def main():
     google_key = api_keys["GOOGLE_API_KEY"]
     anthropic_key = api_keys["ANTHROPIC_API_KEY"]
 
-    if not any([openai_key, google_key, anthropic_key]):
-        print("Error: No API keys found. Please set keys in ~/.humbug/api-keys.json or environment variables")
-        return 1
-
     # Initialize components
     ai_backends = AIProvider.create_backends(openai_key, google_key, anthropic_key)
     if not ai_backends:

@@ -3,6 +3,7 @@
 from typing import Dict, Optional
 
 from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ollama_backend import OllamaBackend
 from humbug.ai.openai_backend import OpenAIBackend
 from humbug.ai.gemini_backend import GeminiBackend
 from humbug.ai.anthropic_backend import AnthropicBackend
@@ -34,5 +35,7 @@ class AIProvider:
 
         if anthropic_key:
             backends["anthropic"] = AnthropicBackend(anthropic_key)
+
+        backends["ollama"] = OllamaBackend()
 
         return backends
