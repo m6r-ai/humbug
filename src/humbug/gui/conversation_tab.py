@@ -668,6 +668,9 @@ class ConversationTab(TabBase):
                 )
                 self._add_message(error_message)
                 asyncio.create_task(self._write_transcript(error_message))
+
+                self._is_streaming = False
+                self._input.set_streaming(False)
                 return
 
             stream = backend.stream_message(
