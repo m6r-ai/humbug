@@ -1175,6 +1175,7 @@ Context: Capabilities
         - "claude-3-5-haiku-20241022": Anthropic Claude 3.5 Haiku model (default for Anthropic)
         - "claude-3-5-sonnet-20241022": Anthropic Claude 3.5 Sonnet model
         - "llama3.2": Ollama model
+        - "phi4": Ollama model
 
         Context: Model providers
             Models are provided by different AI services:
@@ -1182,7 +1183,7 @@ Context: Capabilities
             - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"
             - Google models: "gemini-1.5-flash", "gemini-1.5-pro"
             - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"
-            - Ollama models: "llama3.2"
+            - Ollama models: "llama3.2", "phi4"
 
             The AI model is configurable via the settings dialog.  If Google's model is available then we default
             to it, then to Anthropic, and finally OpenAI.
@@ -1207,6 +1208,7 @@ Context: Capabilities
         - claude-3-5-haiku-20241022: Supports temperature 0.0-1.0
         - claude-3-5-sonnet-20241022: Supports temperature 0.0-1.0
         - llama3.2: Supports temperature 0.0-1.0
+        - phi4: Supports temperature 0.0-1.0
 
         Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
 
