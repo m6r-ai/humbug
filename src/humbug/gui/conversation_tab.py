@@ -529,7 +529,7 @@ class ConversationTab(TabBase):
         content: str,
         usage: Optional[Usage] = None,
         error: Optional[Dict] = None
-    ) -> Optional[Message]:
+    ):
         """Update the current AI response in the conversation."""
         if error:
             self._is_streaming = False
@@ -544,6 +544,7 @@ class ConversationTab(TabBase):
                 )
                 if message:
                     await self._write_transcript(message)
+
                 self._current_ai_message = None
 
             # Then add the error message
@@ -556,7 +557,7 @@ class ConversationTab(TabBase):
             self._add_message(error_message)
             asyncio.create_task(self._write_transcript(error_message))
             self._logger.warning("AI response error: %s", error_msg)
-            return error_message
+            return
 
         if not self._is_streaming:
             self._is_streaming = True
@@ -595,7 +596,7 @@ class ConversationTab(TabBase):
                 completed=(usage is not None)
             )
             if not message:
-                return None
+                return
 
         if usage:
             self._is_streaming = False
@@ -603,9 +604,9 @@ class ConversationTab(TabBase):
             self.update_status()
             self._current_ai_message = None
             await self._write_transcript(message)
-            return message
+            return
 
-        return message
+        return
 
     def load_message_history(self, messages: List[Message]):
         """
@@ -681,7 +682,7 @@ class ConversationTab(TabBase):
 
             async for response in stream:
                 try:
-                    message = await self.update_streaming_response(
+                    await self.update_streaming_response(
                         content=response.content,
                         usage=response.usage,
                         error=response.error
