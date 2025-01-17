@@ -72,6 +72,8 @@ class EditorTab(TabBase):
         self._current_language = ProgrammingLanguage.TEXT
         self._logger = logging.getLogger("EditorTab")
 
+        self._workspace_manager = WorkspaceManager()
+
         # Set up layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -95,7 +97,6 @@ class EditorTab(TabBase):
         self.update_status()
 
         # Update auto-backup based on current workspace settings
-        self._workspace_manager = WorkspaceManager()
         if self._workspace_manager.has_workspace:
             settings = self._workspace_manager.settings
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
