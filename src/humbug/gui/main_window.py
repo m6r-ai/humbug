@@ -282,13 +282,12 @@ class MainWindow(QMainWindow):
 
         self.setStatusBar(self._status_bar)
         self._tab_manager.column_state_changed.connect(self._handle_column_state_changed)
+        self._tab_manager.status_message.connect(self._handle_status_message)
 
         self._handle_style_changed()
 
         self._workspace_manager = WorkspaceManager()
         self._restore_last_workspace()
-
-        self._tab_manager.status_message.connect(self._handle_status_message)
 
     def _handle_column_state_changed(self):
         """Handle column state changes from tab manager."""
