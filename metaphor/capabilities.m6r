@@ -72,6 +72,10 @@ Context: Capabilities
             - Styling matches the current application theme (light/dark mode)
             - The tree view updates automatically when files are added or removed
 
+            Context: File/directory mouse-over
+                If the user mouses over a file or directory item then this will pop open a tooltip that
+                will display the full path name of the item moused-over.
+
             Context: File deletion
                 If the user clicks the right mouse button while a file is highlighted then they will be
                 given a pop-up menu.  If they select "Delete File" then the system will confirm they

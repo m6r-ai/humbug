@@ -33,11 +33,6 @@ class WorkspaceFileTree(QWidget):
 
         # Create tree view
         self._tree_view = FileTreeView()
-        self._tree_view.setHeaderHidden(True)
-        self._tree_view.setAnimated(True)
-        self._tree_view.header().setSortIndicator(0, Qt.AscendingOrder)
-        self._tree_view.setSortingEnabled(True)
-        self._tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
 
         # Create file system model
@@ -219,5 +214,12 @@ class WorkspaceFileTree(QWidget):
             }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 height: 0px;
+            }}
+            QToolTip {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: 1px;
+                margin: 0px;
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
         """)
