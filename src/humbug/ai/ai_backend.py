@@ -89,7 +89,6 @@ class AIBackend(ABC):
 
                             try:
                                 error_data = json.loads(response_message)
-                                print(f"err: {error_data}")
                                 error_msg = error_data.get("error", {})
                                 if not isinstance(error_msg, str):
                                     error_msg = error_msg.get("message", "Unknown error")
@@ -139,7 +138,6 @@ class AIBackend(ABC):
                         response_handler = self._create_stream_response_handler()
                         async for line in response.content:
                             try:
-                                print(f"got line: {line}")
                                 line = line.decode('utf-8').strip()
                                 if not line:
                                     continue
