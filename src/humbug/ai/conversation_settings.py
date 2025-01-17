@@ -65,8 +65,8 @@ class ConversationSettings:
         "gemini-2.0-flash-exp": {"context_window": 1048576, "max_output_tokens": 8192},
         "claude-3-5-haiku-20241022": {"context_window": 200000, "max_output_tokens": 4096},
         "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192},
-        "llama3.2": {"context_window": 4096, "max_output_tokens": 2048},
-        "phi4": {"context_window": 4096, "max_output_tokens": 2048}
+        "llama3.2": {"context_window": 2048, "max_output_tokens": 2048},
+        "phi4": {"context_window": 2048, "max_output_tokens": 2048}
     }
 
     def __init__(self, model: str="gemini-1.5-flash", temperature: float=0.7):
