@@ -2,7 +2,7 @@
 
 import sys
 
-from PySide6.QtCore import Signal, Qt, QMimeData, QRect
+from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent
 from PySide6.QtGui import QKeyEvent
 
 from humbug.gui.message_widget import MessageWidget
@@ -27,6 +27,9 @@ class LiveInputWidget(MessageWidget):
         self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
         self._update_header_text()
+
+        # Install an event filter so we can capture clicks anywhere and redirect them to the input box
+        self.installEventFilter(self)
 
     def set_streaming(self, streaming: bool):
         """Update the streaming state and header text."""
@@ -77,6 +80,14 @@ class LiveInputWidget(MessageWidget):
         if source.hasText():
             cursor = self._text_area.textCursor()
             cursor.insertText(source.text())
+
+    def eventFilter(self, obj, event) -> bool:
+        """Handle window activation and mouse events to redirect focus to our input box."""
+        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
+            self._text_area.setFocus()
+            return False  # Don't consume the event
+
+        return super().eventFilter(obj, event)
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
