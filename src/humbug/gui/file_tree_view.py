@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtWidgets import QTreeView, QApplication, QToolTip
+from PySide6.QtWidgets import QTreeView, QApplication
 from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData
 from PySide6.QtGui import QDrag
 
