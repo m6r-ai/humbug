@@ -41,7 +41,7 @@ def setup_logging():
 
 def cleanup_old_logs(log_dir: str, max_logs: int):
     """Remove oldest log files if we exceed maximum count."""
-    log_files = glob.glob(os.path.join(log_dir, "*.log"))
+    log_files = glob.glob(os.path.join(log_dir, "*.log*"))
     log_files.sort(key=os.path.getctime)  # Sort by creation time
 
     # Remove oldest files if we have too many
