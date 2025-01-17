@@ -167,7 +167,7 @@ class ConversationTab(TabBase):
             raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
         # Load messages into the new tab
-        forked_tab.load_message_history(messages)
+        forked_tab._load_message_history(messages)
 
         return forked_tab
 
@@ -222,7 +222,7 @@ class ConversationTab(TabBase):
 
             # Create conversation tab
             conversation_tab = cls(conversation_id, path, timestamp, ai_backends, parent)
-            conversation_tab.load_message_history(transcript_data.messages)
+            conversation_tab._load_message_history(transcript_data.messages)
 
             return conversation_tab
 
@@ -267,7 +267,7 @@ class ConversationTab(TabBase):
                 raise ConversationError("Timestamp mismatch in transcript metadata")
 
             # Load the message history
-            tab.load_message_history(transcript_data.messages)
+            tab._load_message_history(transcript_data.messages)
 
             return tab
 
@@ -608,7 +608,7 @@ class ConversationTab(TabBase):
 
         return
 
-    def load_message_history(self, messages: List[Message]):
+    def _load_message_history(self, messages: List[Message]):
         """
         Load existing message history from transcript.
 
