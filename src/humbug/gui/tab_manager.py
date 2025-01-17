@@ -562,6 +562,7 @@ class TabManager(QWidget):
         self._active_column = target_column
         column_number = self._tab_columns.index(current_column)
         self._remove_column_and_resize(column_number, current_column)
+
         # Emit signal about column state change
         self._update_tabs()
         self.column_state_changed.emit()
