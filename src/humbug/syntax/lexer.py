@@ -24,9 +24,6 @@ class Lexer(ABC):
         self._tokens: List[Token] = []
         self._next_token: int = 0
 
-        # Initialize lexing functions for ASCII characters (0-127)
-        self._lexing_functions: List[Callable[[], None]] = [self._get_lexing_function(chr(i)) for i in range(128)]
-
     @abstractmethod
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -48,12 +45,7 @@ class Lexer(ABC):
         """
         while self._position < len(self._input):
             ch = self._input[self._position]
-            ch_val = ord(ch)
-            if ch_val < 128:
-                fn = self._lexing_functions[ch_val]
-            else:
-                fn = self._get_lexing_function(ch)
-
+            fn = self._get_lexing_function(ch)
             fn()
 
     def get_next_token(self, filter_list: List=None) -> Optional[Token]:
