@@ -22,7 +22,7 @@ venv
 # Ignore conversation and log files
 conversations
 
-# Ignore humbug workspace files
+# Ignore humbug mindspace files
 .humbug
 
 # Ignore Mac system files

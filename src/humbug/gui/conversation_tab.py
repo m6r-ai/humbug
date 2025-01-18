@@ -177,7 +177,7 @@ class ConversationTab(TabBase):
         return self._timestamp
 
     def get_state(self, temp_state: bool=False) -> TabState:
-        """Get serializable state for workspace persistence.
+        """Get serializable state for mindspace persistence.
 
         Returns:
             TabState containing conversation-specific state

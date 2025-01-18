@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import json
 
 @dataclass
-class WorkspaceSettings:
+class MindspaceSettings:
     use_soft_tabs: bool = True
     tab_size: int = 4
     font_size: float = None  # None means use the default font size
@@ -10,7 +10,7 @@ class WorkspaceSettings:
     auto_backup_interval: int = 300  # Default 5 minutes in seconds
 
     @classmethod
-    def load(cls, path: str) -> "WorkspaceSettings":
+    def load(cls, path: str) -> "MindspaceSettings":
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
             editor = data.get("editor", {})

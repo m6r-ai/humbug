@@ -22,7 +22,7 @@ from humbug.gui.tab_label import TabLabel
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.gui.welcome_widget import WelcomeWidget
-from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class TabData:
@@ -52,7 +52,7 @@ class TabManager(QWidget):
 
         self._untitled_count = 0
         self._ai_backends = ai_backends
-        self._workspace_manager = WorkspaceManager()
+        self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("TabManager")
 
         # Create main layout
@@ -626,15 +626,15 @@ class TabManager(QWidget):
         self.add_tab(editor, os.path.basename(path))
         return editor
 
-    def new_conversation(self, workspace_path: str) -> Optional[str]:
+    def new_conversation(self, mindspace_path: str) -> Optional[str]:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
         timestamp = datetime.utcnow()
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
-        # Create path relative to workspace
+        # Create path relative to mindspace
         filename = os.path.join("conversations", f"{conversation_id}.conv")
-        full_path = os.path.join(workspace_path, filename)
+        full_path = os.path.join(mindspace_path, filename)
 
         conversation_tab = ConversationTab(
             conversation_id,
@@ -736,7 +736,7 @@ class TabManager(QWidget):
                 state = TabState.from_dict(state_dict)
 
                 if not os.path.isabs(state.path):
-                    state.path = self._workspace_manager.get_workspace_path(state.path)
+                    state.path = self._mindspace_manager.get_mindspace_path(state.path)
 
                 tab = self._restore_tab_from_state(state)
                 if not tab:

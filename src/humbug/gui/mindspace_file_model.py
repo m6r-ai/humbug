@@ -1,26 +1,26 @@
-"""File tree view implementation for workspace files."""
+"""File tree view implementation for mindspace files."""
 
 import os
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel
 
 
-class WorkspaceFileModel(QSortFilterProxyModel):
+class MindspaceFileModel(QSortFilterProxyModel):
     """Filter model to hide .humbug directory and apply custom sorting."""
 
     def __init__(self, parent=None):
         """Initialize the filter model."""
         super().__init__(parent)
-        self._workspace_root = None
+        self._mindspace_root = None
 
-    def set_workspace_root(self, path: str):
-        """Set the workspace root path for relative path calculations."""
-        self._workspace_root = path
+    def set_mindspace_root(self, path: str):
+        """Set the mindspace root path for relative path calculations."""
+        self._mindspace_root = path
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         """Filter out .humbug directory and other hidden files."""
-        # If no workspace is open, don't show any files
-        if not self._workspace_root:
+        # If no mindspace is open, don't show any files
+        if not self._mindspace_root:
             return False
 
         source_model = self.sourceModel()

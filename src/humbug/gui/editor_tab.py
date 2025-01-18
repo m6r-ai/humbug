@@ -19,7 +19,7 @@ from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 # Map file extensions to programming languages
@@ -72,7 +72,7 @@ class EditorTab(TabBase):
         self._current_language = ProgrammingLanguage.TEXT
         self._logger = logging.getLogger("EditorTab")
 
-        self._workspace_manager = WorkspaceManager()
+        self._mindspace_manager = MindspaceManager()
 
         # Set up layout
         layout = QVBoxLayout(self)
@@ -96,18 +96,18 @@ class EditorTab(TabBase):
 
         self.update_status()
 
-        # Update auto-backup based on current workspace settings
-        if self._workspace_manager.has_workspace:
-            settings = self._workspace_manager.settings
+        # Update auto-backup based on current mindspace settings
+        if self._mindspace_manager.has_mindspace:
+            settings = self._mindspace_manager.settings
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
-        # Connect to workspace settings changes
-        self._workspace_manager.settings_changed.connect(self._handle_workspace_settings_changed)
+        # Connect to mindspace settings changes
+        self._mindspace_manager.settings_changed.connect(self._handle_mindspace_settings_changed)
 
-    def _handle_workspace_settings_changed(self):
-        """Handle workspace settings changes."""
-        if self._workspace_manager.has_workspace:
-            settings = self._workspace_manager.settings
+    def _handle_mindspace_settings_changed(self):
+        """Handle mindspace settings changes."""
+        if self._mindspace_manager.has_mindspace:
+            settings = self._mindspace_manager.settings
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
     def update_auto_backup_settings(self, enabled: bool, interval: int) -> None:
@@ -127,7 +127,7 @@ class EditorTab(TabBase):
             self._cleanup_backup_files()
 
     def get_state(self, temp_state: bool=False) -> TabState:
-        """Get serializable state for workspace persistence."""
+        """Get serializable state for mindspace persistence."""
         metadata_state = {
             "language": self._current_language.name
         }
@@ -343,7 +343,7 @@ class EditorTab(TabBase):
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
 
-        if self._workspace_manager.has_workspace and self._workspace_manager.settings.auto_backup:
+        if self._mindspace_manager.has_mindspace and self._mindspace_manager.settings.auto_backup:
             if is_modified and not self._auto_backup_timer.isActive():
                 self._auto_backup_timer.start()
             elif not is_modified:
@@ -383,15 +383,15 @@ class EditorTab(TabBase):
         if not self._is_modified:
             return
 
-        # All backups should now go in workspace .humbug/backups
-        if not self._workspace_manager.has_workspace:
-            return  # No backups without a workspace
+        # All backups should now go in mindspace .humbug/backups
+        if not self._mindspace_manager.has_mindspace:
+            return  # No backups without a mindspace
 
-        backup_dir = self._workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
+        backup_dir = self._mindspace_manager.get_mindspace_path(os.path.join(".humbug", "backups"))
         os.makedirs(backup_dir, exist_ok=True)
 
         if not self._path:
-            # For untitled files, use timestamp-based backup in workspace
+            # For untitled files, use timestamp-based backup in mindspace
             prefix = f"backup-{self._untitled_number}-"
             current_time = int(time.time())
             try:
@@ -435,7 +435,7 @@ class EditorTab(TabBase):
 
     def _cleanup_backup_files(self) -> None:
         """Clean up any backup files for this editor."""
-        if not self._workspace_manager.has_workspace:
+        if not self._mindspace_manager.has_mindspace:
             return
 
         if self._path:
@@ -448,7 +448,7 @@ class EditorTab(TabBase):
                 self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
         elif self._untitled_number:
             # Clean up backups for untitled file
-            backup_dir = self._workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
+            backup_dir = self._mindspace_manager.get_mindspace_path(os.path.join(".humbug", "backups"))
             prefix = f"backup-{self._untitled_number}-"
             try:
                 for file in os.listdir(backup_dir):
@@ -540,12 +540,12 @@ class EditorTab(TabBase):
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save As",
-            self._path or self._workspace_manager.file_dialog_directory
+            self._path or self._mindspace_manager.file_dialog_directory
         )
         if not filename:
             return False
 
-        self._workspace_manager.update_file_dialog_directory(filename)
+        self._mindspace_manager.update_file_dialog_directory(filename)
 
         self._path = filename
         self._untitled_number = None

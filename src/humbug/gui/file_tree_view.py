@@ -1,4 +1,4 @@
-"""File tree view implementation for workspace files."""
+"""File tree view implementation for mindspace files."""
 
 import os
 

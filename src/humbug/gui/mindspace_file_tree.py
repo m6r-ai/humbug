@@ -1,4 +1,4 @@
-"""File tree view implementation for workspace files."""
+"""File tree view implementation for mindspace files."""
 
 import os
 from typing import Optional
@@ -11,11 +11,11 @@ from humbug.gui.file_tree_icon_provider import FileTreeIconProvider
 from humbug.gui.file_tree_view import FileTreeView
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.workspace_file_model import WorkspaceFileModel
+from humbug.gui.mindspace_file_model import MindspaceFileModel
 
 
-class WorkspaceFileTree(QWidget):
-    """Tree view widget for displaying workspace files."""
+class MindspaceFileTree(QWidget):
+    """Tree view widget for displaying mindspace files."""
 
     file_activated = Signal(str)  # Emits path when file is activated
     file_deleted = Signal(str)  # Emits path when file is deleted
@@ -41,7 +41,7 @@ class WorkspaceFileTree(QWidget):
         self._fs_model.setReadOnly(True)
 
         # Create filter model
-        self._filter_model = WorkspaceFileModel()
+        self._filter_model = MindspaceFileModel()
         self._filter_model.setSourceModel(self._fs_model)
 
         # Set model on tree view
@@ -59,8 +59,8 @@ class WorkspaceFileTree(QWidget):
         # Apply styling
         self._handle_style_changed()
 
-        # Track current workspace
-        self._workspace_path: Optional[str] = None
+        # Track current mindspace
+        self._mindspace_path: Optional[str] = None
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
     def _show_context_menu(self, position):
@@ -119,19 +119,19 @@ class WorkspaceFileTree(QWidget):
                     [MessageBoxButton.OK]
                 )
 
-    def set_workspace(self, path: str):
-        """Set the workspace root directory."""
+    def set_mindspace(self, path: str):
+        """Set the mindspace root directory."""
         if not path:
-            # Clear the model when no workspace is active
+            # Clear the model when no mindspace is active
             self._fs_model.setRootPath("")
-            self._filter_model.set_workspace_root(None)
+            self._filter_model.set_mindspace_root(None)
             self._tree_view.setRootIndex(self._filter_model.mapFromSource(
                 self._fs_model.index("")
             ))
             return
 
         self._fs_model.setRootPath(path)
-        self._filter_model.set_workspace_root(path)
+        self._filter_model.set_mindspace_root(path)
 
         # Set the root index through the proxy model
         root_index = self._filter_model.mapFromSource(

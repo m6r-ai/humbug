@@ -5,7 +5,7 @@ from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
 from humbug.gui.color_role import ColorRole
 from humbug.gui.line_number_area import LineNumberArea
 from humbug.gui.style_manager import StyleManager
-from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class EditorTextEdit(QPlainTextEdit):
@@ -328,12 +328,12 @@ class EditorTextEdit(QPlainTextEdit):
         Args:
             event: The key event to handle
         """
-        workspace_manager = WorkspaceManager()
-        if not workspace_manager.has_workspace:
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace:
             super().keyPressEvent(event)
             return
 
-        settings = workspace_manager.settings
+        settings = mindspace_manager.settings
         cursor = self.textCursor()
 
         if event.key() == Qt.Key_Tab:

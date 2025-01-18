@@ -40,11 +40,11 @@ source code for the app.
     - Line number display and cursor position tracking.
     - Auto-backup functionality for unsaved changes.
     - Configurable tab and font settings.
-- **Workspace Management:**
+- **Mindspace Management:**
     - Project-specific environments with their own settings and state.
-    - Workspace settings include soft tabs, tab size, font size, and auto-backup options.
-    - Workspace state persistence for restoring open tabs and cursor positions.
-    - Home directory tracking of last opened workspace.
+    - Mindspace settings include soft tabs, tab size, font size, and auto-backup options.
+    - Mindspace state persistence for restoring open tabs and cursor positions.
+    - Home directory tracking of last opened mindspace.
 - **User Interface:**
     - Keyboard navigation and mouse support.
     - Resizable splitter between file tree and tab view.
@@ -58,7 +58,7 @@ source code for the app.
     - Full vertical scrollbar for history and input area.
     - Conversation transcript logging.
 - **File Tree:**
-    - Displays all files and folders in the workspace directory.
+    - Displays all files and folders in the mindspace directory.
     - Excludes the ".humbug" directory and other hidden files/folders.
     - Supports keyboard navigation and automatic refresh when files change.
 - **Menu System:**
@@ -133,9 +133,9 @@ source code for the app.
    - Ensure the `api-keys.json` file has permissions set to `0o600` for security.
    - Ensure the `~/.humbug` directory has permissions set to `0o700` for security.
 
-2. **Workspace Settings:**
+2. **Mindspace Settings:**
 
-   - Workspace settings are stored in `settings.json` within the workspace's `.humbug` directory.
+   - Mindspace settings are stored in `settings.json` within the mindspace's `.humbug` directory.
    - Settings include:
      - `useSoftTabs`: boolean, whether to use soft tabs (spaces) or hard tabs.
      - `tabSize`: integer, number of spaces for a tab.
@@ -155,10 +155,10 @@ python -m humbug
 
 - **General**
     - `Ctrl+Q` - Quit Humbug
-    - `Ctrl+Alt+N` - New Workspace
-    - `Ctrl+Alt+O` - Open Workspace
-    - `Ctrl+Alt+W` - Close Workspace
-    - `Ctrl+Alt+,` - Workspace Settings
+    - `Ctrl+Alt+N` - New Mindspace
+    - `Ctrl+Alt+O` - Open Mindspace
+    - `Ctrl+Alt+W` - Close Mindspace
+    - `Ctrl+Alt+,` - Mindspace Settings
 - **File Operations**
     - `Ctrl+N` - New File
     - `Ctrl+O` - Open File
@@ -200,7 +200,7 @@ src/humbug/
 ├── gui/           # GUI components
 ├── syntax/        # Syntax highlighting and parsing
 ├── transcript/    # Transcript handling
-├── workspace/     # Workspace management
+├── mindspace/     # Mindspace management
 └── __main__.py    # Main entry point
 ```
 
