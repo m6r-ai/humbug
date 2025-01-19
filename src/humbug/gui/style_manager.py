@@ -627,7 +627,9 @@ class StyleManager(QObject):
         """Set mindspace-specific font size override."""
         if size != self._mindspace_font_size:
             self._mindspace_font_size = size
-            self.style_changed.emit(self._zoom_factor)
+
+            if size:
+                self.style_changed.emit(self._zoom_factor)
 
     @property
     def color_mode(self) -> ColorMode:
