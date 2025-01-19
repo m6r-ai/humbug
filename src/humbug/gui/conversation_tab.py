@@ -182,18 +182,23 @@ class ConversationTab(TabBase):
         Returns:
             TabState containing conversation-specific state
         """
+        metadata_state = {
+            "messages": [msg.to_transcript_dict() for msg in self._conversation.get_messages()],
+            "settings": {
+                "model": self._settings.model,
+                "temperature": self._settings.temperature
+            }
+        }
+
+        if temp_state:
+            metadata_state["content"] = self._input.toPlainText()
+
         return TabState(
             type=TabType.CONVERSATION,
             tab_id=self._tab_id,
             path=self._path,
             timestamp=self._timestamp,
-            metadata={
-                "messages": [msg.to_transcript_dict() for msg in self._conversation.get_messages()],
-                "settings": {
-                    "model": self._settings.model,
-                    "temperature": self._settings.temperature
-                }
-            }
+            metadata=metadata_state
         )
 
     @classmethod
@@ -268,6 +273,10 @@ class ConversationTab(TabBase):
 
             # Load the message history
             tab._load_message_history(transcript_data.messages)
+
+            # Restore content if specified
+            if state.metadata and "content" in state.metadata:
+                tab._input.setPlainText(state.metadata["content"])
 
             return tab
 
@@ -510,10 +519,6 @@ class ConversationTab(TabBase):
             1,
             50
         )
-
-    def get_input_text(self) -> str:
-        """Get the current input text."""
-        return self._input.toPlainText()
 
     def set_input_text(self, text: str):
         """Set the input text."""
@@ -841,12 +846,12 @@ class ConversationTab(TabBase):
         self._input.paste()
 
     def can_submit(self) -> bool:
-        has_text = bool(self.get_input_text())
+        has_text = bool(self._input.toPlainText())
         return has_text and not self._is_streaming
 
     def submit(self):
         """Submit current input text."""
-        content = self._sanitize_input(self.get_input_text().strip())
+        content = self._sanitize_input(self._input.toPlainText().strip())
         if not content:
             return
 
