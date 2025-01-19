@@ -140,6 +140,8 @@ class EditorTab(TabBase):
             tab_id=self.tab_id,
             path=self._path if self._path else f"untitled-{self._untitled_number}",
             cursor_position=self.get_cursor_position(),
+            horizontal_scroll=self._editor.horizontalScrollBar().value(),
+            vertical_scroll=self._editor.verticalScrollBar().value(),
             metadata=metadata_state
         )
 
@@ -171,6 +173,13 @@ class EditorTab(TabBase):
         # Restore cursor position if present
         if state.cursor_position:
             tab.set_cursor_position(state.cursor_position)
+
+        # Restore scroll poisitions if present
+        if state.horizontal_scroll:
+            tab._editor.horizontalScrollBar().setValue(state.horizontal_scroll)
+
+        if state.vertical_scroll:
+            tab._editor.verticalScrollBar().setValue(state.vertical_scroll)
 
         return tab
 

@@ -12,6 +12,8 @@ class TabState:
     tab_id: str
     path: str
     cursor_position: Optional[Dict[str, int]] = None
+    horizontal_scroll: Optional[int] = None
+    vertical_scroll: Optional[int] = None
     timestamp: Optional[datetime] = None
     metadata: Optional[Dict[str, Any]] = None
 
