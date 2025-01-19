@@ -328,15 +328,29 @@ class EditorTextEdit(QPlainTextEdit):
         Args:
             event: The key event to handle
         """
-        mindspace_manager = MindspaceManager()
-        if not mindspace_manager.has_mindspace:
-            super().keyPressEvent(event)
+        if event.key() == Qt.Key_Home:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.StartOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
             return
 
-        settings = mindspace_manager.settings
-        cursor = self.textCursor()
+        if event.key() == Qt.Key_End:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.EndOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
+            return
 
         if event.key() == Qt.Key_Tab:
+            cursor = self.textCursor()
+            mindspace_manager = MindspaceManager()
+            if not mindspace_manager.has_mindspace:
+                super().keyPressEvent(event)
+                return
+
+            settings = mindspace_manager.settings
+
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
             cursor.beginEditBlock()
@@ -360,6 +374,14 @@ class EditorTextEdit(QPlainTextEdit):
             return
 
         if event.key() == Qt.Key_Backtab:  # Shift+Tab
+            cursor = self.textCursor()
+            mindspace_manager = MindspaceManager()
+            if not mindspace_manager.has_mindspace:
+                super().keyPressEvent(event)
+                return
+
+            settings = mindspace_manager.settings
+
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
             cursor.beginEditBlock()
@@ -380,20 +402,6 @@ class EditorTextEdit(QPlainTextEdit):
                 self.setTextCursor(cursor)
                 scrollbar.setValue(current_scroll)
 
-            event.accept()
-            return
-
-        if event.key() == Qt.Key_Home:
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.StartOfLine)
-            self.setTextCursor(cursor)
-            event.accept()
-            return
-
-        if event.key() == Qt.Key_End:
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.EndOfLine)
-            self.setTextCursor(cursor)
             event.accept()
             return
 
