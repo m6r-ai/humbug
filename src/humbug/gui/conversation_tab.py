@@ -183,15 +183,14 @@ class ConversationTab(TabBase):
             TabState containing conversation-specific state
         """
         metadata_state = {
-            "messages": [msg.to_transcript_dict() for msg in self._conversation.get_messages()],
-            "settings": {
-                "model": self._settings.model,
-                "temperature": self._settings.temperature
-            }
         }
 
         if temp_state:
             metadata_state["content"] = self._input.toPlainText()
+            metadata_state["settings"] = {
+                "model": self._settings.model,
+                "temperature": self._settings.temperature
+            }
 
         return TabState(
             type=TabType.CONVERSATION,
@@ -275,8 +274,16 @@ class ConversationTab(TabBase):
             tab._load_message_history(transcript_data.messages)
 
             # Restore content if specified
-            if state.metadata and "content" in state.metadata:
-                tab._input.setPlainText(state.metadata["content"])
+            if state.metadata:
+                if "content" in state.metadata:
+                    tab._input.setPlainText(state.metadata["content"])
+
+                if "settings" in state.metadata:
+                    if "model" in state.metadata["settings"]:
+                        tab._settings.model = state.metadata["settings"]["model"]
+
+                    if "temperature" in state.metadata["settings"]:
+                        tab._settings.temperature = state.metadata["settings"]["temperature"]
 
             return tab
 

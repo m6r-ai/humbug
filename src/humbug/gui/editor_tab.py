@@ -161,14 +161,15 @@ class EditorTab(TabBase):
         else:
             tab.set_filename(state.path)
 
-        # Restore language if specified
-        if state.metadata and "language" in state.metadata:
-            language = ProgrammingLanguage[state.metadata["language"]]
-            tab._update_language(language)
+        if state.metadata:
+            # Restore language if specified
+            if "language" in state.metadata:
+                language = ProgrammingLanguage[state.metadata["language"]]
+                tab._update_language(language)
 
-        # Restore content if specified
-        if state.metadata and "content" in state.metadata:
-            tab._editor.setPlainText(state.metadata["content"])
+            # Restore content if specified
+            if "content" in state.metadata:
+                tab._editor.setPlainText(state.metadata["content"])
 
         # Restore cursor position if present
         if state.cursor_position:
