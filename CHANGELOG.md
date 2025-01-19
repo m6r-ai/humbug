@@ -10,6 +10,7 @@ This release adds the following new features:
 - Added a Kotlin lexer/parser for syntax highlighting.
 - Remember the last directory used for file operations and for opening conversations.
 - Renamed "workspace" to "mindspace".
+- Conversation text editing now supports soft tabs and tab/backtab.
 
 Te release fixes the following bugs:
 
