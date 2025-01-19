@@ -16,6 +16,7 @@ class MindspaceFileModel(QSortFilterProxyModel):
     def set_mindspace_root(self, path: str):
         """Set the mindspace root path for relative path calculations."""
         self._mindspace_root = path
+        self.invalidateFilter()
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         """Filter out .humbug directory and other hidden files."""

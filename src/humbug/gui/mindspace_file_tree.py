@@ -123,11 +123,7 @@ class MindspaceFileTree(QWidget):
         """Set the mindspace root directory."""
         if not path:
             # Clear the model when no mindspace is active
-            self._fs_model.setRootPath("")
             self._filter_model.set_mindspace_root(None)
-            self._tree_view.setRootIndex(self._filter_model.mapFromSource(
-                self._fs_model.index("")
-            ))
             return
 
         self._fs_model.setRootPath(path)
@@ -143,9 +139,6 @@ class MindspaceFileTree(QWidget):
         self._tree_view.header().hideSection(1)  # Size
         self._tree_view.header().hideSection(2)  # Type
         self._tree_view.header().hideSection(3)  # Date
-
-        # Expand first level
-        self._tree_view.expandToDepth(0)
 
     def _handle_activation(self, index: QModelIndex):
         """Handle item activation (double-click or Enter)."""
