@@ -482,14 +482,23 @@ class ConversationTab(TabBase):
 
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
-        if has_selection:
-            if self._message_with_selection and self._message_with_selection != message_widget:
+        print(f"section changed {has_selection}")
+        if not has_selection:
+            if self._message_with_selection:
                 self._message_with_selection.clear_selection()
-            self._message_with_selection = message_widget
-        elif message_widget == self._message_with_selection:
-            self._message_with_selection = None
+                self._message_with_selection = None
 
-    def has_selection(self) -> bool:
+            return
+
+        if self._message_with_selection and self._message_with_selection != message_widget:
+            self._message_with_selection.clear_selection()
+
+        if (message_widget == self._input):
+            self._message_with_section = None
+        else:
+            self._message_with_selection = message_widget
+
+    def _has_selection(self) -> bool:
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
@@ -835,7 +844,7 @@ class ConversationTab(TabBase):
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
-        return self.has_selection() or (self._input.hasFocus() and self._input.textCursor().hasSelection())
+        return (self._input.hasFocus() and self._input.textCursor().hasSelection()) or self._has_selection()
 
     def copy(self):
         """Copy selected text to clipboard."""
