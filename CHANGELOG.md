@@ -17,6 +17,7 @@ Te release fixes the following bugs:
 - Don't indent empty lines when we do a block indent.
 - Hard tabs were being stripped from prompts to the AI backends.
 - Drag and drop labels could end up illegible in light mode.
+- Closing and opening a new mindspace could result in the wrong directory tree being shown in the mindspace tree view.
 
 ## v0.2 (2025-01-14)
 
