@@ -11,6 +11,7 @@ from PySide6.QtGui import (
 )
 
 from humbug.gui.style_manager import StyleManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class ConversationTextEdit(QTextEdit):
@@ -97,6 +98,207 @@ class ConversationTextEdit(QTextEdit):
         # For all other cases, propagate the event up
         event.ignore()
 
+    def _indent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
+        """Indent a single line using soft tabs (spaces).
+
+        Args:
+            cursor: The current text cursor
+            tab_size: Number of spaces to use for indentation
+        """
+        current_column = cursor.position() - cursor.block().position()
+        spaces_needed = tab_size - (current_column % tab_size)
+        cursor.insertText(" " * spaces_needed)
+
+    def _indent_single_line_hard_tabs(self, cursor: QTextCursor) -> None:
+        """Indent a single line using hard tabs.
+
+        Args:
+            cursor: The current text cursor
+        """
+        cursor.insertText("\t")
+
+    def _indent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
+        """Indent a block of text using soft tabs (spaces).
+
+        Args:
+            cursor: The current text cursor
+            tab_size: Number of spaces to use for indentation
+        """
+        start = cursor.selectionStart()
+        end = cursor.selectionEnd()
+        reverse: bool = start == cursor.position()
+
+        cursor.setPosition(start)
+        cursor.movePosition(QTextCursor.StartOfLine)
+
+        # If selection ends at start of line, don't indent that line
+        end_offs = 0
+        check_cursor = QTextCursor(cursor)
+        check_cursor.setPosition(end)
+        if check_cursor.atBlockStart():
+            end_offs = 1
+
+        start += tab_size
+        while cursor.position() <= end - end_offs:
+            if not cursor.atBlockEnd():
+                cursor.insertText(" " * tab_size)
+                end += tab_size
+
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                break
+
+        cursor.setPosition(start if not reverse else end)
+        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+
+    def _indent_block_hard_tabs(self, cursor: QTextCursor) -> None:
+        """Indent a block of text using hard tabs.
+
+        Args:
+            cursor: The current text cursor
+        """
+        start = cursor.selectionStart()
+        end = cursor.selectionEnd()
+        reverse: bool = start == cursor.position()
+
+        cursor.setPosition(start)
+        cursor.movePosition(QTextCursor.StartOfLine)
+
+        # If selection ends at start of line, don't indent that line
+        end_offs = 0
+        check_cursor = QTextCursor(cursor)
+        check_cursor.setPosition(end)
+        if check_cursor.atBlockStart():
+            end_offs = 1
+
+        start += 1
+        while cursor.position() <= end - end_offs:
+            if not cursor.atBlockEnd():
+                cursor.insertText("\t")
+                end += 1
+
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                break
+
+        cursor.setPosition(start if not reverse else end)
+        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+
+    def _outdent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
+        """Outdent a single line using soft tabs (spaces).
+
+        Args:
+            cursor: The current text cursor
+            tab_size: Number of spaces to use for indentation
+        """
+        current_column = cursor.position() - cursor.block().position()
+        deletes_needed = 1 + ((current_column - 1) % tab_size)
+        deletes_needed = min(deletes_needed, current_column)
+
+        while deletes_needed > 0:
+            text = cursor.block().text()
+            if not text or text[current_column - 1] != " ":
+                break
+
+            cursor.deletePreviousChar()
+            current_column -= 1
+            deletes_needed -= 1
+
+    def _outdent_single_line_hard_tabs(self, cursor: QTextCursor) -> None:
+        """Outdent a single line using hard tabs.
+
+        Args:
+            cursor: The current text cursor
+        """
+        current_column = cursor.position() - cursor.block().position()
+        if current_column > 0:
+            text = cursor.block().text()
+            if text and text[current_column - 1] == "\t":
+                cursor.deletePreviousChar()
+
+    def _outdent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
+        """Outdent a block of text using soft tabs (spaces).
+
+        Args:
+            cursor: The current text cursor
+            tab_size: Number of spaces to use for indentation
+        """
+        start = cursor.selectionStart()
+        end = cursor.selectionEnd()
+        reverse: bool = start == cursor.position()
+
+        cursor.setPosition(start)
+        cursor.movePosition(QTextCursor.StartOfLine)
+
+        # If selection ends at start of line, don't outdent that line
+        end_offs = 0
+        check_cursor = QTextCursor(cursor)
+        check_cursor.setPosition(end)
+        if check_cursor.atBlockStart():
+            end_offs = 1
+
+        # Work out how far to move the start position
+        current_column = start - cursor.block().position()
+        first_line = cursor.block().text()
+        first_line_spaces = len(first_line) - len(first_line.lstrip(" "))
+        first_line_spaces = min(first_line_spaces, tab_size)
+        first_line_spaces = min(first_line_spaces, current_column)
+        start -= first_line_spaces
+
+        while cursor.position() <= end - end_offs:
+            deletes_needed = tab_size
+
+            while deletes_needed > 0:
+                text = cursor.block().text()
+                if not text or text[0] != " ":
+                    break
+
+                cursor.deleteChar()
+                deletes_needed -= 1
+                end -= 1
+
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                break
+
+        cursor.setPosition(start if not reverse else end)
+        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+
+    def _outdent_block_hard_tabs(self, cursor: QTextCursor) -> None:
+        """Outdent a block of text using hard tabs.
+
+        Args:
+            cursor: The current text cursor
+        """
+        start = cursor.selectionStart()
+        end = cursor.selectionEnd()
+        reverse: bool = start == cursor.position()
+
+        cursor.setPosition(start)
+        cursor.movePosition(QTextCursor.StartOfLine)
+
+        # If selection ends at start of line, don't outdent that line
+        end_offs = 0
+        check_cursor = QTextCursor(cursor)
+        check_cursor.setPosition(end)
+        if check_cursor.atBlockStart():
+            end_offs = 1
+
+        # Work out how far to move the start position
+        current_column = start - cursor.block().position()
+        first_line = cursor.block().text()
+        if first_line and first_line[0] == "\t" and current_column > 0:
+            start -= 1
+
+        while cursor.position() <= end - end_offs:
+            text = cursor.block().text()
+            if text and text[0] == "\t":
+                cursor.deleteChar()
+                end -= 1
+
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                break
+
+        cursor.setPosition(start if not reverse else end)
+        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
         # Is this a read-only widget?  If it is then we don't want to process certain key events,
@@ -105,20 +307,6 @@ class ConversationTextEdit(QTextEdit):
             if event.key() in (Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Up, Qt.Key_Down):
                 event.ignore()
 
-            return
-
-        if event.key() == Qt.Key_Home:
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.StartOfLine)
-            self.setTextCursor(cursor)
-            event.accept()
-            return
-
-        if event.key() == Qt.Key_End:
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.EndOfLine)
-            self.setTextCursor(cursor)
-            event.accept()
             return
 
         if event.key() in (Qt.Key_PageUp, Qt.Key_PageDown):
@@ -149,6 +337,82 @@ class ConversationTextEdit(QTextEdit):
                     self.setTextCursor(cursor)
                     # Signal for scroll - ConversationTab will handle ensuring cursor visibility
                     self.pageScrollRequested.emit()
+
+            event.accept()
+            return
+
+        if event.key() == Qt.Key_Home:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.StartOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
+            return
+
+        if event.key() == Qt.Key_End:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.EndOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
+            return
+
+        if event.key() == Qt.Key_Tab:
+            cursor = self.textCursor()
+            mindspace_manager = MindspaceManager()
+            if not mindspace_manager.has_mindspace:
+                super().keyPressEvent(event)
+                return
+
+            settings = mindspace_manager.settings
+
+            scrollbar = self.verticalScrollBar()
+            current_scroll = scrollbar.value()
+            cursor.beginEditBlock()
+            try:
+                if not cursor.hasSelection():
+                    if settings.use_soft_tabs:
+                        self._indent_single_line_soft_tabs(cursor, settings.tab_size)
+                    else:
+                        self._indent_single_line_hard_tabs(cursor)
+                else:
+                    if settings.use_soft_tabs:
+                        self._indent_block_soft_tabs(cursor, settings.tab_size)
+                    else:
+                        self._indent_block_hard_tabs(cursor)
+            finally:
+                cursor.endEditBlock()
+                self.setTextCursor(cursor)
+                scrollbar.setValue(current_scroll)
+
+            event.accept()
+            return
+
+        if event.key() == Qt.Key_Backtab:  # Shift+Tab
+            cursor = self.textCursor()
+            mindspace_manager = MindspaceManager()
+            if not mindspace_manager.has_mindspace:
+                super().keyPressEvent(event)
+                return
+
+            settings = mindspace_manager.settings
+
+            scrollbar = self.verticalScrollBar()
+            current_scroll = scrollbar.value()
+            cursor.beginEditBlock()
+            try:
+                if not cursor.hasSelection():
+                    if settings.use_soft_tabs:
+                        self._outdent_single_line_soft_tabs(cursor, settings.tab_size)
+                    else:
+                        self._outdent_single_line_hard_tabs(cursor)
+                else:
+                    if settings.use_soft_tabs:
+                        self._outdent_block_soft_tabs(cursor, settings.tab_size)
+                    else:
+                        self._outdent_block_hard_tabs(cursor)
+            finally:
+                cursor.endEditBlock()
+                self.setTextCursor(cursor)
+                scrollbar.setValue(current_scroll)
 
             event.accept()
             return
