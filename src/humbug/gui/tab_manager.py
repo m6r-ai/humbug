@@ -416,8 +416,9 @@ class TabManager(QWidget):
                 self._update_tabs()
                 self.column_state_changed.emit()
 
-        # Show welcome message if no tabs remain
+        # If no tabs remain clean up the display
         if not self._tabs:
+            self.status_message.emit(StatusMessage(""))
             self._stack.setCurrentWidget(self._welcome_widget)
 
     def _find_column_for_tab(self, tab: TabBase) -> Optional[TabColumn]:
