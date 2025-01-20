@@ -35,7 +35,7 @@ exe = EXE(
     console=False,  # Set to False since this is a GUI application
     target_arch=None,
     codesign_identity=None,
-    icon=''  # Add your icon if you have one
+    entitlements_file=None
 )
 
 coll = COLLECT(
@@ -50,8 +50,12 @@ coll = COLLECT(
 )
 
 app = BUNDLE(
-    exe,
+    coll,
     name='Humbug.app',
     icon=None,  # Add path to your .icns file if you have one
-    bundle_identifier='ai.m6r.humbug'
+    bundle_identifier='ai.m6r.humbug',
+    info_plist={
+        'NSPrincipalClass': 'NSApplication',
+        'NSAppleScriptEnabled': False
+    }
 )
