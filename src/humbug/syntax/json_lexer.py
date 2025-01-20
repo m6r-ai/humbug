@@ -9,7 +9,6 @@ class JSONLexerState(LexerState):
     """
     State information for the JSON lexer.
     """
-    pass
 
 
 class JSONLexer(Lexer):
@@ -208,6 +207,7 @@ class JSONLexer(Lexer):
         Read a JSON keyword token (true, false, or null).
         """
         start = self._position
+        self._position += 1
         while (self._position < len(self._input) and
                self._is_letter(self._input[self._position])):
             self._position += 1

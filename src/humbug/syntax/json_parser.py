@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.json_lexer import JSONLexer
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -13,7 +12,6 @@ class JSONParserState(ParserState):
     """
     State information for the JSON parser.
     """
-    pass
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.JSON)
