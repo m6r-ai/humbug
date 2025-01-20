@@ -1,8 +1,8 @@
 """
-Dialog for configuring workspace-specific settings.
+Dialog for configuring mindspace-specific settings.
 
-This dialog allows users to configure workspace settings such as tab behavior and size.
-Settings are persisted to the workspace's settings.json file.
+This dialog allows users to configure mindspace settings such as tab behavior and size.
+Settings are persisted to the mindspace's settings.json file.
 """
 
 from typing import Optional
@@ -15,27 +15,27 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.workspace.workspace_settings import WorkspaceSettings
+from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 
-class WorkspaceSettingsDialog(QDialog):
-    """Dialog for editing workspace settings."""
+class MindspaceSettingsDialog(QDialog):
+    """Dialog for editing mindspace settings."""
 
-    settings_changed = Signal(WorkspaceSettings)
+    settings_changed = Signal(MindspaceSettings)
 
     def __init__(self, parent=None):
-        """Initialize the workspace settings dialog.
+        """Initialize the mindspace settings dialog.
 
         Args:
             parent: Parent widget, typically the main window.
         """
         super().__init__(parent)
-        self.setWindowTitle("Workspace Settings")
+        self.setWindowTitle("Mindspace Settings")
         self.setMinimumWidth(500)
         self.setModal(True)
 
-        self._initial_settings: Optional[WorkspaceSettings] = None
-        self._current_settings: Optional[WorkspaceSettings] = None
+        self._initial_settings: Optional[MindspaceSettings] = None
+        self._current_settings: Optional[MindspaceSettings] = None
 
         self._style_manager = StyleManager()
 
@@ -258,9 +258,9 @@ class WorkspaceSettingsDialog(QDialog):
             self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
         )
 
-    def get_settings(self) -> WorkspaceSettings:
+    def get_settings(self) -> MindspaceSettings:
         """Get the current settings from the dialog."""
-        return WorkspaceSettings(
+        return MindspaceSettings(
             use_soft_tabs=self._soft_tabs_check.isChecked(),
             tab_size=self._tab_size_spin.value(),
             font_size=self._font_size_spin.value(),
@@ -268,16 +268,16 @@ class WorkspaceSettingsDialog(QDialog):
             auto_backup_interval=self._backup_interval_spin.value()
         )
 
-    def set_settings(self, settings: WorkspaceSettings) -> None:
+    def set_settings(self, settings: MindspaceSettings) -> None:
         """Set the current settings in the dialog."""
-        self._initial_settings = WorkspaceSettings(
+        self._initial_settings = MindspaceSettings(
             use_soft_tabs=settings.use_soft_tabs,
             tab_size=settings.tab_size,
             font_size=settings.font_size,
             auto_backup=settings.auto_backup,
             auto_backup_interval=settings.auto_backup_interval
         )
-        self._current_settings = WorkspaceSettings(
+        self._current_settings = MindspaceSettings(
             use_soft_tabs=settings.use_soft_tabs,
             tab_size=settings.tab_size,
             font_size=settings.font_size,

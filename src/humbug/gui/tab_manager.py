@@ -22,7 +22,22 @@ from humbug.gui.tab_label import TabLabel
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.gui.welcome_widget import WelcomeWidget
-from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
+
+
+class TabData:
+    """Encapsulates data related to a tab."""
+    def __init__(self, tab: TabBase, title: str):
+        """
+        Initialize tab data.
+
+        Args:
+            tab: The tab widget
+            title: Initial title for the tab
+        """
+        self.tab = tab
+        self.tab_id = tab.tab_id
+        self.label = TabLabel(title, self.tab_id)
 
 
 class TabManager(QWidget):
@@ -37,7 +52,7 @@ class TabManager(QWidget):
 
         self._untitled_count = 0
         self._ai_backends = ai_backends
-        self._workspace_manager = WorkspaceManager()
+        self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("TabManager")
 
         # Create main layout
@@ -51,6 +66,7 @@ class TabManager(QWidget):
 
         # Create welcome widget
         self._welcome_widget = WelcomeWidget()
+        self._welcome_widget.file_dropped.connect(self._handle_welcome_file_drop)
         self._stack.addWidget(self._welcome_widget)
 
         # Create widget to hold columns
@@ -83,15 +99,112 @@ class TabManager(QWidget):
 
         self._handle_style_changed(self._style_manager.zoom_factor)
 
+    def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
+        """
+        Create TabData instance and connect signals.
+
+        Args:
+            tab: The tab widget to add
+            title: Initial title for the tab
+
+        Returns:
+            TabData instance for the tab
+        """
+        data = TabData(tab, title)
+        data.label.close_clicked.connect(lambda: self._close_tab_by_id(data.tab_id))
+        tab.activated.connect(lambda: self._handle_tab_activated(tab))
+        return data
+
+    def _remove_tab_from_column(self, tab: TabBase, column: TabColumn) -> None:
+        """
+        Remove a tab from a column and clean up associated data.
+
+        Args:
+            tab: Tab to remove
+            column: Column containing the tab
+        """
+        tab_id = tab.tab_id
+        tab_label = self._tab_labels.pop(tab_id)
+        del self._tabs[tab_id]
+        index = column.indexOf(tab)
+        column.removeTab(index)
+        tab_label.deleteLater()
+        tab.deleteLater()
+
+    def _add_tab_to_column(self, tab_data: TabData, column: TabColumn) -> None:
+        """
+        Add a tab to a column and set up associated data.
+
+        Args:
+            tab_data: TabData instance
+            column: Target column
+        """
+        self._tabs[tab_data.tab_id] = tab_data.tab
+        self._tab_labels[tab_data.tab_id] = tab_data.label
+
+        index = column.addTab(tab_data.tab, "")
+        column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_data.label)
+        column.setCurrentWidget(tab_data.tab)
+
+    def _move_tab_between_columns(
+        self,
+        tab: TabBase,
+        source_column: TabColumn,
+        target_column: TabColumn
+    ) -> None:
+        """
+        Move a tab from one column to another.
+
+        Args:
+            tab: Tab to move
+            source_column: Source column
+            target_column: Target column
+        """
+        # Save tab state before removal
+        tab_state = tab.get_state(True)
+        tab_id = tab.tab_id
+        tab_title = self._tab_labels[tab_id].text()
+
+        # Remove from source
+        self._remove_tab_from_column(tab, source_column)
+
+        # Create and add new tab
+        new_tab = self._restore_tab_from_state(tab_state)
+        if not new_tab:
+            return
+
+        tab_data = self._create_tab_data(new_tab, tab_title)
+        self._add_tab_to_column(tab_data, target_column)
+
+    def _handle_welcome_file_drop(self, file_path: str) -> None:
+        """Handle file drops when only welcome widget is visible."""
+        # Create first column if it doesn't exist
+        if not self._tab_columns:
+            self._create_column(0)
+
+        # Set as active column
+        self._active_column = self._tab_columns[0]
+
+        # Handle the file drop
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == '.conv':
+            conversation_tab = self.open_conversation(file_path)
+            if conversation_tab:
+                self._stack.setCurrentWidget(self._columns_widget)
+        else:
+            editor_tab = self.open_file(file_path)
+            if editor_tab:
+                self._stack.setCurrentWidget(self._columns_widget)
+
     def _handle_tab_drop(self, tab_id: str, target_column: TabColumn, target_index: int) -> None:
-        """Handle a tab being dropped into a new position.
+        """
+        Handle a tab being dropped into a new position.
 
         Args:
             tab_id: ID of the tab being moved
             target_column: Column where the tab was dropped
             target_index: Target position in the column
         """
-        # Find source column and index
         tab = self._tabs.get(tab_id)
         if not tab:
             return
@@ -107,52 +220,53 @@ class TabManager(QWidget):
             (source_index == target_index or source_index == target_index - 1)):
             return
 
-        tab_id = tab.tab_id
-        tab_state = tab.get_state(True)
-        tab_title = self._tab_labels[tab_id].text()
-
-        tab_label = self._tab_labels.pop(tab_id)
-        del self._tabs[tab_id]
-        index = source_column.indexOf(tab)
-        source_column.removeTab(index)
-        tab_label.deleteLater()
-        tab.deleteLater()
-
-        # Create appropriate tab type
-        new_tab = self._restore_tab_from_state(tab_state)
-        if not new_tab:
-            return
-
-        self._tabs[tab_id] = new_tab
-        new_tab.activated.connect(lambda: self._handle_tab_activated(new_tab))
-
-        # Create new label
-        new_tab_label = TabLabel(tab_title, tab_id)
-        new_tab_label.close_clicked.connect(lambda tid=tab_id: self._close_tab_by_id(tid))
-        self._tab_labels[tab_id] = new_tab_label
-
-        # Add to column
-        index = target_column.addTab(new_tab, "")
-        target_column.tabBar().setTabButton(index, QTabBar.LeftSide, new_tab_label)
-        target_column.setCurrentWidget(new_tab)
+        self._move_tab_between_columns(tab, source_column, target_column)
 
         # Set our new active column before we possibly delete the previous one
         self._active_column = target_column
-
-        # Did we remove the last tab from our source column?  If yes then close the column
         if source_column.count() == 0:
             column_number = self._tab_columns.index(source_column)
-            del self._tab_columns[column_number]
-            source_column.deleteLater()
-
-            # Resize splitter.  Note +1 on column count because we won't have lost the deleted column yet!
-            num_columns = len(self._tab_columns)
-            sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
-            self._column_splitter.setSizes(sizes)
+            self._remove_column_and_resize(column_number, source_column)
 
         # Update active states
         self._update_tabs()
         self.column_state_changed.emit()
+
+    def _handle_file_drop(self, file_path: str, target_column: TabColumn, target_index: int) -> None:
+        """
+        Handle a file being dropped into a column.
+
+        Args:
+            file_path: Path to the dropped file
+            target_column: Column where the file was dropped
+            target_index: Target position in the column
+        """
+        # Check file extension
+        ext = os.path.splitext(file_path)[1].lower()
+
+        # Set the target column as active
+        self._active_column = target_column
+
+        try:
+            if ext == '.conv':
+                # Open conversation file
+                conversation_tab = self.open_conversation(file_path)
+                if conversation_tab:
+                    # Move the tab to the target position if not already there
+                    current_index = target_column.indexOf(conversation_tab)
+                    if current_index != target_index:
+                        target_column.tabBar().moveTab(current_index, target_index)
+            else:
+                # Open regular file
+                editor_tab = self.open_file(file_path)
+                if editor_tab:
+                    # Move the tab to the target position if not already there
+                    current_index = target_column.indexOf(editor_tab)
+                    if current_index != target_index:
+                        target_column.tabBar().moveTab(current_index, target_index)
+
+        except (ConversationError, OSError) as e:
+            self._logger.error("Failed to open dropped file '%s': %s", file_path, str(e))
 
     def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
@@ -160,11 +274,29 @@ class TabManager(QWidget):
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
         tab_widget.tab_drop.connect(self._handle_tab_drop)
+        tab_widget.file_drop.connect(self._handle_file_drop)
 
         self._column_splitter.insertWidget(index, tab_widget)
         self._tab_columns.insert(index, tab_widget)
 
         return tab_widget
+
+    def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
+        """
+        Remove a column and resize the remaining columns.
+
+        Args:
+            column_number: Index of the column to remove
+            column: Column widget to remove
+        """
+        del self._tab_columns[column_number]
+        column.deleteLater()
+
+        # Resize splitter to evenly distribute space
+        # Note: We add 1 to column count because deletion hasn't processed yet
+        num_columns = len(self._tab_columns)
+        sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
+        self._column_splitter.setSizes(sizes)
 
     def _update_tabs(self) -> None:
         # Update current states for all tabs
@@ -239,55 +371,38 @@ class TabManager(QWidget):
             tab: The tab widget to add
             title: Initial title for the tab
         """
-        tab_id = tab.tab_id
-        self._tabs[tab_id] = tab
-
-        tab.activated.connect(lambda: self._handle_tab_activated(tab))
-
-        # Create custom tab label
-        tab_label = TabLabel(title, tab_id)
-        tab_label.close_clicked.connect(lambda: self._close_tab_by_id(tab_id))
-        self._tab_labels[tab_id] = tab_label
-
-        # Add tab with custom label to active column
-        index = self._active_column.addTab(tab, "")
-        self._active_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+        tab_data = self._create_tab_data(tab, title)
+        self._add_tab_to_column(tab_data, self._active_column)
 
         # Set initial state
         if len(self._tabs) == 1:  # If this is the first tab
-            tab_label.set_current(True)
+            tab_data.label.set_current(True)
             self._stack.setCurrentWidget(self._columns_widget)
 
-        self._active_column.setCurrentWidget(tab)
-
-    def _close_tab_by_id(self, tab_id: str) -> None:
+    def _close_tab_by_id(self, tab_id: str, force_close: bool=False) -> None:
         """
         Close a tab by its ID.
 
         Args:
             tab_id: ID of the tab to close
+            force_close: Whether to force close without checks
         """
         tab = self._tabs.get(tab_id)
         if not tab:
             return
 
         # Check if tab can be closed
-        if not tab.can_close():
+        if not force_close and not tab.can_close():
             return
+
+        tab.close()
 
         # Find which column contains the tab
         column = self._find_column_for_tab(tab)
         if not column:
             return
 
-        # Remove tab
-        tab_label = self._tab_labels.pop(tab_id)
-        del self._tabs[tab_id]
-        index = column.indexOf(tab)
-        column.removeTab(index)
-        tab_label.deleteLater()
-        tab.deleteLater()
-
+        self._remove_tab_from_column(tab, column)
         # If we closed the last tab in the column, close the column unless it's the last column
         if column.count() == 0:
             if len(self._tab_columns) > 1:
@@ -296,14 +411,14 @@ class TabManager(QWidget):
                     new_active_column = 1 if column_number == 0 else column_number - 1
                     self._active_column = self._tab_columns[new_active_column]
 
-                del self._tab_columns[column_number]
-                column.deleteLater()
+                self._remove_column_and_resize(column_number, column)
 
                 self._update_tabs()
                 self.column_state_changed.emit()
 
-        # Show welcome message if no tabs remain
+        # If no tabs remain clean up the display
         if not self._tabs:
+            self.status_message.emit(StatusMessage(""))
             self._stack.setCurrentWidget(self._welcome_widget)
 
     def _find_column_for_tab(self, tab: TabBase) -> Optional[TabColumn]:
@@ -398,35 +513,12 @@ class TabManager(QWidget):
         target_column_number = current_column_number + (0 if split_left else 1)
         target_column = self._create_column(target_column_number)
 
-        # Delete the current tab from the current column and recreate it in the new column
-        old_tab = self._get_current_tab()
-        old_tab_id = old_tab.tab_id
-        old_tab_state = old_tab.get_state(True)
-        old_tab_title = self._tab_labels[old_tab_id].text()
-
-        tab_label = self._tab_labels.pop(old_tab_id)
-        del self._tabs[old_tab_id]
-        index = current_column.indexOf(old_tab)
-        current_column.removeTab(index)
-        tab_label.deleteLater()
-        old_tab.deleteLater()
-
-        # Create appropriate tab type
-        tab = self._restore_tab_from_state(old_tab_state)
-        if not tab:
+        # Move the current tab to the new column
+        current_tab = self._get_current_tab()
+        if not current_tab:
             return
 
-        self._tabs[old_tab_id] = tab
-        tab.activated.connect(lambda: self._handle_tab_activated(tab))
-
-        # Create new label
-        tab_label = TabLabel(old_tab_title, old_tab_id)
-        tab_label.close_clicked.connect(lambda tid=old_tab_id: self._close_tab_by_id(tid))
-        self._tab_labels[old_tab_id] = tab_label
-
-        # Add to column
-        index = target_column.addTab(tab, "")
-        target_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
+        self._move_tab_between_columns(current_tab, current_column, target_column)
 
         # Resize splitter
         num_columns = len(self._tab_columns)
@@ -463,54 +555,14 @@ class TabManager(QWidget):
         target_column = self._tab_columns[target_column_number]
         current_column = self._active_column
 
-        # Record tab states and labels from current column
-        tab_states = []
-        for i in range(current_column.count()):
-            tab = current_column.widget(i)
-            tab_states.append((
-                tab.tab_id,
-                tab.get_state(True),
-                self._tab_labels[tab.tab_id].text()
-            ))
-
-        # Delete all widgets in current column
+        # Move all tabs to target column
         while current_column.count() > 0:
             tab = current_column.widget(0)
-            tab_label = self._tab_labels.pop(tab.tab_id)
-            del self._tabs[tab.tab_id]
-            current_column.removeTab(0)
-            tab_label.deleteLater()
-            tab.deleteLater()
+            self._move_tab_between_columns(tab, current_column, target_column)
 
-        # Ensure target column is active because we're about to delete the current one
         self._active_column = target_column
-
-        # Remove and delete current column widget
-        current_column.deleteLater()
-        del self._tab_columns[current_column_number]
-
-        # Recreate each tab in target column
-        for tab_id, state, title in tab_states:
-            tab = self._restore_tab_from_state(state)
-            if not tab:
-                continue
-
-            self._tabs[tab_id] = tab
-            tab.activated.connect(lambda handle_tab=tab: self._handle_tab_activated(handle_tab))
-
-            # Create new label
-            tab_label = TabLabel(title, tab_id)
-            tab_label.close_clicked.connect(lambda tid=tab_id: self._close_tab_by_id(tid))
-            self._tab_labels[tab_id] = tab_label
-
-            # Add to column
-            index = target_column.addTab(tab, "")
-            target_column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_label)
-
-        # Resize splitter.  Note +1 on column count because we won't have lost the deleted column yet!
-        num_columns = len(self._tab_columns)
-        sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
-        self._column_splitter.setSizes(sizes)
+        column_number = self._tab_columns.index(current_column)
+        self._remove_column_and_resize(column_number, current_column)
 
         # Emit signal about column state change
         self._update_tabs()
@@ -575,15 +627,15 @@ class TabManager(QWidget):
         self.add_tab(editor, os.path.basename(path))
         return editor
 
-    def new_conversation(self, workspace_path: str) -> Optional[str]:
+    def new_conversation(self, mindspace_path: str) -> Optional[str]:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
         timestamp = datetime.utcnow()
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
-        # Create path relative to workspace
+        # Create path relative to mindspace
         filename = os.path.join("conversations", f"{conversation_id}.conv")
-        full_path = os.path.join(workspace_path, filename)
+        full_path = os.path.join(mindspace_path, filename)
 
         conversation_tab = ConversationTab(
             conversation_id,
@@ -631,11 +683,7 @@ class TabManager(QWidget):
         return True
 
     async def fork_conversation(self) -> None:
-        """Fork an existing conversation into a new tab.
-
-        Args:
-            conversation_tab: The conversation tab to fork
-        """
+        """Fork an existing conversation into a new tab."""
         conversation_tab = self._get_current_tab()
         if not isinstance(conversation_tab, ConversationTab):
             return
@@ -689,7 +737,7 @@ class TabManager(QWidget):
                 state = TabState.from_dict(state_dict)
 
                 if not os.path.isabs(state.path):
-                    state.path = self._workspace_manager.get_workspace_path(state.path)
+                    state.path = self._mindspace_manager.get_mindspace_path(state.path)
 
                 tab = self._restore_tab_from_state(state)
                 if not tab:

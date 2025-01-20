@@ -167,7 +167,7 @@ class ConversationTab(TabBase):
             raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
         # Load messages into the new tab
-        forked_tab.load_message_history(messages)
+        forked_tab._load_message_history(messages)
 
         return forked_tab
 
@@ -177,23 +177,27 @@ class ConversationTab(TabBase):
         return self._timestamp
 
     def get_state(self, temp_state: bool=False) -> TabState:
-        """Get serializable state for workspace persistence.
+        """Get serializable state for mindspace persistence.
 
         Returns:
             TabState containing conversation-specific state
         """
+        metadata_state = {
+        }
+
+        if temp_state:
+            metadata_state["content"] = self._input.toPlainText()
+            metadata_state["settings"] = {
+                "model": self._settings.model,
+                "temperature": self._settings.temperature
+            }
+
         return TabState(
             type=TabType.CONVERSATION,
             tab_id=self._tab_id,
             path=self._path,
             timestamp=self._timestamp,
-            metadata={
-                "messages": [msg.to_transcript_dict() for msg in self._conversation.get_messages()],
-                "settings": {
-                    "model": self._settings.model,
-                    "temperature": self._settings.temperature
-                }
-            }
+            metadata=metadata_state
         )
 
     @classmethod
@@ -222,7 +226,7 @@ class ConversationTab(TabBase):
 
             # Create conversation tab
             conversation_tab = cls(conversation_id, path, timestamp, ai_backends, parent)
-            conversation_tab.load_message_history(transcript_data.messages)
+            conversation_tab._load_message_history(transcript_data.messages)
 
             return conversation_tab
 
@@ -267,7 +271,19 @@ class ConversationTab(TabBase):
                 raise ConversationError("Timestamp mismatch in transcript metadata")
 
             # Load the message history
-            tab.load_message_history(transcript_data.messages)
+            tab._load_message_history(transcript_data.messages)
+
+            # Restore content if specified
+            if state.metadata:
+                if "content" in state.metadata:
+                    tab._input.setPlainText(state.metadata["content"])
+
+                if "settings" in state.metadata:
+                    if "model" in state.metadata["settings"]:
+                        tab._settings.model = state.metadata["settings"]["model"]
+
+                    if "temperature" in state.metadata["settings"]:
+                        tab._settings.temperature = state.metadata["settings"]["temperature"]
 
             return tab
 
@@ -466,14 +482,23 @@ class ConversationTab(TabBase):
 
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
-        if has_selection:
-            if self._message_with_selection and self._message_with_selection != message_widget:
+        print(f"section changed {has_selection}")
+        if not has_selection:
+            if self._message_with_selection:
                 self._message_with_selection.clear_selection()
-            self._message_with_selection = message_widget
-        elif message_widget == self._message_with_selection:
-            self._message_with_selection = None
+                self._message_with_selection = None
 
-    def has_selection(self) -> bool:
+            return
+
+        if self._message_with_selection and self._message_with_selection != message_widget:
+            self._message_with_selection.clear_selection()
+
+        if (message_widget == self._input):
+            self._message_with_section = None
+        else:
+            self._message_with_selection = message_widget
+
+    def _has_selection(self) -> bool:
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
@@ -511,10 +536,6 @@ class ConversationTab(TabBase):
             50
         )
 
-    def get_input_text(self) -> str:
-        """Get the current input text."""
-        return self._input.toPlainText()
-
     def set_input_text(self, text: str):
         """Set the input text."""
         self._input.setPlainText(text)
@@ -529,7 +550,7 @@ class ConversationTab(TabBase):
         content: str,
         usage: Optional[Usage] = None,
         error: Optional[Dict] = None
-    ) -> Optional[Message]:
+    ):
         """Update the current AI response in the conversation."""
         if error:
             self._is_streaming = False
@@ -544,6 +565,7 @@ class ConversationTab(TabBase):
                 )
                 if message:
                     await self._write_transcript(message)
+
                 self._current_ai_message = None
 
             # Then add the error message
@@ -556,7 +578,7 @@ class ConversationTab(TabBase):
             self._add_message(error_message)
             asyncio.create_task(self._write_transcript(error_message))
             self._logger.warning("AI response error: %s", error_msg)
-            return error_message
+            return
 
         if not self._is_streaming:
             self._is_streaming = True
@@ -595,7 +617,7 @@ class ConversationTab(TabBase):
                 completed=(usage is not None)
             )
             if not message:
-                return None
+                return
 
         if usage:
             self._is_streaming = False
@@ -603,11 +625,11 @@ class ConversationTab(TabBase):
             self.update_status()
             self._current_ai_message = None
             await self._write_transcript(message)
-            return message
+            return
 
-        return message
+        return
 
-    def load_message_history(self, messages: List[Message]):
+    def _load_message_history(self, messages: List[Message]):
         """
         Load existing message history from transcript.
 
@@ -645,8 +667,8 @@ class ConversationTab(TabBase):
             self._scroll_to_bottom()
 
     def _sanitize_input(self, text: str) -> str:
-        """Strip control characters from input text, preserving newlines."""
-        return ''.join(char for char in text if char == '\n' or (ord(char) >= 32 and ord(char) != 127))
+        """Strip control characters from input text, preserving newlines and tabs."""
+        return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
 
     async def _process_ai_response(self, message: str):
         """Process AI response with streaming."""
@@ -668,6 +690,9 @@ class ConversationTab(TabBase):
                 )
                 self._add_message(error_message)
                 asyncio.create_task(self._write_transcript(error_message))
+
+                self._is_streaming = False
+                self._input.set_streaming(False)
                 return
 
             stream = backend.stream_message(
@@ -678,7 +703,7 @@ class ConversationTab(TabBase):
 
             async for response in stream:
                 try:
-                    message = await self.update_streaming_response(
+                    await self.update_streaming_response(
                         content=response.content,
                         usage=response.usage,
                         error=response.error
@@ -819,7 +844,7 @@ class ConversationTab(TabBase):
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
-        return self.has_selection() or (self._input.hasFocus() and self._input.textCursor().hasSelection())
+        return (self._input.hasFocus() and self._input.textCursor().hasSelection()) or self._has_selection()
 
     def copy(self):
         """Copy selected text to clipboard."""
@@ -837,12 +862,12 @@ class ConversationTab(TabBase):
         self._input.paste()
 
     def can_submit(self) -> bool:
-        has_text = bool(self.get_input_text())
+        has_text = bool(self._input.toPlainText())
         return has_text and not self._is_streaming
 
     def submit(self):
         """Submit current input text."""
-        content = self._sanitize_input(self.get_input_text().strip())
+        content = self._sanitize_input(self._input.toPlainText().strip())
         if not content:
             return
 

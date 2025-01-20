@@ -19,13 +19,14 @@ from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 # Map file extensions to programming languages
 LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.c': ProgrammingLanguage.C,
     '.cc': ProgrammingLanguage.CPP,
+    '.conv': ProgrammingLanguage.JSON,
     '.cpp': ProgrammingLanguage.CPP,
     '.css': ProgrammingLanguage.CSS,
     '.cxx': ProgrammingLanguage.CPP,
@@ -36,9 +37,13 @@ LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.htm': ProgrammingLanguage.HTML,
     '.hxx': ProgrammingLanguage.CPP,
     '.js': ProgrammingLanguage.JAVASCRIPT,
+    '.json': ProgrammingLanguage.JSON,
     '.jsx': ProgrammingLanguage.JAVASCRIPT,
+    '.kt': ProgrammingLanguage.KOTLIN,
+    '.kts': ProgrammingLanguage.KOTLIN,
     '.m6r': ProgrammingLanguage.METAPHOR,
     '.md': ProgrammingLanguage.TEXT,
+    '.move': ProgrammingLanguage.MOVE,
     '.py': ProgrammingLanguage.PYTHON,
     '.pyw': ProgrammingLanguage.PYTHON,
     '.pyi': ProgrammingLanguage.PYTHON,
@@ -69,6 +74,8 @@ class EditorTab(TabBase):
         self._current_language = ProgrammingLanguage.TEXT
         self._logger = logging.getLogger("EditorTab")
 
+        self._mindspace_manager = MindspaceManager()
+
         # Set up layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -91,20 +98,18 @@ class EditorTab(TabBase):
 
         self.update_status()
 
-        # Update auto-backup based on current workspace settings
-        workspace_manager = WorkspaceManager()
-        if workspace_manager.has_workspace:
-            settings = workspace_manager.settings
+        # Update auto-backup based on current mindspace settings
+        if self._mindspace_manager.has_mindspace:
+            settings = self._mindspace_manager.settings
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
-        # Connect to workspace settings changes
-        workspace_manager.settings_changed.connect(self._handle_workspace_settings_changed)
+        # Connect to mindspace settings changes
+        self._mindspace_manager.settings_changed.connect(self._handle_mindspace_settings_changed)
 
-    def _handle_workspace_settings_changed(self):
-        """Handle workspace settings changes."""
-        workspace_manager = WorkspaceManager()
-        if workspace_manager.has_workspace:
-            settings = workspace_manager.settings
+    def _handle_mindspace_settings_changed(self):
+        """Handle mindspace settings changes."""
+        if self._mindspace_manager.has_mindspace:
+            settings = self._mindspace_manager.settings
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
     def update_auto_backup_settings(self, enabled: bool, interval: int) -> None:
@@ -124,7 +129,7 @@ class EditorTab(TabBase):
             self._cleanup_backup_files()
 
     def get_state(self, temp_state: bool=False) -> TabState:
-        """Get serializable state for workspace persistence."""
+        """Get serializable state for mindspace persistence."""
         metadata_state = {
             "language": self._current_language.name
         }
@@ -137,6 +142,8 @@ class EditorTab(TabBase):
             tab_id=self.tab_id,
             path=self._path if self._path else f"untitled-{self._untitled_number}",
             cursor_position=self.get_cursor_position(),
+            horizontal_scroll=self._editor.horizontalScrollBar().value(),
+            vertical_scroll=self._editor.verticalScrollBar().value(),
             metadata=metadata_state
         )
 
@@ -156,18 +163,26 @@ class EditorTab(TabBase):
         else:
             tab.set_filename(state.path)
 
-        # Restore language if specified
-        if state.metadata and "language" in state.metadata:
-            language = ProgrammingLanguage[state.metadata["language"]]
-            tab._update_language(language)
+        if state.metadata:
+            # Restore language if specified
+            if "language" in state.metadata:
+                language = ProgrammingLanguage[state.metadata["language"]]
+                tab._update_language(language)
 
-        # Restore content if specified
-        if state.metadata and "content" in state.metadata:
-            tab._editor.setPlainText(state.metadata["content"])
+            # Restore content if specified
+            if "content" in state.metadata:
+                tab._editor.setPlainText(state.metadata["content"])
 
         # Restore cursor position if present
         if state.cursor_position:
             tab.set_cursor_position(state.cursor_position)
+
+        # Restore scroll poisitions if present
+        if state.horizontal_scroll:
+            tab._editor.horizontalScrollBar().setValue(state.horizontal_scroll)
+
+        if state.vertical_scroll:
+            tab._editor.verticalScrollBar().setValue(state.vertical_scroll)
 
         return tab
 
@@ -340,8 +355,7 @@ class EditorTab(TabBase):
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
 
-        workspace_manager = WorkspaceManager()
-        if workspace_manager.has_workspace and workspace_manager.settings.auto_backup:
+        if self._mindspace_manager.has_mindspace and self._mindspace_manager.settings.auto_backup:
             if is_modified and not self._auto_backup_timer.isActive():
                 self._auto_backup_timer.start()
             elif not is_modified:
@@ -365,6 +379,7 @@ class EditorTab(TabBase):
             ProgrammingLanguage.CSS: "CSS",
             ProgrammingLanguage.HTML: "HTML",
             ProgrammingLanguage.JAVASCRIPT: "JavaScript",
+            ProgrammingLanguage.JSON: "JSON",
             ProgrammingLanguage.TYPESCRIPT: "TypeScript",
             ProgrammingLanguage.PYTHON: "Python",
             ProgrammingLanguage.METAPHOR: "Metaphor",
@@ -381,16 +396,15 @@ class EditorTab(TabBase):
         if not self._is_modified:
             return
 
-        # All backups should now go in workspace .humbug/backups
-        workspace_manager = WorkspaceManager()
-        if not workspace_manager.has_workspace:
-            return  # No backups without a workspace
+        # All backups should now go in mindspace .humbug/backups
+        if not self._mindspace_manager.has_mindspace:
+            return  # No backups without a mindspace
 
-        backup_dir = workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
+        backup_dir = self._mindspace_manager.get_mindspace_path(os.path.join(".humbug", "backups"))
         os.makedirs(backup_dir, exist_ok=True)
 
         if not self._path:
-            # For untitled files, use timestamp-based backup in workspace
+            # For untitled files, use timestamp-based backup in mindspace
             prefix = f"backup-{self._untitled_number}-"
             current_time = int(time.time())
             try:
@@ -434,8 +448,7 @@ class EditorTab(TabBase):
 
     def _cleanup_backup_files(self) -> None:
         """Clean up any backup files for this editor."""
-        workspace_manager = WorkspaceManager()
-        if not workspace_manager.has_workspace:
+        if not self._mindspace_manager.has_mindspace:
             return
 
         if self._path:
@@ -448,7 +461,7 @@ class EditorTab(TabBase):
                 self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
         elif self._untitled_number:
             # Clean up backups for untitled file
-            backup_dir = workspace_manager.get_workspace_path(os.path.join(".humbug", "backups"))
+            backup_dir = self._mindspace_manager.get_mindspace_path(os.path.join(".humbug", "backups"))
             prefix = f"backup-{self._untitled_number}-"
             try:
                 for file in os.listdir(backup_dir):
@@ -477,16 +490,16 @@ class EditorTab(TabBase):
             return self.save()
 
         if result == MessageBoxButton.DISCARD:
-            # Delete any backup files when discarding changes
-            if self._auto_backup_timer.isActive():
-                self._cleanup_backup_files()
-
             return True
 
         return False
 
     def close(self) -> None:
-        pass
+        # Delete any backup files when we close
+        if not self._auto_backup_timer.isActive():
+            return
+
+        self._cleanup_backup_files()
 
     def can_save(self) -> bool:
         return self._is_modified
@@ -540,10 +553,12 @@ class EditorTab(TabBase):
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save As",
-            self._path or os.path.expanduser("~/")
+            self._path or self._mindspace_manager.file_dialog_directory
         )
         if not filename:
             return False
+
+        self._mindspace_manager.update_file_dialog_directory(filename)
 
         self._path = filename
         self._untitled_number = None

@@ -20,7 +20,11 @@ class ConversationSettings:
         "gpt-4o-mini",
         "gpt-4o",
         "o1-mini",
-        "o1-preview"
+        "o1-preview",
+
+        # Ollama models
+        "llama3.2",
+        "phi4"
     ]
 
     PROVIDER_MAP = {
@@ -32,7 +36,9 @@ class ConversationSettings:
         "gemini-1.5-pro": "google",
         "gemini-2.0-flash-exp": "google",
         "claude-3-5-haiku-20241022": "anthropic",
-        "claude-3-5-sonnet-20241022": "anthropic"
+        "claude-3-5-sonnet-20241022": "anthropic",
+        "llama3.2": "ollama",
+        "phi4": "ollama"
     }
 
     TEMPERATURE_SUPPORTED_MODELS = {
@@ -44,7 +50,9 @@ class ConversationSettings:
         "gemini-1.5-pro": True,
         "gemini-2.0-flash-exp": True,
         "claude-3-5-haiku-20241022": True,
-        "claude-3-5-sonnet-20241022": True
+        "claude-3-5-sonnet-20241022": True,
+        "llama3.2": True,
+        "phi4": True
     }
 
     MODEL_LIMITS = {
@@ -56,7 +64,9 @@ class ConversationSettings:
         "gemini-1.5-pro": {"context_window": 2097152, "max_output_tokens": 8192},
         "gemini-2.0-flash-exp": {"context_window": 1048576, "max_output_tokens": 8192},
         "claude-3-5-haiku-20241022": {"context_window": 200000, "max_output_tokens": 4096},
-        "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192}
+        "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192},
+        "llama3.2": {"context_window": 2048, "max_output_tokens": 2048},
+        "phi4": {"context_window": 2048, "max_output_tokens": 2048}
     }
 
     def __init__(self, model: str="gemini-1.5-flash", temperature: float=0.7):

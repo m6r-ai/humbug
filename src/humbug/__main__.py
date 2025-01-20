@@ -18,7 +18,10 @@ from humbug.syntax.cpp_parser import CppParser  # noqa: F401
 from humbug.syntax.css_parser import CSSParser  # noqa: F401
 from humbug.syntax.html_parser import HTMLParser  # noqa: F401
 from humbug.syntax.javascript_parser import JavaScriptParser  # noqa: F401
+from humbug.syntax.json_parser import JSONParser  # noqa: F401
+from humbug.syntax.kotlin_parser import KotlinParser  # noqa: F401
 from humbug.syntax.metaphor_parser import MetaphorParser  # noqa: F401
+from humbug.syntax.move_parser import MoveParser
 from humbug.syntax.python_parser import PythonParser  # noqa: F401
 from humbug.syntax.text_parser import TextParser  # noqa: F401
 from humbug.syntax.typescript_parser import TypeScriptParser  # noqa: F401
@@ -136,10 +139,6 @@ async def main():
     openai_key = api_keys["OPENAI_API_KEY"]
     google_key = api_keys["GOOGLE_API_KEY"]
     anthropic_key = api_keys["ANTHROPIC_API_KEY"]
-
-    if not any([openai_key, google_key, anthropic_key]):
-        print("Error: No API keys found. Please set keys in ~/.humbug/api-keys.json or environment variables")
-        return 1
 
     # Initialize components
     ai_backends = AIProvider.create_backends(openai_key, google_key, anthropic_key)

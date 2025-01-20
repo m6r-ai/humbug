@@ -52,7 +52,7 @@ class StyleManager(QObject):
             super().__init__()
             self._zoom_factor = 1.0
             self._base_font_size = self._determine_base_font_size()
-            self._workspace_font_size = None
+            self._mindspace_font_size = None
             self._initialized = True
             self._color_mode = ColorMode.DARK  # Default to dark mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
@@ -196,6 +196,10 @@ class StyleManager(QObject):
             },
 
             # Syntax highlighting
+            ColorRole.SYNTAX_ADDRESS: {
+                ColorMode.DARK: "#80e0d0",
+                ColorMode.LIGHT: "#007070"
+            },
             ColorRole.SYNTAX_BACKTICK_CODE: {
                 ColorMode.DARK: "#8080f0",
                 ColorMode.LIGHT: "#3030c0"
@@ -253,8 +257,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a09040"
             },
             ColorRole.SYNTAX_NUMBER: {
-                ColorMode.DARK: "#c08040",
-                ColorMode.LIGHT: "#804000"
+                ColorMode.DARK: "#88d048",
+                ColorMode.LIGHT: "#508020"
             },
             ColorRole.SYNTAX_OPERATOR: {
                 ColorMode.DARK: "#c0c0c0",
@@ -269,18 +273,23 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a04020"
             },
             ColorRole.SYNTAX_STRING: {
-                ColorMode.DARK: "#f06060",
-                ColorMode.LIGHT: "#c04040"
-            },
+                ColorMode.DARK: "#c07040",
+                ColorMode.LIGHT: "#803018"
+             },
             ColorRole.SYNTAX_TEXT: {
                 ColorMode.DARK: "#c8c8c8",
                 ColorMode.LIGHT: "#484848"
+            },
+            ColorRole.SYNTAX_TYPE: {
+                ColorMode.DARK: "#e0a0ff",
+                ColorMode.LIGHT: "#8000c0"
             }
         }
 
     def _initialize_highlights(self):
         # Mapping from token type to colour
         colour_mapping = {
+            "ADDRESS": ColorRole.SYNTAX_ADDRESS,
             "BACKTICK_CODE": ColorRole.SYNTAX_BACKTICK_CODE,
             "CODE": ColorRole. SYNTAX_CODE,
             "COMMENT": ColorRole.SYNTAX_COMMENT,
@@ -301,6 +310,7 @@ class StyleManager(QObject):
             "REGEXP": ColorRole.SYNTAX_REGEXP,
             "STRING": ColorRole.SYNTAX_STRING,
             "TEXT": ColorRole.SYNTAX_TEXT,
+            "TYPE": ColorRole.SYNTAX_TYPE,
             "WHITESPACE": ColorRole.SYNTAX_TEXT
         }
 
@@ -429,28 +439,28 @@ class StyleManager(QObject):
             # Right-pointing arrow
             write_icon(f'arrow-right-{suffix}.svg', f'''
                 <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M2,1 L4,3 L2,5"/>
+                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M2.25,1.5 L3.75,3 L2.25,4.5"/>
                 </svg>
             ''')
 
             # Left-pointing arrow
             write_icon(f'arrow-left-{suffix}.svg', f'''
                 <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M4,1 L2,3 L4,5"/>
+                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M3.75,1.5 L2.25,3 L3.75,4.5"/>
                 </svg>
             ''')
 
             # Up-pointing arrow
             write_icon(f'arrow-up-{suffix}.svg', f'''
                 <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1,4 L3,2 L5,4"/>
+                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1.5,3.75 L3,2.25 L4.5,3.75"/>
                 </svg>
             ''')
 
             # Down-pointing arrow
             write_icon(f'arrow-down-{suffix}.svg', f'''
                 <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1,2 L3,4 L5,2"/>
+                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1.5,2.25 L3,3.75 L4.5,2.25"/>
                 </svg>
             ''')
 
@@ -611,13 +621,15 @@ class StyleManager(QObject):
     @property
     def base_font_size(self) -> float:
         """Get the base font size for the current system."""
-        return self._workspace_font_size or self._base_font_size
+        return self._mindspace_font_size or self._base_font_size
 
-    def set_workspace_font_size(self, size: Optional[float]) -> None:
-        """Set workspace-specific font size override."""
-        if size != self._workspace_font_size:
-            self._workspace_font_size = size
-            self.style_changed.emit(self._zoom_factor)
+    def set_mindspace_font_size(self, size: Optional[float]) -> None:
+        """Set mindspace-specific font size override."""
+        if size != self._mindspace_font_size:
+            self._mindspace_font_size = size
+
+            if size:
+                self.style_changed.emit(self._zoom_factor)
 
     @property
     def color_mode(self) -> ColorMode:

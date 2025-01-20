@@ -4,7 +4,19 @@ Context: Capabilities
     Navigation is done using a keyboard and mouse.
 
     Context: Version
-        This is version 0.2 of the application.
+        This is version 0.3 of the application.
+
+    Context: General concepts
+        The application is designed to allow a user to create and manage projects that interact with AI backend
+        systems.  Each project is called a "mindspace", and represents the same sort of concept as a workspace in
+        a developer tool.
+
+        Mindspaces comprise contextual information about the project.  This could be documentation, source code,
+        diagrams, etc.
+
+        The user is able to interact with the mindspace via a GUI application that runs on their local computer.
+
+        The application provides means for both the user and for AI assistants to work on the project contents.
 
     Context: Application window
         The main window is divided into two primary regions: a file tree view on the left side, and a tabbed
@@ -48,26 +60,41 @@ Context: Capabilities
                 adjacent column, with all tabs moving to that column and the current column being closed.
 
             Context: Column persistence
-                The column layout is persisted with the workspace.
+                The column layout is persisted with the mindspace.
 
-                Each tab's column position is restored when reopening a workspace.
+                Each tab's column position is restored when reopening a mindspace.
 
                 Column sizes are preserved between sessions.
 
         Context: File tree view
-            The file tree displays the contents of the current workspace:
+            The file tree displays the contents of the current mindspace:
 
-            - Shows all files and folders in the workspace directory
+            - Shows all files and folders in the mindspace directory
             - Excludes the ".humbug" directory and other hidden files/folders
             - Directories are shown before files in the tree
             - Files and directories are sorted alphabetically within their sections
             - The tree supports keyboard navigation using arrow keys
-            - Double-clicking or pressing Enter on a file opens it in a new editor tab
+            - Double-clicking or pressing Enter on a file opens it in a new editor tab, unless the file
+              is a conversation file ("*.conv") in which case it is opened as a new conversation.
+            - Dragging a file into the tab column view opens it in a new editor tab, unless the file is
+              a conversation file ("*.conv") in which case it is opened as a new conversation.
             - If the file is already open, its tab becomes active instead
             - Directory nodes can be expanded/collapsed using arrow keys or mouse
             - Initial view is set to 30% of the window width, but can be resized
             - Styling matches the current application theme (light/dark mode)
             - The tree view updates automatically when files are added or removed
+
+            Context: File/directory mouse-over
+                If the user mouses over a file or directory item then this will pop open a tooltip that
+                will display the full path name of the item moused-over.
+
+            Context: File deletion
+                If the user clicks the right mouse button while a file is highlighted then they will be
+                given a pop-up menu.  If they select "Delete File" then the system will confirm they
+                want to delete it via a message box.  The message box will warn that deleting the file
+                will also close any tabs based on the file and will discard any unsaved changes.  If the
+                user agrees then the tabs will be closed and the file deleted.  If the user does not
+                agree then the action will be cancelled.
 
             Context: File tree styling
                 The file tree view must maintain consistent styling:
@@ -221,13 +248,13 @@ Context: Capabilities
                             - Page Up/Down: Scroll by viewport height
 
                     Context: Tab key operations
-                        The Tab key indents one or more lines of code.  If the workspace is configured to use not use soft
-                        tabs then indenting is by one tab character.  If the workspace is configured to use soft tabs then
+                        The Tab key indents one or more lines of code.  If the mindspace is configured to use not use soft
+                        tabs then indenting is by one tab character.  If the mindspace is configured to use soft tabs then
                         indenting is by "tabSize" spaces.
 
-                        The Shift+Tab key combination key outdents one or more lines of code.  If the workspace is configured
+                        The Shift+Tab key combination key outdents one or more lines of code.  If the mindspace is configured
                         to use not use soft tabs then outdenting is by one tab character, unless there are no leading tab
-                        characters in which case no outdenting occurs.  If the workspace is configured to use soft tabs then
+                        characters in which case no outdenting occurs.  If the mindspace is configured to use soft tabs then
                         outdenting is by "tabSize" spaces, unless there are not enough leading spaces, in which case all
                         available leading spaces will be removed.
 
@@ -279,6 +306,7 @@ Context: Capabilities
                     - CSS
                     - HTML
                     - JavaScript
+                    - Kotlin
                     - Metaphor
                     - Python
                     - TypeScript
@@ -307,76 +335,18 @@ Context: Capabilities
                 - Button padding of 6px
                 - 4px margin between buttons
 
-    Context: Workspace structure
-        A workspace represents a project-specific environment containing its own settings and state.
+    Context: Mindspace structure
+        A mindspace represents a project-specific environment containing its own settings and state.
 
-        Every workspace is identified by a ".humbug" directory within the project directory.
+        Every mindspace is identified by a ".humbug" directory within the project directory.
 
-        The workspace ".humbug" directory contains:
+        The mindspace ".humbug" directory contains:
 
-        - settings.json: Project-specific configuration
+        - settings.json: Mindspace-specific configuration
         - session.json: State of active elements
+        - directories.json: Previously used directory paths
 
-        Context: Settings file
-            The settings.json file contains workspace-specific configuration:
-
-            ```json
-            {
-                "editor": {
-                    "useSoftTabs": true,
-                    "tabSize": 4,
-                    "fontSize": 12
-                }
-            }
-            ```
-
-            The application validates this file on workspace load:
-
-            - useSoftTabs must be boolean
-            - tabSize must be positive integer
-
-            If validation fails:
-
-            - Show error dialog with specific issues
-            - Use defaults: soft tabs (true) and 4 spaces
-            - Continue loading workspace
-
-        Context: Recents file
-            The session.json file tracks workspace state for restoration:
-
-            ```json
-            {
-                "tabs": [
-                    {
-                        "type": "conversation",
-                        "path": "conversations/2024-01-03-12-34-56-789.conv"
-                    },
-                    {
-                        "type": "editor",
-                        "path": "src/main.py",
-                        "cursorPosition": {
-                            "line": 10,
-                            "column": 15
-                        }
-                    }
-                ]
-            }
-            ```
-
-            The file is:
-
-            - Read on workspace load to restore state
-            - Updated when workspace closes
-            - Updated when application exits
-
-            During restoration:
-
-            - Attempt to restore each element
-            - Skip elements that cannot be restored
-            - Continue with remaining elements
-            - No error shown for skipped elements
-
-        Context: Workspace settings
+        Context: Mindspace settings
             As an engineer maintaining the application, I want to ensure settings are documented so I can understand
             all configuration options.
 
@@ -417,35 +387,66 @@ Context: Capabilities
                         Default interval is 300 seconds (5 minutes).
 
                     Context: Backup location
-                        For untitled files, backups are stored in the workspace ".humbug/backups" directory with timestamp.
+                        For untitled files, backups are stored in the mindspace ".humbug/backups" directory with timestamp.
 
                         For saved files, backups are stored alongside the original with ".backup" extension.
 
                     Context: Backup behavior
                         Backups only occur when:
 
-                        - Auto backup is enabled in workspace settings
+                        - Auto backup is enabled in mindspace settings
                         - The file has unsaved changes
                         - The specified backup interval has elapsed since last backup
 
                         Backups do not replace the original file and are preserved until the file is saved.
 
+        Context: Settings file
+            The settings.json file contains mindspace-specific configuration.  The application validates this file
+            on mindspace load.
+
+            If validation fails:
+
+            - Show error dialog with specific issues
+            - Use defaults: soft tabs (true) and 4 spaces
+            - Continue loading mindspace
+
+        Context: Session file
+            The session.json file tracks mindspace state for restoration.
+
+            The file is:
+
+            - Read on mindspace load to restore state
+            - Updated when mindspace closes
+            - Updated when application exits
+
+            During restoration:
+
+            - Attempt to restore each element
+            - Skip elements that cannot be restored
+            - Continue with remaining elements
+            - No error shown for skipped elements
+
+        Context: Directories file
+            The directories.json file tracks the previously used directories for files and
+            conversations.  This ensures the user gets the best experience when they want to
+            interact with multiple files in the same place.
+
     Context: Home directory configuration
         The application maintains a ".humbug" directory in the user's home directory.
 
-        This contains workspace.json tracking the last open workspace:
+        This contains "mindspace.json" tracking the last open mindspace:
 
         ```json
         {
-            "lastWorkspace": "/path/to/project/.humbug"
+            "lastMindspace": "/path/to/project/.humbug"
         }
         ```
 
-        This workspace is restored on application startup if:
+        This mindspace is restored on application startup if:
 
-        - The workspace path exists
-        - The workspace is accessible
-        - The workspace contains valid settings.json
+        - The mindspace path exists
+        - The mindspace is accessible
+        - The mindspace contains valid settings.json
 
         Context: API key configuration
             The application supports loading API keys from both environment variables and a configuration file.
@@ -494,17 +495,15 @@ Context: Capabilities
                     - Contains invalid JSON: Log error and raise exception
                     - Has permission issues: Log error and fall back to environment variables
 
-                    The application requires at least one valid API key to start.
-
-    Context: Workspace operations
+    Context: Mindspace operations
         Context: File tree interaction
-            When a workspace is opened:
+            When a mindspace is opened:
 
-            - The file tree root is set to the workspace directory
+            - The file tree root is set to the mindspace directory
             - The tree expands to show first level of contents
             - Previous expansion state is not preserved
 
-            When a workspace is closed:
+            When a mindspace is closed:
 
             - The file tree is cleared
 
@@ -512,11 +511,11 @@ Context: Capabilities
 
             - Display filtering to hide .humbug and hidden files
             - Automatic refresh when files change on disk
-            - Files opened through the tree are tracked in workspace state
-            - Path handling for both absolute and workspace-relative paths
+            - Files opened through the tree are tracked in mindspace state
+            - Path handling for both absolute and mindspace-relative paths
 
-        Context: Creating workspaces
-            When creating a new workspace:
+        Context: Creating mindspaces
+            When creating a new mindspace:
 
             - Show directory selection dialog
             - Validate no existing ".humbug" directory
@@ -525,59 +524,59 @@ Context: Capabilities
             - Create empty session.json
             - Show error if creation fails
 
-        Context: Opening workspaces
-            When opening a workspace:
+        Context: Opening mindspaces
+            When opening a mindspace:
 
             - Show directory selection dialog
             - Filter for directories with ".humbug" subdirectory
-            - Close current workspace if one exists
-            - Load selected workspace
-            - Restore workspace state
+            - Close current mindspace if one exists
+            - Load selected mindspace
+            - Restore mindspace state
             - Update home directory tracking
 
-        Context: Closing workspaces
-            When closing a workspace:
+        Context: Closing mindspaces
+            When closing a mindspace:
 
             - Save current state to session.json
-            - Close all workspace elements
-            - Clear workspace state
+            - Close all mindspace elements
+            - Clear mindspace state
             - Update home directory tracking
 
     Context: State handling
-        Context: Workspace management
-            The application requires an active workspace for most operations:
+        Context: Mindspace management
+            The application requires an active mindspace for most operations:
 
-            - Conversations are stored within the workspace
-            - Editor files are opened relative to workspace
-            - Settings are loaded from workspace
-            - Application state persists in workspace
+            - Conversations are stored within the mindspace
+            - Editor files are opened relative to mindspace
+            - Settings are loaded from mindspace
+            - Application state persists in mindspace
 
-            Without an active workspace:
+            Without an active mindspace:
 
             - New conversation operations disabled
             - File operations disabled
-            - Only workspace creation/open enabled
-            - Welcome message displays workspace instructions
+            - Only mindspace creation/open enabled
+            - Welcome message displays mindspace instructions
 
             On startup:
 
-            1. Check home directory for last workspace
+            1. Check home directory for last mindspace
             2. If found, attempt to restore.  If any previous tabs cannot be restored then ignore them.
-            3. If restore fails, start without workspace
-            4. Show welcome with workspace options
+            3. If restore fails, start without mindspace
+            4. Show welcome with mindspace options
 
-            On workspace change:
+            On mindspace change:
 
-            1. Save current workspace state
+            1. Save current mindspace state
             2. Close all active elements
-            3. Load new workspace settings
-            4. Restore workspace elements
+            3. Load new mindspace settings
+            4. Restore mindspace elements
             5. Update home directory tracking
 
         Context: File tree state
             The file tree maintains a visual state that includes:
 
-            - Current workspace root directory
+            - Current mindspace root directory
             - Expanded/collapsed state of directories
             - Selected item (if any)
             - Column widths and sorting order
@@ -586,7 +585,7 @@ Context: Capabilities
 
             Files opened through the tree are tracked in:
 
-            - The workspace recents file for persistence
+            - The mindspace sessions file for persistence
             - Active tab management for the current session
 
     Context: Menus
@@ -612,8 +611,8 @@ Context: Capabilities
         Context: File
             The "File" menu handles new files and tabs.  When clicked it contains the following:
 
-            Context: New Workspace
-                The "New Workspace" menu item creates a new workspace:
+            Context: New Mindspace
+                The "New Mindspace" menu item creates a new mindspace:
 
                 - Shows directory selection dialog
                 - Creates ".humbug" directory and files
@@ -627,7 +626,7 @@ Context: Capabilities
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+N" for Windows).
 
-                This option is only valid if a workspace is open.
+                This option is only valid if a mindspace is open.
 
             Context: New Metaphor Conversation
                 The "New Metaphor Conversation" menu item will create new conversation tab based on a
@@ -651,18 +650,18 @@ Context: Capabilities
 
                 This will be matched with a keyboard shortcut "Ctrl+N".
 
-                This option is only valid if a workspace is open.
+                This option is only valid if a mindspace is open.
 
             Context: Separator
                 There will be a horizontal Separator
 
-            Context: Open Workspace
-                The "Open Workspace" menu item opens an existing workspace:
+            Context: Open Mindspace
+                The "Open Mindspace" menu item opens an existing mindspace:
 
                 - Shows directory selection dialog
                 - Filters for ".humbug" directories
-                - Closes current workspace
-                - Opens selected workspace
+                - Closes current mindspace
+                - Opens selected mindspace
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+O" for Windows).
 
@@ -680,7 +679,7 @@ Context: Capabilities
 
                 This will be matched with a keyboard shortcut "Ctrl+Shift+O".
 
-                This option is only valid if a workspace is open.
+                This option is only valid if a mindspace is open.
 
             Context: Open File
                 The "Open File..." menu item will show a file selection dialog allowing the user to open
@@ -688,7 +687,7 @@ Context: Capabilities
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+O" for Windows).
 
-                This option is only valid if a workspace is open.
+                This option is only valid if a mindspace is open.
 
             Context: Separator
                 There will be a horizontal Separator
@@ -721,15 +720,15 @@ Context: Capabilities
             Context: Separator
                 There will be a horizontal Separator
 
-            Context: Close Workspace
-                The "Close Workspace" menu item closes current workspace:
+            Context: Close Mindspace
+                The "Close Mindspace" menu item closes current mindspace:
 
                 - Saves state to session.json
-                - Closes all workspace elements
+                - Closes all mindspace elements
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+W" for Windows).
 
-                This option is only valid if a workspace is open.
+                This option is only valid if a mindspace is open.
 
             Context: Close Tab
                 The "Close Tab" menu item with close the current tab, if a tab is active.
@@ -791,8 +790,8 @@ Context: Capabilities
             Context: Separator
                 There will be a horizontal Separator
 
-            Context: Workspace Settings
-                The "Workspace Settings" menu item will support setting the current workspace's settings.
+            Context: Mindspace Settings
+                The "Mindspace Settings" menu item will support setting the current mindspace's settings.
 
                 This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Alt+," for Windows).
 
@@ -1078,7 +1077,7 @@ Context: Capabilities
         mm, dd, hh, mm, ss, ttt (year, numeric month, day-of-month, hours, minutes, seconds, and thousandths of
         seconds respectively).
 
-        Transcript files will be written to a "conversations" directory of the current workspace directory.  If this
+        Transcript files will be written to a "conversations" directory of the current mindspace directory.  If this
         does not exist then the application should create it.
 
         On closing a conversation tab the matching file must be fully closed.
@@ -1191,6 +1190,8 @@ Context: Capabilities
         - "gemini-2.0-flash-exp": Google Gemini 2.0 Flash experimental model
         - "claude-3-5-haiku-20241022": Anthropic Claude 3.5 Haiku model (default for Anthropic)
         - "claude-3-5-sonnet-20241022": Anthropic Claude 3.5 Sonnet model
+        - "llama3.2": Ollama model
+        - "phi4": Ollama model
 
         Context: Model providers
             Models are provided by different AI services:
@@ -1198,6 +1199,7 @@ Context: Capabilities
             - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"
             - Google models: "gemini-1.5-flash", "gemini-1.5-pro"
             - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"
+            - Ollama models: "llama3.2", "phi4"
 
             The AI model is configurable via the settings dialog.  If Google's model is available then we default
             to it, then to Anthropic, and finally OpenAI.
@@ -1221,6 +1223,8 @@ Context: Capabilities
         - gemini-2.0-flash-exp: Supports temperature 0.0-1.0
         - claude-3-5-haiku-20241022: Supports temperature 0.0-1.0
         - claude-3-5-sonnet-20241022: Supports temperature 0.0-1.0
+        - llama3.2: Supports temperature 0.0-1.0
+        - phi4: Supports temperature 0.0-1.0
 
         Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
 

@@ -5,7 +5,7 @@ from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
 from humbug.gui.color_role import ColorRole
 from humbug.gui.line_number_area import LineNumberArea
 from humbug.gui.style_manager import StyleManager
-from humbug.workspace.workspace_manager import WorkspaceManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class EditorTextEdit(QPlainTextEdit):
@@ -153,9 +153,13 @@ class EditorTextEdit(QPlainTextEdit):
 
         start += tab_size
         while cursor.position() <= end - end_offs:
-            cursor.insertText(" " * tab_size)
-            end += tab_size
-            cursor.movePosition(QTextCursor.NextBlock)
+            if not cursor.atBlockEnd():
+                cursor.insertText(" " * tab_size)
+                end += tab_size
+
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                # We hit the end of the file
+                break
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -183,9 +187,13 @@ class EditorTextEdit(QPlainTextEdit):
 
         start += 1
         while cursor.position() <= end - end_offs:
-            cursor.insertText("\t")
-            end += 1
-            cursor.movePosition(QTextCursor.NextBlock)
+            if not cursor.atBlockEnd():
+                cursor.insertText("\t")
+                end += 1
+
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                # We hit the end of the file
+                break
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -266,7 +274,9 @@ class EditorTextEdit(QPlainTextEdit):
                 deletes_needed -= 1
                 end -= 1
 
-            cursor.movePosition(QTextCursor.NextBlock)
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                # We hit the end of the block
+                break
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -304,7 +314,9 @@ class EditorTextEdit(QPlainTextEdit):
                 cursor.deleteChar()
                 end -= 1
 
-            cursor.movePosition(QTextCursor.NextBlock)
+            if not cursor.movePosition(QTextCursor.NextBlock):
+                # We hit the end of the block
+                break
 
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
@@ -316,15 +328,29 @@ class EditorTextEdit(QPlainTextEdit):
         Args:
             event: The key event to handle
         """
-        workspace_manager = WorkspaceManager()
-        if not workspace_manager.has_workspace:
-            super().keyPressEvent(event)
+        if event.key() == Qt.Key_Home:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.StartOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
             return
 
-        settings = workspace_manager.settings
-        cursor = self.textCursor()
+        if event.key() == Qt.Key_End:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.EndOfLine)
+            self.setTextCursor(cursor)
+            event.accept()
+            return
 
         if event.key() == Qt.Key_Tab:
+            cursor = self.textCursor()
+            mindspace_manager = MindspaceManager()
+            if not mindspace_manager.has_mindspace:
+                super().keyPressEvent(event)
+                return
+
+            settings = mindspace_manager.settings
+
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
             cursor.beginEditBlock()
@@ -348,6 +374,14 @@ class EditorTextEdit(QPlainTextEdit):
             return
 
         if event.key() == Qt.Key_Backtab:  # Shift+Tab
+            cursor = self.textCursor()
+            mindspace_manager = MindspaceManager()
+            if not mindspace_manager.has_mindspace:
+                super().keyPressEvent(event)
+                return
+
+            settings = mindspace_manager.settings
+
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
             cursor.beginEditBlock()
@@ -368,20 +402,6 @@ class EditorTextEdit(QPlainTextEdit):
                 self.setTextCursor(cursor)
                 scrollbar.setValue(current_scroll)
 
-            event.accept()
-            return
-
-        if event.key() == Qt.Key_Home:
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.StartOfLine)
-            self.setTextCursor(cursor)
-            event.accept()
-            return
-
-        if event.key() == Qt.Key_End:
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.EndOfLine)
-            self.setTextCursor(cursor)
             event.accept()
             return
 

@@ -25,10 +25,10 @@ from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
-from humbug.gui.workspace_settings_dialog import WorkspaceSettingsDialog
-from humbug.gui.workspace_file_tree import WorkspaceFileTree
-from humbug.workspace.workspace_manager import WorkspaceManager
-from humbug.workspace.workspace_error import WorkspaceError, WorkspaceExistsError
+from humbug.gui.mindspace_settings_dialog import MindspaceSettingsDialog
+from humbug.gui.mindspace_file_tree import MindspaceFileTree
+from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 
 
 class MainWindow(QMainWindow):
@@ -50,9 +50,9 @@ class MainWindow(QMainWindow):
         self._quit_action.triggered.connect(self.close)
 
         # File menu actions
-        self._new_workspace_action = QAction("New Workspace", self)
-        self._new_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
-        self._new_workspace_action.triggered.connect(self._new_workspace)
+        self._new_mindspace_action = QAction("New Mindspace", self)
+        self._new_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
+        self._new_mindspace_action.triggered.connect(self._new_mindspace)
 
         self._new_conv_action = QAction("New Conversation", self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
@@ -66,9 +66,9 @@ class MainWindow(QMainWindow):
         self._new_file_action.setShortcut(QKeySequence.New)
         self._new_file_action.triggered.connect(self._new_file)
 
-        self._open_workspace_action = QAction("Open Workspace", self)
-        self._open_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
-        self._open_workspace_action.triggered.connect(self._open_workspace)
+        self._open_mindspace_action = QAction("Open Mindspace", self)
+        self._open_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
+        self._open_mindspace_action.triggered.connect(self._open_mindspace)
 
         self._open_conv_action = QAction("Open Conversation...", self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
@@ -94,9 +94,9 @@ class MainWindow(QMainWindow):
         self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
         self._close_tab_action.triggered.connect(self._close_tab)
 
-        self._close_workspace_action = QAction("Close Workspace", self)
-        self._close_workspace_action.setShortcut(QKeySequence("Ctrl+Alt+W"))
-        self._close_workspace_action.triggered.connect(self._close_workspace)
+        self._close_mindspace_action = QAction("Close Mindspace", self)
+        self._close_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+W"))
+        self._close_mindspace_action.triggered.connect(self._close_mindspace)
 
         # Edit menu actions
         self._submit_message_action = QAction("Submit Message", self)
@@ -123,9 +123,9 @@ class MainWindow(QMainWindow):
         self._paste_action.setShortcut(QKeySequence("Ctrl+V"))
         self._paste_action.triggered.connect(self._paste)
 
-        self._workspace_settings_action = QAction("Workspace Settings", self)
-        self._workspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
-        self._workspace_settings_action.triggered.connect(self._show_workspace_settings_dialog)
+        self._mindspace_settings_action = QAction("Mindspace Settings", self)
+        self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
+        self._mindspace_settings_action.triggered.connect(self._show_mindspace_settings_dialog)
 
         self._conv_settings_action = QAction("Conversation Settings", self)
         self._conv_settings_action.setShortcut(QKeySequence("Ctrl+,"))
@@ -180,12 +180,12 @@ class MainWindow(QMainWindow):
 
         # File menu
         file_menu = self._menu_bar.addMenu("&File")
-        file_menu.addAction(self._new_workspace_action)
+        file_menu.addAction(self._new_mindspace_action)
         file_menu.addAction(self._new_conv_action)
         file_menu.addAction(self._new_metaphor_conv_action)
         file_menu.addAction(self._new_file_action)
         file_menu.addSeparator()
-        file_menu.addAction(self._open_workspace_action)
+        file_menu.addAction(self._open_mindspace_action)
         file_menu.addAction(self._open_conv_action)
         file_menu.addAction(self._open_file_action)
         file_menu.addSeparator()
@@ -194,7 +194,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self._save_action)
         file_menu.addAction(self._save_as_action)
         file_menu.addSeparator()
-        file_menu.addAction(self._close_workspace_action)
+        file_menu.addAction(self._close_mindspace_action)
         file_menu.addAction(self._close_tab_action)
 
         # Edit menu
@@ -208,7 +208,7 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self._copy_action)
         edit_menu.addAction(self._paste_action)
         edit_menu.addSeparator()
-        edit_menu.addAction(self._workspace_settings_action)
+        edit_menu.addAction(self._mindspace_settings_action)
         edit_menu.addAction(self._conv_settings_action)
 
         # View menu
@@ -226,7 +226,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self._merge_column_right_action)
 
         self.setWindowTitle("Humbug")
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(1024, 600)
 
         # Main widget and layout
         main_widget = QWidget()
@@ -240,8 +240,9 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._splitter)
 
         # Create and add file tree
-        self._file_tree = WorkspaceFileTree(self)
+        self._file_tree = MindspaceFileTree(self)
         self._file_tree.file_activated.connect(self._handle_file_activation)
+        self._file_tree.file_deleted.connect(self._handle_file_deletion)
         self._splitter.addWidget(self._file_tree)
 
         # Create tab manager in splitter
@@ -281,18 +282,17 @@ class MainWindow(QMainWindow):
 
         self.setStatusBar(self._status_bar)
         self._tab_manager.column_state_changed.connect(self._handle_column_state_changed)
+        self._tab_manager.status_message.connect(self._handle_status_message)
 
         self._handle_style_changed()
 
-        self._workspace_manager = WorkspaceManager()
-        self._restore_last_workspace()
-
-        self._tab_manager.status_message.connect(self._handle_status_message)
+        self._mindspace_manager = MindspaceManager()
+        self._restore_last_mindspace()
 
     def _handle_column_state_changed(self):
         """Handle column state changes from tab manager."""
-        # Save workspace state when column configuration changes
-        self._save_workspace_state()
+        # Save mindspace state when column configuration changes
+        self._save_mindspace_state()
 
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
@@ -300,134 +300,134 @@ class MainWindow(QMainWindow):
         if message.timeout:
             QTimer.singleShot(message.timeout, self._status_message_label.clear)
 
-    def _restore_last_workspace(self):
-        """Restore last workspace on startup if available."""
+    def _restore_last_mindspace(self):
+        """Restore last mindspace on startup if available."""
         try:
-            with open(os.path.expanduser("~/.humbug/workspace.json"), encoding='utf-8') as f:
+            with open(os.path.expanduser("~/.humbug/mindspace.json"), encoding='utf-8') as f:
                 data = json.load(f)
-                workspace_path = data.get("lastWorkspace")
-                if workspace_path and os.path.exists(workspace_path):
+                mindspace_path = data.get("lastMindspace")
+                if mindspace_path and os.path.exists(mindspace_path):
                     try:
-                        self._workspace_manager.open_workspace(workspace_path)
-                        self._file_tree.set_workspace(workspace_path)
-                        self._style_manager.set_workspace_font_size(self._workspace_manager.settings.font_size)
-                        self._restore_workspace_state()
-                    except WorkspaceError as e:
-                        self._logger.error("Failed to restore workspace: %s", str(e))
+                        self._mindspace_manager.open_mindspace(mindspace_path)
+                        self._file_tree.set_mindspace(mindspace_path)
+                        self._style_manager.set_mindspace_font_size(self._mindspace_manager.settings.font_size)
+                        self._restore_mindspace_state()
+                    except MindspaceError as e:
+                        self._logger.error("Failed to restore mindspace: %s", str(e))
                         # Don't show error dialog on startup, just log it
         except (FileNotFoundError, json.JSONDecodeError):
             pass
 
-    def _new_workspace(self):
+    def _new_mindspace(self):
         self._menu_timer.stop()
         dir_path = QFileDialog.getExistingDirectory(
-            self, "Create New Workspace"
+            self, "Create New Mindspace"
         )
         self._menu_timer.start()
         if not dir_path:
             return
 
         try:
-            self._workspace_manager.create_workspace(dir_path)
-        except WorkspaceExistsError:
+            self._mindspace_manager.create_mindspace(dir_path)
+        except MindspaceExistsError:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Workspace Error",
-                "Workspace already exists in selected directory."
+                "Mindspace Error",
+                "Mindspace already exists in selected directory."
             )
             return
-        except WorkspaceError as e:
+        except MindspaceError as e:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Workspace Error",
-                f"Failed to create workspace: {str(e)}"
+                "Mindspace Error",
+                f"Failed to create mindspace: {str(e)}"
             )
             return
 
-        self._open_workspace_path(dir_path)
+        self._open_mindspace_path(dir_path)
 
-    def _open_workspace(self):
-        """Open a new workspace."""
+    def _open_mindspace(self):
+        """Open a new mindspace."""
         self._menu_timer.stop()
-        dir_path = QFileDialog.getExistingDirectory(self, "Open Workspace")
+        dir_path = QFileDialog.getExistingDirectory(self, "Open Mindspace")
         self._menu_timer.start()
         if not dir_path:
             return
 
-        self._open_workspace_path(dir_path)
+        self._open_mindspace_path(dir_path)
 
-    def _open_workspace_path(self, path: str) -> None:
-        # If we're switching workspaces, save the current one first
-        if self._workspace_manager.has_workspace:
-            self._save_workspace_state()
+    def _open_mindspace_path(self, path: str) -> None:
+        # If we're switching mindspaces, save the current one first
+        if self._mindspace_manager.has_mindspace:
+            self._save_mindspace_state()
             self._close_all_tabs()
-            self._style_manager.set_workspace_font_size(None)
-            self._workspace_manager.close_workspace()
+            self._style_manager.set_mindspace_font_size(None)
+            self._mindspace_manager.close_mindspace()
 
-        # Open the new workspace
+        # Open the new mindspace
         try:
-            self._workspace_manager.open_workspace(path)
-            self._file_tree.set_workspace(path)
-            self._style_manager.set_workspace_font_size(self._workspace_manager.settings.font_size)
-        except WorkspaceError as e:
+            self._mindspace_manager.open_mindspace(path)
+            self._file_tree.set_mindspace(path)
+            self._style_manager.set_mindspace_font_size(self._mindspace_manager.settings.font_size)
+        except MindspaceError as e:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Workspace Error",
-                f"Failed to open workspace: {str(e)}"
+                "Mindspace Error",
+                f"Failed to open mindspace: {str(e)}"
             )
             return
 
-        # Restore the state of the newly opened workspace
-        self._restore_workspace_state()
+        # Restore the state of the newly opened mindspace
+        self._restore_mindspace_state()
 
-    def _close_workspace(self):
-        if not self._workspace_manager.has_workspace:
-            self._logger.error("No workspace active, cannot close")
+    def _close_mindspace(self):
+        if not self._mindspace_manager.has_mindspace:
+            self._logger.error("No mindspace active, cannot close")
             return
 
-        self._save_workspace_state()
+        self._save_mindspace_state()
         self._close_all_tabs()
-        self._file_tree.set_workspace(None)
-        self._style_manager.set_workspace_font_size(None)
-        self._workspace_manager.close_workspace()
+        self._file_tree.set_mindspace(None)
+        self._style_manager.set_mindspace_font_size(None)
+        self._mindspace_manager.close_mindspace()
 
-    def _save_workspace_state(self):
-        """Save current workspace state."""
-        if not self._workspace_manager.has_workspace:
-            self._logger.error("No workspace active, cannot save")
+    def _save_mindspace_state(self):
+        """Save current mindspace state."""
+        if not self._mindspace_manager.has_mindspace:
+            self._logger.error("No mindspace active, cannot save")
             return
 
         try:
-            workspace_state = self._tab_manager.save_state()
-            self._workspace_manager.save_workspace_state(workspace_state)
-        except WorkspaceError as e:
-            self._logger.error("Failed to save workspace state: %s", str(e))
+            mindspace_state = self._tab_manager.save_state()
+            self._mindspace_manager.save_mindspace_state(mindspace_state)
+        except MindspaceError as e:
+            self._logger.error("Failed to save mindspace state: %s", str(e))
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Workspace Error",
-                f"Failed to save workspace state: {str(e)}"
+                "Mindspace Error",
+                f"Failed to save mindspace state: {str(e)}"
             )
 
-    def _restore_workspace_state(self):
-        """Restore previously open tabs from workspace state."""
-        saved_state = self._workspace_manager.load_workspace_state()
+    def _restore_mindspace_state(self):
+        """Restore previously open tabs from mindspace state."""
+        saved_state = self._mindspace_manager.load_mindspace_state()
         if not saved_state:
             self._logger.debug("No saved states found")
             return
 
         try:
             self._tab_manager.restore_state(saved_state)
-        except WorkspaceError as e:
-            self._logger.error("Failed to restore workspace state: %s", str(e))
+        except MindspaceError as e:
+            self._logger.error("Failed to restore mindspace state: %s", str(e))
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Workspace Error",
-                f"Failed to restore workspace state: {str(e)}"
+                "Mindspace Error",
+                f"Failed to restore mindspace state: {str(e)}"
             )
 
     def _close_all_tabs(self):
@@ -455,7 +455,7 @@ class MainWindow(QMainWindow):
 
     def _new_file(self):
         """Create a new empty editor tab."""
-        if not self._workspace_manager.has_workspace:
+        if not self._mindspace_manager.has_mindspace:
             return
 
         self._tab_manager.new_file()
@@ -470,19 +470,38 @@ class MainWindow(QMainWindow):
 
         self._open_file_path(path)
 
+    def _handle_file_deletion(self, path: str):
+        """Handle deletion of a file by closing any open tab.
+        
+        Args:
+            path: Path of file being deleted
+        """
+        # Find and close any editor tab for this file
+        editor = self._tab_manager.find_editor_tab_by_filename(path)
+        if editor:
+            self._tab_manager._close_tab_by_id(editor.tab_id, True)
+
+        # Also check for conversation files
+        if path.endswith('.conv'):
+            conversation_id = os.path.splitext(os.path.basename(path))[0]
+            conversation = self._tab_manager.find_conversation_tab_by_id(conversation_id)
+            if conversation:
+                self._tab_manager._close_tab_by_id(conversation.tab_id, True)
+
     def _open_file(self):
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
-            self._workspace_manager.workspace_path
+            self._mindspace_manager.file_dialog_directory
         )
         self._menu_timer.start()
 
         if not file_path:
             return
 
+        self._mindspace_manager.update_file_dialog_directory(file_path)
         self._open_file_path(file_path)
 
     def _open_file_path(self, path: str) -> None:
@@ -520,15 +539,15 @@ class MainWindow(QMainWindow):
     @Slot()
     def _update_menu_state(self):
         """Update enabled/disabled state of menu items."""
-        # Update workspace-specific actions
-        has_workspace = self._workspace_manager.has_workspace
-        self._close_workspace_action.setEnabled(has_workspace)
-        self._new_conv_action.setEnabled(has_workspace)
-        self._new_metaphor_conv_action.setEnabled(has_workspace)
-        self._new_file_action.setEnabled(has_workspace)
-        self._open_conv_action.setEnabled(has_workspace)
-        self._open_file_action.setEnabled(has_workspace)
-        self._workspace_settings_action.setEnabled(has_workspace)
+        # Update mindspace-specific actions
+        has_mindspace = self._mindspace_manager.has_mindspace
+        self._close_mindspace_action.setEnabled(has_mindspace)
+        self._new_conv_action.setEnabled(has_mindspace)
+        self._new_metaphor_conv_action.setEnabled(has_mindspace)
+        self._new_file_action.setEnabled(has_mindspace)
+        self._open_conv_action.setEnabled(has_mindspace)
+        self._open_file_action.setEnabled(has_mindspace)
+        self._mindspace_settings_action.setEnabled(has_mindspace)
 
         # Update tab-specific actions
         tab_manager = self._tab_manager
@@ -631,40 +650,31 @@ class MainWindow(QMainWindow):
 
     def _new_conversation(self) -> Optional[str]:
         """Create new conversation tab."""
-        if not self._workspace_manager.has_workspace:
+        if not self._mindspace_manager.has_mindspace:
             return None
 
         try:
-            self._workspace_manager.ensure_workspace_dir("conversations")
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
             return self._tab_manager.new_conversation(
-                self._workspace_manager.workspace_path
+                self._mindspace_manager.mindspace_path
             )
-        except WorkspaceError as e:
+        except MindspaceError as e:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Workspace Error",
+                "Mindspace Error",
                 f"Failed to create conversation: {str(e)}"
             )
             return None
 
     def _new_metaphor_conversation(self):
         """Create new conversation from Metaphor file."""
-        if not self._workspace_manager.has_workspace:
-            MessageBox.show_message(
-                self,
-                MessageBoxType.WARNING,
-                "Workspace Required",
-                "Please open a workspace before creating a Metaphor conversation."
-            )
-            return
-
         # Show file dialog
         self._menu_timer.stop()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Metaphor File",
-            self._workspace_manager.workspace_path,
+            self._mindspace_manager.file_dialog_directory,
             "Metaphor Files (*.m6r);;All Files (*.*)"
         )
         self._menu_timer.start()
@@ -672,7 +682,8 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
-        search_paths = [self._workspace_manager.workspace_path]
+        self._mindspace_manager.update_file_dialog_directory(file_path)
+        search_paths = [self._mindspace_manager.mindspace_path]
 
         metaphor_parser = MetaphorParser()
         try:
@@ -700,7 +711,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Conversation",
-            self._workspace_manager.workspace_path,
+            self._mindspace_manager.conversations_directory,
             "Conversation Files (*.conv);;All Files (*.*)"
         )
         self._menu_timer.start()
@@ -708,6 +719,7 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
+        self._mindspace_manager.update_conversations_directory(file_path)
         self._open_conversation_path(file_path)
 
     def _open_conversation_path(self, path: str) -> None:
@@ -747,25 +759,25 @@ class MainWindow(QMainWindow):
         """Handle message submission."""
         self._tab_manager.submit_message()
 
-    def _show_workspace_settings_dialog(self):
-        """Show the workspace settings dialog."""
-        if not self._workspace_manager.has_workspace:
+    def _show_mindspace_settings_dialog(self):
+        """Show the mindspace settings dialog."""
+        if not self._mindspace_manager.has_mindspace:
             return
 
-        dialog = WorkspaceSettingsDialog(self)
-        dialog.set_settings(self._workspace_manager.settings)
+        dialog = MindspaceSettingsDialog(self)
+        dialog.set_settings(self._mindspace_manager.settings)
 
         def handle_settings_changed(new_settings):
             try:
-                self._workspace_manager.update_settings(new_settings)
-                self._style_manager.set_workspace_font_size(new_settings.font_size)
+                self._mindspace_manager.update_settings(new_settings)
+                self._style_manager.set_mindspace_font_size(new_settings.font_size)
             except OSError as e:
-                self._logger.error("Failed to save workspace settings: %s", str(e))
+                self._logger.error("Failed to save mindspace settings: %s", str(e))
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
                     "Settings Error",
-                    f"Failed to save workspace settings: {str(e)}"
+                    f"Failed to save mindspace settings: {str(e)}"
                 )
 
         dialog.settings_changed.connect(handle_settings_changed)
@@ -804,5 +816,5 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
 
-        self._save_workspace_state()
+        self._save_mindspace_state()
         event.accept()

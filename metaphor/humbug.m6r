@@ -31,4 +31,4 @@ Action: Build the software
     Embed: src/humbug/conversation/*.py
     Embed: src/humbug/gui/*.py
     Embed: src/humbug/transcript/*.py
-    Embed: src/humbug/workspace/*.py
+    Embed: src/humbug/mindspace/*.py

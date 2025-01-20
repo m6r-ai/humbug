@@ -84,9 +84,9 @@ class MessageBox(QDialog):
         font_metrics = self._text_edit.fontMetrics()
         line_height = font_metrics.lineSpacing()
 
-        # For short messages (1-2 lines), use fixed height with small margin
-        if line_count <= 2:
-            content_height = ((line_count + 2) * line_height) + margins.top() + margins.bottom()
+        # For short messages (<= 3 lines), use fixed height with small margin
+        if line_count <= 3:
+            content_height = ((line_count + 3) * line_height) + margins.top() + margins.bottom()
             self._text_edit.setFixedHeight(content_height)
             self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         else:
