@@ -16,6 +16,7 @@ LANGUAGE_MAPPING = {
     "css": ProgrammingLanguage.CSS,
     "html": ProgrammingLanguage.HTML,
     "javascript": ProgrammingLanguage.JAVASCRIPT,
+    "json": ProgrammingLanguage.JSON,
     "kotlin": ProgrammingLanguage.KOTLIN,
     "metaphor": ProgrammingLanguage.METAPHOR,
     "move": ProgrammingLanguage.MOVE,

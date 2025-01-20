@@ -8,9 +8,10 @@ class ProgrammingLanguage(IntEnum):
     CSS = 2
     HTML = 3
     JAVASCRIPT = 4
-    KOTLIN = 5
-    METAPHOR = 6
-    MOVE = 7
-    PYTHON = 8
-    TEXT = 9
-    TYPESCRIPT = 10
+    JSON = 5
+    KOTLIN = 6
+    METAPHOR = 7
+    MOVE = 8
+    PYTHON = 9
+    TEXT = 10
+    TYPESCRIPT = 11
