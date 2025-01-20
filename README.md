@@ -12,6 +12,8 @@ application.  This is done using a [Metaphor](https://m6r.ai/metaphor) descripti
 some elements of its implementation.  It includes a Metaphor prompt compiler as one option for starting a
 conversation with an AI backend.
 
+You can find out more about how AI does this by checking out [@m6rai on YouTube](https://youtube.com/@m6rai).
+
 While AI builds the software it also helps maintain the Metaphor description so we end up with a virtuous
 circle where we have a definition of what the software is supposed to do, and the code that implements it.
 This means the AIs working on the code know what's there by intent, rather than just what ended up being
