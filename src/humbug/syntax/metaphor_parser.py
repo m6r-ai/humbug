@@ -113,6 +113,7 @@ class MetaphorParser(Parser):
         lexer = MetaphorLexer()
         lexer.lex(None, input_str)
 
+        continuation_state = 0
         parse_embedded = language != ProgrammingLanguage.UNKNOWN
 
         while True:
@@ -144,9 +145,11 @@ class MetaphorParser(Parser):
 
                     input_normalized = next_token.value.strip().lower()
                     language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
+                    continuation_state = int(language)
                     continue
 
                 language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
+                continuation_state = int(language)
                 continue
 
             if language != ProgrammingLanguage.UNKNOWN:
@@ -155,6 +158,7 @@ class MetaphorParser(Parser):
             self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
 
         parser_state = MetaphorParserState()
+        parser_state.continuation_state = continuation_state
         parser_state.in_fence_block = in_fence_block
         parser_state.language = language
         if parse_embedded:
