@@ -11,6 +11,7 @@ This release adds the following new features:
 - Remember the last directory used for file operations and for opening conversations.
 - Renamed "workspace" to "mindspace".
 - Conversation text editing now supports soft tabs and tab/backtab.
+- Added a JSON lexer/parser for syntax highlighting.
 
 Te release fixes the following bugs:
 

@@ -26,6 +26,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.c': ProgrammingLanguage.C,
     '.cc': ProgrammingLanguage.CPP,
+    '.conv': ProgrammingLanguage.JSON,
     '.cpp': ProgrammingLanguage.CPP,
     '.css': ProgrammingLanguage.CSS,
     '.cxx': ProgrammingLanguage.CPP,
