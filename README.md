@@ -34,14 +34,15 @@ that are expert on Humbug itself!
     - Allows for editing of text files with syntax highlighting.
     - Tabs can be arranged into multiple columns, with columns being able to split and merge.
     - Tabs can be easily rearranged and closed.
+    - Drag and drop between columns.
 - **AI Interaction:**
     - Real-time streaming of AI responses.
     - Configurable AI model settings per conversation.
-    - Supports OpenAI, Google Gemini, and Anthropic models.
+    - Supports OpenAI, Google Gemini, Anthropic, and Ollama models (Ollama currently assumes local installs only).
     - Configurable temperature settings for supported models.
     - Error handling and retry mechanisms for API requests.
 - **File Editing:**
-    - Syntax highlighting for various languages (C, C++, CSS, HTML, JavaScript, Metaphor, Python, TypeScript).
+    - Syntax highlighting for various languages (C, C++, CSS, HTML, JavaScript, JSON, Kotlin, Metaphor, Move, Python, TypeScript).
     - Line number display and cursor position tracking.
     - Auto-backup functionality for unsaved changes.
     - Configurable tab and font settings.
