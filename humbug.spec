@@ -33,7 +33,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,  # Set to False since this is a GUI application
-    icon='icons/Humbug.ico',
+    icon='icons\\Humbug.ico',
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None
@@ -47,7 +47,7 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='humbug'
+    name='Humbug'
 )
 
 app = BUNDLE(
