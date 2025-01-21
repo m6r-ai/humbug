@@ -33,6 +33,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,  # Set to False since this is a GUI application
+    icon='icons/Humbug.ico',
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None
@@ -52,7 +53,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='Humbug.app',
-    icon=None,  # Add path to your .icns file if you have one
+    icon='icons/Humbug.icns',
     bundle_identifier='ai.m6r.humbug',
     info_plist={
         'NSPrincipalClass': 'NSApplication',
