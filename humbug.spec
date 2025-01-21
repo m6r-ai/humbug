@@ -2,6 +2,8 @@
 #
 # PyInstaller config file
 #
+codesign_id = os.environ['CODESIGN_IDENTITY']
+
 block_cipher = None
 
 a = Analysis(
@@ -35,7 +37,7 @@ exe = EXE(
     console=False,  # Set to False since this is a GUI application
     icon='icons\\Humbug.ico',
     target_arch=None,
-    codesign_identity=None,
+    codesign_identity=codesign_id,
     entitlements_file=None
 )
 
