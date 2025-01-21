@@ -1,14 +1,5 @@
 #!/bin/sh
 
-# Create a folder (named dmg) to prepare our DMG in (if it doesn't already exist).
-mkdir -p dist/dmg
-
-# Empty the dmg folder.
-rm -rf dist/dmg/*
-
-# Copy the app bundle to the dmg folder.
-cp -r "dist/Humbug.app" dist/dmg
-
 # If the DMG already exists, delete it.
 test -f "dist/Humbug.dmg" && rm "dist/Humbug.dmg"
 
