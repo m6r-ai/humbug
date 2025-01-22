@@ -687,7 +687,8 @@ class MainWindow(QMainWindow):
 
         metaphor_parser = MetaphorParser()
         try:
-            syntax_tree = metaphor_parser.parse_file(file_path, search_paths)
+            embed_path = self._mindspace_manager.mindspace_path
+            syntax_tree = metaphor_parser.parse_file(file_path, search_paths, embed_path)
             prompt = format_ast(syntax_tree)
 
             # Create conversation with prompt
