@@ -34,7 +34,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,  # Set to False since this is a GUI application
+    console=False,
     icon='icons\\Humbug.ico',
     target_arch=None,
     codesign_identity=codesign_id,
@@ -58,6 +58,9 @@ app = BUNDLE(
     icon='icons/Humbug.icns',
     bundle_identifier='ai.m6r.humbug',
     info_plist={
+        'CFBundleDisplayName': 'Humbug',
+        'CFBundleShortVersionString': '0.3.1',
+        'CFBundleVersion': '0.3.1',
         'NSPrincipalClass': 'NSApplication',
         'NSAppleScriptEnabled': False
     }
