@@ -156,39 +156,6 @@ class KotlinParser(Parser):
                 ))
                 return
 
-            if next_token.value == '<':
-                # Check for generic type parameters
-                # Keep track of tokens we consume while looking ahead
-                consumed_tokens = []
-                depth = 1
-                found_generic = False
-
-                while True:
-                    next_token = lexer.get_next_token(['WHITESPACE'])
-                    if not next_token:
-                        break
-
-                    consumed_tokens.append(next_token)
-                    if next_token.type == 'OPERATOR':
-                        if next_token.value == '<':
-                            depth += 1
-                        elif next_token.value == '>':
-                            depth -= 1
-                            if depth == 0:
-                                found_generic = True
-                                break
-
-                # Push tokens back in reverse order
-                for token in reversed(consumed_tokens):
-                    self._tokens.insert(len(self._tokens), token)
-                if found_generic:
-                    self._tokens.append(Token(
-                        type='TYPE',
-                        value=token.value,
-                        start=token.start
-                    ))
-                    return
-
         if in_element:
             # Property or element access
             self._tokens.append(Token(
