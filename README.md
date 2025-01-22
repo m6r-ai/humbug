@@ -114,7 +114,8 @@ that are expert on Humbug itself!
 
 1. **API Keys:**
 
-   - Create a file named `api-keys.json` in the `~/.humbug` directory.
+   - Create a file named `api-keys.json` in the `~/.humbug` directory (this is your home directory, not your
+     mindspace directory, as we don't want to risk pushing key credentials to source repositories).
    - Add your API keys in the following format:
 
      ```json
