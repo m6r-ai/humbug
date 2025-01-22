@@ -15,6 +15,7 @@ This release adds the following new features:
 - Added new icons for the file view and made them scalable if you zoom in and out.
 - Added the ability to delete files in the file view by right clicking and selecting "Delete File".
 - Added a Kotlin lexer/parser for syntax highlighting.
+- Added a Sui Move lexer/parser for syntax highlighting.
 - Remember the last directory used for file operations and for opening conversations.
 - Renamed "workspace" to "mindspace".
 - Conversation text editing now supports soft tabs and tab/backtab.
