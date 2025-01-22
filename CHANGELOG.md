@@ -20,6 +20,7 @@ This release adds the following new features:
 - Renamed "workspace" to "mindspace".
 - Conversation text editing now supports soft tabs and tab/backtab.
 - Added a JSON lexer/parser for syntax highlighting.
+- Added default support for Ollama (Phi 4 and Llama3.2 for now) so you can work with a local LLM.
 
 The release fixes the following bugs:
 
