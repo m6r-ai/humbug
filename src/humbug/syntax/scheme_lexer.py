@@ -74,14 +74,12 @@ class SchemeLexer(Lexer):
             return self._read_delimiter
 
         if ch == '.':
-            if (self._position + 1 < len(self._input) and
-                    self._is_digit(self._input[self._position + 1])):
-                return self._read_number
-            return self._read_dot
+            return self._read_dot_or_number
 
-        if self._is_digit(ch) or (ch in ('+', '-') and
-                                 self._position + 1 < len(self._input) and
-                                 self._is_digit(self._input[self._position + 1])):
+        if ch in ('+', '-'):
+            return self._read_operator_or_number
+
+        if self._is_digit(ch):
             return self._read_number
 
         return self._read_identifier
@@ -227,42 +225,41 @@ class SchemeLexer(Lexer):
             start=start
         ))
 
-    def _read_dot(self) -> None:
+    def _read_operator_or_number(self) -> None:
         """
-        Read a dot token (used in pair notation).
+        Read an operator as identifier or start of number.
         """
+        if (self._position + 1 < len(self._input) and
+            self._is_digit(self._input[self._position + 1])):
+            self._read_number()
+            return
+
         start = self._position
-        self._position += 1
-        self._tokens.append(Token(type='DOT', value='.', start=start))
-
-    def _read_delimiter(self) -> None:
-        """
-        Read a delimiter token (parentheses or brackets).
-        """
-        start = self._position
-        ch = self._input[self._position]
-        self._position += 1
-
-        if ch in ('(', '['):
-            token_type = 'LPAREN'
-        else:
-            token_type = 'RPAREN'
-
-        self._tokens.append(Token(type=token_type, value=ch, start=start))
-
-    def _read_comment(self) -> None:
-        """
-        Read a single-line comment token.
-        """
-        start = self._position
-        self._position += 1
         while (self._position < len(self._input) and
-               self._input[self._position] != '\n'):
+               not self._is_delimiter(self._input[self._position])):
             self._position += 1
 
+        value = self._input[start:self._position]
         self._tokens.append(Token(
-            type='COMMENT',
-            value=self._input[start:self._position],
+            type='IDENTIFIER',
+            value=value.lower(),
+            start=start
+        ))
+
+    def _read_dot_or_number(self) -> None:
+        """
+        Read a dot token or start of decimal number.
+        """
+        if (self._position + 1 < len(self._input) and
+            self._is_digit(self._input[self._position + 1])):
+            self._read_number()
+            return
+
+        start = self._position
+        self._position += 1
+        self._tokens.append(Token(
+            type='DOT',
+            value='.',
             start=start
         ))
 
@@ -322,6 +319,37 @@ class SchemeLexer(Lexer):
 
         self._tokens.append(Token(
             type='NUMBER',
+            value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _read_delimiter(self) -> None:
+        """
+        Read a delimiter token (parentheses or brackets).
+        """
+        start = self._position
+        ch = self._input[self._position]
+        self._position += 1
+
+        if ch in ('(', '['):
+            token_type = 'LPAREN'
+        else:
+            token_type = 'RPAREN'
+
+        self._tokens.append(Token(type=token_type, value=ch, start=start))
+
+    def _read_comment(self) -> None:
+        """
+        Read a single-line comment token.
+        """
+        start = self._position
+        self._position += 1
+        while (self._position < len(self._input) and
+               self._input[self._position] != '\n'):
+            self._position += 1
+
+        self._tokens.append(Token(
+            type='COMMENT',
             value=self._input[start:self._position],
             start=start
         ))

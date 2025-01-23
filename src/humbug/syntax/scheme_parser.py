@@ -14,10 +14,8 @@ class SchemeParserState(ParserState):
     State information for the Scheme parser.
 
     Attributes:
-        paren_depth: Current depth of nested parentheses
         in_vector: Whether we're currently parsing a vector
     """
-    paren_depth: int = 0
     in_vector: bool = False
 
 
@@ -40,19 +38,15 @@ class SchemeParser(Parser):
 
         Returns:
             The updated parser state after parsing
-
-        Note:
-            The parser tracks nested parentheses depth and vector contexts to maintain
-            proper state across multiple parse calls.
         """
-        paren_depth = 0
         in_vector = False
         prev_lexer_state = None
+        continuation_state = 0
 
         if prev_parser_state:
-            paren_depth = prev_parser_state.paren_depth
             in_vector = prev_parser_state.in_vector
             prev_lexer_state = prev_parser_state.lexer_state
+            continuation_state = prev_parser_state.continuation_state
 
         lexer = SchemeLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
@@ -65,21 +59,21 @@ class SchemeParser(Parser):
             # Handle vector start
             if token.type == 'VECTOR_START':
                 in_vector = True
-                paren_depth += 1
+                continuation_state += 1
                 self._tokens.append(token)
                 continue
 
             # Handle opening parentheses
             if token.type == 'LPAREN':
-                paren_depth += 1
+                continuation_state += 1
                 self._tokens.append(token)
                 continue
 
             # Handle closing parentheses
             if token.type == 'RPAREN':
-                if paren_depth > 0:
-                    paren_depth -= 1
-                    if paren_depth == 0:
+                if continuation_state > 0:
+                    continuation_state -= 1
+                    if continuation_state == 0:
                         in_vector = False
                 self._tokens.append(token)
                 continue
@@ -91,7 +85,7 @@ class SchemeParser(Parser):
                 # Check if it's a special form
                 if self._is_special_form(token.value):
                     self._tokens.append(Token(
-                        type='SPECIAL_FORM',
+                        type='KEYWORD',
                         value=token.value,
                         start=token.start
                     ))
@@ -100,7 +94,7 @@ class SchemeParser(Parser):
                 # Check if it's a standard procedure
                 if self._is_standard_procedure(token.value):
                     self._tokens.append(Token(
-                        type='PROCEDURE',
+                        type='KEYWORD',
                         value=token.value,
                         start=token.start
                     ))
@@ -109,9 +103,8 @@ class SchemeParser(Parser):
             self._tokens.append(token)
 
         parser_state = SchemeParserState()
-        parser_state.continuation_state = paren_depth
+        parser_state.continuation_state = continuation_state
         parser_state.lexer_state = lexer_state
-        parser_state.paren_depth = paren_depth
         parser_state.in_vector = in_vector
         return parser_state
 
@@ -126,7 +119,7 @@ class SchemeParser(Parser):
             True if the value is a special form, False otherwise
         """
         special_forms = {
-            'define', 'set!', 'let', 'let*', 'letrec', 
+            'define', 'set!', 'let', 'let*', 'letrec',
             'begin', 'if', 'cond', 'case', 'and', 'or',
             'lambda', 'delay', 'quasiquote', 'unquote',
             'unquote-splicing'
@@ -149,6 +142,8 @@ class SchemeParser(Parser):
             'vector?', 'procedure?', 'null?',
             # Basic arithmetic
             '+', '-', '*', '/', 'quotient', 'remainder', 'modulo',
+            # Comparison
+            '=', '<', '>', '<=', '>=',
             # List operations
             'car', 'cdr', 'cons', 'list', 'append', 'reverse', 'list-ref',
             # String operations
