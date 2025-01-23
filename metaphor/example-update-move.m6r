@@ -1,0 +1,118 @@
+# This is an example of an update metaphor file.  In this case it's the one that was used to add support for the Sui Move
+# lexer and parser to support syntax highlighting.
+
+Role:
+    You are a world class python programmer, highly skilled in accurate and performant software development
+
+Context:
+    Context: Python implementation and dependencies
+        As an engineer working with the application, I want the application to be easy to use and understand,
+        so I can maintain and enhance it over time.
+
+        Context: Implement in Python 3
+            The application will be written in the latest version of Python 3.
+
+        Context: Indentation of code
+            Code must be indented by 4 spaces.
+
+        Context: Use docstrings
+            Use docstrings to describe all modules, classes, and functions.  This should follow PEP 257 guidelines.
+
+        Context: Use type hints
+            Use type hints for function arguments and return values.
+
+        Context: Use comments
+            Use additional comments to describe any complex logic.
+
+        Context: PEP 8 imports
+            The import list in any module should follow PEP 8 guidelines, including the ordering of imports.
+
+        Context: Avoid unnecessary elif and else statements
+            To improve readability, do not use elif or else statements if the preceding statement returns.
+
+            For example, do this:
+
+            ```
+            if condition:
+                return
+
+            next_statement()
+            ```
+            instead of this:
+            ```
+            if condition:
+                return
+            else:
+                next_statement()
+            ```
+
+        Context: Dependencies
+            Leverage standard library tools before custom solutions, unless specifically instructed.
+
+            Context: HTTP interations
+                Use the aiohttp library for HTTP interactions (e.g. the REST API).
+
+        Context: Exception handling philosophy
+            Context: Exception documentation
+                Document what exceptions each function may raise in its docstring.
+
+            Context: Handling exceptions
+                We should attempt to handle and mitigate exceptions at the level closest to which they are first
+                detected.  If we cannot handle or mitigate the exception then it should be wrapped in a domain-appropriate
+                exception class and this re-raised to the next level up the call stack.
+
+                Include contextual information when wrapping exceptions.
+
+                Preserve the exception chain using "raise ... from e" syntax.
+
+            Context: Avoid bare "except:" or "except Exception:" clauses.
+                We should avoid the use of bare "except:" or "except Exception:" clauses unless a function we are calling
+                can only have exceptions handled this way.
+
+                We should always catch specific exception types that could occur from an operation.
+
+            Context: Exception logging
+                All exceptions should be logged when they occur, before re-raising or wrapping them.
+
+                Use appropriate log levels:
+                - ERROR for exceptions that indicate failure.
+                - WARNING for exceptions that can be handled/recovered from.
+                - DEBUG for detailed exception information during development.
+
+                We must include sufficient context in log messages to aid debugging.
+
+            Context: Exception wrapping example
+                Do this:
+
+                ```python
+                try:
+                    await self.api_client.fetch_data()
+                except ConnectionError as e:
+                    logger.error("Failed to retrieve data from API endpoint", exc_info=True)
+                    raise DataFetchError(f"Failed to retrieve data from API endpoint: {e}") from e
+                except TimeoutError as e:
+                    logger.warning("API request timed out, will retry", exc_info=True)
+                    # Handle retry logic
+                ```
+
+                Not this:
+
+                ```python
+                try:
+                    await self.api_client.fetch_data()
+                except Exception as e:
+                    logger.error(f"Error: {e}")  # Insufficient context, no stack trace
+                    raise  # No wrapping or additional context
+                ```
+
+Action:
+    The following files handle the lexing and parsing of different types of files in my application
+
+    Embed: src/humbug/syntax/*.py
+
+    I would like you to build me a lexer and parser for Sui's Move language implementation.  The lexer and parser should
+    follow the same approach as the other lexers and parsers.  In particular please pay close attention to the way the
+    lexer disambiguates tokens based on the first character of the token.
+
+    If any aspect of this in unclear or ambiguous then please let me know before you start so I can advise you on the
+    path I would like you to follow.
