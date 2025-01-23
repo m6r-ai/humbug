@@ -21,6 +21,7 @@ LANGUAGE_MAPPING = {
     "metaphor": ProgrammingLanguage.METAPHOR,
     "move": ProgrammingLanguage.MOVE,
     "python": ProgrammingLanguage.PYTHON,
+    "scheme": ProgrammingLanguage.SCHEME,
     "typescript": ProgrammingLanguage.TYPESCRIPT
 }
 

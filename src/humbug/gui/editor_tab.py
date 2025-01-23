@@ -47,6 +47,7 @@ LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.py': ProgrammingLanguage.PYTHON,
     '.pyw': ProgrammingLanguage.PYTHON,
     '.pyi': ProgrammingLanguage.PYTHON,
+    '.scm': ProgrammingLanguage.SCHEME,
     '.ts': ProgrammingLanguage.TYPESCRIPT,
     '.tsx': ProgrammingLanguage.TYPESCRIPT,
     '.txt': ProgrammingLanguage.TEXT,

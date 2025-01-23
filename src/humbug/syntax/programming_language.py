@@ -13,5 +13,6 @@ class ProgrammingLanguage(IntEnum):
     METAPHOR = 7
     MOVE = 8
     PYTHON = 9
-    TEXT = 10
-    TYPESCRIPT = 11
+    SCHEME = 10
+    TEXT = 11
+    TYPESCRIPT = 12
