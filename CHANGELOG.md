@@ -1,5 +1,11 @@
 # Changelog for Humbug
 
+## v0.4 (2025-01-xx)
+
+This release adds the following new features:
+
+The release fixes the following bugs:
+
 ## v0.3.1 (2025-01-22)
 
 This is a bug fix release:
