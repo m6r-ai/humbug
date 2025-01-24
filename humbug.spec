@@ -2,7 +2,7 @@
 #
 # PyInstaller config file
 #
-codesign_id = os.environ['CODESIGN_IDENTITY']
+codesign_id = os.environ['CODESIGN_IDENTITY'] if 'CODESIGN_IDENTITY' in os.environ else None
 
 block_cipher = None
 
