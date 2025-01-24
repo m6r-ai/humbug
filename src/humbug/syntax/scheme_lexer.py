@@ -70,7 +70,7 @@ class SchemeLexer(Lexer):
         if ch == '#':
             return self._read_hash_token
 
-        if ch in ('(', ')', '[', ']'):
+        if ch in ('(', ')'):
             return self._read_delimiter
 
         if ch == '.':
@@ -331,10 +331,7 @@ class SchemeLexer(Lexer):
         ch = self._input[self._position]
         self._position += 1
 
-        if ch in ('(', '['):
-            token_type = 'LPAREN'
-        else:
-            token_type = 'RPAREN'
+        token_type = 'LPAREN' if ch == '(' else 'RPAREN'
 
         self._tokens.append(Token(type=token_type, value=ch, start=start))
 
@@ -364,5 +361,4 @@ class SchemeLexer(Lexer):
         Returns:
             True if the character is a delimiter, False otherwise
         """
-        return (self._is_whitespace(ch) or
-                ch in ('(', ')', '[', ']', '"', ';'))
+        return (self._is_whitespace(ch) or ch in ('(', ')'))
