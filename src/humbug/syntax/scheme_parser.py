@@ -67,6 +67,17 @@ class SchemeParser(Parser):
             if token.type == 'LPAREN':
                 continuation_state += 1
                 self._tokens.append(token)
+
+                next_token = lexer.peek_next_token(['WHITESPACE'])
+                if next_token and next_token.type == 'IDENTIFIER':
+                    next_token = lexer.get_next_token(['WHITESPACE'])
+                    self._tokens.append(Token(
+                        type='FUNCTION_OR_METHOD',
+                        value=next_token.value,
+                        start=next_token.start
+                    ))
+                    continue
+
                 continue
 
             # Handle closing parentheses
@@ -78,81 +89,10 @@ class SchemeParser(Parser):
                 self._tokens.append(token)
                 continue
 
-            # Special handling for identifiers in first position after opening parenthesis
-            if (token.type == 'IDENTIFIER' and
-                    self._tokens and
-                    self._tokens[-1].type in ('LPAREN', 'VECTOR_START')):
-                # Check if it's a special form
-                if self._is_special_form(token.value):
-                    self._tokens.append(Token(
-                        type='KEYWORD',
-                        value=token.value,
-                        start=token.start
-                    ))
-                    continue
-
-                # Check if it's a standard procedure
-                if self._is_standard_procedure(token.value):
-                    self._tokens.append(Token(
-                        type='KEYWORD',
-                        value=token.value,
-                        start=token.start
-                    ))
-                    continue
-
             self._tokens.append(token)
 
         parser_state = SchemeParserState()
-        parser_state.continuation_state = continuation_state
+        parser_state.continuation_state = 1 if lexer_state.in_comment else 0
         parser_state.lexer_state = lexer_state
         parser_state.in_vector = in_vector
         return parser_state
-
-    def _is_special_form(self, value: str) -> bool:
-        """
-        Check if a given value is a Scheme special form.
-
-        Args:
-            value: The string to check
-
-        Returns:
-            True if the value is a special form, False otherwise
-        """
-        special_forms = {
-            'define', 'set!', 'let', 'let*', 'letrec',
-            'begin', 'if', 'cond', 'case', 'and', 'or',
-            'lambda', 'delay', 'quasiquote', 'unquote',
-            'unquote-splicing'
-        }
-        return value.lower() in special_forms
-
-    def _is_standard_procedure(self, value: str) -> bool:
-        """
-        Check if a given value is a Scheme standard procedure.
-
-        Args:
-            value: The string to check
-
-        Returns:
-            True if the value is a standard procedure, False otherwise
-        """
-        procedures = {
-            # Type predicates
-            'boolean?', 'pair?', 'symbol?', 'number?', 'char?', 'string?',
-            'vector?', 'procedure?', 'null?',
-            # Basic arithmetic
-            '+', '-', '*', '/', 'quotient', 'remainder', 'modulo',
-            # Comparison
-            '=', '<', '>', '<=', '>=',
-            # List operations
-            'car', 'cdr', 'cons', 'list', 'append', 'reverse', 'list-ref',
-            # String operations
-            'string-append', 'string-length', 'substring',
-            # Vector operations
-            'vector', 'vector-ref', 'vector-set!', 'make-vector',
-            # I/O procedures
-            'display', 'newline', 'read', 'write', 'load',
-            # Other essential procedures
-            'eq?', 'eqv?', 'equal?', 'apply', 'map', 'force', 'eval'
-        }
-        return value.lower() in procedures

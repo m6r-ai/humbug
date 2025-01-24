@@ -77,7 +77,7 @@ class SchemeLexer(Lexer):
             return self._read_dot_or_number
 
         if ch in ('+', '-'):
-            return self._read_operator_or_number
+            return self._read_number_or_identifier
 
         if self._is_digit(ch):
             return self._read_number
@@ -219,13 +219,22 @@ class SchemeLexer(Lexer):
             self._position += 1
 
         value = self._input[start:self._position]
+
+        if self._is_special_form(value):
+            self._tokens.append(Token(
+                type='KEYWORD',
+                value=value,
+                start=start
+            ))
+            return
+
         self._tokens.append(Token(
             type='IDENTIFIER',
-            value=value.lower(),  # Convert to lowercase for case-insensitivity
+            value=value,
             start=start
         ))
 
-    def _read_operator_or_number(self) -> None:
+    def _read_number_or_identifier(self) -> None:
         """
         Read an operator as identifier or start of number.
         """
@@ -234,17 +243,7 @@ class SchemeLexer(Lexer):
             self._read_number()
             return
 
-        start = self._position
-        while (self._position < len(self._input) and
-               not self._is_delimiter(self._input[self._position])):
-            self._position += 1
-
-        value = self._input[start:self._position]
-        self._tokens.append(Token(
-            type='IDENTIFIER',
-            value=value.lower(),
-            start=start
-        ))
+        self._read_identifier()
 
     def _read_dot_or_number(self) -> None:
         """
@@ -362,3 +361,21 @@ class SchemeLexer(Lexer):
             True if the character is a delimiter, False otherwise
         """
         return (self._is_whitespace(ch) or ch in ('(', ')'))
+
+    def _is_special_form(self, value: str) -> bool:
+        """
+        Check if a given value is a Scheme special form.
+
+        Args:
+            value: The string to check
+
+        Returns:
+            True if the value is a special form, False otherwise
+        """
+        special_forms = {
+            'define', 'set!', 'let', 'let*', 'letrec',
+            'begin', 'if', 'cond', 'case', 'and', 'or',
+            'lambda', 'delay', 'quasiquote', 'unquote',
+            'unquote-splicing'
+        }
+        return value.lower() in special_forms
