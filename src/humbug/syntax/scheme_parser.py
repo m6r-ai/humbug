@@ -89,6 +89,14 @@ class SchemeParser(Parser):
                 self._tokens.append(token)
                 continue
 
+            if token.type == 'DOT':
+                self._tokens.append(Token(
+                    type='OPERATOR',
+                    value=token.value,
+                    start=token.start
+                ))
+                continue
+
             self._tokens.append(token)
 
         parser_state = SchemeParserState()

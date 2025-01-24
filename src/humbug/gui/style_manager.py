@@ -292,6 +292,7 @@ class StyleManager(QObject):
             "ADDRESS": ColorRole.SYNTAX_ADDRESS,
             "BACKTICK_CODE": ColorRole.SYNTAX_BACKTICK_CODE,
             "BOOLEAN": ColorRole.SYNTAX_NUMBER,
+            "CHARACTER": ColorRole.SYNTAX_STRING,
             "CODE": ColorRole. SYNTAX_CODE,
             "COMMENT": ColorRole.SYNTAX_COMMENT,
             "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,

@@ -373,9 +373,9 @@ class SchemeLexer(Lexer):
             True if the value is a special form, False otherwise
         """
         special_forms = {
-            'define', 'set!', 'let', 'let*', 'letrec',
-            'begin', 'if', 'cond', 'case', 'and', 'or',
-            'lambda', 'delay', 'quasiquote', 'unquote',
-            'unquote-splicing'
+            'let-syntax', 'letrec-syntax', 'syntax-rules', 'define-syntax',
+            'else', '=>', 'define', 'unquote-splicing', 'unquote',
+            'quote', 'lambda', 'if', 'set!', 'begin', 'cond', 'and', 'or', 'case',
+            'let', 'let*', 'letrec', 'do', 'delay', 'quasiquote'
         }
         return value.lower() in special_forms
