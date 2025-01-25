@@ -51,7 +51,6 @@ class FindWidget(QWidget):
         # Add close button
         self._close_button = QToolButton()
         self._close_button.clicked.connect(self.close)
-        self._close_button.setObjectName("closeButton")
         layout.addWidget(self._close_button)
 
         # Track current state
