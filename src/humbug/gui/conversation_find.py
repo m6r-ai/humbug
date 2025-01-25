@@ -1,23 +1,27 @@
 from typing import List, Tuple
 
 from PySide6.QtGui import QTextCursor, QTextCharFormat
-from PySide6.QtWidgets import QTextEdit
+from PySide6.QtWidgets import QTextEdit, QWidget
+from PySide6.QtCore import QObject, Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.style_manager import StyleManager
 
-class ConversationFind:
+class ConversationFind(QObject):
     """Handles find operations in conversation messages."""
+
+    # Signal to request scrolling to a specific widget and position
+    scrollRequested = Signal(QWidget, int)  # Widget to scroll to, position within widget
 
     def __init__(self):
         """Initialize find handler."""
+        super().__init__()
         self._matches: List[Tuple[MessageWidget, List[Tuple[int, int]]]] = []  # List of (widget, [(start, end)])
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
         self._extra_selections = []
-
         self._style_manager = StyleManager()
 
     def find_text(self, text: str, widgets: List[MessageWidget], forward: bool = True) -> None:
@@ -90,6 +94,7 @@ class ConversationFind:
         self._highlight_matches()
 
         # Scroll to current match
+        print("scroll to match")
         self._scroll_to_match()
 
     def _highlight_matches(self) -> None:
@@ -137,10 +142,12 @@ class ConversationFind:
             text_edit.setExtraSelections(selections)
 
     def _scroll_to_match(self) -> None:
-        """Scroll to ensure the current match is visible."""
+        """Request scroll to ensure the current match is visible."""
+        print("scroll to match here")
         if not self._matches:
             return
 
+        print("scroll to match here 2")
         widget, matches = self._matches[self._current_widget_index]
         start, _ = matches[self._current_match_index]
 
@@ -148,10 +155,11 @@ class ConversationFind:
         cursor = QTextCursor(text_edit.document())
         cursor.setPosition(start)
         text_edit.setTextCursor(cursor)
-        text_edit.ensureCursorVisible()
 
-        # Ensure the widget itself is visible in the scroll area
-        widget.ensureVisible(0, 0, 0, 50)
+        # Emit signal for parent to handle scrolling
+        print(f"widget {widget}, pos: {start}")
+        self.scrollRequested.emit(widget, start)
+        print(f"widget2 {widget}, pos: {start}")
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""

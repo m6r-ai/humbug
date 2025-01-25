@@ -89,9 +89,6 @@ class ConversationTab(TabBase):
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         conversation_layout.insertWidget(0, self._find_widget)
 
-        # Create find handler
-        self._find_handler = ConversationFind()
-
         self._messages_container = QWidget()
 
         self._messages_layout = QVBoxLayout(self._messages_container)
@@ -130,6 +127,9 @@ class ConversationTab(TabBase):
         conversation_layout.setSpacing(0)
         conversation_layout.addWidget(self._scroll_area)
 
+        # Create find handler
+        self._find_handler = ConversationFind()
+
         self.update_status()
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -152,6 +152,7 @@ class ConversationTab(TabBase):
 
         # Handle scrolling requests from input area
         self._input.pageScrollRequested.connect(self._handle_edit_page_scroll)
+        self._find_handler.scrollRequested.connect(self._handle_find_scroll)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
@@ -547,6 +548,35 @@ class ConversationTab(TabBase):
             total_height + input_cursor.y(),
             1,
             50
+        )
+
+    def _handle_find_scroll(self, widget: QWidget, position: int) -> None:
+        """
+        Handle scroll requests from find operations.
+
+        Args:
+            widget: Widget to scroll to
+            position: Text position within the widget
+        """
+        # Calculate widget's position in scroll area
+        widget_pos = widget.mapTo(self._messages_container, QPoint(0, 0))
+
+        # Get text edit cursor rect for the position
+        text_edit = widget._text_area
+        cursor = text_edit.textCursor()
+        cursor.setPosition(position)
+        text_edit.setTextCursor(cursor)
+        cursor_rect = text_edit.cursorRect(cursor)
+
+        # Convert cursor position to global coordinates
+        global_pos = text_edit.mapTo(self._messages_container, cursor_rect.topLeft())
+
+        # Ensure position is visible in scroll area
+        self._scroll_area.ensureVisible(
+            0,  # x
+            global_pos.y(),  # y
+            0,  # xmargin
+            50  # ymargin - provide some context around the match
         )
 
     def set_input_text(self, text: str):
