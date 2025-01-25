@@ -174,3 +174,8 @@ class FindWidget(QWidget):
     def get_search_text(self) -> str:
         """Get the current search text."""
         return self._search_input.text()
+
+    def set_search_text(self, text: str):
+        """Set the search text and trigger a search."""
+        self._search_input.setText(text)
+        self._search_input.selectAll()

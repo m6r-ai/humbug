@@ -625,8 +625,19 @@ class EditorTab(TabBase):
     def can_submit(self) -> bool:
         return False
 
-    def _show_find(self):
+    def show_find(self):
         """Show the find widget."""
+        cursor = self._editor.textCursor()
+        if cursor.hasSelection():
+            # Get the selected text
+            text = cursor.selectedText()
+
+            # Only use selection if it's on a single line
+            if '\u2029' not in text:  # Qt uses this character for line breaks
+                self._find_widget.set_search_text(text)
+            else:
+                self._find_widget.set_search_text("")
+
         self._find_widget.show()
 
     def _close_find(self):

@@ -117,6 +117,7 @@ class EditorFind:
         """
         if not self._matches:
             return 0, 0
+
         return self._current_match + 1, len(self._matches)
 
     def clear(self) -> None:

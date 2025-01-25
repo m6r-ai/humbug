@@ -878,7 +878,7 @@ class TabManager(QWidget):
     def find(self):
         tab = self._get_current_tab()
         if isinstance(tab, EditorTab):
-            tab._show_find()
+            tab.show_find()
 
     def close_deleted_file(self, path: str):
         """
