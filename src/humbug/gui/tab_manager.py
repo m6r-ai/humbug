@@ -871,6 +871,34 @@ class TabManager(QWidget):
     def paste(self):
         self._get_current_tab().paste()
 
+    def can_find(self) -> bool:
+        tab = self._get_current_tab()
+        return False if not tab else tab.can_paste()
+
+    def find(self):
+        tab = self._get_current_tab()
+        if isinstance(tab, EditorTab):
+            tab._show_find()
+
+    def close_deleted_file(self, path: str):
+        """
+        Close any open tabs related to a file being deleted.
+
+        Args:
+            path: Path of file being deleted
+        """
+        # Find and close any editor tab for this file
+        editor = self.find_editor_tab_by_filename(path)
+        if editor:
+            self._close_tab_by_id(editor.tab_id, True)
+
+        # Also check for conversation files
+        if path.endswith('.conv'):
+            conversation_id = os.path.splitext(os.path.basename(path))[0]
+            conversation = self.find_conversation_tab_by_id(conversation_id)
+            if conversation:
+                self._close_tab_by_id(conversation.tab_id, True)
+
     def can_close_all_tabs(self) -> bool:
         """Can we close all the tabs that are open?"""
         all_tabs = list(self._tabs.values())

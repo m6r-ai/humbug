@@ -21,7 +21,6 @@ from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.conversation_error import ConversationError
 from humbug.gui.color_role import ColorRole
-from humbug.gui.editor_tab import EditorTab
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
@@ -126,7 +125,7 @@ class MainWindow(QMainWindow):
 
         self._find_action = QAction("Find", self)
         self._find_action.setShortcut(QKeySequence.Find)
-        self._find_action.triggered.connect(self._show_find)
+        self._find_action.triggered.connect(self._find)
 
         self._mindspace_settings_action = QAction("Mindspace Settings", self)
         self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
@@ -455,11 +454,8 @@ class MainWindow(QMainWindow):
     def _paste(self):
         self._tab_manager.paste()
 
-    def _show_find(self):
-        """Show the find widget in current editor tab."""
-        tab = self._tab_manager._get_current_tab()
-        if isinstance(tab, EditorTab):
-            tab._show_find()
+    def _find(self):
+        self._tab_manager.find()
 
     def _show_about_dialog(self):
         """Show the About dialog."""
@@ -489,17 +485,7 @@ class MainWindow(QMainWindow):
         Args:
             path: Path of file being deleted
         """
-        # Find and close any editor tab for this file
-        editor = self._tab_manager.find_editor_tab_by_filename(path)
-        if editor:
-            self._tab_manager._close_tab_by_id(editor.tab_id, True)
-
-        # Also check for conversation files
-        if path.endswith('.conv'):
-            conversation_id = os.path.splitext(os.path.basename(path))[0]
-            conversation = self._tab_manager.find_conversation_tab_by_id(conversation_id)
-            if conversation:
-                self._tab_manager._close_tab_by_id(conversation.tab_id, True)
+        self._tab_manager.close_deleted_file(path)
 
     def _open_file(self):
         """Show open file dialog and create editor tab."""
@@ -573,6 +559,7 @@ class MainWindow(QMainWindow):
         self._cut_action.setEnabled(tab_manager.can_cut())
         self._copy_action.setEnabled(tab_manager.can_copy())
         self._paste_action.setEnabled(tab_manager.can_paste())
+        self._find_action.setEnabled(tab_manager.can_find())
         self._submit_message_action.setEnabled(tab_manager.can_submit_message())
         self._conv_settings_action.setEnabled(tab_manager.can_show_conversation_settings_dialog())
 
