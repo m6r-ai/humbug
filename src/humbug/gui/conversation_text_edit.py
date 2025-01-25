@@ -504,3 +504,25 @@ class ConversationTextEdit(QTextEdit):
         """Calculate idea size based on content."""
         width = super().sizeHint().width()
         return QSize(width, self._height())
+
+    def find_text(self, text: str) -> bool:
+        """Find text in the widget.
+
+        Args:
+            text: Text to search for
+
+        Returns:
+            True if text was found
+        """
+        # Clear any existing selection
+        cursor = self.textCursor()
+        cursor.clearSelection()
+        self.setTextCursor(cursor)
+
+        # Find the text
+        found = self.find(text)
+        if found:
+            # Ensure found text is visible
+            self.ensureCursorVisible()
+
+        return found

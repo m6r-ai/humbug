@@ -20,6 +20,8 @@ from humbug.conversation.message_source import MessageSource
 from humbug.conversation.usage import Usage
 from humbug.gui.conversation_error import ConversationError
 from humbug.gui.color_role import ColorRole
+from humbug.gui.conversation_find import ConversationFind
+from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.live_input_widget import LiveInputWidget
 from humbug.gui.status_message import StatusMessage
@@ -78,6 +80,17 @@ class ConversationTab(TabBase):
         self.setLayout(conversation_layout)
 
         self._scroll_area = QScrollArea()
+
+        # Add find widget at top (initially hidden)
+        self._find_widget = FindWidget()
+        self._find_widget.hide()
+        self._find_widget.closed.connect(self._close_find)
+        self._find_widget.find_next.connect(lambda: self._find_next(True))
+        self._find_widget.find_previous.connect(lambda: self._find_next(False))
+        conversation_layout.insertWidget(0, self._find_widget)
+
+        # Create find handler
+        self._find_handler = ConversationFind()
 
         self._messages_container = QWidget()
 
@@ -890,3 +903,39 @@ class ConversationTab(TabBase):
                 self._logger.debug("Task already removed")
 
         task.add_done_callback(task_done_callback)
+
+    def show_find(self):
+        """Show the find widget."""
+        # Get selected text if any
+        if self._message_with_selection:
+            cursor = self._message_with_selection._text_area.textCursor()
+            if cursor.hasSelection():
+                text = cursor.selectedText()
+                if '\u2029' not in text:  # Qt uses this for line breaks
+                    self._find_widget.set_search_text(text)
+                else:
+                    self._find_widget.set_search_text("")
+        elif self._input.hasFocus():
+            cursor = self._input.textCursor()
+            if cursor.hasSelection():
+                text = cursor.selectedText()
+                if '\u2029' not in text:
+                    self._find_widget.set_search_text(text)
+                else:
+                    self._find_widget.set_search_text("")
+
+        self._find_widget.show()
+
+    def _close_find(self):
+        """Close the find widget and clear search state."""
+        self._find_widget.hide()
+        self._find_handler.clear()
+
+    def _find_next(self, forward: bool = True):
+        """Find next/previous match."""
+        text = self._find_widget.get_search_text()
+        # Include both messages and input widget in search
+        widgets = self._messages + [self._input]
+        self._find_handler.find_text(text, widgets, forward)
+        current, total = self._find_handler.get_match_status()
+        self._find_widget.set_match_status(current, total)

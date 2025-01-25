@@ -873,12 +873,11 @@ class TabManager(QWidget):
 
     def can_find(self) -> bool:
         tab = self._get_current_tab()
-        return False if not tab else tab.can_paste()
+        return (tab != None)
 
     def find(self):
         tab = self._get_current_tab()
-        if isinstance(tab, EditorTab):
-            tab.show_find()
+        tab.show_find()
 
     def close_deleted_file(self, path: str):
         """

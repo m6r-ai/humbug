@@ -78,7 +78,7 @@ class MessageWidget(QFrame):
 
     def _create_text_area(self) -> ConversationTextEdit:
         """Create and configure the text area.
-        
+
         Returns:
             Configured ConversationTextEdit instance
         """
@@ -94,7 +94,7 @@ class MessageWidget(QFrame):
 
     def set_content(self, text: str, style: MessageSource, timestamp: datetime):
         """Set content with style, handling incremental updates for AI responses.
-        
+
         Args:
             text: The message text content
             style: The style type ('user', 'ai', 'system', or 'error')
@@ -158,6 +158,17 @@ class MessageWidget(QFrame):
             self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         else:
             self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def find_text(self, text: str) -> bool:
+        """Find text in the message.
+
+        Args:
+            text: Text to search for
+
+        Returns:
+            True if text was found
+        """
+        return self._text_area.find_text(text)
 
     def clear_selection(self):
         """Clear any text selection in this message."""
