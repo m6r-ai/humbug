@@ -4,6 +4,8 @@
 
 This release adds the following new features:
 
+- Added a Scheme lexer/parser for syntax highlighting.
+
 The release fixes the following bugs:
 
 ## v0.3.1 (2025-01-22)
