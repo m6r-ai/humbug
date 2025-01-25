@@ -57,23 +57,33 @@ class ConversationFind:
             return
 
         # Move to next/previous match
-        if forward:
-            if self._current_widget_index == -1:
+        if self._current_widget_index == -1:
+            # First search - start at beginning or end depending on direction
+            if forward:
                 self._current_widget_index = 0
                 self._current_match_index = 0
             else:
-                self._current_match_index += 1
-                if self._current_match_index >= len(self._matches[self._current_widget_index][1]):
-                    self._current_widget_index = (self._current_widget_index + 1) % len(self._matches)
-                    self._current_match_index = 0
-        else:
-            if self._current_widget_index == -1:
                 self._current_widget_index = len(self._matches) - 1
                 self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
+        else:
+            # Move to next/previous match
+            if forward:
+                self._current_match_index += 1
+                # If we've reached the end of matches in current widget
+                if self._current_match_index >= len(self._matches[self._current_widget_index][1]):
+                    self._current_widget_index += 1
+                    # If we've reached the end of widgets, wrap around
+                    if self._current_widget_index >= len(self._matches):
+                        self._current_widget_index = 0
+                    self._current_match_index = 0
             else:
                 self._current_match_index -= 1
+                # If we've reached the start of matches in current widget
                 if self._current_match_index < 0:
-                    self._current_widget_index = (self._current_widget_index - 1) % len(self._matches)
+                    self._current_widget_index -= 1
+                    # If we've reached the start of widgets, wrap around
+                    if self._current_widget_index < 0:
+                        self._current_widget_index = len(self._matches) - 1
                     self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
 
         # Highlight all matches
@@ -96,9 +106,15 @@ class ConversationFind:
         other_color = self._style_manager.get_color(ColorRole.TEXT_SELECTED).lighter(120)
         other_format.setBackground(other_color)
 
+        # Create a dictionary to collect selections per text edit
+        selections_by_editor = {}
+
         # Highlight all matches
         for widget_idx, (widget, matches) in enumerate(self._matches):
             text_edit = widget._text_area
+            if text_edit not in selections_by_editor:
+                selections_by_editor[text_edit] = []
+
             for match_idx, (start, end) in enumerate(matches):
                 cursor = QTextCursor(text_edit.document())
                 cursor.setPosition(start)
@@ -114,8 +130,11 @@ class ConversationFind:
                 else:
                     extra_selection.format = other_format
 
-                self._extra_selections.append((text_edit, extra_selection))
-                text_edit.setExtraSelections([s for te, s in self._extra_selections if te == text_edit])
+                selections_by_editor[text_edit].append(extra_selection)
+
+        # Apply all selections at once for each text edit
+        for text_edit, selections in selections_by_editor.items():
+            text_edit.setExtraSelections(selections)
 
     def _scroll_to_match(self) -> None:
         """Scroll to ensure the current match is visible."""
