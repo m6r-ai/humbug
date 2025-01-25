@@ -92,7 +92,10 @@ class ConversationTextEdit(QTextEdit):
                 # Use the horizontal component directly
                 delta = event.angleDelta().x()
                 hbar.setValue(hbar.value() - delta)
-                event.accept()
+
+                # We've only handled the horizontal component - we need to let our parent
+                # handle the vertical component.
+                event.ignore()
                 return
 
         # For all other cases, propagate the event up
