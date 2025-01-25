@@ -78,7 +78,7 @@ class EditorFind:
             # Create extra selection
             extra_selection = QTextEdit.ExtraSelection()
             extra_selection.cursor = cursor
-            
+
             # Use different format for current match
             if i == self._current_match:
                 extra_selection.format = selection_format
