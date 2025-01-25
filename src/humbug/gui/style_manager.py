@@ -442,45 +442,45 @@ class StyleManager(QObject):
 
             # Right-pointing arrow
             write_icon(f'arrow-right-{suffix}.svg', f'''
-                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M2.25,1.5 L3.75,3 L2.25,4.5"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M24,16 L40,32 L24,48"/>
                 </svg>
             ''')
 
             # Left-pointing arrow
             write_icon(f'arrow-left-{suffix}.svg', f'''
-                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M3.75,1.5 L2.25,3 L3.75,4.5"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M40,16 L24,32 L40,48"/>
                 </svg>
             ''')
 
             # Up-pointing arrow
             write_icon(f'arrow-up-{suffix}.svg', f'''
-                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1.5,3.75 L3,2.25 L4.5,3.75"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M16,40 L32,24 L48,40"/>
                 </svg>
             ''')
 
             # Down-pointing arrow
             write_icon(f'arrow-down-{suffix}.svg', f'''
-                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1.5,2.25 L3,3.75 L4.5,2.25"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M16,24 L32,40 L48,24"/>
                 </svg>
             ''')
 
             # Close button - visible version
             write_icon(f'close-{suffix}.svg', f'''
-                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="4" fill="none"
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none"
                         d="M16,16 L48,48 M48,16 L16,48"/>
                 </svg>
             ''')
 
             # Checkbox check mark
             write_icon(f'check-{suffix}.svg', f'''
-                <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="1.5" fill="none"
-                        d="M2,6 L5,9 L10,3" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M16,32 L28,44 L48,20" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             ''')
 
