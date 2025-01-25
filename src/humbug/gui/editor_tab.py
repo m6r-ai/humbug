@@ -11,7 +11,9 @@ from PySide6.QtGui import QTextCursor
 
 from humbug.gui.editor_highlighter import EditorHighlighter
 from humbug.gui.color_role import ColorRole
+from humbug.gui.editor_find import EditorFind
 from humbug.gui.editor_text_edit import EditorTextEdit
+from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
@@ -58,8 +60,7 @@ class EditorTab(TabBase):
     """Tab for editing text files."""
 
     def __init__(self, tab_id: str, parent=None):
-        """
-        Initialize editor tab.
+        """Initialize editor tab.
 
         Args:
             tab_id: Unique identifier for this tab
@@ -82,11 +83,22 @@ class EditorTab(TabBase):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # Add find widget at top (initially hidden)
+        self._find_widget = FindWidget()
+        self._find_widget.hide()
+        self._find_widget.closed.connect(self._close_find)
+        self._find_widget.find_next.connect(lambda: self._find_next(True))
+        self._find_widget.find_previous.connect(lambda: self._find_next(False))
+        layout.addWidget(self._find_widget)
+
         # Create editor
         self._editor = EditorTextEdit()
         self._editor.textChanged.connect(self._handle_text_changed)
         self._editor.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor)
+
+        # Create find handler
+        self._find_handler = EditorFind(self._editor)
 
         self._install_activation_tracking(self._editor)
 
@@ -612,3 +624,19 @@ class EditorTab(TabBase):
 
     def can_submit(self) -> bool:
         return False
+
+    def _show_find(self):
+        """Show the find widget."""
+        self._find_widget.show()
+
+    def _close_find(self):
+        """Close the find widget and clear search state."""
+        self._find_widget.hide()
+        self._find_handler.clear()
+
+    def _find_next(self, forward: bool = True):
+        """Find next/previous match."""
+        text = self._find_widget.get_search_text()
+        self._find_handler.find_text(text, forward)
+        current, total = self._find_handler.get_match_status()
+        self._find_widget.set_match_status(current, total)

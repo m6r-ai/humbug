@@ -21,6 +21,7 @@ from humbug.ai.ai_backend import AIBackend
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.conversation_error import ConversationError
 from humbug.gui.color_role import ColorRole
+from humbug.gui.editor_tab import EditorTab
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
@@ -123,6 +124,10 @@ class MainWindow(QMainWindow):
         self._paste_action.setShortcut(QKeySequence("Ctrl+V"))
         self._paste_action.triggered.connect(self._paste)
 
+        self._find_action = QAction("Find", self)
+        self._find_action.setShortcut(QKeySequence.Find)
+        self._find_action.triggered.connect(self._show_find)
+
         self._mindspace_settings_action = QAction("Mindspace Settings", self)
         self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
         self._mindspace_settings_action.triggered.connect(self._show_mindspace_settings_dialog)
@@ -207,6 +212,8 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self._cut_action)
         edit_menu.addAction(self._copy_action)
         edit_menu.addAction(self._paste_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(self._find_action)
         edit_menu.addSeparator()
         edit_menu.addAction(self._mindspace_settings_action)
         edit_menu.addAction(self._conv_settings_action)
@@ -447,6 +454,12 @@ class MainWindow(QMainWindow):
 
     def _paste(self):
         self._tab_manager.paste()
+
+    def _show_find(self):
+        """Show the find widget in current editor tab."""
+        tab = self._tab_manager._get_current_tab()
+        if isinstance(tab, EditorTab):
+            tab._show_find()
 
     def _show_about_dialog(self):
         """Show the About dialog."""
