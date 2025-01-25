@@ -58,6 +58,7 @@ class FindWidget(QWidget):
         self._current_match = 0
 
         # Apply styling
+        self._update_match_status()
         self._handle_style_changed(self._style_manager.zoom_factor)
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
@@ -95,16 +96,14 @@ class FindWidget(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                border-radius: 4px;
-                padding: 4px;
+                padding: 2px;
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
             QToolButton {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                border-radius: 4px;
-                padding: 4px 8px;
+                padding: 2px 4px;
             }}
             QToolButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
@@ -118,7 +117,8 @@ class FindWidget(QWidget):
             }}
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 4px;
+                border: none;
+                padding: 2px;
             }}
         """)
 
@@ -142,8 +142,22 @@ class FindWidget(QWidget):
         super().closeEvent(event)
         self.closed.emit()
 
+    def _update_match_status(self):
+        """Update the match status display."""
+
+        if self._matches > 0:
+            self._status_label.setText(f"{self._current_match} of {self._matches}")
+            self._status_label.show()
+        else:
+            self._status_label.setText("No matches")
+            self._status_label.show()
+
+        # Update button states
+        self._prev_button.setEnabled(self._matches > 0)
+        self._next_button.setEnabled(self._matches > 0)
+
     def set_match_status(self, current: int, total: int):
-        """Update the match status display.
+        """Set the match status display.
         
         Args:
             current: Current match index (1-based)
@@ -151,21 +165,7 @@ class FindWidget(QWidget):
         """
         self._matches = total
         self._current_match = current
-
-        if total > 0:
-            self._status_label.setText(f"{current} of {total}")
-            self._status_label.show()
-        else:
-            if self._search_input.text():
-                self._status_label.setText("No matches")
-                self._status_label.show()
-            else:
-                self._status_label.clear()
-                self._status_label.hide()
-
-        # Update button states
-        self._prev_button.setEnabled(total > 0)
-        self._next_button.setEnabled(total > 0)
+        self._update_match_status()
 
     def _handle_text_changed(self):
         """Handle changes to search text."""
