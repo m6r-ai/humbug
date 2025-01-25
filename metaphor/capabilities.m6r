@@ -797,6 +797,9 @@ Context: Capabilities
                 that indicates the number of matches for the current search, and 3 buttons.  The buttons are
                 "previous" (uses a < icon), "next" (uses a > icon), and "close" (uses an x icon).
 
+                If the user has highlighted text on a single line then find will use that text as the initial search
+                string.
+
                 This will be matched with a standard keyboard shortcut (e.g. "Ctrl+F" for Windows).
 
             Context: Separator
