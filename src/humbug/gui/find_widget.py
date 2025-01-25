@@ -103,7 +103,7 @@ class FindWidget(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                padding: 2px 4px;
+                padding: 2px;
             }}
             QToolButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
