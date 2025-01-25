@@ -3,8 +3,8 @@
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLineEdit, QToolButton, QLabel
 )
-from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QTextCursor, QTextDocument
+from PySide6.QtCore import Signal, Qt, QSize
+from PySide6.QtGui import QIcon
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -35,25 +35,23 @@ class FindWidget(QWidget):
         self._search_input.returnPressed.connect(self.find_next)
         layout.addWidget(self._search_input)
 
-        # Create navigation buttons
-        self._prev_button = QToolButton()
-        self._prev_button.setText("Previous")
-        self._prev_button.clicked.connect(self.find_previous)
-        layout.addWidget(self._prev_button)
-
-        self._next_button = QToolButton()
-        self._next_button.setText("Next")
-        self._next_button.clicked.connect(self.find_next)
-        layout.addWidget(self._next_button)
-
         # Add status label
         self._status_label = QLabel()
         layout.addWidget(self._status_label)
 
+        # Create navigation buttons
+        self._prev_button = QToolButton()
+        self._prev_button.clicked.connect(self.find_previous)
+        layout.addWidget(self._prev_button)
+
+        self._next_button = QToolButton()
+        self._next_button.clicked.connect(self.find_next)
+        layout.addWidget(self._next_button)
+
         # Add close button
         self._close_button = QToolButton()
-        self._close_button.setText("×")
         self._close_button.clicked.connect(self.close)
+        self._close_button.setObjectName("closeButton")
         layout.addWidget(self._close_button)
 
         # Track current state
@@ -69,13 +67,30 @@ class FindWidget(QWidget):
         # Update font size
         font = self.font()
         base_font_size = self._style_manager.base_font_size
-        font.setPointSizeF(base_font_size * factor)
+        font_size = base_font_size * factor
+        font.setPointSizeF(font_size)
         self.setFont(font)
+
+        self._prev_button.setIcon(QIcon(self._style_manager.scale_icon(
+            self._style_manager.get_icon_path("arrow-left"), 16
+        )))
+        self._next_button.setIcon(QIcon(self._style_manager.scale_icon(
+            self._style_manager.get_icon_path("arrow-right"), 16
+        )))
+        self._close_button.setIcon(QIcon(self._style_manager.scale_icon(
+            self._style_manager.get_icon_path("close"), 16
+        )))
+
+        icon_size = QSize(16 * factor, 16 * factor)
+        self._prev_button.setIconSize(icon_size)
+        self._next_button.setIconSize(icon_size)
+        self._close_button.setIconSize(icon_size)
 
         self.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                font-size: {font_size}pt;
             }}
             QLineEdit {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
@@ -137,7 +152,7 @@ class FindWidget(QWidget):
         """
         self._matches = total
         self._current_match = current
-        
+
         if total > 0:
             self._status_label.setText(f"{current} of {total}")
             self._status_label.show()
