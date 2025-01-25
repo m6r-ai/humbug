@@ -12,6 +12,7 @@ from humbug.gui.file_tree_view import FileTreeView
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.mindspace_file_model import MindspaceFileModel
+from humbug.gui.mindspace_file_tree_style import MindspaceFileTreeStyle
 
 
 class MindspaceFileTree(QWidget):
@@ -34,6 +35,8 @@ class MindspaceFileTree(QWidget):
         # Create tree view
         self._tree_view = FileTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
+        self._tree_style = MindspaceFileTreeStyle(self._style_manager)
+        self._tree_view.setStyle(self._tree_style)
 
         # Create file system model
         self._icon_provider = FileTreeIconProvider()
@@ -165,6 +168,7 @@ class MindspaceFileTree(QWidget):
         self.setFont(font)
         self._tree_view.setFont(font)
 
+        branch_icon_size = int(12 * zoom_factor)
         self.setStyleSheet(f"""
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
@@ -188,11 +192,15 @@ class MindspaceFileTree(QWidget):
             QTreeView::branch:closed:has-children:has-siblings {{
                 image: url("{self._style_manager.get_icon_path("arrow-right")}");
                 padding: 2px;
+                width: {branch_icon_size}px;
+                height: {branch_icon_size}px;
             }}
             QTreeView::branch:open:has-children:!has-siblings,
             QTreeView::branch:open:has-children:has-siblings {{
                 image: url("{self._style_manager.get_icon_path("arrow-down")}");
                 padding: 2px;
+                width: {branch_icon_size}px;
+                height: {branch_icon_size}px;
             }}
             QScrollBar:vertical {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
