@@ -11,7 +11,7 @@ The release fixes the following bugs:
 
 - The expand/collapse icons in the mindspace file tree did not scale with the zoom level.
 - Vertical scrolling in the conversation window only worked for pure vertical scrolling, not
-  where horizontal scrolling occurred.
+  where horizontal scrolling occurred at the same time.
 
 ## v0.3.1 (2025-01-22)
 
