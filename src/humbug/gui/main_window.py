@@ -27,6 +27,7 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.gui.mindspace_file_tree import MindspaceFileTree
+from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 
@@ -37,6 +38,8 @@ class MainWindow(QMainWindow):
     def __init__(self, ai_backends: Dict[str, AIBackend]):
         """Initialize the main window."""
         super().__init__()
+        self._language_manager = LanguageManager()
+        strings = self._language_manager.strings
         self._ai_backends = ai_backends
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
@@ -50,126 +53,126 @@ class MainWindow(QMainWindow):
         self._quit_action.triggered.connect(self.close)
 
         # File menu actions
-        self._new_mindspace_action = QAction("New Mindspace", self)
+        self._new_mindspace_action = QAction(strings.new_mindspace, self)
         self._new_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
         self._new_mindspace_action.triggered.connect(self._new_mindspace)
 
-        self._new_conv_action = QAction("New Conversation", self)
+        self._new_conv_action = QAction(strings.new_conversation, self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self._new_conv_action.triggered.connect(self._new_conversation)
 
-        self._new_metaphor_conv_action = QAction("New Metaphor Conversation...", self)
+        self._new_metaphor_conv_action = QAction(strings.new_metaphor_conversation, self)
         self._new_metaphor_conv_action.setShortcut(QKeySequence("Ctrl+Shift+M"))
         self._new_metaphor_conv_action.triggered.connect(self._new_metaphor_conversation)
 
-        self._new_file_action = QAction("New File", self)
+        self._new_file_action = QAction(strings.new_file, self)
         self._new_file_action.setShortcut(QKeySequence.New)
         self._new_file_action.triggered.connect(self._new_file)
 
-        self._open_mindspace_action = QAction("Open Mindspace", self)
+        self._open_mindspace_action = QAction(strings.open_mindspace, self)
         self._open_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
         self._open_mindspace_action.triggered.connect(self._open_mindspace)
 
-        self._open_conv_action = QAction("Open Conversation...", self)
+        self._open_conv_action = QAction(strings.open_conversation, self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
         self._open_conv_action.triggered.connect(self._open_conversation)
 
-        self._open_file_action = QAction("Open File...", self)
+        self._open_file_action = QAction(strings.open_file, self)
         self._open_file_action.setShortcut(QKeySequence.Open)
         self._open_file_action.triggered.connect(self._open_file)
 
-        self._fork_conv_action = QAction("Fork Conversation", self)
+        self._fork_conv_action = QAction(strings.fork_conversation, self)
         self._fork_conv_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
         self._fork_conv_action.triggered.connect(self._fork_conversation)
 
-        self._save_action = QAction("Save", self)
+        self._save_action = QAction(strings.save, self)
         self._save_action.setShortcut(QKeySequence.Save)
         self._save_action.triggered.connect(self._save_file)
 
-        self._save_as_action = QAction("Save As...", self)
+        self._save_as_action = QAction(strings.save_as, self)
         self._save_as_action.setShortcut(QKeySequence.SaveAs)
         self._save_as_action.triggered.connect(self._save_file_as)
 
-        self._close_tab_action = QAction("Close Tab", self)
+        self._close_tab_action = QAction(strings.close_tab, self)
         self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
         self._close_tab_action.triggered.connect(self._close_tab)
 
-        self._close_mindspace_action = QAction("Close Mindspace", self)
+        self._close_mindspace_action = QAction(strings.close_mindspace, self)
         self._close_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+W"))
         self._close_mindspace_action.triggered.connect(self._close_mindspace)
 
         # Edit menu actions
-        self._submit_message_action = QAction("Submit Message", self)
+        self._submit_message_action = QAction(strings.submit_message, self)
         self._submit_message_action.setShortcut(QKeySequence("Ctrl+J"))
         self._submit_message_action.triggered.connect(self._submit_message)
 
-        self._undo_action = QAction("Undo", self)
+        self._undo_action = QAction(strings.undo, self)
         self._undo_action.setShortcut(QKeySequence("Ctrl+Z"))
         self._undo_action.triggered.connect(self._undo)
 
-        self._redo_action = QAction("Redo", self)
+        self._redo_action = QAction(strings.redo, self)
         self._redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
         self._redo_action.triggered.connect(self._redo)
 
-        self._cut_action = QAction("Cut", self)
+        self._cut_action = QAction(strings.cut, self)
         self._cut_action.setShortcut(QKeySequence("Ctrl+X"))
         self._cut_action.triggered.connect(self._cut)
 
-        self._copy_action = QAction("Copy", self)
+        self._copy_action = QAction(strings.copy, self)
         self._copy_action.setShortcut(QKeySequence("Ctrl+C"))
         self._copy_action.triggered.connect(self._copy)
 
-        self._paste_action = QAction("Paste", self)
+        self._paste_action = QAction(strings.paste, self)
         self._paste_action.setShortcut(QKeySequence("Ctrl+V"))
         self._paste_action.triggered.connect(self._paste)
 
-        self._find_action = QAction("Find", self)
+        self._find_action = QAction(strings.find, self)
         self._find_action.setShortcut(QKeySequence.Find)
         self._find_action.triggered.connect(self._find)
 
-        self._mindspace_settings_action = QAction("Mindspace Settings", self)
+        self._mindspace_settings_action = QAction(strings.mindspace_settings, self)
         self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
         self._mindspace_settings_action.triggered.connect(self._show_mindspace_settings_dialog)
 
-        self._conv_settings_action = QAction("Conversation Settings", self)
+        self._conv_settings_action = QAction(strings.conversation_settings, self)
         self._conv_settings_action.setShortcut(QKeySequence("Ctrl+,"))
         self._conv_settings_action.triggered.connect(self._show_conversation_settings_dialog)
 
         # View menu actions
-        self._dark_mode_action = QAction("&Dark Mode", self)
+        self._dark_mode_action = QAction(strings.dark_mode, self)
         self._dark_mode_action.setCheckable(True)
         self._dark_mode_action.setChecked(True)
         self._dark_mode_action.triggered.connect(self._handle_dark_mode)
 
-        self._zoom_in_action = QAction("Zoom In", self)
+        self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
         self._zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.189027))
 
-        self._zoom_out_action = QAction("Zoom Out", self)
+        self._zoom_out_action = QAction(strings.zoom_out, self)
         self._zoom_out_action.setShortcut(QKeySequence("Ctrl+-"))
         self._zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.189027))
 
-        self._reset_zoom_action = QAction("Reset Zoom", self)
+        self._reset_zoom_action = QAction(strings.reset_zoom, self)
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
-        self._show_all_columns_action = QAction("Show All Columns", self)
+        self._show_all_columns_action = QAction(strings.show_all_columns, self)
         self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
         self._show_all_columns_action.triggered.connect(self._show_all_columns)
 
-        self._split_column_left_action = QAction("Split Column Left", self)
+        self._split_column_left_action = QAction(strings.split_column_left, self)
         self._split_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+["))
         self._split_column_left_action.triggered.connect(lambda: self._split_column(True))
 
-        self._split_column_right_action = QAction("Split Column Right", self)
+        self._split_column_right_action = QAction(strings.split_column_right, self)
         self._split_column_right_action.setShortcut(QKeySequence("Ctrl+Shift+]"))
         self._split_column_right_action.triggered.connect(lambda: self._split_column(False))
 
-        self._merge_column_left_action = QAction("Merge Column Left", self)
+        self._merge_column_left_action = QAction(strings.merge_column_left, self)
         self._merge_column_left_action.setShortcut(QKeySequence("Ctrl+["))
         self._merge_column_left_action.triggered.connect(lambda: self._merge_column(True))
 
-        self._merge_column_right_action = QAction("Merge Column Right", self)
+        self._merge_column_right_action = QAction(strings.merge_column_right, self)
         self._merge_column_right_action.setShortcut(QKeySequence("Ctrl+]"))
         self._merge_column_right_action.triggered.connect(lambda: self._merge_column(False))
 
@@ -177,13 +180,13 @@ class MainWindow(QMainWindow):
         self.setMenuBar(self._menu_bar)
 
         # Humbug menu
-        humbug_menu = self._menu_bar.addMenu("&Humbug")
+        humbug_menu = self._menu_bar.addMenu(strings.humbug_menu)
         humbug_menu.addAction(self._about_action)
         humbug_menu.addSeparator()
         humbug_menu.addAction(self._quit_action)
 
         # File menu
-        file_menu = self._menu_bar.addMenu("&File")
+        file_menu = self._menu_bar.addMenu(strings.file_menu)
         file_menu.addAction(self._new_mindspace_action)
         file_menu.addAction(self._new_conv_action)
         file_menu.addAction(self._new_metaphor_conv_action)
@@ -202,7 +205,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self._close_tab_action)
 
         # Edit menu
-        edit_menu = self._menu_bar.addMenu("&Edit")
+        edit_menu = self._menu_bar.addMenu(strings.edit_menu)
         edit_menu.addAction(self._submit_message_action)
         edit_menu.addSeparator()
         edit_menu.addAction(self._undo_action)
@@ -218,7 +221,7 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self._conv_settings_action)
 
         # View menu
-        view_menu = self._menu_bar.addMenu("&View")
+        view_menu = self._menu_bar.addMenu(strings.view_menu)
         view_menu.addAction(self._dark_mode_action)
         view_menu.addSeparator()
         view_menu.addAction(self._zoom_in_action)
@@ -492,7 +495,7 @@ class MainWindow(QMainWindow):
         self._menu_timer.stop()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open File",
+            self._language_manager.strings.file_dialog_title,
             self._mindspace_manager.file_dialog_directory
         )
         self._menu_timer.start()

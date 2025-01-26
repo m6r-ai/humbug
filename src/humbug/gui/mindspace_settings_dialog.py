@@ -15,6 +15,8 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_dialog import create_language_selector
+from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 
@@ -30,7 +32,10 @@ class MindspaceSettingsDialog(QDialog):
             parent: Parent widget, typically the main window.
         """
         super().__init__(parent)
-        self.setWindowTitle("Mindspace Settings")
+        self._language_manager = LanguageManager()
+        strings = self._language_manager.strings
+
+        self.setWindowTitle(strings.settings_dialog_title)
         self.setMinimumWidth(500)
         self.setModal(True)
 
@@ -43,6 +48,13 @@ class MindspaceSettingsDialog(QDialog):
         layout = QVBoxLayout()
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
+
+        # Add language selector
+        language_layout, self._language_combo = create_language_selector(self)
+        layout.addLayout(language_layout)
+
+        # Connect language change handler
+        self._language_combo.currentIndexChanged.connect(self._handle_language_change)
 
         # Soft tabs setting
         soft_tabs_layout = QHBoxLayout()
@@ -247,12 +259,37 @@ class MindspaceSettingsDialog(QDialog):
             }}
         """)
 
+    def _handle_language_change(self, _index: int) -> None:
+        """Handle language selection changes."""
+        selected_code = self._language_combo.currentData()
+        self._language_manager.set_language(selected_code)
+        
+        # Update dialog text with new language
+        strings = self._language_manager.strings
+        self.setWindowTitle(strings.settings_dialog_title)
+        
+        # Update labels
+        self._soft_tabs_label.setText(strings.use_soft_tabs)
+        self._tab_size_label.setText(strings.tab_size)
+        self._auto_backup_label.setText(strings.auto_backup)
+        self._backup_interval_label.setText(strings.backup_interval)
+        
+        # Update buttons
+        self.ok_button.setText(strings.ok)
+        self.cancel_button.setText(strings.cancel)
+        self.apply_button.setText(strings.apply)
+
     def _handle_value_change(self) -> None:
         """Handle changes to any setting value."""
         if not self._current_settings:
             return
 
+        # Check if language changed
+        new_lang = self._language_combo.currentData()
+        lang_changed = new_lang != self._language_manager.current_language
+    
         self.apply_button.setEnabled(
+            lang_changed or
             self._soft_tabs_check.isChecked() != self._current_settings.use_soft_tabs or
             self._tab_size_spin.value() != self._current_settings.tab_size or
             self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
@@ -294,6 +331,11 @@ class MindspaceSettingsDialog(QDialog):
 
     def _handle_apply(self) -> None:
         """Handle Apply button click."""
+        # Apply language change if needed
+        new_lang = self._language_combo.currentData()
+        if new_lang != self._language_manager.current_language:
+            self._language_manager.set_language(new_lang)
+
         settings = self.get_settings()
         self._current_settings = settings
         self.settings_changed.emit(settings)
