@@ -366,15 +366,8 @@ class MindspaceSettingsDialog(QDialog):
 
     def get_settings(self) -> MindspaceSettings:
         """Get the current settings from the dialog."""
-        # Get current language selection
-        selected_code = self._language_combo.currentData()
-
-        # Apply language change
-        if selected_code != self._language_manager.current_language:
-            self._language_manager.set_language(selected_code)
-
         return MindspaceSettings(
-            language=selected_code,
+            language=self._language_combo.currentData(),
             use_soft_tabs=self._soft_tabs_check.isChecked(),
             tab_size=self._tab_size_spin.value(),
             font_size=self._font_size_spin.value(),
@@ -416,11 +409,6 @@ class MindspaceSettingsDialog(QDialog):
 
     def _handle_apply(self) -> None:
         """Handle Apply button click."""
-        # Apply language change if needed
-        new_lang = self._language_combo.currentData()
-        if new_lang != self._language_manager.current_language:
-            self._language_manager.set_language(new_lang)
-
         settings = self.get_settings()
         self._current_settings = settings
         self.settings_changed.emit(settings)
@@ -435,7 +423,5 @@ class MindspaceSettingsDialog(QDialog):
         """Handle Cancel button click."""
         if self._initial_settings:
             self.settings_changed.emit(self._initial_settings)
-
-        self._language_manager.set_language(self._initial_settings.language)
 
         super().reject()

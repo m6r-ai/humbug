@@ -371,6 +371,7 @@ class MainWindow(QMainWindow):
                         self._mindspace_manager.open_mindspace(mindspace_path)
                         self._file_tree.set_mindspace(mindspace_path)
                         self._style_manager.set_mindspace_font_size(self._mindspace_manager.settings.font_size)
+                        self._language_manager.set_language(self._mindspace_manager.settings.language)
                         self._restore_mindspace_state()
                     except MindspaceError as e:
                         self._logger.error("Failed to restore mindspace: %s", str(e))
@@ -826,6 +827,7 @@ class MainWindow(QMainWindow):
             try:
                 self._mindspace_manager.update_settings(new_settings)
                 self._style_manager.set_mindspace_font_size(new_settings.font_size)
+                self._language_manager.set_language(new_settings.language)
             except OSError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
                 MessageBox.show_message(

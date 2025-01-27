@@ -37,5 +37,4 @@ class LanguageManager(QObject):
         """Set new language and emit change signal."""
         if code != self._current_language:
             self._current_language = code
-            print("emit language changed")
             self.language_changed.emit(code)
