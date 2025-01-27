@@ -507,7 +507,7 @@ class ConversationTab(TabBase):
         if self._message_with_selection and self._message_with_selection != message_widget:
             self._message_with_selection.clear_selection()
 
-        if (message_widget == self._input):
+        if message_widget == self._input:
             self._message_with_section = None
         else:
             self._message_with_selection = message_widget

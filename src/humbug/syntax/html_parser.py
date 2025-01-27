@@ -85,11 +85,9 @@ class HTMLParser(Parser):
         """
         prev_lexer_state = None
         embedded_parser_state = None
-        parsing_continuation = False
         if prev_parser_state:
             prev_lexer_state = prev_parser_state.lexer_state
             embedded_parser_state = prev_parser_state.embedded_parser_state
-            parsing_continuation = prev_parser_state.parsing_continuation
 
         lexer = HTMLLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
