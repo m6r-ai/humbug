@@ -15,7 +15,7 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.language.language_config import LanguageCode
+from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 

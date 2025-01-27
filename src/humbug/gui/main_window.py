@@ -27,6 +27,7 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.gui.mindspace_file_tree import MindspaceFileTree
+from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -39,6 +40,7 @@ class MainWindow(QMainWindow):
         """Initialize the main window."""
         super().__init__()
         self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings
         self._ai_backends = ai_backends
         self._logger = logging.getLogger("MainWindow")
@@ -297,6 +299,41 @@ class MainWindow(QMainWindow):
 
         self._mindspace_manager = MindspaceManager()
         self._restore_last_mindspace()
+
+    def _handle_language_changed(self, _code: LanguageCode) -> None:
+        """Update UI text when language changes."""
+        strings = self._language_manager.strings
+        self._about_action.setText(strings.about_title)
+        self._new_mindspace_action.setText(strings.new_mindspace)
+        self._new_conv_action.setText(strings.new_conversation)
+        self._new_metaphor_conv_action.setText(strings.new_metaphor_conversation)
+        self._new_file_action.setText(strings.new_file)
+        self._open_mindspace_action.setText(strings.open_mindspace)
+        self._open_conv_action.setText(strings.open_conversation)
+        self._open_file_action.setText(strings.open_file)
+        self._fork_conv_action.setText(strings.fork_conversation)
+        self._save_action.setText(strings.save)
+        self._save_as_action.setText(strings.save_as)
+        self._close_tab_action.setText(strings.close_tab)
+        self._close_mindspace_action.setText(strings.close_mindspace)
+        self._submit_message_action.setText(strings.submit_message)
+        self._undo_action.setText(strings.undo)
+        self._redo_action.setText(strings.redo)
+        self._cut_action.setText(strings.cut)
+        self._copy_action.setText(strings.copy)
+        self._paste_action.setText(strings.paste)
+        self._find_action.setText(strings.find)
+        self._mindspace_settings_action.setText(strings.mindspace_settings)
+        self._conv_settings_action.setText(strings.conversation_settings)
+        self._dark_mode_action.setText(strings.dark_mode)
+        self._zoom_in_action.setText(strings.zoom_in)
+        self._zoom_out_action.setText(strings.zoom_out)
+        self._reset_zoom_action.setText(strings.reset_zoom)
+        self._show_all_columns_action.setText(strings.show_all_columns)
+        self._split_column_left_action.setText(strings.split_column_left)
+        self._split_column_right_action.setText(strings.split_column_right)
+        self._merge_column_left_action.setText(strings.merge_column_left)
+        self._merge_column_right_action.setText(strings.merge_column_right)
 
     def _handle_column_state_changed(self):
         """Handle column state changes from tab manager."""

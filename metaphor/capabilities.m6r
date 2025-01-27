@@ -1,5 +1,5 @@
 Context: Capabilities
-    Humbug is a GUI-based application that allows a user to interact with one or more AI backends.
+    Humbug is a multilingual GUI-based application that allows a user to interact with one or more AI backends.
 
     Navigation is done using a keyboard and mouse.
 
@@ -17,6 +17,15 @@ Context: Capabilities
         The user is able to interact with the mindspace via a GUI application that runs on their local computer.
 
         The application provides means for both the user and for AI assistants to work on the project contents.
+
+    Context: Human language support
+        To give a great user experience, the application supports many human languages.  The current operating
+        language can be changed at runtime, and the current language is stored in the mindspace.  This allows
+        users to work with whatever language they are most comfortable using, but will be able to leverage AI
+        to translate things as necessary.
+
+        Throughout the rest of this document, references will be made to the English language version of any
+        messages or strings, but the application will support the matching versions in all other languages.
 
     Context: Application window
         The main window is divided into two primary regions: a file tree view on the left side, and a tabbed
@@ -272,7 +281,8 @@ Context: Capabilities
                         cursor will move to match the amount outdented.
 
             Context: Syntax highlighting
-                Code blocks and inline code will be syntax highlighted based on the programming language:
+                Code blocks and inline code will be syntax highlighted based on the programming language
+                or data format:
 
                 - Keywords appear in pink (#ffc0eb)
                 - Comments appear in green (#68d068)
@@ -293,12 +303,12 @@ Context: Capabilities
 
                 The syntax highlighting is updated in real-time as text is entered or changed.
 
-                Context: Language detection
+                Context: Language and data format detection
                     When a code block starts with a language identifier (e.g., ```python), the
                     appropriate syntax highlighting rules for that language are applied.
                     If no language is specified, the code is treated as plain text with no highlighting.
 
-                Context: Supported languages
+                Context: Supported languages and data formats
                     Syntax highlighting is supported for:
 
                     - C
@@ -306,9 +316,12 @@ Context: Capabilities
                     - CSS
                     - HTML
                     - JavaScript
+                    - JSON
                     - Kotlin
                     - Metaphor
                     - Python
+                    - Scheme (R5RS)
+                    - Sui Move
                     - TypeScript
 
         Context: Dialog styling
@@ -351,24 +364,24 @@ Context: Capabilities
             all configuration options.
 
             Context: Settings Dialog
-                Context: Editor settings
-                    The editor supports configurable settings.
+                Context: Language
+                    The language to be used by messages in the application can be selected from a drop-down list.
 
-                    Context: Tab settings
-                        The editor supports configurable tab behavior.
+                Context: Tab settings
+                    The visual tabs (e.g. editor and conversation) supports configurable tab character behavior.
 
-                        Context: Soft tabs
-                            The useSoftTabs setting controls whether pressing the tab key inserts literal
-                            tab characters or equivalent spaces.
+                    Context: Soft tabs
+                        The useSoftTabs setting controls whether pressing the tab key inserts literal
+                        tab characters or equivalent spaces.
 
-                        Context: Tab size
-                            The tabSize setting controls how many spaces wide a tab or soft tab will be.
+                    Context: Tab size
+                        The tabSize setting controls how many spaces wide a tab or soft tab will be.
 
-                    Context: Font size
-                        The fontSize setting controls the base font size used in editors and related text areas.
-                        When not specified, the system default font size will be used.
+                Context: Font size
+                    The fontSize setting controls the base font size used in editors and related text areas.
+                    When not specified, the system default font size will be used.
 
-                        The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
+                    The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
 
                 Context: Auto backup settings
                     The editor supports automatic backup of unsaved changes.

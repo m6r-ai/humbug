@@ -6,6 +6,7 @@ This release adds the following new features:
 
 - Added a Scheme lexer/parser for syntax highlighting.
 - Added a "Find" function to search for text in files.
+- Added support for i18n - initial 3 languages are English, French, and Arabic.
 
 The release fixes the following bugs:
 

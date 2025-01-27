@@ -1,13 +1,7 @@
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import Dict
 
-
-class LanguageCode(Enum):
-    """Supported language codes."""
-    EN = auto()  # English
-    FR = auto()  # French
-    AR = auto()  # Arabic
+from humbug.language.language_code import LanguageCode
 
 
 @dataclass

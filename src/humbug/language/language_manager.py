@@ -2,8 +2,8 @@
 
 from PySide6.QtCore import QObject, Signal
 
-
-from humbug.language.language_config import LanguageCode, LanguageStrings
+from humbug.language.language_code import LanguageCode
+from humbug.language.language_config import LanguageStrings
 
 
 class LanguageManager(QObject):
