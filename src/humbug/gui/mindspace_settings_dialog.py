@@ -8,14 +8,14 @@ Settings are persisted to the mindspace's settings.json file.
 from typing import Optional
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QPushButton, QSpinBox, QCheckBox, QDoubleSpinBox
 )
 from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.language.language_dialog import create_language_selector
+from humbug.language.language_config import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 
@@ -50,7 +50,7 @@ class MindspaceSettingsDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Add language selector
-        language_layout, self._language_combo = create_language_selector(self)
+        language_layout, self._language_combo = self._create_language_selector(self)
         layout.addLayout(language_layout)
 
         # Connect language change handler
@@ -182,6 +182,39 @@ class MindspaceSettingsDialog(QDialog):
             QCheckBox::indicator:unchecked {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
             }}
+            QComboBox {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+            }}
+            QComboBox:disabled {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: url({self._style_manager.get_icon_path("arrow-down")});
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox::down-arrow:on {{
+                image: url({self._style_manager.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox::down-arrow:disabled {{
+                image: none;
+            }}
+            QComboBox QAbstractItemView {{
+                background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
             QSpinBox {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -259,21 +292,59 @@ class MindspaceSettingsDialog(QDialog):
             }}
         """)
 
+    def _create_language_selector(self, parent) -> tuple[QHBoxLayout, QComboBox]:
+        """Create language selection UI elements.
+
+        Args:
+            parent: Parent widget for the selector
+
+        Returns:
+            Tuple of (layout containing selector, combo box for language selection)
+        """
+        language_manager = LanguageManager()
+
+        layout = QHBoxLayout()
+        label = QLabel(language_manager.strings.select_language)
+        label.setMinimumHeight(40)
+        combo = QComboBox(parent)
+        combo.setMinimumWidth(300)
+        combo.setMinimumHeight(40)
+
+        # Add language options
+        language_names = {
+            LanguageCode.EN: "English",
+            LanguageCode.FR: "Français",
+            LanguageCode.AR: "العربية"
+        }
+
+        for code in LanguageCode:
+            combo.addItem(language_names[code], code)
+
+        # Set current language
+        current_index = combo.findData(language_manager.current_language)
+        combo.setCurrentIndex(current_index)
+
+        layout.addWidget(label)
+        layout.addStretch()
+        layout.addWidget(combo)
+
+        return layout, combo
+
     def _handle_language_change(self, _index: int) -> None:
         """Handle language selection changes."""
         selected_code = self._language_combo.currentData()
         self._language_manager.set_language(selected_code)
-        
+
         # Update dialog text with new language
         strings = self._language_manager.strings
         self.setWindowTitle(strings.settings_dialog_title)
-        
+
         # Update labels
         self._soft_tabs_label.setText(strings.use_soft_tabs)
         self._tab_size_label.setText(strings.tab_size)
         self._auto_backup_label.setText(strings.auto_backup)
         self._backup_interval_label.setText(strings.backup_interval)
-        
+
         # Update buttons
         self.ok_button.setText(strings.ok)
         self.cancel_button.setText(strings.cancel)
@@ -287,7 +358,7 @@ class MindspaceSettingsDialog(QDialog):
         # Check if language changed
         new_lang = self._language_combo.currentData()
         lang_changed = new_lang != self._language_manager.current_language
-    
+
         self.apply_button.setEnabled(
             lang_changed or
             self._soft_tabs_check.isChecked() != self._current_settings.use_soft_tabs or
