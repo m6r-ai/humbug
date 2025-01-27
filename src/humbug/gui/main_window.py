@@ -11,7 +11,7 @@ from m6rclib import (
 )
 
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel, QMenu
+    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel, QMenu, QApplication
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -302,6 +302,12 @@ class MainWindow(QMainWindow):
 
     def _handle_language_changed(self, _code: LanguageCode) -> None:
         """Update UI text when language changes."""
+        app = QApplication.instance()
+        if self._language_manager.current_language == LanguageCode.AR:
+            app.setLayoutDirection(Qt.RightToLeft)
+        else:
+            app.setLayoutDirection(Qt.LeftToRight)
+
         strings = self._language_manager.strings
 
         # Update menu titles
