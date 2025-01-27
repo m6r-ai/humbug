@@ -3,7 +3,7 @@
 from PySide6.QtCore import QObject, Signal
 
 from humbug.language.language_code import LanguageCode
-from humbug.language.language_config import LanguageStrings
+from humbug.language.language_strings import LanguageStrings
 
 
 class LanguageManager(QObject):
@@ -37,4 +37,5 @@ class LanguageManager(QObject):
         """Set new language and emit change signal."""
         if code != self._current_language:
             self._current_language = code
+            print("emit language changed")
             self.language_changed.emit(code)

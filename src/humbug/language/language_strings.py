@@ -70,6 +70,18 @@ class LanguageStrings:
     error_opening_file: str
     error_saving_file: str
     mindspace_exists_error: str
+    close_button: str
+    save_changes: str
+    discard_button: str
+    confirm_close: str
+    unsaved_changes: str
+    could_not_open: str
+    could_not_save: str
+    error_creating_conversation: str
+    error_opening_conversation: str
+    error_forking_conversation: str
+    error_processing_metaphor: str
+    error_saving_settings: str
 
     @classmethod
     def get_strings(cls, code: LanguageCode) -> 'LanguageStrings':
@@ -142,7 +154,19 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         delete_file_warning="Are you sure you want to delete this file?",
         error_opening_file="Error Opening File",
         error_saving_file="Error Saving File",
-        mindspace_exists_error="Mindspace already exists in selected directory."
+        mindspace_exists_error="Mindspace already exists in selected directory.",
+        close_button="Close",
+        save_changes="Save Changes?",
+        discard_button="Discard",
+        confirm_close="Confirm Close",
+        unsaved_changes="Do you want to save your changes?",
+        could_not_open="Could not open {}: {}",
+        could_not_save="Could not save {}: {}",
+        error_creating_conversation="Failed to create conversation: {}",
+        error_opening_conversation="Could not load {}: {}",
+        error_forking_conversation="Could not fork conversation: {}",
+        error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
+        error_saving_settings="Failed to save mindspace settings: {}"
     ),
 
     LanguageCode.FR: LanguageStrings(
@@ -208,7 +232,19 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         delete_file_warning="Êtes-vous sûr de vouloir supprimer ce fichier ?",
         error_opening_file="Erreur lors de l'ouverture du fichier",
         error_saving_file="Erreur lors de l'enregistrement du fichier",
-        mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné."
+        mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné.",
+        close_button="Fermer",
+        save_changes="Enregistrer les modifications ?",
+        discard_button="Abandonner",
+        confirm_close="Confirmer la fermeture",
+        unsaved_changes="Voulez-vous enregistrer vos modifications ?",
+        could_not_open="Impossible d'ouvrir {} : {}",
+        could_not_save="Impossible d'enregistrer {} : {}",
+        error_creating_conversation="Échec de la création de la conversation : {}",
+        error_opening_conversation="Impossible de charger {} : {}",
+        error_forking_conversation="Impossible de dupliquer la conversation : {}",
+        error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
+        error_saving_settings="Échec de l'enregistrement des paramètres : {}"
     ),
 
     LanguageCode.AR: LanguageStrings(
@@ -274,6 +310,18 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         delete_file_warning="هل أنت متأكد من حذف هذا الملف؟",
         error_opening_file="خطأ في فتح الملف",
         error_saving_file="خطأ في حفظ الملف",
-        mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد."
+        mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد.",
+        close_button="إغلاق",
+        save_changes="حفظ التغييرات؟",
+        discard_button="تجاهل",
+        confirm_close="تأكيد الإغلاق",
+        unsaved_changes="هل تريد حفظ التغييرات؟",
+        could_not_open="لا يمكن فتح {}: {}",
+        could_not_save="لا يمكن حفظ {}: {}",
+        error_creating_conversation="فشل في إنشاء المحادثة: {}",
+        error_opening_conversation="لا يمكن تحميل {}: {}",
+        error_forking_conversation="لا يمكن نسخ المحادثة: {}",
+        error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
+        error_saving_settings="فشل في حفظ الإعدادات: {}"
     )
 }

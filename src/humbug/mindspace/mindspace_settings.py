@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import json
 
-from humbug.language.language_config import LanguageCode
+from humbug.language.language_code import LanguageCode
 
 
 @dataclass

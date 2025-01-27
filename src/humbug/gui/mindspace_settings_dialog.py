@@ -33,6 +33,7 @@ class MindspaceSettingsDialog(QDialog):
         """
         super().__init__(parent)
         self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._update_dialog_texts)
         strings = self._language_manager.strings
 
         self.setWindowTitle(strings.settings_dialog_title)
@@ -54,38 +55,38 @@ class MindspaceSettingsDialog(QDialog):
         layout.addLayout(language_layout)
 
         # Connect language change handler
-        self._language_combo.currentIndexChanged.connect(self._handle_language_change)
+        self._language_combo.currentIndexChanged.connect(self._handle_value_change)
 
         # Soft tabs setting
         soft_tabs_layout = QHBoxLayout()
-        soft_tabs_label = QLabel("Use Soft Tabs:")
-        soft_tabs_label.setMinimumHeight(40)
+        self._soft_tabs_label = QLabel(strings.use_soft_tabs)
+        self._soft_tabs_label.setMinimumHeight(40)
         self._soft_tabs_check = QCheckBox()
         self._soft_tabs_check.setMinimumHeight(40)
         self._soft_tabs_check.setMinimumWidth(300)
         self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
-        soft_tabs_layout.addWidget(soft_tabs_label)
+        soft_tabs_layout.addWidget(self._soft_tabs_label)
         soft_tabs_layout.addStretch()
         soft_tabs_layout.addWidget(self._soft_tabs_check)
         layout.addLayout(soft_tabs_layout)
 
         # Tab size setting
         tab_size_layout = QHBoxLayout()
-        tab_size_label = QLabel("Tab Size:")
-        tab_size_label.setMinimumHeight(40)
+        self._tab_size_label = QLabel(strings.tab_size)
+        self._tab_size_label.setMinimumHeight(40)
         self._tab_size_spin = QSpinBox()
         self._tab_size_spin.setRange(1, 8)
         self._tab_size_spin.setMinimumWidth(300)
         self._tab_size_spin.setMinimumHeight(40)
         self._tab_size_spin.valueChanged.connect(self._handle_value_change)
-        tab_size_layout.addWidget(tab_size_label)
+        tab_size_layout.addWidget(self._tab_size_label)
         tab_size_layout.addStretch()
         tab_size_layout.addWidget(self._tab_size_spin)
         layout.addLayout(tab_size_layout)
 
         font_size_layout = QHBoxLayout()
-        font_size_label = QLabel("Font Size:")
-        font_size_label.setMinimumHeight(40)
+        self._font_size_label = QLabel("Font Size:")
+        self._font_size_label.setMinimumHeight(40)
         self._font_size_spin = QDoubleSpinBox()
         self._font_size_spin.setRange(8.0, 24.0)
         self._font_size_spin.setSingleStep(0.5)
@@ -94,34 +95,34 @@ class MindspaceSettingsDialog(QDialog):
         self._font_size_spin.setMinimumHeight(40)
         self._font_size_spin.setContentsMargins(8, 8, 8, 8)
         self._font_size_spin.valueChanged.connect(self._handle_value_change)
-        font_size_layout.addWidget(font_size_label)
+        font_size_layout.addWidget(self._font_size_label)
         font_size_layout.addStretch()
         font_size_layout.addWidget(self._font_size_spin)
         layout.addLayout(font_size_layout)
 
         # Add auto-backup settings
         auto_backup_layout = QHBoxLayout()
-        auto_backup_label = QLabel("Auto Backup:")
-        auto_backup_label.setMinimumHeight(40)
+        self._auto_backup_label = QLabel(strings.auto_backup)
+        self._auto_backup_label.setMinimumHeight(40)
         self._auto_backup_check = QCheckBox()
         self._auto_backup_check.setMinimumHeight(40)
         self._auto_backup_check.setMinimumWidth(300)
         self._auto_backup_check.stateChanged.connect(self._handle_value_change)
-        auto_backup_layout.addWidget(auto_backup_label)
+        auto_backup_layout.addWidget(self._auto_backup_label)
         auto_backup_layout.addStretch()
         auto_backup_layout.addWidget(self._auto_backup_check)
         layout.addLayout(auto_backup_layout)
 
         # Add auto-backup interval setting
         backup_interval_layout = QHBoxLayout()
-        backup_interval_label = QLabel("Backup Interval (seconds):")
-        backup_interval_label.setMinimumHeight(40)
+        self._backup_interval_label = QLabel(strings.backup_interval)
+        self._backup_interval_label.setMinimumHeight(40)
         self._backup_interval_spin = QSpinBox()
         self._backup_interval_spin.setRange(60, 3600)  # 1 minute to 1 hour
         self._backup_interval_spin.setMinimumWidth(300)
         self._backup_interval_spin.setMinimumHeight(40)
         self._backup_interval_spin.valueChanged.connect(self._handle_value_change)
-        backup_interval_layout.addWidget(backup_interval_label)
+        backup_interval_layout.addWidget(self._backup_interval_label)
         backup_interval_layout.addStretch()
         backup_interval_layout.addWidget(self._backup_interval_spin)
         layout.addLayout(backup_interval_layout)
@@ -134,9 +135,9 @@ class MindspaceSettingsDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)
 
-        self.ok_button = QPushButton("OK")
-        self.cancel_button = QPushButton("Cancel")
-        self.apply_button = QPushButton("Apply")
+        self.ok_button = QPushButton(strings.ok)
+        self.cancel_button = QPushButton(strings.cancel)
+        self.apply_button = QPushButton(strings.apply)
 
         self.ok_button.clicked.connect(self._handle_ok)
         self.cancel_button.clicked.connect(self.reject)
@@ -304,8 +305,8 @@ class MindspaceSettingsDialog(QDialog):
         language_manager = LanguageManager()
 
         layout = QHBoxLayout()
-        label = QLabel(language_manager.strings.select_language)
-        label.setMinimumHeight(40)
+        self._language_label = QLabel(language_manager.strings.select_language)
+        self._language_label.setMinimumHeight(40)
         combo = QComboBox(parent)
         combo.setMinimumWidth(300)
         combo.setMinimumHeight(40)
@@ -324,24 +325,23 @@ class MindspaceSettingsDialog(QDialog):
         current_index = combo.findData(language_manager.current_language)
         combo.setCurrentIndex(current_index)
 
-        layout.addWidget(label)
+        layout.addWidget(self._language_label)
         layout.addStretch()
         layout.addWidget(combo)
 
         return layout, combo
 
-    def _handle_language_change(self, _index: int) -> None:
-        """Handle language selection changes."""
-        selected_code = self._language_combo.currentData()
-        self._language_manager.set_language(selected_code)
-
-        # Update dialog text with new language
+    def _update_dialog_texts(self) -> None:
+        """Update all dialog texts with current language strings."""
+        print("dialog detected lang change")
         strings = self._language_manager.strings
         self.setWindowTitle(strings.settings_dialog_title)
 
         # Update labels
+        self._language_label.setText(strings.select_language)
         self._soft_tabs_label.setText(strings.use_soft_tabs)
         self._tab_size_label.setText(strings.tab_size)
+        self._font_size_label.setText("Font Size:")  # This probably needs translation too
         self._auto_backup_label.setText(strings.auto_backup)
         self._backup_interval_label.setText(strings.backup_interval)
 
@@ -355,20 +355,26 @@ class MindspaceSettingsDialog(QDialog):
         if not self._current_settings:
             return
 
-        # Check if language changed
-        new_lang = self._language_combo.currentData()
-        lang_changed = new_lang != self._language_manager.current_language
-
         self.apply_button.setEnabled(
-            lang_changed or
+            self._language_combo.currentData() != self._current_settings.language or
             self._soft_tabs_check.isChecked() != self._current_settings.use_soft_tabs or
             self._tab_size_spin.value() != self._current_settings.tab_size or
+            self._auto_backup_check.isChecked() != self._current_settings.auto_backup or
+            self._backup_interval_spin.value() != self._current_settings.auto_backup_interval or
             self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
         )
 
     def get_settings(self) -> MindspaceSettings:
         """Get the current settings from the dialog."""
+        # Get current language selection
+        selected_code = self._language_combo.currentData()
+
+        # Apply language change
+        if selected_code != self._language_manager.current_language:
+            self._language_manager.set_language(selected_code)
+
         return MindspaceSettings(
+            language=selected_code,
             use_soft_tabs=self._soft_tabs_check.isChecked(),
             tab_size=self._tab_size_spin.value(),
             font_size=self._font_size_spin.value(),
@@ -378,7 +384,9 @@ class MindspaceSettingsDialog(QDialog):
 
     def set_settings(self, settings: MindspaceSettings) -> None:
         """Set the current settings in the dialog."""
+        # Store initial language for potential cancel/revert
         self._initial_settings = MindspaceSettings(
+            language=settings.language,
             use_soft_tabs=settings.use_soft_tabs,
             tab_size=settings.tab_size,
             font_size=settings.font_size,
@@ -386,6 +394,7 @@ class MindspaceSettingsDialog(QDialog):
             auto_backup_interval=settings.auto_backup_interval
         )
         self._current_settings = MindspaceSettings(
+            language=settings.language,
             use_soft_tabs=settings.use_soft_tabs,
             tab_size=settings.tab_size,
             font_size=settings.font_size,
@@ -398,6 +407,11 @@ class MindspaceSettingsDialog(QDialog):
         self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
         self._auto_backup_check.setChecked(settings.auto_backup)
         self._backup_interval_spin.setValue(settings.auto_backup_interval)
+
+        # Set initial language selection
+        current_index = self._language_combo.findData(self._language_manager.current_language)
+        self._language_combo.setCurrentIndex(current_index)
+
         self.apply_button.setEnabled(False)
 
     def _handle_apply(self) -> None:
@@ -421,4 +435,7 @@ class MindspaceSettingsDialog(QDialog):
         """Handle Cancel button click."""
         if self._initial_settings:
             self.settings_changed.emit(self._initial_settings)
+
+        self._language_manager.set_language(self._initial_settings.language)
+
         super().reject()
