@@ -226,6 +226,7 @@ class PythonLexer(Lexer):
                     self._input[self._position + 2] == quote_char):
                 self._in_docstring = False
                 self._position += 3
+                break
 
             self._position += 1
 

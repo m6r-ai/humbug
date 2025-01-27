@@ -122,6 +122,7 @@ class KotlinParser(Parser):
 
         parser_state = KotlinParserState()
         parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
+        parser_state.parsing_continuation = lexer_state.in_block_comment
         parser_state.lexer_state = lexer_state
         parser_state.in_element = in_element
         parser_state.in_lambda = in_lambda

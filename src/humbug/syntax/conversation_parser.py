@@ -106,58 +106,62 @@ class ConversationParser(Parser):
         in_fence_block = False
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
+        parsing_continuation = False
         if prev_parser_state:
             in_fence_block = prev_parser_state.in_fence_block
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
+            parsing_continuation = prev_parser_state.parsing_continuation
 
-        lexer = ConversationLexer()
-        lexer.lex(None, input_str)
-
-        seen_text = False
         parse_embedded = language != ProgrammingLanguage.UNKNOWN
 
-        while True:
-            lex_token = lexer.get_next_token()
-            if not lex_token:
-                break
+        if not parsing_continuation:
+            lexer = ConversationLexer()
+            lexer.lex(None, input_str)
 
-            if lex_token.type == 'WHITESPACE':
-                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
-                continue
+            seen_text = False
 
-            if (not seen_text) and (lex_token.type == 'FENCE'):
-                seen_text = True
-                if in_fence_block:
-                    self._tokens.append(Token(type='FENCE_END', value='```', start=lex_token.start))
-                    in_fence_block = False
-                    language = ProgrammingLanguage.UNKNOWN
+            while True:
+                lex_token = lexer.get_next_token()
+                if not lex_token:
+                    break
+
+                if lex_token.type == 'WHITESPACE':
+                    self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                    continue
+
+                if (not seen_text) and (lex_token.type == 'FENCE'):
+                    seen_text = True
+                    if in_fence_block:
+                        self._tokens.append(Token(type='FENCE_END', value='```', start=lex_token.start))
+                        in_fence_block = False
+                        language = ProgrammingLanguage.UNKNOWN
+                        embedded_parser_state = None
+                        parse_embedded = False
+                        continue
+
+                    in_fence_block = True
                     embedded_parser_state = None
-                    parse_embedded = False
+                    self._tokens.append(Token(type='FENCE_START', value='```', start=lex_token.start))
+
+                    next_token = lexer.peek_next_token('WHITESPACE')
+                    if next_token and (next_token.type == 'TEXT'):
+                        next_token = lexer.get_next_token('WHITESPACE')
+                        self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
+
+                        input_normalized = next_token.value.strip().lower()
+                        language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
+                        continue
+
+                    language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
                     continue
 
-                in_fence_block = True
-                embedded_parser_state = None
-                self._tokens.append(Token(type='FENCE_START', value='```', start=lex_token.start))
+                seen_text = True
 
-                next_token = lexer.peek_next_token('WHITESPACE')
-                if next_token and (next_token.type == 'TEXT'):
-                    next_token = lexer.get_next_token('WHITESPACE')
-                    self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
+                if language != ProgrammingLanguage.UNKNOWN:
+                    break
 
-                    input_normalized = next_token.value.strip().lower()
-                    language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
-                    continue
-
-                language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
-                continue
-
-            seen_text = True
-
-            if language != ProgrammingLanguage.UNKNOWN:
-                break
-
-            self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
 
         parser_state = ConversationParserState()
         parser_state.in_fence_block = in_fence_block
@@ -167,5 +171,6 @@ class ConversationParser(Parser):
             parser_state.embedded_parser_state = new_embedded_parser_state
             if new_embedded_parser_state:
                 parser_state.continuation_state = new_embedded_parser_state.continuation_state
+                parser_state.parsing_continuation = new_embedded_parser_state.parsing_continuation
 
         return parser_state

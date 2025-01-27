@@ -12,6 +12,7 @@ class ParserState:
     State information for the Parser.
     """
     lexer_state: LexerState = None
+    parsing_continuation: bool = False
     continuation_state: int = 0
 
 

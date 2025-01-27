@@ -97,6 +97,7 @@ class PythonParser(Parser):
 
         parser_state = PythonParserState()
         parser_state.continuation_state = 1 if lexer_state.in_docstring else 0
+        parser_state.parsing_continuation = lexer_state.in_docstring
         parser_state.lexer_state = lexer_state
         parser_state.in_element = in_element
         return parser_state
