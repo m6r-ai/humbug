@@ -9,7 +9,7 @@ from humbug.language.language_strings import LanguageStrings
 class LanguageManager(QObject):
     """Singleton manager for application-wide language settings."""
 
-    language_changed = Signal(LanguageCode)
+    language_changed = Signal()
     _instance = None
 
     def __new__(cls):
@@ -37,4 +37,9 @@ class LanguageManager(QObject):
         """Set new language and emit change signal."""
         if code != self._current_language:
             self._current_language = code
-            self.language_changed.emit(code)
+            self.language_changed.emit()
+
+    @property
+    def left_to_right(self) -> bool:
+        """Are we using a left to right language?"""
+        return self._current_language is not LanguageCode.AR

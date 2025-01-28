@@ -13,6 +13,7 @@ from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.mindspace_file_model import MindspaceFileModel
 from humbug.gui.mindspace_file_tree_style import MindspaceFileTreeStyle
+from humbug.language.language_manager import LanguageManager
 
 
 class MindspaceFileTree(QWidget):
@@ -65,6 +66,9 @@ class MindspaceFileTree(QWidget):
         # Track current mindspace
         self._mindspace_path: Optional[str] = None
         self._style_manager.style_changed.connect(self._handle_style_changed)
+
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
 
     def _show_context_menu(self, position):
         """Show context menu for file tree items."""
@@ -153,6 +157,10 @@ class MindspaceFileTree(QWidget):
         if os.path.isfile(path):
             self.file_activated.emit(path)
 
+    def _handle_language_changed(self):
+        """Update when the language changes."""
+        self._handle_style_changed()
+
     def _handle_style_changed(self):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor
@@ -169,6 +177,8 @@ class MindspaceFileTree(QWidget):
         self._tree_view.setFont(font)
 
         branch_icon_size = int(12 * zoom_factor)
+        expand_icon = "arrow-right" if self.layoutDirection() == Qt.LeftToRight else "arrow-left"
+
         self.setStyleSheet(f"""
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
@@ -190,7 +200,7 @@ class MindspaceFileTree(QWidget):
             }}
             QTreeView::branch:has-children:!has-siblings:closed,
             QTreeView::branch:closed:has-children:has-siblings {{
-                image: url("{self._style_manager.get_icon_path("arrow-right")}");
+                image: url("{self._style_manager.get_icon_path(expand_icon)}");
                 padding: 2px;
                 width: {branch_icon_size}px;
                 height: {branch_icon_size}px;

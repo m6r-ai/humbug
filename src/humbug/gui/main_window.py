@@ -27,7 +27,6 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
 from humbug.gui.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.gui.mindspace_file_tree import MindspaceFileTree
-from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -300,13 +299,13 @@ class MainWindow(QMainWindow):
         self._mindspace_manager = MindspaceManager()
         self._restore_last_mindspace()
 
-    def _handle_language_changed(self, language_code: LanguageCode) -> None:
+    def _handle_language_changed(self) -> None:
         """Update UI text when language changes."""
         app = QApplication.instance()
-        if language_code == LanguageCode.AR:
-            app.setLayoutDirection(Qt.RightToLeft)
-        else:
+        if self._language_manager.left_to_right:
             app.setLayoutDirection(Qt.LeftToRight)
+        else:
+            app.setLayoutDirection(Qt.RightToLeft)
 
         strings = self._language_manager.strings
 

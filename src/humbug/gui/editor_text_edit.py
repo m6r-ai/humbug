@@ -41,7 +41,7 @@ class EditorTextEdit(QPlainTextEdit):
         self._language_manager.language_changed.connect(self._handle_language_changed)
         self.update_line_number_area_width()
 
-    def _handle_language_changed(self, _code: LanguageCode) -> None:
+    def _handle_language_changed(self) -> None:
         self.update_line_number_area_width()
         self.viewport().update()
 
@@ -59,6 +59,7 @@ class EditorTextEdit(QPlainTextEdit):
     def update_line_number_area_width(self):
         """Update the margins to accommodate the line numbers."""
         width = self.line_number_area_width()
+
         # Set margin on appropriate side based on layout direction
         if self.layoutDirection() == Qt.RightToLeft:
             self.setViewportMargins(0, 0, 0, 0)  # Right margin
