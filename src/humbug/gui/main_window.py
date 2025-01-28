@@ -11,7 +11,7 @@ from m6rclib import (
 )
 
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel, QMenu, QApplication
+    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel, QApplication
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -182,59 +182,59 @@ class MainWindow(QMainWindow):
         self.setMenuBar(self._menu_bar)
 
         # Humbug menu
-        humbug_menu = self._menu_bar.addMenu(strings.humbug_menu)
-        humbug_menu.addAction(self._about_action)
-        humbug_menu.addSeparator()
-        humbug_menu.addAction(self._quit_action)
+        self._humbug_menu = self._menu_bar.addMenu(strings.humbug_menu)
+        self._humbug_menu.addAction(self._about_action)
+        self._humbug_menu.addSeparator()
+        self._humbug_menu.addAction(self._quit_action)
 
         # File menu
-        file_menu = self._menu_bar.addMenu(strings.file_menu)
-        file_menu.addAction(self._new_mindspace_action)
-        file_menu.addAction(self._new_conv_action)
-        file_menu.addAction(self._new_metaphor_conv_action)
-        file_menu.addAction(self._new_file_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._open_mindspace_action)
-        file_menu.addAction(self._open_conv_action)
-        file_menu.addAction(self._open_file_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._fork_conv_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._save_action)
-        file_menu.addAction(self._save_as_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._close_mindspace_action)
-        file_menu.addAction(self._close_tab_action)
+        self._file_menu = self._menu_bar.addMenu(strings.file_menu)
+        self._file_menu.addAction(self._new_mindspace_action)
+        self._file_menu.addAction(self._new_conv_action)
+        self._file_menu.addAction(self._new_metaphor_conv_action)
+        self._file_menu.addAction(self._new_file_action)
+        self._file_menu.addSeparator()
+        self._file_menu.addAction(self._open_mindspace_action)
+        self._file_menu.addAction(self._open_conv_action)
+        self._file_menu.addAction(self._open_file_action)
+        self._file_menu.addSeparator()
+        self._file_menu.addAction(self._fork_conv_action)
+        self._file_menu.addSeparator()
+        self._file_menu.addAction(self._save_action)
+        self._file_menu.addAction(self._save_as_action)
+        self._file_menu.addSeparator()
+        self._file_menu.addAction(self._close_mindspace_action)
+        self._file_menu.addAction(self._close_tab_action)
 
         # Edit menu
-        edit_menu = self._menu_bar.addMenu(strings.edit_menu)
-        edit_menu.addAction(self._submit_message_action)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._undo_action)
-        edit_menu.addAction(self._redo_action)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._cut_action)
-        edit_menu.addAction(self._copy_action)
-        edit_menu.addAction(self._paste_action)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._find_action)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._mindspace_settings_action)
-        edit_menu.addAction(self._conv_settings_action)
+        self._edit_menu = self._menu_bar.addMenu(strings.edit_menu)
+        self._edit_menu.addAction(self._submit_message_action)
+        self._edit_menu.addSeparator()
+        self._edit_menu.addAction(self._undo_action)
+        self._edit_menu.addAction(self._redo_action)
+        self._edit_menu.addSeparator()
+        self._edit_menu.addAction(self._cut_action)
+        self._edit_menu.addAction(self._copy_action)
+        self._edit_menu.addAction(self._paste_action)
+        self._edit_menu.addSeparator()
+        self._edit_menu.addAction(self._find_action)
+        self._edit_menu.addSeparator()
+        self._edit_menu.addAction(self._mindspace_settings_action)
+        self._edit_menu.addAction(self._conv_settings_action)
 
         # View menu
-        view_menu = self._menu_bar.addMenu(strings.view_menu)
-        view_menu.addAction(self._dark_mode_action)
-        view_menu.addSeparator()
-        view_menu.addAction(self._zoom_in_action)
-        view_menu.addAction(self._zoom_out_action)
-        view_menu.addAction(self._reset_zoom_action)
-        view_menu.addSeparator()
-        view_menu.addAction(self._show_all_columns_action)
-        view_menu.addAction(self._split_column_left_action)
-        view_menu.addAction(self._split_column_right_action)
-        view_menu.addAction(self._merge_column_left_action)
-        view_menu.addAction(self._merge_column_right_action)
+        self._view_menu = self._menu_bar.addMenu(strings.view_menu)
+        self._view_menu.addAction(self._dark_mode_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._zoom_in_action)
+        self._view_menu.addAction(self._zoom_out_action)
+        self._view_menu.addAction(self._reset_zoom_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._show_all_columns_action)
+        self._view_menu.addAction(self._split_column_left_action)
+        self._view_menu.addAction(self._split_column_right_action)
+        self._view_menu.addAction(self._merge_column_left_action)
+        self._view_menu.addAction(self._merge_column_right_action)
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(1024, 600)
@@ -300,10 +300,10 @@ class MainWindow(QMainWindow):
         self._mindspace_manager = MindspaceManager()
         self._restore_last_mindspace()
 
-    def _handle_language_changed(self, _code: LanguageCode) -> None:
+    def _handle_language_changed(self, language_code: LanguageCode) -> None:
         """Update UI text when language changes."""
         app = QApplication.instance()
-        if self._language_manager.current_language == LanguageCode.AR:
+        if language_code == LanguageCode.AR:
             app.setLayoutDirection(Qt.RightToLeft)
         else:
             app.setLayoutDirection(Qt.LeftToRight)
@@ -311,16 +311,10 @@ class MainWindow(QMainWindow):
         strings = self._language_manager.strings
 
         # Update menu titles
-#        menus = self._menu_bar.findChildren(QMenu)
-#        for menu in menus:
-#            if menu is self._menu_bar.actions()[0].menu():  # Humbug menu
-#                menu.setTitle(strings.humbug_menu)
-#            elif menu is self._menu_bar.actions()[1].menu():  # File menu
-#                menu.setTitle(strings.file_menu)
-#            elif menu is self._menu_bar.actions()[2].menu():  # Edit menu
-#                menu.setTitle(strings.edit_menu)
-#            elif menu is self._menu_bar.actions()[3].menu():  # View menu
-#                menu.setTitle(strings.view_menu)
+        self._humbug_menu.setTitle(strings.humbug_menu)
+        self._edit_menu.setTitle(strings.edit_menu)
+        self._file_menu.setTitle(strings.file_menu)
+        self._view_menu.setTitle(strings.view_menu)
 
         # Update action texts
         self._about_action.setText(strings.about_title)
@@ -354,6 +348,8 @@ class MainWindow(QMainWindow):
         self._split_column_right_action.setText(strings.split_column_right)
         self._merge_column_left_action.setText(strings.merge_column_left)
         self._merge_column_right_action.setText(strings.merge_column_right)
+
+        self._handle_style_changed()
 
     def _handle_column_state_changed(self):
         """Handle column state changes from tab manager."""

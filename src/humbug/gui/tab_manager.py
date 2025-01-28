@@ -873,7 +873,7 @@ class TabManager(QWidget):
 
     def can_find(self) -> bool:
         tab = self._get_current_tab()
-        return (tab != None)
+        return tab is not None
 
     def find(self):
         tab = self._get_current_tab()

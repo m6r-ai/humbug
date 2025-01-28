@@ -5,6 +5,8 @@ from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
 from humbug.gui.color_role import ColorRole
 from humbug.gui.line_number_area import LineNumberArea
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_code import LanguageCode
+from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
@@ -34,7 +36,14 @@ class EditorTextEdit(QPlainTextEdit):
 
         self.blockCountChanged.connect(self.update_line_number_area_width)
         self.updateRequest.connect(self._update_line_number_area)
+
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
         self.update_line_number_area_width()
+
+    def _handle_language_changed(self, _code: LanguageCode) -> None:
+        self.update_line_number_area_width()
+        self.viewport().update()
 
     def line_number_area_width(self) -> int:
         """Calculate the width needed for the line number area."""
@@ -102,8 +111,8 @@ class EditorTextEdit(QPlainTextEdit):
         top = self.blockBoundingGeometry(block).translated(offset).top()
         bottom = top + self.blockBoundingRect(block).height()
 
-        # Use one space width for padding
-        left_padding = self.fontMetrics().horizontalAdvance('9')
+        # Use two space widths for padding
+        padding = self.fontMetrics().horizontalAdvance('9') * 2
 
         # Adjust alignment and padding based on layout direction
         is_rtl = self.layoutDirection() == Qt.RightToLeft
@@ -115,9 +124,9 @@ class EditorTextEdit(QPlainTextEdit):
                 text_color = self._style_manager.get_color(ColorRole.LINE_NUMBER)
                 painter.setPen(text_color)
                 text_rect = QRect(
-                    left_padding,
+                    0,
                     int(top),
-                    self._line_number_area.width() - (3 * left_padding),
+                    self._line_number_area.width() - padding,
                     self.fontMetrics().height()
                 )
                 painter.drawText(text_rect, alignment, number)

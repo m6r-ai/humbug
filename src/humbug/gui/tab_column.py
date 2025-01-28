@@ -22,13 +22,13 @@ class TabColumn(QTabWidget):
         self.setAcceptDrops(True)
 
         # Configure tab bar
-        tab_bar = self.tabBar()
-        tab_bar.setDrawBase(False)
-        tab_bar.setUsesScrollButtons(True)
+        self._tab_bar = self.tabBar()
+        self._tab_bar.setDrawBase(False)
+        self._tab_bar.setUsesScrollButtons(True)
 
         # Install event filter on all child widgets
         self.installEventFilter(self)
-        tab_bar.installEventFilter(self)
+        self._tab_bar.installEventFilter(self)
 
     def eventFilter(self, obj, event) -> bool:
         """Handle window activation and mouse events to detect active column."""
