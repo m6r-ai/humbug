@@ -563,14 +563,15 @@ class EditorTab(TabBase):
         Returns:
             bool: True if save was successful
         """
-        filename, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save As",
-            self._path or self._mindspace_manager.file_dialog_directory
-        )
-        if not filename:
+        export_dialog = QFileDialog()
+        export_dialog.setWindowTitle('Save As')
+        export_dialog.setDirectory(self._path or self._mindspace_manager.file_dialog_directory)
+        export_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        export_dialog.setDefaultSuffix('')
+        if export_dialog.exec_() != QFileDialog.Accepted:
             return False
 
+        filename = export_dialog.selectedFiles()[0]
         self._mindspace_manager.update_file_dialog_directory(filename)
 
         self._path = filename
