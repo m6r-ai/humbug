@@ -567,7 +567,6 @@ class EditorTab(TabBase):
         export_dialog.setWindowTitle('Save As')
         export_dialog.setDirectory(self._path or self._mindspace_manager.file_dialog_directory)
         export_dialog.setAcceptMode(QFileDialog.AcceptSave)
-        export_dialog.setDefaultSuffix('')
         if export_dialog.exec_() != QFileDialog.Accepted:
             return False
 

@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
 
 from humbug.gui.color_role import ColorRole
@@ -49,7 +49,12 @@ class EditorTextEdit(QPlainTextEdit):
 
     def update_line_number_area_width(self):
         """Update the margins to accommodate the line numbers."""
-        self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
+        width = self.line_number_area_width()
+        # Set margin on appropriate side based on layout direction
+        if self.layoutDirection() == Qt.RightToLeft:
+            self.setViewportMargins(0, 0, 0, 0)  # Right margin
+        else:
+            self.setViewportMargins(width, 0, 0, 0)  # Left margin
 
     def _update_line_number_area(self, rect, dy):
         """Handle updates to the line number area."""
@@ -67,12 +72,24 @@ class EditorTextEdit(QPlainTextEdit):
         super().resizeEvent(event)
         cr = self.contentsRect()
         width = self.line_number_area_width()
-        rect = cr
-        rect.setWidth(width)
-        self._line_number_area.setGeometry(rect)
+
+        if self.layoutDirection() == Qt.RightToLeft:
+            self._line_number_area.setGeometry(
+                cr.right() - width,
+                cr.top(),
+                width,
+                cr.height()
+            )
+        else:
+            self._line_number_area.setGeometry(
+                cr.left(),
+                cr.top(),
+                width,
+                cr.height()
+            )
 
     def line_number_area_paint_event(self, event):
-        """Paint the line number area."""
+        """Paint the line numbers."""
         painter = QPainter(self._line_number_area)
         bg_color = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
         painter.fillRect(event.rect(), bg_color)
@@ -85,22 +102,25 @@ class EditorTextEdit(QPlainTextEdit):
         top = self.blockBoundingGeometry(block).translated(offset).top()
         bottom = top + self.blockBoundingRect(block).height()
 
-        # Use one space width for left padding
+        # Use one space width for padding
         left_padding = self.fontMetrics().horizontalAdvance('9')
+
+        # Adjust alignment and padding based on layout direction
+        is_rtl = self.layoutDirection() == Qt.RightToLeft
+        alignment = Qt.AlignLeft if is_rtl else Qt.AlignRight
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
                 text_color = self._style_manager.get_color(ColorRole.LINE_NUMBER)
                 painter.setPen(text_color)
-                painter.drawText(
+                text_rect = QRect(
                     left_padding,
                     int(top),
                     self._line_number_area.width() - (3 * left_padding),
-                    self.fontMetrics().height(),
-                    Qt.AlignRight,
-                    number
+                    self.fontMetrics().height()
                 )
+                painter.drawText(text_rect, alignment, number)
 
             block = block.next()
             top = bottom
