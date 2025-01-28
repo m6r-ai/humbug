@@ -22,23 +22,25 @@ from humbug.gui.tab_label import TabLabel
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.gui.welcome_widget import WelcomeWidget
+from humbug.gui.column_splitter import ColumnSplitter
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
-class TabManager(QTabWidget):
-    """Manages conversation tabs with custom labels."""
 
-    conversation_closed = Signal(str)  # Emits conversation_id
 
-    def __init__(self, parent=None):
-        """Initialize the tab manager."""
-        
 class TabData:
     """Encapsulates data related to a tab."""
     def __init__(self, tab: TabBase, title: str):
+        """
+        Initialize tab data.
 
+        Args:
+            tab: The tab widget
+            title: Initial title for the tab
+        """
         self.tab = tab
         self.tab_id = tab.tab_id
         self.label = TabLabel(title, self.tab_id)
+
 
 class TabManager(QWidget):
     """Manages multiple tabs across one or two columns."""
@@ -49,9 +51,7 @@ class TabManager(QWidget):
     def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
         """Initialize the tab manager."""
         super().__init__(parent)
-        # Track conversations and their labels
-        self._conversations = {}  # conversation_id -> ChatView
-        self._tab_labels = {}    # conversation_id -> TabLabel
+
         self._untitled_count = 0
         self._ai_backends = ai_backends
         self._mindspace_manager = MindspaceManager()
@@ -85,6 +85,7 @@ class TabManager(QWidget):
 
         # Connect to the splitter's moved signal
         self._column_splitter.splitterMoved.connect(self._handle_splitter_moved)
+
         # Create initial column
         self._tab_columns: List[TabColumn] = []
         self._create_column(0)
@@ -103,27 +104,14 @@ class TabManager(QWidget):
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
         self._handle_style_changed(self._style_manager.zoom_factor)
-
-        self._style_manager = StyleManager()
-
-        # Connect tab change signals
-        self.currentChanged.connect(self._on_tab_changed)
-        tab_bar = self.tabBar()
-        tab_bar.setDrawBase(False)  # Remove line under tabs
-        tab_bar.setUsesScrollButtons(True)
-
-        self._handle_style_changed(self._style_manager.zoom_factor)
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-
-    def create_conversation(self, conversation_id: str, title: str) -> 'ChatView':
-        """Create a new conversation tab."""
-
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        
+        
 
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
         Create TabData instance and connect signals.
-          Args:
+
+        Args:
             tab: The tab widget to add
             title: Initial title for the tab
 
@@ -162,8 +150,6 @@ class TabManager(QWidget):
         self._tabs[tab_data.tab_id] = tab_data.tab
         self._tab_labels[tab_data.tab_id] = tab_data.label
 
-    def _on_tab_changed(self, index: int):
-        """Handle tab selection changes."""
         index = column.addTab(tab_data.tab, "")
         column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_data.label)
         column.setCurrentWidget(tab_data.tab)
@@ -335,22 +321,37 @@ class TabManager(QWidget):
 
         return tab_widget
 
-    def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
-        """
-        Remove a column and resize the remaining columns.
+    def _handle_tab_merge(self, dragged_tab_id: str, target_tab_id: str) -> None:
+        """Handle merging tabs when one is dropped directly onto another."""
+        dragged_tab = self._tabs.get(dragged_tab_id)
+        target_tab = self._tabs.get(target_tab_id)
+        
+        if not dragged_tab or not target_tab:
+            return
 
-        Args:
-            column_number: Index of the column to remove
-            column: Column widget to remove
-        """
-        del self._tab_columns[column_number]
-        column.deleteLater()
+        source_column = self._find_column_for_tab(dragged_tab)
+        target_column = self._find_column_for_tab(target_tab)
+        
+        if not source_column or not target_column:
+            return
 
-        # Resize splitter to evenly distribute space
-        # Note: We add 1 to column count because deletion hasn't processed yet
-        num_columns = len(self._tab_columns)
-        sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
-        self._column_splitter.setSizes(sizes)
+        # Get the target index
+        target_index = target_column.indexOf(target_tab)
+        if target_index == -1:
+            return
+
+        # Move the tab
+        self._move_tab_between_columns(dragged_tab, source_column, target_column)
+
+        # If the source column is now empty, remove it
+        if source_column.count() == 0:
+            column_number = self._tab_columns.index(source_column)
+            self._remove_column_and_resize(column_number, source_column)
+
+        # Update states
+        self._active_column = target_column
+        self._update_tabs()
+        self.column_state_changed.emit()
 
     def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
         """Remove a column and resize the remaining columns."""
@@ -392,6 +393,7 @@ class TabManager(QWidget):
     def _handle_tab_changed(self, _index: int) -> None:
         """
         Handle tab selection changes.
+
         Args:
             index: Index of the newly selected tab
         """
@@ -899,8 +901,6 @@ class TabManager(QWidget):
                 width: 1px;
             }}
         """)
-        for label in self._tab_labels.values():
-            label.handle_style_changed(factor)
 
     def can_undo(self) -> bool:
         tab = self._get_current_tab()
@@ -939,7 +939,7 @@ class TabManager(QWidget):
 
     def can_find(self) -> bool:
         tab = self._get_current_tab()
-        return tab is not None
+        return (tab != None)
 
     def find(self):
         tab = self._get_current_tab()
