@@ -24,21 +24,21 @@ from humbug.gui.tab_type import TabType
 from humbug.gui.welcome_widget import WelcomeWidget
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
+class TabManager(QTabWidget):
+    """Manages conversation tabs with custom labels."""
 
+    conversation_closed = Signal(str)  # Emits conversation_id
+
+    def __init__(self, parent=None):
+        """Initialize the tab manager."""
+        
 class TabData:
     """Encapsulates data related to a tab."""
     def __init__(self, tab: TabBase, title: str):
-        """
-        Initialize tab data.
 
-        Args:
-            tab: The tab widget
-            title: Initial title for the tab
-        """
         self.tab = tab
         self.tab_id = tab.tab_id
         self.label = TabLabel(title, self.tab_id)
-
 
 class TabManager(QWidget):
     """Manages multiple tabs across one or two columns."""
@@ -49,7 +49,9 @@ class TabManager(QWidget):
     def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
         """Initialize the tab manager."""
         super().__init__(parent)
-
+        # Track conversations and their labels
+        self._conversations = {}  # conversation_id -> ChatView
+        self._tab_labels = {}    # conversation_id -> TabLabel
         self._untitled_count = 0
         self._ai_backends = ai_backends
         self._mindspace_manager = MindspaceManager()
@@ -77,9 +79,12 @@ class TabManager(QWidget):
         self._stack.addWidget(self._columns_widget)
 
         # Create splitter for columns
-        self._column_splitter = QSplitter(Qt.Horizontal)
+        self._column_splitter = ColumnSplitter()
+        self._column_splitter.setHandleWidth(1)
         self._columns_layout.addWidget(self._column_splitter)
 
+        # Connect to the splitter's moved signal
+        self._column_splitter.splitterMoved.connect(self._handle_splitter_moved)
         # Create initial column
         self._tab_columns: List[TabColumn] = []
         self._create_column(0)
@@ -99,11 +104,26 @@ class TabManager(QWidget):
 
         self._handle_style_changed(self._style_manager.zoom_factor)
 
+        self._style_manager = StyleManager()
+
+        # Connect tab change signals
+        self.currentChanged.connect(self._on_tab_changed)
+        tab_bar = self.tabBar()
+        tab_bar.setDrawBase(False)  # Remove line under tabs
+        tab_bar.setUsesScrollButtons(True)
+
+        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+
+    def create_conversation(self, conversation_id: str, title: str) -> 'ChatView':
+        """Create a new conversation tab."""
+
+        self._handle_style_changed(self._style_manager.zoom_factor)
+
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
         Create TabData instance and connect signals.
-
-        Args:
+          Args:
             tab: The tab widget to add
             title: Initial title for the tab
 
@@ -142,6 +162,8 @@ class TabManager(QWidget):
         self._tabs[tab_data.tab_id] = tab_data.tab
         self._tab_labels[tab_data.tab_id] = tab_data.label
 
+    def _on_tab_changed(self, index: int):
+        """Handle tab selection changes."""
         index = column.addTab(tab_data.tab, "")
         column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_data.label)
         column.setCurrentWidget(tab_data.tab)
@@ -195,6 +217,37 @@ class TabManager(QWidget):
             editor_tab = self.open_file(file_path)
             if editor_tab:
                 self._stack.setCurrentWidget(self._columns_widget)
+                
+    def _handle_splitter_moved(self, pos: int, index: int):
+        """Handle splitter movement and potential column merging."""
+        sizes = self._column_splitter.sizes()
+        min_width = 200  # Minimum width before merging
+
+        # Find any columns that are too small
+        for i, size in enumerate(sizes):
+            if size < min_width:
+                # Determine which column to merge with
+                merge_target = i - 1 if i > 0 else i + 1
+                if 0 <= merge_target < len(self._tab_columns):
+                    source_column = self._tab_columns[i]
+                    target_column = self._tab_columns[merge_target]
+
+                    # If the source column was active, make the target column active
+                    if self._active_column == source_column:
+                        self._active_column = target_column
+
+                    # Move all tabs from source to target
+                    while source_column.count() > 0:
+                        tab = source_column.widget(0)
+                        self._move_tab_between_columns(tab, source_column, target_column)
+
+                    # Remove the empty column
+                    self._remove_column_and_resize(i, source_column)
+
+                    # Update tab highlighting
+                    self._update_tabs()
+                    self.column_state_changed.emit()
+                    break
 
     def _handle_tab_drop(self, tab_id: str, target_column: TabColumn, target_index: int) -> None:
         """
@@ -271,6 +324,7 @@ class TabManager(QWidget):
     def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
         tab_widget = TabColumn()
+        tab_widget.setMinimumWidth(200)  # Set minimum width
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
         tab_widget.tab_drop.connect(self._handle_tab_drop)
@@ -297,6 +351,17 @@ class TabManager(QWidget):
         num_columns = len(self._tab_columns)
         sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
         self._column_splitter.setSizes(sizes)
+
+    def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
+        """Remove a column and resize the remaining columns."""
+        del self._tab_columns[column_number]
+        column.deleteLater()
+
+        # Distribute space evenly among remaining columns
+        if self._tab_columns:
+            width = self.width()
+            column_width = width // len(self._tab_columns)
+            self._column_splitter.setSizes([column_width] * len(self._tab_columns))
 
     def _update_tabs(self) -> None:
         # Update current states for all tabs
@@ -327,7 +392,6 @@ class TabManager(QWidget):
     def _handle_tab_changed(self, _index: int) -> None:
         """
         Handle tab selection changes.
-
         Args:
             index: Index of the newly selected tab
         """
@@ -835,6 +899,8 @@ class TabManager(QWidget):
                 width: 1px;
             }}
         """)
+        for label in self._tab_labels.values():
+            label.handle_style_changed(factor)
 
     def can_undo(self) -> bool:
         tab = self._get_current_tab()
