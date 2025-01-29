@@ -37,7 +37,7 @@ class ConversationTextEdit(QTextEdit):
         # Calculate tab stops
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
         # Batch update handling
         self._update_timer = QTimer(self)
@@ -54,7 +54,7 @@ class ConversationTextEdit(QTextEdit):
 
         self._logger = logging.getLogger("ConversationTextEdit")
 
-    def _handle_style_changed(self, _factor: float) -> None:
+    def _handle_style_changed(self) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
 
     def mouseReleaseEvent(self, event):

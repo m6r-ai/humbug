@@ -77,7 +77,7 @@ class MessageWidget(QFrame):
         self._current_style: MessageSource = None
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
     def _create_text_area(self) -> ConversationTextEdit:
         """Create and configure the text area.
@@ -122,7 +122,7 @@ class MessageWidget(QFrame):
                 self._timestamp_label.setText(f" @ {timestamp_str}")
 
             self._current_style = style
-            self._handle_style_changed(self._style_manager.zoom_factor)
+            self._handle_style_changed()
 
             # Full reset needed for style change
             self._text_area.clear()
@@ -181,8 +181,9 @@ class MessageWidget(QFrame):
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
 
-    def _handle_style_changed(self, factor: float):
+    def _handle_style_changed(self):
         """Handle the style changing"""
+        factor = self._style_manager.zoom_factor
         font = self.font()
         base_font_size = self._style_manager.base_font_size
         font.setPointSizeF(base_font_size * factor)

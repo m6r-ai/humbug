@@ -138,7 +138,7 @@ class ConversationTab(TabBase):
         self.update_status()
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
         # Create timer for smooth scrolling
         self._scroll_timer = QTimer(self)
@@ -806,7 +806,8 @@ class ConversationTab(TabBase):
         if backend:
             backend.update_conversation_settings(self.tab_id, new_settings)
 
-    def _handle_style_changed(self, factor: float) -> None:
+    def _handle_style_changed(self) -> None:
+        factor = self._style_manager.zoom_factor
         font = self.font()
         base_font_size = self._style_manager.base_font_size
         font.setPointSizeF(base_font_size * factor)

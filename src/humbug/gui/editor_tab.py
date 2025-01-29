@@ -107,7 +107,7 @@ class EditorTab(TabBase):
 
         # Connect to style changes
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
         self.update_status()
 
@@ -225,7 +225,8 @@ class EditorTab(TabBase):
         self._editor.ensureCursorVisible()
 
     def get_cursor_position(self) -> Dict[str, int]:
-        """Get current cursor position from editor.
+        """
+        Get current cursor position from editor.
 
         Returns:
             Dictionary with 'line' and 'column' keys
@@ -236,14 +237,12 @@ class EditorTab(TabBase):
             "column": cursor.columnNumber()
         }
 
-    def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
+    def _handle_style_changed(self) -> None:
         """
         Handle style and zoom changes.
-
-        Args:
-            zoom_factor: New zoom scaling factor
         """
         # Update font size
+        zoom_factor = self._style_manager.zoom_factor
         font = self._editor.font()
         base_size = self._style_manager.base_font_size
         font.setPointSizeF(base_size * zoom_factor)

@@ -37,7 +37,7 @@ class StyleManager(QObject):
         _initialized (bool): Tracks initialization state of QObject base
     """
 
-    style_changed = Signal(float)
+    style_changed = Signal()
     _instance = None
 
     def __new__(cls):
@@ -633,7 +633,7 @@ class StyleManager(QObject):
             self._mindspace_font_size = size
 
             if size:
-                self.style_changed.emit(self._zoom_factor)
+                self.style_changed.emit()
 
     @property
     def color_mode(self) -> ColorMode:
@@ -650,7 +650,7 @@ class StyleManager(QObject):
         if mode != self._color_mode:
             self._color_mode = mode
             self._initialize_highlights()  # Reinitialize highlights with new colors
-            self.style_changed.emit(self._zoom_factor)  # Trigger style update
+            self.style_changed.emit()  # Trigger style update
 
     @property
     def zoom_factor(self) -> float:
@@ -667,7 +667,7 @@ class StyleManager(QObject):
         new_factor = max(0.5, min(2.0, factor))
         if new_factor != self._zoom_factor:
             self._zoom_factor = new_factor
-            self.style_changed.emit(self._zoom_factor)
+            self.style_changed.emit()
 
     def get_scaled_size(self, base_size: float) -> float:
         """

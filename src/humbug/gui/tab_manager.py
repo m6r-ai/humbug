@@ -97,7 +97,7 @@ class TabManager(QWidget):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
@@ -308,7 +308,7 @@ class TabManager(QWidget):
             label.set_current(is_current)
 
         # Force style refresh to show active state
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
         # Emit our new signal with current tab
         current_tab = self._get_current_tab()
@@ -776,12 +776,9 @@ class TabManager(QWidget):
 
         return os.path.basename(state.path)
 
-    def _handle_style_changed(self, factor: float = 1.0) -> None:
+    def _handle_style_changed(self) -> None:
         """
         Handle style changes from StyleManager.
-
-        Args:
-            factor: New zoom factor
         """
         for column in self._tab_columns:
             selected_border = ColorRole.TAB_BORDER_ACTIVE if column == self._active_column else ColorRole.TAB_BACKGROUND_ACTIVE
@@ -826,7 +823,7 @@ class TabManager(QWidget):
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
             is_label_active = column == self._active_column and tab == column.currentWidget()
-            label.handle_style_changed(factor, is_label_active)
+            label.handle_style_changed(is_label_active)
 
         self._column_splitter.setStyleSheet(f"""
             QSplitter::handle {{
