@@ -257,6 +257,9 @@ class EditorTab(TabBase):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;
             }}
+            QPlainTextEdit {{
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
             QScrollBar:vertical, QScrollBar:horizontal {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;

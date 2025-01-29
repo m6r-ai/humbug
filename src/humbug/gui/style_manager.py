@@ -90,7 +90,7 @@ class StyleManager(QObject):
             },
             ColorRole.TEXT_SELECTED: {
                 ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#e0e0e0"
+                ColorMode.LIGHT: "#909090"
             },
 
             # Tab colours
