@@ -333,7 +333,6 @@ class MindspaceSettingsDialog(QDialog):
 
     def _update_dialog_texts(self) -> None:
         """Update all dialog texts with current language strings."""
-        print("dialog detected lang change")
         strings = self._language_manager.strings
         self.setWindowTitle(strings.settings_dialog_title)
 
@@ -341,7 +340,7 @@ class MindspaceSettingsDialog(QDialog):
         self._language_label.setText(strings.select_language)
         self._soft_tabs_label.setText(strings.use_soft_tabs)
         self._tab_size_label.setText(strings.tab_size)
-        self._font_size_label.setText("Font Size:")  # This probably needs translation too
+        self._font_size_label.setText(strings.font_size)
         self._auto_backup_label.setText(strings.auto_backup)
         self._backup_interval_label.setText(strings.backup_interval)
 
