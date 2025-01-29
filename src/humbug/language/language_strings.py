@@ -54,11 +54,22 @@ class LanguageStrings:
     merge_column_left: str
     merge_column_right: str
 
+    # Message roles and labels
+    role_you: str
+    role_assistant: str
+    role_system: str
+
+    # Find widget
+    find_placeholder: str
+    find_no_matches: str
+    find_match_count: str  # Format: "{current} of {total}"
+
     # Dialog and settings
     cancel: str
     ok: str
     apply: str
     select_language: str
+    font_size: str
     use_soft_tabs: str
     tab_size: str
     auto_backup: str
@@ -139,11 +150,22 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         merge_column_left="Merge Column Left",
         merge_column_right="Merge Column Right",
 
+        # Message roles
+        role_you="You",
+        role_assistant="Assistant",
+        role_system="System Message",
+
+        # Find widget
+        find_placeholder="Find",
+        find_no_matches="No matches",
+        find_match_count="{current} of {total}",
+
         # Dialog and settings
         cancel="Cancel",
         ok="OK",
         apply="Apply",
         select_language="Language",
+        font_size="Font Size",
         use_soft_tabs="Use Soft Tabs",
         tab_size="Tab Size",
         auto_backup="Auto Backup",
@@ -217,11 +239,22 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         merge_column_left="Fusionner avec la colonne de gauche",
         merge_column_right="Fusionner avec la colonne de droite",
 
+        # Message roles
+        role_you="Vous",
+        role_assistant="Assistant",
+        role_system="Message système",
+
+        # Find widget
+        find_placeholder="Rechercher",
+        find_no_matches="Aucun résultat",
+        find_match_count="{current} sur {total}",
+
         # Dialog and settings
         cancel="Annuler",
         ok="OK",
         apply="Appliquer",
         select_language="Langue",
+        font_size="Taille de police",
         use_soft_tabs="Utiliser des tabulations douces",
         tab_size="Taille de tabulation",
         auto_backup="Sauvegarde automatique",
@@ -295,11 +328,22 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         merge_column_left="دمج مع العمود الأيسر",
         merge_column_right="دمج مع العمود الأيمن",
 
+        # Message roles
+        role_you="أنت",
+        role_assistant="المساعد",
+        role_system="رسالة النظام",
+
+        # Find widget
+        find_placeholder="بحث",
+        find_no_matches="لا توجد نتائج",
+        find_match_count="{current} من {total}",
+
         # Dialog and settings
         cancel="إلغاء",
         ok="موافق",
         apply="تطبيق",
         select_language="اللغة",
+        font_size="حجم الخط",
         use_soft_tabs="استخدام المسافات البادئة",
         tab_size="حجم المسافة البادئة",
         auto_backup="نسخ احتياطي تلقائي",

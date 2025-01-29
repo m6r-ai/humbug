@@ -76,6 +76,11 @@ class ConversationTab(TabBase):
         self._message_with_selection: Optional[MessageWidget] = None
         self._is_streaming = False
 
+        # Initialize tracking variables
+        self._auto_scroll = True
+        self._last_scroll_maximum = 0
+        self._last_insertion_point = 0
+
         conversation_layout = QVBoxLayout(self)
         self.setLayout(conversation_layout)
 
@@ -140,11 +145,6 @@ class ConversationTab(TabBase):
         self._scroll_timer.setInterval(16)  # ~60fps
         self._scroll_timer.timeout.connect(self._update_scroll)
         self._last_mouse_pos = None
-
-        # Initialize tracking variables
-        self._auto_scroll = True
-        self._last_scroll_maximum = 0
-        self._last_insertion_point = 0
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)

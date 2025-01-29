@@ -85,7 +85,7 @@ class MindspaceSettingsDialog(QDialog):
         layout.addLayout(tab_size_layout)
 
         font_size_layout = QHBoxLayout()
-        self._font_size_label = QLabel("Font Size:")
+        self._font_size_label = QLabel(strings.font_size)
         self._font_size_label.setMinimumHeight(40)
         self._font_size_spin = QDoubleSpinBox()
         self._font_size_spin.setRange(8.0, 24.0)

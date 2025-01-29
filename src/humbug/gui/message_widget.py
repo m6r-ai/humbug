@@ -10,6 +10,7 @@ from humbug.gui.conversation_highlighter import ConversationHighlighter
 from humbug.gui.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_manager import LanguageManager
 
 
 class MessageWidget(QFrame):
@@ -67,6 +68,8 @@ class MessageWidget(QFrame):
         self._highlighter = ConversationHighlighter(self._text_area.document())
         self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
 
+        self._language_manager = LanguageManager()
+
         # Get style manager
         self._style_manager = StyleManager()
 
@@ -105,11 +108,13 @@ class MessageWidget(QFrame):
             if self._is_input:
                 self._timestamp_label.setText("")  # No timestamp for input
             else:
+                strings = self._language_manager.strings
+
                 # For history messages, show role with timestamp
                 role_text = {
-                    MessageSource.USER: "You",
-                    MessageSource.AI: "Assistant",
-                    MessageSource.SYSTEM: "System Message"
+                    MessageSource.USER: strings.role_you,
+                    MessageSource.AI: strings.role_assistant,
+                    MessageSource.SYSTEM: strings.role_system
                 }.get(style, "Unknown")
 
                 self._role_label.setText(role_text)

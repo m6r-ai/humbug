@@ -8,6 +8,7 @@ from PySide6.QtGui import QIcon
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_manager import LanguageManager
 
 
 class FindWidget(QWidget):
@@ -21,6 +22,7 @@ class FindWidget(QWidget):
         """Initialize the find widget."""
         super().__init__(parent)
         self._style_manager = StyleManager()
+        self._language_manager = LanguageManager()
 
         # Create layout
         layout = QHBoxLayout()
@@ -30,7 +32,6 @@ class FindWidget(QWidget):
 
         # Create search input
         self._search_input = QLineEdit()
-        self._search_input.setPlaceholderText("Find")
         self._search_input.textChanged.connect(self._handle_text_changed)
         self._search_input.returnPressed.connect(self.find_next)
         layout.addWidget(self._search_input)
@@ -48,7 +49,6 @@ class FindWidget(QWidget):
         self._next_button.clicked.connect(self.find_next)
         layout.addWidget(self._next_button)
 
-        # Add close button
         self._close_button = QToolButton()
         self._close_button.clicked.connect(self.close)
         layout.addWidget(self._close_button)
@@ -57,25 +57,34 @@ class FindWidget(QWidget):
         self._matches = 0
         self._current_match = 0
 
-        # Apply styling
-        self._update_match_status()
-        self._handle_style_changed(self._style_manager.zoom_factor)
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_language_changed()
 
-    def _handle_style_changed(self, factor: float) -> None:
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+
+    def _handle_language_changed(self) -> None:
+        strings = self._language_manager.strings
+        self._search_input.setPlaceholderText(strings.find_placeholder)
+        self._update_match_status()
+        self._handle_style_changed()
+
+    def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
         # Update font size
+        factor = self._style_manager.zoom_factor
         font = self.font()
         base_font_size = self._style_manager.base_font_size
         font_size = base_font_size * factor
         font.setPointSizeF(font_size)
         self.setFont(font)
 
+        prev_icon = "arrow-left" if self.layoutDirection() == Qt.LeftToRight else "arrow-right"
         self._prev_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path("arrow-left"), 16
+            self._style_manager.get_icon_path(prev_icon), 16
         )))
+        next_icon = "arrow-right" if self.layoutDirection() == Qt.LeftToRight else "arrow-left"
         self._next_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path("arrow-right"), 16
+            self._style_manager.get_icon_path(next_icon), 16
         )))
         self._close_button.setIcon(QIcon(self._style_manager.scale_icon(
             self._style_manager.get_icon_path("close"), 16
@@ -145,11 +154,15 @@ class FindWidget(QWidget):
     def _update_match_status(self):
         """Update the match status display."""
 
+        strings = self._language_manager.strings
         if self._matches > 0:
-            self._status_label.setText(f"{self._current_match} of {self._matches}")
+            self._status_label.setText(strings.find_match_count.format(
+                current=self._current_match,
+                total=self._matches
+            ))
             self._status_label.show()
         else:
-            self._status_label.setText("No matches")
+            self._status_label.setText(strings.find_no_matches)
             self._status_label.show()
 
         # Update button states
