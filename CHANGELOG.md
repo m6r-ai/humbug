@@ -7,12 +7,18 @@ This release adds the following new features:
 - Added a Scheme lexer/parser for syntax highlighting.
 - Added a "Find" function to search for text in files.
 - Added support for i18n - initial 3 languages are English, French, and Arabic.
+- When highlighting text, the syntax highlights are now preserved.
 
 The release fixes the following bugs:
 
 - The expand/collapse icons in the mindspace file tree did not scale with the zoom level.
 - Vertical scrolling in the conversation window only worked for pure vertical scrolling, not
   where horizontal scrolling occurred at the same time.
+- Editing a file no longer jumps the cursor into the middle of the input tab when it's first
+  modified.  This also eliminates a glitch that made displays momentarily shrink and then
+  expand back.
+- Embedded code highlighting now avoids problems with 3 backticks in a comment or string
+  dropping the syntax highlighting back to the AI markdown highlighter.
 
 ## v0.3.1 (2025-01-22)
 
