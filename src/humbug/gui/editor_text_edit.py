@@ -5,7 +5,6 @@ from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
 from humbug.gui.color_role import ColorRole
 from humbug.gui.line_number_area import LineNumberArea
 from humbug.gui.style_manager import StyleManager
-from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
