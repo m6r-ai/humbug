@@ -489,8 +489,6 @@ class TabManager(QWidget):
             elif not modified and current_text.endswith('*'):
                 label.update_text(current_text[:-1])
 
-            self.adjustSize()
-
     def can_split_column(self) -> bool:
         """Can the current column be split in two?"""
         if len(self._tab_columns) >= 6:
