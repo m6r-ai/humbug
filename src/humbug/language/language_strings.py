@@ -64,6 +64,10 @@ class LanguageStrings:
     find_no_matches: str
     find_match_count: str  # Format: "{current} of {total}"
 
+    # Input widget
+    processing_message: str
+    input_prompt: str  # Format: "Add your next message... ({key} to submit)"
+
     # Dialog and settings
     cancel: str
     ok: str
@@ -160,6 +164,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         find_no_matches="No matches",
         find_match_count="{current} of {total}",
 
+        # Input widget
+        processing_message="Processing your request (Esc to cancel)",
+        input_prompt="Add your next message... ({key} to submit)",
+
         # Dialog and settings
         cancel="Cancel",
         ok="OK",
@@ -249,6 +257,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         find_no_matches="Aucun résultat",
         find_match_count="{current} sur {total}",
 
+        # Input widget
+        processing_message="Traitement de votre requête (Échap pour annuler)",
+        input_prompt="Ajoutez votre message... ({key} pour envoyer)",
+
         # Dialog and settings
         cancel="Annuler",
         ok="OK",
@@ -337,6 +349,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         find_placeholder="بحث",
         find_no_matches="لا توجد نتائج",
         find_match_count="{current} من {total}",
+
+        # Input widget
+        processing_message="معالجة طلبك (Esc للإلغاء)",
+        input_prompt="أضف رسالتك... ({key} للإرسال)",
 
         # Dialog and settings
         cancel="إلغاء",

@@ -8,6 +8,7 @@ from PySide6.QtGui import QKeyEvent
 from humbug.gui.message_widget import MessageWidget
 from humbug.gui.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
+from humbug.language.language_manager import LanguageManager
 
 
 class LiveInputWidget(MessageWidget):
@@ -26,10 +27,16 @@ class LiveInputWidget(MessageWidget):
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
         self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+
         self._update_header_text()
 
         # Install an event filter so we can capture clicks anywhere and redirect them to the input box
         self.installEventFilter(self)
+
+    def _handle_language_changed(self):
+        self._update_header_text()
 
     def set_streaming(self, streaming: bool):
         """Update the streaming state and header text."""
@@ -45,11 +52,12 @@ class LiveInputWidget(MessageWidget):
 
     def _update_header_text(self):
         """Update the header text based on current state."""
+        strings = self._language_manager.strings
         if self._is_streaming:
-            self._role_label.setText("Processing your request (Esc to cancel)")
+            self._role_label.setText(strings.processing_message)
         else:
             submit_key = self._get_submit_key_text()
-            self._role_label.setText(f"Add your next message... ({submit_key} to submit)")
+            self._role_label.setText(strings.input_prompt.format(key=submit_key))
 
         self._set_role_style()
 
