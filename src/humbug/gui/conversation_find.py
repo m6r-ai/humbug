@@ -22,7 +22,9 @@ class ConversationFind(QObject):
         self._current_match_index = -1
         self._last_search = ""
         self._extra_selections = []
+
         self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._handle_style_changed)
 
     def find_text(self, text: str, widgets: List[MessageWidget], forward: bool = True) -> None:
         """Find all instances of text and highlight them.
@@ -94,22 +96,20 @@ class ConversationFind(QObject):
         self._highlight_matches()
 
         # Scroll to current match
-        print("scroll to match")
         self._scroll_to_match()
+
+    def _handle_style_changed(self) -> None:
+        """Handle style changes"""
+        self._highlight_matches()
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
         self._clear_highlights()
 
-        # Create selection format for current match
-        current_format = QTextCharFormat()
-        current_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_SELECTED))
-        current_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_PRIMARY))
-
-        # Create less prominent format for other matches
-        other_format = QTextCharFormat()
-        other_color = self._style_manager.get_color(ColorRole.TEXT_SELECTED).lighter(120)
-        other_format.setBackground(other_color)
+        selection_format = QTextCharFormat()
+        selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_SELECTED))
+        dim_selection_format = QTextCharFormat()
+        dim_selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_DIM_SELECTED))
 
         # Create a dictionary to collect selections per text edit
         selections_by_editor = {}
@@ -131,9 +131,9 @@ class ConversationFind(QObject):
 
                 # Use different format for current match
                 if widget_idx == self._current_widget_index and match_idx == self._current_match_index:
-                    extra_selection.format = current_format
+                    extra_selection.format = selection_format
                 else:
-                    extra_selection.format = other_format
+                    extra_selection.format = dim_selection_format
 
                 selections_by_editor[text_edit].append(extra_selection)
 
@@ -143,11 +143,9 @@ class ConversationFind(QObject):
 
     def _scroll_to_match(self) -> None:
         """Request scroll to ensure the current match is visible."""
-        print("scroll to match here")
         if not self._matches:
             return
 
-        print("scroll to match here 2")
         widget, matches = self._matches[self._current_widget_index]
         start, _ = matches[self._current_match_index]
 
@@ -157,9 +155,7 @@ class ConversationFind(QObject):
         text_edit.setTextCursor(cursor)
 
         # Emit signal for parent to handle scrolling
-        print(f"widget {widget}, pos: {start}")
         self.scrollRequested.emit(widget, start)
-        print(f"widget2 {widget}, pos: {start}")
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""

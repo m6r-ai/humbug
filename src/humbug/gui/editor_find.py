@@ -2,8 +2,12 @@
 
 from typing import List, Tuple
 
-from PySide6.QtGui import QTextCursor
+from PySide6.QtGui import QTextCursor, QTextCharFormat
 from PySide6.QtWidgets import QTextEdit
+
+from humbug.gui.color_role import ColorRole
+from humbug.gui.style_manager import StyleManager
+
 
 class EditorFind:
     """Handles find operations in editor text."""
@@ -19,6 +23,9 @@ class EditorFind:
         self._current_match = -1
         self._last_search = ""
         self._extra_selections = []
+
+        self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._handle_style_changed)
 
     def find_text(self, text: str, forward: bool = True) -> None:
         """Find all instances of text and highlight them.
@@ -60,14 +67,19 @@ class EditorFind:
         # Scroll to current match
         self._scroll_to_match(self._current_match)
 
+    def _handle_style_changed(self) -> None:
+        """Handle style changes"""
+        self._highlight_matches()
+
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
         self._clear_highlights()
 
-                    # Create selection format
-        selection_format = self._editor.currentCharFormat()
-        selection_format.setBackground(self._editor.palette().highlight())
-        selection_format.setForeground(self._editor.palette().highlightedText())
+        # Create selection format
+        selection_format = QTextCharFormat()
+        selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_SELECTED))
+        dim_selection_format = QTextCharFormat()
+        dim_selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_DIM_SELECTED))
 
         # Highlight all matches
         for i, (start, end) in enumerate(self._matches):
@@ -83,10 +95,7 @@ class EditorFind:
             if i == self._current_match:
                 extra_selection.format = selection_format
             else:
-                # Create less prominent format for other matches
-                other_format = self._editor.currentCharFormat()
-                other_format.setBackground(self._editor.palette().highlight().color().lighter())
-                extra_selection.format = other_format
+                extra_selection.format = dim_selection_format
 
             self._extra_selections.append(extra_selection)
 

@@ -14,6 +14,7 @@ class ColorRole(Enum):
     TEXT_PRIMARY = auto()               # Primary text color
     TEXT_DISABLED = auto()              # Disabled text color
     TEXT_SELECTED = auto()              # Selected text background
+    TEXT_DIM_SELECTED = auto()          # Dimmed selected text background
 
     # Tab colours
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background

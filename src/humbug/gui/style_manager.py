@@ -89,8 +89,12 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a0a0a0"
             },
             ColorRole.TEXT_SELECTED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#606070",
+                ColorMode.LIGHT: "#b0b0c0"
+            },
+            ColorRole.TEXT_DIM_SELECTED: {
+                ColorMode.DARK: "#40404c",
+                ColorMode.LIGHT: "#d0d0dc"
             },
 
             # Tab colours
@@ -682,6 +686,7 @@ class StyleManager(QObject):
         return base_size * self._zoom_factor
 
     def get_space_width(self) -> float:
+        """Get the width of a space character"""
         font = QFont(self.monospace_font_families)
         font.setPointSizeF(self.base_font_size * self._zoom_factor)
         font_metrics = QFontMetricsF(font)
