@@ -72,6 +72,11 @@ class LanguageStrings:
     cancel: str
     ok: str
     apply: str
+    discard: str
+    yes: str
+    no: str
+
+    # Mindspace settings
     select_language: str
     font_size: str
     use_soft_tabs: str
@@ -87,7 +92,6 @@ class LanguageStrings:
     mindspace_exists_error: str
     close_button: str
     save_changes: str
-    discard_button: str
     confirm_close: str
     unsaved_changes: str
     could_not_open: str
@@ -172,6 +176,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         cancel="Cancel",
         ok="OK",
         apply="Apply",
+        discard="Discard",
+        yes="Yes",
+        no="No",
+
+        # Mindspace settings
         select_language="Language",
         font_size="Font Size",
         use_soft_tabs="Use Soft Tabs",
@@ -187,7 +196,6 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         mindspace_exists_error="Mindspace already exists in selected directory.",
         close_button="Close",
         save_changes="Save Changes?",
-        discard_button="Discard",
         confirm_close="Confirm Close",
         unsaved_changes="Do you want to save your changes?",
         could_not_open="Could not open {}: {}",
@@ -265,6 +273,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         cancel="Annuler",
         ok="OK",
         apply="Appliquer",
+        discard="Abandonner",
+        yes="Oui",
+        no="Non",
+
+        # Mindspace settings
         select_language="Langue",
         font_size="Taille de police",
         use_soft_tabs="Utiliser des tabulations douces",
@@ -280,7 +293,6 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné.",
         close_button="Fermer",
         save_changes="Enregistrer les modifications ?",
-        discard_button="Abandonner",
         confirm_close="Confirmer la fermeture",
         unsaved_changes="Voulez-vous enregistrer vos modifications ?",
         could_not_open="Impossible d'ouvrir {} : {}",
@@ -358,6 +370,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         cancel="إلغاء",
         ok="موافق",
         apply="تطبيق",
+        discard="تجاهل",
+        yes="نعم",
+        no="لا",
+
+        # Mindspace settings
         select_language="اللغة",
         font_size="حجم الخط",
         use_soft_tabs="استخدام المسافات البادئة",
@@ -373,7 +390,6 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد.",
         close_button="إغلاق",
         save_changes="حفظ التغييرات؟",
-        discard_button="تجاهل",
         confirm_close="تأكيد الإغلاق",
         unsaved_changes="هل تريد حفظ التغييرات؟",
         could_not_open="لا يمكن فتح {}: {}",
