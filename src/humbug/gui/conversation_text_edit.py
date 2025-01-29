@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
 from PySide6.QtGui import (
-    QTextOption, QTextCursor, QMouseEvent, QKeyEvent
+    QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
 
 from humbug.gui.style_manager import StyleManager
@@ -53,6 +53,11 @@ class ConversationTextEdit(QTextEdit):
         self._has_code_block = False
 
         self._logger = logging.getLogger("ConversationTextEdit")
+
+        # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
+        palette = self.palette()
+        palette.setBrush(QPalette.ColorRole.HighlightedText, QBrush(Qt.BrushStyle.NoBrush))
+        self.setPalette(palette)
 
     def _handle_style_changed(self) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)

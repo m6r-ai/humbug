@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt, QRect
-from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent
+from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent, QPalette, QBrush
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.line_number_area import LineNumberArea
@@ -39,6 +39,11 @@ class EditorTextEdit(QPlainTextEdit):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
         self.update_line_number_area_width()
+
+        # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
+        palette = self.palette()
+        palette.setBrush(QPalette.ColorRole.HighlightedText, QBrush(Qt.BrushStyle.NoBrush))
+        self.setPalette(palette)
 
     def _handle_language_changed(self) -> None:
         self.update_line_number_area_width()
