@@ -496,11 +496,11 @@ class ConversationTab(TabBase):
 
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
-        print(f"section changed {has_selection}")
         if not has_selection:
             if self._message_with_selection:
-                self._message_with_selection.clear_selection()
+                msg = self._message_with_selection
                 self._message_with_selection = None
+                msg.clear_selection()
 
             return
 
