@@ -44,13 +44,12 @@ that are expert on Humbug itself!
     - Configurable temperature settings for supported models.
     - Error handling and retry mechanisms for API requests.
 - **File Editing:**
-    - Syntax highlighting for various languages (C, C++, CSS, HTML, JavaScript, JSON, Kotlin, Metaphor, Move, Python, TypeScript).
-    - Line number display and cursor position tracking.
+    - Syntax highlighting for various languages.  Currently supported: C, C++, CSS, HTML, JavaScript,
+      JSON, Kotlin, Metaphor, Move, Python, Scheme, and TypeScript.
     - Auto-backup functionality for unsaved changes.
-    - Configurable tab and font settings.
 - **Mindspace Management:**
     - Project-specific environments with their own settings and state.
-    - Mindspace settings include soft tabs, tab size, font size, and auto-backup options.
+    - Mindspace settings include language, soft tabs, tab size, font size, and auto-backup options.
     - Mindspace state persistence for restoring open tabs and cursor positions.
     - Home directory tracking of last opened mindspace.
 - **User Interface:**
@@ -65,6 +64,7 @@ that are expert on Humbug itself!
     - Input area that expands vertically as content is added.
     - Full vertical scrollbar for history and input area.
     - Conversation transcript logging.
+    - Full text search across all parts of a conversation.
 - **File Tree:**
     - Displays all files and folders in the mindspace directory.
     - Excludes the ".humbug" directory and other hidden files/folders.
@@ -75,6 +75,9 @@ that are expert on Humbug itself!
     - Dynamic menu item state updates based on application context.
 - **Cross-Platform Support:**
     - Compatible with MacOS X (2020+), Linux (2020+), and Windows 10/11.
+- **Multi-Language Support:**
+    - Mindspaces can be configured to use different human languages.  Currently supported Arabic,
+      English, French.
 - **Asynchronous Design:**
     - Utilizes asynchronous operations to ensure responsiveness.
 
