@@ -574,8 +574,13 @@ class EditorTab(TabBase):
             return False
 
         filename = export_dialog.selectedFiles()[0]
-        self._mindspace_manager.update_file_dialog_directory(filename)
 
+        # This is an ugly hack.  On one laptop using ".m6r" as a filename results in Qt
+        # adding a ".m".  Need to root cause this.
+        if filename.endswith(".m6r.m"):
+            filename = filename[:-2]
+
+        self._mindspace_manager.update_file_dialog_directory(filename)
         self._path = filename
         self._untitled_number = None
         self._update_title()
