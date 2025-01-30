@@ -42,6 +42,7 @@ class ConversationRenameDialog(QDialog):
         )
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
+        button_box.setCenterButtons(True)
 
         # Style buttons
         for button in button_box.buttons():
@@ -61,7 +62,7 @@ class ConversationRenameDialog(QDialog):
     def _validate_input(self):
         """Validate the input and enable/disable OK button."""
         text = self._name_input.text().strip()
-        valid = bool(text and not any(c in '\/:*?"<>|' for c in text))
+        valid = bool(text and not any(c in r'\/:*?"<>|' for c in text))
 
         # Find OK button and set enabled state
         for button in self.findChildren(QPushButton):

@@ -8,6 +8,7 @@ This release adds the following new features:
 - Added a "Find" function to search for text in files.
 - Added support for i18n - initial 3 languages are English, French, and Arabic.
 - When highlighting text, the syntax highlights are now preserved.
+- Added the ability to rename existing conversations.
 
 The release fixes the following bugs:
 

@@ -92,6 +92,7 @@ class MindspaceFileTree(QWidget):
         ext = os.path.splitext(path)[1].lower()
 
         # Add rename option for conversation files
+        rename_action = None
         if ext == '.conv':
             rename_action = menu.addAction(self._language_manager.strings.rename_conversation)
             menu.addSeparator()

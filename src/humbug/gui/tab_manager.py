@@ -285,7 +285,21 @@ class TabManager(QWidget):
             old_id = os.path.splitext(os.path.basename(old_path))[0]
             conversation = self.find_conversation_tab_by_id(old_id)
             if conversation:
-                conversation.update_path(new_path)
+                # Get new ID
+                new_id = os.path.splitext(os.path.basename(new_path))[0]
+
+                # Update manager's data structures
+                self._tabs[new_id] = self._tabs.pop(old_id)
+                self._tab_labels[new_id] = self._tab_labels.pop(old_id)
+
+                # Update tab label text
+                label = self._tab_labels[new_id]
+                label.update_text(f"Conv: {new_id}")
+                label._tab_id = new_id
+                label.close_clicked.connect(lambda: self._close_tab_by_id(new_id))
+
+                # Update conversation internals without signaling
+                conversation.update_path(new_id, new_path)
 
     def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
@@ -771,9 +785,10 @@ class TabManager(QWidget):
     def _restore_tab_from_state(self, state: TabState) -> Optional[TabBase]:
         """Create appropriate tab type from state."""
         if state.type == TabType.CONVERSATION:
-            return ConversationTab.restore_from_state(
+            tab = ConversationTab.restore_from_state(
                 state, self, ai_backends=self._ai_backends
             )
+            return tab
         elif state.type == TabType.EDITOR:
             tab = EditorTab.restore_from_state(state, self)
             self._connect_editor_signals(tab)
