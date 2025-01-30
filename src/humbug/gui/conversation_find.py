@@ -1,5 +1,4 @@
-from typing import List, Tuple
-
+from typing import List, Tuple, Dict, Set
 from PySide6.QtGui import QTextCursor, QTextCharFormat
 from PySide6.QtWidgets import QTextEdit, QWidget
 from PySide6.QtCore import QObject, Signal
@@ -21,7 +20,8 @@ class ConversationFind(QObject):
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
-        self._extra_selections = []
+        # Track text edits with highlights
+        self._highlighted_editors: Set[QTextEdit] = set()
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -111,8 +111,8 @@ class ConversationFind(QObject):
         dim_selection_format = QTextCharFormat()
         dim_selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_DIM_SELECTED))
 
-        # Create a dictionary to collect selections per text edit
-        selections_by_editor = {}
+        # Create selections for each text edit
+        selections_by_editor: Dict[QTextEdit, List[QTextEdit.ExtraSelection]] = {}
 
         # Highlight all matches
         for widget_idx, (widget, matches) in enumerate(self._matches):
@@ -137,9 +137,10 @@ class ConversationFind(QObject):
 
                 selections_by_editor[text_edit].append(extra_selection)
 
-        # Apply all selections at once for each text edit
+        # Apply selections and track highlighted editors
         for text_edit, selections in selections_by_editor.items():
             text_edit.setExtraSelections(selections)
+            self._highlighted_editors.add(text_edit)
 
     def _scroll_to_match(self) -> None:
         """Request scroll to ensure the current match is visible."""
@@ -159,9 +160,11 @@ class ConversationFind(QObject):
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
-        for text_edit, _ in self._extra_selections:
+        # Clear highlights from all tracked editors
+        for text_edit in self._highlighted_editors:
             text_edit.setExtraSelections([])
-        self._extra_selections = []
+
+        self._highlighted_editors.clear()
 
     def get_match_status(self) -> Tuple[int, int]:
         """Get the current match status.
