@@ -12,9 +12,10 @@ from humbug.gui.style_manager import StyleManager
 class EditorFind:
     """Handles find operations in editor text."""
 
-    def __init__(self, editor):
-        """Initialize find handler.
-        
+    def __init__(self, editor: QTextEdit):
+        """
+        Initialize find handler.
+
         Args:
             editor: The QTextEdit instance to search in
         """
@@ -22,14 +23,14 @@ class EditorFind:
         self._matches: List[Tuple[int, int]] = []  # List of (start, end) positions
         self._current_match = -1
         self._last_search = ""
-        self._extra_selections = []
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
     def find_text(self, text: str, forward: bool = True) -> None:
-        """Find all instances of text and highlight them.
-        
+        """
+        Find all instances of text and highlight them.
+
         Args:
             text: Text to search for
             forward: Whether to search forward from current position
@@ -68,18 +69,23 @@ class EditorFind:
         self._scroll_to_match(self._current_match)
 
     def _handle_style_changed(self) -> None:
-        """Handle style changes"""
+        """Handle style changes."""
         self._highlight_matches()
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
         self._clear_highlights()
 
-        # Create selection format
+        if not self._matches:
+            return
+
         selection_format = QTextCharFormat()
         selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_SELECTED))
         dim_selection_format = QTextCharFormat()
         dim_selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_DIM_SELECTED))
+
+        # Create extra selections list
+        selections = []
 
         # Highlight all matches
         for i, (start, end) in enumerate(self._matches):
@@ -97,13 +103,15 @@ class EditorFind:
             else:
                 extra_selection.format = dim_selection_format
 
-            self._extra_selections.append(extra_selection)
+            selections.append(extra_selection)
 
-        self._editor.setExtraSelections(self._extra_selections)
+        # Apply selections
+        self._editor.setExtraSelections(selections)
 
     def _scroll_to_match(self, match_index: int) -> None:
-        """Scroll to ensure the given match is visible.
-        
+        """
+        Scroll to ensure the given match is visible.
+
         Args:
             match_index: Index of match to scroll to
         """
@@ -115,12 +123,12 @@ class EditorFind:
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
-        self._extra_selections = []
         self._editor.setExtraSelections([])
 
     def get_match_status(self) -> Tuple[int, int]:
-        """Get the current match status.
-        
+        """
+        Get the current match status.
+
         Returns:
             Tuple of (current_match, total_matches)
         """

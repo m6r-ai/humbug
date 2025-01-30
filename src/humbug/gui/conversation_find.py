@@ -27,8 +27,9 @@ class ConversationFind(QObject):
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
     def find_text(self, text: str, widgets: List[MessageWidget], forward: bool = True) -> None:
-        """Find all instances of text and highlight them.
-        
+        """
+        Find all instances of text and highlight them.
+
         Args:
             text: Text to search for
             widgets: List of message widgets to search in
@@ -167,8 +168,9 @@ class ConversationFind(QObject):
         self._highlighted_editors.clear()
 
     def get_match_status(self) -> Tuple[int, int]:
-        """Get the current match status.
-        
+        """
+        Get the current match status.
+
         Returns:
             Tuple of (current_match, total_matches)
         """
