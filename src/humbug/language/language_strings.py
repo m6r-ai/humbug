@@ -68,6 +68,11 @@ class LanguageStrings:
     processing_message: str
     input_prompt: str  # Format: "Add your next message... ({key} to submit)"
 
+    # File tree messages
+    rename_conversation: str
+    conversation_name: str
+    delete_file: str
+
     # Dialog and settings
     cancel: str
     ok: str
@@ -172,6 +177,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         processing_message="Processing your request (Esc to cancel)",
         input_prompt="Add your next message... ({key} to submit)",
 
+        # File tree messages
+        rename_conversation="Rename Conversation",
+        conversation_name="Conversation Name:",
+        delete_file="Delete",
+
         # Dialog and settings
         cancel="Cancel",
         ok="OK",
@@ -269,6 +279,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         processing_message="Traitement de votre requête (Échap pour annuler)",
         input_prompt="Ajoutez votre message... ({key} pour envoyer)",
 
+        # File tree messages
+        rename_conversation="Renommer la conversation",
+        conversation_name="Nom de la conversation:",
+        delete_file="Supprimer",
+
         # Dialog and settings
         cancel="Annuler",
         ok="OK",
@@ -365,6 +380,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         # Input widget
         processing_message="معالجة طلبك (Esc للإلغاء)",
         input_prompt="أضف رسالتك... ({key} للإرسال)",
+
+        # File tree messages
+        rename_conversation="إعادة تسمية المحادثة",
+        conversation_name="اسم المحادثة:",
+        delete_file="حذف",
 
         # Dialog and settings
         cancel="إلغاء",

@@ -516,6 +516,15 @@ class ConversationTab(TabBase):
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
+    def update_path(self, new_path: str):
+        """Update the conversation file path.
+
+        Args:
+            new_path: New path for the conversation file
+        """
+        self._path = new_path
+        self._transcript_handler.update_path(new_path)
+
     def update_status(self) -> None:
         """Update status bar with token counts and settings."""
         counts = self._conversation.get_token_counts()

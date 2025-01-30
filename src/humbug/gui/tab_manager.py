@@ -268,6 +268,25 @@ class TabManager(QWidget):
         except (ConversationError, OSError) as e:
             self._logger.error("Failed to open dropped file '%s': %s", file_path, str(e))
 
+    def handle_file_rename(self, old_path: str, new_path: str):
+        """Handle renaming of files by updating any open tabs.
+
+        Args:
+            old_path: Original path of renamed file
+            new_path: New path after renaming
+        """
+        # Find any editor tab for this file
+        editor = self.find_editor_tab_by_filename(old_path)
+        if editor:
+            editor.set_filename(new_path)
+
+        # For conversations, find by ID and update path
+        if old_path.endswith('.conv'):
+            old_id = os.path.splitext(os.path.basename(old_path))[0]
+            conversation = self.find_conversation_tab_by_id(old_id)
+            if conversation:
+                conversation.update_path(new_path)
+
     def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
         tab_widget = TabColumn()

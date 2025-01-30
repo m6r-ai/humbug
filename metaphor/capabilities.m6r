@@ -97,13 +97,20 @@ Context: Capabilities
                 If the user mouses over a file or directory item then this will pop open a tooltip that
                 will display the full path name of the item moused-over.
 
-            Context: File deletion
+            Context: Pop-up menu
                 If the user clicks the right mouse button while a file is highlighted then they will be
-                given a pop-up menu.  If they select "Delete File" then the system will confirm they
-                want to delete it via a message box.  The message box will warn that deleting the file
-                will also close any tabs based on the file and will discard any unsaved changes.  If the
-                user agrees then the tabs will be closed and the file deleted.  If the user does not
-                agree then the action will be cancelled.
+                given a pop-up menu.
+
+                Context: File deletion
+                    If the user selects "Delete File" then the system will confirm they
+                    want to delete it via a message box.  The message box will warn that deleting the file
+                    will also close any tabs based on the file and will discard any unsaved changes.  If the
+                    user agrees then the tabs will be closed and the file deleted.  If the user does not
+                    agree then the action will be cancelled.
+
+                Context: Rename conversation
+                    If the user selects "Rename Conversation" then the system will pop up a dialog box
+                    that allows them to rename the conversation to any name that is not already used.
 
             Context: File tree styling
                 The file tree view must maintain consistent styling:

@@ -253,6 +253,7 @@ class MainWindow(QMainWindow):
         self._file_tree = MindspaceFileTree(self)
         self._file_tree.file_activated.connect(self._handle_file_activation)
         self._file_tree.file_deleted.connect(self._handle_file_deletion)
+        self._file_tree.file_renamed.connect(self._handle_file_rename)
         self._splitter.addWidget(self._file_tree)
 
         # Create tab manager in splitter
@@ -537,11 +538,20 @@ class MainWindow(QMainWindow):
 
     def _handle_file_deletion(self, path: str):
         """Handle deletion of a file by closing any open tab.
-        
+
         Args:
             path: Path of file being deleted
         """
         self._tab_manager.close_deleted_file(path)
+
+    def _handle_file_rename(self, old_path: str, new_path: str):
+        """Handle renaming of files.
+
+        Args:
+            old_path: Original path of renamed file
+            new_path: New path after renaming
+        """
+        self._tab_manager.handle_file_rename(old_path, new_path)
 
     def _open_file(self):
         """Show open file dialog and create editor tab."""

@@ -3,10 +3,11 @@
 import os
 from typing import Optional
 
-from PySide6.QtWidgets import QFileSystemModel, QWidget, QVBoxLayout, QMenu
+from PySide6.QtWidgets import QFileSystemModel, QWidget, QVBoxLayout, QMenu, QDialog
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
 
 from humbug.gui.color_role import ColorRole
+from humbug.gui.conversation_rename_dialog import ConversationRenameDialog
 from humbug.gui.file_tree_icon_provider import FileTreeIconProvider
 from humbug.gui.file_tree_view import FileTreeView
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -21,6 +22,7 @@ class MindspaceFileTree(QWidget):
 
     file_activated = Signal(str)  # Emits path when file is activated
     file_deleted = Signal(str)  # Emits path when file is deleted
+    file_renamed = Signal(str, str)  # Emits (old_path, new_path)
 
     def __init__(self, parent=None):
         """Initialize the file tree widget."""
@@ -87,16 +89,27 @@ class MindspaceFileTree(QWidget):
 
         # Create context menu
         menu = QMenu(self)
-        delete_action = menu.addAction("Delete File")
+        ext = os.path.splitext(path)[1].lower()
+
+        # Add rename option for conversation files
+        if ext == '.conv':
+            rename_action = menu.addAction(self._language_manager.strings.rename_conversation)
+            menu.addSeparator()
+
+        delete_action = menu.addAction(self._language_manager.strings.delete_file)
 
         # Show menu and handle selection
         action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
         if action == delete_action:
             self._handle_delete_file(path)
+            return
+
+        if ext == '.conv' and action == rename_action:
+            self._handle_rename_conversation(path)
 
     def _handle_delete_file(self, path: str):
         """Handle request to delete a file.
-        
+
         Args:
             path: Path to the file to delete
         """
@@ -125,6 +138,56 @@ class MindspaceFileTree(QWidget):
                     f"Could not delete file: {str(e)}",
                     [MessageBoxButton.OK]
                 )
+
+    def _handle_rename_conversation(self, path: str):
+        """Handle request to rename a conversation file.
+
+        Args:
+            path: Path to the conversation file to rename
+        """
+        # Show dialog to get new name
+        old_name = os.path.splitext(os.path.basename(path))[0]
+        dialog = ConversationRenameDialog(old_name, self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        new_name = dialog.get_name()
+        if not new_name:
+            return
+
+        # Ensure name ends with .conv
+        if not new_name.endswith('.conv'):
+            new_name += '.conv'
+
+        # Get paths
+        old_dir = os.path.dirname(path)
+        new_path = os.path.join(old_dir, new_name)
+
+        # Check if target already exists
+        if os.path.exists(new_path):
+            MessageBox.show_message(
+                self,
+                MessageBoxType.WARNING,
+                "Rename Error",
+                f"A conversation named '{new_name}' already exists.",
+                [MessageBoxButton.OK]
+            )
+            return
+
+        try:
+            # First emit signal so tabs can be updated
+            self.file_renamed.emit(path, new_path)
+
+            # Then rename the file
+            os.rename(path, new_path)
+        except OSError as e:
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "Rename Error",
+                f"Could not rename conversation: {str(e)}",
+                [MessageBoxButton.OK]
+            )
 
     def set_mindspace(self, path: str):
         """Set the mindspace root directory."""
