@@ -220,6 +220,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#ffc0eb",
                 ColorMode.LIGHT: "#c000a0"
             },
+            ColorRole.SYNTAX_DOCTYPE: {
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#606060"
+            },
             ColorRole.SYNTAX_ELEMENT: {
                 ColorMode.DARK: "#90e0e8",
                 ColorMode.LIGHT: "#0080a0"
@@ -239,10 +243,6 @@ class StyleManager(QObject):
             ColorRole.SYNTAX_HTML_ATTRIBUTE: {
                 ColorMode.DARK: "#90e0e8",
                 ColorMode.LIGHT: "#0080a0"
-            },
-            ColorRole.SYNTAX_HTML_DOCTYPE: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#606060"
             },
             ColorRole.SYNTAX_HTML_TAG: {
                 ColorMode.DARK: "#ffc0eb",
@@ -300,12 +300,12 @@ class StyleManager(QObject):
             "CODE": ColorRole. SYNTAX_CODE,
             "COMMENT": ColorRole.SYNTAX_COMMENT,
             "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,
+            "DOCTYPE": ColorRole.SYNTAX_DOCTYPE,
             "ELEMENT": ColorRole.SYNTAX_ELEMENT,
             "ERROR": ColorRole.SYNTAX_ERROR,
             "FUNCTION_OR_METHOD": ColorRole.SYNTAX_FUNCTION_OR_METHOD,
             "HEADING": ColorRole.SYNTAX_HEADING,
             "HTML_ATTRIBUTE": ColorRole.SYNTAX_HTML_ATTRIBUTE,
-            "HTML_DOCTYPE": ColorRole.SYNTAX_HTML_DOCTYPE,
             "HTML_TAG": ColorRole.SYNTAX_HTML_TAG,
             "IDENTIFIER": ColorRole.SYNTAX_IDENTIFIER,
             "KEYWORD": ColorRole.SYNTAX_KEYWORD,
