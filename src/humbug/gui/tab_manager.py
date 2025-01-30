@@ -294,8 +294,7 @@ class TabManager(QWidget):
 
                 # Update tab label text
                 label = self._tab_labels[new_id]
-                label.update_text(f"Conv: {new_id}")
-                label._tab_id = new_id
+                label.update_id(new_id, f"Conv: {new_id}")
                 label.close_clicked.connect(lambda: self._close_tab_by_id(new_id))
 
                 # Update conversation internals without signaling
