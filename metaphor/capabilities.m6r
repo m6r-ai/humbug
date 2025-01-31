@@ -78,6 +78,7 @@ Context: Capabilities
         Context: File tree view
             The file tree displays the contents of the current mindspace:
 
+            - Shows the name of the current mindspace, or "no mindspace active" if none is active
             - Shows all files and folders in the mindspace directory
             - Excludes the ".humbug" directory and other hidden files/folders
             - Directories are shown before files in the tree

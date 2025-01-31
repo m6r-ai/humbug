@@ -80,6 +80,9 @@ class LanguageStrings:
     yes: str
     no: str
 
+    # Mindspace tree
+    mindspace_label_none: str
+
     # Mindspace settings
     select_language: str
     font_size: str
@@ -232,6 +235,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         yes="Yes",
         no="No",
 
+        # Mindspace tree
+        mindspace_label_none="No mindspace active",
+
         # Mindspace settings
         select_language="Language",
         font_size="Font Size",
@@ -377,6 +383,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         yes="Oui",
         no="Non",
 
+        # Mindspace tree
+        mindspace_label_none="Aucun espace mental actif",
+
         # Mindspace settings
         select_language="Langue",
         font_size="Taille de police",
@@ -521,6 +530,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         discard="تجاهل",
         yes="نعم",
         no="لا",
+
+        # Mindspace tree
+        mindspace_label_none="لا توجد مساحة ذهنية نشطة",
 
         # Mindspace settings
         select_language="اللغة",

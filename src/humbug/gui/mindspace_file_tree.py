@@ -3,7 +3,10 @@
 import os
 from typing import Optional
 
-from PySide6.QtWidgets import QFileSystemModel, QWidget, QVBoxLayout, QMenu, QDialog
+from PySide6.QtWidgets import (
+    QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
+    QLabel
+)
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
 
 from humbug.gui.color_role import ColorRole
@@ -34,6 +37,16 @@ class MindspaceFileTree(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+
+        # Create mindspace label
+        label_layout = QHBoxLayout()
+        label_layout.setContentsMargins(0, 0, 0, 0)
+        label_layout.setSpacing(0)
+        self._mindspace_label = QLabel()
+        self._mindspace_label.setContentsMargins(0, 0, 0, 0)
+        label_layout.addWidget(self._mindspace_label)
+        label_layout.addStretch(1)
+        layout.addLayout(label_layout)
 
         # Create tree view
         self._tree_view = FileTreeView()
@@ -71,6 +84,9 @@ class MindspaceFileTree(QWidget):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
+
+        # Set initial label text
+        self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
 
     def _show_context_menu(self, position):
         """Show context menu for file tree items."""
@@ -120,7 +136,7 @@ class MindspaceFileTree(QWidget):
             self,
             MessageBoxType.WARNING,
             strings.confirm_delete_title,
-            strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" + 
+            strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" +
             strings.delete_warning_detail,
             [MessageBoxButton.YES, MessageBoxButton.NO]
         )
@@ -196,13 +212,17 @@ class MindspaceFileTree(QWidget):
 
     def set_mindspace(self, path: str):
         """Set the mindspace root directory."""
+        self._mindspace_path = path
+
         if not path:
             # Clear the model when no mindspace is active
             self._filter_model.set_mindspace_root(None)
+            self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
             return
 
         self._fs_model.setRootPath(path)
         self._filter_model.set_mindspace_root(path)
+        self._mindspace_label.setText(os.path.basename(path))
 
         # Set the root index through the proxy model
         root_index = self._filter_model.mapFromSource(
@@ -227,6 +247,8 @@ class MindspaceFileTree(QWidget):
 
     def _handle_language_changed(self):
         """Update when the language changes."""
+        if not self._mindspace_path:
+            self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
         self._handle_style_changed()
 
     def _handle_style_changed(self):
@@ -234,13 +256,16 @@ class MindspaceFileTree(QWidget):
         zoom_factor = self._style_manager.zoom_factor
         base_font_size = self._style_manager.base_font_size
 
+        # Update font size for label
+        font = self.font()
+        font.setPointSizeF(base_font_size * zoom_factor)
+        self._mindspace_label.setFont(font)
+
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
         self._tree_view.setIconSize(QSize(16 * zoom_factor, 16 * zoom_factor))
 
-        # Update font size
-        font = self.font()
-        font.setPointSizeF(base_font_size * zoom_factor)
+        # Update font size for tree
         self.setFont(font)
         self._tree_view.setFont(font)
 
@@ -248,6 +273,12 @@ class MindspaceFileTree(QWidget):
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LeftToRight else "arrow-left"
 
         self.setStyleSheet(f"""
+            QLabel {{
+                color: {self._style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: none;
+                padding: 8px;
+            }}
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
