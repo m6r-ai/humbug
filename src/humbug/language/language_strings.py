@@ -139,6 +139,9 @@ class LanguageStrings:
 
     # Status bar
     editor_status: str
+    conversation_status: str
+    conversation_status_temperature: str
+    conversation_status_no_temperature: str
 
     @classmethod
     def get_strings(cls, code: LanguageCode) -> 'LanguageStrings':
@@ -280,7 +283,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
 
         # Status bar
-        editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}"
+        editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",
+        conversation_status="Model: {model} | {temperature} | Last response - Input: {input_tokens} ({max_tokens}) | Output: {output_tokens}",
+        conversation_status_temperature="Temp: {temperature:.1f}",
+        conversation_status_no_temperature="Temp: N/A"
     ),
 
     LanguageCode.FR: LanguageStrings(
@@ -415,7 +421,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}",
 
         # Status bar
-        editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}"
+        editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",
+        conversation_status="Modèle : {model} | {temperature} | Dernière réponse - Entrée : {input_tokens} ({max_tokens}) | Sortie : {output_tokens}",
+        conversation_status_temperature="Temp : {temperature:.1f}",
+        conversation_status_no_temperature="Temp : N/D"
     ),
 
     LanguageCode.AR: LanguageStrings(
@@ -550,6 +559,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}",
 
         # Status bar
-        editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}"
+        editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
+        conversation_status="النموذج: {model} | {temperature} | آخر رد - المدخلات: {input_tokens} ({max_tokens}) | المخرجات: {output_tokens}",
+        conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
+        conversation_status_no_temperature="درجة الحرارة: غير متوفر"
     )
 }

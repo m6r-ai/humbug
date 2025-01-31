@@ -136,10 +136,10 @@ class ConversationTab(TabBase):
         # Create find handler
         self._find_handler = ConversationFind()
 
-        self.update_status()
-
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
+
+        self.update_status()
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
@@ -549,12 +549,24 @@ class ConversationTab(TabBase):
     def update_status(self) -> None:
         """Update status bar with token counts and settings."""
         counts = self._conversation.get_token_counts()
-        temp_display = f"Temp: {self._settings.temperature:.1f}" if self._settings.temperature is not None else "Temp: N/A"
+        strings = self._language_manager.strings
+
+        # Temperature display depends on whether it's available
+        if self._settings.temperature is not None:
+            temp_display = strings.conversation_status_temperature.format(
+                temperature=self._settings.temperature
+            )
+        else:
+            temp_display = strings.conversation_status_no_temperature
+
         message = StatusMessage(
-            f"Model: {self._settings.model} | "
-            f"{temp_display} | "
-            f"Last response - Input: {counts['input']} ({self._settings.context_window}) | "
-            f"Output: {counts['output']}"
+            strings.conversation_status.format(
+                model=self._settings.model,
+                temperature=temp_display,
+                input_tokens=counts['input'],
+                max_tokens=self._settings.context_window,
+                output_tokens=counts['output']
+            )
         )
         self.status_message.emit(message)
 
