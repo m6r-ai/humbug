@@ -29,6 +29,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
+from humbug.language.language_manager import LanguageManager
 from humbug.transcript.transcript_error import (
     TranscriptError, TranscriptFormatError, TranscriptIOError
 )
@@ -137,6 +138,9 @@ class ConversationTab(TabBase):
 
         self.update_status()
 
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
@@ -156,6 +160,22 @@ class ConversationTab(TabBase):
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
+
+    def _handle_language_changed(self) -> None:
+        """Update language-specific elements when language changes."""
+        # Update input widget streaming state text
+        self._input.set_streaming(self._is_streaming)
+
+        # No need to explicitly update message widgets as they handle
+        # their own language change events
+
+        # Update find widget text if visible
+        if not self._find_widget.isHidden():
+            current, total = self._find_handler.get_match_status()
+            self._find_widget.set_match_status(current, total)
+
+        # Update status bar
+        self.update_status()
 
     async def fork_conversation(self) -> None:
         """Create a copy of this conversation with the same history."""

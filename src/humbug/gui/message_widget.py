@@ -31,6 +31,11 @@ class MessageWidget(QFrame):
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
         self._is_input = is_input
 
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._message_source = None
+        self._message_timestamp = None
+
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
@@ -95,6 +100,31 @@ class MessageWidget(QFrame):
         """Handle mouse release from text area."""
         self.mouseReleased.emit()
 
+    def _handle_language_changed(self) -> None:
+        """Update text when language changes."""
+        if not self._is_input:
+            # Don't update input widget headers
+            self._update_role_text()
+
+    def _update_role_text(self) -> None:
+        """Update the role text based on current language."""
+        if not self._message_source:
+            return
+
+        strings = self._language_manager.strings
+        role_text = {
+            MessageSource.USER: strings.role_you,
+            MessageSource.AI: strings.role_assistant,
+            MessageSource.SYSTEM: strings.role_system
+        }.get(self._message_source, "Unknown")
+
+        # Format with timestamp
+        if self._message_timestamp:
+            timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            self._role_label.setText(f"{role_text} @ {timestamp_str}")
+        else:
+            self._role_label.setText(role_text)
+
     def set_content(self, text: str, style: MessageSource, timestamp: datetime):
         """Set content with style, handling incremental updates for AI responses.
 
@@ -103,28 +133,14 @@ class MessageWidget(QFrame):
             style: The style type ('user', 'ai', 'system', or 'error')
             timestamp: datetime object for the message timestamp
         """
+        self._message_source = style
+        self._message_timestamp = timestamp
+
         if style != self._current_style:
-            # Style changed - update header and styling
-            if self._is_input:
-                self._timestamp_label.setText("")  # No timestamp for input
-            else:
-                strings = self._language_manager.strings
-
-                # For history messages, show role with timestamp
-                role_text = {
-                    MessageSource.USER: strings.role_you,
-                    MessageSource.AI: strings.role_assistant,
-                    MessageSource.SYSTEM: strings.role_system
-                }.get(style, "Unknown")
-
-                self._role_label.setText(role_text)
-                timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                self._timestamp_label.setText(f" @ {timestamp_str}")
-
+            # Update header text with proper role
+            self._update_role_text()
             self._current_style = style
             self._handle_style_changed()
-
-            # Full reset needed for style change
             self._text_area.clear()
 
         self._text_area.set_incremental_text(text)
