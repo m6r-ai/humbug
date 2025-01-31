@@ -9,6 +9,7 @@ This release adds the following new features:
 - Added support for i18n - initial 3 languages are English, French, and Arabic.
 - When highlighting text, the syntax highlights are now preserved.
 - Added the ability to rename existing conversations.
+- The mindspace name is shown above the mindspace file tree.
 
 The release fixes the following bugs:
 
@@ -20,6 +21,8 @@ The release fixes the following bugs:
   expand back.
 - Embedded code highlighting now avoids problems with 3 backticks in a comment or string
   dropping the syntax highlighting back to the AI markdown highlighter.
+- Syntax highlighting of module/package names in Kotlin and Python are now handled so they do
+  not appear as object fields/properties.
 
 ## v0.3.1 (2025-01-22)
 
