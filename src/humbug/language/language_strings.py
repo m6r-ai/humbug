@@ -88,6 +88,13 @@ class LanguageStrings:
     auto_backup: str
     backup_interval: str
 
+    # Conversation settings
+    settings_model_label: str
+    settings_temp_label: str 
+    settings_context_label: str
+    settings_max_output_label: str
+    settings_tokens_label: str
+
     # File dialog titles
     file_dialog_open_metaphor: str
     file_dialog_open_conversation: str
@@ -214,7 +221,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # File tree messages
         rename_conversation="Rename Conversation",
-        conversation_name="Conversation Name:",
+        conversation_name="Conversation Name",
         delete_file="Delete",
 
         # Dialog and settings
@@ -232,6 +239,13 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         tab_size="Tab Size",
         auto_backup="Auto Backup",
         backup_interval="Backup Interval (seconds)",
+
+        # Conversation settings
+        settings_model_label="AI Model",
+        settings_temp_label="Temperature",
+        settings_context_label="Context Window",
+        settings_max_output_label="Max Output Tokens",
+        settings_tokens_label="tokens",
 
         # File dialog titles
         file_dialog_open_metaphor="Open Metaphor File",
@@ -352,7 +366,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # File tree messages
         rename_conversation="Renommer la conversation",
-        conversation_name="Nom de la conversation :",
+        conversation_name="Nom de la conversation",
         delete_file="Supprimer",
 
         # Dialog and settings
@@ -370,6 +384,13 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         tab_size="Taille de tabulation",
         auto_backup="Sauvegarde automatique",
         backup_interval="Intervalle de sauvegarde (secondes)",
+
+        # Conversation settings
+        settings_model_label="Modèle IA",
+        settings_temp_label="Température",
+        settings_context_label="Fenêtre de contexte",
+        settings_max_output_label="Jetons de sortie maximum",
+        settings_tokens_label="jetons",
 
         # File dialog titles
         file_dialog_open_metaphor="Ouvrir un fichier Metaphor",
@@ -490,7 +511,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # File tree messages
         rename_conversation="إعادة تسمية المحادثة",
-        conversation_name="اسم المحادثة:",
+        conversation_name="اسم المحادثة",
         delete_file="حذف",
 
         # Dialog and settings
@@ -508,6 +529,13 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         tab_size="حجم المسافة البادئة",
         auto_backup="نسخ احتياطي تلقائي",
         backup_interval="فترة النسخ الاحتياطي (ثواني)",
+
+        # Conversation settings
+        settings_model_label="نموذج الذكاء الاصطناعي",
+        settings_temp_label="درجة الحرارة",
+        settings_context_label="نافذة السياق",
+        settings_max_output_label="الحد الأقصى للرموز الناتجة",
+        settings_tokens_label="رمز",
 
         # File dialog titles
         file_dialog_open_metaphor="فتح ملف ميتافور",

@@ -12,6 +12,7 @@ from humbug.ai.ai_backend import AIBackend
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_manager import LanguageManager
 
 
 class ConversationSettingsDialog(QDialog):
@@ -22,7 +23,11 @@ class ConversationSettingsDialog(QDialog):
     def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
         """Initialize the conversation settings dialog."""
         super().__init__(parent)
-        self.setWindowTitle("Conversation Settings")
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+        strings = self._language_manager.strings
+
+        self.setWindowTitle(strings.conversation_settings)
         self.setMinimumWidth(500)
         self.setModal(True)
 
@@ -36,74 +41,74 @@ class ConversationSettingsDialog(QDialog):
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
-        layout.setSpacing(12)  # Slightly increased spacing
+        layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Model selection
         model_layout = QHBoxLayout()
-        model_label = QLabel("AI Model:")
-        model_label.setMinimumHeight(40)
+        self._model_label = QLabel(strings.settings_model_label)
+        self._model_label.setMinimumHeight(40)
         self._model_combo = QComboBox()
         self._model_combo.setMinimumWidth(300)
-        self._model_combo.setMinimumHeight(40)  # Match label height
+        self._model_combo.setMinimumHeight(40)
         self._model_combo.currentTextChanged.connect(self._handle_model_change)
-        model_layout.addWidget(model_label)
+        model_layout.addWidget(self._model_label)
         model_layout.addStretch()
         model_layout.addWidget(self._model_combo)
         layout.addLayout(model_layout)
 
         # Temperature setting
         temp_layout = QHBoxLayout()
-        temp_label = QLabel("Temperature:")
-        temp_label.setMinimumHeight(40)
+        self._temp_label = QLabel(strings.settings_temp_label)
+        self._temp_label.setMinimumHeight(40)
         self.temp_spin = QDoubleSpinBox()
         self.temp_spin.setRange(0.0, 1.0)
         self.temp_spin.setSingleStep(0.100000000001)  # Increased step size to avoid FP issues
         self.temp_spin.setDecimals(1)
-        self.temp_spin.setMinimumWidth(300)  # Match combo box width
-        self.temp_spin.setMinimumHeight(40)  # Match label height
-        temp_layout.addWidget(temp_label)
+        self.temp_spin.setMinimumWidth(300)
+        self.temp_spin.setMinimumHeight(40)
+        temp_layout.addWidget(self._temp_label)
         temp_layout.addStretch()
         temp_layout.addWidget(self.temp_spin)
         layout.addLayout(temp_layout)
 
         # Context window display
         context_layout = QHBoxLayout()
-        context_label = QLabel("Context Window:")
-        context_label.setMinimumHeight(40)
+        self._context_label = QLabel(strings.settings_context_label)
+        self._context_label.setMinimumHeight(40)
         self.context_value = QLabel()
-        self.context_value.setMinimumWidth(300)  # Match combo box width
-        self.context_value.setMinimumHeight(40)  # Match label height
+        self.context_value.setMinimumWidth(300)
+        self.context_value.setMinimumHeight(40)
         self.context_value.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        context_layout.addWidget(context_label)
+        context_layout.addWidget(self._context_label)
         context_layout.addStretch()
         context_layout.addWidget(self.context_value)
         layout.addLayout(context_layout)
 
         # Max output display
         output_layout = QHBoxLayout()
-        output_label = QLabel("Max Output Tokens:")
-        output_label.setMinimumHeight(40)
+        self._output_label = QLabel(strings.settings_max_output_label)
+        self._output_label.setMinimumHeight(40)
         self.output_value = QLabel()
-        self.output_value.setMinimumWidth(300)  # Match combo box width
-        self.output_value.setMinimumHeight(40)  # Match label height
+        self.output_value.setMinimumWidth(300)
+        self.output_value.setMinimumHeight(40)
         self.output_value.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        output_layout.addWidget(output_label)
+        output_layout.addWidget(self._output_label)
         output_layout.addStretch()
         output_layout.addWidget(self.output_value)
         layout.addLayout(output_layout)
 
-        # Add extra spacing before buttons (24px since our base spacing is 12px)
+        # Add extra spacing before buttons
         layout.addSpacing(24)
         layout.addStretch()
 
         # Button row with proper spacing and alignment
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(8)  # Slightly increased button spacing
+        button_layout.setSpacing(8)
 
-        self.ok_button = QPushButton("OK")
-        self.cancel_button = QPushButton("Cancel")
-        self.apply_button = QPushButton("Apply")
+        self.ok_button = QPushButton(strings.ok)
+        self.cancel_button = QPushButton(strings.cancel)
+        self.apply_button = QPushButton(strings.apply)
 
         self.ok_button.clicked.connect(self._handle_ok)
         self.cancel_button.clicked.connect(self.reject)
@@ -113,8 +118,8 @@ class ConversationSettingsDialog(QDialog):
         self.temp_spin.valueChanged.connect(self._handle_value_change)
 
         # Set minimum button widths and heights
-        min_button_width = 90  # Slightly increased
-        min_button_height = 40  # Match other controls
+        min_button_width = 90
+        min_button_height = 40
         for button in [self.ok_button, self.cancel_button, self.apply_button]:
             button.setMinimumWidth(min_button_width)
             button.setMinimumHeight(min_button_height)
@@ -223,22 +228,56 @@ class ConversationSettingsDialog(QDialog):
             }}
         """)
 
-    def _handle_model_change(self, model: str):
-        """Handle model selection changes."""
-        supports_temp = ConversationSettings.supports_temperature(model)
-        self.temp_spin.setEnabled(supports_temp)
+    def _handle_language_changed(self) -> None:
+        """Update dialog texts when language changes."""
+        strings = self._language_manager.strings
 
-        # Get and display model limits
+        # Update window title
+        self.setWindowTitle(strings.conversation_settings)
+
+        # Update labels
+        self._model_label.setText(strings.settings_model_label)
+        self._temp_label.setText(strings.settings_temp_label)
+        self._context_label.setText(strings.settings_context_label)
+        self._output_label.setText(strings.settings_max_output_label)
+
+        # Update button texts
+        self.ok_button.setText(strings.ok)
+        self.cancel_button.setText(strings.cancel)
+        self.apply_button.setText(strings.apply)
+
+        # Update displays with current model
+        if self._model_combo.currentText():
+            self._update_model_displays(self._model_combo.currentText())
+
+    def _update_model_displays(self, model: str) -> None:
+        """Update the model-specific displays with proper localization."""
+        strings = self._language_manager.strings
         limits = ConversationSettings.get_model_limits(model)
-        self.context_value.setText(f"{limits['context_window']:,} tokens")
+
+        # Update context window display
+        self.context_value.setText(
+            f"{limits['context_window']:,} {strings.settings_tokens_label}"
+        )
         self.context_value.setProperty('valueDisplay', True)
         self.context_value.style().unpolish(self.context_value)
         self.context_value.style().polish(self.context_value)
 
-        self.output_value.setText(f"{limits['max_output_tokens']:,} tokens")
+        # Update max output tokens display
+        self.output_value.setText(
+            f"{limits['max_output_tokens']:,} {strings.settings_tokens_label}"
+        )
         self.output_value.setProperty('valueDisplay', True)
         self.output_value.style().unpolish(self.output_value)
         self.output_value.style().polish(self.output_value)
+
+    def _handle_model_change(self, model: str) -> None:
+        """Handle model selection changes."""
+        supports_temp = ConversationSettings.supports_temperature(model)
+        self.temp_spin.setEnabled(supports_temp)
+
+        # Update displays
+        self._update_model_displays(model)
 
         if supports_temp:
             if model in self._model_temperatures:
@@ -261,7 +300,7 @@ class ConversationSettingsDialog(QDialog):
 
         self._handle_value_change()
 
-    def _handle_value_change(self):
+    def _handle_value_change(self) -> None:
         """Handle changes to any setting value."""
         if not self._current_settings:
             return
@@ -280,7 +319,7 @@ class ConversationSettingsDialog(QDialog):
         temperature = self.temp_spin.value() if ConversationSettings.supports_temperature(model) else None
         return ConversationSettings(model=model, temperature=temperature)
 
-    def set_settings(self, settings: ConversationSettings):
+    def set_settings(self, settings: ConversationSettings) -> None:
         """Set the current settings in the dialog."""
         models = []
         for model in ConversationSettings.AVAILABLE_MODELS:
@@ -310,10 +349,8 @@ class ConversationSettingsDialog(QDialog):
         if model_index >= 0:
             self._model_combo.setCurrentIndex(model_index)
 
-        # Update limits display for the current model
-        limits = ConversationSettings.get_model_limits(settings.model)
-        self.context_value.setText(f"{limits['context_window']:,} tokens")
-        self.output_value.setText(f"{limits['max_output_tokens']:,} tokens")
+        # Update displays for the current model
+        self._update_model_displays(settings.model)
 
         supports_temp = ConversationSettings.supports_temperature(settings.model)
         self.temp_spin.setEnabled(supports_temp)
@@ -324,7 +361,7 @@ class ConversationSettingsDialog(QDialog):
 
         self.apply_button.setEnabled(False)
 
-    def _handle_apply(self):
+    def _handle_apply(self) -> None:
         """Handle Apply button click."""
         current_model = self._model_combo.currentText()
         if ConversationSettings.supports_temperature(current_model):
@@ -335,12 +372,12 @@ class ConversationSettingsDialog(QDialog):
         self.settings_changed.emit(settings)
         self.apply_button.setEnabled(False)
 
-    def _handle_ok(self):
+    def _handle_ok(self) -> None:
         """Handle OK button click."""
         self._handle_apply()
         self.accept()
 
-    def reject(self):
+    def reject(self) -> None:
         """Handle Cancel button click."""
         if self._initial_settings:
             self.settings_changed.emit(self._initial_settings)
