@@ -115,10 +115,11 @@ class MindspaceFileTree(QWidget):
             path: Path to the file to delete
         """
         # Show confirmation dialog using MessageBox
+        strings = self._language_manager.strings
         result = MessageBox.show_message(
             self,
             MessageBoxType.WARNING,
-            "Confirm Delete",
+            strings.confirm_delete_title,
             f"Are you sure you want to delete {os.path.basename(path)}?\n\n"
             "Any open tab for this file will be closed without saving.",
             [MessageBoxButton.YES, MessageBoxButton.NO]

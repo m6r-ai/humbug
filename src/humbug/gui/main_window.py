@@ -383,8 +383,9 @@ class MainWindow(QMainWindow):
 
     def _new_mindspace(self):
         self._menu_timer.stop()
+        strings = self._language_manager.strings
         dir_path = QFileDialog.getExistingDirectory(
-            self, "Create New Mindspace"
+            self, strings.file_dialog_new_mindspace
         )
         self._menu_timer.start()
         if not dir_path:
@@ -396,15 +397,15 @@ class MainWindow(QMainWindow):
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
-                "Mindspace already exists in selected directory."
+                strings.mindspace_error_title,
+                strings.mindspace_exists_error
             )
             return
         except MindspaceError as e:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
+                strings.mindspace_error_title,
                 f"Failed to create mindspace: {str(e)}"
             )
             return
@@ -414,7 +415,8 @@ class MainWindow(QMainWindow):
     def _open_mindspace(self):
         """Open a new mindspace."""
         self._menu_timer.stop()
-        dir_path = QFileDialog.getExistingDirectory(self, "Open Mindspace")
+        strings = self._language_manager.strings
+        dir_path = QFileDialog.getExistingDirectory(self, strings.file_dialog_open_mindspace)
         self._menu_timer.start()
         if not dir_path:
             return
@@ -435,10 +437,11 @@ class MainWindow(QMainWindow):
             self._file_tree.set_mindspace(path)
             self._style_manager.set_mindspace_font_size(self._mindspace_manager.settings.font_size)
         except MindspaceError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
+                strings.mindspace_error_title,
                 f"Failed to open mindspace: {str(e)}"
             )
             return
@@ -468,10 +471,11 @@ class MainWindow(QMainWindow):
             self._mindspace_manager.save_mindspace_state(mindspace_state)
         except MindspaceError as e:
             self._logger.error("Failed to save mindspace state: %s", str(e))
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
+                strings.mindspace_error_title,
                 f"Failed to save mindspace state: {str(e)}"
             )
 
@@ -486,10 +490,11 @@ class MainWindow(QMainWindow):
             self._tab_manager.restore_state(saved_state)
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
+                strings.mindspace_error_title,
                 f"Failed to restore mindspace state: {str(e)}"
             )
 
@@ -556,9 +561,10 @@ class MainWindow(QMainWindow):
     def _open_file(self):
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
+        strings = self._language_manager.strings
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            self._language_manager.strings.file_dialog_title,
+            strings.file_dialog_open_file,
             self._mindspace_manager.file_dialog_directory
         )
         self._menu_timer.start()
@@ -574,10 +580,11 @@ class MainWindow(QMainWindow):
         try:
             self._tab_manager.open_file(path)
         except OSError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Error Opening File",
+                strings.error_opening_file_title,
                 f"Could not open {path}: {str(e)}"
             )
 
@@ -725,10 +732,11 @@ class MainWindow(QMainWindow):
                 self._mindspace_manager.mindspace_path
             )
         except MindspaceError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
+                strings.mindspace_error_title,
                 f"Failed to create conversation: {str(e)}"
             )
             return None
@@ -737,11 +745,12 @@ class MainWindow(QMainWindow):
         """Create new conversation from Metaphor file."""
         # Show file dialog
         self._menu_timer.stop()
+        strings = self._language_manager.strings
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Metaphor File",
+            strings.file_dialog_open_metaphor,
             self._mindspace_manager.file_dialog_directory,
-            "Metaphor Files (*.m6r);;All Files (*.*)"
+            f"{strings.file_filter_metaphor};;{strings.file_filter_all}"
         )
         self._menu_timer.start()
 
@@ -765,21 +774,23 @@ class MainWindow(QMainWindow):
                 if conversation_tab:
                     conversation_tab.set_input_text(prompt)
         except MetaphorParserError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Metaphor Processing Error",
+                strings.metaphor_error_title,
                 f"Failed to process Metaphor file:\n\n{format_errors(e.errors)}"
             )
 
     def _open_conversation(self):
         """Show open conversation dialog and create conversation tab."""
         self._menu_timer.stop()
+        strings = self._language_manager.strings
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Conversation",
+            strings.file_dialog_open_conversation,
             self._mindspace_manager.conversations_directory,
-            "Conversation Files (*.conv);;All Files (*.*)"
+            f"{strings.file_filter_conversation};;{strings.file_filter_all}"
         )
         self._menu_timer.start()
 
@@ -795,10 +806,11 @@ class MainWindow(QMainWindow):
             self._tab_manager.open_conversation(path)
         except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Error Loading Conversation",
+                strings.conversation_error_title,
                 f"Could not load {path}: {str(e)}"
             )
 
@@ -808,10 +820,11 @@ class MainWindow(QMainWindow):
             try:
                 await self._tab_manager.fork_conversation()
             except ConversationError as e:
+                strings = self._language_manager.strings
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
-                    "Error Forking Conversation",
+                    strings.conversation_error_title,
                     f"Could not fork conversation: {str(e)}"
                 )
 
@@ -841,10 +854,11 @@ class MainWindow(QMainWindow):
                 self._language_manager.set_language(new_settings.language)
             except OSError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
+                strings = self._language_manager.strings
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
-                    "Settings Error",
+                    strings.settings_error_title,
                     f"Failed to save mindspace settings: {str(e)}"
                 )
 

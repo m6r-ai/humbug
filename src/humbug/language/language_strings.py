@@ -9,7 +9,6 @@ class LanguageStrings:
     """Strings for UI elements in different languages."""
     # Window titles
     about_title: str
-    file_dialog_title: str
     settings_dialog_title: str
 
     # Menu names
@@ -89,14 +88,34 @@ class LanguageStrings:
     auto_backup: str
     backup_interval: str
 
+    # File dialog titles
+    file_dialog_open_metaphor: str
+    file_dialog_open_conversation: str
+    file_dialog_open_file: str
+    file_dialog_save_file: str
+    file_dialog_new_mindspace: str
+    file_dialog_open_mindspace: str
+
+    # File dialog filters
+    file_filter_all: str
+    file_filter_metaphor: str
+    file_filter_conversation: str
+    file_filter_text: str
+
+    # Dialog titles
+    mindspace_error_title: str
+    conversation_error_title: str
+    metaphor_error_title: str
+    settings_error_title: str
+    error_opening_file_title: str
+    error_saving_file_title: str
+    save_changes_title: str
+    confirm_delete_title: str
+
     # Messages
-    confirm_delete: str
     delete_file_warning: str
-    error_opening_file: str
-    error_saving_file: str
     mindspace_exists_error: str
     close_button: str
-    save_changes: str
     confirm_close: str
     unsaved_changes: str
     could_not_open: str
@@ -118,7 +137,6 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
     LanguageCode.EN: LanguageStrings(
         # Window titles
         about_title="About Humbug",
-        file_dialog_title="Select File",
         settings_dialog_title="Settings",
 
         # Menu names
@@ -198,14 +216,34 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         auto_backup="Auto Backup",
         backup_interval="Backup Interval (seconds)",
 
+        # File dialog titles
+        file_dialog_open_metaphor="Open Metaphor File",
+        file_dialog_open_conversation="Open Conversation",
+        file_dialog_open_file="Open File",
+        file_dialog_save_file="Save File",
+        file_dialog_new_mindspace="Create New Mindspace",
+        file_dialog_open_mindspace="Open Mindspace",
+
+        # File dialog filters
+        file_filter_all="All Files (*.*)",
+        file_filter_metaphor="Metaphor Files (*.m6r)",
+        file_filter_conversation="Conversation Files (*.conv)",
+        file_filter_text="Text Files (*.txt)",
+
+        # Dialog titles
+        mindspace_error_title="Mindspace Error",
+        conversation_error_title="Conversation Error",
+        metaphor_error_title="Metaphor Processing Error",
+        settings_error_title="Settings Error",
+        error_opening_file_title="Error Opening File",
+        error_saving_file_title="Error Saving File",
+        save_changes_title="Save Changes?",
+        confirm_delete_title="Confirm Delete",
+
         # Messages
-        confirm_delete="Confirm Delete",
         delete_file_warning="Are you sure you want to delete this file?",
-        error_opening_file="Error Opening File",
-        error_saving_file="Error Saving File",
         mindspace_exists_error="Mindspace already exists in selected directory.",
         close_button="Close",
-        save_changes="Save Changes?",
         confirm_close="Confirm Close",
         unsaved_changes="Do you want to save your changes?",
         could_not_open="Could not open {}: {}",
@@ -220,7 +258,6 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
     LanguageCode.FR: LanguageStrings(
         # Window titles
         about_title="À propos de Humbug",
-        file_dialog_title="Sélectionner un fichier",
         settings_dialog_title="Paramètres",
 
         # Menu names
@@ -281,7 +318,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # File tree messages
         rename_conversation="Renommer la conversation",
-        conversation_name="Nom de la conversation:",
+        conversation_name="Nom de la conversation :",
         delete_file="Supprimer",
 
         # Dialog and settings
@@ -300,14 +337,34 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         auto_backup="Sauvegarde automatique",
         backup_interval="Intervalle de sauvegarde (secondes)",
 
+        # File dialog titles
+        file_dialog_open_metaphor="Ouvrir un fichier Metaphor",
+        file_dialog_open_conversation="Ouvrir une conversation",
+        file_dialog_open_file="Ouvrir un fichier",
+        file_dialog_save_file="Enregistrer le fichier",
+        file_dialog_new_mindspace="Créer un nouvel espace mental",
+        file_dialog_open_mindspace="Ouvrir un espace mental",
+
+        # File dialog filters
+        file_filter_all="Tous les fichiers (*.*)",
+        file_filter_metaphor="Fichiers Metaphor (*.m6r)",
+        file_filter_conversation="Fichiers de conversation (*.conv)",
+        file_filter_text="Fichiers texte (*.txt)",
+
+        # Dialog titles
+        mindspace_error_title="Erreur d'espace mental",
+        conversation_error_title="Erreur de conversation",
+        metaphor_error_title="Erreur de traitement Metaphor",
+        settings_error_title="Erreur de paramètres",
+        error_opening_file_title="Erreur lors de l'ouverture du fichier",
+        error_saving_file_title="Erreur lors de l'enregistrement du fichier",
+        save_changes_title="Enregistrer les modifications ?",
+        confirm_delete_title="Confirmer la suppression",
+
         # Messages
-        confirm_delete="Confirmer la suppression",
         delete_file_warning="Êtes-vous sûr de vouloir supprimer ce fichier ?",
-        error_opening_file="Erreur lors de l'ouverture du fichier",
-        error_saving_file="Erreur lors de l'enregistrement du fichier",
         mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné.",
         close_button="Fermer",
-        save_changes="Enregistrer les modifications ?",
         confirm_close="Confirmer la fermeture",
         unsaved_changes="Voulez-vous enregistrer vos modifications ?",
         could_not_open="Impossible d'ouvrir {} : {}",
@@ -322,7 +379,6 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
     LanguageCode.AR: LanguageStrings(
         # Window titles
         about_title="حول هامبج",
-        file_dialog_title="اختر ملف",
         settings_dialog_title="الإعدادات",
 
         # Menu names
@@ -402,14 +458,34 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         auto_backup="نسخ احتياطي تلقائي",
         backup_interval="فترة النسخ الاحتياطي (ثواني)",
 
+        # File dialog titles
+        file_dialog_open_metaphor="فتح ملف ميتافور",
+        file_dialog_open_conversation="فتح محادثة",
+        file_dialog_open_file="فتح ملف",
+        file_dialog_save_file="حفظ الملف",
+        file_dialog_new_mindspace="إنشاء مساحة ذهنية جديدة",
+        file_dialog_open_mindspace="فتح مساحة ذهنية",
+
+        # File dialog filters
+        file_filter_all="كل الملفات (*.*)",
+        file_filter_metaphor="ملفات ميتافور (*.m6r)",
+        file_filter_conversation="ملفات المحادثة (*.conv)",
+        file_filter_text="الملفات النصية (*.txt)",
+
+        # Dialog titles
+        mindspace_error_title="خطأ في المساحة الذهنية",
+        conversation_error_title="خطأ في المحادثة",
+        metaphor_error_title="خطأ في معالجة ميتافور",
+        settings_error_title="خطأ في الإعدادات",
+        error_opening_file_title="خطأ في فتح الملف",
+        error_saving_file_title="خطأ في حفظ الملف",
+        save_changes_title="حفظ التغييرات؟",
+        confirm_delete_title="تأكيد الحذف",
+
         # Messages
-        confirm_delete="تأكيد الحذف",
         delete_file_warning="هل أنت متأكد من حذف هذا الملف؟",
-        error_opening_file="خطأ في فتح الملف",
-        error_saving_file="خطأ في حفظ الملف",
         mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد.",
         close_button="إغلاق",
-        save_changes="حفظ التغييرات؟",
         confirm_close="تأكيد الإغلاق",
         unsaved_changes="هل تريد حفظ التغييرات؟",
         could_not_open="لا يمكن فتح {}: {}",

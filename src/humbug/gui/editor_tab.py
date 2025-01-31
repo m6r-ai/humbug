@@ -20,6 +20,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
+from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
@@ -77,6 +78,7 @@ class EditorTab(TabBase):
         self._logger = logging.getLogger("EditorTab")
 
         self._mindspace_manager = MindspaceManager()
+        self._language_manager = LanguageManager()
 
         # Set up layout
         layout = QVBoxLayout(self)
@@ -345,10 +347,11 @@ class EditorTab(TabBase):
                 self._last_save_content = content
                 self._set_modified(False)
             except Exception as e:
+                strings = self._language_manager.strings
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
-                    "Error Opening File",
+                    strings.error_opening_file_title,
                     f"Could not open {filename}: {str(e)}"
                 )
         self._update_title()
@@ -494,10 +497,11 @@ class EditorTab(TabBase):
         if not self._is_modified:
             return True
 
+        strings = self._language_manager.strings
         result = MessageBox.show_message(
             self,
             MessageBoxType.QUESTION,
-            "Save Changes?",
+            strings.save_changes_title,
             f"Do you want to save changes to {self._path or f'Untitled-{self._untitled_number}'}?",
             [MessageBoxButton.SAVE, MessageBoxButton.DISCARD, MessageBoxButton.CANCEL]
         )
@@ -548,10 +552,11 @@ class EditorTab(TabBase):
 
             return True
         except Exception as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Error Saving File",
+                strings.error_saving_file_title,
                 f"Could not save {self._path}: {str(e)}"
             )
             return False
@@ -566,8 +571,9 @@ class EditorTab(TabBase):
         Returns:
             bool: True if save was successful
         """
+        strings = self._language_manager.strings
         export_dialog = QFileDialog()
-        export_dialog.setWindowTitle('Save As')
+        export_dialog.setWindowTitle(strings.file_dialog_save_file)
         export_dialog.setDirectory(self._path or self._mindspace_manager.file_dialog_directory)
         export_dialog.setAcceptMode(QFileDialog.AcceptSave)
         if export_dialog.exec_() != QFileDialog.Accepted:
