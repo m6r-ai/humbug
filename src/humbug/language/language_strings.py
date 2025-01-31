@@ -111,8 +111,16 @@ class LanguageStrings:
     error_saving_file_title: str
     save_changes_title: str
     confirm_delete_title: str
+    file_error_title: str
 
     # Messages
+    confirm_delete_message: str
+    delete_warning_detail: str
+    error_deleting_file: str
+    error_title_rename: str
+    error_rename_exists: str
+    error_rename_failed: str
+    unsaved_changes: str
     delete_file_warning: str
     mindspace_exists_error: str
     close_button: str
@@ -242,8 +250,16 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_saving_file_title="Error Saving File",
         save_changes_title="Save Changes?",
         confirm_delete_title="Confirm Delete",
+        file_error_title = "File Error",
 
         # Messages
+        confirm_delete_message="Are you sure you want to delete {0}?",
+        delete_warning_detail="Any open tab for this file will be closed without saving.",
+        error_deleting_file="Could not delete file: {0}",
+        error_title_rename="Rename Error",
+        error_rename_exists="A conversation named '{0}' already exists.",
+        error_rename_failed="Could not rename conversation: {0}",
+        unsaved_changes="Do you want to save changes to {0}?",
         delete_file_warning="Are you sure you want to delete this file?",
         mindspace_exists_error="Mindspace already exists in selected directory.",
         close_button="Close",
@@ -366,8 +382,16 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_saving_file_title="Erreur lors de l'enregistrement du fichier",
         save_changes_title="Enregistrer les modifications ?",
         confirm_delete_title="Confirmer la suppression",
+        file_error_title = "Erreur de fichier",
 
         # Messages
+        confirm_delete_message="Êtes-vous sûr de vouloir supprimer {0} ?",
+        delete_warning_detail="Tout onglet ouvert pour ce fichier sera fermé sans enregistrement.",
+        error_deleting_file="Impossible de supprimer le fichier : {0}",
+        error_title_rename="Erreur de renommage",
+        error_rename_exists="Une conversation nommée '{0}' existe déjà.",
+        error_rename_failed="Impossible de renommer la conversation : {0}",
+        unsaved_changes="Voulez-vous enregistrer les modifications de {0} ?",
         delete_file_warning="Êtes-vous sûr de vouloir supprimer ce fichier ?",
         mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné.",
         close_button="Fermer",
@@ -490,8 +514,16 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_saving_file_title="خطأ في حفظ الملف",
         save_changes_title="حفظ التغييرات؟",
         confirm_delete_title="تأكيد الحذف",
+        file_error_title = "خطأ في الملف",
 
         # Messages
+        confirm_delete_message="هل أنت متأكد من حذف {0}؟",
+        delete_warning_detail="سيتم إغلاق أي تبويب مفتوح لهذا الملف دون حفظ.",
+        error_deleting_file="تعذر حذف الملف: {0}",
+        error_title_rename="خطأ في إعادة التسمية",
+        error_rename_exists="توجد محادثة باسم '{0}' بالفعل.",
+        error_rename_failed="تعذر إعادة تسمية المحادثة: {0}",
+        unsaved_changes="هل تريد حفظ التغييرات في {0}؟",
         delete_file_warning="هل أنت متأكد من حذف هذا الملف؟",
         mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد.",
         close_button="إغلاق",

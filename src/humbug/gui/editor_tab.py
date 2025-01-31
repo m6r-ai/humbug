@@ -352,7 +352,7 @@ class EditorTab(TabBase):
                     self,
                     MessageBoxType.CRITICAL,
                     strings.error_opening_file_title,
-                    f"Could not open {filename}: {str(e)}"
+                    strings.could_not_open.format(filename, str(e))
                 )
         self._update_title()
 
@@ -498,11 +498,12 @@ class EditorTab(TabBase):
             return True
 
         strings = self._language_manager.strings
+        document_name = self._path or f'Untitled-{self._untitled_number}'
         result = MessageBox.show_message(
             self,
             MessageBoxType.QUESTION,
             strings.save_changes_title,
-            f"Do you want to save changes to {self._path or f'Untitled-{self._untitled_number}'}?",
+            strings.unsaved_changes.format(document_name),
             [MessageBoxButton.SAVE, MessageBoxButton.DISCARD, MessageBoxButton.CANCEL]
         )
 
@@ -557,7 +558,7 @@ class EditorTab(TabBase):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.error_saving_file_title,
-                f"Could not save {self._path}: {str(e)}"
+                strings.could_not_save.format(self._path, str(e))
             )
             return False
 

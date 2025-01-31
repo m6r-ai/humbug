@@ -120,8 +120,8 @@ class MindspaceFileTree(QWidget):
             self,
             MessageBoxType.WARNING,
             strings.confirm_delete_title,
-            f"Are you sure you want to delete {os.path.basename(path)}?\n\n"
-            "Any open tab for this file will be closed without saving.",
+            strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" + 
+            strings.delete_warning_detail,
             [MessageBoxButton.YES, MessageBoxButton.NO]
         )
 
@@ -133,11 +133,12 @@ class MindspaceFileTree(QWidget):
                 # Then delete the file
                 os.remove(path)
             except OSError as e:
+                strings = self._language_manager.strings
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
-                    "Error",
-                    f"Could not delete file: {str(e)}",
+                    strings.file_error_title,
+                    strings.error_deleting_file.format(str(e)),
                     [MessageBoxButton.OK]
                 )
 
@@ -167,11 +168,12 @@ class MindspaceFileTree(QWidget):
 
         # Check if target already exists
         if os.path.exists(new_path):
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.WARNING,
-                "Rename Error",
-                f"A conversation named '{new_name}' already exists.",
+                strings.error_title_rename,
+                strings.error_rename_exists.format(new_name),
                 [MessageBoxButton.OK]
             )
             return
@@ -183,11 +185,12 @@ class MindspaceFileTree(QWidget):
             # Then rename the file
             os.rename(path, new_path)
         except OSError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Rename Error",
-                f"Could not rename conversation: {str(e)}",
+                strings.error_title_rename,
+                strings.error_rename_failed.format(str(e)),
                 [MessageBoxButton.OK]
             )
 
