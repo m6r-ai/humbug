@@ -163,19 +163,15 @@ class MainWindow(QMainWindow):
 
         self._split_column_left_action = QAction(strings.split_column_left, self)
         self._split_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+["))
-        self._split_column_left_action.triggered.connect(lambda: self._split_column(True))
 
         self._split_column_right_action = QAction(strings.split_column_right, self)
         self._split_column_right_action.setShortcut(QKeySequence("Ctrl+Shift+]"))
-        self._split_column_right_action.triggered.connect(lambda: self._split_column(False))
 
         self._merge_column_left_action = QAction(strings.merge_column_left, self)
         self._merge_column_left_action.setShortcut(QKeySequence("Ctrl+["))
-        self._merge_column_left_action.triggered.connect(lambda: self._merge_column(True))
 
         self._merge_column_right_action = QAction(strings.merge_column_right, self)
         self._merge_column_right_action.setShortcut(QKeySequence("Ctrl+]"))
-        self._merge_column_right_action.triggered.connect(lambda: self._merge_column(False))
 
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
@@ -295,7 +291,7 @@ class MainWindow(QMainWindow):
         self._tab_manager.column_state_changed.connect(self._handle_column_state_changed)
         self._tab_manager.status_message.connect(self._handle_status_message)
 
-        self._handle_style_changed()
+        self._handle_language_changed()
 
         self._mindspace_manager = MindspaceManager()
         self._restore_last_mindspace()
@@ -303,7 +299,8 @@ class MainWindow(QMainWindow):
     def _handle_language_changed(self) -> None:
         """Update UI text when language changes."""
         app = QApplication.instance()
-        if self._language_manager.left_to_right:
+        left_to_right = self._language_manager.left_to_right
+        if left_to_right:
             app.setLayoutDirection(Qt.LeftToRight)
         else:
             app.setLayoutDirection(Qt.RightToLeft)
@@ -348,6 +345,16 @@ class MainWindow(QMainWindow):
         self._split_column_right_action.setText(strings.split_column_right)
         self._merge_column_left_action.setText(strings.merge_column_left)
         self._merge_column_right_action.setText(strings.merge_column_right)
+
+        # Our logic for left and right reverses for right-to-left languages
+        self._split_column_left_action.triggered.disconnect()
+        self._split_column_left_action.triggered.connect(lambda: self._split_column(left_to_right))
+        self._split_column_right_action.triggered.disconnect()
+        self._split_column_right_action.triggered.connect(lambda: self._split_column(not left_to_right))
+        self._merge_column_left_action.triggered.disconnect()
+        self._merge_column_left_action.triggered.connect(lambda: self._merge_column(left_to_right))
+        self._merge_column_right_action.triggered.disconnect()
+        self._merge_column_right_action.triggered.connect(lambda: self._merge_column(not left_to_right))
 
         self._handle_style_changed()
 
@@ -638,13 +645,14 @@ class MainWindow(QMainWindow):
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor
+        left_to_right = self._language_manager.left_to_right
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
         self._show_all_columns_action.setEnabled(tab_manager.can_show_all_columns())
         self._split_column_left_action.setEnabled(tab_manager.can_split_column())
         self._split_column_right_action.setEnabled(tab_manager.can_split_column())
-        self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(True))
-        self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(False))
+        self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(left_to_right))
+        self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(not left_to_right))
 
     def _handle_style_changed(self) -> None:
         style_manager = self._style_manager
