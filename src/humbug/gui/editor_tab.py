@@ -74,11 +74,12 @@ class EditorTab(TabBase):
         self._last_save_content = ""
         self._auto_backup_timer = QTimer(self)
         self._auto_backup_timer.timeout.connect(self._auto_backup)
-        self._current_language = ProgrammingLanguage.TEXT
+        self._current_programming_language = ProgrammingLanguage.TEXT
         self._logger = logging.getLogger("EditorTab")
 
         self._mindspace_manager = MindspaceManager()
         self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
 
         # Set up layout
         layout = QVBoxLayout(self)
@@ -121,6 +122,16 @@ class EditorTab(TabBase):
         # Connect to mindspace settings changes
         self._mindspace_manager.settings_changed.connect(self._handle_mindspace_settings_changed)
 
+    def _handle_language_changed(self) -> None:
+        """Update language-specific elements."""
+        # Update find widget text if visible
+        if not self._find_widget.isHidden():
+            current, total = self._find_handler.get_match_status()
+            self._find_widget.set_match_status(current, total)
+
+        # Update status bar with translated terms
+        self.update_status()
+
     def _handle_mindspace_settings_changed(self):
         """Handle mindspace settings changes."""
         if self._mindspace_manager.has_mindspace:
@@ -146,7 +157,7 @@ class EditorTab(TabBase):
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""
         metadata_state = {
-            "language": self._current_language.name
+            "language": self._current_programming_language.name
         }
 
         if temp_state:
@@ -182,7 +193,7 @@ class EditorTab(TabBase):
             # Restore language if specified
             if "language" in state.metadata:
                 language = ProgrammingLanguage[state.metadata["language"]]
-                tab._update_language(language)
+                tab._update_programming_language(language)
 
             # Restore content if specified
             if "content" in state.metadata:
@@ -291,7 +302,7 @@ class EditorTab(TabBase):
         # Force a redraw of syntax highlighting
         self._highlighter.rehighlight()
 
-    def _detect_language(self, filename: Optional[str]) -> ProgrammingLanguage:
+    def _detect_programming_language(self, filename: Optional[str]) -> ProgrammingLanguage:
         """
         Detect the programming language based on file extension.
 
@@ -307,15 +318,15 @@ class EditorTab(TabBase):
         ext = os.path.splitext(filename)[1].lower()
         return LANGUAGE_MAP.get(ext, ProgrammingLanguage.TEXT)
 
-    def _update_language(self, new_language: ProgrammingLanguage) -> None:
+    def _update_programming_language(self, new_language: ProgrammingLanguage) -> None:
         """
         Update the syntax highlighting language.
 
         Args:
             new_language: The new programming language to use
         """
-        if self._current_language != new_language:
-            self._current_language = new_language
+        if self._current_programming_language != new_language:
+            self._current_programming_language = new_language
             self._highlighter.set_language(new_language)
             self.update_status()
 
@@ -336,8 +347,8 @@ class EditorTab(TabBase):
         self._untitled_number = untitled_number
 
         # Update syntax highlighting based on file extension
-        new_language = self._detect_language(filename)
-        self._update_language(new_language)
+        new_language = self._detect_programming_language(filename)
+        self._update_programming_language(new_language)
 
         if filename and os.path.exists(filename):
             try:
@@ -403,10 +414,17 @@ class EditorTab(TabBase):
             ProgrammingLanguage.PYTHON: "Python",
             ProgrammingLanguage.METAPHOR: "Metaphor",
         }
-        file_type = language_names.get(self._current_language, "Text")
+        file_type = language_names.get(self._current_programming_language, "Text")
 
+        strings = self._language_manager.strings
         message = StatusMessage(
-            f"Line {line}, Column {column} | {encoding} | {line_ending} | {file_type}"
+            strings.editor_status.format(
+                line=line,
+                column=column,
+                encoding=encoding,
+                line_ending=line_ending,
+                type=file_type
+            )
         )
         self.status_message.emit(message)
 
@@ -592,8 +610,8 @@ class EditorTab(TabBase):
         self._untitled_number = None
         self._update_title()
 
-        new_language = self._detect_language(filename)
-        self._update_language(new_language)
+        new_language = self._detect_programming_language(filename)
+        self._update_programming_language(new_language)
 
         return self.save()
 

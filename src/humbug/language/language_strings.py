@@ -137,6 +137,9 @@ class LanguageStrings:
     error_processing_metaphor: str
     error_saving_mindspace_settings: str
 
+    # Status bar
+    editor_status: str
+
     @classmethod
     def get_strings(cls, code: LanguageCode) -> 'LanguageStrings':
         """Get strings for specified language code."""
@@ -274,7 +277,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_opening_conversation="Could not load {}: {}",
         error_forking_conversation="Could not fork conversation: {}",
         error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
-        error_saving_mindspace_settings="Failed to save mindspace settings: {}"
+        error_saving_mindspace_settings="Failed to save mindspace settings: {}",
+
+        # Status bar
+        editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}"
     ),
 
     LanguageCode.FR: LanguageStrings(
@@ -406,7 +412,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_opening_conversation="Impossible de charger {} : {}",
         error_forking_conversation="Impossible de dupliquer la conversation : {}",
         error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
-        error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}"
+        error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}",
+
+        # Status bar
+        editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}"
     ),
 
     LanguageCode.AR: LanguageStrings(
@@ -538,6 +547,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         error_opening_conversation="لا يمكن تحميل {}: {}",
         error_forking_conversation="لا يمكن نسخ المحادثة: {}",
         error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
-        error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}"
+        error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}",
+
+        # Status bar
+        editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}"
     )
 }
