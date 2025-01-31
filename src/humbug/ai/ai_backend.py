@@ -9,7 +9,7 @@ from typing import List, AsyncGenerator, Dict
 import aiohttp
 from aiohttp import ClientConnectorError, ClientError
 
-from humbug.ai.ai_response import AIResponse
+from humbug.ai.ai_response import AIResponse, AIError
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.rate_limiter import RateLimiter
 
@@ -115,11 +115,12 @@ class AIBackend(ABC):
                                     delay = self._base_delay * (2 ** attempt)
                                     yield AIResponse(
                                         content="",
-                                        error={
-                                            "code": "rate_limit",
-                                            "message": f"Rate limit exceeded. Retrying in {delay} seconds...",
-                                            "details": error_data
-                                        }
+                                        error=AIError(
+                                            code="rate_limit",
+                                            message=f"Rate limit exceeded. Retrying in {delay} seconds...",
+                                            retries_exhausted=False,
+                                            details=error_data
+                                        )
                                     )
                                     await asyncio.sleep(delay)
                                     attempt += 1
@@ -127,11 +128,12 @@ class AIBackend(ABC):
 
                             yield AIResponse(
                                 content="",
-                                error={
-                                    "code": str(response.status),
-                                    "message": f"API error {response.status}: {error_msg}",
-                                    "details": error_data
-                                }
+                                error=AIError(
+                                    code=str(response.status),
+                                    message=f"API error {response.status}: {error_msg}",
+                                    retries_exhausted=True,
+                                    details=error_data
+                                )
                             )
                             return
 
@@ -195,11 +197,12 @@ class AIBackend(ABC):
                 if attempt < self._max_retries - 1:
                     yield AIResponse(
                         content="",
-                        error={
-                            "code": "network_error",
-                            "message": f"Network error: {str(e)}. Retrying in {delay} seconds...",
-                            "details": {"type": type(e).__name__, "attempt": attempt + 1}
-                        }
+                        error=AIError(
+                            code="network_error",
+                            message=f"Network error: {str(e)}. Retrying in {delay} seconds...",
+                            retries_exhausted=False,
+                            details={"type": type(e).__name__, "attempt": attempt + 1}
+                        )
                     )
                     await asyncio.sleep(delay)
                     attempt += 1
@@ -207,11 +210,12 @@ class AIBackend(ABC):
 
                 yield AIResponse(
                     content="",
-                    error={
-                        "code": "network_error",
-                        "message": f"Network error after {self._max_retries} attempts: {str(e)}",
-                        "details": {"type": type(e).__name__}
-                    }
+                    error=AIError(
+                        code="network_error",
+                        message=f"Network error: {str(e)}",
+                        retries_exhausted=True,
+                        details={"type": type(e).__name__}
+                    )
                 )
                 return
 

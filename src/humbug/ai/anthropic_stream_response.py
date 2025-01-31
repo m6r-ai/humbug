@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 
 from humbug.ai.ai_usage import AIUsage
+from humbug.ai.ai_response import AIError
 
 
 class AnthropicStreamResponse:
@@ -13,7 +14,7 @@ class AnthropicStreamResponse:
         """Initialize stream response handler."""
         self.content = ""
         self.usage: Optional[AIUsage] = None
-        self.error = None
+        self.error: Optional[AIError] = None
         self._logger = logging.getLogger("AnthropicStreamResponse")
 
         # Internal tracking of tokens
@@ -24,11 +25,13 @@ class AnthropicStreamResponse:
         """Update from a response chunk and return new content if any."""
         if "error" in chunk:
             self._logger.debug("Got error message: %s", chunk["error"])
-            self.error = {
-                "code": chunk["error"].get("type", "stream_error"),
-                "message": chunk["error"].get("message", "Unknown error"),
-                "details": chunk["error"]
-            }
+            error_data = chunk["error"]
+            self.error = AIError(
+                code=error_data.get("type", "stream_error"),
+                message=error_data.get("message", "Unknown error"),
+                retries_exhausted=True,
+                details=error_data
+            )
             return
 
         event_type = chunk.get("type")

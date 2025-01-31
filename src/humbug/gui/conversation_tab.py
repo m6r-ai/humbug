@@ -14,6 +14,7 @@ from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_response import AIError
 from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
@@ -63,6 +64,7 @@ class ConversationTab(TabBase):
         self._timestamp = timestamp
         self._ai_backends = ai_backends
         self._current_tasks: List[asyncio.Task] = []
+        self._last_submitted_message = None
 
         # Create transcript handler with provided filename
         self._transcript_handler = TranscriptHandler(
@@ -634,7 +636,7 @@ class ConversationTab(TabBase):
         self,
         content: str,
         usage: Optional[Usage] = None,
-        error: Optional[Dict] = None
+        error: Optional[AIError] = None
     ):
         """Update the current AI response in the conversation."""
         if error:
@@ -642,7 +644,7 @@ class ConversationTab(TabBase):
             self._input.set_streaming(False)
 
             # For cancellation, preserve the partial response first
-            if error.get("code") == "cancelled" and self._current_ai_message:
+            if self._current_ai_message:
                 message = self._conversation.update_message(
                     self._current_ai_message.id,
                     content=self._current_ai_message.content,
@@ -654,11 +656,11 @@ class ConversationTab(TabBase):
                 self._current_ai_message = None
 
             # Then add the error message
-            error_msg = f"{error['message']}"
+            error_msg = error.message
             error_message = Message.create(
                 MessageSource.SYSTEM,
                 error_msg,
-                error=error
+                error={"code": error.code, "message": error.message, "details": error.details}
             )
             self._add_message(error_message)
             asyncio.create_task(self._write_transcript(error_message))
@@ -776,6 +778,7 @@ class ConversationTab(TabBase):
                 self._add_message(error_message)
                 asyncio.create_task(self._write_transcript(error_message))
 
+                self._restore_last_message()
                 self._is_streaming = False
                 self._input.set_streaming(False)
                 return
@@ -794,11 +797,13 @@ class ConversationTab(TabBase):
                         error=response.error
                     )
 
-                    # Handle retryable errors
                     if response.error:
-                        if response.error['code'] in ['network_error', 'timeout']:
-                            continue  # Continue to next retry attempt
-                        return  # Non-retryable error
+                        if response.error.retries_exhausted:
+                            self._restore_last_message()
+                            return
+
+                        # We're retrying - continue to the next attempt
+                        continue
 
                 except StopAsyncIteration:
                     break
@@ -820,18 +825,26 @@ class ConversationTab(TabBase):
                 settings.model,
                 str(e)
             )
-            error = {
-                "code": "process_error",
-                "message": str(e),
-                "details": {"type": type(e).__name__}
-            }
+            error = AIError(
+                code="process_error",
+                message=str(e),
+                retries_exhausted=True,
+                details={"type": type(e).__name__}
+            )
             await self.update_streaming_response(
                 content="",
                 error=error
             )
+            self._restore_last_message()
 
         finally:
             self._logger.debug("=== Finished AI response ===")
+
+    def _restore_last_message(self):
+        """Restore the last submitted message to the input box."""
+        if self._last_submitted_message is not None:
+            self._input.setPlainText(self._last_submitted_message)
+            self._last_submitted_message = None
 
     def cancel_current_tasks(self):
         """Cancel any ongoing AI response tasks."""
@@ -957,6 +970,7 @@ class ConversationTab(TabBase):
         if not content:
             return
 
+        self._last_submitted_message = content
         self._input.clear()
         self._input.set_streaming(True)
 
