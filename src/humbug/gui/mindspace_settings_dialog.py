@@ -33,7 +33,7 @@ class MindspaceSettingsDialog(QDialog):
         """
         super().__init__(parent)
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._update_dialog_texts)
+        self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings
 
         self.setWindowTitle(strings.settings_dialog_title)
@@ -331,7 +331,7 @@ class MindspaceSettingsDialog(QDialog):
 
         return layout, combo
 
-    def _update_dialog_texts(self) -> None:
+    def _handle_language_changed(self) -> None:
         """Update all dialog texts with current language strings."""
         strings = self._language_manager.strings
         self.setWindowTitle(strings.settings_dialog_title)
@@ -348,6 +348,12 @@ class MindspaceSettingsDialog(QDialog):
         self.ok_button.setText(strings.ok)
         self.cancel_button.setText(strings.cancel)
         self.apply_button.setText(strings.apply)
+
+        # Adjust dialog size to fit new content
+        self.adjustSize()
+        size_hint = self.sizeHint()
+        new_width = max(500, size_hint.width())
+        self.resize(new_width, size_hint.height())
 
     def _handle_value_change(self) -> None:
         """Handle changes to any setting value."""
