@@ -45,6 +45,7 @@ class PythonParser(Parser):
             they're part of a dotted access chain.
         """
         in_element = False
+        in_import = False
         prev_lexer_state = None
         if prev_parser_state:
             in_element = prev_parser_state.in_element
@@ -58,7 +59,10 @@ class PythonParser(Parser):
             if not token:
                 break
 
-            if token.type != 'IDENTIFIER':
+            if token.type == 'KEYWORD' and token.value in ('from', 'import'):
+                in_import = True
+
+            if token.type != 'IDENTIFIER' and not in_import:
                 self._tokens.append(token)
                 continue
 
