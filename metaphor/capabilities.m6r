@@ -1013,14 +1013,6 @@ Context: Capabilities
             interact with them they will behave differently.  For example, highlighting of text cannot span
             between the editable and non-editable regions.
 
-        Context: Screen colours
-            The status line background is light grey with black text.
-
-            Message backgrounds and text colours are:
-                - User messages: White text on #3c3c3c background
-                - AI responses: White text on #282828 background
-                - System messages: White text on #1a3a1a background (dark green)
-
         Context: Message display
             Messages must automatically adjust their display height based on content.  The height adjustment should
             happen smoothly and in real-time as content is added or removed.
@@ -1341,6 +1333,8 @@ Context: Capabilities
                 Track API calls with sliding 60-second window.
 
                 Pause requests when approaching limits.
+
+                If the user's request fails restore the failed message so they can try it again.
 
             Context: Retry strategy
                 Maximum 3 retries for recoverable errors.

@@ -640,22 +640,23 @@ class ConversationTab(TabBase):
     ):
         """Update the current AI response in the conversation."""
         if error:
-            self._is_streaming = False
-            self._input.set_streaming(False)
+            # Only stop streaming if retries are exhausted
+            if error.retries_exhausted:
+                self._is_streaming = False
+                self._input.set_streaming(False)
 
-            # For cancellation, preserve the partial response first
-            if self._current_ai_message:
-                message = self._conversation.update_message(
-                    self._current_ai_message.id,
-                    content=self._current_ai_message.content,
-                    completed=False
-                )
-                if message:
-                    await self._write_transcript(message)
+                # For cancellation, preserve the partial response first
+                if self._current_ai_message:
+                    message = self._conversation.update_message(
+                        self._current_ai_message.id,
+                        content=self._current_ai_message.content,
+                        completed=False
+                    )
+                    if message:
+                        await self._write_transcript(message)
 
-                self._current_ai_message = None
+                    self._current_ai_message = None
 
-            # Then add the error message
             error_msg = error.message
             error_message = Message.create(
                 MessageSource.SYSTEM,

@@ -52,10 +52,13 @@ class LiveInputWidget(MessageWidget):
 
     def _update_header_text(self):
         """Update the header text based on current state."""
+        print("update header text")
         strings = self._language_manager.strings
         if self._is_streaming:
+            print("streaming")
             self._role_label.setText(strings.processing_message)
         else:
+            print("not streaming")
             submit_key = self._get_submit_key_text()
             self._role_label.setText(strings.input_prompt.format(key=submit_key))
 
