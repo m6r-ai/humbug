@@ -117,14 +117,17 @@ class LanguageStrings:
     mindspace_exists_error: str
     close_button: str
     confirm_close: str
-    unsaved_changes: str
     could_not_open: str
     could_not_save: str
+    error_creating_mindspace: str
+    error_opening_mindspace: str
+    error_restoring_mindspace: str
+    error_saving_mindspace: str
     error_creating_conversation: str
     error_opening_conversation: str
     error_forking_conversation: str
     error_processing_metaphor: str
-    error_saving_settings: str
+    error_saving_mindspace_settings: str
 
     @classmethod
     def get_strings(cls, code: LanguageCode) -> 'LanguageStrings':
@@ -245,14 +248,17 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         mindspace_exists_error="Mindspace already exists in selected directory.",
         close_button="Close",
         confirm_close="Confirm Close",
-        unsaved_changes="Do you want to save your changes?",
         could_not_open="Could not open {}: {}",
         could_not_save="Could not save {}: {}",
+        error_creating_mindspace="Failed to create mindspace: {0}",
+        error_opening_mindspace="Failed to open mindspace: {0}",
+        error_restoring_mindspace="Failed to restore mindspace state: {0}",
+        error_saving_mindspace="Failed to save mindspace state: {0}",
         error_creating_conversation="Failed to create conversation: {}",
         error_opening_conversation="Could not load {}: {}",
         error_forking_conversation="Could not fork conversation: {}",
         error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
-        error_saving_settings="Failed to save mindspace settings: {}"
+        error_saving_mindspace_settings="Failed to save mindspace settings: {}"
     ),
 
     LanguageCode.FR: LanguageStrings(
@@ -366,14 +372,17 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné.",
         close_button="Fermer",
         confirm_close="Confirmer la fermeture",
-        unsaved_changes="Voulez-vous enregistrer vos modifications ?",
         could_not_open="Impossible d'ouvrir {} : {}",
         could_not_save="Impossible d'enregistrer {} : {}",
+        error_creating_mindspace="Échec de la création de l'espace mental: {0}",
+        error_opening_mindspace="Échec de l'ouverture de l'espace mental: {0}",
+        error_restoring_mindspace="Échec de la restauration de l'état de l'espace mental: {0}",
+        error_saving_mindspace="Échec de l'enregistrement de l'état de l'espace mental: {0}",
         error_creating_conversation="Échec de la création de la conversation : {}",
         error_opening_conversation="Impossible de charger {} : {}",
         error_forking_conversation="Impossible de dupliquer la conversation : {}",
         error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
-        error_saving_settings="Échec de l'enregistrement des paramètres : {}"
+        error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}"
     ),
 
     LanguageCode.AR: LanguageStrings(
@@ -487,13 +496,16 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد.",
         close_button="إغلاق",
         confirm_close="تأكيد الإغلاق",
-        unsaved_changes="هل تريد حفظ التغييرات؟",
         could_not_open="لا يمكن فتح {}: {}",
         could_not_save="لا يمكن حفظ {}: {}",
+        error_creating_mindspace="فشل في إنشاء المساحة الذهنية: {0}",
+        error_opening_mindspace="فشل في فتح المساحة الذهنية: {0}",
+        error_restoring_mindspace="فشل في استعادة حالة المساحة الذهنية: {0}",
+        error_saving_mindspace="فشل في حفظ حالة المساحة الذهنية: {0}",
         error_creating_conversation="فشل في إنشاء المحادثة: {}",
         error_opening_conversation="لا يمكن تحميل {}: {}",
         error_forking_conversation="لا يمكن نسخ المحادثة: {}",
         error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
-        error_saving_settings="فشل في حفظ الإعدادات: {}"
+        error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}"
     )
 }

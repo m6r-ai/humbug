@@ -406,8 +406,8 @@ class MainWindow(QMainWindow):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.mindspace_error_title,
-                f"Failed to create mindspace: {str(e)}"
-            )
+                strings.error_creating_mindspace.format(str(e))
+                )
             return
 
         self._open_mindspace_path(dir_path)
@@ -442,7 +442,7 @@ class MainWindow(QMainWindow):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.mindspace_error_title,
-                f"Failed to open mindspace: {str(e)}"
+                strings.error_opening_mindspace.format(str(e))
             )
             return
 
@@ -476,7 +476,7 @@ class MainWindow(QMainWindow):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.mindspace_error_title,
-                f"Failed to save mindspace state: {str(e)}"
+                strings.error_saving_mindspace.format(str(e))
             )
 
     def _restore_mindspace_state(self):
@@ -495,7 +495,7 @@ class MainWindow(QMainWindow):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.mindspace_error_title,
-                f"Failed to restore mindspace state: {str(e)}"
+                strings.error_restoring_mindspace.format(str(e))
             )
 
     def _close_all_tabs(self):
@@ -585,7 +585,7 @@ class MainWindow(QMainWindow):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.error_opening_file_title,
-                f"Could not open {path}: {str(e)}"
+                strings.could_not_open.format(path, str(e))
             )
 
     def _save_file(self):
@@ -737,7 +737,7 @@ class MainWindow(QMainWindow):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.mindspace_error_title,
-                f"Failed to create conversation: {str(e)}"
+                strings.error_opening_conversation.format(str(e))
             )
             return None
 
@@ -779,7 +779,7 @@ class MainWindow(QMainWindow):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.metaphor_error_title,
-                f"Failed to process Metaphor file:\n\n{format_errors(e.errors)}"
+                strings.error_processing_metaphor.format(format_errors(e.errors))
             )
 
     def _open_conversation(self):
@@ -811,7 +811,7 @@ class MainWindow(QMainWindow):
                 self,
                 MessageBoxType.CRITICAL,
                 strings.conversation_error_title,
-                f"Could not load {path}: {str(e)}"
+                strings.error_opening_conversation.format(path, str(e))
             )
 
     def _fork_conversation(self):
@@ -825,7 +825,7 @@ class MainWindow(QMainWindow):
                     self,
                     MessageBoxType.CRITICAL,
                     strings.conversation_error_title,
-                    f"Could not fork conversation: {str(e)}"
+                    strings.error_forking_conversation.format(str(e))
                 )
 
         # Create task to fork conversation
@@ -859,7 +859,7 @@ class MainWindow(QMainWindow):
                     self,
                     MessageBoxType.CRITICAL,
                     strings.settings_error_title,
-                    f"Failed to save mindspace settings: {str(e)}"
+                    strings.error_saving_mindspace_settings.format(str(e))
                 )
 
         dialog.settings_changed.connect(handle_settings_changed)
