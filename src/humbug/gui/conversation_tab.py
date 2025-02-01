@@ -665,7 +665,12 @@ class ConversationTab(TabBase):
             )
             self._add_message(error_message)
             asyncio.create_task(self._write_transcript(error_message))
-            self._logger.warning("AI response error: %s", error_msg)
+
+            # For cancellation, don't log as warning since it's user-initiated
+            if error.code == "cancelled":
+                self._logger.debug("AI response cancelled by user")
+            else:
+                self._logger.warning("AI response error: %s", error.message)
             return
 
         if not self._is_streaming:
@@ -813,10 +818,12 @@ class ConversationTab(TabBase):
             self._logger.debug("AI response cancelled")
             await self.update_streaming_response(
                 content="",
-                error={
-                    "code": "cancelled",
-                    "message": "Request cancelled by user"
-                }
+                error=AIError(
+                    code="cancelled",
+                    message="Request cancelled by user",
+                    retries_exhausted=True,
+                    details={"type": "CancelledError"}
+                )
             )
             return
 
@@ -826,15 +833,14 @@ class ConversationTab(TabBase):
                 settings.model,
                 str(e)
             )
-            error = AIError(
-                code="process_error",
-                message=str(e),
-                retries_exhausted=True,
-                details={"type": type(e).__name__}
-            )
             await self.update_streaming_response(
                 content="",
-                error=error
+                error=AIError(
+                    code="process_error",
+                    message=str(e),
+                    retries_exhausted=True,
+                    details={"type": type(e).__name__}
+                )
             )
             self._restore_last_message()
 

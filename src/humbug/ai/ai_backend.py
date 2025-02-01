@@ -171,10 +171,12 @@ class AIBackend(ABC):
                                 self._logger.exception("CancelledError")
                                 yield AIResponse(
                                     content=response_handler.content,
-                                    error={
-                                        "code": "cancelled",
-                                        "message": "Request cancelled by user"
-                                    }
+                                    error=AIError(
+                                        code="cancelled",
+                                        message="Request cancelled by user",
+                                        retries_exhausted=True,
+                                        details={"type": "CancelledError"}
+                                    )
                                 )
                                 return
 
@@ -224,10 +226,11 @@ class AIBackend(ABC):
                 self._logger.exception("Error processing AI response: %s", str(e))
                 yield AIResponse(
                     content="",
-                    error={
-                        "code": "error",
-                        "message": f"Error: {str(e)}",
-                        "details": {"type": type(e).__name__}
-                    }
+                    error=AIError(
+                        code="error",
+                        message=f"Error: {str(e)}",
+                        retries_exhausted=True,
+                        details={"type": type(e).__name__}
+                    )
                 )
                 return

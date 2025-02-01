@@ -17,6 +17,7 @@ class LiveInputWidget(MessageWidget):
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
+    cancelRequested = Signal()
 
     def __init__(self, parent=None):
         """Initialize the live input widget."""
@@ -103,12 +104,10 @@ class LiveInputWidget(MessageWidget):
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
-            if not self._is_streaming:
-                text = self._text_area.toPlainText().strip()
-                if text:
-                    self.clear()
-
-                return
+            # Just emit the signal - let parent decide what to do
+            self.cancelRequested.emit()
+            event.accept()
+            return
 
         super().keyPressEvent(event)
 
