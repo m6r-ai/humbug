@@ -38,7 +38,7 @@ from humbug.transcript.transcript_handler import TranscriptHandler
 
 
 class ConversationTab(TabBase):
-    """Unified conversation tab implementing single-window feel with distinct regions."""
+    """Unified conversation tab."""
 
     def __init__(
         self,
