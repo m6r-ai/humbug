@@ -17,7 +17,6 @@ class LiveInputWidget(MessageWidget):
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
-    cancelRequested = Signal()
 
     def __init__(self, parent=None):
         """Initialize the live input widget."""
@@ -53,13 +52,10 @@ class LiveInputWidget(MessageWidget):
 
     def _update_header_text(self):
         """Update the header text based on current state."""
-        print("update header text")
         strings = self._language_manager.strings
         if self._is_streaming:
-            print("streaming")
             self._role_label.setText(strings.processing_message)
         else:
-            print("not streaming")
             submit_key = self._get_submit_key_text()
             self._role_label.setText(strings.input_prompt.format(key=submit_key))
 
@@ -104,10 +100,12 @@ class LiveInputWidget(MessageWidget):
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
-            # Just emit the signal - let parent decide what to do
-            self.cancelRequested.emit()
-            event.accept()
-            return
+            if not self._is_streaming:
+                text = self._text_area.toPlainText().strip()
+                if text:
+                    self.clear()
+
+                return
 
         super().keyPressEvent(event)
 

@@ -825,6 +825,7 @@ class ConversationTab(TabBase):
                     details={"type": "CancelledError"}
                 )
             )
+            self._restore_last_message()
             return
 
         except Exception as e:
