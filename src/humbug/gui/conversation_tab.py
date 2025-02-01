@@ -20,11 +20,11 @@ from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
 from humbug.conversation.usage import Usage
 from humbug.gui.conversation_error import ConversationError
-from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation_find import ConversationFind
+from humbug.gui.conversation_input_widget import ConversationInputWidget
+from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_widget import MessageWidget
-from humbug.gui.live_input_widget import LiveInputWidget
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
@@ -103,7 +103,7 @@ class ConversationTab(TabBase):
         self._messages_container.setLayout(self._messages_layout)
 
         # Set up the input box
-        self._input = LiveInputWidget(self._messages_container)
+        self._input = ConversationInputWidget(self._messages_container)
         self._input.cursorPositionChanged.connect(self._ensure_cursor_visible)
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)

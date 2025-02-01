@@ -11,15 +11,15 @@ from humbug.gui.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 
 
-class LiveInputWidget(MessageWidget):
-    """Widget for live message input that matches history message styling."""
+class ConversationInputWidget(MessageWidget):
+    """Widget for conversation message input that matches history message styling."""
 
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
 
     def __init__(self, parent=None):
-        """Initialize the live input widget."""
+        """Initialize the conversation input widget."""
         self._is_streaming = False
         super().__init__(parent, is_input=True)
 
