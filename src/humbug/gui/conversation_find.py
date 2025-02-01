@@ -20,6 +20,7 @@ class ConversationFind(QObject):
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
+
         # Track text edits with highlights
         self._highlighted_editors: Set[QTextEdit] = set()
 
