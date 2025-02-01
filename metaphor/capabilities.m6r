@@ -816,7 +816,9 @@ Context: Capabilities
 
                 When find is invoked a new control opens above the content of the tab with an input area, a status
                 that indicates the number of matches for the current search, and 3 buttons.  The buttons are
-                "previous" (uses a < icon), "next" (uses a > icon), and "close" (uses an x icon).
+                "previous" (uses a < icon for left-to-right languages, > for right-to-left languages), "next"
+                (uses a > icon for left-to-right languages, < for right-to-left languages), and "close" (uses
+                an x icon).
 
                 If the user has highlighted text on a single line then find will use that text as the initial search
                 string.
@@ -928,7 +930,6 @@ Context: Capabilities
 
             - Cut/Copy/Paste with standard keyboard shortcuts
             - Undo/Redo functionality
-            - Find/Replace functionality
             - Line number display
             - Cursor position display (line:column) in status bar
 
