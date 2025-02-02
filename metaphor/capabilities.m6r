@@ -244,6 +244,16 @@ Context: Capabilities
 
                         The maximum scroll speed is reached when the cursor is twice the viewport height away.
 
+                    Context: Pop-up menu
+                        If the user clicks the right mouse button in a conversation tab then they will be
+                        given a pop-up menu.
+
+                        Context: Fork conversation
+                            Selecting this will fork the conversation in the same way as the main menu option
+
+                        Context: Conversation settings
+                            Selecting this will pop up the conversation settings dialog.
+
                 Context: Editor tabs
                     Each editor tab will be named with the filename being edited.
 

@@ -7,9 +7,9 @@ import os
 from typing import Dict, List, Optional
 
 from PySide6.QtWidgets import (
-    QVBoxLayout, QWidget, QScrollArea, QSizePolicy
+    QDialog, QVBoxLayout, QWidget, QScrollArea, QSizePolicy, QMenu
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Slot
+from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal
 from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
 
 from humbug.ai.conversation_settings import ConversationSettings
@@ -18,6 +18,7 @@ from humbug.ai.ai_response import AIError
 from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
+from humbug.gui.conversation_settings_dialog import ConversationSettingsDialog
 from humbug.conversation.usage import Usage
 from humbug.gui.conversation_error import ConversationError
 from humbug.gui.conversation_find import ConversationFind
@@ -39,6 +40,8 @@ from humbug.transcript.transcript_handler import TranscriptHandler
 
 class ConversationTab(TabBase):
     """Unified conversation tab."""
+
+    forkRequested = Signal()
 
     def __init__(
         self,
@@ -108,6 +111,8 @@ class ConversationTab(TabBase):
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
         )
+        self._input.forkRequested.connect(self.forkRequested)
+        self._input.settingsRequested.connect(self.show_conversation_settings_dialog)
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
 
@@ -151,6 +156,10 @@ class ConversationTab(TabBase):
         self._scroll_timer.setInterval(16)  # ~60fps
         self._scroll_timer.timeout.connect(self._update_scroll)
         self._last_mouse_pos = None
+
+        # Handle pop-up context menu
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._create_context_menu)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -500,6 +509,8 @@ class ConversationTab(TabBase):
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
+        msg_widget.forkRequested.connect(self.forkRequested)
+        msg_widget.settingsRequested.connect(self.show_conversation_settings_dialog)
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
         msg_widget.set_content(message.content, message.source, message.timestamp)
@@ -1034,3 +1045,35 @@ class ConversationTab(TabBase):
         self._find_handler.find_text(text, widgets, forward)
         current, total = self._find_handler.get_match_status()
         self._find_widget.set_match_status(current, total)
+
+    def _create_context_menu(self, pos) -> None:
+        """
+        Create and show the context menu at the given position.
+
+        Args:
+            pos: Local coordinates for menu position
+        """
+        menu = QMenu(self)
+
+        # Create menu actions
+        fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
+        menu.addSeparator()
+        settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
+
+        # Show menu and handle selection
+        action = menu.exec_(self.mapToGlobal(pos))
+        if not action:
+            return
+
+        if action == fork_action:
+            self.forkRequested.emit()
+        elif action == settings_action:
+            self.show_conversation_settings_dialog()
+
+    def show_conversation_settings_dialog(self) -> None:
+        """Show the conversation settings dialog."""
+        dialog = ConversationSettingsDialog(self._ai_backends, self)
+        dialog.set_settings(self.get_settings())
+
+        if dialog.exec() == QDialog.Accepted:
+            self.update_conversation_settings(dialog.get_settings())
