@@ -10,6 +10,8 @@ This release adds the following new features:
 - When highlighting text, the syntax highlights are now preserved.
 - Added the ability to rename existing conversations.
 - The mindspace name is shown above the mindspace file tree.
+- Added a pop-up context menu on conversation tabs that provides access to conversation
+  settings and forking for that conversation.
 
 The release fixes the following bugs:
 
