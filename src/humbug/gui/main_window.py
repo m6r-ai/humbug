@@ -11,7 +11,8 @@ from m6rclib import (
 )
 
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel, QApplication
+    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
+    QSplitter, QLabel, QApplication, QDialog
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -25,6 +26,7 @@ from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
+from humbug.gui.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.gui.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.gui.mindspace_file_tree import MindspaceFileTree
 from humbug.language.language_manager import LanguageManager
@@ -389,6 +391,7 @@ class MainWindow(QMainWindow):
             pass
 
     def _new_mindspace(self):
+        """Show folder selection dialog and create new mindspace."""
         self._menu_timer.stop()
         strings = self._language_manager.strings
         dir_path = QFileDialog.getExistingDirectory(
@@ -398,8 +401,14 @@ class MainWindow(QMainWindow):
         if not dir_path:
             return
 
+        # Show folder configuration dialog
+        dialog = MindspaceFoldersDialog(dir_path, self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
         try:
-            self._mindspace_manager.create_mindspace(dir_path)
+            # Create mindspace with selected folders
+            self._mindspace_manager.create_mindspace(dir_path, dialog.get_selected_folders())
         except MindspaceExistsError:
             MessageBox.show_message(
                 self,
@@ -414,7 +423,7 @@ class MainWindow(QMainWindow):
                 MessageBoxType.CRITICAL,
                 strings.mindspace_error_title,
                 strings.error_creating_mindspace.format(str(e))
-                )
+            )
             return
 
         self._open_mindspace_path(dir_path)
