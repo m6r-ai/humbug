@@ -29,7 +29,6 @@ class ConversationHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._code_font_families = self._style_manager.monospace_font_families
         self._has_code_block = False
 
         self._logger = logging.getLogger("ConversationHighlighter")
