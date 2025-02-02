@@ -549,8 +549,29 @@ Context: Capabilities
             When creating a new mindspace:
 
             - Show directory selection dialog
-            - Validate no existing ".humbug" directory
-            - Create ".humbug" directory if valid
+
+            When the user selects a directory, validate there is no existing ".humbug" directory within
+            it.  If there is not then present the user with a new dialog:
+
+            The dialog has:
+
+            - "Mindspace path:", followed by the path the user selected.
+            - "conversations folder:", followed by a checkbox.
+            - "metaphor folder:", "followed by a checkbox.
+            - "source folder:", followed by a checkbox.
+
+            The conversations folder checkbox is checked and disabled so it cannot be unchecked.
+
+            The metaphor folder checkbox is checked and enabled so it can be unchecked.
+
+            The source folder checkbox is unchecked and enabled so it can be checked.
+
+            The dialog has two buttons, "OK" and "Cancel".
+
+            If the user hits "OK" then:
+
+            - Create ".humbug" directory
+            - Create the checked directories from the dialog.
             - Create default settings.json
             - Create empty session.json
             - Show error if creation fails

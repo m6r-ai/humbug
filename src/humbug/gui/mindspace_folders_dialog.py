@@ -4,8 +4,9 @@ from typing import List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
-    QPushButton
+    QPushButton, QWidget
 )
+from PySide6.QtCore import Qt
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -38,31 +39,72 @@ class MindspaceFoldersDialog(QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Add mindspace path display
+        # Create form layout for aligned content
+        form_widget = QWidget()
+        form_layout = QVBoxLayout(form_widget)
+        form_layout.setSpacing(12)
+        form_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Add mindspace path display that will set our alignment
         path_layout = QHBoxLayout()
+        path_layout.setSpacing(8)
         self._path_label = QLabel(strings.mindspace_path)
+        self._path_label.setMinimumWidth(150)  # Fixed width for label column
+        self._path_label.setMinimumHeight(40)
         self._path_value = QLabel(mindspace_path)
         self._path_value.setWordWrap(True)
+        self._path_value.setMinimumHeight(40)
         path_layout.addWidget(self._path_label)
         path_layout.addWidget(self._path_value, stretch=1)
-        layout.addLayout(path_layout)
+        form_layout.addLayout(path_layout)
 
-        # Add folder checkboxes
-        self._conversations_check = QCheckBox(strings.conversations_folder)
+        # Add folder options with labels aligned under path label
+        # and checkboxes aligned under path value
+        options_layout = QVBoxLayout()
+        options_layout.setSpacing(8)
+
+        # Conversations folder option
+        conv_layout = QHBoxLayout()
+        conv_layout.setSpacing(8)
+        conv_label = QLabel(strings.conversations_folder)
+        conv_label.setMinimumWidth(150)  # Match path label width
+        conv_label.setMinimumHeight(40)
+        self._conversations_check = QCheckBox()
         self._conversations_check.setChecked(True)
         self._conversations_check.setEnabled(False)
         self._conversations_check.setMinimumHeight(40)
-        layout.addWidget(self._conversations_check)
+        conv_layout.addWidget(conv_label)
+        conv_layout.addWidget(self._conversations_check, 1, Qt.AlignLeft)
+        options_layout.addLayout(conv_layout)
 
-        self._metaphor_check = QCheckBox(strings.metaphor_folder)
+        # Metaphor folder option
+        metaphor_layout = QHBoxLayout()
+        metaphor_layout.setSpacing(8)
+        metaphor_label = QLabel(strings.metaphor_folder)
+        metaphor_label.setMinimumWidth(150)  # Match path label width
+        metaphor_label.setMinimumHeight(40)
+        self._metaphor_check = QCheckBox()
         self._metaphor_check.setChecked(True)
         self._metaphor_check.setMinimumHeight(40)
-        layout.addWidget(self._metaphor_check)
+        metaphor_layout.addWidget(metaphor_label)
+        metaphor_layout.addWidget(self._metaphor_check, 1, Qt.AlignLeft)
+        options_layout.addLayout(metaphor_layout)
 
-        self._src_check = QCheckBox(strings.src_folder)
+        # Source folder option
+        src_layout = QHBoxLayout()
+        src_layout.setSpacing(8)
+        src_label = QLabel(strings.src_folder)
+        src_label.setMinimumWidth(150)  # Match path label width
+        src_label.setMinimumHeight(40)
+        self._src_check = QCheckBox()
         self._src_check.setChecked(False)
         self._src_check.setMinimumHeight(40)
-        layout.addWidget(self._src_check)
+        src_layout.addWidget(src_label)
+        src_layout.addWidget(self._src_check, 1, Qt.AlignLeft)
+        options_layout.addLayout(src_layout)
+
+        form_layout.addLayout(options_layout)
+        layout.addWidget(form_widget)
 
         # Add spacing before buttons
         layout.addSpacing(24)
@@ -117,9 +159,19 @@ class MindspaceFoldersDialog(QDialog):
         strings = self._language_manager.strings
         self.setWindowTitle(strings.mindspace_folders_title)
         self._path_label.setText(strings.mindspace_path)
-        self._conversations_check.setText(strings.conversations_folder)
-        self._metaphor_check.setText(strings.metaphor_folder)
-        self._src_check.setText(strings.src_folder)
+
+        # Update folder labels
+        for checkbox, label in zip(
+            [self._conversations_check, self._metaphor_check, self._src_check],
+            [strings.conversations_folder, strings.metaphor_folder, strings.src_folder]
+        ):
+            # Find the label widget in the checkbox's parent layout
+            layout = checkbox.parent().layout()
+            if layout:
+                label_widget = layout.itemAt(0).widget()
+                if isinstance(label_widget, QLabel):
+                    label_widget.setText(label)
+
         self.ok_button.setText(strings.ok)
         self.cancel_button.setText(strings.cancel)
 
