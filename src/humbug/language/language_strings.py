@@ -247,7 +247,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Mindspace folders dialog
         mindspace_folders_title="Configure Mindspace Folders",
-        mindspace_path="Mindspace Path:",
+        mindspace_path="Mindspace Path",
         conversations_folder="Conversations Folder",
         metaphor_folder="Metaphor Folder",
         src_folder="Source Code Folder",
@@ -402,7 +402,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Mindspace folders dialog
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
-        mindspace_path="Chemin de l'espace mental :",
+        mindspace_path="Chemin de l'espace mental",
         conversations_folder="Dossier des conversations",
         metaphor_folder="Dossier des métaphores",
         src_folder="Dossier du code source",
@@ -557,7 +557,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Mindspace folders dialog
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",
-        mindspace_path="مسار المساحة الذهنية:",
+        mindspace_path="مسار المساحة الذهنية",
         conversations_folder="مجلد المحادثات",
         metaphor_folder="مجلد الاستعارات",
         src_folder="مجلد الكود المصدري",

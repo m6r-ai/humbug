@@ -12,6 +12,8 @@ This release adds the following new features:
 - The mindspace name is shown above the mindspace file tree.
 - Added a pop-up context menu on conversation tabs that provides access to conversation
   settings and forking for that conversation.
+- When creating a new mindspace, the user is asked if they wish to create "conversations",
+  "metaphor", and "src" folders.
 
 The release fixes the following bugs:
 

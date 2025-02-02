@@ -39,72 +39,59 @@ class MindspaceFoldersDialog(QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Create form layout for aligned content
-        form_widget = QWidget()
-        form_layout = QVBoxLayout(form_widget)
-        form_layout.setSpacing(12)
-        form_layout.setContentsMargins(0, 0, 0, 0)
-
         # Add mindspace path display that will set our alignment
         path_layout = QHBoxLayout()
-        path_layout.setSpacing(8)
         self._path_label = QLabel(strings.mindspace_path)
-        self._path_label.setMinimumWidth(150)  # Fixed width for label column
         self._path_label.setMinimumHeight(40)
         self._path_value = QLabel(mindspace_path)
         self._path_value.setWordWrap(True)
+        self._path_value.setMinimumWidth(300)  # Match width from settings dialog
         self._path_value.setMinimumHeight(40)
+        self._path_value.setProperty('valueDisplay', True)  # For styling
         path_layout.addWidget(self._path_label)
-        path_layout.addWidget(self._path_value, stretch=1)
-        form_layout.addLayout(path_layout)
-
-        # Add folder options with labels aligned under path label
-        # and checkboxes aligned under path value
-        options_layout = QVBoxLayout()
-        options_layout.setSpacing(8)
+        path_layout.addStretch()
+        path_layout.addWidget(self._path_value)
+        layout.addLayout(path_layout)
 
         # Conversations folder option
         conv_layout = QHBoxLayout()
-        conv_layout.setSpacing(8)
         conv_label = QLabel(strings.conversations_folder)
-        conv_label.setMinimumWidth(150)  # Match path label width
         conv_label.setMinimumHeight(40)
         self._conversations_check = QCheckBox()
         self._conversations_check.setChecked(True)
         self._conversations_check.setEnabled(False)
+        self._conversations_check.setMinimumWidth(300)
         self._conversations_check.setMinimumHeight(40)
         conv_layout.addWidget(conv_label)
-        conv_layout.addWidget(self._conversations_check, 1, Qt.AlignLeft)
-        options_layout.addLayout(conv_layout)
+        conv_layout.addStretch()
+        conv_layout.addWidget(self._conversations_check)
+        layout.addLayout(conv_layout)
 
         # Metaphor folder option
         metaphor_layout = QHBoxLayout()
-        metaphor_layout.setSpacing(8)
         metaphor_label = QLabel(strings.metaphor_folder)
-        metaphor_label.setMinimumWidth(150)  # Match path label width
         metaphor_label.setMinimumHeight(40)
         self._metaphor_check = QCheckBox()
         self._metaphor_check.setChecked(True)
         self._metaphor_check.setMinimumHeight(40)
+        self._metaphor_check.setMinimumWidth(300)
         metaphor_layout.addWidget(metaphor_label)
-        metaphor_layout.addWidget(self._metaphor_check, 1, Qt.AlignLeft)
-        options_layout.addLayout(metaphor_layout)
+        metaphor_layout.addStretch()
+        metaphor_layout.addWidget(self._metaphor_check)
+        layout.addLayout(metaphor_layout)
 
         # Source folder option
         src_layout = QHBoxLayout()
-        src_layout.setSpacing(8)
         src_label = QLabel(strings.src_folder)
-        src_label.setMinimumWidth(150)  # Match path label width
         src_label.setMinimumHeight(40)
         self._src_check = QCheckBox()
         self._src_check.setChecked(False)
+        self._src_check.setMinimumWidth(300)
         self._src_check.setMinimumHeight(40)
         src_layout.addWidget(src_label)
-        src_layout.addWidget(self._src_check, 1, Qt.AlignLeft)
-        options_layout.addLayout(src_layout)
-
-        form_layout.addLayout(options_layout)
-        layout.addWidget(form_widget)
+        src_layout.addStretch()
+        src_layout.addWidget(self._src_check)
+        layout.addLayout(src_layout)
 
         # Add spacing before buttons
         layout.addSpacing(24)
@@ -194,6 +181,13 @@ class MindspaceFoldersDialog(QDialog):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
             }}
+            QLabel[valueDisplay="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+            }}
             QCheckBox {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
@@ -205,6 +199,9 @@ class MindspaceFoldersDialog(QDialog):
                 border: none;
                 border-radius: 4px;
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+            }}
+            QCheckBox::indicator:disabled {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
             }}
             QCheckBox::indicator:checked {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
