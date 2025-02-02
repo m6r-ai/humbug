@@ -77,6 +77,7 @@ class MessageWidget(QFrame):
 
         # Get style manager
         self._style_manager = StyleManager()
+        self._init_colour_mode = self._style_manager.color_mode
 
         # Track current message style
         self._current_style: MessageSource = None
@@ -287,4 +288,8 @@ class MessageWidget(QFrame):
                 border-radius: 8px;
             }}
         """)
-        self._highlighter.rehighlight()
+
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode
+            self._highlighter.rehighlight()

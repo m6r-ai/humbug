@@ -71,6 +71,7 @@ class EditorTab(TabBase):
 
         self._untitled_number: Optional[int] = None
         self._style_manager = StyleManager()
+        self._init_colour_mode = self._style_manager.color_mode
         self._last_save_content = ""
         self._auto_backup_timer = QTimer(self)
         self._auto_backup_timer.timeout.connect(self._auto_backup)
@@ -299,8 +300,10 @@ class EditorTab(TabBase):
         # Scale line number area
         self._editor.update_line_number_area_width()
 
-        # Force a redraw of syntax highlighting
-        self._highlighter.rehighlight()
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode
+            self._highlighter.rehighlight()
 
     def _detect_programming_language(self, filename: Optional[str]) -> ProgrammingLanguage:
         """
