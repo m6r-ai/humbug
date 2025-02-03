@@ -125,7 +125,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.BUTTON_BACKGROUND_DISABLED: {
-                ColorMode.DARK: "#242424",
+                ColorMode.DARK: "#2c2c2c",
                 ColorMode.LIGHT: "#d8d8d8"
             },
             ColorRole.BUTTON_BACKGROUND_PRESSED: {

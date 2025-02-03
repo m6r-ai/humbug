@@ -204,11 +204,7 @@ class MindspaceFoldersDialog(QDialog):
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
             }}
             QCheckBox::indicator:checked {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 image: url({style_manager.get_icon_path('check')});
-            }}
-            QCheckBox::indicator:unchecked {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
             }}
             QCheckBox:disabled {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
