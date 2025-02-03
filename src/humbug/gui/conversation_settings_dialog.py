@@ -174,7 +174,7 @@ class ConversationSettingsDialog(QDialog):
             }}
             QComboBox QListView {{
                 border: none;
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QDoubleSpinBox {{
