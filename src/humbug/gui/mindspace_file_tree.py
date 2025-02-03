@@ -5,7 +5,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
-    QLabel
+    QLabel, QSizePolicy
 )
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
 
@@ -39,14 +39,27 @@ class MindspaceFileTree(QWidget):
         layout.setSpacing(0)
 
         # Create mindspace label
-        label_layout = QHBoxLayout()
-        label_layout.setContentsMargins(0, 0, 0, 0)
-        label_layout.setSpacing(0)
+        label_container = QWidget()
+        label_container.setObjectName("label_container")
+
+        # Create header container
+        header_widget = QWidget()
+        header_widget.setObjectName("header_widget")
+        header_layout = QHBoxLayout(header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(0)
+
+        # Create mindspace label
         self._mindspace_label = QLabel()
         self._mindspace_label.setContentsMargins(0, 0, 0, 0)
-        label_layout.addWidget(self._mindspace_label)
-        label_layout.addStretch(1)
-        layout.addLayout(label_layout)
+        header_layout.addWidget(self._mindspace_label)
+
+        # Create a spacer widget instead of using addStretch
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        header_layout.addWidget(spacer)
+
+        layout.addWidget(header_widget)
 
         # Create tree view
         self._tree_view = FileTreeView()
@@ -273,6 +286,9 @@ class MindspaceFileTree(QWidget):
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LeftToRight else "arrow-left"
 
         self.setStyleSheet(f"""
+            QWidget#header_widget, QWidget#header_widget > QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+            }}
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
