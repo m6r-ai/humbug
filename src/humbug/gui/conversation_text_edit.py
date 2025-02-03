@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
 from PySide6.QtGui import (
-    QTextOption, QTextCursor, QMouseEvent, QKeyEvent
+    QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
 
 from humbug.gui.style_manager import StyleManager
@@ -17,6 +17,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 class ConversationTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
 
+    mousePressed = Signal(QMouseEvent)
     mouseReleased = Signal(QMouseEvent)
     pageScrollRequested = Signal()
 
@@ -37,7 +38,7 @@ class ConversationTextEdit(QTextEdit):
         # Calculate tab stops
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
         # Batch update handling
         self._update_timer = QTimer(self)
@@ -54,8 +55,17 @@ class ConversationTextEdit(QTextEdit):
 
         self._logger = logging.getLogger("ConversationTextEdit")
 
-    def _handle_style_changed(self, _factor: float) -> None:
+        # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
+        palette = self.palette()
+        palette.setBrush(QPalette.ColorRole.HighlightedText, QBrush(Qt.BrushStyle.NoBrush))
+        self.setPalette(palette)
+
+    def _handle_style_changed(self) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.mousePressed.emit(event)
 
     def mouseReleaseEvent(self, event):
         """Propagate mouse release events to parent."""
@@ -92,7 +102,10 @@ class ConversationTextEdit(QTextEdit):
                 # Use the horizontal component directly
                 delta = event.angleDelta().x()
                 hbar.setValue(hbar.value() - delta)
-                event.accept()
+
+                # We've only handled the horizontal component - we need to let our parent
+                # handle the vertical component.
+                event.ignore()
                 return
 
         # For all other cases, propagate the event up
@@ -504,3 +517,25 @@ class ConversationTextEdit(QTextEdit):
         """Calculate idea size based on content."""
         width = super().sizeHint().width()
         return QSize(width, self._height())
+
+    def find_text(self, text: str) -> bool:
+        """Find text in the widget.
+
+        Args:
+            text: Text to search for
+
+        Returns:
+            True if text was found
+        """
+        # Clear any existing selection
+        cursor = self.textCursor()
+        cursor.clearSelection()
+        self.setTextCursor(cursor)
+
+        # Find the text
+        found = self.find(text)
+        if found:
+            # Ensure found text is visible
+            self.ensureCursorVisible()
+
+        return found

@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import shutil
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal
 
@@ -117,12 +117,21 @@ class MindspaceManager(QObject):
         """
         return self._mindspace_path is not None
 
-    def create_mindspace(self, path: str) -> None:
+    def is_already_mindspace(self, path: str) -> bool:
+        """Check if we already have a mindspace at the specified path."""
+        mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
+        if os.path.exists(mindspace_dir):
+            return True
+
+        return False
+
+    def create_mindspace(self, path: str, folders: List[str] = None) -> None:
         """
         Create a new mindspace at the specified path.
 
         Args:
             path: Directory path where the mindspace should be created.
+            folders: List of folder names to create within the mindspace.
 
         Raises:
             MindspaceExistsError: If a mindspace already exists at the specified path.
@@ -135,6 +144,9 @@ class MindspaceManager(QObject):
         try:
             # Create mindspace directory structure
             os.makedirs(mindspace_dir)
+
+            for folder in folders:
+                os.makedirs(os.path.join(path, folder), exist_ok=True)
 
             # Create and save default settings
             settings = MindspaceSettings()
@@ -153,6 +165,16 @@ class MindspaceManager(QObject):
                     shutil.rmtree(mindspace_dir)
                 except OSError:
                     pass  # Ignore cleanup errors
+
+            # Also clean up any created folders
+            if folders:
+                for folder in folders:
+                    folder_path = os.path.join(path, folder)
+                    if os.path.exists(folder_path):
+                        try:
+                            shutil.rmtree(folder_path)
+                        except OSError:
+                            pass  # Ignore cleanup errors
             raise
 
     def open_mindspace(self, path: str) -> None:

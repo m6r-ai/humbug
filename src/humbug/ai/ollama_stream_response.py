@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 
 from humbug.ai.ai_usage import AIUsage
+from humbug.ai.ai_response import AIError
 
 
 class OllamaStreamResponse:
@@ -20,11 +21,12 @@ class OllamaStreamResponse:
         """Update from a response chunk and return new content if any."""
         if "error" in chunk:
             self._logger.debug("Got error message: %s", chunk["error"])
-            self.error = {
-                "code": "stream_error",
-                "message": chunk["error"].get("message", "Unknown error"),
-                "details": chunk["error"]
-            }
+            self.error = AIError(
+                code="stream_error",
+                message=chunk["error"].get("message", "Unknown error"),
+                retries_exhausted=True,
+                details=chunk["error"]
+            )
             return
 
         if chunk.get("done"):

@@ -11,6 +11,7 @@ from PySide6.QtGui import QPixmap
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_manager import LanguageManager
 
 
 class MessageBoxType(Enum):
@@ -51,8 +52,8 @@ class MessageBox(QDialog):
         self.setModal(True)
         self.setMinimumWidth(400)
 
-        # Get style manager for consistent styling
         self._style_manager = StyleManager()
+        self._language_manager = LanguageManager()
 
         # Create layout with proper spacing
         layout = QVBoxLayout()
@@ -163,13 +164,14 @@ class MessageBox(QDialog):
 
     def _get_button_text(self, button: MessageBoxButton) -> str:
         """Get display text for button type."""
+        strings = self._language_manager.strings
         return {
-            MessageBoxButton.OK: "OK",
-            MessageBoxButton.CANCEL: "Cancel",
-            MessageBoxButton.YES: "Yes",
-            MessageBoxButton.NO: "No",
-            MessageBoxButton.SAVE: "Save",
-            MessageBoxButton.DISCARD: "Discard"
+            MessageBoxButton.OK: strings.ok,
+            MessageBoxButton.CANCEL: strings.cancel,
+            MessageBoxButton.YES: strings.yes,
+            MessageBoxButton.NO: strings.no,
+            MessageBoxButton.SAVE: strings.save,
+            MessageBoxButton.DISCARD: strings.discard
         }[button]
 
     def _handle_button(self):

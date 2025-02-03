@@ -1,19 +1,20 @@
+import asyncio
 from datetime import datetime
 import logging
 import os
 from typing import Optional, Dict, List, cast
 import uuid
 
-from PySide6.QtWidgets import QDialog, QTabBar, QWidget, QVBoxLayout, QSplitter, QStackedWidget
+from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QSplitter, QStackedWidget
 from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.conversation_error import ConversationError
-from humbug.gui.conversation_settings_dialog import ConversationSettingsDialog
 from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor_tab import EditorTab
+from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
@@ -22,6 +23,7 @@ from humbug.gui.tab_label import TabLabel
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.gui.welcome_widget import WelcomeWidget
+from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
@@ -54,6 +56,8 @@ class TabManager(QWidget):
         self._ai_backends = ai_backends
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("TabManager")
+
+        self._language_manager = LanguageManager()
 
         # Create main layout
         main_layout = QVBoxLayout(self)
@@ -97,7 +101,7 @@ class TabManager(QWidget):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
@@ -268,6 +272,38 @@ class TabManager(QWidget):
         except (ConversationError, OSError) as e:
             self._logger.error("Failed to open dropped file '%s': %s", file_path, str(e))
 
+    def handle_file_rename(self, old_path: str, new_path: str):
+        """Handle renaming of files by updating any open tabs.
+
+        Args:
+            old_path: Original path of renamed file
+            new_path: New path after renaming
+        """
+        # Find any editor tab for this file
+        editor = self.find_editor_tab_by_filename(old_path)
+        if editor:
+            editor.set_filename(new_path)
+
+        # For conversations, find by ID and update path
+        if old_path.endswith('.conv'):
+            old_id = os.path.splitext(os.path.basename(old_path))[0]
+            conversation = self.find_conversation_tab_by_id(old_id)
+            if conversation:
+                # Get new ID
+                new_id = os.path.splitext(os.path.basename(new_path))[0]
+
+                # Update manager's data structures
+                self._tabs[new_id] = self._tabs.pop(old_id)
+                self._tab_labels[new_id] = self._tab_labels.pop(old_id)
+
+                # Update tab label text
+                label = self._tab_labels[new_id]
+                label.update_id(new_id, f"Conv: {new_id}")
+                label.close_clicked.connect(lambda: self._close_tab_by_id(new_id))
+
+                # Update conversation internals without signaling
+                conversation.update_path(new_id, new_path)
+
     def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
         tab_widget = TabColumn()
@@ -304,11 +340,11 @@ class TabManager(QWidget):
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
             column_index = column.currentIndex()
-            is_current = column_index != -1 and tab == column.widget(column_index) and column == self._active_column
-            label.set_current(is_current)
+            is_current = column_index != -1 and tab == column.widget(column_index)
+            label.set_current(is_current, is_current and column == self._active_column)
 
         # Force style refresh to show active state
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
         # Emit our new signal with current tab
         current_tab = self._get_current_tab()
@@ -376,7 +412,7 @@ class TabManager(QWidget):
 
         # Set initial state
         if len(self._tabs) == 1:  # If this is the first tab
-            tab_data.label.set_current(True)
+            tab_data.label.set_current(True, True)
             self._stack.setCurrentWidget(self._columns_widget)
 
     def _close_tab_by_id(self, tab_id: str, force_close: bool=False) -> None:
@@ -488,8 +524,6 @@ class TabManager(QWidget):
                 label.update_text(f"{current_text}*")
             elif not modified and current_text.endswith('*'):
                 label.update_text(current_text[:-1])
-
-            self.adjustSize()
 
     def can_split_column(self) -> bool:
         """Can the current column be split in two?"""
@@ -644,6 +678,7 @@ class TabManager(QWidget):
             self._ai_backends,
             self
         )
+        conversation_tab.forkRequested.connect(self._fork_conversation)
 
         # Set default model based on available backends for any new conversation
         default_model = ConversationSettings.get_default_model(self._ai_backends)
@@ -668,6 +703,7 @@ class TabManager(QWidget):
                 self._ai_backends,
                 self
             )
+            conversation_tab.forkRequested.connect(self._fork_conversation)
             self.add_tab(conversation_tab, f"Conv: {conversation_id}")
             return conversation_tab
 
@@ -698,6 +734,23 @@ class TabManager(QWidget):
         except ConversationError as e:
             self._logger.error("Failed to fork conversation: %s", str(e))
             raise
+
+    def _fork_conversation(self):
+        """Create a new conversation tab with the history of the current conversation."""
+        async def fork_and_handle_errors():
+            try:
+                await self.fork_conversation()
+            except ConversationError as e:
+                strings = self._language_manager.strings
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.conversation_error_title,
+                    strings.error_forking_conversation.format(str(e))
+                )
+
+        # Create task to fork conversation
+        asyncio.create_task(fork_and_handle_errors())
 
     def save_state(self) -> Dict:
         """Get current state of all tabs."""
@@ -754,9 +807,11 @@ class TabManager(QWidget):
     def _restore_tab_from_state(self, state: TabState) -> Optional[TabBase]:
         """Create appropriate tab type from state."""
         if state.type == TabType.CONVERSATION:
-            return ConversationTab.restore_from_state(
+            tab = ConversationTab.restore_from_state(
                 state, self, ai_backends=self._ai_backends
             )
+            tab.forkRequested.connect(self._fork_conversation)
+            return tab
         elif state.type == TabType.EDITOR:
             tab = EditorTab.restore_from_state(state, self)
             self._connect_editor_signals(tab)
@@ -776,12 +831,9 @@ class TabManager(QWidget):
 
         return os.path.basename(state.path)
 
-    def _handle_style_changed(self, factor: float = 1.0) -> None:
+    def _handle_style_changed(self) -> None:
         """
         Handle style changes from StyleManager.
-
-        Args:
-            factor: New zoom factor
         """
         for column in self._tab_columns:
             selected_border = ColorRole.TAB_BORDER_ACTIVE if column == self._active_column else ColorRole.TAB_BACKGROUND_ACTIVE
@@ -826,7 +878,7 @@ class TabManager(QWidget):
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
             is_label_active = column == self._active_column and tab == column.currentWidget()
-            label.handle_style_changed(factor, is_label_active)
+            label.handle_style_changed(is_label_active)
 
         self._column_splitter.setStyleSheet(f"""
             QSplitter::handle {{
@@ -870,6 +922,33 @@ class TabManager(QWidget):
 
     def paste(self):
         self._get_current_tab().paste()
+
+    def can_find(self) -> bool:
+        tab = self._get_current_tab()
+        return tab is not None
+
+    def find(self):
+        tab = self._get_current_tab()
+        tab.show_find()
+
+    def close_deleted_file(self, path: str):
+        """
+        Close any open tabs related to a file being deleted.
+
+        Args:
+            path: Path of file being deleted
+        """
+        # Find and close any editor tab for this file
+        editor = self.find_editor_tab_by_filename(path)
+        if editor:
+            self._close_tab_by_id(editor.tab_id, True)
+
+        # Also check for conversation files
+        if path.endswith('.conv'):
+            conversation_id = os.path.splitext(os.path.basename(path))[0]
+            conversation = self.find_conversation_tab_by_id(conversation_id)
+            if conversation:
+                self._close_tab_by_id(conversation.tab_id, True)
 
     def can_close_all_tabs(self) -> bool:
         """Can we close all the tabs that are open?"""
@@ -954,11 +1033,7 @@ class TabManager(QWidget):
         if not tab or not isinstance(tab, ConversationTab):
             return
 
-        dialog = ConversationSettingsDialog(self._ai_backends, self)
-        dialog.set_settings(tab.get_settings())
-
-        if dialog.exec() == QDialog.Accepted:
-            tab.update_conversation_settings(dialog.get_settings())
+        tab.show_conversation_settings_dialog()
 
     def handle_esc_key(self) -> bool:
         """Handle processing of the "Esc" key."""

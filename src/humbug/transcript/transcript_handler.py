@@ -45,6 +45,14 @@ class TranscriptHandler:
                 raise ValueError("Timestamp required when creating new transcript")
             self._initialize_file()
 
+    def update_path(self, new_path: str):
+        """Update the transcript file path.
+
+        Args:
+            new_path: New path for the transcript file
+        """
+        self._filename = new_path
+
     def _initialize_file(self) -> None:
         """
         Initialize a new transcript file with metadata.

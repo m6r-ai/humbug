@@ -10,6 +10,7 @@ from PySide6.QtGui import QPixmap
 from humbug import format_version
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_manager import LanguageManager
 
 
 class AboutDialog(QDialog):
@@ -18,7 +19,9 @@ class AboutDialog(QDialog):
     def __init__(self, parent: Optional[QDialog] = None) -> None:
         """Initialize the About dialog."""
         super().__init__(parent)
-        self.setWindowTitle("About Humbug")
+
+        self._language_manager = LanguageManager()
+        self.setWindowTitle(self._language_manager.strings.about_title)
         self.setMinimumWidth(400)
         self.setModal(True)
 
@@ -62,7 +65,7 @@ class AboutDialog(QDialog):
         layout.addWidget(desc_label)
 
         # Close button with proper styling and sizing
-        close_button = QPushButton("Close")
+        close_button = QPushButton(self._language_manager.strings.close_button)
         close_button.clicked.connect(self.accept)
         close_button.setMinimumWidth(80)
         close_button.setContentsMargins(6, 6, 6, 6)

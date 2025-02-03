@@ -21,6 +21,7 @@ LANGUAGE_MAPPING = {
     "metaphor": ProgrammingLanguage.METAPHOR,
     "move": ProgrammingLanguage.MOVE,
     "python": ProgrammingLanguage.PYTHON,
+    "scheme": ProgrammingLanguage.SCHEME,
     "typescript": ProgrammingLanguage.TYPESCRIPT
 }
 
@@ -105,57 +106,60 @@ class MetaphorParser(Parser):
         in_fence_block = False
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
+        parsing_continuation = False
         if prev_parser_state:
             in_fence_block = prev_parser_state.in_fence_block
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
+            parsing_continuation = prev_parser_state.parsing_continuation
 
-        lexer = MetaphorLexer()
-        lexer.lex(None, input_str)
-
-        continuation_state = 0
         parse_embedded = language != ProgrammingLanguage.UNKNOWN
+        continuation_state = 0
 
-        while True:
-            lex_token = lexer.get_next_token()
-            if not lex_token:
-                break
+        if not parsing_continuation:
+            lexer = MetaphorLexer()
+            lexer.lex(None, input_str)
 
-            if lex_token.type == 'WHITESPACE':
-                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
-                continue
+            while True:
+                lex_token = lexer.get_next_token()
+                if not lex_token:
+                    break
 
-            if lex_token.type == 'FENCE':
-                if in_fence_block:
-                    self._tokens.append(Token(type='LANGUAGE', value='```', start=lex_token.start))
-                    in_fence_block = False
-                    language = ProgrammingLanguage.UNKNOWN
-                    embedded_parser_state = None
-                    parse_embedded = False
+                if lex_token.type == 'WHITESPACE':
+                    self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
                     continue
 
-                in_fence_block = True
-                embedded_parser_state = None
-                self._tokens.append(Token(type='LANGUAGE', value='```', start=lex_token.start))
+                if lex_token.type == 'FENCE':
+                    if in_fence_block:
+                        self._tokens.append(Token(type='LANGUAGE', value='```', start=lex_token.start))
+                        in_fence_block = False
+                        language = ProgrammingLanguage.UNKNOWN
+                        embedded_parser_state = None
+                        parse_embedded = False
+                        continue
 
-                next_token = lexer.peek_next_token('WHITESPACE')
-                if next_token and (next_token.type == 'TEXT'):
-                    next_token = lexer.get_next_token('WHITESPACE')
-                    self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
+                    in_fence_block = True
+                    embedded_parser_state = None
+                    self._tokens.append(Token(type='LANGUAGE', value='```', start=lex_token.start))
 
-                    input_normalized = next_token.value.strip().lower()
-                    language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
+                    next_token = lexer.peek_next_token('WHITESPACE')
+                    if next_token and (next_token.type == 'TEXT'):
+                        next_token = lexer.get_next_token('WHITESPACE')
+                        self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
+
+                        input_normalized = next_token.value.strip().lower()
+                        language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
+                        continuation_state = int(language)
+                        continue
+
+                    language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
                     continuation_state = int(language)
                     continue
 
-                language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
-                continuation_state = int(language)
-                continue
+                if language != ProgrammingLanguage.UNKNOWN:
+                    break
 
-            if language != ProgrammingLanguage.UNKNOWN:
-                break
-
-            self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
 
         parser_state = MetaphorParserState()
         parser_state.continuation_state = continuation_state
@@ -166,5 +170,6 @@ class MetaphorParser(Parser):
             parser_state.embedded_parser_state = new_embedded_parser_state
             if new_embedded_parser_state:
                 parser_state.continuation_state = new_embedded_parser_state.continuation_state
+                parser_state.parsing_continuation = new_embedded_parser_state.parsing_continuation
 
         return parser_state

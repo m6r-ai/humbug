@@ -7,26 +7,31 @@ import os
 from typing import Dict, List, Optional
 
 from PySide6.QtWidgets import (
-    QVBoxLayout, QWidget, QScrollArea, QSizePolicy
+    QDialog, QVBoxLayout, QWidget, QScrollArea, QSizePolicy, QMenu
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Slot
+from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal
 from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_response import AIError
 from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
+from humbug.gui.conversation_settings_dialog import ConversationSettingsDialog
 from humbug.conversation.usage import Usage
 from humbug.gui.conversation_error import ConversationError
+from humbug.gui.conversation_find import ConversationFind
+from humbug.gui.conversation_input_widget import ConversationInputWidget
 from humbug.gui.color_role import ColorRole
+from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_widget import MessageWidget
-from humbug.gui.live_input_widget import LiveInputWidget
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
+from humbug.language.language_manager import LanguageManager
 from humbug.transcript.transcript_error import (
     TranscriptError, TranscriptFormatError, TranscriptIOError
 )
@@ -34,7 +39,9 @@ from humbug.transcript.transcript_handler import TranscriptHandler
 
 
 class ConversationTab(TabBase):
-    """Unified conversation tab implementing single-window feel with distinct regions."""
+    """Unified conversation tab."""
+
+    forkRequested = Signal()
 
     def __init__(
         self,
@@ -60,6 +67,7 @@ class ConversationTab(TabBase):
         self._timestamp = timestamp
         self._ai_backends = ai_backends
         self._current_tasks: List[asyncio.Task] = []
+        self._last_submitted_message = None
 
         # Create transcript handler with provided filename
         self._transcript_handler = TranscriptHandler(
@@ -74,10 +82,23 @@ class ConversationTab(TabBase):
         self._message_with_selection: Optional[MessageWidget] = None
         self._is_streaming = False
 
+        # Initialize tracking variables
+        self._auto_scroll = True
+        self._last_scroll_maximum = 0
+        self._last_insertion_point = 0
+
         conversation_layout = QVBoxLayout(self)
         self.setLayout(conversation_layout)
 
         self._scroll_area = QScrollArea()
+
+        # Add find widget at top (initially hidden)
+        self._find_widget = FindWidget()
+        self._find_widget.hide()
+        self._find_widget.closed.connect(self._close_find)
+        self._find_widget.find_next.connect(lambda: self._find_next(True))
+        self._find_widget.find_previous.connect(lambda: self._find_next(False))
+        conversation_layout.insertWidget(0, self._find_widget)
 
         self._messages_container = QWidget()
 
@@ -85,11 +106,13 @@ class ConversationTab(TabBase):
         self._messages_container.setLayout(self._messages_layout)
 
         # Set up the input box
-        self._input = LiveInputWidget(self._messages_container)
+        self._input = ConversationInputWidget(self._messages_container)
         self._input.cursorPositionChanged.connect(self._ensure_cursor_visible)
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
         )
+        self._input.forkRequested.connect(self.forkRequested)
+        self._input.settingsRequested.connect(self.show_conversation_settings_dialog)
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
 
@@ -117,10 +140,16 @@ class ConversationTab(TabBase):
         conversation_layout.setSpacing(0)
         conversation_layout.addWidget(self._scroll_area)
 
+        # Create find handler
+        self._find_handler = ConversationFind()
+
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+
         self.update_status()
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
         # Create timer for smooth scrolling
         self._scroll_timer = QTimer(self)
@@ -128,10 +157,9 @@ class ConversationTab(TabBase):
         self._scroll_timer.timeout.connect(self._update_scroll)
         self._last_mouse_pos = None
 
-        # Initialize tracking variables
-        self._auto_scroll = True
-        self._last_scroll_maximum = 0
-        self._last_insertion_point = 0
+        # Handle pop-up context menu
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._create_context_menu)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -139,9 +167,26 @@ class ConversationTab(TabBase):
 
         # Handle scrolling requests from input area
         self._input.pageScrollRequested.connect(self._handle_edit_page_scroll)
+        self._find_handler.scrollRequested.connect(self._handle_find_scroll)
 
         # Set initial focus to input area
         QTimer.singleShot(0, self._set_initial_focus)
+
+    def _handle_language_changed(self) -> None:
+        """Update language-specific elements when language changes."""
+        # Update input widget streaming state text
+        self._input.set_streaming(self._is_streaming)
+
+        # No need to explicitly update message widgets as they handle
+        # their own language change events
+
+        # Update find widget text if visible
+        if not self._find_widget.isHidden():
+            current, total = self._find_handler.get_match_status()
+            self._find_widget.set_match_status(current, total)
+
+        # Update status bar
+        self.update_status()
 
     async def fork_conversation(self) -> None:
         """Create a copy of this conversation with the same history."""
@@ -464,6 +509,8 @@ class ConversationTab(TabBase):
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
+        msg_widget.forkRequested.connect(self.forkRequested)
+        msg_widget.settingsRequested.connect(self.show_conversation_settings_dialog)
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
         msg_widget.set_content(message.content, message.source, message.timestamp)
@@ -482,19 +529,19 @@ class ConversationTab(TabBase):
 
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
-        print(f"section changed {has_selection}")
         if not has_selection:
             if self._message_with_selection:
-                self._message_with_selection.clear_selection()
+                msg = self._message_with_selection
                 self._message_with_selection = None
+                msg.clear_selection()
 
             return
 
         if self._message_with_selection and self._message_with_selection != message_widget:
             self._message_with_selection.clear_selection()
 
-        if (message_widget == self._input):
-            self._message_with_section = None
+        if message_widget == self._input:
+            self._message_with_selection = None
         else:
             self._message_with_selection = message_widget
 
@@ -502,15 +549,37 @@ class ConversationTab(TabBase):
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
+    def update_path(self, new_id: str, new_path: str):
+        """Update the conversation file path.
+
+        Args:
+            new_path: New path for the conversation file
+        """
+        self._path = new_path
+        self._tab_id = new_id
+        self._transcript_handler.update_path(new_path)
+
     def update_status(self) -> None:
         """Update status bar with token counts and settings."""
         counts = self._conversation.get_token_counts()
-        temp_display = f"Temp: {self._settings.temperature:.1f}" if self._settings.temperature is not None else "Temp: N/A"
+        strings = self._language_manager.strings
+
+        # Temperature display depends on whether it's available
+        if self._settings.temperature is not None:
+            temp_display = strings.conversation_status_temperature.format(
+                temperature=self._settings.temperature
+            )
+        else:
+            temp_display = strings.conversation_status_no_temperature
+
         message = StatusMessage(
-            f"Model: {self._settings.model} | "
-            f"{temp_display} | "
-            f"Last response - Input: {counts['input']} ({self._settings.context_window}) | "
-            f"Output: {counts['output']}"
+            strings.conversation_status.format(
+                model=self._settings.model,
+                temperature=temp_display,
+                input_tokens=counts['input'],
+                max_tokens=self._settings.context_window,
+                output_tokens=counts['output']
+            )
         )
         self.status_message.emit(message)
 
@@ -536,6 +605,32 @@ class ConversationTab(TabBase):
             50
         )
 
+    def _handle_find_scroll(self, widget: QWidget, position: int) -> None:
+        """
+        Handle scroll requests from find operations.
+
+        Args:
+            widget: Widget to scroll to
+            position: Text position within the widget
+        """
+        # Get text edit cursor rect for the position
+        text_edit = widget._text_area
+        cursor = text_edit.textCursor()
+        cursor.setPosition(position)
+        text_edit.setTextCursor(cursor)
+        cursor_rect = text_edit.cursorRect(cursor)
+
+        # Convert cursor position to global coordinates
+        global_pos = text_edit.mapTo(self._messages_container, cursor_rect.topLeft())
+
+        # Ensure position is visible in scroll area
+        self._scroll_area.ensureVisible(
+            0,  # x
+            global_pos.y(),  # y
+            0,  # xmargin
+            50  # ymargin - provide some context around the match
+        )
+
     def set_input_text(self, text: str):
         """Set the input text."""
         self._input.setPlainText(text)
@@ -549,35 +644,41 @@ class ConversationTab(TabBase):
         self,
         content: str,
         usage: Optional[Usage] = None,
-        error: Optional[Dict] = None
+        error: Optional[AIError] = None
     ):
         """Update the current AI response in the conversation."""
         if error:
-            self._is_streaming = False
-            self._input.set_streaming(False)
+            # Only stop streaming if retries are exhausted
+            if error.retries_exhausted:
+                self._is_streaming = False
+                self._input.set_streaming(False)
 
-            # For cancellation, preserve the partial response first
-            if error.get("code") == "cancelled" and self._current_ai_message:
-                message = self._conversation.update_message(
-                    self._current_ai_message.id,
-                    content=self._current_ai_message.content,
-                    completed=False
-                )
-                if message:
-                    await self._write_transcript(message)
+                # For cancellation, preserve the partial response first
+                if self._current_ai_message:
+                    message = self._conversation.update_message(
+                        self._current_ai_message.id,
+                        content=self._current_ai_message.content,
+                        completed=False
+                    )
+                    if message:
+                        await self._write_transcript(message)
 
-                self._current_ai_message = None
+                    self._current_ai_message = None
 
-            # Then add the error message
-            error_msg = f"{error['message']}"
+            error_msg = error.message
             error_message = Message.create(
                 MessageSource.SYSTEM,
                 error_msg,
-                error=error
+                error={"code": error.code, "message": error.message, "details": error.details}
             )
             self._add_message(error_message)
             asyncio.create_task(self._write_transcript(error_message))
-            self._logger.warning("AI response error: %s", error_msg)
+
+            # For cancellation, don't log as warning since it's user-initiated
+            if error.code == "cancelled":
+                self._logger.debug("AI response cancelled by user")
+            else:
+                self._logger.warning("AI response error: %s", error.message)
             return
 
         if not self._is_streaming:
@@ -691,6 +792,7 @@ class ConversationTab(TabBase):
                 self._add_message(error_message)
                 asyncio.create_task(self._write_transcript(error_message))
 
+                self._restore_last_message()
                 self._is_streaming = False
                 self._input.set_streaming(False)
                 return
@@ -709,11 +811,13 @@ class ConversationTab(TabBase):
                         error=response.error
                     )
 
-                    # Handle retryable errors
                     if response.error:
-                        if response.error['code'] in ['network_error', 'timeout']:
-                            continue  # Continue to next retry attempt
-                        return  # Non-retryable error
+                        if response.error.retries_exhausted:
+                            self._restore_last_message()
+                            return
+
+                        # We're retrying - continue to the next attempt
+                        continue
 
                 except StopAsyncIteration:
                     break
@@ -722,11 +826,14 @@ class ConversationTab(TabBase):
             self._logger.debug("AI response cancelled")
             await self.update_streaming_response(
                 content="",
-                error={
-                    "code": "cancelled",
-                    "message": "Request cancelled by user"
-                }
+                error=AIError(
+                    code="cancelled",
+                    message="Request cancelled by user",
+                    retries_exhausted=True,
+                    details={"type": "CancelledError"}
+                )
             )
+            self._restore_last_message()
             return
 
         except Exception as e:
@@ -735,18 +842,25 @@ class ConversationTab(TabBase):
                 settings.model,
                 str(e)
             )
-            error = {
-                "code": "process_error",
-                "message": str(e),
-                "details": {"type": type(e).__name__}
-            }
             await self.update_streaming_response(
                 content="",
-                error=error
+                error=AIError(
+                    code="process_error",
+                    message=str(e),
+                    retries_exhausted=True,
+                    details={"type": type(e).__name__}
+                )
             )
+            self._restore_last_message()
 
         finally:
             self._logger.debug("=== Finished AI response ===")
+
+    def _restore_last_message(self):
+        """Restore the last submitted message to the input box."""
+        if self._last_submitted_message is not None:
+            self._input.setPlainText(self._last_submitted_message)
+            self._last_submitted_message = None
 
     def cancel_current_tasks(self):
         """Cancel any ongoing AI response tasks."""
@@ -763,7 +877,8 @@ class ConversationTab(TabBase):
         if backend:
             backend.update_conversation_settings(self.tab_id, new_settings)
 
-    def _handle_style_changed(self, factor: float) -> None:
+    def _handle_style_changed(self) -> None:
+        factor = self._style_manager.zoom_factor
         font = self.font()
         base_font_size = self._style_manager.base_font_size
         font.setPointSizeF(base_font_size * factor)
@@ -871,6 +986,7 @@ class ConversationTab(TabBase):
         if not content:
             return
 
+        self._last_submitted_message = content
         self._input.clear()
         self._input.set_streaming(True)
 
@@ -890,3 +1006,71 @@ class ConversationTab(TabBase):
                 self._logger.debug("Task already removed")
 
         task.add_done_callback(task_done_callback)
+
+    def show_find(self):
+        """Show the find widget."""
+        # Get selected text if any
+        if self._message_with_selection:
+            cursor = self._message_with_selection._text_area.textCursor()
+            if cursor.hasSelection():
+                text = cursor.selectedText()
+                if '\u2029' not in text:  # Qt uses this for line breaks
+                    self._find_widget.set_search_text(text)
+                else:
+                    self._find_widget.set_search_text("")
+        elif self._input.hasFocus():
+            cursor = self._input.textCursor()
+            if cursor.hasSelection():
+                text = cursor.selectedText()
+                if '\u2029' not in text:
+                    self._find_widget.set_search_text(text)
+                else:
+                    self._find_widget.set_search_text("")
+
+        self._find_widget.show()
+
+    def _close_find(self):
+        """Close the find widget and clear search state."""
+        self._find_widget.hide()
+        self._find_handler.clear()
+
+    def _find_next(self, forward: bool = True):
+        """Find next/previous match."""
+        text = self._find_widget.get_search_text()
+        # Include both messages and input widget in search
+        widgets = self._messages + [self._input]
+        self._find_handler.find_text(text, widgets, forward)
+        current, total = self._find_handler.get_match_status()
+        self._find_widget.set_match_status(current, total)
+
+    def _create_context_menu(self, pos) -> None:
+        """
+        Create and show the context menu at the given position.
+
+        Args:
+            pos: Local coordinates for menu position
+        """
+        menu = QMenu(self)
+
+        # Create menu actions
+        fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
+        menu.addSeparator()
+        settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
+
+        # Show menu and handle selection
+        action = menu.exec_(self.mapToGlobal(pos))
+        if not action:
+            return
+
+        if action == fork_action:
+            self.forkRequested.emit()
+        elif action == settings_action:
+            self.show_conversation_settings_dialog()
+
+    def show_conversation_settings_dialog(self) -> None:
+        """Show the conversation settings dialog."""
+        dialog = ConversationSettingsDialog(self._ai_backends, self)
+        dialog.set_settings(self.get_settings())
+
+        if dialog.exec() == QDialog.Accepted:
+            self.update_conversation_settings(dialog.get_settings())

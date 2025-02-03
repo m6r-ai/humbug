@@ -6,8 +6,6 @@ Context: Humbug application
     Include: metaphor/implementation.m6r
 
 Action: Build the software
-    Please review the requirements provided in the Context section and check if they are met by the software.  Do not
-    make modifications to the software at this point, unless asked to do so.
 #    Please review the requirements provided in the Context section and build the software described.  Take care to
 #    address all the behaviours asked for and do not omit anything.
 #
@@ -22,13 +20,9 @@ Action: Build the software
 #
 #    Embed: src/humbug/**/*.py
 
-    An earlier version of most of the application is provided here.  Please use this as a template.  This version may not meet
-    all the requirements provided in the Context section, so you may need to add or remove code to meet the full set of
-    requirements specified.
+    The following files implement the application described in the Metaphor description.  Please carefully review the
+    functionality and see where there is any user-visible functionality that is not accurately described or if there is
+    any functionality described that is not fully implemented.  If you find anything then please summarise the
+    discrepancy and suggest any changes that might be necessary to either the software or the Metaphor description.
 
-    Embed: src/humbug/*.py
-    Embed: src/humbug/ai/*.py
-    Embed: src/humbug/conversation/*.py
-    Embed: src/humbug/gui/*.py
-    Embed: src/humbug/transcript/*.py
-    Embed: src/humbug/mindspace/*.py
+    Embed: src/humbug/**/*.py

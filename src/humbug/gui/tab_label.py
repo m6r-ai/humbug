@@ -31,6 +31,7 @@ class TabLabel(QWidget):
 
         self._tab_id = tab_id
         self._is_current = False
+        self._is_active_column = False
         self._is_hovered = False
         self._style_manager = StyleManager()
         self._drag_start_pos: Optional[QPoint] = None
@@ -51,13 +52,21 @@ class TabLabel(QWidget):
         self._close_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._layout.addWidget(self._close_button)
 
-        self.handle_style_changed(self._style_manager.zoom_factor, False)
+        self.handle_style_changed(False)
 
         self.setMouseTracking(True)
 
     def _create_visible_close_icon(self) -> QIcon:
         icon = QIcon()
         icon_path = self._style_manager.get_icon_path("close")
+        pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
+        icon.addPixmap(pixmap, QIcon.Normal, QIcon.Off)
+        icon.addPixmap(pixmap, QIcon.Active, QIcon.Off)
+        return icon
+
+    def _create_visible_disabled_close_icon(self) -> QIcon:
+        icon = QIcon()
+        icon_path = self._style_manager.get_icon_path("disabled-close")
         pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
         icon.addPixmap(pixmap, QIcon.Normal, QIcon.Off)
         icon.addPixmap(pixmap, QIcon.Active, QIcon.Off)
@@ -70,12 +79,12 @@ class TabLabel(QWidget):
         transparent_pixmap.fill(Qt.transparent)
         return QIcon(transparent_pixmap)
 
-    def handle_style_changed(self, factor: float, is_active: bool):
+    def handle_style_changed(self, is_active: bool):
         """
         Handle style changes from StyleManager.
 
         Args:
-            factor: New zoom factor
+            is_active: Is this an active tab's label?
         """
         colour = ColorRole.TEXT_PRIMARY if is_active else ColorRole.TAB_INACTIVE
         self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(colour)}")
@@ -83,6 +92,7 @@ class TabLabel(QWidget):
         self._update_font_size()
 
         # Update close button size
+        factor = self._style_manager.zoom_factor
         button_size = 16 * factor
         self._close_button.setFixedSize(button_size, button_size)
 
@@ -92,6 +102,7 @@ class TabLabel(QWidget):
 
         # Recreate icons at new size
         self._visible_close_icon = self._create_visible_close_icon()
+        self._visible_disabled_close_icon = self._create_visible_disabled_close_icon()
         self._invisible_close_icon = self._create_invisible_close_icon()
 
         # Update layout margins and spacing
@@ -203,7 +214,8 @@ class TabLabel(QWidget):
                     background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
                 }}
             """
-            self._close_button.setIcon(self._visible_close_icon)
+            icon = self._visible_close_icon if self._is_active_column else self._visible_disabled_close_icon
+            self._close_button.setIcon(icon)
             self._close_button.setCursor(Qt.PointingHandCursor)
             self._close_button.setToolTip("Close Tab")
         else:
@@ -221,9 +233,10 @@ class TabLabel(QWidget):
 
         self._close_button.setStyleSheet(style)
 
-    def set_current(self, is_current: bool):
+    def set_current(self, is_current: bool, is_active_column: bool):
         """Update the current state of the tab."""
         self._is_current = is_current
+        self._is_active_column = is_active_column
         self._update_close_button()
 
     @property
@@ -249,3 +262,13 @@ class TabLabel(QWidget):
         """
         self._label.setText(text)
         self.adjustSize()
+
+    def update_id(self, id: str, text: str) -> None:
+        """
+        Update the ID and the text displayed in the tab label.
+
+        Args:
+            text: New text to display
+        """
+        self._tab_id = id
+        self.update_text(text)

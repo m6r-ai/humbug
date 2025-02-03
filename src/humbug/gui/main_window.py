@@ -11,7 +11,8 @@ from m6rclib import (
 )
 
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog, QSplitter, QLabel
+    QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
+    QSplitter, QLabel, QApplication, QDialog
 )
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
@@ -25,8 +26,10 @@ from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
+from humbug.gui.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.gui.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.gui.mindspace_file_tree import MindspaceFileTree
+from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 
@@ -37,6 +40,9 @@ class MainWindow(QMainWindow):
     def __init__(self, ai_backends: Dict[str, AIBackend]):
         """Initialize the main window."""
         super().__init__()
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+        strings = self._language_manager.strings
         self._ai_backends = ai_backends
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
@@ -50,180 +56,182 @@ class MainWindow(QMainWindow):
         self._quit_action.triggered.connect(self.close)
 
         # File menu actions
-        self._new_mindspace_action = QAction("New Mindspace", self)
+        self._new_mindspace_action = QAction(strings.new_mindspace, self)
         self._new_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
         self._new_mindspace_action.triggered.connect(self._new_mindspace)
 
-        self._new_conv_action = QAction("New Conversation", self)
+        self._new_conv_action = QAction(strings.new_conversation, self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self._new_conv_action.triggered.connect(self._new_conversation)
 
-        self._new_metaphor_conv_action = QAction("New Metaphor Conversation...", self)
+        self._new_metaphor_conv_action = QAction(strings.new_metaphor_conversation, self)
         self._new_metaphor_conv_action.setShortcut(QKeySequence("Ctrl+Shift+M"))
         self._new_metaphor_conv_action.triggered.connect(self._new_metaphor_conversation)
 
-        self._new_file_action = QAction("New File", self)
+        self._new_file_action = QAction(strings.new_file, self)
         self._new_file_action.setShortcut(QKeySequence.New)
         self._new_file_action.triggered.connect(self._new_file)
 
-        self._open_mindspace_action = QAction("Open Mindspace", self)
+        self._open_mindspace_action = QAction(strings.open_mindspace, self)
         self._open_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
         self._open_mindspace_action.triggered.connect(self._open_mindspace)
 
-        self._open_conv_action = QAction("Open Conversation...", self)
+        self._open_conv_action = QAction(strings.open_conversation, self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
         self._open_conv_action.triggered.connect(self._open_conversation)
 
-        self._open_file_action = QAction("Open File...", self)
+        self._open_file_action = QAction(strings.open_file, self)
         self._open_file_action.setShortcut(QKeySequence.Open)
         self._open_file_action.triggered.connect(self._open_file)
 
-        self._fork_conv_action = QAction("Fork Conversation", self)
+        self._fork_conv_action = QAction(strings.fork_conversation, self)
         self._fork_conv_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
         self._fork_conv_action.triggered.connect(self._fork_conversation)
 
-        self._save_action = QAction("Save", self)
+        self._save_action = QAction(strings.save, self)
         self._save_action.setShortcut(QKeySequence.Save)
         self._save_action.triggered.connect(self._save_file)
 
-        self._save_as_action = QAction("Save As...", self)
+        self._save_as_action = QAction(strings.save_as, self)
         self._save_as_action.setShortcut(QKeySequence.SaveAs)
         self._save_as_action.triggered.connect(self._save_file_as)
 
-        self._close_tab_action = QAction("Close Tab", self)
+        self._close_tab_action = QAction(strings.close_tab, self)
         self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
         self._close_tab_action.triggered.connect(self._close_tab)
 
-        self._close_mindspace_action = QAction("Close Mindspace", self)
+        self._close_mindspace_action = QAction(strings.close_mindspace, self)
         self._close_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+W"))
         self._close_mindspace_action.triggered.connect(self._close_mindspace)
 
         # Edit menu actions
-        self._submit_message_action = QAction("Submit Message", self)
+        self._submit_message_action = QAction(strings.submit_message, self)
         self._submit_message_action.setShortcut(QKeySequence("Ctrl+J"))
         self._submit_message_action.triggered.connect(self._submit_message)
 
-        self._undo_action = QAction("Undo", self)
+        self._undo_action = QAction(strings.undo, self)
         self._undo_action.setShortcut(QKeySequence("Ctrl+Z"))
         self._undo_action.triggered.connect(self._undo)
 
-        self._redo_action = QAction("Redo", self)
+        self._redo_action = QAction(strings.redo, self)
         self._redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
         self._redo_action.triggered.connect(self._redo)
 
-        self._cut_action = QAction("Cut", self)
+        self._cut_action = QAction(strings.cut, self)
         self._cut_action.setShortcut(QKeySequence("Ctrl+X"))
         self._cut_action.triggered.connect(self._cut)
 
-        self._copy_action = QAction("Copy", self)
+        self._copy_action = QAction(strings.copy, self)
         self._copy_action.setShortcut(QKeySequence("Ctrl+C"))
         self._copy_action.triggered.connect(self._copy)
 
-        self._paste_action = QAction("Paste", self)
+        self._paste_action = QAction(strings.paste, self)
         self._paste_action.setShortcut(QKeySequence("Ctrl+V"))
         self._paste_action.triggered.connect(self._paste)
 
-        self._mindspace_settings_action = QAction("Mindspace Settings", self)
+        self._find_action = QAction(strings.find, self)
+        self._find_action.setShortcut(QKeySequence.Find)
+        self._find_action.triggered.connect(self._find)
+
+        self._mindspace_settings_action = QAction(strings.mindspace_settings, self)
         self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
         self._mindspace_settings_action.triggered.connect(self._show_mindspace_settings_dialog)
 
-        self._conv_settings_action = QAction("Conversation Settings", self)
+        self._conv_settings_action = QAction(strings.conversation_settings, self)
         self._conv_settings_action.setShortcut(QKeySequence("Ctrl+,"))
         self._conv_settings_action.triggered.connect(self._show_conversation_settings_dialog)
 
         # View menu actions
-        self._dark_mode_action = QAction("&Dark Mode", self)
+        self._dark_mode_action = QAction(strings.dark_mode, self)
         self._dark_mode_action.setCheckable(True)
         self._dark_mode_action.setChecked(True)
         self._dark_mode_action.triggered.connect(self._handle_dark_mode)
 
-        self._zoom_in_action = QAction("Zoom In", self)
+        self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
         self._zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.189027))
 
-        self._zoom_out_action = QAction("Zoom Out", self)
+        self._zoom_out_action = QAction(strings.zoom_out, self)
         self._zoom_out_action.setShortcut(QKeySequence("Ctrl+-"))
         self._zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.189027))
 
-        self._reset_zoom_action = QAction("Reset Zoom", self)
+        self._reset_zoom_action = QAction(strings.reset_zoom, self)
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
-        self._show_all_columns_action = QAction("Show All Columns", self)
+        self._show_all_columns_action = QAction(strings.show_all_columns, self)
         self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
         self._show_all_columns_action.triggered.connect(self._show_all_columns)
 
-        self._split_column_left_action = QAction("Split Column Left", self)
+        self._split_column_left_action = QAction(strings.split_column_left, self)
         self._split_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+["))
-        self._split_column_left_action.triggered.connect(lambda: self._split_column(True))
 
-        self._split_column_right_action = QAction("Split Column Right", self)
+        self._split_column_right_action = QAction(strings.split_column_right, self)
         self._split_column_right_action.setShortcut(QKeySequence("Ctrl+Shift+]"))
-        self._split_column_right_action.triggered.connect(lambda: self._split_column(False))
 
-        self._merge_column_left_action = QAction("Merge Column Left", self)
+        self._merge_column_left_action = QAction(strings.merge_column_left, self)
         self._merge_column_left_action.setShortcut(QKeySequence("Ctrl+["))
-        self._merge_column_left_action.triggered.connect(lambda: self._merge_column(True))
 
-        self._merge_column_right_action = QAction("Merge Column Right", self)
+        self._merge_column_right_action = QAction(strings.merge_column_right, self)
         self._merge_column_right_action.setShortcut(QKeySequence("Ctrl+]"))
-        self._merge_column_right_action.triggered.connect(lambda: self._merge_column(False))
 
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
 
         # Humbug menu
-        humbug_menu = self._menu_bar.addMenu("&Humbug")
-        humbug_menu.addAction(self._about_action)
-        humbug_menu.addSeparator()
-        humbug_menu.addAction(self._quit_action)
+        self._humbug_menu = self._menu_bar.addMenu(strings.humbug_menu)
+        self._humbug_menu.addAction(self._about_action)
+        self._humbug_menu.addSeparator()
+        self._humbug_menu.addAction(self._quit_action)
 
         # File menu
-        file_menu = self._menu_bar.addMenu("&File")
-        file_menu.addAction(self._new_mindspace_action)
-        file_menu.addAction(self._new_conv_action)
-        file_menu.addAction(self._new_metaphor_conv_action)
-        file_menu.addAction(self._new_file_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._open_mindspace_action)
-        file_menu.addAction(self._open_conv_action)
-        file_menu.addAction(self._open_file_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._fork_conv_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._save_action)
-        file_menu.addAction(self._save_as_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._close_mindspace_action)
-        file_menu.addAction(self._close_tab_action)
+        self._file_menu = self._menu_bar.addMenu(strings.file_menu)
+        self._file_menu.addAction(self._new_mindspace_action)
+        self._file_menu.addAction(self._new_conv_action)
+        self._file_menu.addAction(self._new_metaphor_conv_action)
+        self._file_menu.addAction(self._new_file_action)
+        self._file_menu.addSeparator()
+        self._file_menu.addAction(self._open_mindspace_action)
+        self._file_menu.addAction(self._open_conv_action)
+        self._file_menu.addAction(self._open_file_action)
+        self._file_menu.addSeparator()
+        self._file_menu.addAction(self._fork_conv_action)
+        self._file_menu.addSeparator()
+        self._file_menu.addAction(self._save_action)
+        self._file_menu.addAction(self._save_as_action)
+        self._file_menu.addSeparator()
+        self._file_menu.addAction(self._close_mindspace_action)
+        self._file_menu.addAction(self._close_tab_action)
 
         # Edit menu
-        edit_menu = self._menu_bar.addMenu("&Edit")
-        edit_menu.addAction(self._submit_message_action)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._undo_action)
-        edit_menu.addAction(self._redo_action)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._cut_action)
-        edit_menu.addAction(self._copy_action)
-        edit_menu.addAction(self._paste_action)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._mindspace_settings_action)
-        edit_menu.addAction(self._conv_settings_action)
+        self._edit_menu = self._menu_bar.addMenu(strings.edit_menu)
+        self._edit_menu.addAction(self._submit_message_action)
+        self._edit_menu.addSeparator()
+        self._edit_menu.addAction(self._undo_action)
+        self._edit_menu.addAction(self._redo_action)
+        self._edit_menu.addSeparator()
+        self._edit_menu.addAction(self._cut_action)
+        self._edit_menu.addAction(self._copy_action)
+        self._edit_menu.addAction(self._paste_action)
+        self._edit_menu.addSeparator()
+        self._edit_menu.addAction(self._find_action)
+        self._edit_menu.addSeparator()
+        self._edit_menu.addAction(self._mindspace_settings_action)
+        self._edit_menu.addAction(self._conv_settings_action)
 
         # View menu
-        view_menu = self._menu_bar.addMenu("&View")
-        view_menu.addAction(self._dark_mode_action)
-        view_menu.addSeparator()
-        view_menu.addAction(self._zoom_in_action)
-        view_menu.addAction(self._zoom_out_action)
-        view_menu.addAction(self._reset_zoom_action)
-        view_menu.addSeparator()
-        view_menu.addAction(self._show_all_columns_action)
-        view_menu.addAction(self._split_column_left_action)
-        view_menu.addAction(self._split_column_right_action)
-        view_menu.addAction(self._merge_column_left_action)
-        view_menu.addAction(self._merge_column_right_action)
+        self._view_menu = self._menu_bar.addMenu(strings.view_menu)
+        self._view_menu.addAction(self._dark_mode_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._zoom_in_action)
+        self._view_menu.addAction(self._zoom_out_action)
+        self._view_menu.addAction(self._reset_zoom_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._show_all_columns_action)
+        self._view_menu.addAction(self._split_column_left_action)
+        self._view_menu.addAction(self._split_column_right_action)
+        self._view_menu.addAction(self._merge_column_left_action)
+        self._view_menu.addAction(self._merge_column_right_action)
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(1024, 600)
@@ -243,6 +251,7 @@ class MainWindow(QMainWindow):
         self._file_tree = MindspaceFileTree(self)
         self._file_tree.file_activated.connect(self._handle_file_activation)
         self._file_tree.file_deleted.connect(self._handle_file_deletion)
+        self._file_tree.file_renamed.connect(self._handle_file_rename)
         self._splitter.addWidget(self._file_tree)
 
         # Create tab manager in splitter
@@ -284,10 +293,72 @@ class MainWindow(QMainWindow):
         self._tab_manager.column_state_changed.connect(self._handle_column_state_changed)
         self._tab_manager.status_message.connect(self._handle_status_message)
 
-        self._handle_style_changed()
+        self._handle_language_changed()
 
         self._mindspace_manager = MindspaceManager()
         self._restore_last_mindspace()
+
+    def _handle_language_changed(self) -> None:
+        """Update UI text when language changes."""
+        app = QApplication.instance()
+        left_to_right = self._language_manager.left_to_right
+        if left_to_right:
+            app.setLayoutDirection(Qt.LeftToRight)
+        else:
+            app.setLayoutDirection(Qt.RightToLeft)
+
+        strings = self._language_manager.strings
+
+        # Update menu titles
+        self._humbug_menu.setTitle(strings.humbug_menu)
+        self._edit_menu.setTitle(strings.edit_menu)
+        self._file_menu.setTitle(strings.file_menu)
+        self._view_menu.setTitle(strings.view_menu)
+
+        # Update action texts
+        self._about_action.setText(strings.about_title)
+        self._new_mindspace_action.setText(strings.new_mindspace)
+        self._new_conv_action.setText(strings.new_conversation)
+        self._new_metaphor_conv_action.setText(strings.new_metaphor_conversation)
+        self._new_file_action.setText(strings.new_file)
+        self._open_mindspace_action.setText(strings.open_mindspace)
+        self._open_conv_action.setText(strings.open_conversation)
+        self._open_file_action.setText(strings.open_file)
+        self._fork_conv_action.setText(strings.fork_conversation)
+        self._save_action.setText(strings.save)
+        self._save_as_action.setText(strings.save_as)
+        self._close_tab_action.setText(strings.close_tab)
+        self._close_mindspace_action.setText(strings.close_mindspace)
+        self._submit_message_action.setText(strings.submit_message)
+        self._undo_action.setText(strings.undo)
+        self._redo_action.setText(strings.redo)
+        self._cut_action.setText(strings.cut)
+        self._copy_action.setText(strings.copy)
+        self._paste_action.setText(strings.paste)
+        self._find_action.setText(strings.find)
+        self._mindspace_settings_action.setText(strings.mindspace_settings)
+        self._conv_settings_action.setText(strings.conversation_settings)
+        self._dark_mode_action.setText(strings.dark_mode)
+        self._zoom_in_action.setText(strings.zoom_in)
+        self._zoom_out_action.setText(strings.zoom_out)
+        self._reset_zoom_action.setText(strings.reset_zoom)
+        self._show_all_columns_action.setText(strings.show_all_columns)
+        self._split_column_left_action.setText(strings.split_column_left)
+        self._split_column_right_action.setText(strings.split_column_right)
+        self._merge_column_left_action.setText(strings.merge_column_left)
+        self._merge_column_right_action.setText(strings.merge_column_right)
+
+        # Our logic for left and right reverses for right-to-left languages
+        self._split_column_left_action.triggered.disconnect()
+        self._split_column_left_action.triggered.connect(lambda: self._split_column(left_to_right))
+        self._split_column_right_action.triggered.disconnect()
+        self._split_column_right_action.triggered.connect(lambda: self._split_column(not left_to_right))
+        self._merge_column_left_action.triggered.disconnect()
+        self._merge_column_left_action.triggered.connect(lambda: self._merge_column(left_to_right))
+        self._merge_column_right_action.triggered.disconnect()
+        self._merge_column_right_action.triggered.connect(lambda: self._merge_column(not left_to_right))
+
+        self._handle_style_changed()
 
     def _handle_column_state_changed(self):
         """Handle column state changes from tab manager."""
@@ -311,6 +382,7 @@ class MainWindow(QMainWindow):
                         self._mindspace_manager.open_mindspace(mindspace_path)
                         self._file_tree.set_mindspace(mindspace_path)
                         self._style_manager.set_mindspace_font_size(self._mindspace_manager.settings.font_size)
+                        self._language_manager.set_language(self._mindspace_manager.settings.language)
                         self._restore_mindspace_state()
                     except MindspaceError as e:
                         self._logger.error("Failed to restore mindspace: %s", str(e))
@@ -319,30 +391,47 @@ class MainWindow(QMainWindow):
             pass
 
     def _new_mindspace(self):
+        """Show folder selection dialog and create new mindspace."""
         self._menu_timer.stop()
+        strings = self._language_manager.strings
         dir_path = QFileDialog.getExistingDirectory(
-            self, "Create New Mindspace"
+            self, strings.file_dialog_new_mindspace
         )
         self._menu_timer.start()
         if not dir_path:
             return
 
+        if self._mindspace_manager.is_already_mindspace(dir_path):
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.mindspace_exists_error
+            )
+            return
+
+        # Show folder configuration dialog
+        dialog = MindspaceFoldersDialog(dir_path, self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
         try:
-            self._mindspace_manager.create_mindspace(dir_path)
+            # Create mindspace with selected folders
+            self._mindspace_manager.create_mindspace(dir_path, dialog.get_selected_folders())
         except MindspaceExistsError:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
-                "Mindspace already exists in selected directory."
+                strings.mindspace_error_title,
+                strings.mindspace_exists_error
             )
             return
         except MindspaceError as e:
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
-                f"Failed to create mindspace: {str(e)}"
+                strings.mindspace_error_title,
+                strings.error_creating_mindspace.format(str(e))
             )
             return
 
@@ -351,7 +440,8 @@ class MainWindow(QMainWindow):
     def _open_mindspace(self):
         """Open a new mindspace."""
         self._menu_timer.stop()
-        dir_path = QFileDialog.getExistingDirectory(self, "Open Mindspace")
+        strings = self._language_manager.strings
+        dir_path = QFileDialog.getExistingDirectory(self, strings.file_dialog_open_mindspace)
         self._menu_timer.start()
         if not dir_path:
             return
@@ -372,11 +462,12 @@ class MainWindow(QMainWindow):
             self._file_tree.set_mindspace(path)
             self._style_manager.set_mindspace_font_size(self._mindspace_manager.settings.font_size)
         except MindspaceError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
-                f"Failed to open mindspace: {str(e)}"
+                strings.mindspace_error_title,
+                strings.error_opening_mindspace.format(str(e))
             )
             return
 
@@ -405,11 +496,12 @@ class MainWindow(QMainWindow):
             self._mindspace_manager.save_mindspace_state(mindspace_state)
         except MindspaceError as e:
             self._logger.error("Failed to save mindspace state: %s", str(e))
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
-                f"Failed to save mindspace state: {str(e)}"
+                strings.mindspace_error_title,
+                strings.error_saving_mindspace.format(str(e))
             )
 
     def _restore_mindspace_state(self):
@@ -423,11 +515,12 @@ class MainWindow(QMainWindow):
             self._tab_manager.restore_state(saved_state)
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
-                f"Failed to restore mindspace state: {str(e)}"
+                strings.mindspace_error_title,
+                strings.error_restoring_mindspace.format(str(e))
             )
 
     def _close_all_tabs(self):
@@ -447,6 +540,9 @@ class MainWindow(QMainWindow):
 
     def _paste(self):
         self._tab_manager.paste()
+
+    def _find(self):
+        self._tab_manager.find()
 
     def _show_about_dialog(self):
         """Show the About dialog."""
@@ -472,28 +568,28 @@ class MainWindow(QMainWindow):
 
     def _handle_file_deletion(self, path: str):
         """Handle deletion of a file by closing any open tab.
-        
+
         Args:
             path: Path of file being deleted
         """
-        # Find and close any editor tab for this file
-        editor = self._tab_manager.find_editor_tab_by_filename(path)
-        if editor:
-            self._tab_manager._close_tab_by_id(editor.tab_id, True)
+        self._tab_manager.close_deleted_file(path)
 
-        # Also check for conversation files
-        if path.endswith('.conv'):
-            conversation_id = os.path.splitext(os.path.basename(path))[0]
-            conversation = self._tab_manager.find_conversation_tab_by_id(conversation_id)
-            if conversation:
-                self._tab_manager._close_tab_by_id(conversation.tab_id, True)
+    def _handle_file_rename(self, old_path: str, new_path: str):
+        """Handle renaming of files.
+
+        Args:
+            old_path: Original path of renamed file
+            new_path: New path after renaming
+        """
+        self._tab_manager.handle_file_rename(old_path, new_path)
 
     def _open_file(self):
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
+        strings = self._language_manager.strings
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open File",
+            strings.file_dialog_open_file,
             self._mindspace_manager.file_dialog_directory
         )
         self._menu_timer.start()
@@ -509,11 +605,12 @@ class MainWindow(QMainWindow):
         try:
             self._tab_manager.open_file(path)
         except OSError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Error Opening File",
-                f"Could not open {path}: {str(e)}"
+                strings.error_opening_file_title,
+                strings.could_not_open.format(path, str(e))
             )
 
     def _save_file(self):
@@ -560,18 +657,20 @@ class MainWindow(QMainWindow):
         self._cut_action.setEnabled(tab_manager.can_cut())
         self._copy_action.setEnabled(tab_manager.can_copy())
         self._paste_action.setEnabled(tab_manager.can_paste())
+        self._find_action.setEnabled(tab_manager.can_find())
         self._submit_message_action.setEnabled(tab_manager.can_submit_message())
         self._conv_settings_action.setEnabled(tab_manager.can_show_conversation_settings_dialog())
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor
+        left_to_right = self._language_manager.left_to_right
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
         self._show_all_columns_action.setEnabled(tab_manager.can_show_all_columns())
         self._split_column_left_action.setEnabled(tab_manager.can_split_column())
         self._split_column_right_action.setEnabled(tab_manager.can_split_column())
-        self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(True))
-        self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(False))
+        self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(left_to_right))
+        self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(not left_to_right))
 
     def _handle_style_changed(self) -> None:
         style_manager = self._style_manager
@@ -659,11 +758,12 @@ class MainWindow(QMainWindow):
                 self._mindspace_manager.mindspace_path
             )
         except MindspaceError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Mindspace Error",
-                f"Failed to create conversation: {str(e)}"
+                strings.mindspace_error_title,
+                strings.error_opening_conversation.format(str(e))
             )
             return None
 
@@ -671,11 +771,12 @@ class MainWindow(QMainWindow):
         """Create new conversation from Metaphor file."""
         # Show file dialog
         self._menu_timer.stop()
+        strings = self._language_manager.strings
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Metaphor File",
+            strings.file_dialog_open_metaphor,
             self._mindspace_manager.file_dialog_directory,
-            "Metaphor Files (*.m6r);;All Files (*.*)"
+            f"{strings.file_filter_metaphor};;{strings.file_filter_all}"
         )
         self._menu_timer.start()
 
@@ -699,21 +800,23 @@ class MainWindow(QMainWindow):
                 if conversation_tab:
                     conversation_tab.set_input_text(prompt)
         except MetaphorParserError as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Metaphor Processing Error",
-                f"Failed to process Metaphor file:\n\n{format_errors(e.errors)}"
+                strings.metaphor_error_title,
+                strings.error_processing_metaphor.format(format_errors(e.errors))
             )
 
     def _open_conversation(self):
         """Show open conversation dialog and create conversation tab."""
         self._menu_timer.stop()
+        strings = self._language_manager.strings
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Conversation",
+            strings.file_dialog_open_conversation,
             self._mindspace_manager.conversations_directory,
-            "Conversation Files (*.conv);;All Files (*.*)"
+            f"{strings.file_filter_conversation};;{strings.file_filter_all}"
         )
         self._menu_timer.start()
 
@@ -729,11 +832,12 @@ class MainWindow(QMainWindow):
             self._tab_manager.open_conversation(path)
         except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Error Loading Conversation",
-                f"Could not load {path}: {str(e)}"
+                strings.conversation_error_title,
+                strings.error_opening_conversation.format(path, str(e))
             )
 
     def _fork_conversation(self):
@@ -742,11 +846,12 @@ class MainWindow(QMainWindow):
             try:
                 await self._tab_manager.fork_conversation()
             except ConversationError as e:
+                strings = self._language_manager.strings
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
-                    "Error Forking Conversation",
-                    f"Could not fork conversation: {str(e)}"
+                    strings.conversation_error_title,
+                    strings.error_forking_conversation.format(str(e))
                 )
 
         # Create task to fork conversation
@@ -772,13 +877,15 @@ class MainWindow(QMainWindow):
             try:
                 self._mindspace_manager.update_settings(new_settings)
                 self._style_manager.set_mindspace_font_size(new_settings.font_size)
+                self._language_manager.set_language(new_settings.language)
             except OSError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
+                strings = self._language_manager.strings
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
-                    "Settings Error",
-                    f"Failed to save mindspace settings: {str(e)}"
+                    strings.settings_error_title,
+                    strings.error_saving_mindspace_settings.format(str(e))
                 )
 
         dialog.settings_changed.connect(handle_settings_changed)

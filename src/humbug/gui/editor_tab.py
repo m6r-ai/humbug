@@ -11,13 +11,16 @@ from PySide6.QtGui import QTextCursor
 
 from humbug.gui.editor_highlighter import EditorHighlighter
 from humbug.gui.color_role import ColorRole
+from humbug.gui.editor_find import EditorFind
 from humbug.gui.editor_text_edit import EditorTextEdit
+from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
+from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
@@ -47,6 +50,7 @@ LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.py': ProgrammingLanguage.PYTHON,
     '.pyw': ProgrammingLanguage.PYTHON,
     '.pyi': ProgrammingLanguage.PYTHON,
+    '.scm': ProgrammingLanguage.SCHEME,
     '.ts': ProgrammingLanguage.TYPESCRIPT,
     '.tsx': ProgrammingLanguage.TYPESCRIPT,
     '.txt': ProgrammingLanguage.TEXT,
@@ -57,8 +61,7 @@ class EditorTab(TabBase):
     """Tab for editing text files."""
 
     def __init__(self, tab_id: str, parent=None):
-        """
-        Initialize editor tab.
+        """Initialize editor tab.
 
         Args:
             tab_id: Unique identifier for this tab
@@ -68,24 +71,38 @@ class EditorTab(TabBase):
 
         self._untitled_number: Optional[int] = None
         self._style_manager = StyleManager()
+        self._init_colour_mode = self._style_manager.color_mode
         self._last_save_content = ""
         self._auto_backup_timer = QTimer(self)
         self._auto_backup_timer.timeout.connect(self._auto_backup)
-        self._current_language = ProgrammingLanguage.TEXT
+        self._current_programming_language = ProgrammingLanguage.TEXT
         self._logger = logging.getLogger("EditorTab")
 
         self._mindspace_manager = MindspaceManager()
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
 
         # Set up layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # Add find widget at top (initially hidden)
+        self._find_widget = FindWidget()
+        self._find_widget.hide()
+        self._find_widget.closed.connect(self._close_find)
+        self._find_widget.find_next.connect(lambda: self._find_next(True))
+        self._find_widget.find_previous.connect(lambda: self._find_next(False))
+        layout.addWidget(self._find_widget)
+
         # Create editor
         self._editor = EditorTextEdit()
         self._editor.textChanged.connect(self._handle_text_changed)
         self._editor.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor)
+
+        # Create find handler
+        self._find_handler = EditorFind(self._editor)
 
         self._install_activation_tracking(self._editor)
 
@@ -94,7 +111,7 @@ class EditorTab(TabBase):
 
         # Connect to style changes
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
         self.update_status()
 
@@ -105,6 +122,16 @@ class EditorTab(TabBase):
 
         # Connect to mindspace settings changes
         self._mindspace_manager.settings_changed.connect(self._handle_mindspace_settings_changed)
+
+    def _handle_language_changed(self) -> None:
+        """Update language-specific elements."""
+        # Update find widget text if visible
+        if not self._find_widget.isHidden():
+            current, total = self._find_handler.get_match_status()
+            self._find_widget.set_match_status(current, total)
+
+        # Update status bar with translated terms
+        self.update_status()
 
     def _handle_mindspace_settings_changed(self):
         """Handle mindspace settings changes."""
@@ -131,7 +158,7 @@ class EditorTab(TabBase):
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""
         metadata_state = {
-            "language": self._current_language.name
+            "language": self._current_programming_language.name
         }
 
         if temp_state:
@@ -167,7 +194,7 @@ class EditorTab(TabBase):
             # Restore language if specified
             if "language" in state.metadata:
                 language = ProgrammingLanguage[state.metadata["language"]]
-                tab._update_language(language)
+                tab._update_programming_language(language)
 
             # Restore content if specified
             if "content" in state.metadata:
@@ -212,7 +239,8 @@ class EditorTab(TabBase):
         self._editor.ensureCursorVisible()
 
     def get_cursor_position(self) -> Dict[str, int]:
-        """Get current cursor position from editor.
+        """
+        Get current cursor position from editor.
 
         Returns:
             Dictionary with 'line' and 'column' keys
@@ -223,14 +251,12 @@ class EditorTab(TabBase):
             "column": cursor.columnNumber()
         }
 
-    def _handle_style_changed(self, zoom_factor: float = 1.0) -> None:
+    def _handle_style_changed(self) -> None:
         """
         Handle style and zoom changes.
-
-        Args:
-            zoom_factor: New zoom scaling factor
         """
         # Update font size
+        zoom_factor = self._style_manager.zoom_factor
         font = self._editor.font()
         base_size = self._style_manager.base_font_size
         font.setPointSizeF(base_size * zoom_factor)
@@ -244,6 +270,10 @@ class EditorTab(TabBase):
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;
+            }}
+            QPlainTextEdit {{
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-color: none;
             }}
             QScrollBar:vertical, QScrollBar:horizontal {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
@@ -270,10 +300,12 @@ class EditorTab(TabBase):
         # Scale line number area
         self._editor.update_line_number_area_width()
 
-        # Force a redraw of syntax highlighting
-        self._highlighter.rehighlight()
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode
+            self._highlighter.rehighlight()
 
-    def _detect_language(self, filename: Optional[str]) -> ProgrammingLanguage:
+    def _detect_programming_language(self, filename: Optional[str]) -> ProgrammingLanguage:
         """
         Detect the programming language based on file extension.
 
@@ -289,15 +321,15 @@ class EditorTab(TabBase):
         ext = os.path.splitext(filename)[1].lower()
         return LANGUAGE_MAP.get(ext, ProgrammingLanguage.TEXT)
 
-    def _update_language(self, new_language: ProgrammingLanguage) -> None:
+    def _update_programming_language(self, new_language: ProgrammingLanguage) -> None:
         """
         Update the syntax highlighting language.
 
         Args:
             new_language: The new programming language to use
         """
-        if self._current_language != new_language:
-            self._current_language = new_language
+        if self._current_programming_language != new_language:
+            self._current_programming_language = new_language
             self._highlighter.set_language(new_language)
             self.update_status()
 
@@ -318,8 +350,8 @@ class EditorTab(TabBase):
         self._untitled_number = untitled_number
 
         # Update syntax highlighting based on file extension
-        new_language = self._detect_language(filename)
-        self._update_language(new_language)
+        new_language = self._detect_programming_language(filename)
+        self._update_programming_language(new_language)
 
         if filename and os.path.exists(filename):
             try:
@@ -329,11 +361,12 @@ class EditorTab(TabBase):
                 self._last_save_content = content
                 self._set_modified(False)
             except Exception as e:
+                strings = self._language_manager.strings
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
-                    "Error Opening File",
-                    f"Could not open {filename}: {str(e)}"
+                    strings.error_opening_file_title,
+                    strings.could_not_open.format(filename, str(e))
                 )
         self._update_title()
 
@@ -384,10 +417,17 @@ class EditorTab(TabBase):
             ProgrammingLanguage.PYTHON: "Python",
             ProgrammingLanguage.METAPHOR: "Metaphor",
         }
-        file_type = language_names.get(self._current_language, "Text")
+        file_type = language_names.get(self._current_programming_language, "Text")
 
+        strings = self._language_manager.strings
         message = StatusMessage(
-            f"Line {line}, Column {column} | {encoding} | {line_ending} | {file_type}"
+            strings.editor_status.format(
+                line=line,
+                column=column,
+                encoding=encoding,
+                line_ending=line_ending,
+                type=file_type
+            )
         )
         self.status_message.emit(message)
 
@@ -478,11 +518,13 @@ class EditorTab(TabBase):
         if not self._is_modified:
             return True
 
+        strings = self._language_manager.strings
+        document_name = self._path or f'Untitled-{self._untitled_number}'
         result = MessageBox.show_message(
             self,
             MessageBoxType.QUESTION,
-            "Save Changes?",
-            f"Do you want to save changes to {self._path or f'Untitled-{self._untitled_number}'}?",
+            strings.save_changes_title,
+            strings.unsaved_changes.format(document_name),
             [MessageBoxButton.SAVE, MessageBoxButton.DISCARD, MessageBoxButton.CANCEL]
         )
 
@@ -532,11 +574,12 @@ class EditorTab(TabBase):
 
             return True
         except Exception as e:
+            strings = self._language_manager.strings
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                "Error Saving File",
-                f"Could not save {self._path}: {str(e)}"
+                strings.error_saving_file_title,
+                strings.could_not_save.format(self._path, str(e))
             )
             return False
 
@@ -550,22 +593,28 @@ class EditorTab(TabBase):
         Returns:
             bool: True if save was successful
         """
-        filename, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save As",
-            self._path or self._mindspace_manager.file_dialog_directory
-        )
-        if not filename:
+        strings = self._language_manager.strings
+        export_dialog = QFileDialog()
+        export_dialog.setWindowTitle(strings.file_dialog_save_file)
+        export_dialog.setDirectory(self._path or self._mindspace_manager.file_dialog_directory)
+        export_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        if export_dialog.exec_() != QFileDialog.Accepted:
             return False
 
-        self._mindspace_manager.update_file_dialog_directory(filename)
+        filename = export_dialog.selectedFiles()[0]
 
+        # This is an ugly hack.  On one laptop using ".m6r" as a filename results in Qt
+        # adding a ".m".  Need to root cause this.
+        if filename.endswith(".m6r.m"):
+            filename = filename[:-2]
+
+        self._mindspace_manager.update_file_dialog_directory(filename)
         self._path = filename
         self._untitled_number = None
         self._update_title()
 
-        new_language = self._detect_language(filename)
-        self._update_language(new_language)
+        new_language = self._detect_programming_language(filename)
+        self._update_programming_language(new_language)
 
         return self.save()
 
@@ -611,3 +660,30 @@ class EditorTab(TabBase):
 
     def can_submit(self) -> bool:
         return False
+
+    def show_find(self):
+        """Show the find widget."""
+        cursor = self._editor.textCursor()
+        if cursor.hasSelection():
+            # Get the selected text
+            text = cursor.selectedText()
+
+            # Only use selection if it's on a single line
+            if '\u2029' not in text:  # Qt uses this character for line breaks
+                self._find_widget.set_search_text(text)
+            else:
+                self._find_widget.set_search_text("")
+
+        self._find_widget.show()
+
+    def _close_find(self):
+        """Close the find widget and clear search state."""
+        self._find_widget.hide()
+        self._find_handler.clear()
+
+    def _find_next(self, forward: bool = True):
+        """Find next/previous match."""
+        text = self._find_widget.get_search_text()
+        self._find_handler.find_text(text, forward)
+        current, total = self._find_handler.get_match_status()
+        self._find_widget.set_match_status(current, total)

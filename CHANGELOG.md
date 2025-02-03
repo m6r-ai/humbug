@@ -1,5 +1,37 @@
 # Changelog for Humbug
 
+## v0.4 (2025-02-03)
+
+This release adds the following new features:
+
+- Added a Scheme lexer/parser for syntax highlighting.
+- Added a "Find" function to search for text in files.
+- Added support for i18n - initial 3 languages are English, French, and Arabic.
+- When highlighting text, the syntax highlights are now preserved.
+- Added the ability to rename existing conversations.
+- The mindspace name is shown above the mindspace file tree.
+- Added a pop-up context menu on conversation tabs that provides access to conversation
+  settings and forking for that conversation.
+- When creating a new mindspace, the user is asked if they wish to create "conversations",
+  "metaphor", and "src" folders.
+
+The release fixes the following bugs:
+
+- The expand/collapse icons in the mindspace file tree did not scale with the zoom level.
+- Vertical scrolling in the conversation window only worked for pure vertical scrolling, not
+  where horizontal scrolling occurred at the same time.
+- Editing a file no longer jumps the cursor into the middle of the input tab when it's first
+  modified.  This also eliminates a glitch that made displays momentarily shrink and then
+  expand back.
+- Embedded code highlighting now avoids problems with 3 backticks in a comment or string
+  dropping the syntax highlighting back to the AI markdown highlighter.
+- Syntax highlighting of module/package names in Kotlin and Python are now handled so they do
+  not appear as object fields/properties.
+- Close buttons on the tab view used to have the wrong background and cross colour for the
+  active tab in an inactive column.
+- If text was highlighted using the keyboard in a conversation view then moving the mouse
+  outside of the conversation tab would cause the tab to scroll.
+
 ## v0.3.1 (2025-01-22)
 
 This is a bug fix release:

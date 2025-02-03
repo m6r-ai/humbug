@@ -53,6 +53,7 @@ class KotlinParser(Parser):
             - String template expressions
         """
         in_element = False
+        in_import = False
         in_lambda = False
         lambda_brace_count = 0
         template_expression_count = 0
@@ -73,8 +74,11 @@ class KotlinParser(Parser):
             if not token:
                 break
 
+            if token.type == 'KEYWORD' and token.value in ('import', 'package'):
+                in_import = True
+
             # Handle special token sequences
-            if token.type == 'IDENTIFIER':
+            if token.type == 'IDENTIFIER' and not in_import:
                 self._handle_identifier(token, lexer, in_element)
                 continue
 
@@ -122,6 +126,7 @@ class KotlinParser(Parser):
 
         parser_state = KotlinParserState()
         parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
+        parser_state.parsing_continuation = lexer_state.in_block_comment
         parser_state.lexer_state = lexer_state
         parser_state.in_element = in_element
         parser_state.in_lambda = in_lambda

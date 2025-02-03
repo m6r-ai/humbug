@@ -3,13 +3,14 @@
 from datetime import datetime
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint
-from PySide6.QtGui import QCursor
+from PySide6.QtGui import QCursor, QMouseEvent
 
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.conversation_highlighter import ConversationHighlighter
 from humbug.gui.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_manager import LanguageManager
 
 
 class MessageWidget(QFrame):
@@ -18,6 +19,8 @@ class MessageWidget(QFrame):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
+    forkRequested = Signal()
+    settingsRequested = Signal()
 
     def __init__(self, parent=None, is_input=False):
         """Initialize the message widget.
@@ -29,6 +32,13 @@ class MessageWidget(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
         self._is_input = is_input
+
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._message_source = None
+        self._message_timestamp = None
+
+        self._mouse_left_button_pressed = False
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -61,24 +71,28 @@ class MessageWidget(QFrame):
 
         # Connect selection change signal
         self._text_area.selectionChanged.connect(self._on_selection_changed)
+        self._text_area.mousePressed.connect(self._on_mouse_pressed)
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add conversation highlighter
         self._highlighter = ConversationHighlighter(self._text_area.document())
         self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
 
+        self._language_manager = LanguageManager()
+
         # Get style manager
         self._style_manager = StyleManager()
+        self._init_colour_mode = self._style_manager.color_mode
 
         # Track current message style
         self._current_style: MessageSource = None
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed(self._style_manager.zoom_factor)
+        self._handle_style_changed()
 
     def _create_text_area(self) -> ConversationTextEdit:
         """Create and configure the text area.
-        
+
         Returns:
             Configured ConversationTextEdit instance
         """
@@ -86,50 +100,95 @@ class MessageWidget(QFrame):
         text_area.setAcceptRichText(False)
         text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        text_area.setContextMenuPolicy(Qt.CustomContextMenu)
+        text_area.customContextMenuRequested.connect(self._show_enhanced_text_context_menu)
         return text_area
 
-    def _on_mouse_released(self):
-        """Handle mouse release from text area."""
-        self.mouseReleased.emit()
+    def _show_enhanced_text_context_menu(self, pos) -> None:
+        """Show an enhanced context menu for text areas, adding to standard edit menu.
+
+        Args:
+            pos: Position in text edit coordinates
+        """
+        text_edit = self.sender()
+
+        # Create standard menu first
+        menu = text_edit.createStandardContextMenu()
+
+        # Add our custom actions
+        menu.addSeparator()
+        fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
+        menu.addSeparator()
+        settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
+
+        # Show menu and handle selection
+        action = menu.exec_(text_edit.mapToGlobal(pos))
+        if action == fork_action:
+            self.forkRequested.emit()
+        elif action == settings_action:
+            self.settingsRequested.emit()
+
+    def _handle_language_changed(self) -> None:
+        """Update text when language changes."""
+        if not self._is_input:
+            # Don't update input widget headers
+            self._update_role_text()
+
+    def _update_role_text(self) -> None:
+        """Update the role text based on current language."""
+        if not self._message_source:
+            return
+
+        strings = self._language_manager.strings
+        role_text = {
+            MessageSource.USER: strings.role_you,
+            MessageSource.AI: strings.role_assistant,
+            MessageSource.SYSTEM: strings.role_system
+        }.get(self._message_source, "Unknown")
+
+        # Format with timestamp
+        if self._message_timestamp:
+            timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            self._role_label.setText(f"{role_text} @ {timestamp_str}")
+        else:
+            self._role_label.setText(role_text)
 
     def set_content(self, text: str, style: MessageSource, timestamp: datetime):
         """Set content with style, handling incremental updates for AI responses.
-        
+
         Args:
             text: The message text content
             style: The style type ('user', 'ai', 'system', or 'error')
             timestamp: datetime object for the message timestamp
         """
+        self._message_source = style
+        self._message_timestamp = timestamp
+
         if style != self._current_style:
-            # Style changed - update header and styling
-            if self._is_input:
-                self._timestamp_label.setText("")  # No timestamp for input
-            else:
-                # For history messages, show role with timestamp
-                role_text = {
-                    MessageSource.USER: "You",
-                    MessageSource.AI: "Assistant",
-                    MessageSource.SYSTEM: "System Message"
-                }.get(style, "Unknown")
-
-                self._role_label.setText(role_text)
-                timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                self._timestamp_label.setText(f" @ {timestamp_str}")
-
+            # Update header text with proper role
+            self._update_role_text()
             self._current_style = style
-            self._handle_style_changed(self._style_manager.zoom_factor)
-
-            # Full reset needed for style change
+            self._handle_style_changed()
             self._text_area.clear()
 
         self._text_area.set_incremental_text(text)
+
+    def _on_mouse_pressed(self, event: QMouseEvent):
+        """Handle mouse press from text area."""
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            self._mouse_left_button_pressed = True
+
+    def _on_mouse_released(self, event: QMouseEvent):
+        """Handle mouse release from text area."""
+        self._mouse_left_button_pressed = False
+        self.mouseReleased.emit()
 
     def _on_selection_changed(self):
         """Handle selection changes in the text area."""
         cursor = self._text_area.textCursor()
         has_selection = cursor.hasSelection()
 
-        if has_selection:
+        if has_selection and self._mouse_left_button_pressed:
             # Emit global mouse position for accurate scroll calculations
             self.scrollRequested.emit(QCursor.pos())
 
@@ -159,14 +218,26 @@ class MessageWidget(QFrame):
         else:
             self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
+    def find_text(self, text: str) -> bool:
+        """Find text in the message.
+
+        Args:
+            text: Text to search for
+
+        Returns:
+            True if text was found
+        """
+        return self._text_area.find_text(text)
+
     def clear_selection(self):
         """Clear any text selection in this message."""
         cursor = self._text_area.textCursor()
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
 
-    def _handle_style_changed(self, factor: float):
+    def _handle_style_changed(self):
         """Handle the style changing"""
+        factor = self._style_manager.zoom_factor
         font = self.font()
         base_font_size = self._style_manager.base_font_size
         font.setPointSizeF(base_font_size * factor)
@@ -254,4 +325,8 @@ class MessageWidget(QFrame):
                 border-radius: 8px;
             }}
         """)
-        self._highlighter.rehighlight()
+
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode
+            self._highlighter.rehighlight()

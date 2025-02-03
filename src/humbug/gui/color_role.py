@@ -14,6 +14,7 @@ class ColorRole(Enum):
     TEXT_PRIMARY = auto()               # Primary text color
     TEXT_DISABLED = auto()              # Disabled text color
     TEXT_SELECTED = auto()              # Selected text background
+    TEXT_DIM_SELECTED = auto()          # Dimmed selected text background
 
     # Tab colours
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background
@@ -62,12 +63,12 @@ class ColorRole(Enum):
     SYNTAX_CODE = auto()
     SYNTAX_COMMENT = auto()
     SYNTAX_CSS_AT_RULE = auto()
+    SYNTAX_DOCTYPE = auto()
     SYNTAX_ELEMENT = auto()
     SYNTAX_ERROR = auto()
     SYNTAX_FUNCTION_OR_METHOD = auto()
     SYNTAX_HEADING = auto()
     SYNTAX_HTML_ATTRIBUTE = auto()
-    SYNTAX_HTML_DOCTYPE = auto()
     SYNTAX_HTML_TAG = auto()
     SYNTAX_IDENTIFIER = auto()
     SYNTAX_KEYWORD = auto()

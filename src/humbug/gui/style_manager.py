@@ -37,7 +37,7 @@ class StyleManager(QObject):
         _initialized (bool): Tracks initialization state of QObject base
     """
 
-    style_changed = Signal(float)
+    style_changed = Signal()
     _instance = None
 
     def __new__(cls):
@@ -85,12 +85,16 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#000000"
             },
             ColorRole.TEXT_DISABLED: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#a0a0a0"
+                ColorMode.DARK: "#707070",
+                ColorMode.LIGHT: "#909090"
             },
             ColorRole.TEXT_SELECTED: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#e0e0e0"
+                ColorMode.DARK: "#606070",
+                ColorMode.LIGHT: "#b0b0c0"
+            },
+            ColorRole.TEXT_DIM_SELECTED: {
+                ColorMode.DARK: "#40404c",
+                ColorMode.LIGHT: "#d0d0dc"
             },
 
             # Tab colours
@@ -117,11 +121,11 @@ class StyleManager(QObject):
 
             # Button colours
             ColorRole.BUTTON_BACKGROUND: {
-                ColorMode.DARK: "#1c1c1c",
+                ColorMode.DARK: "#0c0c0c",
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.BUTTON_BACKGROUND_DISABLED: {
-                ColorMode.DARK: "#242424",
+                ColorMode.DARK: "#2c2c2c",
                 ColorMode.LIGHT: "#d8d8d8"
             },
             ColorRole.BUTTON_BACKGROUND_PRESSED: {
@@ -216,6 +220,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#ffc0eb",
                 ColorMode.LIGHT: "#c000a0"
             },
+            ColorRole.SYNTAX_DOCTYPE: {
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#606060"
+            },
             ColorRole.SYNTAX_ELEMENT: {
                 ColorMode.DARK: "#90e0e8",
                 ColorMode.LIGHT: "#0080a0"
@@ -235,10 +243,6 @@ class StyleManager(QObject):
             ColorRole.SYNTAX_HTML_ATTRIBUTE: {
                 ColorMode.DARK: "#90e0e8",
                 ColorMode.LIGHT: "#0080a0"
-            },
-            ColorRole.SYNTAX_HTML_DOCTYPE: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#606060"
             },
             ColorRole.SYNTAX_HTML_TAG: {
                 ColorMode.DARK: "#ffc0eb",
@@ -291,23 +295,27 @@ class StyleManager(QObject):
         colour_mapping = {
             "ADDRESS": ColorRole.SYNTAX_ADDRESS,
             "BACKTICK_CODE": ColorRole.SYNTAX_BACKTICK_CODE,
+            "BOOLEAN": ColorRole.SYNTAX_NUMBER,
+            "CHARACTER": ColorRole.SYNTAX_STRING,
             "CODE": ColorRole. SYNTAX_CODE,
             "COMMENT": ColorRole.SYNTAX_COMMENT,
             "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,
+            "DOCTYPE": ColorRole.SYNTAX_DOCTYPE,
             "ELEMENT": ColorRole.SYNTAX_ELEMENT,
             "ERROR": ColorRole.SYNTAX_ERROR,
             "FUNCTION_OR_METHOD": ColorRole.SYNTAX_FUNCTION_OR_METHOD,
             "HEADING": ColorRole.SYNTAX_HEADING,
             "HTML_ATTRIBUTE": ColorRole.SYNTAX_HTML_ATTRIBUTE,
-            "HTML_DOCTYPE": ColorRole.SYNTAX_HTML_DOCTYPE,
             "HTML_TAG": ColorRole.SYNTAX_HTML_TAG,
             "IDENTIFIER": ColorRole.SYNTAX_IDENTIFIER,
             "KEYWORD": ColorRole.SYNTAX_KEYWORD,
             "LANGUAGE": ColorRole.SYNTAX_LANGUAGE,
+            "LPAREN": ColorRole.SYNTAX_OPERATOR,
             "NUMBER": ColorRole.SYNTAX_NUMBER,
             "OPERATOR": ColorRole.SYNTAX_OPERATOR,
             "PREPROCESSOR": ColorRole.SYNTAX_PREPROCESSOR,
             "REGEXP": ColorRole.SYNTAX_REGEXP,
+            "RPAREN": ColorRole.SYNTAX_OPERATOR,
             "STRING": ColorRole.SYNTAX_STRING,
             "TEXT": ColorRole.SYNTAX_TEXT,
             "TYPE": ColorRole.SYNTAX_TYPE,
@@ -434,49 +442,58 @@ class StyleManager(QObject):
         # Create collapsed and expanded arrows for both themes
         for mode in ColorMode:
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
+            disabled_color = self._colors[ColorRole.TEXT_DISABLED][mode]
             suffix = mode.name.lower()
 
             # Right-pointing arrow
             write_icon(f'arrow-right-{suffix}.svg', f'''
-                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M2.25,1.5 L3.75,3 L2.25,4.5"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M24,16 L40,32 L24,48"/>
                 </svg>
             ''')
 
             # Left-pointing arrow
             write_icon(f'arrow-left-{suffix}.svg', f'''
-                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M3.75,1.5 L2.25,3 L3.75,4.5"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M40,16 L24,32 L40,48"/>
                 </svg>
             ''')
 
             # Up-pointing arrow
             write_icon(f'arrow-up-{suffix}.svg', f'''
-                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1.5,3.75 L3,2.25 L4.5,3.75"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M16,40 L32,24 L48,40"/>
                 </svg>
             ''')
 
             # Down-pointing arrow
             write_icon(f'arrow-down-{suffix}.svg', f'''
-                <svg width="6" height="6" viewBox="0 0 6 6" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="0.75" fill="none" d="M1.5,2.25 L3,3.75 L4.5,2.25"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M16,24 L32,40 L48,24"/>
                 </svg>
             ''')
 
             # Close button - visible version
             write_icon(f'close-{suffix}.svg', f'''
-                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="4" fill="none"
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M16,16 L48,48 M48,16 L16,48"/>
+                </svg>
+            ''')
+
+            # Disabled close button - visible version
+            write_icon(f'disabled-close-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{disabled_color}" stroke-width="6" fill="none"
                         d="M16,16 L48,48 M48,16 L16,48"/>
                 </svg>
             ''')
 
             # Checkbox check mark
             write_icon(f'check-{suffix}.svg', f'''
-                <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="1.5" fill="none"
-                        d="M2,6 L5,9 L10,3" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M16,32 L28,44 L48,20" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             ''')
 
@@ -629,7 +646,7 @@ class StyleManager(QObject):
             self._mindspace_font_size = size
 
             if size:
-                self.style_changed.emit(self._zoom_factor)
+                self.style_changed.emit()
 
     @property
     def color_mode(self) -> ColorMode:
@@ -646,7 +663,7 @@ class StyleManager(QObject):
         if mode != self._color_mode:
             self._color_mode = mode
             self._initialize_highlights()  # Reinitialize highlights with new colors
-            self.style_changed.emit(self._zoom_factor)  # Trigger style update
+            self.style_changed.emit()  # Trigger style update
 
     @property
     def zoom_factor(self) -> float:
@@ -663,7 +680,7 @@ class StyleManager(QObject):
         new_factor = max(0.5, min(2.0, factor))
         if new_factor != self._zoom_factor:
             self._zoom_factor = new_factor
-            self.style_changed.emit(self._zoom_factor)
+            self.style_changed.emit()
 
     def get_scaled_size(self, base_size: float) -> float:
         """
@@ -678,6 +695,7 @@ class StyleManager(QObject):
         return base_size * self._zoom_factor
 
     def get_space_width(self) -> float:
+        """Get the width of a space character"""
         font = QFont(self.monospace_font_families)
         font.setPointSizeF(self.base_font_size * self._zoom_factor)
         font_metrics = QFontMetricsF(font)

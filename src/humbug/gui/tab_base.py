@@ -269,6 +269,10 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement paste")
 
+    def show_find(self):
+        """Show the find widget."""
+        raise NotImplementedError("Subclasses must implement show_find")
+
     def can_submit(self) -> bool:
         """
         Check if submit operation is available.
