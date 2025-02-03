@@ -137,6 +137,7 @@ class ConversationSettingsDialog(QDialog):
             QLabel {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                border: none;
             }}
             QComboBox {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
