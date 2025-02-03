@@ -38,10 +38,6 @@ class MindspaceFileTree(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Create mindspace label
-        label_container = QWidget()
-        label_container.setObjectName("label_container")
-
         # Create header container
         header_widget = QWidget()
         header_widget.setObjectName("header_widget")
@@ -54,7 +50,7 @@ class MindspaceFileTree(QWidget):
         self._mindspace_label.setContentsMargins(0, 0, 0, 0)
         header_layout.addWidget(self._mindspace_label)
 
-        # Create a spacer widget instead of using addStretch
+        # Create a spacer widget
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         header_layout.addWidget(spacer)
@@ -262,6 +258,7 @@ class MindspaceFileTree(QWidget):
         """Update when the language changes."""
         if not self._mindspace_path:
             self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
+
         self._handle_style_changed()
 
     def _handle_style_changed(self):
