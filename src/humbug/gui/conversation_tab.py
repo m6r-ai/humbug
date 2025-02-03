@@ -613,9 +613,6 @@ class ConversationTab(TabBase):
             widget: Widget to scroll to
             position: Text position within the widget
         """
-        # Calculate widget's position in scroll area
-        widget_pos = widget.mapTo(self._messages_container, QPoint(0, 0))
-
         # Get text edit cursor rect for the position
         text_edit = widget._text_area
         cursor = text_edit.textCursor()
