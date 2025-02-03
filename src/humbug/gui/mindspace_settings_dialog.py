@@ -211,9 +211,10 @@ class MindspaceSettingsDialog(QDialog):
             QComboBox::down-arrow:disabled {{
                 image: none;
             }}
-            QComboBox QAbstractItemView {{
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            QComboBox QAbstractItemView::item:selected {{
+                border: none;
+                background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QComboBox QListView {{
                 border: none;

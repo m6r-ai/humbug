@@ -168,9 +168,10 @@ class ConversationSettingsDialog(QDialog):
             QComboBox::down-arrow:disabled {{
                 image: none;
             }}
-            QComboBox QAbstractItemView {{
-                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                selection-color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            QComboBox QAbstractItemView::item:selected {{
+                border: none;
+                background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QComboBox QListView {{
                 border: none;
