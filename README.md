@@ -1,8 +1,9 @@
-# Humbug
+# Humbug v0.4
 
-Humbug is a versatile, GUI-based application designed to facilitate interaction with various AI backends.
-It offers a user-friendly tabbed interface for managing multiple conversations and editing files, all
-while maintaining a consistent user experience across platforms.
+Humbug is a versatile, GUI-based application designed to place AI interactions at the heart of software
+product development.  It offers a user-friendly tabbed interface for managing simultaneous conversations
+with different AIs, and editing files, all while maintaining a consistent user experience across Linux,
+Windows and MacOS.
 
 ## Designed for AI, built by AI!
 
@@ -52,6 +53,9 @@ that are expert on Humbug itself!
     - Mindspace settings include language, soft tabs, tab size, font size, and auto-backup options.
     - Mindspace state persistence for restoring open tabs and cursor positions.
     - Home directory tracking of last opened mindspace.
+- **Multi-Language Support:**
+    - Mindspaces can be configured to use different human languages.  Currently supported English, French,
+      and Arabic.
 - **User Interface:**
     - Keyboard navigation and mouse support.
     - Resizable splitter between file tree and tab view.
@@ -75,9 +79,6 @@ that are expert on Humbug itself!
     - Dynamic menu item state updates based on application context.
 - **Cross-Platform Support:**
     - Compatible with MacOS X (2020+), Linux (2020+), and Windows 10/11.
-- **Multi-Language Support:**
-    - Mindspaces can be configured to use different human languages.  Currently supported Arabic,
-      English, French.
 - **Asynchronous Design:**
     - Utilizes asynchronous operations to ensure responsiveness.
 

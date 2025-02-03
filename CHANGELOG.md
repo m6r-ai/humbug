@@ -1,6 +1,6 @@
 # Changelog for Humbug
 
-## v0.4 (2025-01-xx)
+## v0.4 (2025-02-03)
 
 This release adds the following new features:
 
@@ -27,6 +27,10 @@ The release fixes the following bugs:
   dropping the syntax highlighting back to the AI markdown highlighter.
 - Syntax highlighting of module/package names in Kotlin and Python are now handled so they do
   not appear as object fields/properties.
+- Close buttons on the tab view used to have the wrong background and cross colour for the
+  active tab in an inactive column.
+- If text was highlighted using the keyboard in a conversation view then moving the mouse
+  outside of the conversation tab would cause the tab to scroll.
 
 ## v0.3.1 (2025-01-22)
 
