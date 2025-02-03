@@ -169,10 +169,13 @@ class ConversationSettingsDialog(QDialog):
                 image: none;
             }}
             QComboBox QAbstractItemView {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 selection-color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QComboBox QListView {{
+                border: none;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QDoubleSpinBox {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};

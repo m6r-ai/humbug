@@ -187,7 +187,7 @@ class MindspaceSettingsDialog(QDialog):
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                border-radius: 4px;
+                border-radius: 0px;
                 padding: 8px;
             }}
             QComboBox:disabled {{
@@ -212,10 +212,13 @@ class MindspaceSettingsDialog(QDialog):
                 image: none;
             }}
             QComboBox QAbstractItemView {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QComboBox QListView {{
+                border: none;
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QSpinBox {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
