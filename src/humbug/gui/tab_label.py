@@ -31,6 +31,7 @@ class TabLabel(QWidget):
 
         self._tab_id = tab_id
         self._is_current = False
+        self._is_active_column = False
         self._is_hovered = False
         self._style_manager = StyleManager()
         self._drag_start_pos: Optional[QPoint] = None
@@ -58,6 +59,14 @@ class TabLabel(QWidget):
     def _create_visible_close_icon(self) -> QIcon:
         icon = QIcon()
         icon_path = self._style_manager.get_icon_path("close")
+        pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
+        icon.addPixmap(pixmap, QIcon.Normal, QIcon.Off)
+        icon.addPixmap(pixmap, QIcon.Active, QIcon.Off)
+        return icon
+
+    def _create_visible_disabled_close_icon(self) -> QIcon:
+        icon = QIcon()
+        icon_path = self._style_manager.get_icon_path("disabled-close")
         pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
         icon.addPixmap(pixmap, QIcon.Normal, QIcon.Off)
         icon.addPixmap(pixmap, QIcon.Active, QIcon.Off)
@@ -93,6 +102,7 @@ class TabLabel(QWidget):
 
         # Recreate icons at new size
         self._visible_close_icon = self._create_visible_close_icon()
+        self._visible_disabled_close_icon = self._create_visible_disabled_close_icon()
         self._invisible_close_icon = self._create_invisible_close_icon()
 
         # Update layout margins and spacing
@@ -204,7 +214,8 @@ class TabLabel(QWidget):
                     background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
                 }}
             """
-            self._close_button.setIcon(self._visible_close_icon)
+            icon = self._visible_close_icon if self._is_active_column else self._visible_disabled_close_icon
+            self._close_button.setIcon(icon)
             self._close_button.setCursor(Qt.PointingHandCursor)
             self._close_button.setToolTip("Close Tab")
         else:
@@ -222,9 +233,10 @@ class TabLabel(QWidget):
 
         self._close_button.setStyleSheet(style)
 
-    def set_current(self, is_current: bool):
+    def set_current(self, is_current: bool, is_active_column: bool):
         """Update the current state of the tab."""
         self._is_current = is_current
+        self._is_active_column = is_active_column
         self._update_close_button()
 
     @property

@@ -340,8 +340,8 @@ class TabManager(QWidget):
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
             column_index = column.currentIndex()
-            is_current = column_index != -1 and tab == column.widget(column_index) and column == self._active_column
-            label.set_current(is_current)
+            is_current = column_index != -1 and tab == column.widget(column_index)
+            label.set_current(is_current, is_current and column == self._active_column)
 
         # Force style refresh to show active state
         self._handle_style_changed()
@@ -412,7 +412,7 @@ class TabManager(QWidget):
 
         # Set initial state
         if len(self._tabs) == 1:  # If this is the first tab
-            tab_data.label.set_current(True)
+            tab_data.label.set_current(True, True)
             self._stack.setCurrentWidget(self._columns_widget)
 
     def _close_tab_by_id(self, tab_id: str, force_close: bool=False) -> None:

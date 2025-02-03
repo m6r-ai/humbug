@@ -442,6 +442,7 @@ class StyleManager(QObject):
         # Create collapsed and expanded arrows for both themes
         for mode in ColorMode:
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
+            disabled_color = self._colors[ColorRole.TEXT_DISABLED][mode]
             suffix = mode.name.lower()
 
             # Right-pointing arrow
@@ -476,6 +477,14 @@ class StyleManager(QObject):
             write_icon(f'close-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M16,16 L48,48 M48,16 L16,48"/>
+                </svg>
+            ''')
+
+            # Disabled close button - visible version
+            write_icon(f'disabled-close-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{disabled_color}" stroke-width="6" fill="none"
                         d="M16,16 L48,48 M48,16 L16,48"/>
                 </svg>
             ''')
