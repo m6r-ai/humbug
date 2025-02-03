@@ -401,6 +401,15 @@ class MainWindow(QMainWindow):
         if not dir_path:
             return
 
+        if self._mindspace_manager.is_already_mindspace(dir_path):
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.mindspace_exists_error
+            )
+            return
+
         # Show folder configuration dialog
         dialog = MindspaceFoldersDialog(dir_path, self)
         if dialog.exec() != QDialog.Accepted:

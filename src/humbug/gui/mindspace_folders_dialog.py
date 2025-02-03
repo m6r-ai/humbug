@@ -54,7 +54,6 @@ class MindspaceFoldersDialog(QDialog):
         value_layout.setSpacing(0)
 
         self._path_value = QLabel(mindspace_path)
-#        self._path_value.setWordWrap(True)
         self._path_value.setMinimumHeight(40)
         value_layout.addWidget(self._path_value)
 

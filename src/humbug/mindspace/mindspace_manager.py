@@ -117,6 +117,14 @@ class MindspaceManager(QObject):
         """
         return self._mindspace_path is not None
 
+    def is_already_mindspace(self, path: str) -> bool:
+        """Check if we already have a mindspace at the specified path."""
+        mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
+        if os.path.exists(mindspace_dir):
+            return True
+
+        return False
+
     def create_mindspace(self, path: str, folders: List[str] = None) -> None:
         """
         Create a new mindspace at the specified path.
