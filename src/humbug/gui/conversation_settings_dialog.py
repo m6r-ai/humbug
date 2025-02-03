@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QComboBox, QDoubleSpinBox
+    QComboBox, QDoubleSpinBox, QListView
 )
 from PySide6.QtCore import Signal, Qt
 
@@ -49,6 +49,7 @@ class ConversationSettingsDialog(QDialog):
         self._model_label = QLabel(strings.settings_model_label)
         self._model_label.setMinimumHeight(40)
         self._model_combo = QComboBox()
+        self._model_combo.setView(QListView())  # Weird workaround to get styles to work!
         self._model_combo.setMinimumWidth(300)
         self._model_combo.setMinimumHeight(40)
         self._model_combo.currentTextChanged.connect(self._handle_model_change)
@@ -168,8 +169,9 @@ class ConversationSettingsDialog(QDialog):
                 image: none;
             }}
             QComboBox QAbstractItemView {{
-                background: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                selection-background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 selection-color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QDoubleSpinBox {{

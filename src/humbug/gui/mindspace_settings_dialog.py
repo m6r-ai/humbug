@@ -9,7 +9,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QPushButton, QSpinBox, QCheckBox, QDoubleSpinBox
+    QPushButton, QSpinBox, QCheckBox, QDoubleSpinBox, QListView
 )
 from PySide6.QtCore import Signal
 
@@ -212,8 +212,9 @@ class MindspaceSettingsDialog(QDialog):
                 image: none;
             }}
             QComboBox QAbstractItemView {{
-                background: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QSpinBox {{
@@ -308,6 +309,7 @@ class MindspaceSettingsDialog(QDialog):
         self._language_label = QLabel(language_manager.strings.select_language)
         self._language_label.setMinimumHeight(40)
         combo = QComboBox(parent)
+        combo.setView(QListView())  # Weird workaround to get styles to work!
         combo.setMinimumWidth(300)
         combo.setMinimumHeight(40)
 
