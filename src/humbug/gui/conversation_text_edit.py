@@ -17,6 +17,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 class ConversationTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
 
+    mousePressed = Signal(QMouseEvent)
     mouseReleased = Signal(QMouseEvent)
     pageScrollRequested = Signal()
 
@@ -61,6 +62,10 @@ class ConversationTextEdit(QTextEdit):
 
     def _handle_style_changed(self) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.mousePressed.emit(event)
 
     def mouseReleaseEvent(self, event):
         """Propagate mouse release events to parent."""

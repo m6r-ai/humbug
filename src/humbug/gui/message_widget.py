@@ -3,7 +3,7 @@
 from datetime import datetime
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint
-from PySide6.QtGui import QCursor
+from PySide6.QtGui import QCursor, QMouseEvent
 
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.conversation_highlighter import ConversationHighlighter
@@ -38,6 +38,8 @@ class MessageWidget(QFrame):
         self._message_source = None
         self._message_timestamp = None
 
+        self._mouse_left_button_pressed = False
+
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
@@ -69,6 +71,7 @@ class MessageWidget(QFrame):
 
         # Connect selection change signal
         self._text_area.selectionChanged.connect(self._on_selection_changed)
+        self._text_area.mousePressed.connect(self._on_mouse_pressed)
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add conversation highlighter
@@ -125,10 +128,6 @@ class MessageWidget(QFrame):
         elif action == settings_action:
             self.settingsRequested.emit()
 
-    def _on_mouse_released(self):
-        """Handle mouse release from text area."""
-        self.mouseReleased.emit()
-
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
         if not self._is_input:
@@ -174,12 +173,22 @@ class MessageWidget(QFrame):
 
         self._text_area.set_incremental_text(text)
 
+    def _on_mouse_pressed(self, event: QMouseEvent):
+        """Handle mouse press from text area."""
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            self._mouse_left_button_pressed = True
+
+    def _on_mouse_released(self, event: QMouseEvent):
+        """Handle mouse release from text area."""
+        self._mouse_left_button_pressed = False
+        self.mouseReleased.emit()
+
     def _on_selection_changed(self):
         """Handle selection changes in the text area."""
         cursor = self._text_area.textCursor()
         has_selection = cursor.hasSelection()
 
-        if has_selection:
+        if has_selection and self._mouse_left_button_pressed:
             # Emit global mouse position for accurate scroll calculations
             self.scrollRequested.emit(QCursor.pos())
 
