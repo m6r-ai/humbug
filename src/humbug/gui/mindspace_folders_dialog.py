@@ -4,9 +4,8 @@ from typing import List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
-    QPushButton, QWidget
+    QPushButton, QWidget, QSizePolicy
 )
-from PySide6.QtCore import Qt
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -39,20 +38,35 @@ class MindspaceFoldersDialog(QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Add mindspace path display that will set our alignment
+        # Path label and value container
         path_layout = QHBoxLayout()
         self._path_label = QLabel(strings.mindspace_path)
         self._path_label.setMinimumHeight(40)
-        self._path_value = QLabel(mindspace_path)
-        self._path_value.setWordWrap(True)
-        self._path_value.setMinimumWidth(300)  # Match width from settings dialog
-        self._path_value.setMinimumHeight(40)
-        self._path_value.setProperty('valueDisplay', True)  # For styling
         path_layout.addWidget(self._path_label)
         path_layout.addStretch()
-        path_layout.addWidget(self._path_value)
+
+        # Create header-style container for path value
+        value_container = QWidget()
+        value_container.setObjectName("path_widget")
+        value_container.setMinimumWidth(300)
+        value_layout = QHBoxLayout(value_container)
+        value_layout.setContentsMargins(0, 0, 0, 0)
+        value_layout.setSpacing(0)
+
+        self._path_value = QLabel(mindspace_path)
+#        self._path_value.setWordWrap(True)
+        self._path_value.setMinimumHeight(40)
+        value_layout.addWidget(self._path_value)
+
+        # Create a spacer widget
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        value_layout.addWidget(spacer)
+
+        path_layout.addWidget(value_container)
         layout.addLayout(path_layout)
 
+        # Rest of the dialog content remains the same
         # Conversations folder option
         conv_layout = QHBoxLayout()
         conv_label = QLabel(strings.conversations_folder)
@@ -181,7 +195,7 @@ class MindspaceFoldersDialog(QDialog):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
             }}
-            QLabel[valueDisplay="true"] {{
+            QWidget#path_widget, QWidget#path_widget > QWidget {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
                 border: none;

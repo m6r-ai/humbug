@@ -556,9 +556,9 @@ Context: Capabilities
             The dialog has:
 
             - "Mindspace path", followed by the path the user selected.
-            - "conversations folder", followed by a checkbox.
-            - "metaphor folder", "followed by a checkbox.
-            - "source folder", followed by a checkbox.
+            - "Create Conversations Folder", followed by a checkbox.
+            - "Create Metaphor Folder", "followed by a checkbox.
+            - "Create Source Folder", followed by a checkbox.
 
             The conversations folder checkbox is checked and disabled so it cannot be unchecked.
 

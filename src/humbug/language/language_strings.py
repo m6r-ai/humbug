@@ -248,9 +248,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         # Mindspace folders dialog
         mindspace_folders_title="Configure Mindspace Folders",
         mindspace_path="Mindspace Path",
-        conversations_folder="Conversations Folder",
-        metaphor_folder="Metaphor Folder",
-        src_folder="Source Code Folder",
+        conversations_folder='Create "conversations" Folder',
+        metaphor_folder='Create "metaphor" Folder',
+        src_folder='Create "src" Folder',
 
         # Mindspace settings
         select_language="Language",
@@ -403,9 +403,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         # Mindspace folders dialog
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
         mindspace_path="Chemin de l'espace mental",
-        conversations_folder="Dossier des conversations",
-        metaphor_folder="Dossier des métaphores",
-        src_folder="Dossier du code source",
+        conversations_folder='Créer le dossier "conversations"',
+        metaphor_folder='Créer le dossier "metaphor"',
+        src_folder='Créer le dossier "src"',
 
         # Mindspace settings
         select_language="Langue",
@@ -558,9 +558,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         # Mindspace folders dialog
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",
         mindspace_path="مسار المساحة الذهنية",
-        conversations_folder="مجلد المحادثات",
-        metaphor_folder="مجلد الاستعارات",
-        src_folder="مجلد الكود المصدري",
+        conversations_folder='إنشاء مجلد "conversations"',
+        metaphor_folder='إنشاء مجلد "metaphor"',
+        src_folder='إنشاء مجلد "src"',
 
         # Mindspace settings
         select_language="اللغة",
