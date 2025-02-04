@@ -1,5 +1,12 @@
 # Changelog for Humbug
 
+## v0.5 (2025-02-04)
+
+Internal structure changes:
+
+- The conversation, editor, and mindspace UI functionality has been moved into separate
+  subdirectories to make it easier to find related functionality.
+
 ## v0.4 (2025-02-03)
 
 This release adds the following new features:

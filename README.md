@@ -1,4 +1,4 @@
-# Humbug v0.4
+# Humbug v0.5
 
 Humbug is a versatile, GUI-based application designed to place AI interactions at the heart of software
 product development.  It offers a user-friendly tabbed interface for managing simultaneous conversations
@@ -32,18 +32,9 @@ that are expert on Humbug itself!
 
 ## What's New
 
-In 0.4 we've added a lot of new features aimed at making Humbug easier to use:
+In 0.5 we've added a lot of new features aimed at making Humbug easier to use:
 
-- Mindspace can now be configured to use either English, French, or Arabic.
-- You can now search for text in conversations and editor sessions.
-- Scheme syntax highlighting is now supported.
-- Syntax highlighting works far better.
-- You can now rename existing conversations.
-- There is new pop-up context menu on conversation tabs that provides access to conversation
-  settings and forking for that conversation.
-- When creating a new mindspace, you have the option to create a series of default folders/directories.
-
-We also fixed a lot of usability bugs and quirkly behaviour.
+TBD
 
 ## Features
 

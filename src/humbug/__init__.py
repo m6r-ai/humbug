@@ -6,8 +6,7 @@ from logging.handlers import RotatingFileHandler
 import os
 
 
-__version__ = "0.4"
-
+__version__ = "0.5"
 
 
 def setup_logging():
