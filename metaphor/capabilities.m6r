@@ -223,6 +223,11 @@ Context: Capabilities
                             +------------------------------------------+
                             ```
 
+                    Context: History box navigation
+                        In the history view, the user should be able to scroll vertically with the up and down
+                        cursor keys and the page-up, page-down keys.  If a horizontal scroll bar is active then
+                        the user can also scroll horizontally with the left and right cursor keys.
+
                     Context: Input box behavior
                         The input box starts with a single line and expands vertically as content is added.
 
