@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QTextEdit, QWidget
 from PySide6.QtCore import QObject, Signal
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.message_widget import MessageWidget
+from humbug.gui.conversation.message_widget import MessageWidget
 from humbug.gui.style_manager import StyleManager
 
 class ConversationFind(QObject):

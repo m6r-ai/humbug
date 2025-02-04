@@ -11,12 +11,12 @@ from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation_rename_dialog import ConversationRenameDialog
-from humbug.gui.file_tree_icon_provider import FileTreeIconProvider
-from humbug.gui.file_tree_view import FileTreeView
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
+from humbug.gui.mindspace.file_tree_icon_provider import FileTreeIconProvider
+from humbug.gui.mindspace.file_tree_view import FileTreeView
+from humbug.gui.mindspace.mindspace_file_model import MindspaceFileModel
+from humbug.gui.mindspace.mindspace_file_tree_style import MindspaceFileTreeStyle
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.mindspace_file_model import MindspaceFileModel
-from humbug.gui.mindspace_file_tree_style import MindspaceFileTreeStyle
 from humbug.language.language_manager import LanguageManager
 
 

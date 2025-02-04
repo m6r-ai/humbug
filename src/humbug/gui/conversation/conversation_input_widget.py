@@ -5,9 +5,9 @@ import sys
 from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent
 from PySide6.QtGui import QKeyEvent
 
-from humbug.gui.message_widget import MessageWidget
-from humbug.gui.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
+from humbug.gui.conversation.conversation_text_edit import ConversationTextEdit
+from humbug.gui.conversation.message_widget import MessageWidget
 from humbug.language.language_manager import LanguageManager
 
 

@@ -6,8 +6,8 @@ from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QCursor, QMouseEvent
 
 from humbug.conversation.message_source import MessageSource
-from humbug.gui.conversation_highlighter import ConversationHighlighter
-from humbug.gui.conversation_text_edit import ConversationTextEdit
+from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
+from humbug.gui.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager

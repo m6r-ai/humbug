@@ -9,10 +9,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QTextCursor
 
-from humbug.gui.editor_highlighter import EditorHighlighter
 from humbug.gui.color_role import ColorRole
-from humbug.gui.editor_find import EditorFind
-from humbug.gui.editor_text_edit import EditorTextEdit
+from humbug.gui.editor.editor_highlighter import EditorHighlighter
+from humbug.gui.editor.editor_find import EditorFind
+from humbug.gui.editor.editor_text_edit import EditorTextEdit
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.gui.status_message import StatusMessage

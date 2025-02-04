@@ -10,10 +10,10 @@ from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.conversation_settings import ConversationSettings
-from humbug.gui.conversation_error import ConversationError
-from humbug.gui.conversation_tab import ConversationTab
 from humbug.gui.color_role import ColorRole
-from humbug.gui.editor_tab import EditorTab
+from humbug.gui.conversation.conversation_error import ConversationError
+from humbug.gui.conversation.conversation_tab import ConversationTab
+from humbug.gui.editor.editor_tab import EditorTab
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
