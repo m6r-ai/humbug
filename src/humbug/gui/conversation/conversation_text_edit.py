@@ -317,6 +317,19 @@ class ConversationTextEdit(QTextEdit):
         # Is this a read-only widget?  If it is then we don't want to process certain key events,
         # leaving it to the parent to handle them.
         if self.isReadOnly():
+            # Handle horizontal scrolling
+            if self._has_code_block and event.key() in (Qt.Key_Left, Qt.Key_Right):
+                hbar = self.horizontalScrollBar()
+                if hbar and hbar.isVisible():
+                    current = hbar.value()
+                    step = 50  # Adjust scroll step size as needed
+                    if event.key() == Qt.Key_Left:
+                        hbar.setValue(max(hbar.minimum(), current - step))
+                    else:
+                        hbar.setValue(min(hbar.maximum(), current + step))
+                    event.accept()
+                    return
+
             if event.key() in (Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Up, Qt.Key_Down):
                 event.ignore()
 
