@@ -7,66 +7,71 @@ class ConversationSettings:
     """Data class for conversation settings."""
 
     AVAILABLE_MODELS = [
-        # Gemini models
+        # Anthropic models
+        "claude-3-5-haiku-20241022",
+        "claude-3-5-sonnet-20241022",
+
+        # Google models
         "gemini-1.5-flash",
         "gemini-1.5-pro",
         "gemini-2.0-flash-exp",
 
-        # Anthropic models
-        "claude-3-5-haiku-20241022",
-        "claude-3-5-sonnet-20241022",
+        # M6R models
+        "tessa",
+
+        # Ollama models
+        "llama3.2",
+        "phi4",
 
         # OpenAI models
         "gpt-4o-mini",
         "gpt-4o",
         "o1-mini",
-        "o1-preview",
-
-        # Ollama models
-        "llama3.2",
-        "phi4"
+        "o1-preview"
     ]
 
     PROVIDER_MAP = {
-        "gpt-4o-mini": "openai",
-        "gpt-4o": "openai",
-        "o1-mini": "openai",
-        "o1-preview": "openai",
+        "claude-3-5-haiku-20241022": "anthropic",
+        "claude-3-5-sonnet-20241022": "anthropic",
         "gemini-1.5-flash": "google",
         "gemini-1.5-pro": "google",
         "gemini-2.0-flash-exp": "google",
-        "claude-3-5-haiku-20241022": "anthropic",
-        "claude-3-5-sonnet-20241022": "anthropic",
+        "tessa": "m6r",
         "llama3.2": "ollama",
-        "phi4": "ollama"
+        "phi4": "ollama",
+        "gpt-4o-mini": "openai",
+        "gpt-4o": "openai",
+        "o1-mini": "openai",
+        "o1-preview": "openai"
     }
 
     TEMPERATURE_SUPPORTED_MODELS = {
-        "gpt-4o-mini": True,
-        "gpt-4o": True,
-        "o1-mini": False,
-        "o1-preview": False,
+        "claude-3-5-haiku-20241022": True,
+        "claude-3-5-sonnet-20241022": True,
         "gemini-1.5-flash": True,
         "gemini-1.5-pro": True,
         "gemini-2.0-flash-exp": True,
-        "claude-3-5-haiku-20241022": True,
-        "claude-3-5-sonnet-20241022": True,
         "llama3.2": True,
-        "phi4": True
+        "phi4": True,
+        "gpt-4o-mini": True,
+        "gpt-4o": True,
+        "o1-mini": False,
+        "o1-preview": False
     }
 
     MODEL_LIMITS = {
-        "gpt-4o-mini": {"context_window": 128000, "max_output_tokens": 16384},
-        "gpt-4o": {"context_window": 128000, "max_output_tokens": 16384},
-        "o1-mini": {"context_window": 128000, "max_output_tokens": 65536},
-        "o1-preview": {"context_window": 200000, "max_output_tokens": 100000},
+        "claude-3-5-haiku-20241022": {"context_window": 200000, "max_output_tokens": 4096},
+        "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192},
         "gemini-1.5-flash": {"context_window": 1048576, "max_output_tokens": 8192},
         "gemini-1.5-pro": {"context_window": 2097152, "max_output_tokens": 8192},
         "gemini-2.0-flash-exp": {"context_window": 1048576, "max_output_tokens": 8192},
-        "claude-3-5-haiku-20241022": {"context_window": 200000, "max_output_tokens": 4096},
-        "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192},
+        "tessa": {"context_window": 1024, "max_output_tokens": 1024},
         "llama3.2": {"context_window": 2048, "max_output_tokens": 2048},
-        "phi4": {"context_window": 2048, "max_output_tokens": 2048}
+        "phi4": {"context_window": 2048, "max_output_tokens": 2048},
+        "gpt-4o-mini": {"context_window": 128000, "max_output_tokens": 16384},
+        "gpt-4o": {"context_window": 128000, "max_output_tokens": 16384},
+        "o1-mini": {"context_window": 128000, "max_output_tokens": 65536},
+        "o1-preview": {"context_window": 200000, "max_output_tokens": 100000}
     }
 
     def __init__(self, model: str="gemini-1.5-flash", temperature: float=0.7):
@@ -122,6 +127,10 @@ class ConversationSettings:
         # Then Anthropic
         if "anthropic" in ai_backends:
             return "claude-3-5-haiku-20241022"
+
+        # Then M6R
+        if "m6r" in ai_backends:
+            return "tessa"
 
         # Finally OpenAI
         if "openai" in ai_backends:
