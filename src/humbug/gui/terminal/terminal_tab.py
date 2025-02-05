@@ -4,6 +4,8 @@ import asyncio
 from asyncio.subprocess import Process
 import logging
 import os
+import pty
+import termios
 import select
 from typing import Dict, Optional
 
@@ -58,7 +60,6 @@ class TerminalTab(TabBase):
 
         # Initialize process
         self._process: Optional[Process] = None
-        self._stdin_closed = False
 
         # Start local shell process
         asyncio.create_task(self._start_process())
@@ -70,10 +71,6 @@ class TerminalTab(TabBase):
             print("Starting terminal process...")
 
             shell = os.environ.get('SHELL', '/bin/sh')
-
-            # Make sure we're setting up a pseudo-terminal
-            import pty
-            import termios
 
             # Create pseudo-terminal
             master_fd, slave_fd = pty.openpty()
@@ -125,7 +122,6 @@ class TerminalTab(TabBase):
                         if not data:
                             break
 
-                        print(f"Read data: {data}")  # Debug
                         self._terminal.put_data(data)
                     except OSError:
                         break
