@@ -1,6 +1,6 @@
 """Terminal widget implementation."""
 
-from typing import Optional
+from typing import Optional, Tuple
 from dataclasses import dataclass
 import re
 import logging
@@ -8,10 +8,12 @@ import logging
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import (
-    QTextCursor, QKeyEvent, QColor, QFont, QTextCharFormat
+    QTextCursor, QKeyEvent, QColor, QFont, QTextCharFormat,
+    QMouseEvent
 )
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class TerminalColors:
@@ -40,8 +42,11 @@ class TerminalWidget(QPlainTextEdit):
 
     # Signal emitted when user input is ready
     data_ready = Signal(bytes)
+    # Signal emitted for mouse events when tracking is enabled
+    mouse_event = Signal(str)
 
     def __init__(self, parent: Optional[QWidget] = None):
+        """Initialize terminal widget."""
         super().__init__(parent)
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
 
@@ -76,21 +81,95 @@ class TerminalWidget(QPlainTextEdit):
         self._in_escape_seq = False
         self._saved_cursor_position = None
 
+        # Additional terminal state
+        self._alternate_screen_buffer = ""
+        self._main_screen_buffer = ""
+        self._using_alternate_screen = False
+        self._scroll_region: Optional[Tuple[int, int]] = None
+        self._application_cursor_keys = False
+        self._mouse_tracking = False
+        self._mouse_tracking_sgr = False
+        self._saved_mouse_tracking = False
+        self._saved_mouse_tracking_sgr = False
+
     def keyPressEvent(self, event: QKeyEvent):
         """Send all keypresses to the process."""
-        # Convert the key event into bytes to send
         text = event.text()
         key = event.key()
 
-        if key == Qt.Key_Backspace:
-            self.data_ready.emit(b'\b')
-        elif key == Qt.Key_Delete:
-            # On most Unix-like systems, the Delete key sends \x7f (DEL character)
-            self.data_ready.emit(b'\x7f')
-        elif text:  # Only send if there's actual text (not just modifiers)
-            self.data_ready.emit(text.encode())
+        if self._application_cursor_keys:
+            # Handle cursor keys in application mode
+            if key == Qt.Key_Up:
+                self.data_ready.emit(b'\x1bOA')
+            elif key == Qt.Key_Down:
+                self.data_ready.emit(b'\x1bOB')
+            elif key == Qt.Key_Right:
+                self.data_ready.emit(b'\x1bOC')
+            elif key == Qt.Key_Left:
+                self.data_ready.emit(b'\x1bOD')
+            elif key == Qt.Key_Backspace:
+                self.data_ready.emit(b'\b')
+            elif key == Qt.Key_Delete:
+                self.data_ready.emit(b'\x7f')
+            elif text:
+                self.data_ready.emit(text.encode())
+        else:
+            # Normal mode key handling
+            if key == Qt.Key_Backspace:
+                self.data_ready.emit(b'\b')
+            elif key == Qt.Key_Delete:
+                self.data_ready.emit(b'\x7f')
+            elif text:
+                self.data_ready.emit(text.encode())
 
         event.accept()
+
+    def mousePressEvent(self, event: QMouseEvent):
+        """Handle mouse events when tracking is enabled."""
+        if self._mouse_tracking:
+            pos = event.pos()
+            char_width = self.fontMetrics().horizontalAdvance(' ')
+            char_height = self.fontMetrics().height()
+            x = pos.x() // char_width + 1
+            y = pos.y() // char_height + 1
+            button = event.button()
+
+            if self._mouse_tracking_sgr:
+                # SGR mouse mode
+                if button == Qt.LeftButton:
+                    self.mouse_event.emit(f'\x1b[<0;{x};{y}M')
+                elif button == Qt.RightButton:
+                    self.mouse_event.emit(f'\x1b[<2;{x};{y}M')
+                elif button == Qt.MiddleButton:
+                    self.mouse_event.emit(f'\x1b[<1;{x};{y}M')
+            else:
+                # Normal mouse mode
+                cb = 0  # Left button
+                if button == Qt.RightButton:
+                    cb = 2
+                elif button == Qt.MiddleButton:
+                    cb = 1
+                self.mouse_event.emit(f'\x1b[M{chr(32+cb)}{chr(32+x)}{chr(32+y)}')
+        else:
+            super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        """Handle mouse release events when tracking is enabled."""
+        if self._mouse_tracking:
+            pos = event.pos()
+            char_width = self.fontMetrics().horizontalAdvance(' ')
+            char_height = self.fontMetrics().height()
+            x = pos.x() // char_width + 1
+            y = pos.y() // char_height + 1
+
+            if self._mouse_tracking_sgr:
+                # SGR mouse mode release
+                self.mouse_event.emit(f'\x1b[<0;{x};{y}m')
+            else:
+                # Normal mouse mode release
+                self.mouse_event.emit(f'\x1b[M{chr(32+3)}{chr(32+x)}{chr(32+y)}')
+        else:
+            super().mouseReleaseEvent(event)
 
     def put_data(self, data: bytes):
         """Display received data with ANSI sequence handling."""
@@ -112,7 +191,7 @@ class TerminalWidget(QPlainTextEdit):
         self.ensureCursorVisible()
 
     def _insert_plain_text(self, text: str):
-        """Insert text at current cursor position."""
+        """Insert text at current cursor position with scroll region support."""
         cursor = self.textCursor()
 
         # Apply the current text format
@@ -122,9 +201,50 @@ class TerminalWidget(QPlainTextEdit):
             # Move to start of line
             cursor.movePosition(QTextCursor.StartOfLine)
         elif text == '\n':
-            # Move to start of next line
-            cursor.movePosition(QTextCursor.EndOfLine)
-            cursor.insertText('\n')
+            # Handle newline with scroll region support
+            if self._scroll_region is not None:
+                top, bottom = self._scroll_region
+                current_line = cursor.blockNumber()
+
+                if current_line == bottom:
+                    # At bottom of scroll region, need to scroll
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(top):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_start = cursor.position()
+
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(top + 1):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_text_start = cursor.position()
+
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(bottom + 1):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_end = cursor.position()
+
+                    # Select and copy the text to be scrolled
+                    cursor.setPosition(scroll_text_start)
+                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
+                    text_to_move = cursor.selectedText()
+
+                    # Delete old content and insert at new position
+                    cursor.setPosition(scroll_start)
+                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
+                    cursor.removeSelectedText()
+                    cursor.setPosition(scroll_start)
+                    cursor.insertText(text_to_move)
+
+                    # Move to the end of the line
+                    cursor.movePosition(QTextCursor.EndOfLine)
+                else:
+                    # Normal newline behavior
+                    cursor.movePosition(QTextCursor.EndOfLine)
+                    cursor.insertText('\n')
+            else:
+                # No scroll region, normal newline
+                cursor.movePosition(QTextCursor.EndOfLine)
+                cursor.insertText('\n')
             cursor.movePosition(QTextCursor.StartOfLine)
         elif text == '\b':  # Backspace
             cursor.movePosition(QTextCursor.Left)
@@ -142,21 +262,101 @@ class TerminalWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
 
     def _process_escape_sequence(self, sequence: str):
-        """Handle ANSI escape sequences.
+        """Handle ANSI escape sequences."""
+        # Clear scrollback buffer
+        if sequence == '\x1b[3J':
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            visible_content = cursor.selectedText()
+            self.clear()
+            self.insertPlainText(visible_content)
+            return
 
-        Args:
-            sequence: The escape sequence to process
+        # Move cursor to home position
+        if sequence == '\x1b[H':
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.Start)
+            self.setTextCursor(cursor)
+            return
 
-        Note:
-            Handles the following sequences:
-            - SGR (Select Graphic Rendition) sequences ending in 'm'
-            - Cursor movement sequences ending in ABCD
-            - Screen clearing sequences: [2J, [J, [K
-            - Cursor save/restore: ]7, ]8
-            - Bracketed paste mode: [?2004h, [?2004l
-            - Working directory: ]7;f
-        """
-        # Basic color codes
+        # Enable alternate screen buffer
+        if sequence == '\x1b[?1049h':
+            if not self._using_alternate_screen:
+                self._main_screen_buffer = self.toPlainText()
+                self.clear()
+                self._using_alternate_screen = True
+            return
+
+        # Set scrolling region
+        if sequence.startswith('\x1b[') and sequence.endswith('r'):
+            try:
+                params = sequence[2:-1].split(';')
+                if len(params) == 2:
+                    top = int(params[0]) - 1  # Convert to 0-based
+                    bottom = int(params[1]) - 1
+                    self._scroll_region = (top, bottom)
+            except (ValueError, IndexError):
+                self._scroll_region = None
+            return
+
+        # Reset insert mode
+        if sequence == '\x1b[4l':
+            self.setOverwriteMode(True)
+            return
+
+        # Move cursor to specific position
+        if sequence.startswith('\x1b[') and sequence.endswith('H'):
+            try:
+                params = sequence[2:-1].split(';')
+                if len(params) == 2:
+                    row = int(params[0]) - 1  # Convert to 0-based
+                    col = int(params[1]) - 1
+                    cursor = self.textCursor()
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(row):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    cursor.movePosition(QTextCursor.Right, n=col)
+                    self.setTextCursor(cursor)
+            except (ValueError, IndexError):
+                pass
+            return
+
+        # Set US ASCII character set (no action needed)
+        if sequence == '\x1b(B':
+            return
+
+        # Disable alternate screen buffer
+        if sequence == '\x1b[?1049l':
+            if self._using_alternate_screen:
+                self._alternate_screen_buffer = self.toPlainText()
+                self.clear()
+                self.setPlainText(self._main_screen_buffer)
+                self._using_alternate_screen = False
+            return
+
+        # Save mouse tracking settings
+        if sequence == '\x1b[?1001s':
+            self._saved_mouse_tracking = self._mouse_tracking
+            self._saved_mouse_tracking_sgr = self._mouse_tracking_sgr
+            return
+
+        # Enable mouse button tracking
+        if sequence == '\x1b[?1002h':
+            self._mouse_tracking = True
+            return
+
+        # Enable SGR mouse mode
+        if sequence == '\x1b[?1006h':
+            self._mouse_tracking_sgr = True
+            return
+
+        # Enable application keypad mode
+        if sequence == '\x1b=':
+            self._application_cursor_keys = True
+            return
+
+        # Handle basic color codes
         if sequence.startswith('\x1b[') and sequence.endswith('m'):
             self._handle_sgr_sequence(sequence[2:-1])
             return
@@ -182,18 +382,13 @@ class TerminalWidget(QPlainTextEdit):
             return
 
         # Save cursor position
-        if sequence == '\x1b]7':
+        if sequence == '\x1b7':
             cursor = self.textCursor()
             self._saved_cursor_position = (cursor.blockNumber(), cursor.columnNumber())
             return
 
-        # Set current working directory
-        if sequence.startswith('\x1b]7;f'):
-            # We can ignore this as it's just informational
-            return
-
         # Restore cursor position
-        if sequence == '\x1b]8':
+        if sequence == '\x1b8':
             if self._saved_cursor_position:
                 line, column = self._saved_cursor_position
                 cursor = self.textCursor()
@@ -202,16 +397,6 @@ class TerminalWidget(QPlainTextEdit):
                     cursor.movePosition(QTextCursor.NextBlock)
                 cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, column)
                 self.setTextCursor(cursor)
-            return
-
-        # Bracketed paste mode enable
-        if sequence == '\x1b[?2004h':
-            # Could implement bracketed paste mode if needed
-            return
-
-        # Bracketed paste mode disable
-        if sequence == '\x1b[?2004l':
-            # Could implement bracketed paste mode if needed
             return
 
         logger.warning(f"Unhandled escape sequence: {sequence}")
