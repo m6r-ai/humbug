@@ -4,17 +4,18 @@ Context: Implementation
 
         The implementation supports OpenAI, Google Gemini, and Anthropic endpoints.
 
-        Context: OpenAI REST endpoint
+        Context: Anthropic REST endpoint
             Messages are sent via a POST message.
 
-            The API to use is the "continuations" API.  The endpoint is "https://api.openai.com/v1/chat/completions".
+            The endpoint is "https://api.anthropic.com/v1/messages".
 
-            This needs two headers to be provided:
+            This needs three headers to be provided:
 
             "Content-Type": "application/json"
-            "Authorization": {key}"
+            "x-api-key": {key}
+            "anthropic-version": "2023-06-01"
 
-            {key} must be replaced with the API key found in the environment variable `OPENAI_API_KEY`.
+            {key} must be replaced with the API key found in the environment variable `ANTHROPIC_API_KEY`.
 
             The data for the POST is of this form:
 
@@ -23,62 +24,57 @@ Context: Implementation
                 "model": "selected-model",
                 "messages": [{"role": "user", "content": "Say this is a test!"}],
                 "temperature": temp-setting,
-                "stream": true,
-                "stream_options": {"include_usage": true}
+                "max_tokens": 1024,
+                "stream": true
             }
             ```
 
             In this, "selected-model" is name of the selected AI model, and "temp-setting" is the numeric temperature
             setting defined by the user.
 
-            The "content" section of a message should be replaced with the user's message to the AI.
-            With streaming enabled, responses will arrive as chunks. Each chunk begins with "data: " followed
-            by a JSON object. This repeats until a chunk containing "data: [DONE]" arrives.  Each JSON chunk
-            takes this form:
+            The content section of a message should be replaced with the user's message to the AI.
+
+            With streaming enabled, responses arrive as server-sent events. Each event begins with "data: " followed by
+            event type and a JSON object. The sequence will be:
+
+            1. message_start with initial usage statistics
+            2. content_block_start to mark beginning of response
+            3. content_block_delta events with actual content
+            4. content_block_stop for end of current block
+            5. message_delta with final usage statistics
+            6. message_stop to end the sequence
+
+            Example response chunk formats:
 
             ```json
             {
-                "id": "chatcmpl-abc123",
-                "object": "chat.completion.chunk",
-                "created": 1677858242,
-                "model": "gpt-4o-mini",
-                "choices": [
-                    {
-                        "delta": {
-                            "content": "chunk of text"
-                        },
-                        "finish_reason": null,
-                        "index": 0
-                    }
-                ]
+                "type": "content_block_delta",
+                "index": 0,
+                "delta": {
+                    "type": "text_delta",
+                    "text": "chunk of text"
+                }
             }
             ```
 
-            The final chunk includes usage information:
+            Usage stats are provided in message_start and message_delta events:
 
             ```json
             {
-                "id": "chatcmpl-abc123",
-                "object": "chat.completion.chunk",
-                "created": 1677858242,
-                "model": "gpt-4o-mini",
                 "usage": {
-                    "prompt_tokens": 13,
-                    "completion_tokens": 7,
-                    "total_tokens": 20
-                },
-                "choices": [
-                    {
-                        "delta": {},
-                        "finish_reason": "stop",
-                        "index": 0
-                    }
-                ]
+                    "input_tokens": 12,
+                    "output_tokens": 6
+                }
             }
             ```
 
-            In this message, the content is what should be captured as the AI response, but capture the usage information
-            in the JSON transcript.
+            Context: Provider-specific errors
+                Context: Anthropic errors
+                    Anthropic errors include:
+
+                    - Invalid API key
+                    - Overloaded error (too many requests)
+                    - Model overloaded
 
         Context: Google REST endpoint
             Messages are sent via a POST message.
@@ -161,18 +157,16 @@ Context: Implementation
 
             The final chunk will have finishReason set to "STOP" and may include usage information.
 
-        Context: Anthropic REST endpoint
+        Context: M6R REST endpoint
             Messages are sent via a POST message.
 
-            The endpoint is "https://api.anthropic.com/v1/messages".
+            The API to use is the chat API. The endpoint is "http://localhost:8080/v1/chat".
 
-            This needs three headers to be provided:
-
+            This needs two headers to be provided:
             "Content-Type": "application/json"
-            "x-api-key": {key}
-            "anthropic-version": "2023-06-01"
+            "Authorization": "Bearer {key}"
 
-            {key} must be replaced with the API key found in the environment variable `ANTHROPIC_API_KEY`.
+            {key} must be replaced with the API key found in the environment variable `M6R_API_KEY`.
 
             The data for the POST is of this form:
 
@@ -180,58 +174,37 @@ Context: Implementation
             {
                 "model": "selected-model",
                 "messages": [{"role": "user", "content": "Say this is a test!"}],
-                "temperature": temp-setting,
-                "max_tokens": 1024,
                 "stream": true
             }
             ```
 
-            In this, "selected-model" is name of the selected AI model, and "temp-setting" is the numeric temperature
-            setting defined by the user.
-
-            The content section of a message should be replaced with the user's message to the AI.
-
-            With streaming enabled, responses arrive as server-sent events. Each event begins with "data: " followed by
-            event type and a JSON object. The sequence will be:
-
-            1. message_start with initial usage statistics
-            2. content_block_start to mark beginning of response
-            3. content_block_delta events with actual content
-            4. content_block_stop for end of current block
-            5. message_delta with final usage statistics
-            6. message_stop to end the sequence
-
-            Example response chunk formats:
+            With streaming enabled, responses will arrive as Server-Sent Events.
+            Each event begins with "data: " followed by a JSON object.
+            The stream ends with a "data: [DONE]" message.
+            Each JSON chunk takes this form:
 
             ```json
             {
-                "type": "content_block_delta",
-                "index": 0,
-                "delta": {
-                    "type": "text_delta",
-                    "text": "chunk of text"
-                }
-            }
-            ```
-
-            Usage stats are provided in message_start and message_delta events:
-
-            ```json
-            {
+                "type": "content",
+                "text": "chunk of text",
                 "usage": {
-                    "input_tokens": 12,
-                    "output_tokens": 6
+                    "output_tokens": 10
                 }
             }
             ```
 
-            Context: Provider-specific errors
-                Context: Anthropic errors
-                    Anthropic errors include:
+            The final chunk will have type "done" and include total usage information:
 
-                    - Invalid API key
-                    - Overloaded error (too many requests)
-                    - Model overloaded
+            ```json
+            {
+                "type": "done",
+                "usage": {
+                    "input_tokens": 5,
+                    "output_tokens": 20,
+                    "total_tokens": 25
+                }
+            }
+            ```
 
         Context: Ollama REST endpoint
             Messages are sent via a POST message.
@@ -294,6 +267,82 @@ Context: Implementation
             in the JSON transcript.
 
             The input token count is "prompt_eval_count" and the output token count is "eval_count".
+
+        Context: OpenAI REST endpoint
+            Messages are sent via a POST message.
+
+            The API to use is the "continuations" API.  The endpoint is "https://api.openai.com/v1/chat/completions".
+
+            This needs two headers to be provided:
+
+            "Content-Type": "application/json"
+            "Authorization": {key}"
+
+            {key} must be replaced with the API key found in the environment variable `OPENAI_API_KEY`.
+
+            The data for the POST is of this form:
+
+            ```json
+            {
+                "model": "selected-model",
+                "messages": [{"role": "user", "content": "Say this is a test!"}],
+                "temperature": temp-setting,
+                "stream": true,
+                "stream_options": {"include_usage": true}
+            }
+            ```
+
+            In this, "selected-model" is name of the selected AI model, and "temp-setting" is the numeric temperature
+            setting defined by the user.
+
+            The "content" section of a message should be replaced with the user's message to the AI.
+            With streaming enabled, responses will arrive as chunks. Each chunk begins with "data: " followed
+            by a JSON object. This repeats until a chunk containing "data: [DONE]" arrives.  Each JSON chunk
+            takes this form:
+
+            ```json
+            {
+                "id": "chatcmpl-abc123",
+                "object": "chat.completion.chunk",
+                "created": 1677858242,
+                "model": "gpt-4o-mini",
+                "choices": [
+                    {
+                        "delta": {
+                            "content": "chunk of text"
+                        },
+                        "finish_reason": null,
+                        "index": 0
+                    }
+                ]
+            }
+            ```
+
+            The final chunk includes usage information:
+
+            ```json
+            {
+                "id": "chatcmpl-abc123",
+                "object": "chat.completion.chunk",
+                "created": 1677858242,
+                "model": "gpt-4o-mini",
+                "usage": {
+                    "prompt_tokens": 13,
+                    "completion_tokens": 7,
+                    "total_tokens": 20
+                },
+                "choices": [
+                    {
+                        "delta": {},
+                        "finish_reason": "stop",
+                        "index": 0
+                    }
+                ]
+            }
+            ```
+
+            In this message, the content is what should be captured as the AI response, but capture the usage information
+            in the JSON transcript.
 
     Context: Logging
         Where appropriate the application will log key operations, errors, and exceptions to a log file.  A new log file
