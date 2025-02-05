@@ -87,6 +87,7 @@ class TerminalWidget(QPlainTextEdit):
         self._using_alternate_screen = False
         self._scroll_region: Optional[Tuple[int, int]] = None
         self._application_cursor_keys = False
+        self._application_keypad_mode = False
         self._mouse_tracking = False
         self._mouse_tracking_sgr = False
         self._saved_mouse_tracking = False
@@ -99,6 +100,31 @@ class TerminalWidget(QPlainTextEdit):
         text = event.text()
         key = event.key()
         modifiers = event.modifiers()
+
+        # Handle keypad in application mode
+        if self._application_keypad_mode and not modifiers:
+            # Map keypad keys to application mode sequences
+            keypad_map = {
+                Qt.Key_0: b'\x1bOp',
+                Qt.Key_1: b'\x1bOq',
+                Qt.Key_2: b'\x1bOr',
+                Qt.Key_3: b'\x1bOs',
+                Qt.Key_4: b'\x1bOt',
+                Qt.Key_5: b'\x1bOu',
+                Qt.Key_6: b'\x1bOv',
+                Qt.Key_7: b'\x1bOw',
+                Qt.Key_8: b'\x1bOx',
+                Qt.Key_9: b'\x1bOy',
+                Qt.Key_Minus: b'\x1bOm',
+                Qt.Key_Plus: b'\x1bOl',
+                Qt.Key_Period: b'\x1bOn',
+                Qt.Key_Enter: b'\x1bOM',
+            }
+
+            if key in keypad_map:
+                self.data_ready.emit(keypad_map[key])
+                event.accept()
+                return
 
         # Handle control key combinations
         if modifiers & Qt.ControlModifier:
@@ -226,16 +252,50 @@ class TerminalWidget(QPlainTextEdit):
                 self.data_ready.emit(text.encode())
 
     def put_data(self, data: bytes):
-        """Display received data with ANSI sequence handling."""
+        """Display received data with ANSI sequence handling.
+
+        Args:
+            data: Raw bytes from terminal
+
+        Raises:
+            UnicodeDecodeError: If data cannot be decoded
+        """
         text = data.decode(errors='replace')
 
         for char in text:
             if self._in_escape_seq:
                 self._escape_seq_buffer += char
-                if char.isalpha() or char == 'm' or char == 'h' or char == 'l' or char == 'f':
-                    self._process_escape_sequence(self._escape_seq_buffer)
+
+                # Handle single-character sequences
+                if len(self._escape_seq_buffer) == 2:  # ESC + one character
+                    if char in {'=', '>', '\\', '7', '8', 'c', 'D', 'E', 'H', 'M'}:
+                        self._process_escape_sequence(self._escape_seq_buffer)
+                        self._escape_seq_buffer = ""
+                        self._in_escape_seq = False
+                        continue
+
+                # Handle CSI sequences
+                if len(self._escape_seq_buffer) >= 2 and self._escape_seq_buffer[1] == '[':
+                    if char.isalpha() or char in {'@', '`', '~'}:
+                        self._process_escape_sequence(self._escape_seq_buffer)
+                        self._escape_seq_buffer = ""
+                        self._in_escape_seq = False
+                        continue
+
+                # Handle OSC sequences
+                if len(self._escape_seq_buffer) >= 2 and self._escape_seq_buffer[1] == ']':
+                    if char in {'\\', '\x07'}:  # BEL character can also terminate OSC
+                        self._process_escape_sequence(self._escape_seq_buffer)
+                        self._escape_seq_buffer = ""
+                        self._in_escape_seq = False
+                        continue
+
+                # Safety check for buffer length
+                if len(self._escape_seq_buffer) > 32:  # Arbitrary reasonable limit
+                    logger.warning(f"Escape sequence too long, discarding: {self._escape_seq_buffer}")
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
+
             elif char == '\x1b':  # ESC
                 self._in_escape_seq = True
                 self._escape_seq_buffer = char
@@ -244,16 +304,44 @@ class TerminalWidget(QPlainTextEdit):
 
         self.ensureCursorVisible()
 
-    def _handle_osc_sequence(self, sequence: str):
-        """Handle Operating System Command (OSC) sequences."""
-        if sequence.startswith('\x1b]7;'):
-            # Current Working Directory notification
+    def _handle_osc_sequence(self, sequence: str) -> bool:
+        """Handle Operating System Command (OSC) sequences.
+
+        Args:
+            sequence: The OSC sequence to handle
+
+        Returns:
+            bool: True if sequence was handled, False otherwise
+
+        Raises:
+            None
+        """
+        # Handle window title (ESC]0;)
+        if sequence.startswith('\x1b]0;'):
             try:
-                self._current_directory = sequence[4:-1]  # Remove ESC]7; prefix and terminator
-                logger.debug(f"Current directory set to: {self._current_directory}")
+                title = sequence[4:-1]  # Remove ESC]0; prefix and terminator
+                # Emit signal to update window title
+                logger.debug(f"Window title set to: {title}")
+                return True
+            except Exception as e:
+                logger.warning(f"Failed to process window title update: {e}")
+                return True
+
+        # Handle current working directory notification (ESC]7;)
+        if sequence.startswith('\x1b]7;'):
+            try:
+                if sequence.endswith('f'):  # Query current directory
+                    if self._current_directory:
+                        response = f"\x1b]7;{self._current_directory}\x1b\\"
+                        self.data_ready.emit(response.encode())
+                else:
+                    self._current_directory = sequence[4:-1]  # Remove ESC]7; prefix and terminator
+                    logger.debug(f"Current directory set to: {self._current_directory}")
+                return True
             except Exception as e:
                 logger.warning(f"Failed to process directory update: {e}")
-            return True
+                return True
+
         return False
 
     def _process_escape_sequence(self, sequence: str):
@@ -262,6 +350,15 @@ class TerminalWidget(QPlainTextEdit):
         if sequence.startswith('\x1b]'):
             if self._handle_osc_sequence(sequence):
                 return
+
+        # Handle keypad mode sequences
+        if sequence == '\x1b=':  # ESC=
+            self._application_keypad_mode = True
+            return
+
+        if sequence == '\x1b>':  # ESC>
+            self._application_keypad_mode = False
+            return
 
         # Handle bracketed paste mode
         if sequence == '\x1b[?2004h':
@@ -361,8 +458,13 @@ class TerminalWidget(QPlainTextEdit):
             return
 
         # Enable application keypad mode
-        if sequence == '\x1b=':
+        if sequence == '\x1b[?1h':
             self._application_cursor_keys = True
+            return
+
+        # Enable application keypad mode
+        if sequence == '\x1b[?1l':
+            self._application_cursor_keys = False
             return
 
         # Handle basic color codes
@@ -383,6 +485,16 @@ class TerminalWidget(QPlainTextEdit):
         # Clear from cursor to end of screen
         if sequence == '\x1b[J':
             self._clear_to_end_of_screen()
+            return
+
+        # Clear from start of line to cursor (ESC[1K)
+        if sequence == '\x1b[1K':
+            cursor = self.textCursor()
+            start_pos = cursor.block().position()
+            cursor.setPosition(start_pos)
+            end_pos = self.textCursor().position()
+            cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
             return
 
         # Clear to end of line
