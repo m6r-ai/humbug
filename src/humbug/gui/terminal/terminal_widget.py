@@ -91,12 +91,40 @@ class TerminalWidget(QPlainTextEdit):
         self._mouse_tracking_sgr = False
         self._saved_mouse_tracking = False
         self._saved_mouse_tracking_sgr = False
+        self._bracketed_paste_mode = False
+        self._current_directory = None
 
     def keyPressEvent(self, event: QKeyEvent):
-        """Send all keypresses to the process."""
+        """Handle key press events including control sequences."""
         text = event.text()
         key = event.key()
+        modifiers = event.modifiers()
 
+        # Handle control key combinations
+        if modifiers & Qt.ControlModifier:
+            if key >= Qt.Key_A and key <= Qt.Key_Z:
+                # Calculate control character (1-26)
+                ctrl_char = bytes([key - Qt.Key_A + 1])
+                self.data_ready.emit(ctrl_char)
+                event.accept()
+                return
+
+            # Handle special control sequences
+            ctrl_map = {
+                Qt.Key_2: b'\x00',  # Ctrl+@, Ctrl+2
+                Qt.Key_3: b'\x1b',  # Ctrl+[, Ctrl+3
+                Qt.Key_4: b'\x1c',  # Ctrl+\, Ctrl+4
+                Qt.Key_5: b'\x1d',  # Ctrl+], Ctrl+5
+                Qt.Key_6: b'\x1e',  # Ctrl+^, Ctrl+6
+                Qt.Key_7: b'\x1f',  # Ctrl+_, Ctrl+7
+                Qt.Key_8: b'\x7f',  # Ctrl+8 (delete)
+            }
+            if key in ctrl_map:
+                self.data_ready.emit(ctrl_map[key])
+                event.accept()
+                return
+
+        # Handle application cursor key mode and normal mode
         if self._application_cursor_keys:
             # Handle cursor keys in application mode
             if key == Qt.Key_Up:
@@ -107,18 +135,32 @@ class TerminalWidget(QPlainTextEdit):
                 self.data_ready.emit(b'\x1bOC')
             elif key == Qt.Key_Left:
                 self.data_ready.emit(b'\x1bOD')
+            elif key == Qt.Key_Return or key == Qt.Key_Enter:
+                self.data_ready.emit(b'\r')
             elif key == Qt.Key_Backspace:
-                self.data_ready.emit(b'\b')
+                self.data_ready.emit(b'\x7f' if modifiers & Qt.ControlModifier else b'\b')
             elif key == Qt.Key_Delete:
-                self.data_ready.emit(b'\x7f')
+                self.data_ready.emit(b'\x1b[3~')
             elif text:
                 self.data_ready.emit(text.encode())
         else:
             # Normal mode key handling
-            if key == Qt.Key_Backspace:
-                self.data_ready.emit(b'\b')
+            if key == Qt.Key_Up:
+                self.data_ready.emit(b'\x1b[A')
+            elif key == Qt.Key_Down:
+                self.data_ready.emit(b'\x1b[B')
+            elif key == Qt.Key_Right:
+                self.data_ready.emit(b'\x1b[C')
+            elif key == Qt.Key_Left:
+                self.data_ready.emit(b'\x1b[D')
+            elif key == Qt.Key_Return or key == Qt.Key_Enter:
+                self.data_ready.emit(b'\r')
+            elif key == Qt.Key_Backspace:
+                self.data_ready.emit(b'\x7f' if modifiers & Qt.ControlModifier else b'\b')
             elif key == Qt.Key_Delete:
-                self.data_ready.emit(b'\x7f')
+                self.data_ready.emit(b'\x1b[3~')
+            elif key == Qt.Key_Tab:
+                self.data_ready.emit(b'\t')
             elif text:
                 self.data_ready.emit(text.encode())
 
@@ -171,6 +213,18 @@ class TerminalWidget(QPlainTextEdit):
         else:
             super().mouseReleaseEvent(event)
 
+    def insertFromMimeData(self, source):
+        """Handle paste events with support for bracketed paste mode."""
+        if source.hasText():
+            text = source.text()
+            if self._bracketed_paste_mode:
+                # Wrap the pasted text in bracketed paste sequences
+                self.data_ready.emit(b'\x1b[200~')
+                self.data_ready.emit(text.encode())
+                self.data_ready.emit(b'\x1b[201~')
+            else:
+                self.data_ready.emit(text.encode())
+
     def put_data(self, data: bytes):
         """Display received data with ANSI sequence handling."""
         text = data.decode(errors='replace')
@@ -178,7 +232,7 @@ class TerminalWidget(QPlainTextEdit):
         for char in text:
             if self._in_escape_seq:
                 self._escape_seq_buffer += char
-                if char.isalpha() or char == 'm' or char == 'h' or char == 'l':
+                if char.isalpha() or char == 'm' or char == 'h' or char == 'l' or char == 'f':
                     self._process_escape_sequence(self._escape_seq_buffer)
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
@@ -190,79 +244,34 @@ class TerminalWidget(QPlainTextEdit):
 
         self.ensureCursorVisible()
 
-    def _insert_plain_text(self, text: str):
-        """Insert text at current cursor position with scroll region support."""
-        cursor = self.textCursor()
-
-        # Apply the current text format
-        cursor.mergeCharFormat(self._current_text_format)
-
-        if text == '\r':
-            # Move to start of line
-            cursor.movePosition(QTextCursor.StartOfLine)
-        elif text == '\n':
-            # Handle newline with scroll region support
-            if self._scroll_region is not None:
-                top, bottom = self._scroll_region
-                current_line = cursor.blockNumber()
-
-                if current_line == bottom:
-                    # At bottom of scroll region, need to scroll
-                    cursor.movePosition(QTextCursor.Start)
-                    for _ in range(top):
-                        cursor.movePosition(QTextCursor.NextBlock)
-                    scroll_start = cursor.position()
-
-                    cursor.movePosition(QTextCursor.Start)
-                    for _ in range(top + 1):
-                        cursor.movePosition(QTextCursor.NextBlock)
-                    scroll_text_start = cursor.position()
-
-                    cursor.movePosition(QTextCursor.Start)
-                    for _ in range(bottom + 1):
-                        cursor.movePosition(QTextCursor.NextBlock)
-                    scroll_end = cursor.position()
-
-                    # Select and copy the text to be scrolled
-                    cursor.setPosition(scroll_text_start)
-                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
-                    text_to_move = cursor.selectedText()
-
-                    # Delete old content and insert at new position
-                    cursor.setPosition(scroll_start)
-                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
-                    cursor.removeSelectedText()
-                    cursor.setPosition(scroll_start)
-                    cursor.insertText(text_to_move)
-
-                    # Move to the end of the line
-                    cursor.movePosition(QTextCursor.EndOfLine)
-                else:
-                    # Normal newline behavior
-                    cursor.movePosition(QTextCursor.EndOfLine)
-                    cursor.insertText('\n')
-            else:
-                # No scroll region, normal newline
-                cursor.movePosition(QTextCursor.EndOfLine)
-                cursor.insertText('\n')
-            cursor.movePosition(QTextCursor.StartOfLine)
-        elif text == '\b':  # Backspace
-            cursor.movePosition(QTextCursor.Left)
-            cursor.deleteChar()
-        elif text == '\t':  # Tab
-            # Insert 8 spaces for tab
-            cursor.insertText(' ' * 8)
-        elif text == '\x0b':  # Vertical tab
-            cursor.movePosition(QTextCursor.Down)
-        elif text == '\x0c':  # Form feed
-            self.clear()
-        else:
-            cursor.insertText(text)
-
-        self.setTextCursor(cursor)
+    def _handle_osc_sequence(self, sequence: str):
+        """Handle Operating System Command (OSC) sequences."""
+        if sequence.startswith('\x1b]7;'):
+            # Current Working Directory notification
+            try:
+                self._current_directory = sequence[4:-1]  # Remove ESC]7; prefix and terminator
+                logger.debug(f"Current directory set to: {self._current_directory}")
+            except Exception as e:
+                logger.warning(f"Failed to process directory update: {e}")
+            return True
+        return False
 
     def _process_escape_sequence(self, sequence: str):
         """Handle ANSI escape sequences."""
+        # Handle OSC sequences first
+        if sequence.startswith('\x1b]'):
+            if self._handle_osc_sequence(sequence):
+                return
+
+        # Handle bracketed paste mode
+        if sequence == '\x1b[?2004h':
+            self._bracketed_paste_mode = True
+            return
+
+        if sequence == '\x1b[?2004l':
+            self._bracketed_paste_mode = False
+            return
+
         # Clear scrollback buffer
         if sequence == '\x1b[3J':
             cursor = self.textCursor()
@@ -401,6 +410,84 @@ class TerminalWidget(QPlainTextEdit):
 
         logger.warning(f"Unhandled escape sequence: {sequence}")
 
+    def _insert_plain_text(self, text: str):
+        """Insert text at current cursor position with scroll region support."""
+        cursor = self.textCursor()
+
+        # Apply the current text format
+        cursor.mergeCharFormat(self._current_text_format)
+
+        if text == '\r':
+            # Move to start of line
+            cursor.movePosition(QTextCursor.StartOfLine)
+        elif text == '\n':
+            # Handle newline with scroll region support
+            if self._scroll_region is not None:
+                top, bottom = self._scroll_region
+                current_line = cursor.blockNumber()
+
+                if current_line == bottom:
+                    # At bottom of scroll region, need to scroll
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(top):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_start = cursor.position()
+
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(top + 1):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_text_start = cursor.position()
+
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(bottom + 1):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_end = cursor.position()
+
+                    # Select and copy the text to be scrolled
+                    cursor.setPosition(scroll_text_start)
+                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
+                    text_to_move = cursor.selectedText()
+
+                    # Delete old content and insert at new position
+                    cursor.setPosition(scroll_start)
+                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
+                    cursor.removeSelectedText()
+                    cursor.setPosition(scroll_start)
+                    cursor.insertText(text_to_move)
+
+                    # Move to the end of the line
+                    cursor.movePosition(QTextCursor.EndOfLine)
+                else:
+                    # Normal newline behavior
+                    cursor.movePosition(QTextCursor.EndOfLine)
+                    cursor.insertText('\n')
+            else:
+                # No scroll region, normal newline
+                cursor.movePosition(QTextCursor.EndOfLine)
+                cursor.insertText('\n')
+            cursor.movePosition(QTextCursor.StartOfLine)
+        elif text == '\b':  # Backspace/Cursor Left
+            cursor.movePosition(QTextCursor.Left)
+        elif text == '\t':  # Tab
+            # Handle each space in overwrite mode
+            for _ in range(8):
+                if not cursor.atEnd():
+                    cursor.deleteChar()
+
+                cursor.insertText(' ')
+        elif text == '\x0b':  # Vertical tab
+            cursor.movePosition(QTextCursor.Down)
+        elif text == '\x0c':  # Form feed
+            self.clear()
+        else:
+            # In a terminal, we always overwrite the character at cursor position
+            if not cursor.atEnd():
+                cursor.deleteChar()
+
+            cursor.insertText(text)
+
+        self.setTextCursor(cursor)
+
     def _clear_to_end_of_screen(self):
         """Clear from cursor position to the end of screen."""
         cursor = self.textCursor()
@@ -428,7 +515,10 @@ class TerminalWidget(QPlainTextEdit):
         current_format = QTextCharFormat(self._current_text_format)
 
         for param in params.split(';'):
-            code = int(param)
+            try:
+                code = int(param)
+            except ValueError:
+                continue
 
             if code == 0:  # Reset all attributes
                 current_format = QTextCharFormat(self._default_text_format)
