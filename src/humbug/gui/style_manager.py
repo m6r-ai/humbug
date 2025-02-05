@@ -181,6 +181,16 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a04040"
             },
 
+            # Terminal elements
+            ColorRole.TERMINAL_TEXT: {
+                ColorMode.DARK: "#ffffff",
+                ColorMode.LIGHT: "#000000"
+            },
+            ColorRole.TERMINAL_BACKGROUND: {
+                ColorMode.DARK: "#080808",
+                ColorMode.LIGHT: "#e0e0e0"
+            },
+
             # Status bar elements
             ColorRole.STATUS_BAR_BACKGROUND: {
                 ColorMode.DARK: "#121212",

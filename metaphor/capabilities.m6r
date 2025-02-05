@@ -303,6 +303,10 @@ Context: Capabilities
                         tab stop, or to the next non-whitespace character if this occurs before the previous tab stop.  The
                         cursor will move to match the amount outdented.
 
+                Context: Terminal tabs
+                    The software supports terminal tabs.  These provide access to a shell environment via a terminal
+                    emulator.
+
             Context: Syntax highlighting
                 Code blocks and inline code will be syntax highlighted based on the programming language
                 or data format:
@@ -707,6 +711,13 @@ Context: Capabilities
                 The "New File" menu item will create a new empty editor tab.
 
                 This will be matched with a keyboard shortcut "Ctrl+N".
+
+                This option is only valid if a mindspace is open.
+
+            Context: New Terminal
+                The "New Terminal" menu item will create a new terminal tab.
+
+                This will be matched with a keyboard shortcut "Ctrl+Alt+T".
 
                 This option is only valid if a mindspace is open.
 

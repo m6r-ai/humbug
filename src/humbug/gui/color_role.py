@@ -47,6 +47,10 @@ class ColorRole(Enum):
     MESSAGE_AI = auto()                 # AI message background
     MESSAGE_SYSTEM = auto()             # System message background
 
+    # Terminal colours
+    TERMINAL_TEXT = auto()
+    TERMINAL_BACKGROUND = auto()
+
     # Status bar elements
     STATUS_BAR_BACKGROUND = auto()      # Status bar background
 

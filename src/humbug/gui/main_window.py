@@ -72,6 +72,10 @@ class MainWindow(QMainWindow):
         self._new_file_action.setShortcut(QKeySequence.New)
         self._new_file_action.triggered.connect(self._new_file)
 
+        self._new_terminal_action = QAction(strings.new_terminal, self)
+        self._new_terminal_action.setShortcut(QKeySequence("Ctrl+Alt+T"))
+        self._new_terminal_action.triggered.connect(self._new_terminal)
+
         self._open_mindspace_action = QAction(strings.open_mindspace, self)
         self._open_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
         self._open_mindspace_action.triggered.connect(self._open_mindspace)
@@ -190,6 +194,7 @@ class MainWindow(QMainWindow):
         self._file_menu.addAction(self._new_conv_action)
         self._file_menu.addAction(self._new_metaphor_conv_action)
         self._file_menu.addAction(self._new_file_action)
+        self._file_menu.addAction(self._new_terminal_action)
         self._file_menu.addSeparator()
         self._file_menu.addAction(self._open_mindspace_action)
         self._file_menu.addAction(self._open_conv_action)
@@ -549,6 +554,13 @@ class MainWindow(QMainWindow):
         dialog = AboutDialog(self)
         dialog.exec()
 
+    def _new_terminal(self):
+        """Show new terminal dialog and create terminal tab."""
+        if not self._mindspace_manager.has_mindspace:
+            return
+
+        self._tab_manager.new_terminal()
+
     def _new_file(self):
         """Create a new empty editor tab."""
         if not self._mindspace_manager.has_mindspace:
@@ -644,6 +656,7 @@ class MainWindow(QMainWindow):
         self._new_file_action.setEnabled(has_mindspace)
         self._open_conv_action.setEnabled(has_mindspace)
         self._open_file_action.setEnabled(has_mindspace)
+        self._new_terminal_action.setEnabled(has_mindspace)
         self._mindspace_settings_action.setEnabled(has_mindspace)
 
         # Update tab-specific actions

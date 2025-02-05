@@ -14,6 +14,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_error import ConversationError
 from humbug.gui.conversation.conversation_tab import ConversationTab
 from humbug.gui.editor.editor_tab import EditorTab
+from humbug.gui.terminal.terminal_tab import TerminalTab
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
@@ -752,6 +753,26 @@ class TabManager(QWidget):
         # Create task to fork conversation
         asyncio.create_task(fork_and_handle_errors())
 
+    def new_terminal(self, command: Optional[str] = None) -> TerminalTab:
+        """Create new terminal tab.
+
+        Args:
+            command: Optional command to run in terminal
+
+        Returns:
+            Created terminal tab
+        """
+        tab_id = str(uuid.uuid4())
+        terminal = TerminalTab(tab_id, command, self)
+
+        if command:
+            title = f"Term: {os.path.basename(command)}"
+        else:
+            title = "Terminal"
+
+        self.add_tab(terminal, title)
+        return terminal
+
     def save_state(self) -> Dict:
         """Get current state of all tabs."""
         tab_columns = []
@@ -812,10 +833,14 @@ class TabManager(QWidget):
             )
             tab.forkRequested.connect(self._fork_conversation)
             return tab
-        elif state.type == TabType.EDITOR:
+
+        if state.type == TabType.EDITOR:
             tab = EditorTab.restore_from_state(state, self)
             self._connect_editor_signals(tab)
             return tab
+
+        if state.type == TabType.TERMINAL:
+           return TerminalTab.restore_from_state(state, self)
 
         return None
 
@@ -828,6 +853,12 @@ class TabManager(QWidget):
         """Get appropriate title for tab type."""
         if isinstance(tab, ConversationTab):
             return f"Conv: {tab.tab_id}"
+
+        if isinstance(tab, TerminalTab):
+            if state.metadata and "command" in state.metadata:
+                return f"Term: {os.path.basename(state.metadata['command'])}"
+
+            return "Terminal"
 
         return os.path.basename(state.path)
 

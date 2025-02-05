@@ -22,6 +22,7 @@ class LanguageStrings:
     new_conversation: str
     new_metaphor_conversation: str
     new_file: str
+    new_terminal: str
     open_mindspace: str
     open_conversation: str
     open_file: str
@@ -184,6 +185,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         new_conversation="New Conversation",
         new_metaphor_conversation="New Metaphor Conversation...",
         new_file="New File",
+        new_terminal="New Terminal",
         open_mindspace="Open Mindspace",
         open_conversation="Open Conversation...",
         open_file="Open File...",
@@ -339,6 +341,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         new_conversation="Nouvelle conversation",
         new_metaphor_conversation="Nouvelle conversation Metaphor...",
         new_file="Nouveau fichier",
+        new_terminal="TRANSLATE ME",
         open_mindspace="Ouvrir espace mental",
         open_conversation="Ouvrir conversation...",
         open_file="Ouvrir fichier...",
@@ -494,6 +497,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         new_conversation="محادثة جديدة",
         new_metaphor_conversation="محادثة ميتافور جديدة...",
         new_file="ملف جديد",
+        new_terminal="TRANSLATE ME",
         open_mindspace="فتح مساحة ذهنية",
         open_conversation="فتح محادثة...",
         open_file="فتح ملف...",
