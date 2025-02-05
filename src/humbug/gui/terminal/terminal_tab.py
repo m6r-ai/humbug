@@ -4,6 +4,7 @@ import asyncio
 from asyncio.subprocess import Process
 import logging
 import os
+import select
 from typing import Dict, Optional
 
 from PySide6.QtWidgets import QVBoxLayout
@@ -65,61 +66,81 @@ class TerminalTab(TabBase):
     async def _start_process(self):
         """Start the terminal process."""
         try:
-            # Start shell process
-            if self._command:
-                self._process = await asyncio.create_subprocess_shell(
-                    self._command,
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-            else:
-                shell = os.environ.get('SHELL', '/bin/sh')
-                self._process = await asyncio.create_subprocess_exec(
-                    shell,
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
+            # Debug logging
+            print("Starting terminal process...")
 
-            # Start read loops
-            asyncio.create_task(self._read_stdout())
-            asyncio.create_task(self._read_stderr())
+            shell = os.environ.get('SHELL', '/bin/sh')
+
+            # Make sure we're setting up a pseudo-terminal
+            import pty
+            import termios
+
+            # Create pseudo-terminal
+            master_fd, slave_fd = pty.openpty()
+
+            # Set raw mode
+            mode = termios.tcgetattr(slave_fd)
+            mode[3] &= ~(termios.ECHO | termios.ICANON)  # Turn off echo and canonical mode
+            termios.tcsetattr(slave_fd, termios.TCSAFLUSH, mode)
+
+            # Start process with the slave end of the pty
+            self._process = await asyncio.create_subprocess_exec(
+                shell,
+                stdin=slave_fd,
+                stdout=slave_fd,
+                stderr=slave_fd,
+                start_new_session=True
+            )
+
+            # Close slave fd as the subprocess has it
+            os.close(slave_fd)
+
+            print(f"Process started with pid {self._process.pid}")
+
+            # Create task for reading from master_fd
+            asyncio.create_task(self._read_loop(master_fd))
+
+            # Store master fd for writing
+            self._master_fd = master_fd
 
         except Exception as e:
             self._logger.error("Failed to start terminal process: %s", str(e))
             self._terminal.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
-    async def _read_stdout(self):
-        """Read data from process stdout."""
+    async def _read_loop(self, master_fd):
+        """Read data from the master end of the pty."""
         try:
-            while self._process and not self._process.stdout.at_eof():
-                data = await self._process.stdout.read(4096)
-                if not data:
-                    break
-                self._terminal.put_data(data)
-        except Exception as e:
-            self._logger.error("Error reading stdout: %s", str(e))
+            while True:
+                r, w, e = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    select.select,
+                    [master_fd],
+                    [],
+                    []
+                )
 
-    async def _read_stderr(self):
-        """Read data from process stderr."""
-        try:
-            while self._process and not self._process.stderr.at_eof():
-                data = await self._process.stderr.read(4096)
-                if not data:
-                    break
-                self._terminal.put_data(data)
+                if master_fd in r:
+                    try:
+                        data = os.read(master_fd, 1024)
+                        if not data:
+                            break
+
+                        print(f"Read data: {data}")  # Debug
+                        self._terminal.put_data(data)
+                    except OSError:
+                        break
         except Exception as e:
-            self._logger.error("Error reading stderr: %s", str(e))
+            self._logger.error("Error in read loop: %s", str(e))
+        finally:
+            os.close(master_fd)
 
     @Slot(bytes)
     def _handle_data_ready(self, data: bytes):
         """Handle data from terminal."""
-        if self._process and self._process.stdin:
-            try:
-                self._process.stdin.write(data)
-            except Exception as e:
-                self._logger.error("Failed to write to process: %s", str(e))
+        try:
+            os.write(self._master_fd, data)
+        except Exception as e:
+            self._logger.error("Failed to write to process: %s", str(e))
 
     def _handle_style_changed(self):
         """Handle style changes."""

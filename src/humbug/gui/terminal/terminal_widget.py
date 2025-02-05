@@ -1,14 +1,15 @@
-# File: humbug/gui/terminal/terminal_widget.py
+"""Terminal widget implementation."""
 
-from typing import List, Optional
+from typing import Optional
 from dataclasses import dataclass
 import re
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import (
-    QTextCharFormat, QTextCursor, QKeyEvent, QColor
+    QTextCharFormat, QTextCursor, QKeyEvent, QColor, QFont
 )
+
 
 @dataclass
 class TerminalColors:
@@ -31,25 +32,18 @@ class TerminalColors:
     BRIGHT_CYAN = QColor(0, 255, 255)
     BRIGHT_WHITE = QColor(255, 255, 255)
 
-class TerminalWidget(QPlainTextEdit):
-    """Custom terminal emulator widget."""
 
-    # Signal emitted when user input is ready to be sent
+class TerminalWidget(QPlainTextEdit):
+    """Terminal display widget."""
+
+    # Signal emitted when user input is ready
     data_ready = Signal(bytes)
 
     def __init__(self, parent: Optional[QWidget] = None):
-        """Initialize terminal widget."""
         super().__init__(parent)
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
 
-        # Terminal state
-        self._input_start_pos = 0
-        self._command_history: List[str] = []
-        self._history_index = 0
-        self._current_line = ""
-
-        # Terminal settings
-        self._cursor_blink = True
+        # Terminal colors
         self._colors = TerminalColors()
 
         # Set up default appearance
@@ -64,124 +58,27 @@ class TerminalWidget(QPlainTextEdit):
         # Configure cursor
         self.setCursorWidth(8)
 
-        # Handle input
-        self.cursorPositionChanged.connect(self._handle_cursor_position_changed)
-
-        # Setup ANSI escape sequence processing
+        # ANSI escape sequence handling
         self._escape_seq_buffer = ""
         self._in_escape_seq = False
 
-        # Initialize with prompt
-        self._show_prompt()
-
-    def _show_prompt(self):
-        """Display command prompt."""
-        self.appendPlainText("$ ")
-        self._input_start_pos = self.textCursor().position()
-
-    def _handle_cursor_position_changed(self):
-        """Ensure cursor doesn't move before input area."""
-        cursor = self.textCursor()
-        if cursor.position() < self._input_start_pos:
-            cursor.setPosition(self._input_start_pos)
-            self.setTextCursor(cursor)
-
     def keyPressEvent(self, event: QKeyEvent):
-        """Handle key press events."""
-        cursor = self.textCursor()
-
-        # Only allow input after prompt
-        if cursor.position() < self._input_start_pos:
-            cursor.setPosition(self._input_start_pos)
-            self.setTextCursor(cursor)
-
-        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
-            self._handle_return()
-            return
-
-        if event.key() == Qt.Key_Backspace:
-            if cursor.position() <= self._input_start_pos:
-                return
-            super().keyPressEvent(event)
-            return
-
-        if event.key() == Qt.Key_Up:
-            self._handle_history_up()
-            return
-
-        if event.key() == Qt.Key_Down:
-            self._handle_history_down()
-            return
-
-        if event.key() == Qt.Key_Left:
-            if cursor.position() <= self._input_start_pos:
-                return
-
-            super().keyPressEvent(event)
-            return
-
-        if event.key() == Qt.Key_Home:
-            cursor.setPosition(self._input_start_pos)
-            self.setTextCursor(cursor)
-            return
-
-        # Handle normal input
-        if not event.text():
-            return
-
-        super().keyPressEvent(event)
-
-    def _handle_return(self):
-        """Process return key press."""
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.End)
-        self.setTextCursor(cursor)
-
-        # Get current command
-        command = self.toPlainText()[self._input_start_pos:]
-
-        # Add to history
-        if command.strip():
-            self._command_history.append(command)
-            self._history_index = len(self._command_history)
-
-        # Emit command
-        self.data_ready.emit(command.encode() + b'\r\n')
-
-        # Add newline
-        self.appendPlainText("")
-
-    def _handle_history_up(self):
-        """Handle up arrow key for history."""
-        if not self._command_history:
-            return
-
-        if self._history_index > 0:
-            self._history_index -= 1
-            self._set_command(self._command_history[self._history_index])
-
-    def _handle_history_down(self):
-        """Handle down arrow key for history."""
-        if self._history_index < len(self._command_history) - 1:
-            self._history_index += 1
-            self._set_command(self._command_history[self._history_index])
-        else:
-            self._history_index = len(self._command_history)
-            self._set_command("")
-
-    def _set_command(self, command: str):
-        """Set the current command text."""
-        cursor = self.textCursor()
-        cursor.setPosition(self._input_start_pos)
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        cursor.insertText(command)
+        """Send all keypresses to the process."""
+        # Convert the key event into bytes to send
+        text = event.text()
+        if text:  # Only send if there's actual text (not just modifiers)
+            self.data_ready.emit(text.encode())
+        event.accept()
 
     def put_data(self, data: bytes):
-        """Process received data."""
+        """Display received data with ANSI sequence handling."""
+        print(f"put data {data}")
         text = data.decode(errors='replace')
 
         for char in text:
+            print(f"process char: {ord(char)}")
             if self._in_escape_seq:
+                print("esc seq")
                 self._escape_seq_buffer += char
                 if char.isalpha():
                     self._process_escape_sequence(self._escape_seq_buffer)
@@ -191,12 +88,23 @@ class TerminalWidget(QPlainTextEdit):
                 self._in_escape_seq = True
                 self._escape_seq_buffer = char
             else:
+                print(f"plain: {char}")
                 self._insert_plain_text(char)
+
+        self.ensureCursorVisible()
 
     def _insert_plain_text(self, text: str):
         """Insert text at current cursor position."""
         cursor = self.textCursor()
-        cursor.insertText(text)
+
+        if text == '\r':
+            # Move to start of line
+            cursor.movePosition(QTextCursor.StartOfLine)
+        elif text == '\n':
+            cursor.insertText('\n')
+        else:
+            cursor.insertText(text)
+
         self.setTextCursor(cursor)
 
     def _process_escape_sequence(self, sequence: str):
@@ -227,14 +135,14 @@ class TerminalWidget(QPlainTextEdit):
             if code == 0:  # Reset
                 char_format.setForeground(self._colors.WHITE)
                 char_format.setBackground(self._colors.BLACK)
-                char_format.setFontWeight(QTextCharFormat.Normal)
+                char_format.setFontWeight(QFont.Normal)
             elif code == 1:  # Bold
-                char_format.setFontWeight(QTextCharFormat.Bold)
+                char_format.setFontWeight(QFont.Bold)
             elif code == 4:  # Underline
                 char_format.setFontUnderline(True)
             elif code == 7:  # Inverse
-                fg = format.foreground().color()
-                bg = format.background().color()
+                fg = char_format.foreground().color()
+                bg = char_format.background().color()
                 char_format.setForeground(bg)
                 char_format.setBackground(fg)
             # Foreground colors
@@ -265,7 +173,7 @@ class TerminalWidget(QPlainTextEdit):
                 char_format.setBackground(color)
 
         cursor = self.textCursor()
-        cursor.mergeCharFormat(format)
+        cursor.mergeCharFormat(char_format)
         self.setTextCursor(cursor)
 
     def _handle_cursor_sequence(self, sequence: str):
@@ -301,4 +209,3 @@ class TerminalWidget(QPlainTextEdit):
     def clear(self):
         """Clear the terminal."""
         self.setPlainText("")
-        self._input_start_pos = 0
