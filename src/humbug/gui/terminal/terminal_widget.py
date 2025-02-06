@@ -101,9 +101,31 @@ class TerminalWidget(QPlainTextEdit):
         # Update default format
         self._update_default_format()
 
-        # Update current format if it matches default
-        if self._current_text_format == self._default_text_format:
-            self._current_text_format = QTextCharFormat(self._default_text_format)
+        # Update current format while preserving custom properties
+        new_format = QTextCharFormat(self._default_text_format)
+
+        # Check each custom property and preserve if set
+        if self._current_text_format.property(FormatProperty.CUSTOM_FOREGROUND):
+            new_format.setForeground(self._current_text_format.foreground())
+            new_format.setProperty(FormatProperty.CUSTOM_FOREGROUND, True)
+
+        if self._current_text_format.property(FormatProperty.CUSTOM_BACKGROUND):
+            new_format.setBackground(self._current_text_format.background())
+            new_format.setProperty(FormatProperty.CUSTOM_BACKGROUND, True)
+
+        if self._current_text_format.property(FormatProperty.CUSTOM_WEIGHT):
+            new_format.setFontWeight(self._current_text_format.fontWeight())
+            new_format.setProperty(FormatProperty.CUSTOM_WEIGHT, True)
+
+        if self._current_text_format.property(FormatProperty.CUSTOM_ITALIC):
+            new_format.setFontItalic(self._current_text_format.fontItalic())
+            new_format.setProperty(FormatProperty.CUSTOM_ITALIC, True)
+
+        if self._current_text_format.property(FormatProperty.CUSTOM_UNDERLINE):
+            new_format.setFontUnderline(self._current_text_format.fontUnderline())
+            new_format.setProperty(FormatProperty.CUSTOM_UNDERLINE, True)
+
+        self._current_text_format = new_format
 
         # Update appearance
         self.setStyleSheet(f"""
