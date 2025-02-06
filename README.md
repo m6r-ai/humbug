@@ -54,6 +54,8 @@ TBD
     - Syntax highlighting for various languages.  Currently supported: C, C++, CSS, HTML, JavaScript,
       JSON, Kotlin, Metaphor, Move, Python, Scheme, and TypeScript.
     - Auto-backup functionality for unsaved changes.
+- **Command Line Shell:**
+    - Support for accessing the local shell on Linux and MacOS systems.
 - **Mindspace Management:**
     - Project-specific environments with their own settings and state.
     - Mindspace settings include language, soft tabs, tab size, font size, and auto-backup options.

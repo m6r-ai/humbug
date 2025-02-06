@@ -2,10 +2,20 @@
 
 ## v0.5 (2025-02-04)
 
+New features:
+
+- Added a command line shell for users on Linux and MacOS.  This will let you open a
+  terminal window and use command line tools.
+- Added preliminary support for M6R AI backends.
+
 Internal structure changes:
 
 - The conversation, editor, and mindspace UI functionality has been moved into separate
   subdirectories to make it easier to find related functionality.
+
+Bug fixes:
+
+- Resolve a problem with the conversation settings dialog.
 
 ## v0.4 (2025-02-03)
 
