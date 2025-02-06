@@ -301,7 +301,8 @@ class MainWindow(QMainWindow):
         self._handle_language_changed()
 
         self._mindspace_manager = MindspaceManager()
-        self._restore_last_mindspace()
+
+        QTimer.singleShot(0, self._restore_last_mindspace)
 
     def _handle_language_changed(self) -> None:
         """Update UI text when language changes."""
