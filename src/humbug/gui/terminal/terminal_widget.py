@@ -1,14 +1,14 @@
 """Terminal widget implementation."""
 
 from typing import Optional, Tuple
-from dataclasses import dataclass
 import re
 import logging
+from enum import IntEnum
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import (
-    QTextCursor, QKeyEvent, QColor, QFont, QTextCharFormat, QMouseEvent,
+    QTextCursor, QKeyEvent, QFont, QTextCharFormat, QMouseEvent,
     QTextFormat
 )
 
@@ -16,6 +16,15 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 
 logger = logging.getLogger(__name__)
+
+
+class FormatProperty(IntEnum):
+    """Properties used to track which format attributes are explicit vs default."""
+    CUSTOM_FOREGROUND = QTextFormat.UserProperty
+    CUSTOM_BACKGROUND = QTextFormat.UserProperty + 1
+    CUSTOM_WEIGHT = QTextFormat.UserProperty + 2
+    CUSTOM_ITALIC = QTextFormat.UserProperty + 3
+    CUSTOM_UNDERLINE = QTextFormat.UserProperty + 4
 
 
 class TerminalWidget(QPlainTextEdit):
@@ -77,13 +86,15 @@ class TerminalWidget(QPlainTextEdit):
 
     def _update_default_format(self):
         """Update the default text format based on current style."""
+        self._default_text_format = QTextCharFormat()
         self._default_text_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
         self._default_text_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
         self._default_text_format.setFontWeight(QFont.Normal)
         self._default_text_format.setFontUnderline(False)
         self._default_text_format.setFontItalic(False)
-        # Set a custom property to mark this as using default colors
-        self._default_text_format.setProperty(QTextFormat.UserProperty, True)
+        # Clear any custom property markers
+        for prop in FormatProperty:
+            self._default_text_format.setProperty(prop, False)
 
     def _handle_style_changed(self):
         """Handle style changes."""
@@ -103,20 +114,23 @@ class TerminalWidget(QPlainTextEdit):
             }}
         """)
 
-        # Update colors for all text blocks that use default colors
+        # Update colors for all text blocks
         cursor = self.textCursor()
         saved_position = cursor.position()
         cursor.movePosition(cursor.Start)
 
         while not cursor.atEnd():
             cursor.movePosition(cursor.Right, cursor.KeepAnchor)
-            format = cursor.charFormat()
+            text_format = cursor.charFormat()
+            new_format = QTextCharFormat(text_format)
 
-            # Check if this format is using default colors
-            if format.hasProperty(QTextFormat.UserProperty) and format.property(QTextFormat.UserProperty):
-                new_format = QTextCharFormat(self._default_text_format)
-                cursor.mergeCharFormat(new_format)
+            # Only update colors that aren't custom (i.e., are using defaults)
+            if not format.hasProperty(FormatProperty.CUSTOM_FOREGROUND):
+                new_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
+            if not format.hasProperty(FormatProperty.CUSTOM_BACKGROUND):
+                new_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
 
+            cursor.mergeCharFormat(new_format)
             cursor.clearSelection()
 
         # Restore cursor position
@@ -544,7 +558,7 @@ class TerminalWidget(QPlainTextEdit):
         """Insert text at current cursor position with scroll region support."""
         cursor = self.textCursor()
 
-        # Apply the current text format
+        # Always apply the current format
         cursor.mergeCharFormat(self._current_text_format)
 
         if text == '\r':
@@ -603,7 +617,6 @@ class TerminalWidget(QPlainTextEdit):
             for _ in range(8):
                 if not cursor.atEnd():
                     cursor.deleteChar()
-
                 cursor.insertText(' ')
         elif text == '\x0b':  # Vertical tab
             cursor.movePosition(QTextCursor.Down)
@@ -613,7 +626,6 @@ class TerminalWidget(QPlainTextEdit):
             # In a terminal, we always overwrite the character at cursor position
             if not cursor.atEnd():
                 cursor.deleteChar()
-
             cursor.insertText(text)
 
         self.setTextCursor(cursor)
@@ -651,29 +663,42 @@ class TerminalWidget(QPlainTextEdit):
                 continue
 
             if code == 0:  # Reset all attributes
-                current_format = QTextCharFormat(self._default_text_format)
-                # Mark as using default colors
-                current_format.setProperty(QTextFormat.UserProperty, True)
+                current_format = QTextCharFormat()
+                current_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
+                current_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
+                current_format.setFontWeight(QFont.Normal)
+                current_format.setFontUnderline(False)
+                current_format.setFontItalic(False)
+                # Clear all custom property markers
+                for prop in FormatProperty:
+                    current_format.setProperty(prop, False)
             elif code == 1:  # Bold
                 current_format.setFontWeight(QFont.Bold)
+                current_format.setProperty(FormatProperty.CUSTOM_WEIGHT, True)
             elif code == 2:  # Faint
                 current_format.setFontWeight(QFont.Light)
+                current_format.setProperty(FormatProperty.CUSTOM_WEIGHT, True)
             elif code == 3:  # Italic
                 current_format.setFontItalic(True)
+                current_format.setProperty(FormatProperty.CUSTOM_ITALIC, True)
             elif code == 4:  # Underline
                 current_format.setFontUnderline(True)
+                current_format.setProperty(FormatProperty.CUSTOM_UNDERLINE, True)
             elif code == 22:  # Normal intensity (reset bold/faint)
                 current_format.setFontWeight(QFont.Normal)
+                current_format.setProperty(FormatProperty.CUSTOM_WEIGHT, False)
             elif code == 23:  # Not italic
                 current_format.setFontItalic(False)
+                current_format.setProperty(FormatProperty.CUSTOM_ITALIC, False)
             elif code == 24:  # Not underlined
                 current_format.setFontUnderline(False)
+                current_format.setProperty(FormatProperty.CUSTOM_UNDERLINE, False)
             elif code == 39:  # Default foreground color
-                current_format.setForeground(self._default_text_format.foreground().color())
-                current_format.setProperty(QTextFormat.UserProperty, True)
+                current_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
+                current_format.setProperty(FormatProperty.CUSTOM_FOREGROUND, False)
             elif code == 49:  # Default background color
-                current_format.setBackground(self._default_text_format.background().color())
-                current_format.setProperty(QTextFormat.UserProperty, True)
+                current_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
+                current_format.setProperty(FormatProperty.CUSTOM_BACKGROUND, False)
             # Foreground colors
             elif 30 <= code <= 37:
                 color_roles = [
@@ -687,8 +712,7 @@ class TerminalWidget(QPlainTextEdit):
                     ColorRole.TERM_WHITE
                 ]
                 current_format.setForeground(self._style_manager.get_color(color_roles[code - 30]))
-                # Clear default color marker as this is an explicit ANSI color
-                current_format.setProperty(QTextFormat.UserProperty, False)
+                current_format.setProperty(FormatProperty.CUSTOM_FOREGROUND, True)
             # Bright foreground colors
             elif 90 <= code <= 97:
                 color_roles = [
@@ -702,7 +726,7 @@ class TerminalWidget(QPlainTextEdit):
                     ColorRole.TERM_BRIGHT_WHITE
                 ]
                 current_format.setForeground(self._style_manager.get_color(color_roles[code - 90]))
-                current_format.setProperty(QTextFormat.UserProperty, False)
+                current_format.setProperty(FormatProperty.CUSTOM_FOREGROUND, True)
             # Background colors
             elif 40 <= code <= 47:
                 color_roles = [
@@ -716,7 +740,7 @@ class TerminalWidget(QPlainTextEdit):
                     ColorRole.TERM_WHITE
                 ]
                 current_format.setBackground(self._style_manager.get_color(color_roles[code - 40]))
-                current_format.setProperty(QTextFormat.UserProperty, False)
+                current_format.setProperty(FormatProperty.CUSTOM_BACKGROUND, True)
             # Bright background colors
             elif 100 <= code <= 107:
                 color_roles = [
@@ -730,7 +754,7 @@ class TerminalWidget(QPlainTextEdit):
                     ColorRole.TERM_BRIGHT_WHITE
                 ]
                 current_format.setBackground(self._style_manager.get_color(color_roles[code - 100]))
-                current_format.setProperty(QTextFormat.UserProperty, False)
+                current_format.setProperty(FormatProperty.CUSTOM_BACKGROUND, True)
 
         # Update the current text format
         self._current_text_format = current_format
