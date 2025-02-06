@@ -332,79 +332,123 @@ class TerminalWidget(QPlainTextEdit):
         """
         text = data.decode(errors='replace')
 
-        for char in text:
+        i = 0
+        while i < len(text):
+            char = text[i]
+
             if self._in_escape_seq:
                 self._escape_seq_buffer += char
 
-                # Handle single-character sequences
-                if len(self._escape_seq_buffer) == 2:  # ESC + one character
-                    if char in {'=', '>', '\\', '7', '8', 'c', 'D', 'E', 'H', 'M'}:
+                # Check for sequence endings based on type
+                if self._escape_seq_buffer.startswith('\x1b]'):  # OSC sequence
+                    if char == '\x07':  # BEL terminator
                         self._process_escape_sequence(self._escape_seq_buffer)
                         self._escape_seq_buffer = ""
                         self._in_escape_seq = False
-                        continue
+                    elif char == '\\' and self._escape_seq_buffer[-2:] == '\x1b\\':  # ST terminator
+                        self._process_escape_sequence(self._escape_seq_buffer)
+                        self._escape_seq_buffer = ""
+                        self._in_escape_seq = False
 
-                # Handle CSI sequences
-                if len(self._escape_seq_buffer) >= 2 and self._escape_seq_buffer[1] == '[':
+                elif self._escape_seq_buffer.startswith('\x1b['):  # CSI sequence
                     if char.isalpha() or char in {'@', '`', '~'}:
                         self._process_escape_sequence(self._escape_seq_buffer)
                         self._escape_seq_buffer = ""
                         self._in_escape_seq = False
-                        continue
 
-                # Handle OSC sequences
-                if len(self._escape_seq_buffer) >= 2 and self._escape_seq_buffer[1] == ']':
-                    if char in {'\\', '\x07'}:  # BEL character can also terminate OSC
+                elif self._escape_seq_buffer.startswith('\x1bP'):  # DCS sequence
+                    if char == '\\' and self._escape_seq_buffer[-2:] == '\x1b\\':  # ST terminator
                         self._process_escape_sequence(self._escape_seq_buffer)
                         self._escape_seq_buffer = ""
                         self._in_escape_seq = False
-                        continue
 
-                # Safety check for buffer length
-                if len(self._escape_seq_buffer) > 32:  # Arbitrary reasonable limit
-                    self._logger.warning(f"Escape sequence too long, discarding: {self._escape_seq_buffer}")
+                elif len(self._escape_seq_buffer) == 2:  # Simple ESC sequences
+                    if char in {'=', '>', '\\', '7', '8', 'c', 'D', 'E', 'H', 'M'}:
+                        self._process_escape_sequence(self._escape_seq_buffer)
+                        self._escape_seq_buffer = ""
+                        self._in_escape_seq = False
+
+                # Reset if we find a new escape sequence while processing one
+                elif char == '\x1b' and len(self._escape_seq_buffer) > 1:
+                    self._logger.debug(f"Found new escape sequence while processing: {repr(self._escape_seq_buffer)}")
+                    # Process what we have so far as raw text
+                    for c in self._escape_seq_buffer:
+                        self._insert_plain_text(c)
+                    self._escape_seq_buffer = char
+
+                # Safety check for buffer length - separate limits for different sequence types
+                elif (
+                    (self._escape_seq_buffer.startswith('\x1b]') and len(self._escape_seq_buffer) > 256) or  # OSC
+                    (self._escape_seq_buffer.startswith('\x1b[') and len(self._escape_seq_buffer) > 32) or   # CSI
+                    (self._escape_seq_buffer.startswith('\x1bP') and len(self._escape_seq_buffer) > 32) or   # DCS
+                    (len(self._escape_seq_buffer) > 16)  # Other
+                ):
+                    self._logger.warning(
+                        f"Escape sequence exceeded maximum length, discarding: {repr(self._escape_seq_buffer)}"
+                    )
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
 
-            elif char == '\x1b':  # ESC
+            elif char == '\x1b':  # Start of new escape sequence
                 self._in_escape_seq = True
                 self._escape_seq_buffer = char
+
             else:
                 self._insert_plain_text(char)
+
+            i += 1
 
         self.ensureCursorVisible()
 
     def _handle_osc_sequence(self, sequence: str) -> bool:
-        """Handle Operating System Command (OSC) sequences."""
-        # Window title (ESC]0;)
-        if sequence.startswith('\x1b]0;'):
-            title = sequence[4:-1]  # Remove ESC]0; prefix and terminator
-            # Emit signal to update window title
-            self._logger.debug(f"Window title set to: {title}")
-            return True
+        """Handle Operating System Command (OSC) sequences.
 
-        # Handle current working directory notification (ESC]7;)
-        if sequence.startswith('\x1b]7;'):
-            try:
-                if sequence.endswith('f'):  # Query current directory
+        Args:
+            sequence: The complete OSC sequence (starting with ESC])
+
+        Returns:
+            bool: True if sequence was handled, False otherwise
+        """
+        # Extract the OSC command number and parameter
+        parts = sequence[2:].split(';', 1)
+        if not parts:
+            return False
+
+        try:
+            command = int(parts[0])
+            param = parts[1][:-1] if len(parts) > 1 else ''  # Remove terminator
+
+            if command == 0:  # Window title
+                self._logger.debug(f"Window title set to: {param}")
+                return True
+
+            elif command == 7:  # Current directory notification
+                if param == 'f':  # Query current directory
                     if self._current_directory:
                         response = f"\x1b]7;{self._current_directory}\x1b\\"
                         self.data_ready.emit(response.encode())
                 else:
-                    self._current_directory = sequence[4:-1]  # Remove ESC]7; prefix and terminator
-                    self._logger.debug(f"Current directory set to: {self._current_directory}")
+                    self._current_directory = param
+                    self._logger.debug(f"Current directory set to: {param}")
                 return True
-            except Exception as e:
-                self._logger.warning(f"Failed to process directory update: {e}")
+
+            elif command == 10:  # Set foreground color
+                self._logger.debug(f"Set text foreground color: {param}")
+                # TODO: Implement color parsing and setting
                 return True
+
+            elif command == 11:  # Set background color
+                self._logger.debug(f"Set text background color: {param}")
+                # TODO: Implement color parsing and setting
+                return True
+
+        except (ValueError, IndexError) as e:
+            self._logger.warning(f"Failed to parse OSC sequence: {sequence}, error: {e}")
 
         return False
 
     def _process_escape_sequence(self, sequence: str):
         """Handle ANSI escape sequences.
-
-        Handles a wide range of ANSI escape sequences including cursor movement,
-        screen clearing, colors, text attributes, device status, and more.
 
         Args:
             sequence: The complete escape sequence starting with ESC
@@ -420,183 +464,54 @@ class TerminalWidget(QPlainTextEdit):
             command = sequence[-1]
             params = sequence[2:-1]  # Remove ESC[ and command char
 
-            # Cursor Movement
-            if command in 'ABCD':  # Up, Down, Right, Left
+            # Handle based on command type
+            if command in 'ABCD':  # Cursor movement
                 self._handle_cursor_sequence(sequence)
                 return
 
-            if command == 'H' or command == 'f':  # Position cursor
-                try:
-                    parts = params.split(';')
-                    row = int(parts[0]) if parts[0] else 1
-                    col = int(parts[1]) if len(parts) > 1 and parts[1] else 1
-                    cursor = self.textCursor()
-                    cursor.movePosition(QTextCursor.Start)
-                    for _ in range(row - 1):
-                        cursor.movePosition(QTextCursor.NextBlock)
-                    cursor.movePosition(QTextCursor.Right, n=col - 1)
-                    self.setTextCursor(cursor)
-                except (ValueError, IndexError):
-                    self._logger.warning(f"Invalid cursor position sequence: {sequence}")
+            if command in 'Hf':  # Cursor position
+                self._handle_cursor_position(params)
                 return
 
-            # Screen and Line Clearing
             if command == 'J':  # Clear screen
-                param = params if params else '0'
-                if param == '0':  # Clear from cursor to end of screen
-                    self._clear_to_end_of_screen()
-                elif param == '1':  # Clear from cursor to beginning of screen
-                    cursor = self.textCursor()
-                    end_pos = cursor.position()
-                    cursor.movePosition(QTextCursor.Start, QTextCursor.KeepAnchor)
-                    cursor.removeSelectedText()
-                    cursor.setPosition(end_pos)
-                elif param == '2':  # Clear entire screen
-                    self.clear()
-                elif param == '3':  # Clear scrollback buffer
-                    cursor = self.textCursor()
-                    pos = cursor.position()
-                    cursor.movePosition(QTextCursor.Start)
-                    cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-                    visible_content = cursor.selectedText()
-                    self.clear()
-                    self.insertPlainText(visible_content)
-                    cursor.setPosition(pos)
-                    self.setTextCursor(cursor)
+                self._handle_clear_screen(params)
                 return
 
             if command == 'K':  # Clear line
-                param = params if params else '0'
-                cursor = self.textCursor()
-                if param == '0':  # Clear from cursor to end of line
-                    self._clear_to_end_of_line()
-                elif param == '1':  # Clear from cursor to start of line
-                    start_pos = cursor.block().position()
-                    end_pos = cursor.position()
-                    cursor.setPosition(start_pos)
-                    cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
-                    cursor.removeSelectedText()
-                elif param == '2':  # Clear entire line
-                    cursor.movePosition(QTextCursor.StartOfLine)
-                    cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-                    cursor.removeSelectedText()
-                self.setTextCursor(cursor)
+                self._handle_clear_line(params)
                 return
 
-            # Insert/Delete Operations
-            if command in '@PML':
-                count = int(params) if params else 1
-                cursor = self.textCursor()
-
-                if command == '@':  # Insert blank characters
-                    cursor.insertText(' ' * count)
-                elif command == 'P':  # Delete characters
-                    end_pos = cursor.position() + count
-                    cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
-                    cursor.removeSelectedText()
-                elif command == 'L':  # Insert lines
-                    pos = cursor.position()
-                    cursor.movePosition(QTextCursor.StartOfLine)
-                    for _ in range(count):
-                        cursor.insertText('\n')
-                    cursor.setPosition(pos)
-                elif command == 'M':  # Delete lines
-                    cursor.movePosition(QTextCursor.StartOfLine)
-                    for _ in range(count):
-                        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-                        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-                        cursor.removeSelectedText()
-
-                self.setTextCursor(cursor)
+            if command in '@PML':  # Insert/Delete operations
+                self._handle_insert_delete(command, params)
                 return
 
-            # Text Formatting
             if command == 'm':  # SGR - Select Graphic Rendition
                 self._handle_sgr_sequence(params)
                 return
 
-            # Device Status Reports
-            if command == 'n':
-                if params == '5':  # Device status report
-                    self.data_ready.emit(b'\x1b[0n')  # Device OK
-                elif params == '6':  # Cursor position report
-                    cursor = self.textCursor()
-                    row = cursor.blockNumber() + 1
-                    col = cursor.columnNumber() + 1
-                    self.data_ready.emit(f'\x1b[{row};{col}R'.encode())
+            if command == 'n':  # Device Status Reports
+                self._handle_device_status(params)
                 return
 
-            # Device Attributes
-            if command == 'c':
-                if not params or params == '0':
-                    # Report as VT100 with Advanced Video Option
-                    self.data_ready.emit(b'\x1b[?1;2c')
-                elif params == '>':  # Secondary Device Attributes
-                    # Report as VT220
-                    self.data_ready.emit(b'\x1b[>1;10;0c')
+            if command == 'c':  # Device Attributes
+                self._handle_device_attributes(params)
                 return
 
-            # Tab Controls
-            if command == 'g':
-                if not params or params == '0':  # Clear tab at cursor
-                    pass  # Implement tab clear
-                elif params == '3':  # Clear all tabs
-                    pass  # Implement clear all tabs
+            if command == 'g':  # Tab Controls
+                self._handle_tab_control(params)
                 return
 
-            # Scrolling Region
-            if command == 'r':
-                try:
-                    if params:
-                        top, bottom = map(lambda x: int(x) - 1, params.split(';'))
-                        self._scroll_region = (top, bottom)
-                    else:
-                        self._scroll_region = None
-                except (ValueError, IndexError):
-                    self._scroll_region = None
+            if command == 'r':  # Scrolling Region
+                self._handle_scroll_region(params)
                 return
 
-            # Mode Settings
-            if command == 'h' or command == 'l':
-                set_mode = (command == 'h')
-                if params.startswith('?'):  # Private modes
-                    mode = params[1:]
-                    if mode == '1':  # Application Cursor Keys
-                        self._application_cursor_keys = set_mode
-                    elif mode == '7':  # Auto-wrap Mode
-                        self.setLineWrapMode(
-                            QPlainTextEdit.WidgetWidth if set_mode
-                            else QPlainTextEdit.NoWrap
-                        )
-                    elif mode == '12':  # Send/receive (SRM)
-                        pass  # Not implemented
-                    elif mode == '25':  # Show/Hide Cursor
-                        self.setCursorWidth(8 if set_mode else 0)
-                    elif mode == '1049':  # Alternate Screen Buffer
-                        if set_mode and not self._using_alternate_screen:
-                            self._main_screen_buffer = self.toPlainText()
-                            self.clear()
-                            self._using_alternate_screen = True
-                        elif not set_mode and self._using_alternate_screen:
-                            self._alternate_screen_buffer = self.toPlainText()
-                            self.clear()
-                            self.setPlainText(self._main_screen_buffer)
-                            self._using_alternate_screen = False
-                    elif mode == '2004':  # Bracketed Paste Mode
-                        self._bracketed_paste_mode = set_mode
-                    elif mode == '1001':  # Save mouse tracking
-                        self._saved_mouse_tracking = self._mouse_tracking
-                        self._saved_mouse_tracking_sgr = self._mouse_tracking_sgr
-                    elif mode == '1002':  # Enable mouse button tracking
-                        self._mouse_tracking = set_mode
-                    elif mode == '1006':  # Enable SGR mouse mode
-                        self._mouse_tracking_sgr = set_mode
-                else:  # ANSI modes
-                    mode = params
-                    if mode == '4':  # Insert Mode
-                        self.setOverwriteMode(not set_mode)
-                    elif mode == '20':  # Automatic Newline
-                        pass  # Not implemented
+            if command in 'hl':  # Mode Settings
+                self._handle_mode_setting(command, params)
+                return
+
+            # Handle window operations
+            if command == 't':
+                self._handle_window_operation(params)
                 return
 
         # Handle keypad mode sequences
@@ -610,71 +525,269 @@ class TerminalWidget(QPlainTextEdit):
 
         # Handle single-character sequences
         if len(sequence) == 2:  # ESC + one character
-            char = sequence[1]
-
-            if char == '7':  # Save Cursor
-                cursor = self.textCursor()
-                self._saved_cursor_position = (cursor.blockNumber(), cursor.columnNumber())
-                return
-
-            if char == '8':  # Restore Cursor
-                if self._saved_cursor_position:
-                    line, column = self._saved_cursor_position
-                    cursor = self.textCursor()
-                    cursor.movePosition(QTextCursor.Start)
-                    for _ in range(line):
-                        cursor.movePosition(QTextCursor.NextBlock)
-                    cursor.movePosition(QTextCursor.Right, n=column)
-                    self.setTextCursor(cursor)
-                return
-
-            if char == 'D':  # Index - Move cursor down one line, scroll if needed
-                cursor = self.textCursor()
-                if cursor.blockNumber() == self.document().blockCount() - 1:
-                    self.insertPlainText('\n')
-                cursor.movePosition(QTextCursor.Down)
-                self.setTextCursor(cursor)
-                return
-
-            if char == 'M':  # Reverse Index
-                cursor = self.textCursor()
-                if cursor.blockNumber() == 0:
-                    cursor.movePosition(QTextCursor.Start)
-                    cursor.insertText('\n')
-                    cursor.movePosition(QTextCursor.Up)
-                else:
-                    cursor.movePosition(QTextCursor.Up)
-                self.setTextCursor(cursor)
-                return
-
-            if char == 'E':  # Next Line
-                cursor = self.textCursor()
-                cursor.movePosition(QTextCursor.NextBlock)
-                cursor.movePosition(QTextCursor.StartOfLine)
-                self.setTextCursor(cursor)
-                return
-
-            if char == 'H':  # Horizontal Tab Set
-                pass  # Implement tab set
-                return
-
-            if char == 'c':  # Reset to Initial State
-                self.clear()
-                self._current_text_format = QTextCharFormat(self._default_text_format)
-                self._scroll_region = None
-                self._saved_cursor_position = None
-                self._application_cursor_keys = False
-                self._application_keypad_mode = False
-                self._bracketed_paste_mode = False
-                self.setOverwriteMode(True)
-                return
-
-            # Character Set Selection (Just log for now)
-            if char in '()':
-                self._logger.debug(f"Character set selection not implemented: {sequence}")
+            if self._handle_simple_sequence(sequence[1]):
                 return
 
         self._logger.warning(f"Unhandled escape sequence: {sequence}")
+
+    def _handle_window_operation(self, params: str):
+        """Handle window operation sequences.
+
+        Args:
+            params: The parameters for the window operation
+        """
+        try:
+            parts = params.split(';')
+            op = int(parts[0])
+
+            if op == 22:  # Push/pop window title
+                if len(parts) > 1:
+                    sub_op = int(parts[1])
+                    if sub_op == 1:  # Push window title
+                        self._logger.debug("Push window title")
+                    elif sub_op == 2:  # Pop window title
+                        self._logger.debug("Pop window title")
+
+        except (ValueError, IndexError) as e:
+            self._logger.warning(f"Invalid window operation parameters: {params}, error: {e}")
+
+    def _handle_cursor_position(self, params: str):
+        """Handle cursor position (CUP) sequences."""
+        try:
+            parts = params.split(';')
+            row = int(parts[0]) if parts[0] else 1
+            col = int(parts[1]) if len(parts) > 1 and parts[1] else 1
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.Start)
+            for _ in range(row - 1):
+                cursor.movePosition(QTextCursor.NextBlock)
+            cursor.movePosition(QTextCursor.Right, n=col - 1)
+            self.setTextCursor(cursor)
+        except (ValueError, IndexError):
+            self._logger.warning(f"Invalid cursor position params: {params}")
+
+    def _handle_clear_screen(self, params: str):
+        """Handle clear screen (ED) sequences."""
+        param = params if params else '0'
+        if param == '0':  # Clear from cursor to end of screen
+            self._clear_to_end_of_screen()
+        elif param == '1':  # Clear from cursor to beginning of screen
+            cursor = self.textCursor()
+            end_pos = cursor.position()
+            cursor.movePosition(QTextCursor.Start, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
+            cursor.setPosition(end_pos)
+        elif param == '2':  # Clear entire screen
+            self.clear()
+        elif param == '3':  # Clear scrollback buffer
+            cursor = self.textCursor()
+            pos = cursor.position()
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            visible_content = cursor.selectedText()
+            self.clear()
+            self.insertPlainText(visible_content)
+            cursor.setPosition(pos)
+            self.setTextCursor(cursor)
+
+    def _handle_clear_line(self, params: str):
+        """Handle clear line (EL) sequences."""
+        param = params if params else '0'
+        cursor = self.textCursor()
+        if param == '0':  # Clear from cursor to end of line
+            self._clear_to_end_of_line()
+        elif param == '1':  # Clear from cursor to start of line
+            start_pos = cursor.block().position()
+            end_pos = cursor.position()
+            cursor.setPosition(start_pos)
+            cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
+        elif param == '2':  # Clear entire line
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
+        self.setTextCursor(cursor)
+
+    def _handle_insert_delete(self, command: str, params: str):
+        """Handle insert and delete operations."""
+        count = int(params) if params else 1
+        cursor = self.textCursor()
+
+        if command == '@':  # Insert blank characters
+            cursor.insertText(' ' * count)
+        elif command == 'P':  # Delete characters
+            end_pos = cursor.position() + count
+            cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
+        elif command == 'L':  # Insert lines
+            pos = cursor.position()
+            cursor.movePosition(QTextCursor.StartOfLine)
+            for _ in range(count):
+                cursor.insertText('\n')
+            cursor.setPosition(pos)
+        elif command == 'M':  # Delete lines
+            cursor.movePosition(QTextCursor.StartOfLine)
+            for _ in range(count):
+                cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+                cursor.removeSelectedText()
+
+        self.setTextCursor(cursor)
+
+    def _handle_device_status(self, params: str):
+        """Handle Device Status Report (DSR) sequences."""
+        if params == '5':  # Device status report
+            self.data_ready.emit(b'\x1b[0n')  # Device OK
+        elif params == '6':  # Cursor position report
+            cursor = self.textCursor()
+            row = cursor.blockNumber() + 1
+            col = cursor.columnNumber() + 1
+            self.data_ready.emit(f'\x1b[{row};{col}R'.encode())
+
+    def _handle_device_attributes(self, params: str):
+        """Handle Device Attributes (DA) sequences."""
+        if not params or params == '0':
+            # Report as VT100 with Advanced Video Option
+            self.data_ready.emit(b'\x1b[?1;2c')
+        elif params == '>':  # Secondary Device Attributes
+            # Report as VT220
+            self.data_ready.emit(b'\x1b[>1;10;0c')
+
+    def _handle_tab_control(self, params: str):
+        """Handle tab control sequences."""
+        if not params or params == '0':  # Clear tab at cursor
+            pass  # Implement tab clear
+        elif params == '3':  # Clear all tabs
+            pass  # Implement clear all tabs
+
+    def _handle_scroll_region(self, params: str):
+        """Handle scrolling region (DECSTBM) sequences."""
+        try:
+            if params:
+                top, bottom = map(lambda x: int(x) - 1, params.split(';'))
+                self._scroll_region = (top, bottom)
+            else:
+                self._scroll_region = None
+        except (ValueError, IndexError):
+            self._scroll_region = None
+
+    def _handle_mode_setting(self, command: str, params: str):
+        """Handle mode setting sequences."""
+        set_mode = (command == 'h')
+        if params.startswith('?'):  # Private modes
+            self._handle_private_mode(params[1:], set_mode)
+        else:  # ANSI modes
+            self._handle_ansi_mode(params, set_mode)
+
+    def _handle_private_mode(self, mode: str, set_mode: bool):
+        """Handle private mode settings."""
+        if mode == '1':  # Application Cursor Keys
+            self._application_cursor_keys = set_mode
+        elif mode == '7':  # Auto-wrap Mode
+            self.setLineWrapMode(
+                QPlainTextEdit.WidgetWidth if set_mode
+                else QPlainTextEdit.NoWrap
+            )
+        elif mode == '12':  # Send/receive (SRM)
+            pass  # Not implemented
+        elif mode == '25':  # Show/Hide Cursor
+            self.setCursorWidth(8 if set_mode else 0)
+        elif mode == '1049':  # Alternate Screen Buffer
+            if set_mode and not self._using_alternate_screen:
+                self._main_screen_buffer = self.toPlainText()
+                self.clear()
+                self._using_alternate_screen = True
+            elif not set_mode and self._using_alternate_screen:
+                self._alternate_screen_buffer = self.toPlainText()
+                self.clear()
+                self.setPlainText(self._main_screen_buffer)
+                self._using_alternate_screen = False
+        elif mode == '2004':  # Bracketed Paste Mode
+            self._bracketed_paste_mode = set_mode
+        elif mode == '1001':  # Save mouse tracking
+            self._saved_mouse_tracking = self._mouse_tracking
+            self._saved_mouse_tracking_sgr = self._mouse_tracking_sgr
+        elif mode == '1002':  # Enable mouse button tracking
+            self._mouse_tracking = set_mode
+        elif mode == '1006':  # Enable SGR mouse mode
+            self._mouse_tracking_sgr = set_mode
+
+    def _handle_ansi_mode(self, mode: str, set_mode: bool):
+        """Handle ANSI mode settings."""
+        if mode == '4':  # Insert Mode
+            self.setOverwriteMode(not set_mode)
+        elif mode == '20':  # Automatic Newline
+            pass  # Not implemented
+
+    def _handle_simple_sequence(self, char: str) -> bool:
+        """Handle simple ESC + char sequences.
+
+        Returns:
+            bool: True if sequence was handled
+        """
+        if char == '7':  # Save Cursor
+            cursor = self.textCursor()
+            self._saved_cursor_position = (cursor.blockNumber(), cursor.columnNumber())
+            return True
+
+        if char == '8':  # Restore Cursor
+            if self._saved_cursor_position:
+                line, column = self._saved_cursor_position
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.Start)
+                for _ in range(line):
+                    cursor.movePosition(QTextCursor.NextBlock)
+                cursor.movePosition(QTextCursor.Right, n=column)
+                self.setTextCursor(cursor)
+            return True
+
+        if char == 'D':  # Index - Move cursor down one line
+            cursor = self.textCursor()
+            if cursor.blockNumber() == self.document().blockCount() - 1:
+                self.insertPlainText('\n')
+            cursor.movePosition(QTextCursor.Down)
+            self.setTextCursor(cursor)
+            return True
+
+        if char == 'M':  # Reverse Index
+            cursor = self.textCursor()
+            if cursor.blockNumber() == 0:
+                cursor.movePosition(QTextCursor.Start)
+                cursor.insertText('\n')
+                cursor.movePosition(QTextCursor.Up)
+            else:
+                cursor.movePosition(QTextCursor.Up)
+            self.setTextCursor(cursor)
+            return True
+
+        if char == 'E':  # Next Line
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.NextBlock)
+            cursor.movePosition(QTextCursor.StartOfLine)
+            self.setTextCursor(cursor)
+            return True
+
+        if char == 'H':  # Horizontal Tab Set
+            pass  # Implement tab set
+            return True
+
+        if char == 'c':  # Reset to Initial State
+            self.clear()
+            self._current_text_format = QTextCharFormat(self._default_text_format)
+            self._scroll_region = None
+            self._saved_cursor_position = None
+            self._application_cursor_keys = False
+            self._application_keypad_mode = False
+            self._bracketed_paste_mode = False
+            self.setOverwriteMode(True)
+            return True
+
+        # Character Set Selection (Just log for now)
+        if char in '()':
+            self._logger.debug(f"Character set selection not implemented: {char}")
+            return True
+
+        return False
 
     def _insert_plain_text(self, text: str):
         """Insert text at current cursor position with scroll region support."""
