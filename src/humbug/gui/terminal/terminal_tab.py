@@ -69,9 +69,16 @@ class TerminalTab(TabBase):
 
         # Initialize window size handling
         self._install_sigwinch_handler()
+        self._terminal.size_changed.connect(self._handle_terminal_resize)
 
         # Start local shell process
         self._create_tracked_task(self._start_process())
+
+    def _handle_terminal_resize(self, rows: int, cols: int):
+        """Handle terminal resize event."""
+        if self._master_fd is not None:
+            winsize = struct.pack('HHHH', rows, cols, 0, 0)
+            fcntl.ioctl(self._master_fd, termios.TIOCSWINSZ, winsize)
 
     def _install_sigwinch_handler(self):
         """Install SIGWINCH handler for terminal size changes."""
@@ -81,12 +88,8 @@ class TerminalTab(TabBase):
     def _handle_window_resize(self):
         """Handle terminal window resize events."""
         if self._master_fd is not None:
-            # Get terminal size in characters
-            char_width = self._terminal.viewport().width() // self._terminal.fontMetrics().horizontalAdvance(' ')
-            char_height = self._terminal.viewport().height() // self._terminal.fontMetrics().height()
-
-            # Update terminal size
-            winsize = struct.pack('HHHH', char_height, char_width, 0, 0)
+            current_size = self._terminal._current_size
+            winsize = struct.pack('HHHH', current_size.rows, current_size.cols, 0, 0)
             fcntl.ioctl(self._master_fd, termios.TIOCSWINSZ, winsize)
 
     def _create_tracked_task(self, coro) -> asyncio.Task:

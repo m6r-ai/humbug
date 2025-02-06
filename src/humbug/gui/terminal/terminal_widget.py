@@ -1,5 +1,6 @@
 """Terminal widget implementation."""
 
+from dataclasses import dataclass
 from typing import Optional, Tuple
 import re
 import logging
@@ -9,7 +10,7 @@ from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import (
     QTextCursor, QKeyEvent, QFont, QTextCharFormat, QMouseEvent,
-    QTextFormat
+    QTextFormat, QResizeEvent
 )
 
 from humbug.gui.color_role import ColorRole
@@ -25,6 +26,18 @@ class FormatProperty(IntEnum):
     CUSTOM_UNDERLINE = QTextFormat.UserProperty + 4
 
 
+@dataclass
+class TerminalSize:
+    """Terminal size in rows and columns."""
+    rows: int
+    cols: int
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, TerminalSize):
+            return False
+        return self.rows == other.rows and self.cols == other.cols
+
+
 class TerminalWidget(QPlainTextEdit):
     """Terminal display widget."""
 
@@ -32,6 +45,7 @@ class TerminalWidget(QPlainTextEdit):
     data_ready = Signal(bytes)
     # Signal emitted for mouse events when tracking is enabled
     mouse_event = Signal(str)
+    size_changed = Signal(int, int)  # (rows, cols)
 
     def __init__(self, parent: Optional[QWidget] = None):
         """Initialize terminal widget."""
@@ -81,6 +95,9 @@ class TerminalWidget(QPlainTextEdit):
         self._saved_mouse_tracking_sgr = False
         self._bracketed_paste_mode = False
         self._current_directory = None
+
+        self._current_size: Optional[TerminalSize] = None
+        self._calculate_size()
 
         # Connect style changed signal
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -749,9 +766,14 @@ class TerminalWidget(QPlainTextEdit):
                 self._using_alternate_screen = False
         elif mode == '2004':  # Bracketed Paste Mode
             self._bracketed_paste_mode = set_mode
-        elif mode == '1001':  # Save mouse tracking
+        elif mode == '1001s':  # Save mouse tracking state
             self._saved_mouse_tracking = self._mouse_tracking
             self._saved_mouse_tracking_sgr = self._mouse_tracking_sgr
+        elif mode == '1001r':  # Restore mouse tracking state
+            self._mouse_tracking = self._saved_mouse_tracking
+            self._mouse_tracking_sgr = self._saved_mouse_tracking_sgr
+        elif mode == '1001':  # Toggle mouse tracking
+            self._mouse_tracking = set_mode
         elif mode == '1002':  # Enable mouse button tracking
             self._mouse_tracking = set_mode
         elif mode == '1006':  # Enable SGR mouse mode
@@ -834,18 +856,74 @@ class TerminalWidget(QPlainTextEdit):
 
         return False
 
-    def _insert_plain_text(self, text: str):
-        """Insert text at current cursor position with scroll region support."""
-        cursor = self.textCursor()
+    def _calculate_size(self) -> TerminalSize:
+        """Calculate current terminal size in rows and columns."""
+        char_width = self.fontMetrics().horizontalAdvance(' ')
+        char_height = self.fontMetrics().height()
 
-        # Always apply the current format
+        if char_width == 0 or char_height == 0:
+            self._logger.warning("Invalid character dimensions")
+            return TerminalSize(24, 80)  # Default fallback size
+
+        viewport = self.viewport()
+        width = viewport.width()
+        height = viewport.height()
+
+        cols = max(width // char_width, 1)
+        rows = max(height // char_height, 1)
+
+        return TerminalSize(rows, cols)
+
+    def resizeEvent(self, event: QResizeEvent):
+        """Handle resize events."""
+        super().resizeEvent(event)
+        new_size = self._calculate_size()
+
+        if self._current_size != new_size:
+            old_size = self._current_size
+            self._current_size = new_size
+            self._logger.debug(
+                f"Terminal size changed: {old_size} -> {new_size}"
+            )
+            self._reflow_content(old_size, new_size)
+            self.size_changed.emit(new_size.rows, new_size.cols)
+
+    def _reflow_content(self, old_size: Optional[TerminalSize], new_size: TerminalSize):
+        """Reflow terminal content for new dimensions."""
+        if old_size is None:
+            return
+
+        cursor = self.textCursor()
+        cursor.movePosition(cursor.Start)
+
+        while not cursor.atEnd():
+            block_start = cursor.position()
+            cursor.movePosition(cursor.EndOfLine, cursor.KeepAnchor)
+            line = cursor.selectedText()
+
+            if len(line) > new_size.cols:
+                cursor.setPosition(block_start)
+                while len(line) > new_size.cols:
+                    cursor.movePosition(cursor.Right, cursor.MoveAnchor, new_size.cols)
+                    if not cursor.atEnd():
+                        cursor.insertText('\n')
+                    line = line[new_size.cols:]
+
+            cursor.movePosition(cursor.NextBlock)
+            cursor.movePosition(cursor.StartOfLine)
+
+    def _insert_plain_text(self, text: str):
+        """Insert text at current cursor position with scroll region and line wrapping support.
+
+        Args:
+            text: Text to insert
+        """
+        cursor = self.textCursor()
         cursor.mergeCharFormat(self._current_text_format)
 
         if text == '\r':
-            # Move to start of line
             cursor.movePosition(QTextCursor.StartOfLine)
         elif text == '\n':
-            # Handle newline with scroll region support
             if self._scroll_region is not None:
                 top, bottom = self._scroll_region
                 current_line = cursor.blockNumber()
@@ -894,15 +972,24 @@ class TerminalWidget(QPlainTextEdit):
             cursor.movePosition(QTextCursor.Left)
         elif text == '\t':  # Tab
             # Handle each space in overwrite mode
-            for _ in range(8):
+            spaces_to_next_tab = 8 - (cursor.columnNumber() % 8)
+            for _ in range(spaces_to_next_tab):
                 if not cursor.atEnd():
                     cursor.deleteChar()
                 cursor.insertText(' ')
+                # Check for line wrap
+                if cursor.columnNumber() >= self._current_size.cols:
+                    cursor.insertText('\n')
         elif text == '\x0b':  # Vertical tab
             cursor.movePosition(QTextCursor.Down)
         elif text == '\x0c':  # Form feed
             self.clear()
         else:
+            # Check if we need to wrap at terminal width
+            if cursor.columnNumber() >= self._current_size.cols:
+                cursor.insertText('\n')
+                cursor.movePosition(QTextCursor.StartOfLine)
+
             # In a terminal, we always overwrite the character at cursor position
             if not cursor.atEnd():
                 cursor.deleteChar()
