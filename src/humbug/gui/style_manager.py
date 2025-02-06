@@ -297,6 +297,74 @@ class StyleManager(QObject):
             ColorRole.SYNTAX_TYPE: {
                 ColorMode.DARK: "#e0a0ff",
                 ColorMode.LIGHT: "#8000c0"
+            },
+
+            # Terminal basic colors
+            ColorRole.TERM_BLACK: {
+                ColorMode.DARK: "#000000",
+                ColorMode.LIGHT: "#000000"
+            },
+            ColorRole.TERM_RED: {
+                ColorMode.DARK: "#CD0000",
+                ColorMode.LIGHT: "#CD0000"
+            },
+            ColorRole.TERM_GREEN: {
+                ColorMode.DARK: "#00CD00",
+                ColorMode.LIGHT: "#00CD00"
+            },
+            ColorRole.TERM_YELLOW: {
+                ColorMode.DARK: "#CDCD00",
+                ColorMode.LIGHT: "#CDCD00"
+            },
+            ColorRole.TERM_BLUE: {
+                ColorMode.DARK: "#0000EE",
+                ColorMode.LIGHT: "#0000EE"
+            },
+            ColorRole.TERM_MAGENTA: {
+                ColorMode.DARK: "#CD00CD",
+                ColorMode.LIGHT: "#CD00CD"
+            },
+            ColorRole.TERM_CYAN: {
+                ColorMode.DARK: "#00CDCD",
+                ColorMode.LIGHT: "#00CDCD"
+            },
+            ColorRole.TERM_WHITE: {
+                ColorMode.DARK: "#E5E5E5",
+                ColorMode.LIGHT: "#E5E5E5"
+            },
+
+            # Terminal bright colors
+            ColorRole.TERM_BRIGHT_BLACK: {
+                ColorMode.DARK: "#7F7F7F",
+                ColorMode.LIGHT: "#7F7F7F"
+            },
+            ColorRole.TERM_BRIGHT_RED: {
+                ColorMode.DARK: "#FF0000",
+                ColorMode.LIGHT: "#FF0000"
+            },
+            ColorRole.TERM_BRIGHT_GREEN: {
+                ColorMode.DARK: "#00FF00",
+                ColorMode.LIGHT: "#00FF00"
+            },
+            ColorRole.TERM_BRIGHT_YELLOW: {
+                ColorMode.DARK: "#FFFF00",
+                ColorMode.LIGHT: "#FFFF00"
+            },
+            ColorRole.TERM_BRIGHT_BLUE: {
+                ColorMode.DARK: "#5C5CFF",
+                ColorMode.LIGHT: "#5C5CFF"
+            },
+            ColorRole.TERM_BRIGHT_MAGENTA: {
+                ColorMode.DARK: "#FF00FF",
+                ColorMode.LIGHT: "#FF00FF"
+            },
+            ColorRole.TERM_BRIGHT_CYAN: {
+                ColorMode.DARK: "#00FFFF",
+                ColorMode.LIGHT: "#00FFFF"
+            },
+            ColorRole.TERM_BRIGHT_WHITE: {
+                ColorMode.DARK: "#FFFFFF",
+                ColorMode.LIGHT: "#FFFFFF"
             }
         }
 

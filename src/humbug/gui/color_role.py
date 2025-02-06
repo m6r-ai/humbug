@@ -84,3 +84,23 @@ class ColorRole(Enum):
     SYNTAX_STRING = auto()
     SYNTAX_TEXT = auto()
     SYNTAX_TYPE = auto()
+
+    # Terminal basic colors
+    TERM_BLACK = auto()
+    TERM_RED = auto()
+    TERM_GREEN = auto()
+    TERM_YELLOW = auto()
+    TERM_BLUE = auto()
+    TERM_MAGENTA = auto()
+    TERM_CYAN = auto()
+    TERM_WHITE = auto()
+
+    # Terminal bright colors
+    TERM_BRIGHT_BLACK = auto()
+    TERM_BRIGHT_RED = auto()
+    TERM_BRIGHT_GREEN = auto()
+    TERM_BRIGHT_YELLOW = auto()
+    TERM_BRIGHT_BLUE = auto()
+    TERM_BRIGHT_MAGENTA = auto()
+    TERM_BRIGHT_CYAN = auto()
+    TERM_BRIGHT_WHITE = auto()
