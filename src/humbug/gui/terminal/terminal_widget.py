@@ -117,17 +117,22 @@ class TerminalWidget(QPlainTextEdit):
         # Update colors for all text blocks
         cursor = self.textCursor()
         saved_position = cursor.position()
-        cursor.movePosition(cursor.Start)
+        cursor.movePosition(QTextCursor.Start)
 
         while not cursor.atEnd():
-            cursor.movePosition(cursor.Right, cursor.KeepAnchor)
+            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
             text_format = cursor.charFormat()
             new_format = QTextCharFormat(text_format)
 
+            # Log format properties
+            has_custom_fg = text_format.property(FormatProperty.CUSTOM_FOREGROUND)
+            has_custom_bg = text_format.property(FormatProperty.CUSTOM_BACKGROUND)
+
             # Only update colors that aren't custom (i.e., are using defaults)
-            if not format.hasProperty(FormatProperty.CUSTOM_FOREGROUND):
+            if not has_custom_fg:
                 new_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
-            if not format.hasProperty(FormatProperty.CUSTOM_BACKGROUND):
+
+            if not has_custom_bg:
                 new_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
 
             cursor.mergeCharFormat(new_format)
