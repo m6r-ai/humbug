@@ -70,6 +70,7 @@ class TerminalWidget(QPlainTextEdit):
         # Additional terminal state
         self._alternate_screen_buffer = ""
         self._main_screen_buffer = ""
+        self._main_screen_formats = []
         self._using_alternate_screen = False
         self._scroll_region: Optional[Tuple[int, int]] = None
         self._application_cursor_keys = False
@@ -263,30 +264,34 @@ class TerminalWidget(QPlainTextEdit):
 
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse events when tracking is enabled."""
-        if self._mouse_tracking:
-            pos = event.pos()
-            char_width = self.fontMetrics().horizontalAdvance(' ')
-            char_height = self.fontMetrics().height()
-            x = pos.x() // char_width + 1
-            y = pos.y() // char_height + 1
-            button = event.button()
+        if not self._mouse_tracking or (event.modifiers() & Qt.ShiftModifier):
+            # Allow normal text selection when mouse tracking is disabled
+            super().mousePressEvent(event)
+            return
 
-            if self._mouse_tracking_sgr:
-                # SGR mouse mode
-                if button == Qt.LeftButton:
-                    self.mouse_event.emit(f'\x1b[<0;{x};{y}M')
-                elif button == Qt.RightButton:
-                    self.mouse_event.emit(f'\x1b[<2;{x};{y}M')
-                elif button == Qt.MiddleButton:
-                    self.mouse_event.emit(f'\x1b[<1;{x};{y}M')
-            else:
-                # Normal mouse mode
-                cb = 0  # Left button
-                if button == Qt.RightButton:
-                    cb = 2
-                elif button == Qt.MiddleButton:
-                    cb = 1
-                self.mouse_event.emit(f'\x1b[M{chr(32+cb)}{chr(32+x)}{chr(32+y)}')
+        pos = event.pos()
+        char_width = self.fontMetrics().horizontalAdvance(' ')
+        char_height = self.fontMetrics().height()
+        x = pos.x() // char_width + 1
+        y = pos.y() // char_height + 1
+        button = event.button()
+
+        if self._mouse_tracking_sgr:
+            # SGR mouse mode
+            if button == Qt.LeftButton:
+                self.mouse_event.emit(f'\x1b[<0;{x};{y}M')
+            elif button == Qt.RightButton:
+                self.mouse_event.emit(f'\x1b[<2;{x};{y}M')
+            elif button == Qt.MiddleButton:
+                self.mouse_event.emit(f'\x1b[<1;{x};{y}M')
+        else:
+            # Normal mouse mode
+            cb = 0  # Left button
+            if button == Qt.RightButton:
+                cb = 2
+            elif button == Qt.MiddleButton:
+                cb = 1
+            self.mouse_event.emit(f'\x1b[M{chr(32+cb)}{chr(32+x)}{chr(32+y)}')
 
         # Accept the event but don't call super() to prevent cursor movement
         event.accept()
