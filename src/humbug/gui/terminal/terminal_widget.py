@@ -287,8 +287,9 @@ class TerminalWidget(QPlainTextEdit):
                 elif button == Qt.MiddleButton:
                     cb = 1
                 self.mouse_event.emit(f'\x1b[M{chr(32+cb)}{chr(32+x)}{chr(32+y)}')
-        else:
-            super().mousePressEvent(event)
+
+        # Accept the event but don't call super() to prevent cursor movement
+        event.accept()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         """Handle mouse release events when tracking is enabled."""
