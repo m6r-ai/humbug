@@ -378,14 +378,10 @@ class TerminalWidget(QPlainTextEdit):
         """Handle Operating System Command (OSC) sequences."""
         # Window title (ESC]0;)
         if sequence.startswith('\x1b]0;'):
-            try:
-                title = sequence[4:-1]  # Remove ESC]0; prefix and terminator
-                # Emit signal to update window title
-                self._logger.debug(f"Window title set to: {title}")
-                return True
-            except Exception as e:
-                self._logger.warning(f"Failed to process window title update: {e}")
-                return True
+            title = sequence[4:-1]  # Remove ESC]0; prefix and terminator
+            # Emit signal to update window title
+            self._logger.debug(f"Window title set to: {title}")
+            return True
 
         # Handle current working directory notification (ESC]7;)
         if sequence.startswith('\x1b]7;'):
@@ -576,6 +572,7 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.movePosition(QTextCursor.Start)
                 for _ in range(line):
                     cursor.movePosition(QTextCursor.NextBlock)
+
                 cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, column)
                 self.setTextCursor(cursor)
             return
