@@ -7,6 +7,9 @@ import os
 import pty
 import termios
 import select
+import signal
+import fcntl
+import struct
 from typing import Dict, Optional, Set
 
 from PySide6.QtWidgets import QVBoxLayout
@@ -64,8 +67,27 @@ class TerminalTab(TabBase):
         self._running = True
         self._master_fd = None
 
+        # Initialize window size handling
+        self._install_sigwinch_handler()
+
         # Start local shell process
         self._create_tracked_task(self._start_process())
+
+    def _install_sigwinch_handler(self):
+        """Install SIGWINCH handler for terminal size changes."""
+        loop = asyncio.get_event_loop()
+        loop.add_signal_handler(signal.SIGWINCH, self._handle_window_resize)
+
+    def _handle_window_resize(self):
+        """Handle terminal window resize events."""
+        if self._master_fd is not None:
+            # Get terminal size in characters
+            char_width = self._terminal.viewport().width() // self._terminal.fontMetrics().horizontalAdvance(' ')
+            char_height = self._terminal.viewport().height() // self._terminal.fontMetrics().height()
+
+            # Update terminal size
+            winsize = struct.pack('HHHH', char_height, char_width, 0, 0)
+            fcntl.ioctl(self._master_fd, termios.TIOCSWINSZ, winsize)
 
     def _create_tracked_task(self, coro) -> asyncio.Task:
         """
@@ -96,6 +118,12 @@ class TerminalTab(TabBase):
             mode = termios.tcgetattr(slave_fd)
             mode[3] &= ~(termios.ECHO | termios.ICANON)  # Turn off echo and canonical mode
             termios.tcsetattr(slave_fd, termios.TCSAFLUSH, mode)
+
+            # Set initial terminal size
+            char_width = self._terminal.viewport().width() // self._terminal.fontMetrics().horizontalAdvance(' ')
+            char_height = self._terminal.viewport().height() // self._terminal.fontMetrics().height()
+            winsize = struct.pack('HHHH', char_height, char_width, 0, 0)
+            fcntl.ioctl(master_fd, termios.TIOCSWINSZ, winsize)
 
             # Start process with the slave end of the pty
             self._process = await asyncio.create_subprocess_exec(

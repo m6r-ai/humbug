@@ -428,7 +428,7 @@ class TerminalWidget(QPlainTextEdit):
                 self._logger.debug(f"Window title set to: {param}")
                 return True
 
-            elif command == 7:  # Current directory notification
+            if command == 7:  # Current directory notification
                 if param == 'f':  # Query current directory
                     if self._current_directory:
                         response = f"\x1b]7;{self._current_directory}\x1b\\"
@@ -438,12 +438,12 @@ class TerminalWidget(QPlainTextEdit):
                     self._logger.debug(f"Current directory set to: {param}")
                 return True
 
-            elif command == 10:  # Set foreground color
+            if command == 10:  # Set foreground color
                 self._logger.debug(f"Set text foreground color: {param}")
                 # TODO: Implement color parsing and setting
                 return True
 
-            elif command == 11:  # Set background color
+            if command == 11:  # Set background color
                 self._logger.debug(f"Set text background color: {param}")
                 # TODO: Implement color parsing and setting
                 return True
@@ -545,6 +545,13 @@ class TerminalWidget(QPlainTextEdit):
         try:
             parts = params.split(';')
             op = int(parts[0])
+
+            if op == 18:  # Report terminal size
+                # Get size in characters
+                char_width = self.viewport().width() // self.fontMetrics().horizontalAdvance(' ')
+                char_height = self.viewport().height() // self.fontMetrics().height()
+                self.data_ready.emit(f'\x1b[8;{char_height};{char_width}t'.encode())
+                return
 
             if op == 22:  # Push/pop window title
                 if len(parts) > 1:
@@ -649,6 +656,10 @@ class TerminalWidget(QPlainTextEdit):
             row = cursor.blockNumber() + 1
             col = cursor.columnNumber() + 1
             self.data_ready.emit(f'\x1b[{row};{col}R'.encode())
+        elif params == '18t':  # Terminal size query (alternate form)
+            char_width = self.viewport().width() // self.fontMetrics().horizontalAdvance(' ')
+            char_height = self.viewport().height() // self.fontMetrics().height()
+            self.data_ready.emit(f'\x1b[8;{char_height};{char_width}t'.encode())
 
     def _handle_device_attributes(self, params: str):
         """Handle Device Attributes (DA) sequences."""
