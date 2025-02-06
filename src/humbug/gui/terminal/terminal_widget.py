@@ -15,8 +15,6 @@ from PySide6.QtGui import (
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 
-logger = logging.getLogger(__name__)
-
 
 class FormatProperty(IntEnum):
     """Properties used to track which format attributes are explicit vs default."""
@@ -39,6 +37,8 @@ class TerminalWidget(QPlainTextEdit):
         """Initialize terminal widget."""
         super().__init__(parent)
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
+
+        self._logger = logging.getLogger("TerminalTab")
 
         # Get style manager
         self._style_manager = StyleManager()
@@ -362,7 +362,7 @@ class TerminalWidget(QPlainTextEdit):
 
                 # Safety check for buffer length
                 if len(self._escape_seq_buffer) > 32:  # Arbitrary reasonable limit
-                    logger.warning(f"Escape sequence too long, discarding: {self._escape_seq_buffer}")
+                    self._logger.warning(f"Escape sequence too long, discarding: {self._escape_seq_buffer}")
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
 
@@ -381,10 +381,10 @@ class TerminalWidget(QPlainTextEdit):
             try:
                 title = sequence[4:-1]  # Remove ESC]0; prefix and terminator
                 # Emit signal to update window title
-                logger.debug(f"Window title set to: {title}")
+                self._logger.debug(f"Window title set to: {title}")
                 return True
             except Exception as e:
-                logger.warning(f"Failed to process window title update: {e}")
+                self._logger.warning(f"Failed to process window title update: {e}")
                 return True
 
         # Handle current working directory notification (ESC]7;)
@@ -396,10 +396,10 @@ class TerminalWidget(QPlainTextEdit):
                         self.data_ready.emit(response.encode())
                 else:
                     self._current_directory = sequence[4:-1]  # Remove ESC]7; prefix and terminator
-                    logger.debug(f"Current directory set to: {self._current_directory}")
+                    self._logger.debug(f"Current directory set to: {self._current_directory}")
                 return True
             except Exception as e:
-                logger.warning(f"Failed to process directory update: {e}")
+                self._logger.warning(f"Failed to process directory update: {e}")
                 return True
 
         return False
@@ -580,7 +580,7 @@ class TerminalWidget(QPlainTextEdit):
                 self.setTextCursor(cursor)
             return
 
-        logger.warning(f"Unhandled escape sequence: {sequence}")
+        self._logger.warning(f"Unhandled escape sequence: {sequence}")
 
     def _insert_plain_text(self, text: str):
         """Insert text at current cursor position with scroll region support."""
