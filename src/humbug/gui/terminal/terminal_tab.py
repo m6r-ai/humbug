@@ -181,8 +181,8 @@ class TerminalTab(TabBase):
         # Update terminal colors
         self._terminal.setStyleSheet(f"""
             QPlainTextEdit {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TERMINAL_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TERMINAL_TEXT)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};

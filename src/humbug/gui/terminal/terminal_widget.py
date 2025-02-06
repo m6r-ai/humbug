@@ -53,8 +53,8 @@ class TerminalWidget(QPlainTextEdit):
         # Set up default appearance
         self.setStyleSheet(f"""
             QPlainTextEdit {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TERMINAL_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TERMINAL_TEXT)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
             }}
         """)
@@ -87,8 +87,8 @@ class TerminalWidget(QPlainTextEdit):
     def _update_default_format(self):
         """Update the default text format based on current style."""
         self._default_text_format = QTextCharFormat()
-        self._default_text_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
-        self._default_text_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
+        self._default_text_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_PRIMARY))
+        self._default_text_format.setBackground(self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE))
         self._default_text_format.setFontWeight(QFont.Normal)
         self._default_text_format.setFontUnderline(False)
         self._default_text_format.setFontItalic(False)
@@ -130,8 +130,8 @@ class TerminalWidget(QPlainTextEdit):
         # Update appearance
         self.setStyleSheet(f"""
             QPlainTextEdit {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TERMINAL_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TERMINAL_TEXT)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
             }}
         """)
@@ -152,10 +152,10 @@ class TerminalWidget(QPlainTextEdit):
 
             # Only update colors that aren't custom (i.e., are using defaults)
             if not has_custom_fg:
-                new_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
+                new_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_PRIMARY))
 
             if not has_custom_bg:
-                new_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
+                new_format.setBackground(self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE))
 
             cursor.mergeCharFormat(new_format)
             cursor.clearSelection()
@@ -331,6 +331,7 @@ class TerminalWidget(QPlainTextEdit):
             UnicodeDecodeError: If data cannot be decoded
         """
         text = data.decode(errors='replace')
+        print(f"Processing data: {repr(text)}")
 
         i = 0
         while i < len(text):
@@ -694,13 +695,41 @@ class TerminalWidget(QPlainTextEdit):
             self.setCursorWidth(8 if set_mode else 0)
         elif mode == '1049':  # Alternate Screen Buffer
             if set_mode and not self._using_alternate_screen:
-                self._main_screen_buffer = self.toPlainText()
+                # Create deep copy of main screen
+                doc = self.document().clone()
+                self._main_screen_buffer = doc.toRawText()
+                self._main_screen_formats = []
+                cursor = self.textCursor()
+                for i in range(len(self._main_screen_buffer)):
+                    cursor.setPosition(i)
+                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+                    self._main_screen_formats.append(cursor.charFormat())
+                self._saved_cursor_position = (
+                    self.textCursor().blockNumber(),
+                    self.textCursor().columnNumber()
+                )
                 self.clear()
                 self._using_alternate_screen = True
             elif not set_mode and self._using_alternate_screen:
+                # Save alternate screen
                 self._alternate_screen_buffer = self.toPlainText()
                 self.clear()
-                self.setPlainText(self._main_screen_buffer)
+                # Restore main screen with formats
+                cursor = self.textCursor()
+                cursor.insertText(self._main_screen_buffer)
+                cursor.setPosition(0)
+                for i, fmt in enumerate(self._main_screen_formats):
+                    cursor.setPosition(i)
+                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+                    cursor.setCharFormat(fmt)
+                if self._saved_cursor_position:
+                    cursor.clearSelection()
+                    cursor.movePosition(QTextCursor.Start)
+                    line, column = self._saved_cursor_position
+                    for _ in range(line):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    cursor.movePosition(QTextCursor.Right, n=column)
+                    self.setTextCursor(cursor)
                 self._using_alternate_screen = False
         elif mode == '2004':  # Bracketed Paste Mode
             self._bracketed_paste_mode = set_mode
@@ -899,8 +928,8 @@ class TerminalWidget(QPlainTextEdit):
 
             if code == 0:  # Reset all attributes
                 current_format = QTextCharFormat()
-                current_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
-                current_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
+                current_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_PRIMARY))
+                current_format.setBackground(self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE))
                 current_format.setFontWeight(QFont.Normal)
                 current_format.setFontUnderline(False)
                 current_format.setFontItalic(False)
@@ -929,10 +958,10 @@ class TerminalWidget(QPlainTextEdit):
                 current_format.setFontUnderline(False)
                 current_format.setProperty(FormatProperty.CUSTOM_UNDERLINE, False)
             elif code == 39:  # Default foreground color
-                current_format.setForeground(self._style_manager.get_color(ColorRole.TERMINAL_TEXT))
+                current_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_PRIMARY))
                 current_format.setProperty(FormatProperty.CUSTOM_FOREGROUND, False)
             elif code == 49:  # Default background color
-                current_format.setBackground(self._style_manager.get_color(ColorRole.TERMINAL_BACKGROUND))
+                current_format.setBackground(self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE))
                 current_format.setProperty(FormatProperty.CUSTOM_BACKGROUND, False)
             # Foreground colors
             elif 30 <= code <= 37:
