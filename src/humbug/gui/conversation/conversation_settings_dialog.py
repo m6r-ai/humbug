@@ -315,10 +315,17 @@ class ConversationSettingsDialog(QDialog):
         current_model = self._model_combo.currentText()
         current_temp = self.temp_spin.value() if ConversationSettings.supports_temperature(current_model) else None
 
-        self.apply_button.setEnabled(
-            current_model != self._current_settings.model or
-            abs(current_temp - self._current_settings.temperature) > 0.01
-        )
+        model_changed = current_model != self._current_settings.model
+
+        temp_changed = False
+        if current_temp is None and self._current_settings.temperature is None:
+            temp_changed = False
+        elif current_temp is None or self._current_settings.temperature is None:
+            temp_changed = True
+        else:
+            temp_changed = abs(current_temp - self._current_settings.temperature) > 0.01
+
+        self.apply_button.setEnabled(model_changed or temp_changed)
 
     def get_settings(self) -> ConversationSettings:
         """Get the current settings from the dialog."""
