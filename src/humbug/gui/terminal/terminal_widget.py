@@ -1,10 +1,13 @@
 """Terminal widget implementation."""
 
 from dataclasses import dataclass
+import fcntl
 from typing import Optional, Tuple
 import re
 import logging
 from enum import IntEnum
+import struct
+import termios
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Signal, Qt
@@ -37,6 +40,14 @@ class TerminalSize:
             return False
         return self.rows == other.rows and self.cols == other.cols
 
+    def to_struct(self) -> bytes:
+        """Convert terminal size to struct format for TIOCSWINSZ.
+
+        Returns:
+            bytes: Packed struct in format suitable for TIOCSWINSZ ioctl
+        """
+        return struct.pack('HHHH', self.rows, self.cols, 0, 0)
+
 
 class TerminalWidget(QPlainTextEdit):
     """Terminal display widget."""
@@ -45,7 +56,7 @@ class TerminalWidget(QPlainTextEdit):
     data_ready = Signal(bytes)
     # Signal emitted for mouse events when tracking is enabled
     mouse_event = Signal(str)
-    size_changed = Signal(int, int)  # (rows, cols)
+    size_changed = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         """Initialize terminal widget."""
@@ -97,7 +108,6 @@ class TerminalWidget(QPlainTextEdit):
         self._current_directory = None
 
         self._current_size: Optional[TerminalSize] = None
-        self._calculate_size()
 
         # Connect style changed signal
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -353,7 +363,6 @@ class TerminalWidget(QPlainTextEdit):
             UnicodeDecodeError: If data cannot be decoded
         """
         text = data.decode(errors='replace')
-        print(f"Processing data: {repr(text)}")
 
         i = 0
         while i < len(text):
@@ -862,7 +871,7 @@ class TerminalWidget(QPlainTextEdit):
         char_height = self.fontMetrics().height()
 
         if char_width == 0 or char_height == 0:
-            self._logger.warning("Invalid character dimensions")
+            self._logger.warning(f"Invalid character dimensions: width={char_width}, height={char_height}")
             return TerminalSize(24, 80)  # Default fallback size
 
         viewport = self.viewport()
@@ -873,6 +882,23 @@ class TerminalWidget(QPlainTextEdit):
         rows = max(height // char_height, 1)
 
         return TerminalSize(rows, cols)
+
+    def update_pty_size(self, fd: int) -> None:
+        """Update PTY size using current terminal dimensions.
+
+        Args:
+            fd: File descriptor for PTY
+
+        Raises:
+            OSError: If ioctl call fails
+        """
+        try:
+            size = self._calculate_size()
+            print(f"pty size {size.rows}, {size.cols}")
+            fcntl.ioctl(fd, termios.TIOCSWINSZ, size.to_struct())
+        except OSError as e:
+            self._logger.error(f"Failed to update PTY size: {e}")
+            raise
 
     def resizeEvent(self, event: QResizeEvent):
         """Handle resize events."""
@@ -886,31 +912,56 @@ class TerminalWidget(QPlainTextEdit):
                 f"Terminal size changed: {old_size} -> {new_size}"
             )
             self._reflow_content(old_size, new_size)
-            self.size_changed.emit(new_size.rows, new_size.cols)
+            self.size_changed.emit()
 
     def _reflow_content(self, old_size: Optional[TerminalSize], new_size: TerminalSize):
-        """Reflow terminal content for new dimensions."""
+        """Reflow terminal content for new dimensions.
+
+        Args:
+            old_size: Previous terminal size
+            new_size: New terminal size
+        """
         if old_size is None:
             return
 
+        print("reflow")
         cursor = self.textCursor()
-        cursor.movePosition(cursor.Start)
+        cursor.movePosition(QTextCursor.Start)
 
-        while not cursor.atEnd():
+        # Store the total number of blocks we'll process to prevent infinite loops
+        total_blocks = self.document().blockCount()
+        blocks_processed = 0
+
+        while not cursor.atEnd() and blocks_processed < total_blocks:
             block_start = cursor.position()
-            cursor.movePosition(cursor.EndOfLine, cursor.KeepAnchor)
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
             line = cursor.selectedText()
 
             if len(line) > new_size.cols:
+                # Reset cursor to start of current line
                 cursor.setPosition(block_start)
-                while len(line) > new_size.cols:
-                    cursor.movePosition(cursor.Right, cursor.MoveAnchor, new_size.cols)
-                    if not cursor.atEnd():
-                        cursor.insertText('\n')
-                    line = line[new_size.cols:]
+                remaining_text = line
 
-            cursor.movePosition(cursor.NextBlock)
-            cursor.movePosition(cursor.StartOfLine)
+                while remaining_text:
+                    # Take the next chunk that fits in the new width
+                    chunk = remaining_text[:new_size.cols]
+                    remaining_text = remaining_text[new_size.cols:]
+
+                    # Select and replace current line's content
+                    cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                    cursor.insertText(chunk)
+
+                    if remaining_text:  # More text to wrap
+                        cursor.insertText('\n')
+
+                # Move to next original block
+                cursor.movePosition(QTextCursor.NextBlock)
+            else:
+                # Line fits, move to next block
+                cursor.clearSelection()
+                cursor.movePosition(QTextCursor.NextBlock)
+
+            blocks_processed += 1
 
     def _insert_plain_text(self, text: str):
         """Insert text at current cursor position with scroll region and line wrapping support.

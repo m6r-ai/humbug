@@ -74,23 +74,19 @@ class TerminalTab(TabBase):
         # Start local shell process
         self._create_tracked_task(self._start_process())
 
-    def _handle_terminal_resize(self, rows: int, cols: int):
-        """Handle terminal resize event."""
-        if self._master_fd is not None:
-            winsize = struct.pack('HHHH', rows, cols, 0, 0)
-            fcntl.ioctl(self._master_fd, termios.TIOCSWINSZ, winsize)
-
     def _install_sigwinch_handler(self):
         """Install SIGWINCH handler for terminal size changes."""
         loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGWINCH, self._handle_window_resize)
+        loop.add_signal_handler(signal.SIGWINCH, self._handle_terminal_resize)
 
-    def _handle_window_resize(self):
+    def _handle_terminal_resize(self):
         """Handle terminal window resize events."""
         if self._master_fd is not None:
-            current_size = self._terminal._current_size
-            winsize = struct.pack('HHHH', current_size.rows, current_size.cols, 0, 0)
-            fcntl.ioctl(self._master_fd, termios.TIOCSWINSZ, winsize)
+            try:
+                print("terminal resize")
+                self._terminal.update_pty_size(self._master_fd)
+            except OSError as e:
+                self._logger.error(f"Failed to handle window resize: {e}")
 
     def _create_tracked_task(self, coro) -> asyncio.Task:
         """
@@ -122,11 +118,11 @@ class TerminalTab(TabBase):
             mode[3] &= ~(termios.ECHO | termios.ICANON)  # Turn off echo and canonical mode
             termios.tcsetattr(slave_fd, termios.TCSAFLUSH, mode)
 
-            # Set initial terminal size
-            char_width = self._terminal.viewport().width() // self._terminal.fontMetrics().horizontalAdvance(' ')
-            char_height = self._terminal.viewport().height() // self._terminal.fontMetrics().height()
-            winsize = struct.pack('HHHH', char_height, char_width, 0, 0)
-            fcntl.ioctl(master_fd, termios.TIOCSWINSZ, winsize)
+            try:
+                print("start process")
+                self._terminal.update_pty_size(master_fd)
+            except OSError as e:
+                self._logger.warning(f"Failed to set initial terminal size: {e}")
 
             # Start process with the slave end of the pty
             self._process = await asyncio.create_subprocess_exec(
