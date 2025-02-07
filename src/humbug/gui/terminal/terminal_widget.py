@@ -1026,108 +1026,113 @@ class TerminalWidget(QPlainTextEdit):
 
     def _ensure_cursor_position(self, target_row: int, target_col: int) -> None:
         """Ensure cursor can be positioned at the specified row and column.
-        
+
         This function ensures that:
         1. The target row exists in the document
         2. The target row has enough characters to reach the target column
         3. Any missing characters are filled with spaces
-        
+
         Args:
             target_row: Target row number (0-based)
             target_col: Target column number (0-based)
-            
+
         Raises:
             ValueError: If target_row or target_col is negative
         """
         if target_row < 0 or target_col < 0:
             raise ValueError("Target row and column must be non-negative")
-            
+
         cursor = self.textCursor()
-        
+
         # Store original position in case we need to restore it
         original_position = cursor.position()
-        
+
         try:
             # First ensure the target row exists
             current_blocks = self.document().blockCount()
             blocks_needed = target_row + 1 - current_blocks
-            
+
             if blocks_needed > 0:
                 cursor.movePosition(cursor.End)
                 for _ in range(blocks_needed):
                     cursor.insertText('\n')
-                    
+
             # Move to the target row
             cursor.movePosition(cursor.Start)
             for _ in range(target_row):
                 cursor.movePosition(cursor.NextBlock)
-                
+
             # Get the current line length
             cursor.movePosition(cursor.EndOfLine)
             current_length = cursor.columnNumber()
-            
+
             # If we need more characters, add spaces
             if current_length < target_col:
                 spaces_needed = target_col - current_length
                 cursor.insertText(' ' * spaces_needed)
-                
+
         except Exception as e:
             # Restore original cursor position on error
             cursor.setPosition(original_position)
             raise e from None
-            
+
     def _move_cursor_to(self, row: int, col: int) -> None:
-        """Move cursor to specified position, ensuring the position exists.
-        
+        """Move cursor to specified position within visible terminal area.
+
         Args:
-            row: Target row number (0-based)
+            row: Target row number (0-based) relative to visible area
             col: Target column number (0-based)
-            
+
         Raises:
             ValueError: If row or col is negative
         """
-        # First ensure the position exists
-        self._ensure_cursor_position(row, col)
-        
-        # Now move the cursor
+        if row < 0 or col < 0:
+            raise ValueError("Row and column must be non-negative")
+
+        # Get the document and cursor
+        document = self.document()
         cursor = self.textCursor()
-        cursor.movePosition(cursor.Start)
-        for _ in range(row):
-            cursor.movePosition(cursor.NextBlock)
 
-        cursor.movePosition(cursor.StartOfLine)
-        cursor.movePosition(cursor.Right, n=col)
+        # Calculate the first visible block number
+        first_visible = self.firstVisibleBlock().blockNumber()
+
+        # Calculate target block number relative to visible area
+        target_block = first_visible + row
+
+        # Ensure we don't exceed document bounds
+        last_block = document.blockCount() - 1
+        target_block = min(target_block, last_block)
+
+        # Move cursor to target block
+        cursor.movePosition(QTextCursor.Start)
+        # Calculate how many blocks to move forward
+        blocks_to_move = target_block
+        if blocks_to_move > 0:
+            cursor.movePosition(QTextCursor.NextBlock, n=blocks_to_move)
+
+        # Move to start of line and then to target column
+        cursor.movePosition(QTextCursor.StartOfLine)
+
+        # Ensure we have enough characters in the line
+        block = cursor.block()
+        line_length = block.length() - 1  # Subtract 1 for the newline character
+
+        if line_length < col:
+            # Insert spaces to reach target column
+            cursor.movePosition(QTextCursor.EndOfLine)
+            cursor.insertText(' ' * (col - line_length))
+        else:
+            # Move to target column
+            cursor.movePosition(QTextCursor.Right, n=col)
+
         self.setTextCursor(cursor)
-
-    def _ensure_line_exists(self, line_number: int, cursor: QTextCursor) -> None:
-        """Ensure the specified line number exists, adding blank lines if needed.
-        
-        Args:
-            line_number: Target line number
-            cursor: Current text cursor
-        """
-        while self.document().blockCount() <= line_number:
-            cursor.movePosition(QTextCursor.End)
-            cursor.insertText('\n')
-
-    def _ensure_column_width(self, column: int, cursor: QTextCursor) -> None:
-        """Ensure the current line has enough spaces to reach the target column.
-        
-        Args:
-            column: Target column number
-            cursor: Current text cursor
-        """
-        cursor.movePosition(QTextCursor.EndOfLine)
-        spaces_needed = max(0, column - cursor.columnNumber())
-        if spaces_needed > 0:
-            cursor.insertText(' ' * spaces_needed)
 
     def _handle_cursor_sequence(self, sequence: str):
         """Handle cursor movement sequences (CUU, CUD, CUF, CUB).
-        
+
         Args:
             sequence: The complete escape sequence starting with ESC[
-            
+
         The sequences are:
             - CUU (A): Move cursor up n lines
             - CUD (B): Move cursor down n lines
@@ -1157,7 +1162,7 @@ class TerminalWidget(QPlainTextEdit):
                 self._move_cursor_to(current_row, max(0, current_col - count))
         except ValueError as e:
             self._logger.warning(f"Invalid cursor movement: {e}")
-  
+
     def _insert_plain_text(self, text: str):
         """Insert text at current cursor position with scroll region and line wrapping support.
 
@@ -1173,23 +1178,29 @@ class TerminalWidget(QPlainTextEdit):
         elif text == '\n':
             if self._scroll_region is not None:
                 top, bottom = self._scroll_region
-                current_line = cursor.blockNumber()
+                # Get position relative to visible area
+                first_visible = self.firstVisibleBlock().blockNumber()
+                current_line = cursor.blockNumber() - first_visible
 
                 if current_line == bottom:
                     # At bottom of scroll region, need to scroll
+                    scroll_start_block = first_visible + top
+                    scroll_text_start_block = scroll_start_block + 1
+                    scroll_end_block = first_visible + bottom + 1
+
+                    # Move to scroll region start
                     cursor.movePosition(QTextCursor.Start)
-                    for _ in range(top):
-                        cursor.movePosition(QTextCursor.NextBlock)
+                    cursor.movePosition(QTextCursor.NextBlock, n=scroll_start_block)
                     scroll_start = cursor.position()
 
+                    # Move to text start position
                     cursor.movePosition(QTextCursor.Start)
-                    for _ in range(top + 1):
-                        cursor.movePosition(QTextCursor.NextBlock)
+                    cursor.movePosition(QTextCursor.NextBlock, n=scroll_text_start_block)
                     scroll_text_start = cursor.position()
 
+                    # Move to scroll end
                     cursor.movePosition(QTextCursor.Start)
-                    for _ in range(bottom + 1):
-                        cursor.movePosition(QTextCursor.NextBlock)
+                    cursor.movePosition(QTextCursor.NextBlock, n=scroll_end_block)
                     scroll_end = cursor.position()
 
                     # Select and copy the text to be scrolled
@@ -1227,6 +1238,7 @@ class TerminalWidget(QPlainTextEdit):
                 # Check for line wrap
                 if cursor.columnNumber() >= self._current_size.cols:
                     cursor.insertText('\n')
+                    cursor.movePosition(QTextCursor.StartOfLine)
         elif text == '\x0b':  # Vertical tab
             cursor.movePosition(QTextCursor.Down)
         elif text == '\x0c':  # Form feed
@@ -1243,7 +1255,21 @@ class TerminalWidget(QPlainTextEdit):
 
             cursor.insertText(text)
 
+            # If we're at the bottom of the visible area and not in a scroll region,
+            # ensure the cursor remains visible
+            if (self._scroll_region is None and
+                cursor.blockNumber() - self.firstVisibleBlock().blockNumber() >= self._current_size.rows):
+                # Remove the top line
+                cursor.movePosition(QTextCursor.Start)
+                cursor.movePosition(QTextCursor.NextBlock, QTextCursor.KeepAnchor)
+                cursor.removeSelectedText()
+                # Restore cursor position
+                cursor.movePosition(QTextCursor.End)
+                cursor.movePosition(QTextCursor.StartOfLine)
+                cursor.movePosition(QTextCursor.Right, n=cursor.columnNumber())
+
         self.setTextCursor(cursor)
+        self.ensureCursorVisible()
 
     def _calculate_size(self) -> TerminalSize:
         """Calculate current terminal size in rows and columns."""
