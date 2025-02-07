@@ -1058,17 +1058,24 @@ class TerminalWidget(QPlainTextEdit):
         if blocks_to_move > 0:
             cursor.movePosition(QTextCursor.NextBlock, n=blocks_to_move)
 
-        # Move to start of line and then to target column
+        # Move to start of line
         cursor.movePosition(QTextCursor.StartOfLine)
 
-        # Ensure we have enough characters in the line
+        # Get the current line text
         block = cursor.block()
-        line_length = block.length() - 1  # Subtract 1 for the newline character
+        line_text = block.text()
 
-        if line_length < col:
-            # Insert spaces to reach target column
-            cursor.movePosition(QTextCursor.EndOfLine)
-            cursor.insertText(' ' * (col - line_length))
+        if col >= len(line_text):
+            print(f"col {col}, line len {len(line_text)}")
+            # Move to before any newline character
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.Right, n=line_text)
+
+            # Insert needed spaces
+            spaces_needed = col - len(line_text)
+            print(f"insert {spaces_needed} spaces")
+            if spaces_needed > 0:
+                cursor.insertText(' ' * spaces_needed)
         else:
             # Move to target column
             cursor.movePosition(QTextCursor.Right, n=col)
