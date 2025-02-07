@@ -8,8 +8,6 @@ import pty
 import termios
 import select
 import signal
-import fcntl
-import struct
 from typing import Dict, Optional, Set
 
 from PySide6.QtWidgets import QVBoxLayout
@@ -204,6 +202,7 @@ class TerminalTab(TabBase):
         base_size = self._style_manager.base_font_size
         font.setPointSizeF(base_size * self._style_manager.zoom_factor)
         self._terminal.setFont(font)
+        print(f"point size {base_size * self._style_manager.zoom_factor}")
 
         # Update terminal colors
         self._terminal.setStyleSheet(f"""

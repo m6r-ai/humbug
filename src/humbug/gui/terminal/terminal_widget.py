@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import (
     QTextCursor, QKeyEvent, QFont, QTextCharFormat, QMouseEvent,
-    QTextFormat, QResizeEvent
+    QTextFormat, QResizeEvent, QFontMetricsF
 )
 
 from humbug.gui.color_role import ColorRole
@@ -127,6 +127,7 @@ class TerminalWidget(QPlainTextEdit):
     def _handle_style_changed(self):
         """Handle style changes."""
         # Update default format
+        print("handle style changed")
         self._update_default_format()
 
         # Update current format while preserving custom properties
@@ -574,9 +575,8 @@ class TerminalWidget(QPlainTextEdit):
 
             if op == 18:  # Report terminal size
                 # Get size in characters
-                char_width = self.viewport().width() // self.fontMetrics().horizontalAdvance(' ')
-                char_height = self.viewport().height() // self.fontMetrics().height()
-                self.data_ready.emit(f'\x1b[8;{char_height};{char_width}t'.encode())
+                size = self._calculate_size()
+                self.data_ready.emit(f'\x1b[8;{size.rows};{size.cols}t'.encode())
                 return
 
             if op == 22:  # Push/pop window title
@@ -682,10 +682,6 @@ class TerminalWidget(QPlainTextEdit):
             row = cursor.blockNumber() + 1
             col = cursor.columnNumber() + 1
             self.data_ready.emit(f'\x1b[{row};{col}R'.encode())
-        elif params == '18t':  # Terminal size query (alternate form)
-            char_width = self.viewport().width() // self.fontMetrics().horizontalAdvance(' ')
-            char_height = self.viewport().height() // self.fontMetrics().height()
-            self.data_ready.emit(f'\x1b[8;{char_height};{char_width}t'.encode())
 
     def _handle_device_attributes(self, params: str):
         """Handle Device Attributes (DA) sequences."""
@@ -867,19 +863,24 @@ class TerminalWidget(QPlainTextEdit):
 
     def _calculate_size(self) -> TerminalSize:
         """Calculate current terminal size in rows and columns."""
-        char_width = self.fontMetrics().horizontalAdvance(' ')
-        char_height = self.fontMetrics().height()
+        # Get precise font metrics using QFontMetricsF.  Annoyingly Qt rounds up the font metric when
+        # working out how many lines to display, but rounds down when we ask it how tall a character
+        # is, so we have to ensure we've rounded up!
+        fm = QFontMetricsF(self.font())
+        char_width = int(fm.horizontalAdvance(' ') + 0.999)
+        char_height = int(fm.height() + 0.999)
 
         if char_width == 0 or char_height == 0:
             self._logger.warning(f"Invalid character dimensions: width={char_width}, height={char_height}")
             return TerminalSize(24, 80)  # Default fallback size
 
         viewport = self.viewport()
-        width = viewport.width()
-        height = viewport.height()
+        viewport_width = viewport.width()
+        viewport_height = viewport.height()
 
-        cols = max(width // char_width, 1)
-        rows = max(height // char_height, 1)
+        # Calculate rows and columns
+        cols = int(max(viewport_width // char_width, 1))
+        rows = int(max(viewport_height // char_height, 1))
 
         return TerminalSize(rows, cols)
 
@@ -924,7 +925,6 @@ class TerminalWidget(QPlainTextEdit):
         if old_size is None:
             return
 
-        print("reflow")
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Start)
 
