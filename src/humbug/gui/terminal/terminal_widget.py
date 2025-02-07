@@ -365,6 +365,8 @@ class TerminalWidget(QPlainTextEdit):
         """
         text = data.decode(errors='replace')
 
+        print(f"Processing data: {repr(text)}")
+
         i = 0
         while i < len(text):
             char = text[i]
@@ -486,6 +488,7 @@ class TerminalWidget(QPlainTextEdit):
         Args:
             sequence: The complete escape sequence starting with ESC
         """
+        print(f"Processing escape sequence: {repr(sequence)}")
         # Handle OSC sequences first
         if sequence.startswith('\x1b]'):
             if self._handle_osc_sequence(sequence):
@@ -600,6 +603,7 @@ class TerminalWidget(QPlainTextEdit):
             cursor.movePosition(QTextCursor.Start)
             for _ in range(row - 1):
                 cursor.movePosition(QTextCursor.NextBlock)
+
             cursor.movePosition(QTextCursor.Right, n=col - 1)
             self.setTextCursor(cursor)
         except (ValueError, IndexError):
@@ -628,6 +632,9 @@ class TerminalWidget(QPlainTextEdit):
             self.insertPlainText(visible_content)
             cursor.setPosition(pos)
             self.setTextCursor(cursor)
+        else:
+            print(f"handle_clear_screen: unknown param {param}")
+            self._logger.warning(f"handle_clear_screen: unknown param {param}")
 
     def _handle_clear_line(self, params: str):
         """Handle clear line (EL) sequences."""
@@ -645,6 +652,10 @@ class TerminalWidget(QPlainTextEdit):
             cursor.movePosition(QTextCursor.StartOfLine)
             cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
             cursor.removeSelectedText()
+        else:
+            print(f"handle_clear_line: unknown param {param}")
+            self._logger.warning(f"handle_clear_line: unknown param {param}")
+
         self.setTextCursor(cursor)
 
     def _handle_insert_delete(self, command: str, params: str):
@@ -670,6 +681,9 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
                 cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
                 cursor.removeSelectedText()
+        else:
+            print(f"handle_insert_delete: unknown command {command}")
+            self._logger.warning(f"handle_insert_delete: unknown command {command}")
 
         self.setTextCursor(cursor)
 
@@ -682,6 +696,9 @@ class TerminalWidget(QPlainTextEdit):
             row = cursor.blockNumber() + 1
             col = cursor.columnNumber() + 1
             self.data_ready.emit(f'\x1b[{row};{col}R'.encode())
+        else:
+            print(f"handle_device_status: unknown params {params}")
+            self._logger.warning(f"handle_insert_delete: unknown params {params}")
 
     def _handle_device_attributes(self, params: str):
         """Handle Device Attributes (DA) sequences."""
@@ -691,6 +708,9 @@ class TerminalWidget(QPlainTextEdit):
         elif params == '>':  # Secondary Device Attributes
             # Report as VT220
             self.data_ready.emit(b'\x1b[>1;10;0c')
+        else:
+            print(f"handle_device_attributes: unknown params {params}")
+            self._logger.warning(f"handle_insert_attributes: unknown params {params}")
 
     def _handle_tab_control(self, params: str):
         """Handle tab control sequences."""
@@ -698,6 +718,9 @@ class TerminalWidget(QPlainTextEdit):
             pass  # Implement tab clear
         elif params == '3':  # Clear all tabs
             pass  # Implement clear all tabs
+
+        print(f"handle_device_attributes: unknown params {params}")
+        self._logger.warning(f"handle_insert_attributes: unknown params {params}")
 
     def _handle_scroll_region(self, params: str):
         """Handle scrolling region (DECSTBM) sequences."""
@@ -783,13 +806,21 @@ class TerminalWidget(QPlainTextEdit):
             self._mouse_tracking = set_mode
         elif mode == '1006':  # Enable SGR mouse mode
             self._mouse_tracking_sgr = set_mode
+        else:
+            print(f"handle_private_mode: unknown mode {mode}")
+            self._logger.warning(f"handle_private_mode: unknown mode {mode}")
 
     def _handle_ansi_mode(self, mode: str, set_mode: bool):
         """Handle ANSI mode settings."""
         if mode == '4':  # Insert Mode
             self.setOverwriteMode(not set_mode)
         elif mode == '20':  # Automatic Newline
-            pass  # Not implemented
+            print(f"handle_ansi_mode: unknown mode {mode}")
+            self._logger.warning(f"handle_ansi_mode: unknown mode {mode}")
+            # Not implemented
+        else:
+            print(f"handle_ansi_mode: unknown mode {mode}")
+            self._logger.warning(f"handle_ansi_mode: unknown mode {mode}")
 
     def _handle_simple_sequence(self, char: str) -> bool:
         """Handle simple ESC + char sequences.
@@ -809,14 +840,17 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.movePosition(QTextCursor.Start)
                 for _ in range(line):
                     cursor.movePosition(QTextCursor.NextBlock)
+
                 cursor.movePosition(QTextCursor.Right, n=column)
                 self.setTextCursor(cursor)
+
             return True
 
         if char == 'D':  # Index - Move cursor down one line
             cursor = self.textCursor()
             if cursor.blockNumber() == self.document().blockCount() - 1:
                 self.insertPlainText('\n')
+
             cursor.movePosition(QTextCursor.Down)
             self.setTextCursor(cursor)
             return True
@@ -829,6 +863,7 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.movePosition(QTextCursor.Up)
             else:
                 cursor.movePosition(QTextCursor.Up)
+
             self.setTextCursor(cursor)
             return True
 
@@ -840,7 +875,8 @@ class TerminalWidget(QPlainTextEdit):
             return True
 
         if char == 'H':  # Horizontal Tab Set
-            pass  # Implement tab set
+            print(f"handle_simple_sequences: unknown char {char}")
+            self._logger.warning(f"handle_simple_sequences: unknown char {char}")
             return True
 
         if char == 'c':  # Reset to Initial State
@@ -856,197 +892,11 @@ class TerminalWidget(QPlainTextEdit):
 
         # Character Set Selection (Just log for now)
         if char in '()':
-            self._logger.debug(f"Character set selection not implemented: {char}")
+            print(f"handle_simple_sequences: unknown char {char}")
+            self._logger.warning(f"handle_simple_sequences: unknown char {char}")
             return True
 
         return False
-
-    def _calculate_size(self) -> TerminalSize:
-        """Calculate current terminal size in rows and columns."""
-        # Get precise font metrics using QFontMetricsF.  Annoyingly Qt rounds up the font metric when
-        # working out how many lines to display, but rounds down when we ask it how tall a character
-        # is, so we have to ensure we've rounded up!
-        fm = QFontMetricsF(self.font())
-        char_width = int(fm.horizontalAdvance(' ') + 0.999)
-        char_height = int(fm.height() + 0.999)
-
-        if char_width == 0 or char_height == 0:
-            self._logger.warning(f"Invalid character dimensions: width={char_width}, height={char_height}")
-            return TerminalSize(24, 80)  # Default fallback size
-
-        viewport = self.viewport()
-        viewport_width = viewport.width()
-        viewport_height = viewport.height()
-
-        # Calculate rows and columns
-        cols = int(max(viewport_width // char_width, 1))
-        rows = int(max(viewport_height // char_height, 1))
-
-        return TerminalSize(rows, cols)
-
-    def update_pty_size(self, fd: int) -> None:
-        """Update PTY size using current terminal dimensions.
-
-        Args:
-            fd: File descriptor for PTY
-
-        Raises:
-            OSError: If ioctl call fails
-        """
-        try:
-            size = self._calculate_size()
-            print(f"pty size {size.rows}, {size.cols}")
-            fcntl.ioctl(fd, termios.TIOCSWINSZ, size.to_struct())
-        except OSError as e:
-            self._logger.error(f"Failed to update PTY size: {e}")
-            raise
-
-    def resizeEvent(self, event: QResizeEvent):
-        """Handle resize events."""
-        super().resizeEvent(event)
-        new_size = self._calculate_size()
-
-        if self._current_size != new_size:
-            old_size = self._current_size
-            self._current_size = new_size
-            self._logger.debug(
-                f"Terminal size changed: {old_size} -> {new_size}"
-            )
-            self._reflow_content(old_size, new_size)
-            self.size_changed.emit()
-
-    def _reflow_content(self, old_size: Optional[TerminalSize], new_size: TerminalSize):
-        """Reflow terminal content for new dimensions.
-
-        Args:
-            old_size: Previous terminal size
-            new_size: New terminal size
-        """
-        if old_size is None:
-            return
-
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.Start)
-
-        # Store the total number of blocks we'll process to prevent infinite loops
-        total_blocks = self.document().blockCount()
-        blocks_processed = 0
-
-        while not cursor.atEnd() and blocks_processed < total_blocks:
-            block_start = cursor.position()
-            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-            line = cursor.selectedText()
-
-            if len(line) > new_size.cols:
-                # Reset cursor to start of current line
-                cursor.setPosition(block_start)
-                remaining_text = line
-
-                while remaining_text:
-                    # Take the next chunk that fits in the new width
-                    chunk = remaining_text[:new_size.cols]
-                    remaining_text = remaining_text[new_size.cols:]
-
-                    # Select and replace current line's content
-                    cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-                    cursor.insertText(chunk)
-
-                    if remaining_text:  # More text to wrap
-                        cursor.insertText('\n')
-
-                # Move to next original block
-                cursor.movePosition(QTextCursor.NextBlock)
-            else:
-                # Line fits, move to next block
-                cursor.clearSelection()
-                cursor.movePosition(QTextCursor.NextBlock)
-
-            blocks_processed += 1
-
-    def _insert_plain_text(self, text: str):
-        """Insert text at current cursor position with scroll region and line wrapping support.
-
-        Args:
-            text: Text to insert
-        """
-        cursor = self.textCursor()
-        cursor.mergeCharFormat(self._current_text_format)
-
-        if text == '\r':
-            cursor.movePosition(QTextCursor.StartOfLine)
-        elif text == '\n':
-            if self._scroll_region is not None:
-                top, bottom = self._scroll_region
-                current_line = cursor.blockNumber()
-
-                if current_line == bottom:
-                    # At bottom of scroll region, need to scroll
-                    cursor.movePosition(QTextCursor.Start)
-                    for _ in range(top):
-                        cursor.movePosition(QTextCursor.NextBlock)
-                    scroll_start = cursor.position()
-
-                    cursor.movePosition(QTextCursor.Start)
-                    for _ in range(top + 1):
-                        cursor.movePosition(QTextCursor.NextBlock)
-                    scroll_text_start = cursor.position()
-
-                    cursor.movePosition(QTextCursor.Start)
-                    for _ in range(bottom + 1):
-                        cursor.movePosition(QTextCursor.NextBlock)
-                    scroll_end = cursor.position()
-
-                    # Select and copy the text to be scrolled
-                    cursor.setPosition(scroll_text_start)
-                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
-                    text_to_move = cursor.selectedText()
-
-                    # Delete old content and insert at new position
-                    cursor.setPosition(scroll_start)
-                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
-                    cursor.removeSelectedText()
-                    cursor.setPosition(scroll_start)
-                    cursor.insertText(text_to_move)
-
-                    # Move to the end of the line
-                    cursor.movePosition(QTextCursor.EndOfLine)
-                else:
-                    # Normal newline behavior
-                    cursor.movePosition(QTextCursor.EndOfLine)
-                    cursor.insertText('\n')
-            else:
-                # No scroll region, normal newline
-                cursor.movePosition(QTextCursor.EndOfLine)
-                cursor.insertText('\n')
-            cursor.movePosition(QTextCursor.StartOfLine)
-        elif text == '\b':  # Backspace/Cursor Left
-            cursor.movePosition(QTextCursor.Left)
-        elif text == '\t':  # Tab
-            # Handle each space in overwrite mode
-            spaces_to_next_tab = 8 - (cursor.columnNumber() % 8)
-            for _ in range(spaces_to_next_tab):
-                if not cursor.atEnd():
-                    cursor.deleteChar()
-                cursor.insertText(' ')
-                # Check for line wrap
-                if cursor.columnNumber() >= self._current_size.cols:
-                    cursor.insertText('\n')
-        elif text == '\x0b':  # Vertical tab
-            cursor.movePosition(QTextCursor.Down)
-        elif text == '\x0c':  # Form feed
-            self.clear()
-        else:
-            # Check if we need to wrap at terminal width
-            if cursor.columnNumber() >= self._current_size.cols:
-                cursor.insertText('\n')
-                cursor.movePosition(QTextCursor.StartOfLine)
-
-            # In a terminal, we always overwrite the character at cursor position
-            if not cursor.atEnd():
-                cursor.deleteChar()
-            cursor.insertText(text)
-
-        self.setTextCursor(cursor)
 
     def _clear_to_end_of_screen(self):
         """Clear from cursor position to the end of screen."""
@@ -1173,6 +1023,9 @@ class TerminalWidget(QPlainTextEdit):
                 ]
                 current_format.setBackground(self._style_manager.get_color(color_roles[code - 100]))
                 current_format.setProperty(FormatProperty.CUSTOM_BACKGROUND, True)
+            else:
+                print(f"handle_sgr_sequence: unknown code {code}")
+                self._logger.warning(f"handle_sgr_sequence: unknown code {code}")
 
         # Update the current text format
         self._current_text_format = current_format
@@ -1181,6 +1034,8 @@ class TerminalWidget(QPlainTextEdit):
         """Handle cursor movement sequences."""
         match = re.match(r'\x1b\[(\d*)([ABCD])', sequence)
         if not match:
+            print(f"handle_cursor_sequence: unknown sequence {sequence}")
+            self._logger.warning(f"handle_ansi_mode: unknown sequence {sequence}")
             return
 
         count = int(match.group(1)) if match.group(1) else 1
@@ -1198,6 +1053,194 @@ class TerminalWidget(QPlainTextEdit):
             cursor.movePosition(QTextCursor.Left, n=count)
 
         self.setTextCursor(cursor)
+
+    def _insert_plain_text(self, text: str):
+        """Insert text at current cursor position with scroll region and line wrapping support.
+
+        Args:
+            text: Text to insert
+        """
+        cursor = self.textCursor()
+        cursor.mergeCharFormat(self._current_text_format)
+
+        if text == '\r':
+            cursor.movePosition(QTextCursor.StartOfLine)
+        elif text == '\n':
+            if self._scroll_region is not None:
+                top, bottom = self._scroll_region
+                current_line = cursor.blockNumber()
+
+                if current_line == bottom:
+                    # At bottom of scroll region, need to scroll
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(top):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_start = cursor.position()
+
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(top + 1):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_text_start = cursor.position()
+
+                    cursor.movePosition(QTextCursor.Start)
+                    for _ in range(bottom + 1):
+                        cursor.movePosition(QTextCursor.NextBlock)
+                    scroll_end = cursor.position()
+
+                    # Select and copy the text to be scrolled
+                    cursor.setPosition(scroll_text_start)
+                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
+                    text_to_move = cursor.selectedText()
+
+                    # Delete old content and insert at new position
+                    cursor.setPosition(scroll_start)
+                    cursor.setPosition(scroll_end, QTextCursor.KeepAnchor)
+                    cursor.removeSelectedText()
+                    cursor.setPosition(scroll_start)
+                    cursor.insertText(text_to_move)
+
+                    # Move to the end of the line
+                    cursor.movePosition(QTextCursor.EndOfLine)
+                else:
+                    # Normal newline behavior
+                    cursor.movePosition(QTextCursor.EndOfLine)
+                    cursor.insertText('\n')
+            else:
+                # No scroll region, normal newline
+                cursor.movePosition(QTextCursor.EndOfLine)
+                cursor.insertText('\n')
+            cursor.movePosition(QTextCursor.StartOfLine)
+        elif text == '\b':  # Backspace/Cursor Left
+            cursor.movePosition(QTextCursor.Left)
+        elif text == '\t':  # Tab
+            # Handle each space in overwrite mode
+            spaces_to_next_tab = 8 - (cursor.columnNumber() % 8)
+            for _ in range(spaces_to_next_tab):
+                if not cursor.atEnd():
+                    cursor.deleteChar()
+                cursor.insertText(' ')
+                # Check for line wrap
+                if cursor.columnNumber() >= self._current_size.cols:
+                    cursor.insertText('\n')
+        elif text == '\x0b':  # Vertical tab
+            cursor.movePosition(QTextCursor.Down)
+        elif text == '\x0c':  # Form feed
+            self.clear()
+        else:
+            # Check if we need to wrap at terminal width
+            if cursor.columnNumber() >= self._current_size.cols:
+                cursor.insertText('\n')
+                cursor.movePosition(QTextCursor.StartOfLine)
+
+            # In a terminal, we always overwrite the character at cursor position
+            if not cursor.atEnd():
+                cursor.deleteChar()
+
+            cursor.insertText(text)
+
+        self.setTextCursor(cursor)
+
+    def _calculate_size(self) -> TerminalSize:
+        """Calculate current terminal size in rows and columns."""
+        # Get precise font metrics using QFontMetricsF.  Annoyingly Qt rounds up the font metric when
+        # working out how many lines to display, but rounds down when we ask it how tall a character
+        # is, so we have to ensure we've rounded up!
+        fm = QFontMetricsF(self.font())
+        char_width = int(fm.horizontalAdvance(' ') + 0.999)
+        char_height = int(fm.height() + 0.999)
+
+        if char_width == 0 or char_height == 0:
+            self._logger.warning(f"Invalid character dimensions: width={char_width}, height={char_height}")
+            return TerminalSize(24, 80)  # Default fallback size
+
+        viewport = self.viewport()
+        viewport_width = viewport.width()
+        viewport_height = viewport.height()
+
+        # Calculate rows and columns
+        cols = int(max(viewport_width // char_width, 1))
+        rows = int(max(viewport_height // char_height, 1))
+
+        return TerminalSize(rows, cols)
+
+    def update_pty_size(self, fd: int) -> None:
+        """Update PTY size using current terminal dimensions.
+
+        Args:
+            fd: File descriptor for PTY
+
+        Raises:
+            OSError: If ioctl call fails
+        """
+        try:
+            size = self._calculate_size()
+            print(f"pty size {size.rows}, {size.cols}")
+            fcntl.ioctl(fd, termios.TIOCSWINSZ, size.to_struct())
+        except OSError as e:
+            self._logger.error(f"Failed to update PTY size: {e}")
+            raise
+
+    def resizeEvent(self, event: QResizeEvent):
+        """Handle resize events."""
+        super().resizeEvent(event)
+        new_size = self._calculate_size()
+
+        if self._current_size != new_size:
+            old_size = self._current_size
+            self._current_size = new_size
+            self._logger.debug(
+                f"Terminal size changed: {old_size} -> {new_size}"
+            )
+            self._reflow_content(old_size, new_size)
+            self.size_changed.emit()
+
+    def _reflow_content(self, old_size: Optional[TerminalSize], new_size: TerminalSize):
+        """Reflow terminal content for new dimensions.
+
+        Args:
+            old_size: Previous terminal size
+            new_size: New terminal size
+        """
+        if old_size is None:
+            return
+
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+
+        # Store the total number of blocks we'll process to prevent infinite loops
+        total_blocks = self.document().blockCount()
+        blocks_processed = 0
+
+        while not cursor.atEnd() and blocks_processed < total_blocks:
+            block_start = cursor.position()
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+            line = cursor.selectedText()
+
+            if len(line) > new_size.cols:
+                # Reset cursor to start of current line
+                cursor.setPosition(block_start)
+                remaining_text = line
+
+                while remaining_text:
+                    # Take the next chunk that fits in the new width
+                    chunk = remaining_text[:new_size.cols]
+                    remaining_text = remaining_text[new_size.cols:]
+
+                    # Select and replace current line's content
+                    cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                    cursor.insertText(chunk)
+
+                    if remaining_text:  # More text to wrap
+                        cursor.insertText('\n')
+
+                # Move to next original block
+                cursor.movePosition(QTextCursor.NextBlock)
+            else:
+                # Line fits, move to next block
+                cursor.clearSelection()
+                cursor.movePosition(QTextCursor.NextBlock)
+
+            blocks_processed += 1
 
     def _clear_to_end_of_line(self):
         """Clear from cursor to end of current line."""
