@@ -1024,58 +1024,6 @@ class TerminalWidget(QPlainTextEdit):
         # Update the current text format
         self._current_text_format = current_format
 
-    def _ensure_cursor_position(self, target_row: int, target_col: int) -> None:
-        """Ensure cursor can be positioned at the specified row and column.
-
-        This function ensures that:
-        1. The target row exists in the document
-        2. The target row has enough characters to reach the target column
-        3. Any missing characters are filled with spaces
-
-        Args:
-            target_row: Target row number (0-based)
-            target_col: Target column number (0-based)
-
-        Raises:
-            ValueError: If target_row or target_col is negative
-        """
-        if target_row < 0 or target_col < 0:
-            raise ValueError("Target row and column must be non-negative")
-
-        cursor = self.textCursor()
-
-        # Store original position in case we need to restore it
-        original_position = cursor.position()
-
-        try:
-            # First ensure the target row exists
-            current_blocks = self.document().blockCount()
-            blocks_needed = target_row + 1 - current_blocks
-
-            if blocks_needed > 0:
-                cursor.movePosition(cursor.End)
-                for _ in range(blocks_needed):
-                    cursor.insertText('\n')
-
-            # Move to the target row
-            cursor.movePosition(cursor.Start)
-            for _ in range(target_row):
-                cursor.movePosition(cursor.NextBlock)
-
-            # Get the current line length
-            cursor.movePosition(cursor.EndOfLine)
-            current_length = cursor.columnNumber()
-
-            # If we need more characters, add spaces
-            if current_length < target_col:
-                spaces_needed = target_col - current_length
-                cursor.insertText(' ' * spaces_needed)
-
-        except Exception as e:
-            # Restore original cursor position on error
-            cursor.setPosition(original_position)
-            raise e from None
-
     def _move_cursor_to(self, row: int, col: int) -> None:
         """Move cursor to specified position within visible terminal area.
 
