@@ -1030,7 +1030,8 @@ class TerminalWidget(QPlainTextEdit):
         self._current_text_format = current_format
 
     def _move_cursor_to(self, row: int, col: int) -> None:
-        """Move cursor to specified position within visible terminal area.
+        """
+        Move cursor to specified position within visible terminal area.
 
         Args:
             row: Target row number (0-based) relative to visible area
@@ -1053,16 +1054,20 @@ class TerminalWidget(QPlainTextEdit):
         # Calculate target block number relative to visible area
         target_block = first_visible + row
 
-        # Ensure we don't exceed document bounds
-        last_block = document.blockCount() - 1
-        target_block = min(target_block, last_block)
-
-        # Move cursor to target block
+        # Move cursor to start to prepare for movement
         cursor.movePosition(QTextCursor.Start)
-        # Calculate how many blocks to move forward
-        blocks_to_move = target_block
-        if blocks_to_move > 0:
-            cursor.movePosition(QTextCursor.NextBlock, n=blocks_to_move)
+
+        # If we need to extend the document, add newlines
+        current_blocks = document.blockCount()
+        blocks_needed = target_block - current_blocks + 1
+        if blocks_needed > 0:
+            cursor.movePosition(QTextCursor.End)
+            cursor.insertText('\n' * blocks_needed)
+            cursor.movePosition(QTextCursor.Start)
+
+        # Move to target block
+        if target_block > 0:
+            cursor.movePosition(QTextCursor.NextBlock, n=target_block)
 
         # Move to start of line
         cursor.movePosition(QTextCursor.StartOfLine)
@@ -1071,20 +1076,19 @@ class TerminalWidget(QPlainTextEdit):
         block = cursor.block()
         line_text = block.text()
 
-        if col >= len(line_text):
-            print(f"col {col}, line len {len(line_text)}")
-            # Move to before any newline character
+        # If we need to extend the line, add spaces
+        spaces_needed = col - len(line_text)
+        if spaces_needed > 0:
+            # Move to end of existing text
+            cursor.movePosition(QTextCursor.EndOfLine)
+            cursor.insertText(' ' * spaces_needed)
+            # Move back to start of line
             cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.movePosition(QTextCursor.Right, n=len(line_text))
-
-            # Insert needed spaces
-            spaces_needed = col - len(line_text)
-            print(f"insert {spaces_needed} spaces")
-            if spaces_needed > 0:
-                cursor.insertText(' ' * spaces_needed)
+            # Now move to desired column
+            cursor.movePosition(QTextCursor.Right, n=col)
         else:
             # Move to target column
-            cursor.movePosition(QTextCursor.Right, n=col)
+            cursor.movePosition(QTextCursor.Right, n=min(col, len(line_text)))
 
         self.setTextCursor(cursor)
 
