@@ -1311,12 +1311,25 @@ class TerminalWidget(QPlainTextEdit):
         if old_size is None:
             return
 
+        # Save cursor position relative to content
+        original_cursor = self.textCursor()
+        first_visible = self.firstVisibleBlock().blockNumber()
+
+        # Calculate cursor position in characters from start of document
+        char_pos = 0
+        for block_num in range(first_visible, original_cursor.blockNumber()):
+            block = self.document().findBlockByNumber(block_num)
+            char_pos += len(block.text()) + 1  # +1 for newline
+        char_pos += original_cursor.columnNumber()
+
+        # Start reflow from beginning
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Start)
 
         # Store the total number of blocks we'll process to prevent infinite loops
         total_blocks = self.document().blockCount()
         blocks_processed = 0
+        chars_processed = 0  # Track processed characters to recalculate cursor position
 
         while not cursor.atEnd() and blocks_processed < total_blocks:
             block_start = cursor.position()
@@ -1336,18 +1349,50 @@ class TerminalWidget(QPlainTextEdit):
                     # Select and replace current line's content
                     cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
                     cursor.insertText(chunk)
+                    chars_processed += len(chunk)
 
                     if remaining_text:  # More text to wrap
                         cursor.insertText('\n')
+                        chars_processed += 1
 
-                # Move to next original block
+                    # Update cursor position calculation if we've wrapped a line before the original cursor
+                    if chars_processed <= char_pos:
+                        char_pos += 1  # Account for the added newline in cursor position
+
                 cursor.movePosition(QTextCursor.NextBlock)
             else:
                 # Line fits, move to next block
+                chars_processed += len(line) + 1  # +1 for newline
                 cursor.clearSelection()
                 cursor.movePosition(QTextCursor.NextBlock)
 
             blocks_processed += 1
+
+        # Calculate new cursor position
+        cursor.movePosition(QTextCursor.Start)
+        remaining_chars = char_pos
+        new_block_num = 0
+        new_col = 0
+
+        while remaining_chars > 0 and not cursor.atEnd():
+            block = cursor.block()
+            line_length = len(block.text())
+
+            if remaining_chars > line_length:
+                # Move to next block
+                cursor.movePosition(QTextCursor.NextBlock)
+                remaining_chars -= (line_length + 1)  # +1 for newline
+                new_block_num += 1
+            else:
+                # Found the right block and column
+                new_col = remaining_chars
+                remaining_chars = 0
+
+        # Move cursor to calculated position
+        self._move_cursor_to(
+            new_block_num - first_visible,  # Convert to visible-area relative position
+            min(new_col, new_size.cols - 1)  # Ensure we don't exceed terminal width
+        )
 
     def _clear_to_end_of_line(self):
         """Clear from cursor to end of current line."""
