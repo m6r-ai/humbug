@@ -607,7 +607,21 @@ class TerminalWidget(QPlainTextEdit):
         """Handle clear screen (ED) sequences."""
         param = params if params else '0'
         if param == '0':  # Clear from cursor to end of screen
-            self._clear_to_end_of_screen()
+            cursor = self.textCursor()
+
+            # First clear to end of current line
+            cursor.clearSelection()
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
+
+            # Then clear all lines below
+            current_pos = cursor.position()
+            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
+
+            # Restore cursor position
+            cursor.setPosition(current_pos)
+            self.setTextCursor(cursor)
         elif param == '1':  # Clear from cursor to beginning of screen
             cursor = self.textCursor()
             end_pos = cursor.position()
@@ -635,7 +649,11 @@ class TerminalWidget(QPlainTextEdit):
         param = params if params else '0'
         cursor = self.textCursor()
         if param == '0':  # Clear from cursor to end of line
-            self._clear_to_end_of_line()
+            cursor = self.textCursor()
+            cursor.clearSelection()
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
+            self.setTextCursor(cursor)
         elif param == '1':  # Clear from cursor to start of line
             start_pos = cursor.block().position()
             end_pos = cursor.position()
@@ -897,24 +915,6 @@ class TerminalWidget(QPlainTextEdit):
 
         return False
 
-    def _clear_to_end_of_screen(self):
-        """Clear from cursor position to the end of screen."""
-        cursor = self.textCursor()
-
-        # First clear to end of current line
-        cursor.clearSelection()
-        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-        cursor.removeSelectedText()
-
-        # Then clear all lines below
-        current_pos = cursor.position()
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        cursor.removeSelectedText()
-
-        # Restore cursor position
-        cursor.setPosition(current_pos)
-        self.setTextCursor(cursor)
-
     def _handle_sgr_sequence(self, params: str):
         """Handle Select Graphic Rendition (SGR) sequences."""
         if not params:
@@ -1059,7 +1059,7 @@ class TerminalWidget(QPlainTextEdit):
 
         # If we need to extend the document, add newlines
         current_blocks = document.blockCount()
-        blocks_needed = target_block - current_blocks + 1
+        blocks_needed = target_block - current_blocks
         if blocks_needed > 0:
             cursor.movePosition(QTextCursor.End)
             cursor.insertText('\n' * blocks_needed)
@@ -1393,14 +1393,6 @@ class TerminalWidget(QPlainTextEdit):
             new_block_num - first_visible,  # Convert to visible-area relative position
             min(new_col, new_size.cols - 1)  # Ensure we don't exceed terminal width
         )
-
-    def _clear_to_end_of_line(self):
-        """Clear from cursor to end of current line."""
-        cursor = self.textCursor()
-        cursor.clearSelection()
-        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-        cursor.removeSelectedText()
-        self.setTextCursor(cursor)
 
     def clear(self):
         """Clear the terminal."""
