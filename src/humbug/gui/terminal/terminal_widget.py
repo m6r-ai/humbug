@@ -513,8 +513,8 @@ class TerminalWidget(QPlainTextEdit):
                 self._handle_clear_screen(params)
                 return
 
-            if command == 'K':  # Clear line
-                self._handle_clear_line(params)
+            if command == 'K':  # Erase in line
+                self._handle_erase_in_line(params)
                 return
 
             if command in '@PML':  # Insert/Delete operations
@@ -644,16 +644,14 @@ class TerminalWidget(QPlainTextEdit):
             print(f"handle_clear_screen: unknown param {param}")
             self._logger.warning(f"handle_clear_screen: unknown param {param}")
 
-    def _handle_clear_line(self, params: str):
-        """Handle clear line (EL) sequences."""
+    def _handle_erase_in_line(self, params: str):
+        """Handle erase in line (EL) sequences."""
         param = params if params else '0'
         cursor = self.textCursor()
         if param == '0':  # Clear from cursor to end of line
-            cursor = self.textCursor()
             cursor.clearSelection()
             cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
             cursor.removeSelectedText()
-            self.setTextCursor(cursor)
         elif param == '1':  # Clear from cursor to start of line
             start_pos = cursor.block().position()
             end_pos = cursor.position()
