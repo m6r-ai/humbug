@@ -599,13 +599,7 @@ class TerminalWidget(QPlainTextEdit):
             parts = params.split(';')
             row = int(parts[0]) if parts[0] else 1
             col = int(parts[1]) if len(parts) > 1 and parts[1] else 1
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.Start)
-            for _ in range(row - 1):
-                cursor.movePosition(QTextCursor.NextBlock)
-
-            cursor.movePosition(QTextCursor.Right, n=col - 1)
-            self.setTextCursor(cursor)
+            self._move_cursor_to(row - 1, col - 1)  # Convert to 0-based indices
         except (ValueError, IndexError):
             self._logger.warning(f"Invalid cursor position params: {params}")
 
@@ -742,7 +736,13 @@ class TerminalWidget(QPlainTextEdit):
             self._handle_ansi_mode(params, set_mode)
 
     def _handle_private_mode(self, mode: str, set_mode: bool):
-        """Handle private mode settings."""
+        """
+        Handle private mode settings.
+
+        Args:
+            mode: The mode number as a string
+            set_mode: True to set mode, False to reset it
+        """
         if mode == '1':  # Application Cursor Keys
             self._application_cursor_keys = set_mode
         elif mode == '7':  # Auto-wrap Mode
@@ -830,7 +830,10 @@ class TerminalWidget(QPlainTextEdit):
         """
         if char == '7':  # Save Cursor
             cursor = self.textCursor()
-            self._saved_cursor_position = (cursor.blockNumber(), cursor.columnNumber())
+            self._saved_cursor_position = (
+                cursor.blockNumber() - self.firstVisibleBlock().blockNumber(),
+                cursor.columnNumber()
+            )
             return True
 
         if char == '8':  # Restore Cursor
@@ -1037,6 +1040,7 @@ class TerminalWidget(QPlainTextEdit):
         if row < 0 or col < 0:
             raise ValueError("Row and column must be non-negative")
 
+        print(f"move cursor: {row} {col}")
         # Get the document and cursor
         document = self.document()
         cursor = self.textCursor()
