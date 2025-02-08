@@ -765,6 +765,7 @@ class TerminalWidget(QPlainTextEdit):
                     cursor.setPosition(i)
                     cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
                     self._main_screen_formats.append(cursor.charFormat())
+
                 self._saved_cursor_position = (
                     self.textCursor().blockNumber(),
                     self.textCursor().columnNumber()
@@ -789,6 +790,7 @@ class TerminalWidget(QPlainTextEdit):
                     line, column = self._saved_cursor_position
                     for _ in range(line):
                         cursor.movePosition(QTextCursor.NextBlock)
+
                     cursor.movePosition(QTextCursor.Right, n=column)
                     self.setTextCursor(cursor)
                 self._using_alternate_screen = False
@@ -1073,7 +1075,7 @@ class TerminalWidget(QPlainTextEdit):
             print(f"col {col}, line len {len(line_text)}")
             # Move to before any newline character
             cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.movePosition(QTextCursor.Right, n=line_text)
+            cursor.movePosition(QTextCursor.Right, n=len(line_text))
 
             # Insert needed spaces
             spaces_needed = col - len(line_text)
@@ -1135,6 +1137,9 @@ class TerminalWidget(QPlainTextEdit):
         if text == '\r':
             cursor.movePosition(QTextCursor.StartOfLine)
         elif text == '\n':
+            # Get current column position as we need to maintain it
+            current_col = cursor.columnNumber()
+
             if self._scroll_region is not None:
                 top, bottom = self._scroll_region
                 # Get position relative to visible area
@@ -1177,14 +1182,17 @@ class TerminalWidget(QPlainTextEdit):
                     # Move to the end of the line
                     cursor.movePosition(QTextCursor.EndOfLine)
                 else:
-                    # Normal newline behavior
+                    # Normal newline behavior - move down but maintain column
+                    current_row = cursor.blockNumber() - first_visible
                     cursor.movePosition(QTextCursor.EndOfLine)
                     cursor.insertText('\n')
+                    self._move_cursor_to(current_row + 1, current_col)
             else:
-                # No scroll region, normal newline
+                # No scroll region - move down but maintain column
+                current_row = cursor.blockNumber() - self.firstVisibleBlock().blockNumber()
                 cursor.movePosition(QTextCursor.EndOfLine)
                 cursor.insertText('\n')
-            cursor.movePosition(QTextCursor.StartOfLine)
+                self._move_cursor_to(current_row + 1, current_col)
         elif text == '\b':  # Backspace/Cursor Left
             cursor.movePosition(QTextCursor.Left)
         elif text == '\t':  # Tab
@@ -1199,7 +1207,9 @@ class TerminalWidget(QPlainTextEdit):
                     cursor.insertText('\n')
                     cursor.movePosition(QTextCursor.StartOfLine)
         elif text == '\x0b':  # Vertical tab
-            cursor.movePosition(QTextCursor.Down)
+            # Move down one line and to start of line
+            current_row = cursor.blockNumber() - self.firstVisibleBlock().blockNumber()
+            self._move_cursor_to(current_row + 1, 0)
         elif text == '\x0c':  # Form feed
             self.clear()
         else:
