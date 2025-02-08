@@ -453,6 +453,7 @@ class TerminalWidget(QPlainTextEdit):
         """Handle clear screen (ED) sequences."""
         param = params if params else '0'
         cursor = self.textCursor()
+        saved_position = cursor.position()  # Save exact position
         cursor.beginEditBlock()
 
         try:
@@ -467,7 +468,13 @@ class TerminalWidget(QPlainTextEdit):
                 current_pos = cursor.position()
                 cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
                 cursor.removeSelectedText()
+
+                # Fill cleared area with empty lines
                 cursor.setPosition(current_pos)
+                block_num = cursor.blockNumber()
+                total_blocks = self._current_size.rows - (block_num - self.firstVisibleBlock().blockNumber())
+                for _ in range(total_blocks - 1):
+                    cursor.insertText('\n' + ' ' * self._current_size.cols, self._current_text_format)
 
             elif param == '1':  # Clear from cursor to beginning of screen
                 # Clear to start of current line
@@ -480,11 +487,22 @@ class TerminalWidget(QPlainTextEdit):
                 pos = cursor.position()
                 cursor.movePosition(QTextCursor.Start, QTextCursor.KeepAnchor)
                 cursor.removeSelectedText()
-                cursor.setPosition(pos)
+
+                # Fill cleared area with empty lines
+                cursor.setPosition(cursor.position())
+                block_num = cursor.blockNumber()
+                for _ in range(block_num):
+                    cursor.insertText(' ' * self._current_size.cols + '\n', self._current_text_format)
 
             elif param == '2':  # Clear entire screen
                 cursor.select(QTextCursor.Document)
                 cursor.removeSelectedText()
+
+                # Fill with empty lines
+                for i in range(self._current_size.rows):
+                    if i > 0:
+                        cursor.insertText('\n')
+                    cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
 
             elif param == '3':  # Clear scrollback buffer
                 if not self._using_alternate_screen:
@@ -504,13 +522,14 @@ class TerminalWidget(QPlainTextEdit):
 
         finally:
             cursor.endEditBlock()
-
-        self.setTextCursor(cursor)
+            cursor.setPosition(saved_position)  # Restore exact position
+            self.setTextCursor(cursor)
 
     def _handle_erase_in_line(self, params: str):
         """Handle erase in line (EL) sequences."""
         param = params if params else '0'
         cursor = self.textCursor()
+        saved_position = cursor.position()  # Save exact position
         cursor.beginEditBlock()
 
         try:
@@ -519,13 +538,11 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
                 cursor.removeSelectedText()
                 cursor.insertText(' ' * (self._current_size.cols - col), self._current_text_format)
-
             elif param == '1':  # Clear from cursor to start of line
                 col = cursor.columnNumber()
                 cursor.movePosition(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
                 cursor.removeSelectedText()
                 cursor.insertText(' ' * col, self._current_text_format)
-
             elif param == '2':  # Clear entire line
                 cursor.movePosition(QTextCursor.StartOfLine)
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
@@ -534,13 +551,14 @@ class TerminalWidget(QPlainTextEdit):
 
         finally:
             cursor.endEditBlock()
-
-        self.setTextCursor(cursor)
+            cursor.setPosition(saved_position)  # Restore exact position
+            self.setTextCursor(cursor)
 
     def _handle_insert_delete(self, command: str, params: str):
         """Handle insert and delete operations."""
         count = int(params) if params else 1
         cursor = self.textCursor()
+        saved_position = cursor.position()  # Save exact position
         cursor.beginEditBlock()
 
         try:
@@ -583,8 +601,8 @@ class TerminalWidget(QPlainTextEdit):
 
         finally:
             cursor.endEditBlock()
-
-        self.setTextCursor(cursor)
+            cursor.setPosition(saved_position)  # Restore exact position
+            self.setTextCursor(cursor)
 
     def _handle_sgr_sequence(self, params: str):
         """Handle Select Graphic Rendition (SGR) sequences."""
@@ -927,6 +945,7 @@ class TerminalWidget(QPlainTextEdit):
         """
         text = data.decode(errors='replace')
 
+        print(f"put data {repr(text)}")
         i = 0
         while i < len(text):
             char = text[i]
