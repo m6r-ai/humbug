@@ -70,7 +70,9 @@ class TerminalWidget(QPlainTextEdit):
         self._default_text_format = QTextCharFormat()
         self._update_default_format()
 
-        self._input_cursor_pos = 0
+        self._cursor_row = 0  # 0-based row in terminal
+        self._cursor_col = 0  # 0-based column in terminal
+        self._saved_cursor_position = None  # (row, col) tuple when saved
         self._cursor_visible = True
         self._cursor_blink_timer = QTimer(self)
         self._cursor_blink_timer.timeout.connect(self._blink_cursor)
@@ -223,12 +225,104 @@ class TerminalWidget(QPlainTextEdit):
             cursor.removeSelectedText()
             cursor.insertText(line_text[:self._current_size.cols], self._current_text_format)
 
-    def _insert_plain_text(self, text: str):
-        """Insert text at current cursor position with fixed width handling.
+    def _update_cursor_position(self, row: int, col: int):
+        """Update cursor position and ensure it's within bounds.
 
         Args:
-            text: Text to insert
+            row: Target row (0-based)
+            col: Target column (0-based)
         """
+        if not self._current_size:
+            return
+
+        # Ensure row is within bounds
+        self._cursor_row = max(0, row)
+
+        # Ensure column is within bounds
+        self._cursor_col = max(0, min(col, self._current_size.cols - 1))
+
+        # Update Qt cursor position to match
+        self._sync_cursor_position()
+
+    def _move_cursor_relative(self, rows: int, cols: int):
+        """Move cursor relative to current position.
+
+        Args:
+            rows: Number of rows to move (negative = up)
+            cols: Number of columns to move (negative = left)
+        """
+        self._update_cursor_position(
+            self._cursor_row + rows,
+            self._cursor_col + cols
+        )
+
+    def _sync_cursor_position(self):
+        """Synchronize internal cursor position to Qt text cursor."""
+        cursor = self.textCursor()
+
+        # Calculate target block number
+        first_visible = self.firstVisibleBlock().blockNumber()
+        target_block = first_visible + self._cursor_row
+
+        # Ensure we have enough lines
+        current_blocks = self.document().blockCount()
+        blocks_needed = (target_block + 1) - current_blocks
+
+        if blocks_needed > 0:
+            # Add needed lines
+            cursor.movePosition(QTextCursor.End)
+            for _ in range(blocks_needed):
+                cursor.insertText('\n' + ' ' * self._current_size.cols)
+
+        # Move to target position
+        cursor.movePosition(QTextCursor.Start)
+        cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
+        # Update Qt cursor
+        self.setTextCursor(cursor)
+
+        # Force cursor area update
+        cursor_rect = self._get_cursor_rect()
+        if cursor_rect:
+            self.viewport().update(cursor_rect)
+
+    def _handle_cursor_input(self, char: str):
+        """
+        Update cursor position after character input.
+
+        Args:
+            char: Input character
+        """
+        if not self._current_size:
+            return
+
+        if char == '\r':
+            self._update_cursor_position(self._cursor_row, 0)
+        elif char == '\n':
+            self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
+        elif char == '\b':
+            if self._cursor_col > 0:
+                self._update_cursor_position(self._cursor_row, self._cursor_col - 1)
+        elif char == '\t':
+            # Calculate spaces to next tab stop (every 8 columns)
+            spaces = 8 - (self._cursor_col % 8)
+            new_col = self._cursor_col + spaces
+
+            if new_col >= self._current_size.cols:
+                self._update_cursor_position(self._cursor_row + 1, 0)
+            else:
+                self._update_cursor_position(self._cursor_row, new_col)
+        else:
+            # Regular character - handle wrapping
+            if self._cursor_col >= self._current_size.cols - 1:
+                self._update_cursor_position(self._cursor_row + 1, 0)
+            else:
+                self._update_cursor_position(self._cursor_row, self._cursor_col + 1)
+
+    def _insert_plain_text(self, text: str):
+        """Insert text at current cursor position with fixed width handling."""
         if not self._current_size:
             return
 
@@ -237,96 +331,45 @@ class TerminalWidget(QPlainTextEdit):
 
         was_visible = self._cursor_visible
         self._cursor_visible = False
-        old_pos = self._input_cursor_pos
-
-        self._logger.debug(f"Before insert - Input pos: {old_pos}, Text: {repr(text)}")
 
         try:
             if text == '\r':
                 cursor.movePosition(QTextCursor.StartOfLine)
             elif text == '\n':
-                # Get current column position as we need to maintain it
-                current_col = cursor.columnNumber()
-
+                # Handle newline with scroll region if set
                 if self._scroll_region is not None:
                     top, bottom = self._scroll_region
-                    # Get position relative to visible area
-                    first_visible = self.firstVisibleBlock().blockNumber()
-                    current_line = cursor.blockNumber() - first_visible
+                    current_line = self._cursor_row
 
                     if current_line == bottom:
-                        # At bottom of scroll region, need to scroll
                         self._scroll_region_up(top, bottom)
-                        # Move cursor back to bottom line
-                        self._move_cursor_to(bottom, current_col)
                     else:
-                        # Normal newline behavior
                         cursor.movePosition(QTextCursor.EndOfLine)
                         cursor.insertText('\n')
-                        # Ensure new line is padded
                         self._ensure_line_width(cursor)
-                        # Restore column position
-                        self._move_cursor_to(current_line + 1, current_col)
                 else:
-                    # No scroll region - normal newline
                     cursor.movePosition(QTextCursor.EndOfLine)
                     cursor.insertText('\n')
-                    # Ensure new line is padded
                     self._ensure_line_width(cursor)
-                    # Move to the same column on new line
-                    cursor.movePosition(QTextCursor.StartOfLine)
-                    cursor.movePosition(QTextCursor.Right, n=min(current_col, self._current_size.cols))
-
-            elif text == '\b':  # Backspace
+            elif text == '\b':
                 if cursor.columnNumber() > 0:
                     cursor.movePosition(QTextCursor.Left)
-            elif text == '\t':  # Tab
+            elif text == '\t':
                 col = cursor.columnNumber()
-                spaces_to_next_tab = 8 - (col % 8)
-                spaces = ' ' * spaces_to_next_tab
-
-                # Handle insertion at current position
-                if cursor.columnNumber() + len(spaces) > self._current_size.cols:
-                    # Would exceed line width, wrap to next line
-                    cursor.insertText('\n')
-                    cursor.insertText(spaces[:self._current_size.cols], self._current_text_format)
-                else:
-                    # Insert spaces at current position
-                    cursor.insertText(spaces, self._current_text_format)
+                spaces = ' ' * (8 - (col % 8))
+                cursor.insertText(spaces, self._current_text_format)
             else:
                 # Normal character insertion
-                col = cursor.columnNumber()
-                if col >= self._current_size.cols:
-                    # At end of line, wrap to next line
-                    cursor.insertText('\n')
-                    cursor.insertText(text, self._current_text_format)
-                else:
-                    # Replace character at current position
-                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-                    cursor.insertText(text, self._current_text_format)
+                cursor.insertText(text, self._current_text_format)
 
-            # Ensure cursor stays within bounds
-            self._constrain_cursor_position(cursor)
-            self.setTextCursor(cursor)
+            # Update cursor position tracking
+            self._handle_cursor_input(text)
 
         finally:
             cursor.endEditBlock()
+            self._cursor_visible = was_visible
 
         self.ensureCursorVisible()
-
-        self._input_cursor_pos = self.textCursor().position()
-        self._cursor_visible = was_visible
-
-        # Force cursor area update
-        if old_pos != self._input_cursor_pos:
-            old_rect = self._get_cursor_rect()
-            if old_rect:
-                self.viewport().update(old_rect)
-            new_rect = self._get_cursor_rect()
-            if new_rect:
-                self.viewport().update(new_rect)
-
-        self._logger.debug(f"After insert - New input pos: {self._input_cursor_pos}")
 
     def _constrain_cursor_position(self, cursor: QTextCursor):
         """Ensure cursor stays within terminal bounds.
@@ -450,33 +493,39 @@ class TerminalWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
 
     def _handle_cursor_sequence(self, sequence: str):
-        """Handle cursor movement sequences (CUU, CUD, CUF, CUB).
-
-        Args:
-            sequence: The complete escape sequence starting with ESC[
-        """
+        """Handle cursor movement sequences (CUU, CUD, CUF, CUB)."""
         match = re.match(r'\x1b\[(\d*)([ABCD])', sequence)
         if not match:
             self._logger.warning(f"Invalid cursor movement sequence: {sequence}")
             return
 
-        cursor = self.textCursor()
-        current_row = cursor.blockNumber() - self.firstVisibleBlock().blockNumber()
-        current_col = cursor.columnNumber()
         count = int(match.group(1)) if match.group(1) else 1
         direction = match.group(2)
 
+        if direction == 'A':  # Up
+            self._move_cursor_relative(-count, 0)
+        elif direction == 'B':  # Down
+            self._move_cursor_relative(count, 0)
+        elif direction == 'C':  # Forward
+            self._move_cursor_relative(0, count)
+        elif direction == 'D':  # Back
+            self._move_cursor_relative(0, -count)
+
+    def _handle_cursor_position(self, params: str):
+        """Handle cursor position (CUP/HVP) sequences."""
         try:
-            if direction == 'A':  # Up
-                self._move_cursor_to(max(0, current_row - count), current_col)
-            elif direction == 'B':  # Down
-                self._move_cursor_to(current_row + count, current_col)
-            elif direction == 'C':  # Forward
-                self._move_cursor_to(current_row, min(current_col + count, self._current_size.cols - 1))
-            elif direction == 'D':  # Back
-                self._move_cursor_to(current_row, max(0, current_col - count))
-        except ValueError as e:
-            self._logger.warning(f"Invalid cursor movement: {e}")
+            if not params:
+                self._update_cursor_position(0, 0)
+                return
+
+            parts = params.split(';')
+            row = int(parts[0]) - 1  # Convert to 0-based
+            col = int(parts[1]) - 1 if len(parts) > 1 else 0
+
+            self._update_cursor_position(row, col)
+
+        except (ValueError, IndexError) as e:
+            self._logger.warning(f"Invalid cursor position parameters: {params}, error: {e}")
 
     def _handle_clear_screen(self, params: str):
         """Handle clear screen (ED) sequences."""
@@ -827,31 +876,22 @@ class TerminalWidget(QPlainTextEdit):
 
     def _get_cursor_rect(self) -> Optional[QRect]:
         """Get the rectangle where the cursor should be drawn."""
-        cursor = QTextCursor(self.document())
-        cursor.setPosition(self._input_cursor_pos)
-
-        # Get cursor position in document coordinates
-        block = cursor.block()
-        if not block.isValid():
+        if not self._current_size:
             return None
-
-        layout = block.layout()
-        pos_in_block = cursor.positionInBlock()
 
         # Calculate cursor rectangle based on character metrics
         fm = QFontMetricsF(self.font())
         char_width = int(fm.horizontalAdvance(' ') + 0.999)
         char_height = int(fm.height() + 0.999)
 
-        # Convert position to pixel coordinates
-        pos_in_doc = layout.position()
-        x = pos_in_doc.x() + (pos_in_block * char_width)
-        y = pos_in_doc.y() + (block.blockNumber() - self.firstVisibleBlock().blockNumber()) * char_height
+        # Calculate position based on cursor row/col
+        content_offset = self.contentOffset()
+        x = content_offset.x() + (self._cursor_col * char_width)
+        y = self._cursor_row * char_height
 
         # Create rectangle in viewport coordinates
-        content_offset = self.contentOffset()
         rect = QRect(
-            round(x) + content_offset.x(),
+            round(x),
             round(y),
             char_width,
             char_height
@@ -926,6 +966,7 @@ class TerminalWidget(QPlainTextEdit):
         super().focusInEvent(event)
         self._cursor_blink_timer.start()
         self._cursor_visible = True
+        self.setCursorWidth(0)  # Ensure Qt cursor stays hidden
         self.viewport().update()
 
     def focusOutEvent(self, event: QFocusEvent):
@@ -933,6 +974,7 @@ class TerminalWidget(QPlainTextEdit):
         super().focusOutEvent(event)
         self._cursor_blink_timer.stop()
         self._cursor_visible = False
+        self.setCursorWidth(0)  # Ensure Qt cursor stays hidden
         self.viewport().update()
 
     def _reflow_content(self, old_size: Optional[TerminalSize], new_size: TerminalSize):
@@ -1351,17 +1393,13 @@ class TerminalWidget(QPlainTextEdit):
     def _handle_simple_sequence(self, char: str) -> bool:
         """Handle simple ESC + char sequences."""
         if char == '7':  # Save Cursor
-            cursor = self.textCursor()
-            self._saved_cursor_position = (
-                cursor.blockNumber() - self.firstVisibleBlock().blockNumber(),
-                cursor.columnNumber()
-            )
+            self._saved_cursor_position = (self._cursor_row, self._cursor_col)
             return True
 
         if char == '8':  # Restore Cursor
             if self._saved_cursor_position:
                 row, col = self._saved_cursor_position
-                self._move_cursor_to(row, col)
+                self._update_cursor_position(row, col)
             return True
 
         if char == 'D':  # Index - Move cursor down one line
