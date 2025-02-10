@@ -553,6 +553,88 @@ class TerminalWidget(QPlainTextEdit):
             cursor.endEditBlock()
             self.setTextCursor(cursor)
 
+    def _handle_insert_lines(self, params: str):
+        """Handle insert lines operation."""
+        count = int(params) if params else 1
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+
+        try:
+            # Calculate target position from tracked cursor
+            first_visible = self.firstVisibleBlock().blockNumber()
+            target_block = first_visible + self._cursor_row
+
+            # Move Qt cursor to current input position
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
+            current_row = self._cursor_row
+            for _ in range(count):
+                # Move content down
+                self._scroll_region_down(current_row, self._current_size.rows - 1)
+
+            # Cursor moves to the first position on the row
+            self._update_cursor_position(self._cursor_row, 0)
+
+        finally:
+            cursor.endEditBlock()
+
+    def _handle_delete_lines(self, params: str):
+        """Handle delete lines operation."""
+        count = int(params) if params else 1
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+
+        try:
+            # Calculate target position from tracked cursor
+            first_visible = self.firstVisibleBlock().blockNumber()
+            target_block = first_visible + self._cursor_row
+
+            # Move Qt cursor to current input position
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
+            current_row = self._cursor_row
+            for _ in range(count):
+                # Move content down
+                self._scroll_region_up(current_row, self._current_size.rows - 1)
+
+            # Cursor moves to the first position on the row
+            self._update_cursor_position(self._cursor_row, 0)
+
+        finally:
+            cursor.endEditBlock()
+
+    def _handle_delete_characters(self, params: str):
+        """Handle delete characters operation."""
+        count = int(params) if params else 1
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+
+        try:
+            # Calculate target position from tracked cursor
+            first_visible = self.firstVisibleBlock().blockNumber()
+            target_block = first_visible + self._cursor_row
+
+            # Move Qt cursor to current input position
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
+            # Select and remove characters, filling with spaces
+            for i in range(count):
+                if self._cursor_col + i < self._current_size.cols:
+                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+                    cursor.insertText(' ', self._current_text_format)
+
+        finally:
+            cursor.endEditBlock()
+
     def _handle_insert_delete(self, command: str, params: str):
         """Handle insert and delete operations."""
         count = int(params) if params else 1
@@ -1213,52 +1295,64 @@ class TerminalWidget(QPlainTextEdit):
             params = sequence[2:-1]  # Remove ESC[ and command char
 
             # Handle based on command type
-            if command in 'ABCD':  # Cursor movement
+            if command in 'ABCD':
                 self._handle_cursor_sequence(sequence)
                 return
 
-            if command in 'Hf':  # Cursor position
+            if command in 'Hf':
                 self._handle_cursor_position(params)
                 return
 
-            if command == 'J':  # Erase in display
+            if command == 'J':
                 self._handle_erase_in_display(params)
                 return
 
-            if command == 'K':  # Erase in line
+            if command == 'K':
                 self._handle_erase_in_line(params)
                 return
 
-            if command in '@PML':  # Insert/Delete operations
-                self._handle_insert_delete(command, params)
+            if command in '@':
+                self._handle_insert_characters(params)
                 return
 
-            if command == 'm':  # SGR - Select Graphic Rendition
+            if command in 'P':
+                self._handle_delete_characters(params)
+                return
+
+            if command in 'L':
+                self._handle_insert_lines(params)
+                return
+
+            if command in 'M':
+                self._handle_delete_lines(params)
+                return
+
+            if command == 'm':
                 self._handle_sgr_sequence(params)
                 return
 
-            if command == 'n':  # Device Status Reports
+            if command == 'n':
                 self._handle_device_status(params)
                 return
 
-            if command == 'c':  # Device Attributes
+            if command == 'c':
                 self._handle_device_attributes(params)
                 return
 
-            if command == 'g':  # Tab Controls
+            if command == 'g':
                 self._handle_tab_control(params)
                 return
 
-            if command == 'r':  # Scrolling Region
+            if command == 'r':
                 self._handle_scroll_region(params)
                 return
 
-            if command in 'hl':  # Mode Settings
+            if command in 'hl':
                 self._handle_mode_setting(command, params)
                 return
 
-            # Handle window operations
             if command == 't':
+                # TODO - this doesn't exist!
                 self._handle_window_operation(params)
                 return
 
