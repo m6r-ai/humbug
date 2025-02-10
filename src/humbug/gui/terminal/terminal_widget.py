@@ -143,8 +143,10 @@ class TerminalWidget(QPlainTextEdit):
             # Pre-allocate active terminal area
             empty_line = ' ' * self._current_size.cols
             for _ in range(self._current_size.rows - 1):
-                cursor.insertBlock()
                 cursor.insertText(empty_line, self._current_text_format)
+                cursor.insertBlock()
+
+            cursor.insertText(empty_line, self._current_text_format)
 
             # Reset cursor to start
             cursor.movePosition(QTextCursor.Start)
@@ -228,6 +230,7 @@ class TerminalWidget(QPlainTextEdit):
         if not self._current_size:
             return
 
+        print(f"set pos {row} {col}")
         # If the cursor was visible before we need to erase it
         if self._cursor_visible:
             old_cursor_rect = self._get_cursor_rect()
@@ -251,14 +254,17 @@ class TerminalWidget(QPlainTextEdit):
             text: Character to write at current cursor position
         """
         # Handle special characters first
+        print(f"wc: '{repr(text)}'")
         if text == '\r':
             self._update_cursor_position(self._cursor_row, 0)
+            print(f"CR {self._cursor_row} {self._cursor_col}")
             return
         elif text == '\n':
             if self._cursor_row == self._current_size.rows - 1:
                 self._scroll_region_up(0, self._current_size.rows - 1)
             else:
                 self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
+            print(f"NL {self._cursor_row} {self._cursor_col}")
             return
         elif text == '\b':
             self._update_cursor_position(self._cursor_row, max(0, self._cursor_col - 1))
@@ -273,9 +279,18 @@ class TerminalWidget(QPlainTextEdit):
         cursor.beginEditBlock()
 
         try:
+            # Are we trying to write past the end of the line?  If yes, then wrap
+            if self._cursor_col >= self._current_size.cols:
+                if self._cursor_row < self._current_size.rows - 1:
+                    self._update_cursor_position(self._cursor_row + 1, 0)
+                else:
+                    self._scroll_region_up(0, self._current_size.rows - 1)
+                    self._update_cursor_position(self._cursor_row, 0)
+
             # Calculate target block by counting back from end of document
             doc_block_count = self.document().blockCount()
             target_block = doc_block_count - self._current_size.rows + self._cursor_row
+            print(f"dbc: {doc_block_count}, {target_block}")
 
             # Position cursor and insert character
             cursor.movePosition(QTextCursor.Start)
@@ -287,15 +302,7 @@ class TerminalWidget(QPlainTextEdit):
             cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
             cursor.insertText(text, self._current_text_format)
 
-            # Handle cursor movement and wrapping
-            if self._cursor_col >= self._current_size.cols - 1:
-                if self._cursor_row < self._current_size.rows - 1:
-                    self._update_cursor_position(self._cursor_row + 1, 0)
-                else:
-                    self._scroll_region_up(0, self._current_size.rows - 1)
-                    self._update_cursor_position(self._cursor_row, 0)
-            else:
-                self._update_cursor_position(self._cursor_row, self._cursor_col + 1)
+            self._update_cursor_position(self._cursor_row, self._cursor_col + 1)
 
         finally:
             cursor.endEditBlock()
@@ -627,8 +634,7 @@ class TerminalWidget(QPlainTextEdit):
             insert_count = min(count, remaining_space)
 
             # Select characters to shift
-            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor,
-                            remaining_space)
+            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, remaining_space)
             existing_text = cursor.selectedText()
 
             # Overwrite with spaces and shifted text
@@ -787,6 +793,10 @@ class TerminalWidget(QPlainTextEdit):
                 ]
                 current_format.setBackground(self._style_manager.get_color(color_roles[code - 100]))
                 current_format.setProperty(FormatProperty.CUSTOM_BACKGROUND, True)
+
+            else:
+                print(f"SGR code {code} - not handled")
+                self._logger.debug(f"SGR code {code} - not handled")
 
         self._current_text_format = current_format
 
