@@ -447,12 +447,11 @@ class TerminalWidget(QPlainTextEdit):
         except (ValueError, IndexError) as e:
             self._logger.warning(f"Invalid cursor position parameters: {params}, error: {e}")
 
-    def _handle_clear_screen(self, params: str):
-        """Handle clear screen (ED) sequences."""
+    def _handle_erase_in_display(self, params: str):
+        """Handle erase in display (ED) sequences."""
         param = params if params else '0'
         cursor = self.textCursor()
         cursor.beginEditBlock()
-        print(f"clear screen {params}")
 
         try:
             # Calculate target position from tracked cursor
@@ -1032,7 +1031,7 @@ class TerminalWidget(QPlainTextEdit):
 
     def clear(self):
         """Clear the terminal."""
-        self._handle_clear_screen('2')
+        self._handle_erase_in_display('2')
 
     def put_data(self, data: bytes):
         """Display received data with ANSI sequence handling.
@@ -1222,8 +1221,8 @@ class TerminalWidget(QPlainTextEdit):
                 self._handle_cursor_position(params)
                 return
 
-            if command == 'J':  # Clear screen
-                self._handle_clear_screen(params)
+            if command == 'J':  # Erase in display
+                self._handle_erase_in_display(params)
                 return
 
             if command == 'K':  # Erase in line
@@ -1378,34 +1377,28 @@ class TerminalWidget(QPlainTextEdit):
                 self._update_cursor_position(row, col)
             return True
 
-        if char == 'D':  # Index - Move cursor down one line
-            print("doing D")
-            cursor = self.textCursor()
-            if cursor.blockNumber() == self.document().blockCount() - 1:
-                cursor.insertText('\n' + ' ' * self._current_size.cols)
+        if char == 'D':  # Index - move cursor down one line
+            if self._cursor_row == self._current_size.rows - 1:
+                self._scroll_region_up(0, self._current_size.rows - 1)
+            else:
+                self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
 
-            cursor.movePosition(QTextCursor.Down)
-            self.setTextCursor(cursor)
             return True
 
-        if char == 'M':  # Reverse Index
-            print("doing M")
-            cursor = self.textCursor()
-            if cursor.blockNumber() == 0:
-                cursor.movePosition(QTextCursor.Start)
-                cursor.insertText('\n' + ' ' * self._current_size.cols)
-                cursor.movePosition(QTextCursor.Up)
+        if char == 'M':  # Reverse Index - move cursor up one line
+            if self._cursor_row == 0:
+                self._scroll_region_down(0, self._current_size.rows - 1)
             else:
-                cursor.movePosition(QTextCursor.Up)
+                self._update_cursor_position(self._cursor_row - 1, self._cursor_col)
 
-            self.setTextCursor(cursor)
             return True
 
         if char == 'E':  # Next Line
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.NextBlock)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            self.setTextCursor(cursor)
+            if self._cursor_row == self._current_size.rows - 1:
+                self._scroll_region_up(0, self._current_size.rows - 1)
+            else:
+                self._update_cursor_position(self._cursor_row + 1, 0)
+
             return True
 
         if char == 'c':  # Reset to Initial State
