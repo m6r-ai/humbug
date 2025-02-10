@@ -270,7 +270,7 @@ class TerminalTab(TabBase):
 
     def set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position."""
-        self._terminal._move_cursor_to(
+        self._terminal._update_cursor_position(
             position.get("line", 0),
             position.get("column", 0)
         )
