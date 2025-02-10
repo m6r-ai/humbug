@@ -826,7 +826,6 @@ class TerminalWidget(QPlainTextEdit):
             self._current_size = TerminalSize(rows, cols)
             self._initialize_buffer()
 
-        print(f"calculate size {rows}x{cols}")
         return TerminalSize(rows, cols)
 
     def _blink_cursor(self):
