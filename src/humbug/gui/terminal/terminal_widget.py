@@ -147,10 +147,7 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.insertBlock()
 
             cursor.insertText(empty_line, self._current_text_format)
-
-            # Reset cursor to start
-            cursor.movePosition(QTextCursor.Start)
-            self.setTextCursor(cursor)
+            print(f"init buffer {self.document().blockCount()}")
 
         finally:
             cursor.endEditBlock()
@@ -334,10 +331,6 @@ class TerminalWidget(QPlainTextEdit):
                     self._cursor_row = bottom
                 else:
                     self._cursor_row -= 1
-
-            # Ensure we're looking at the right part of the document
-            cursor.movePosition(QTextCursor.End)
-            self.setTextCursor(cursor)
 
         finally:
             cursor.endEditBlock()
@@ -1035,6 +1028,9 @@ class TerminalWidget(QPlainTextEdit):
         if not old_size:
             return
 
+        doc_rows = self.document().blockCount()
+        new_rows = new_size.rows
+
         cursor = self.textCursor()
         cursor.beginEditBlock()
 
@@ -1056,12 +1052,26 @@ class TerminalWidget(QPlainTextEdit):
                 if not cursor.atEnd():
                     cursor.movePosition(QTextCursor.NextBlock)
 
-            # Adjust cursor position if needed
-            self._cursor_col = min(self._cursor_col, new_size.cols - 1)
-            self._cursor_row = min(self._cursor_row, new_size.rows - 1)
+            if doc_rows < new_rows:
+                # Pre-allocate active terminal area
+                empty_line = ' ' * new_size.cols
+                for _ in range(new_rows - doc_rows):
+                    cursor.insertBlock()
+                    cursor.insertText(empty_line, self._current_text_format)
+
+# Need to handle the case where the doc rows are greater than the offset of the cursor row and delete trailing rows
+
+            print(f"init buffer {self.document().blockCount()}")
 
         finally:
             cursor.endEditBlock()
+
+        # Adjust cursor position if needed
+        self._cursor_col = min(self._cursor_col, new_size.cols - 1)
+        print(f"cursor row {self._cursor_row}, new rows {new_size.rows}, old rows {old_size.rows}, doc rows {doc_rows}")
+        self._cursor_row = min(self._cursor_row, new_size.rows - 1)
+        if self._cursor_row == old_size.rows - 1:
+            self._cursor_row = min(new_size.rows - 1, doc_rows - 1)
 
         # Force cursor area update
         cursor_rect = self._get_cursor_rect()
