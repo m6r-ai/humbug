@@ -822,7 +822,7 @@ class TerminalWidget(QPlainTextEdit):
         cols = max(viewport_width // char_width, 1)
         rows = max(viewport_height // char_height, 1)
 
-        if self._current_size == None:
+        if self._current_size is None:
             self._current_size = TerminalSize(rows, cols)
             self._initialize_buffer()
 
