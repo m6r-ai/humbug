@@ -41,7 +41,8 @@ class TerminalSize:
         return self.rows == other.rows and self.cols == other.cols
 
     def to_struct(self) -> bytes:
-        """Convert terminal size to struct format for TIOCSWINSZ.
+        """
+        Convert terminal size to struct format for TIOCSWINSZ.
 
         Returns:
             bytes: Packed struct in format suitable for TIOCSWINSZ ioctl
@@ -198,7 +199,8 @@ class TerminalWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
 
     def _ensure_line_width(self, cursor: QTextCursor):
-        """Ensure the line at cursor has the correct width by overwriting characters.
+        """
+        Ensure the line at cursor has the correct width by overwriting characters.
 
         Args:
             cursor: Cursor positioned on the line to adjust
@@ -223,7 +225,8 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.insertText(char, self._current_text_format)
 
     def _update_cursor_position(self, row: int, col: int):
-        """Update cursor position and ensure it's within bounds.
+        """
+        Update cursor position and ensure it's within bounds.
 
         Args:
             row: Target row (0-based)
@@ -232,17 +235,23 @@ class TerminalWidget(QPlainTextEdit):
         if not self._current_size:
             return
 
-        # Ensure row is within bounds
-        self._cursor_row = max(0, row)
+        # Get old cursor rect before position changes
+        old_cursor_rect = self._get_cursor_rect()
+        if old_cursor_rect:
+            self.viewport().update(old_cursor_rect)
 
-        # Ensure column is within bounds
+        # Update cursor position
+        self._cursor_row = max(0, row)
         self._cursor_col = max(0, min(col, self._current_size.cols - 1))
 
-        # Update Qt cursor position to match
-        self._sync_cursor_position()
+        # Update new cursor position
+        new_cursor_rect = self._get_cursor_rect()
+        if new_cursor_rect:
+            self.viewport().update(new_cursor_rect)
 
     def _move_cursor_relative(self, rows: int, cols: int):
-        """Move cursor relative to current position.
+        """
+        Move cursor relative to current position.
 
         Args:
             rows: Number of rows to move (negative = up)
@@ -252,38 +261,6 @@ class TerminalWidget(QPlainTextEdit):
             self._cursor_row + rows,
             self._cursor_col + cols
         )
-
-    def _sync_cursor_position(self):
-        """Synchronize internal cursor position to Qt text cursor."""
-        cursor = self.textCursor()
-
-        # Calculate target block number
-        first_visible = self.firstVisibleBlock().blockNumber()
-        target_block = first_visible + self._cursor_row
-
-        # Ensure we have enough lines
-        current_blocks = self.document().blockCount()
-        blocks_needed = (target_block + 1) - current_blocks
-
-        if blocks_needed > 0:
-            # Add needed lines
-            cursor.movePosition(QTextCursor.End)
-            for _ in range(blocks_needed):
-                cursor.insertText('\n' + ' ' * self._current_size.cols)
-
-        # Move to target position
-        cursor.movePosition(QTextCursor.Start)
-        cursor.movePosition(QTextCursor.NextBlock, n=target_block)
-        cursor.movePosition(QTextCursor.StartOfLine)
-        cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
-
-        # Update Qt cursor
-        self.setTextCursor(cursor)
-
-        # Force cursor area update
-        cursor_rect = self._get_cursor_rect()
-        if cursor_rect:
-            self.viewport().update(cursor_rect)
 
     def _handle_cursor_input(self, char: str):
         """
@@ -319,7 +296,8 @@ class TerminalWidget(QPlainTextEdit):
                 self._update_cursor_position(self._cursor_row, self._cursor_col + 1)
 
     def _insert_plain_text(self, text: str):
-        """Overwrite text at current cursor position in pre-allocated space.
+        """
+        Overwrite text at current cursor position in pre-allocated space.
 
         Args:
             text: Text to write at current cursor position
@@ -398,7 +376,8 @@ class TerminalWidget(QPlainTextEdit):
             self.viewport().update(cursor_rect)
 
     def _scroll_region_up(self, top: int, bottom: int):
-        """Scroll the defined region up one line.
+        """
+        Scroll the defined region up one line.
 
         Args:
             top: Top line of scroll region (0-based)
@@ -466,7 +445,8 @@ class TerminalWidget(QPlainTextEdit):
 
 
     def _scroll_region_down(self, top: int, bottom: int):
-        """Scroll the defined region down one line.
+        """
+        Scroll the defined region down one line.
 
         Args:
             top: Top line of scroll region (0-based)
@@ -927,7 +907,15 @@ class TerminalWidget(QPlainTextEdit):
             self.viewport().update(cursor_rect)
 
     def _get_cursor_rect(self) -> Optional[QRect]:
-        """Get the rectangle where the cursor should be drawn."""
+        """
+        Get the rectangle where the cursor should be drawn.
+
+        Returns:
+            QRect: Rectangle defining cursor position and size, or None if dimensions invalid
+
+        Note:
+            Coordinates are in viewport coordinates relative to the widget
+        """
         if not self._current_size:
             return None
 
@@ -939,30 +927,63 @@ class TerminalWidget(QPlainTextEdit):
         # Calculate position based on cursor row/col
         content_offset = self.contentOffset()
         x = content_offset.x() + (self._cursor_col * char_width)
-        y = self._cursor_row * char_height
+        y = content_offset.y() + (self._cursor_row * char_height)
 
-        # Create rectangle in viewport coordinates
-        rect = QRect(
+        return QRect(
             round(x),
             round(y),
             char_width,
             char_height
         )
 
-        return rect
-
     def paintEvent(self, event: QPaintEvent):
-        """Handle widget painting including cursor."""
+        """
+        Handle widget painting including cursor.
+
+        Args:
+            event: Paint event containing region to update
+        """
         # Let Qt handle normal text rendering
         super().paintEvent(event)
 
-        # Draw our cursor if visible
-        if self._cursor_visible and not self.textCursor().hasSelection():
-            cursor_rect = self._get_cursor_rect()
-            if cursor_rect and cursor_rect.intersects(event.rect()):
-                painter = QPainter(self.viewport())
-                # Use text color for cursor
-                painter.fillRect(cursor_rect, self.palette().text())
+        # Only draw cursor if visible and no text is selected
+        if not self._cursor_visible or self.textCursor().hasSelection():
+            return
+
+        cursor_rect = self._get_cursor_rect()
+        if not cursor_rect or not cursor_rect.intersects(event.rect()):
+            return
+
+        # Get text cursor at input position to read character/format
+        cursor = self.textCursor()
+        first_visible = self.firstVisibleBlock().blockNumber()
+        target_block = first_visible + self._cursor_row
+
+        cursor.movePosition(QTextCursor.Start)
+        cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
+        # Get character under cursor
+        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+        char = cursor.selectedText()
+        char_format = cursor.charFormat()
+
+        painter = QPainter(self.viewport())
+
+        # Get colors for inversion
+        fg_color = char_format.foreground().color()
+        bg_color = char_format.background().color()
+
+        if not char or char == ' ':
+            # Just draw solid cursor for empty space
+            painter.fillRect(cursor_rect, self.palette().text())
+        else:
+            # Draw inverted cursor with character
+            painter.fillRect(cursor_rect, fg_color)  # Use text color as background
+            painter.setPen(bg_color)  # Use background color as text color
+            painter.setFont(self.font())
+            painter.drawText(cursor_rect, 0, char)
 
     def _position_qt_cursor_at_input(self) -> QTextCursor:
         """Position Qt cursor at current input cursor position.
