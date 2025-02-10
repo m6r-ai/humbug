@@ -102,7 +102,6 @@ class TerminalWidget(QPlainTextEdit):
         self._saved_cursor_position = None
 
         # Additional terminal state
-        self._alternate_screen_buffer = ""
         self._main_screen_buffer = ""
         self._main_screen_formats = []
         self._using_alternate_screen = False
@@ -143,9 +142,9 @@ class TerminalWidget(QPlainTextEdit):
         try:
             # Pre-allocate active terminal area
             empty_line = ' ' * self._current_size.cols
-            cursor.insertText(empty_line, self._current_text_format)
             for _ in range(self._current_size.rows - 1):
-                cursor.insertText('\n' + empty_line, self._current_text_format)
+                cursor.insertBlock()
+                cursor.insertText(empty_line, self._current_text_format)
 
             # Reset cursor to start
             cursor.movePosition(QTextCursor.Start)
@@ -507,18 +506,17 @@ class TerminalWidget(QPlainTextEdit):
                     cursor.movePosition(QTextCursor.NextBlock)
 
             elif param == '3':  # Clear scrollback buffer
-                if not self._using_alternate_screen:
-                    # Delete the history buffer
-                    cursor.movePosition(QTextCursor.Start)
-                    cursor.movePosition(QTextCursor.NextBlock, QTextCursor.KeepAnchor, n=first_active)
-                    cursor.removeSelectedText()
+                # Delete the history buffer
+                cursor.movePosition(QTextCursor.Start)
+                cursor.movePosition(QTextCursor.NextBlock, QTextCursor.KeepAnchor, n=first_active)
+                cursor.removeSelectedText()
 
-                    # Fill with empty lines
-                    for _ in range(self._current_size.rows):
-                        cursor.movePosition(QTextCursor.StartOfLine)
-                        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-                        cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
-                        cursor.movePosition(QTextCursor.NextBlock)
+                # Fill with empty lines
+                for _ in range(self._current_size.rows):
+                    cursor.movePosition(QTextCursor.StartOfLine)
+                    cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                    cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
+                    cursor.movePosition(QTextCursor.NextBlock)
 
         finally:
             cursor.endEditBlock()
@@ -741,44 +739,36 @@ class TerminalWidget(QPlainTextEdit):
         if enable_alternate == self._using_alternate_screen:
             return
 
-        cursor = self.textCursor()
-
         if enable_alternate:
             # Save main screen content and cursor position
             self._main_screen_buffer = self.toPlainText()
             self._saved_cursor_position = (
-                cursor.blockNumber() - self.firstVisibleBlock().blockNumber(),
-                cursor.columnNumber()
+                self._cursor_row,
+                self._cursor_col
             )
 
             # Clear screen for alternate buffer
-            self.clear()
             cursor = self.textCursor()
-
-            # Initialize alternate screen with empty lines
-            if self._current_size:
-                empty_line = ' ' * self._current_size.cols
-                for _ in range(self._current_size.rows):
-                    cursor.insertText(empty_line + '\n', self._current_text_format)
-
-                cursor.movePosition(QTextCursor.Start)
-                self.setTextCursor(cursor)
+            cursor.beginEditBlock()
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            cursor.endEditBlock()
+            self._initialize_buffer()
 
             self._using_alternate_screen = True
-
         else:
-            # Save alternate screen content
-            self._alternate_screen_buffer = self.toPlainText()
-
             # Restore main screen
-            self.clear()
             cursor = self.textCursor()
+            cursor.beginEditBlock()
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
             cursor.insertText(self._main_screen_buffer)
+            cursor.endEditBlock()
 
             # Restore cursor position
             if self._saved_cursor_position:
                 row, col = self._saved_cursor_position
-                self._move_cursor_to(row, col)
+                self._update_cursor_position(row, col)
 
             self._using_alternate_screen = False
 
