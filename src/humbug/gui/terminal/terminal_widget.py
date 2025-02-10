@@ -74,10 +74,9 @@ class TerminalWidget(QPlainTextEdit):
         self._cursor_row = 0  # 0-based row in terminal
         self._cursor_col = 0  # 0-based column in terminal
         self._saved_cursor_position = None  # (row, col) tuple when saved
-        self._cursor_visible = True
+        self._cursor_visible = False
         self._cursor_blink_timer = QTimer(self)
         self._cursor_blink_timer.timeout.connect(self._blink_cursor)
-        self._cursor_blink_timer.start(500)  # Blink every 500ms
 
         # Hide Qt's cursor since we'll draw our own
         self.setCursorWidth(0)
@@ -235,10 +234,11 @@ class TerminalWidget(QPlainTextEdit):
         if not self._current_size:
             return
 
-        # Get old cursor rect before position changes
-        old_cursor_rect = self._get_cursor_rect()
-        if old_cursor_rect:
-            self.viewport().update(old_cursor_rect)
+        # If the cursor was visible before we need to erase it
+        if self._cursor_visible:
+            old_cursor_rect = self._get_cursor_rect()
+            if old_cursor_rect:
+                self.viewport().update(old_cursor_rect)
 
         # Update cursor position
         self._cursor_row = max(0, row)
@@ -262,39 +262,6 @@ class TerminalWidget(QPlainTextEdit):
             self._cursor_col + cols
         )
 
-    def _handle_cursor_input(self, char: str):
-        """
-        Update cursor position after character input.
-
-        Args:
-            char: Input character
-        """
-        if not self._current_size:
-            return
-
-        if char == '\r':
-            self._update_cursor_position(self._cursor_row, 0)
-        elif char == '\n':
-            self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
-        elif char == '\b':
-            if self._cursor_col > 0:
-                self._update_cursor_position(self._cursor_row, self._cursor_col - 1)
-        elif char == '\t':
-            # Calculate spaces to next tab stop (every 8 columns)
-            spaces = 8 - (self._cursor_col % 8)
-            new_col = self._cursor_col + spaces
-
-            if new_col >= self._current_size.cols:
-                self._update_cursor_position(self._cursor_row + 1, 0)
-            else:
-                self._update_cursor_position(self._cursor_row, new_col)
-        else:
-            # Regular character - handle wrapping
-            if self._cursor_col >= self._current_size.cols - 1:
-                self._update_cursor_position(self._cursor_row + 1, 0)
-            else:
-                self._update_cursor_position(self._cursor_row, self._cursor_col + 1)
-
     def _insert_plain_text(self, text: str):
         """
         Overwrite text at current cursor position in pre-allocated space.
@@ -314,8 +281,7 @@ class TerminalWidget(QPlainTextEdit):
             target_block = first_visible + self._cursor_row
 
             if text == '\r':
-                # Just update cursor position
-                self._cursor_col = 0
+                self._update_cursor_position(self._cursor_row, 0)
 
             elif text == '\n':
                 # Handle newline with scroll region if set
@@ -324,31 +290,19 @@ class TerminalWidget(QPlainTextEdit):
                     if self._cursor_row == bottom:
                         self._scroll_region_up(top, bottom)
                     else:
-                        self._cursor_row += 1
+                        self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
                 else:
-                    self._cursor_row += 1
+                    self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
 
             elif text == '\b':
-                if self._cursor_col > 0:
-                    self._cursor_col -= 1
+                self._update_cursor_position(self._cursor_row, self._cursor_col - 1)
 
             elif text == '\t':
-                # Calculate spaces to next tab stop
                 spaces = 8 - (self._cursor_col % 8)
-                spaces_to_insert = min(spaces, self._current_size.cols - self._cursor_col)
+                new_col = self._cursor_col + spaces
 
-                # Move to position and overwrite with spaces
-                cursor.movePosition(QTextCursor.Start)
-                cursor.movePosition(QTextCursor.NextBlock, n=target_block)
-                cursor.movePosition(QTextCursor.StartOfLine)
-                cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
-
-                for _ in range(spaces_to_insert):
-                    # Select next character and replace it
-                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-                    cursor.insertText(' ', self._current_text_format)
-
-                self._cursor_col += spaces_to_insert
+                if new_col < self._current_size.cols:
+                    self._update_cursor_position(self._cursor_row, new_col)
 
             else:
                 # Move to position
@@ -362,10 +316,10 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.insertText(text, self._current_text_format)
 
                 # Update cursor position with wrapping
-                self._cursor_col += 1
-                if self._cursor_col >= self._current_size.cols:
-                    self._cursor_col = 0
-                    self._cursor_row += 1
+                if self._cursor_col >= self._current_size.cols - 1:
+                    self._update_cursor_position(self._cursor_row + 1, 0)
+                else:
+                    self._update_cursor_position(self._cursor_row, self._cursor_col + 1)
 
         finally:
             cursor.endEditBlock()
@@ -946,8 +900,8 @@ class TerminalWidget(QPlainTextEdit):
         # Let Qt handle normal text rendering
         super().paintEvent(event)
 
-        # Only draw cursor if visible and no text is selected
-        if not self._cursor_visible or self.textCursor().hasSelection():
+        # Only draw cursor if visible
+        if not self._cursor_visible:
             return
 
         cursor_rect = self._get_cursor_rect()
@@ -1045,7 +999,7 @@ class TerminalWidget(QPlainTextEdit):
     def focusInEvent(self, event: QFocusEvent):
         """Handle focus in to start cursor blinking."""
         super().focusInEvent(event)
-        self._cursor_blink_timer.start()
+        self._cursor_blink_timer.start(500)
         self._cursor_visible = True
         self.setCursorWidth(0)  # Ensure Qt cursor stays hidden
         self.viewport().update()
@@ -1163,7 +1117,7 @@ class TerminalWidget(QPlainTextEdit):
                     self._process_escape_sequence(self._escape_seq_buffer)
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
-                elif len(self._escape_seq_buffer) > 32:  # Safety limit
+                elif len(self._escape_seq_buffer) > 128:  # Safety limit
                     self._logger.warning(f"Escape sequence too long, discarding: {repr(self._escape_seq_buffer)}")
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
