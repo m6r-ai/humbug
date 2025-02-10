@@ -249,25 +249,12 @@ class TerminalWidget(QPlainTextEdit):
         if new_cursor_rect:
             self.viewport().update(new_cursor_rect)
 
-    def _move_cursor_relative(self, rows: int, cols: int):
+    def _write_char(self, text: str):
         """
-        Move cursor relative to current position.
+        Write a character at the current cursor position.
 
         Args:
-            rows: Number of rows to move (negative = up)
-            cols: Number of columns to move (negative = left)
-        """
-        self._update_cursor_position(
-            self._cursor_row + rows,
-            self._cursor_col + cols
-        )
-
-    def _insert_plain_text(self, text: str):
-        """
-        Overwrite text at current cursor position in pre-allocated space.
-
-        Args:
-            text: Text to write at current cursor position
+            text: Character to write at current cursor position
         """
         if not self._current_size:
             return
@@ -305,6 +292,8 @@ class TerminalWidget(QPlainTextEdit):
                     self._update_cursor_position(self._cursor_row, new_col)
 
             else:
+                print(f"tb {target_block} of {self.document().blockCount()}, col: {self._cursor_col}: '{text}'")
+
                 # Move to position
                 cursor.movePosition(QTextCursor.Start)
                 cursor.movePosition(QTextCursor.NextBlock, n=target_block)
@@ -465,6 +454,19 @@ class TerminalWidget(QPlainTextEdit):
 
         finally:
             cursor.endEditBlock()
+
+    def _move_cursor_relative(self, rows: int, cols: int):
+        """
+        Move cursor relative to current position.
+
+        Args:
+            rows: Number of rows to move (negative = up)
+            cols: Number of columns to move (negative = left)
+        """
+        self._update_cursor_position(
+            self._cursor_row + rows,
+            self._cursor_col + cols
+        )
 
     def _handle_cursor_sequence(self, sequence: str):
         """Handle cursor movement sequences (CUU, CUD, CUF, CUB)."""
@@ -881,7 +883,8 @@ class TerminalWidget(QPlainTextEdit):
         # Calculate position based on cursor row/col
         content_offset = self.contentOffset()
         x = content_offset.x() + (self._cursor_col * char_width)
-        y = content_offset.y() + (self._cursor_row * char_height)
+        cursor_row = self._cursor_row + self.firstVisibleBlock().blockNumber()
+        y = content_offset.y() + (cursor_row * char_height)
 
         return QRect(
             round(x),
@@ -1090,6 +1093,7 @@ class TerminalWidget(QPlainTextEdit):
             cursor.insertText(empty_line, self._current_text_format)
             for _ in range(self._current_size.rows - 1):
                 cursor.insertText('\n' + empty_line, self._current_text_format)
+
             cursor.movePosition(QTextCursor.Start)
             self.setTextCursor(cursor)
 
@@ -1127,7 +1131,7 @@ class TerminalWidget(QPlainTextEdit):
                 self._escape_seq_buffer = char
 
             else:
-                self._insert_plain_text(char)
+                self._write_char(char)
 
             i += 1
 
@@ -1440,6 +1444,7 @@ class TerminalWidget(QPlainTextEdit):
             cursor = self.textCursor()
             if cursor.blockNumber() == self.document().blockCount() - 1:
                 cursor.insertText('\n' + ' ' * self._current_size.cols)
+
             cursor.movePosition(QTextCursor.Down)
             self.setTextCursor(cursor)
             return True
