@@ -332,9 +332,6 @@ class TerminalWidget(QPlainTextEdit):
             cursor.movePosition(QTextCursor.End)
             self.setTextCursor(cursor)
 
-            doc_block_count = self.document().blockCount()
-            self._logger.debug(f"scroll_up: doc_blocks={doc_block_count}")
-
         finally:
             cursor.endEditBlock()
 
@@ -609,6 +606,46 @@ class TerminalWidget(QPlainTextEdit):
         finally:
             cursor.endEditBlock()
 
+    def _handle_insert_characters(self, params: str):
+        """Handle insert characters operation."""
+        count = int(params) if params else 1
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+
+        try:
+            # Calculate target position from tracked cursor
+            first_visible = self.firstVisibleBlock().blockNumber()
+            target_block = first_visible + self._cursor_row
+
+            # Move Qt cursor to current input position
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
+            remaining_space = self._current_size.cols - self._cursor_col
+            insert_count = min(count, remaining_space)
+
+            # Select characters to shift
+            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor,
+                            remaining_space)
+            existing_text = cursor.selectedText()
+
+            # Overwrite with spaces and shifted text
+            cursor.setPosition(cursor.block().position() + self._cursor_col)
+            for i in range(insert_count):
+                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+                cursor.insertText(' ', self._current_text_format)
+
+            # Write shifted text
+            shifted_text = existing_text[:remaining_space - insert_count]
+            for char in shifted_text:
+                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+                cursor.insertText(char, self._current_text_format)
+
+        finally:
+            cursor.endEditBlock()
+
     def _handle_delete_characters(self, params: str):
         """Handle delete characters operation."""
         count = int(params) if params else 1
@@ -631,68 +668,6 @@ class TerminalWidget(QPlainTextEdit):
                 if self._cursor_col + i < self._current_size.cols:
                     cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
                     cursor.insertText(' ', self._current_text_format)
-
-        finally:
-            cursor.endEditBlock()
-
-    def _handle_insert_delete(self, command: str, params: str):
-        """Handle insert and delete operations."""
-        count = int(params) if params else 1
-        cursor = self.textCursor()
-        cursor.beginEditBlock()
-
-        try:
-            # Calculate target position from tracked cursor
-            first_visible = self.firstVisibleBlock().blockNumber()
-            target_block = first_visible + self._cursor_row
-
-            # Move Qt cursor to current input position
-            cursor.movePosition(QTextCursor.Start)
-            cursor.movePosition(QTextCursor.NextBlock, n=target_block)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
-
-            if command == '@':  # Insert blank characters
-                remaining_space = self._current_size.cols - self._cursor_col
-                insert_count = min(count, remaining_space)
-
-                # Select characters to shift
-                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor,
-                                remaining_space)
-                existing_text = cursor.selectedText()
-
-                # Overwrite with spaces and shifted text
-                cursor.setPosition(cursor.block().position() + self._cursor_col)
-                for i in range(insert_count):
-                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-                    cursor.insertText(' ', self._current_text_format)
-
-                # Write shifted text
-                shifted_text = existing_text[:remaining_space - insert_count]
-                for char in shifted_text:
-                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-                    cursor.insertText(char, self._current_text_format)
-
-            elif command == 'P':  # Delete characters
-                # Select and remove characters, filling with spaces
-                for i in range(count):
-                    if self._cursor_col + i < self._current_size.cols:
-                        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-                        cursor.insertText(' ', self._current_text_format)
-
-            elif command == 'L':  # Insert lines
-                current_row = self._cursor_row
-                for _ in range(count):
-                    # Move content down
-                    self._scroll_region_down(current_row, self._current_size.rows - 1)
-                # Cursor position stays the same
-
-            elif command == 'M':  # Delete lines
-                current_row = self._cursor_row
-                for _ in range(count):
-                    # Move content up
-                    self._scroll_region_up(current_row, self._current_size.rows - 1)
-                # Cursor position stays the same
 
         finally:
             cursor.endEditBlock()
@@ -1353,7 +1328,7 @@ class TerminalWidget(QPlainTextEdit):
 
             if command == 't':
                 # TODO - this doesn't exist!
-                self._handle_window_operation(params)
+#                self._handle_window_operation(params)
                 return
 
         # Handle keypad mode sequences
