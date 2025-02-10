@@ -115,10 +115,7 @@ class TerminalWidget(QPlainTextEdit):
         self._saved_mouse_tracking_sgr = False
         self._bracketed_paste_mode = False
         self._current_directory = None
-
-        self._current_size = self._calculate_size()
-        if self._current_size:
-            self._initialize_buffer()
+        self._current_size = None
 
         # Connect style changed signal
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -149,11 +146,6 @@ class TerminalWidget(QPlainTextEdit):
             cursor.insertText(empty_line, self._current_text_format)
             for _ in range(self._current_size.rows - 1):
                 cursor.insertText('\n' + empty_line, self._current_text_format)
-
-            # Ensure no newline on last line - prevents Qt from creating empty line
-            cursor.movePosition(QTextCursor.End)
-            if cursor.block().length() <= 1:  # Empty block at end
-                cursor.deletePreviousChar()
 
             # Reset cursor to start
             cursor.movePosition(QTextCursor.Start)
@@ -285,9 +277,6 @@ class TerminalWidget(QPlainTextEdit):
         Args:
             text: Character to write at current cursor position
         """
-        if not self._current_size:
-            return
-
         # Handle special characters first
         if text == '\r':
             self._update_cursor_position(self._cursor_row, 0)
@@ -323,6 +312,7 @@ class TerminalWidget(QPlainTextEdit):
 
             # Replace character
             cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
             cursor.insertText(text, self._current_text_format)
 
             # Handle cursor movement and wrapping
@@ -832,6 +822,10 @@ class TerminalWidget(QPlainTextEdit):
         cols = max(viewport_width // char_width, 1)
         rows = max(viewport_height // char_height, 1)
 
+        if self._current_size == None:
+            self._current_size = TerminalSize(rows, cols)
+            self._initialize_buffer()
+
         print(f"calculate size {rows}x{cols}")
         return TerminalSize(rows, cols)
 
@@ -856,16 +850,23 @@ class TerminalWidget(QPlainTextEdit):
         if not self._current_size:
             return None
 
-        # Calculate cursor rectangle based on character metrics
+        # Get basic character metrics
         fm = QFontMetricsF(self.font())
         char_width = int(fm.horizontalAdvance(' ') + 0.999)
         char_height = int(fm.height() + 0.999)
 
-        # Calculate position based on cursor row/col
+        # Calculate cursor's position in document coordinates
+        # The cursor row needs to be offset from the end of the document
+        doc_block_count = self.document().blockCount()
+        cursor_block = doc_block_count - self._current_size.rows + self._cursor_row
+
+        # Get viewport position
         content_offset = self.contentOffset()
+        viewport_offset = self.verticalScrollBar().value() * char_height
+
+        # Calculate position in viewport coordinates
         x = content_offset.x() + (self._cursor_col * char_width)
-        cursor_row = self._cursor_row + self.firstVisibleBlock().blockNumber()
-        y = content_offset.y() + (cursor_row * char_height)
+        y = (cursor_block * char_height) - viewport_offset + content_offset.y()
 
         return QRect(
             round(x),
@@ -1087,6 +1088,9 @@ class TerminalWidget(QPlainTextEdit):
         Raises:
             UnicodeDecodeError: If data cannot be decoded
         """
+        if not self._current_size:
+            self._current_size = self._calculate_size()
+
         text = data.decode(errors='replace')
 
         print(f"put data {repr(text)}")
@@ -1115,8 +1119,6 @@ class TerminalWidget(QPlainTextEdit):
                 self._write_char(char)
 
             i += 1
-
-        self.ensureCursorVisible()
 
     def _is_escape_sequence_complete(self, sequence: str) -> bool:
         """Check if an escape sequence is complete.
