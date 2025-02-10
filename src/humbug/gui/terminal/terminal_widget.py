@@ -218,32 +218,6 @@ class TerminalWidget(QPlainTextEdit):
         cursor.setPosition(saved_position)
         self.setTextCursor(cursor)
 
-    def _ensure_line_width(self, cursor: QTextCursor):
-        """
-        Ensure the line at cursor has the correct width by overwriting characters.
-
-        Args:
-            cursor: Cursor positioned on the line to adjust
-        """
-        if not self._current_size:
-            return
-
-        # Get start of line
-        cursor.movePosition(QTextCursor.StartOfLine)
-
-        # Overwrite each position with either existing character or space
-        for i in range(self._current_size.cols):
-            cursor.setPosition(cursor.block().position() + i)
-            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-
-            # If we're beyond the current line length, fill with spaces
-            if i >= cursor.block().length() - 1:
-                cursor.insertText(' ', self._current_text_format)
-            else:
-                # Keep existing character but ensure it has current format
-                char = cursor.selectedText()
-                cursor.insertText(char, self._current_text_format)
-
     def _update_cursor_position(self, row: int, col: int):
         """
         Update cursor position and ensure it's within bounds.
@@ -312,7 +286,6 @@ class TerminalWidget(QPlainTextEdit):
 
             # Replace character
             cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-            cursor.removeSelectedText()
             cursor.insertText(text, self._current_text_format)
 
             # Handle cursor movement and wrapping
@@ -346,6 +319,7 @@ class TerminalWidget(QPlainTextEdit):
             cursor.movePosition(QTextCursor.End)
             if cursor.block().length() > 1:  # Not at an empty block
                 cursor.insertBlock()
+
             cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
 
             # Update cursor position
@@ -380,9 +354,9 @@ class TerminalWidget(QPlainTextEdit):
 
         try:
             # Calculate block numbers for the scroll region
-            first_visible = self.firstVisibleBlock().blockNumber()
-            top_block = first_visible + top
-            bottom_block = first_visible + bottom
+            first_active = max(0, self.document().blockCount() - self._current_size.rows)
+            top_block = first_active + top
+            bottom_block = first_active + bottom
 
             # Handle cursor position update
             if top <= self._cursor_row <= bottom:
@@ -478,105 +452,108 @@ class TerminalWidget(QPlainTextEdit):
         """Handle clear screen (ED) sequences."""
         param = params if params else '0'
         cursor = self.textCursor()
-        saved_position = cursor.position()  # Save exact position
         cursor.beginEditBlock()
+        print(f"clear screen {params}")
 
         try:
+            # Calculate target position from tracked cursor
+            first_active = max(0, self.document().blockCount() - self._current_size.rows)
+            target_block = first_active + self._cursor_row
+
             if param == '0':  # Clear from cursor to end of screen
+                # Move Qt cursor to current input position
+                cursor.movePosition(QTextCursor.Start)
+                cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+                cursor.movePosition(QTextCursor.StartOfLine)
+                cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
                 # Clear to end of current line
-                col = cursor.columnNumber()
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-                cursor.removeSelectedText()
-                cursor.insertText(' ' * (self._current_size.cols - col), self._current_text_format)
+                cursor.insertText(' ' * (self._current_size.cols - self._cursor_col), self._current_text_format)
 
                 # Clear all lines below
-                current_pos = cursor.position()
-                cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-                cursor.removeSelectedText()
-
-                # Fill cleared area with empty lines
-                cursor.setPosition(current_pos)
-                block_num = cursor.blockNumber()
-                total_blocks = self._current_size.rows - (block_num - self.firstVisibleBlock().blockNumber())
+                total_blocks = self._current_size.rows - (self._cursor_row + 1)
                 for _ in range(total_blocks - 1):
-                    cursor.insertText('\n' + ' ' * self._current_size.cols, self._current_text_format)
+                    cursor.movePosition(QTextCursor.NextBlock)
+                    cursor.movePosition(QTextCursor.StartOfLine)
+                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, n=self._current_size.cols)
+                    cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
 
             elif param == '1':  # Clear from cursor to beginning of screen
-                # Clear to start of current line
-                col = cursor.columnNumber()
+                cursor.movePosition(QTextCursor.Start)
+                cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+                cursor.movePosition(QTextCursor.StartOfLine)
+                cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
                 cursor.movePosition(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
-                cursor.removeSelectedText()
-                cursor.insertText(' ' * col, self._current_text_format)
+                cursor.insertText(' ' * self._cursor_col, self._current_text_format)
 
                 # Clear all lines above
-                pos = cursor.position()
-                cursor.movePosition(QTextCursor.Start, QTextCursor.KeepAnchor)
-                cursor.removeSelectedText()
-
-                # Fill cleared area with empty lines
-                cursor.setPosition(cursor.position())
-                block_num = cursor.blockNumber()
-                for _ in range(block_num):
-                    cursor.insertText(' ' * self._current_size.cols + '\n', self._current_text_format)
+                total_blocks = self._cursor_row - 1
+                for _ in range(total_blocks - 1):
+                    cursor.movePosition(QTextCursor.PrevBlock)
+                    cursor.movePosition(QTextCursor.StartOfLine)
+                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, n=self._current_size.cols)
+                    cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
 
             elif param == '2':  # Clear entire screen
-                cursor.select(QTextCursor.Document)
-                cursor.removeSelectedText()
+                cursor.movePosition(QTextCursor.Start)
+                cursor.movePosition(QTextCursor.NextBlock, n=first_active)
 
                 # Fill with empty lines
-                for i in range(self._current_size.rows):
-                    if i > 0:
-                        cursor.insertText('\n')
+                for _ in range(self._current_size.rows):
+                    cursor.movePosition(QTextCursor.StartOfLine)
+                    cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
                     cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
+                    cursor.movePosition(QTextCursor.NextBlock)
 
             elif param == '3':  # Clear scrollback buffer
                 if not self._using_alternate_screen:
-                    # Save visible content
-                    visible_start = self.firstVisibleBlock().position()
-                    visible_end = self.lastVisibleBlock().position() + self.lastVisibleBlock().length()
-                    cursor.setPosition(visible_start)
-                    cursor.setPosition(visible_end, QTextCursor.KeepAnchor)
-                    visible_content = cursor.selectedText()
-
-                    # Clear everything
-                    cursor.select(QTextCursor.Document)
+                    # Delete the history buffer
+                    cursor.movePosition(QTextCursor.Start)
+                    cursor.movePosition(QTextCursor.NextBlock, QTextCursor.KeepAnchor, n=first_active)
                     cursor.removeSelectedText()
 
-                    # Restore visible content
-                    cursor.insertText(visible_content)
+                    # Fill with empty lines
+                    for _ in range(self._current_size.rows):
+                        cursor.movePosition(QTextCursor.StartOfLine)
+                        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                        cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
+                        cursor.movePosition(QTextCursor.NextBlock)
 
         finally:
             cursor.endEditBlock()
-            cursor.setPosition(saved_position)  # Restore exact position
             self.setTextCursor(cursor)
 
     def _handle_erase_in_line(self, params: str):
         """Handle erase in line (EL) sequences."""
         param = params if params else '0'
         cursor = self.textCursor()
-        saved_position = cursor.position()  # Save exact position
         cursor.beginEditBlock()
 
         try:
+            # Calculate target position from tracked cursor
+            first_visible = self.firstVisibleBlock().blockNumber()
+            target_block = first_visible + self._cursor_row
+
+            # Move Qt cursor to current input position
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
             if param == '0':  # Clear from cursor to end of line
-                col = cursor.columnNumber()
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-                cursor.removeSelectedText()
-                cursor.insertText(' ' * (self._current_size.cols - col), self._current_text_format)
+                cursor.insertText(' ' * (self._current_size.cols - self._cursor_col), self._current_text_format)
             elif param == '1':  # Clear from cursor to start of line
-                col = cursor.columnNumber()
                 cursor.movePosition(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
-                cursor.removeSelectedText()
-                cursor.insertText(' ' * col, self._current_text_format)
+                cursor.insertText(' ' * self._cursor_col, self._current_text_format)
             elif param == '2':  # Clear entire line
                 cursor.movePosition(QTextCursor.StartOfLine)
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-                cursor.removeSelectedText()
                 cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
 
         finally:
             cursor.endEditBlock()
-            cursor.setPosition(saved_position)  # Restore exact position
             self.setTextCursor(cursor)
 
     def _handle_insert_delete(self, command: str, params: str):
@@ -783,6 +760,7 @@ class TerminalWidget(QPlainTextEdit):
                 empty_line = ' ' * self._current_size.cols
                 for _ in range(self._current_size.rows):
                     cursor.insertText(empty_line + '\n', self._current_text_format)
+
                 cursor.movePosition(QTextCursor.Start)
                 self.setTextCursor(cursor)
 
@@ -930,8 +908,8 @@ class TerminalWidget(QPlainTextEdit):
             QTextCursor: Cursor positioned at current input location
         """
         cursor = self.textCursor()
-        first_visible = self.firstVisibleBlock().blockNumber()
-        target_block = first_visible + self._cursor_row
+        first_active = max(0, self.document().blockCount() - self._current_size.rows)
+        target_block = first_active + self._cursor_row
 
         cursor.movePosition(QTextCursor.Start)
         cursor.movePosition(QTextCursor.NextBlock, n=target_block)
@@ -1064,19 +1042,7 @@ class TerminalWidget(QPlainTextEdit):
 
     def clear(self):
         """Clear the terminal."""
-        cursor = self.textCursor()
-        cursor.select(QTextCursor.Document)
-        cursor.removeSelectedText()
-
-        # If we have a size, fill with empty lines
-        if self._current_size:
-            empty_line = ' ' * self._current_size.cols
-            cursor.insertText(empty_line, self._current_text_format)
-            for _ in range(self._current_size.rows - 1):
-                cursor.insertText('\n' + empty_line, self._current_text_format)
-
-            cursor.movePosition(QTextCursor.Start)
-            self.setTextCursor(cursor)
+        self._handle_clear_screen('2')
 
     def put_data(self, data: bytes):
         """Display received data with ANSI sequence handling.
@@ -1423,6 +1389,7 @@ class TerminalWidget(QPlainTextEdit):
             return True
 
         if char == 'D':  # Index - Move cursor down one line
+            print("doing D")
             cursor = self.textCursor()
             if cursor.blockNumber() == self.document().blockCount() - 1:
                 cursor.insertText('\n' + ' ' * self._current_size.cols)
@@ -1432,6 +1399,7 @@ class TerminalWidget(QPlainTextEdit):
             return True
 
         if char == 'M':  # Reverse Index
+            print("doing M")
             cursor = self.textCursor()
             if cursor.blockNumber() == 0:
                 cursor.movePosition(QTextCursor.Start)
@@ -1439,6 +1407,7 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.movePosition(QTextCursor.Up)
             else:
                 cursor.movePosition(QTextCursor.Up)
+
             self.setTextCursor(cursor)
             return True
 
