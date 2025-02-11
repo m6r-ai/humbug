@@ -1030,6 +1030,7 @@ class TerminalWidget(QPlainTextEdit):
 
         doc_rows = self.document().blockCount()
         new_rows = new_size.rows
+        old_rows = old_size.rows
 
         cursor = self.textCursor()
         cursor.beginEditBlock()
@@ -1059,7 +1060,8 @@ class TerminalWidget(QPlainTextEdit):
                     cursor.insertBlock()
                     cursor.insertText(empty_line, self._current_text_format)
 
-# Need to handle the case where the doc rows are greater than the offset of the cursor row and delete trailing rows
+                # We've added more padding at the end so we need to ensure the cursor doesn't get moved down
+                old_rows = new_rows
 
             print(f"init buffer {self.document().blockCount()}")
 
@@ -1069,9 +1071,7 @@ class TerminalWidget(QPlainTextEdit):
         # Adjust cursor position if needed
         self._cursor_col = min(self._cursor_col, new_size.cols - 1)
         print(f"cursor row {self._cursor_row}, new rows {new_size.rows}, old rows {old_size.rows}, doc rows {doc_rows}")
-        self._cursor_row = min(self._cursor_row, new_size.rows - 1)
-        if self._cursor_row == old_size.rows - 1:
-            self._cursor_row = min(new_size.rows - 1, doc_rows - 1)
+        self._cursor_row = max(0, self._cursor_row - old_rows + new_rows)
 
         # Force cursor area update
         cursor_rect = self._get_cursor_rect()
