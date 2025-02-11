@@ -93,9 +93,6 @@ class TerminalWidget(QPlainTextEdit):
             }}
         """)
 
-        # Configure cursor
-        self.setCursorWidth(8)
-
         # ANSI escape sequence handling
         self._escape_seq_buffer = ""
         self._in_escape_seq = False
@@ -147,7 +144,6 @@ class TerminalWidget(QPlainTextEdit):
                 cursor.insertBlock()
 
             cursor.insertText(empty_line, self._current_text_format)
-            print(f"init buffer {self.document().blockCount()}")
 
         finally:
             cursor.endEditBlock()
@@ -236,12 +232,13 @@ class TerminalWidget(QPlainTextEdit):
 
         # Update cursor position
         self._cursor_row = max(0, row)
-        self._cursor_col = max(0, min(col, self._current_size.cols - 1))
+        self._cursor_col = max(0, col)
 
-        # Update new cursor position
-        new_cursor_rect = self._get_cursor_rect()
-        if new_cursor_rect:
-            self.viewport().update(new_cursor_rect)
+        # Update new cursor position if it's visible
+        if (row < self._current_size.rows) and (col < self._current_size.cols):
+            new_cursor_rect = self._get_cursor_rect()
+            if new_cursor_rect:
+                self.viewport().update(new_cursor_rect)
 
     def _write_char(self, text: str):
         """
@@ -251,17 +248,14 @@ class TerminalWidget(QPlainTextEdit):
             text: Character to write at current cursor position
         """
         # Handle special characters first
-        print(f"wc: '{repr(text)}'")
         if text == '\r':
             self._update_cursor_position(self._cursor_row, 0)
-            print(f"CR {self._cursor_row} {self._cursor_col}")
             return
         elif text == '\n':
             if self._cursor_row == self._current_size.rows - 1:
-                self._scroll_region_up(0, self._current_size.rows - 1)
+                self._handle_newline_scroll()
             else:
                 self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
-            print(f"NL {self._cursor_row} {self._cursor_col}")
             return
         elif text == '\b':
             self._update_cursor_position(self._cursor_row, max(0, self._cursor_col - 1))
@@ -281,13 +275,12 @@ class TerminalWidget(QPlainTextEdit):
                 if self._cursor_row < self._current_size.rows - 1:
                     self._update_cursor_position(self._cursor_row + 1, 0)
                 else:
-                    self._scroll_region_up(0, self._current_size.rows - 1)
+                    self._handle_newline_scroll()
                     self._update_cursor_position(self._cursor_row, 0)
 
             # Calculate target block by counting back from end of document
             doc_block_count = self.document().blockCount()
             target_block = doc_block_count - self._current_size.rows + self._cursor_row
-            print(f"dbc: {doc_block_count}, {target_block}")
 
             # Position cursor and insert character
             cursor.movePosition(QTextCursor.Start)
@@ -304,9 +297,9 @@ class TerminalWidget(QPlainTextEdit):
         finally:
             cursor.endEditBlock()
 
-    def _scroll_region_up(self, top: int, bottom: int):
+    def _handle_newline_scroll(self):
         """
-        Scroll the defined region up one line.
+        Handle scrolling for a newline
         Args:
             top: Top line of scroll region (0-based)
             bottom: Bottom line of scroll region (0-based)
@@ -325,12 +318,66 @@ class TerminalWidget(QPlainTextEdit):
 
             cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
 
-            # Update cursor position
+        finally:
+            cursor.endEditBlock()
+
+    def _scroll_region_up(self, top: int, bottom: int):
+        """
+        Scroll the defined region up one line.
+        Args:
+            top: Top line of scroll region (0-based)
+            bottom: Bottom line of scroll region (0-based)
+        """
+        if not self._current_size:
+            return
+
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+
+        try:
+            # Calculate block numbers for the scroll region
+            first_active = max(0, self.document().blockCount() - self._current_size.rows)
+            top_block = first_active + top
+            bottom_block = first_active + bottom
+
+            # Handle cursor position update
             if top <= self._cursor_row <= bottom:
-                if self._cursor_row == bottom:
-                    self._cursor_row = bottom
+                if self._cursor_row == top:
+                    self._cursor_row = top
                 else:
-                    self._cursor_row -= 1
+                    self._cursor_row += 1
+
+            # Move lines down one by one while maintaining pre-allocation,
+            # starting from bottom to avoid overwriting
+            for block_num in range(top_block, bottom_block, 1):
+                cursor.movePosition(QTextCursor.Start)
+                cursor.movePosition(QTextCursor.NextBlock, n=block_num)
+
+                # Get next line's content
+                next_cursor = QTextCursor(cursor)
+                next_cursor.movePosition(QTextCursor.Start)
+                next_cursor.movePosition(QTextCursor.NextBlock, n=block_num + 1)
+                next_cursor.movePosition(QTextCursor.EndOfBlock, QTextCursor.KeepAnchor)
+                next_line = next_cursor.selectedText()
+
+                # Replace current line content
+                cursor.movePosition(QTextCursor.EndOfBlock, QTextCursor.KeepAnchor)
+                if next_line:
+                    cursor.insertText(next_line, self._current_text_format)
+                else:
+                    cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
+
+            # Clear the top line, keeping pre-allocation
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.NextBlock, n=top_block)
+            cursor.movePosition(QTextCursor.EndOfBlock, QTextCursor.KeepAnchor)
+            cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
+
+            # Ensure no trailing newline on last line of terminal
+#            if bottom_block == self.document().blockCount() - 1:
+#                cursor.movePosition(QTextCursor.End)
+#                if cursor.block().length() <= 1:  # Empty block at end
+#                    cursor.deletePreviousChar()
 
         finally:
             cursor.endEditBlock()
@@ -388,10 +435,10 @@ class TerminalWidget(QPlainTextEdit):
             cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
 
             # Ensure no trailing newline on last line of terminal
-            if bottom_block == self.document().blockCount() - 1:
-                cursor.movePosition(QTextCursor.End)
-                if cursor.block().length() <= 1:  # Empty block at end
-                    cursor.deletePreviousChar()
+#            if bottom_block == self.document().blockCount() - 1:
+#                cursor.movePosition(QTextCursor.End)
+#                if cursor.block().length() <= 1:  # Empty block at end
+#                    cursor.deletePreviousChar()
 
         finally:
             cursor.endEditBlock()
@@ -811,8 +858,11 @@ class TerminalWidget(QPlainTextEdit):
             cursor.beginEditBlock()
             cursor.movePosition(QTextCursor.Start)
             cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
             cursor.endEditBlock()
             self._initialize_buffer()
+
+            self._update_cursor_position(0, 0)
 
             self._using_alternate_screen = True
         else:
@@ -828,6 +878,9 @@ class TerminalWidget(QPlainTextEdit):
             if self._saved_cursor_position:
                 row, col = self._saved_cursor_position
                 self._update_cursor_position(row, col)
+
+            # We need to reflow in case the dimensions changed from when we saved things
+#            self._reflow_content()
 
             self._using_alternate_screen = False
 
@@ -1012,7 +1065,6 @@ class TerminalWidget(QPlainTextEdit):
         super().focusInEvent(event)
         self._cursor_blink_timer.start(500)
         self._cursor_visible = True
-        self.setCursorWidth(0)  # Ensure Qt cursor stays hidden
         self.viewport().update()
 
     def focusOutEvent(self, event: QFocusEvent):
@@ -1020,7 +1072,6 @@ class TerminalWidget(QPlainTextEdit):
         super().focusOutEvent(event)
         self._cursor_blink_timer.stop()
         self._cursor_visible = False
-        self.setCursorWidth(0)  # Ensure Qt cursor stays hidden
         self.viewport().update()
 
     def _reflow_content(self, old_size: Optional[TerminalSize], new_size: TerminalSize):
@@ -1063,15 +1114,14 @@ class TerminalWidget(QPlainTextEdit):
                 # We've added more padding at the end so we need to ensure the cursor doesn't get moved down
                 old_rows = new_rows
 
-            print(f"init buffer {self.document().blockCount()}")
-
         finally:
             cursor.endEditBlock()
 
         # Adjust cursor position if needed
-        self._cursor_col = min(self._cursor_col, new_size.cols - 1)
-        print(f"cursor row {self._cursor_row}, new rows {new_size.rows}, old rows {old_size.rows}, doc rows {doc_rows}")
-        self._cursor_row = max(0, self._cursor_row - old_rows + new_rows)
+        self._update_cursor_position(
+            max(0, self._cursor_row - old_rows + new_rows),
+            min(self._cursor_col, new_size.cols - 1)
+        )
 
         # Force cursor area update
         cursor_rect = self._get_cursor_rect()
@@ -1424,7 +1474,8 @@ class TerminalWidget(QPlainTextEdit):
         elif mode == '12':  # Send/receive (SRM)
             pass  # Not implemented
         elif mode == '25':  # Show/Hide Cursor
-            self.setCursorWidth(8 if set_mode else 0)
+# This needs to be based on the soft cursor!
+            pass
         elif mode == '1049':  # Alternate Screen Buffer
             self._handle_screen_buffer_switch(set_mode)
         elif mode == '2004':  # Bracketed Paste Mode
@@ -1469,24 +1520,24 @@ class TerminalWidget(QPlainTextEdit):
         if char == 'D':  # Index - move cursor down one line
             if self._cursor_row == self._current_size.rows - 1:
                 self._scroll_region_up(0, self._current_size.rows - 1)
-            else:
-                self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
+
+            self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
 
             return True
 
         if char == 'M':  # Reverse Index - move cursor up one line
             if self._cursor_row == 0:
                 self._scroll_region_down(0, self._current_size.rows - 1)
-            else:
-                self._update_cursor_position(self._cursor_row - 1, self._cursor_col)
+
+            self._update_cursor_position(self._cursor_row - 1, self._cursor_col)
 
             return True
 
         if char == 'E':  # Next Line
             if self._cursor_row == self._current_size.rows - 1:
-                self._scroll_region_up(0, self._current_size.rows - 1)
+                self._handle_newline_scroll()
             else:
-                self._update_cursor_position(self._cursor_row + 1, 0)
+                self._update_cursor_position(self._cursor_row + 1, self._cursor_col)
 
             return True
 
