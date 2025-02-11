@@ -4,8 +4,6 @@ import asyncio
 from asyncio.subprocess import Process
 import logging
 import os
-import pty
-import termios
 import select
 import signal
 from typing import Dict, Optional, Set

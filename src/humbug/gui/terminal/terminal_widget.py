@@ -1,13 +1,11 @@
 """Terminal widget implementation."""
 
 from dataclasses import dataclass
-import fcntl
 from typing import Optional, Tuple
 import re
 import logging
 from enum import IntEnum
 import struct
-import termios
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Signal, Qt, QTimer, QRect
