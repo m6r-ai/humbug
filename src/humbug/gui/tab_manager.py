@@ -28,6 +28,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
+
 class TabData:
     """Encapsulates data related to a tab."""
     def __init__(self, tab: TabBase, title: str):
@@ -82,8 +83,12 @@ class TabManager(QWidget):
         self._stack.addWidget(self._columns_widget)
 
         # Create splitter for columns
-        self._column_splitter = QSplitter(Qt.Horizontal)
+        self._column_splitter = ColumnSplitter()
+        self._column_splitter.setHandleWidth(1)
         self._columns_layout.addWidget(self._column_splitter)
+
+        # Connect to the splitter's moved signal
+        self._column_splitter.splitterMoved.connect(self._handle_splitter_moved)
 
         # Create initial column
         self._tab_columns: List[TabColumn] = []
@@ -200,6 +205,37 @@ class TabManager(QWidget):
             editor_tab = self.open_file(file_path)
             if editor_tab:
                 self._stack.setCurrentWidget(self._columns_widget)
+                
+    def _handle_splitter_moved(self, pos: int, index: int):
+        """Handle splitter movement and potential column merging."""
+        sizes = self._column_splitter.sizes()
+        min_width = 200  # Minimum width before merging
+
+        # Find any columns that are too small
+        for i, size in enumerate(sizes):
+            if size < min_width:
+                # Determine which column to merge with
+                merge_target = i - 1 if i > 0 else i + 1
+                if 0 <= merge_target < len(self._tab_columns):
+                    source_column = self._tab_columns[i]
+                    target_column = self._tab_columns[merge_target]
+
+                    # If the source column was active, make the target column active
+                    if self._active_column == source_column:
+                        self._active_column = target_column
+
+                    # Move all tabs from source to target
+                    while source_column.count() > 0:
+                        tab = source_column.widget(0)
+                        self._move_tab_between_columns(tab, source_column, target_column)
+
+                    # Remove the empty column
+                    self._remove_column_and_resize(i, source_column)
+
+                    # Update tab highlighting
+                    self._update_tabs()
+                    self.column_state_changed.emit()
+                    break
 
     def _handle_tab_drop(self, tab_id: str, target_column: TabColumn, target_index: int) -> None:
         """
@@ -308,6 +344,7 @@ class TabManager(QWidget):
     def _create_column(self, index: int) -> TabColumn:
         """Create a new tab column."""
         tab_widget = TabColumn()
+        tab_widget.setMinimumWidth(200)  # Set minimum width
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
         tab_widget.tab_drop.connect(self._handle_tab_drop)
@@ -318,22 +355,48 @@ class TabManager(QWidget):
 
         return tab_widget
 
-    def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
-        """
-        Remove a column and resize the remaining columns.
+    def _handle_tab_merge(self, dragged_tab_id: str, target_tab_id: str) -> None:
+        """Handle merging tabs when one is dropped directly onto another."""
+        dragged_tab = self._tabs.get(dragged_tab_id)
+        target_tab = self._tabs.get(target_tab_id)
+        
+        if not dragged_tab or not target_tab:
+            return
 
-        Args:
-            column_number: Index of the column to remove
-            column: Column widget to remove
-        """
+        source_column = self._find_column_for_tab(dragged_tab)
+        target_column = self._find_column_for_tab(target_tab)
+        
+        if not source_column or not target_column:
+            return
+
+        # Get the target index
+        target_index = target_column.indexOf(target_tab)
+        if target_index == -1:
+            return
+
+        # Move the tab
+        self._move_tab_between_columns(dragged_tab, source_column, target_column)
+
+        # If the source column is now empty, remove it
+        if source_column.count() == 0:
+            column_number = self._tab_columns.index(source_column)
+            self._remove_column_and_resize(column_number, source_column)
+
+        # Update states
+        self._active_column = target_column
+        self._update_tabs()
+        self.column_state_changed.emit()
+
+    def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
+        """Remove a column and resize the remaining columns."""
         del self._tab_columns[column_number]
         column.deleteLater()
 
-        # Resize splitter to evenly distribute space
-        # Note: We add 1 to column count because deletion hasn't processed yet
-        num_columns = len(self._tab_columns)
-        sizes = [(self.width() // num_columns) for _ in range(num_columns + 1)]
-        self._column_splitter.setSizes(sizes)
+        # Distribute space evenly among remaining columns
+        if self._tab_columns:
+            width = self.width()
+            column_width = width // len(self._tab_columns)
+            self._column_splitter.setSizes([column_width] * len(self._tab_columns))
 
     def _update_tabs(self) -> None:
         # Update current states for all tabs
@@ -956,7 +1019,7 @@ class TabManager(QWidget):
 
     def can_find(self) -> bool:
         tab = self._get_current_tab()
-        return tab is not None
+        return (tab != None)
 
     def find(self):
         tab = self._get_current_tab()
