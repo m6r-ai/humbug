@@ -1026,6 +1026,90 @@ class TabManager(QWidget):
         tab = self._get_current_tab()
         tab.show_find()
 
+
+    def can_swap_column(self, swap_left: bool) -> bool:
+        """
+        Check if the current column can be swapped with the column to its left or right.
+
+        Args:
+            swap_left: If True, try to swap with the column to the left.
+                    If False, try to swap with the column to the right.
+
+        Returns:
+            bool: True if the column can be swapped, False otherwise
+        """
+        if len(self._tab_columns) <= 1:
+            return False
+
+        current_column_number = self._get_current_column()
+        
+        if swap_left and current_column_number == 0:
+            return False
+        
+        if not swap_left and current_column_number == len(self._tab_columns) - 1:
+            return False
+
+        return True
+    
+    def swap_column(self, swap_left: bool) -> None:
+        """
+        Swap the current column with the column to its left or right.
+
+        Args:
+            swap_left: If True, swap with the column to the left.
+                    If False, swap with the column to the right.
+        """
+        if len(self._tab_columns) <= 1:
+            return
+
+        current_column_number = self._get_current_column()
+        
+        if swap_left and current_column_number == 0:
+            return
+        
+        if not swap_left and current_column_number == len(self._tab_columns) - 1:
+            return
+
+        target_column_number = current_column_number + (-1 if swap_left else 1)
+        
+        # Get the source and target columns
+        source_column = self._tab_columns[current_column_number]
+        target_column = self._tab_columns[target_column_number]
+        
+        # Create temporary widgets to help with swapping
+        temp_source = QWidget()
+        temp_target = QWidget()
+        
+        # Replace the source and target columns with temporary widgets
+        index_source = self._column_splitter.indexOf(source_column)
+        index_target = self._column_splitter.indexOf(target_column)
+        
+        self._column_splitter.replaceWidget(index_source, temp_source)
+        self._column_splitter.replaceWidget(index_target, temp_target)
+        
+        # Now swap the actual columns in the splitter
+        self._column_splitter.replaceWidget(index_source, target_column)
+        self._column_splitter.replaceWidget(index_target, source_column)
+        
+        # Update the _tab_columns list to reflect the swap
+        self._tab_columns[current_column_number], self._tab_columns[target_column_number] = \
+            self._tab_columns[target_column_number], self._tab_columns[current_column_number]
+
+        # Clean up temporary widgets
+        temp_source.deleteLater()
+        temp_target.deleteLater()
+
+        # Update active column if necessary
+        if self._active_column == source_column:
+            self._active_column = target_column
+        elif self._active_column == target_column:
+            self._active_column = source_column
+
+        # Emit signal about column state change
+        self._update_tabs()
+        self.column_state_changed.emit()
+        
+    
     def close_deleted_file(self, path: str):
         """
         Close any open tabs related to a file being deleted.

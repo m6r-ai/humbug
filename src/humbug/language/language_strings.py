@@ -53,6 +53,8 @@ class LanguageStrings:
     split_column_right: str
     merge_column_left: str
     merge_column_right: str
+    swap_column_left: str
+    swap_column_right: str
 
     # Message roles and labels
     role_you: str
@@ -216,6 +218,8 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         split_column_right="Split Column Right",
         merge_column_left="Merge Column Left",
         merge_column_right="Merge Column Right",
+        swap_column_left = "Swap Column Left",
+        swap_column_right = "Swap Column Right",
 
         # Message roles
         role_you="You",
@@ -372,6 +376,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         split_column_right="Diviser la colonne à droite",
         merge_column_left="Fusionner avec la colonne de gauche",
         merge_column_right="Fusionner avec la colonne de droite",
+        swap_column_left = "Échanger la colonne gauche",
+        swap_column_right = "Échanger la colonne de droite",
+        
 
         # Message roles
         role_you="Vous",
@@ -528,6 +535,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         split_column_right="تقسيم العمود لليمين",
         merge_column_left="دمج مع العمود الأيسر",
         merge_column_right="دمج مع العمود الأيمن",
+        
+        swap_column_left = "عمود المبادلة إلى اليسار",
+        swap_column_right = "عمود المبادلة لليمين",
+        
 
         # Message roles
         role_you="أنت",
