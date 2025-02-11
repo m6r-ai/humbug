@@ -20,6 +20,7 @@ from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_column import TabColumn
+from humbug.gui.column_splitter import ColumnSplitter
 from humbug.gui.tab_label import TabLabel
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
