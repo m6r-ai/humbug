@@ -124,6 +124,8 @@ class TerminalWidget(QPlainTextEdit):
         self._default_text_format.setFontWeight(QFont.Normal)
         self._default_text_format.setFontUnderline(False)
         self._default_text_format.setFontItalic(False)
+        self._default_text_format.setFontFixedPitch(True)
+
         # Clear any custom property markers
         for prop in FormatProperty:
             self._default_text_format.setProperty(prop, False)
@@ -929,30 +931,21 @@ class TerminalWidget(QPlainTextEdit):
         if not self._current_size:
             return None
 
+        cursor = self.textCursor()
+        first_active = max(0, self.document().blockCount() - self._current_size.rows)
+        target_block = first_active + self._cursor_row
+
+        cursor.movePosition(QTextCursor.Start)
+        cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
+
+        rect = self.cursorRect(cursor)
+
         # Get basic character metrics
         fm = QFontMetricsF(self.font())
-        char_width = int(fm.horizontalAdvance(' ') + 0.999)
-        char_height = int(fm.height() + 0.999)
-
-        # Calculate cursor's position in document coordinates
-        # The cursor row needs to be offset from the end of the document
-        doc_block_count = self.document().blockCount()
-        cursor_block = doc_block_count - self._current_size.rows + self._cursor_row
-
-        # Get viewport position
-        content_offset = self.contentOffset()
-        viewport_offset = self.verticalScrollBar().value() * char_height
-
-        # Calculate position in viewport coordinates
-        x = content_offset.x() + (self._cursor_col * char_width)
-        y = (cursor_block * char_height) - viewport_offset + content_offset.y()
-
-        return QRect(
-            round(x),
-            round(y),
-            char_width,
-            char_height
-        )
+        rect.setWidth(round(fm.horizontalAdvance(' ')))
+        return rect
 
     def paintEvent(self, event: QPaintEvent):
         """
