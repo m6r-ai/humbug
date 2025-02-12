@@ -82,7 +82,7 @@ class TerminalTab(TabBase):
             OSError: If ioctl call fails
         """
         try:
-            size = self._terminal._calculate_size()
+            size = self._terminal.calculate_size()
             fcntl.ioctl(fd, termios.TIOCSWINSZ, size.to_struct())
         except OSError as e:
             self._logger.error(f"Failed to update PTY size: {e}")
