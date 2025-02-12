@@ -952,22 +952,6 @@ class TerminalWidget(QPlainTextEdit):
             painter.setFont(self.font())
             painter.drawText(cursor_rect, 0, char)
 
-    def _position_qt_cursor_at_input(self) -> QTextCursor:
-        """Position Qt cursor at current input cursor position.
-
-        Returns:
-            QTextCursor: Cursor positioned at current input location
-        """
-        cursor = self.textCursor()
-        first_active = max(0, self.document().blockCount() - self._current_size.rows)
-        target_block = first_active + self._cursor_row
-
-        cursor.movePosition(QTextCursor.Start)
-        cursor.movePosition(QTextCursor.NextBlock, n=target_block)
-        cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
-
-        return cursor
-
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse events for selection."""
         if self._mouse_tracking:
