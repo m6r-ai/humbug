@@ -118,8 +118,10 @@ class TerminalSelection:
             (self.start_row == self.end_row and self.start_col > self.end_col)
         ):
             return TerminalSelection(
-                self.end_row, self.end_col,
-                self.start_row, self.start_col
+                self.end_row,
+                self.end_col,
+                self.start_row,
+                self.start_col
             )
 
         return self
@@ -1188,15 +1190,27 @@ class TerminalWidget(QAbstractScrollArea):
         self.viewport().update()
 
     def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
-        """Convert pixel coordinates to text position."""
+        """Convert pixel coordinates to text position.
+
+        Args:
+            pos: Mouse position in viewport coordinates
+
+        Returns:
+            Tuple of (row, col) in terminal buffer coordinates
+        """
         fm = QFontMetrics(self.font())
         char_width = fm.horizontalAdvance(' ')
         char_height = fm.height()
 
-        col = max(0, min(pos.x() // char_width, self._cols - 1))
-        row = max(0, min(pos.y() // char_height, self._rows - 1))
+        # Convert pixel position to viewport row/col
+        viewport_col = max(0, min(pos.x() // char_width, self._cols - 1))
+        viewport_row = max(0, min(pos.y() // char_height, self._rows - 1))
 
-        return (row, col)
+        # Adjust row for scroll position
+        first_visible_line = self.verticalScrollBar().value()
+        buffer_row = viewport_row + first_visible_line
+
+        return (buffer_row, viewport_col)
 
     def _make_sgr_mouse_report(self, row: int, col: int, button: Qt.MouseButton, pressed: bool) -> str:
         """Create an SGR mouse report."""
@@ -1634,19 +1648,18 @@ class TerminalWidget(QAbstractScrollArea):
         # Build selected text
         text = []
         for row in range(selection.start_row, selection.end_row + 1):
-            line_index = len(self._lines) - self._rows + row
-            if 0 <= line_index < len(self._lines):
-                line = self._lines[line_index]
+            line = self._lines[row]
+            print(f"line: {line}")
 
-                start = selection.start_col if row == selection.start_row else 0
-                end = selection.end_col if row == selection.end_row else self._cols
+            start = selection.start_col if row == selection.start_row else 0
+            end = selection.end_col if row == selection.end_row else self._cols
 
-                row_text = ""
-                for col in range(start, end):
-                    char, _attributes, _fg_color, _bg_color = line.get_character(col)
-                    row_text += char
+            row_text = ""
+            for col in range(start, end):
+                char, _attributes, _fg_color, _bg_color = line.get_character(col)
+                row_text += char
 
-                text.append(row_text.rstrip())  # Remove trailing spaces
+            text.append(row_text.rstrip())  # Remove trailing spaces
 
         return "\n".join(text)
 
@@ -1660,7 +1673,7 @@ class TerminalWidget(QAbstractScrollArea):
         """Check if there is an active selection."""
         return self._selection is not None and not self._selection.is_empty()
 
-    def copy_selection(self) -> None:
+    def copy(self) -> None:
         """Copy selected text to clipboard."""
         if not self.has_selection():
             return
@@ -1673,7 +1686,7 @@ class TerminalWidget(QAbstractScrollArea):
         """Paste text from clipboard."""
         text = QGuiApplication.clipboard().text()
         if text:
-            self.put_data(text.encode())
+            self.data_ready.emit(text.encode())
 
     def clear(self) -> None:
         """Clear the terminal."""

@@ -385,13 +385,13 @@ class TerminalTab(TabBase):
         return self._terminal.has_selection()
 
     def copy(self) -> None:
-        self._terminal.copy_selection()
+        self._terminal.copy()
 
     def can_paste(self) -> bool:
         return True
 
     def paste(self) -> None:
-        self._terminal.paste_clipboard()
+        self._terminal.paste()
 
     def show_find(self):
         """Show the find widget."""
