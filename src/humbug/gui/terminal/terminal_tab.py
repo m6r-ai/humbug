@@ -214,8 +214,12 @@ class TerminalTab(TabBase):
                 except OSError:
                     pass
 
-            # Inform the terminal that the process has ended
-            self._terminal.put_data(b"\r\n[Process completed]\r\n")
+        # Only show completion message if not in cleanup
+        if self._running:
+            try:
+                self._terminal.put_data(b"\r\n[Process completed]\r\n")
+            except Exception as e:
+                self._logger.debug(f"Could not write completion message: {e}")
 
     @Slot(bytes)
     def _handle_data_ready(self, data: bytes):
