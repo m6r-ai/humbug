@@ -1,7 +1,7 @@
 """Terminal widget implementation."""
 
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Tuple
 from enum import Flag, auto
 import array
 import logging
@@ -121,10 +121,32 @@ class TerminalWidget(QWidget):
         self._scroll_region_top = 0
         self._scroll_region_bottom = self._rows
 
+        self._using_alternate_screen = False
+
+        # Window/terminal state
+        self._terminal_title = ""
+        self._current_directory = None
+
+        # Operation modes
+        self._application_cursor_keys = False
+        self._origin_mode = False
+        self._auto_wrap = True
+        self._bracketed_paste = False
+
+        # Mouse handling
+        self._mouse_tracking = False
+        self._mouse_tracking_mode = 0  # 0=off, 1000=normal, 1002=button, 1003=any
+        self._mouse_utf8_mode = False
+        self._mouse_sgr_mode = False
+
+        # Focus tracking
+        self._focus_tracking = False
+
         # Cursor state
         self._cursor_row = 0
         self._cursor_col = 0
         self._cursor_visible = True
+        self._cursor_blink = True
         self._saved_cursor = None  # For save/restore cursor position
 
         # Selection state
@@ -328,6 +350,200 @@ class TerminalWidget(QWidget):
         gray_value = 8 + (color_index - 232) * 10
         return (gray_value << 16) | (gray_value << 8) | gray_value
 
+    def _handle_selection_data(self, param: str):
+        """Handle OSC 52 selection data operations."""
+        try:
+            clipboard, data = param.split(';', 1)
+            if clipboard in ('c', 'p', 's'):  # Primary, clipboard, or secondary selection
+                if data == '?':  # Query
+                    # Should emit response with current selection
+                    pass
+                elif data:  # Set
+                    # Base64 decode data and update clipboard
+                    import base64
+                    decoded = base64.b64decode(data).decode('utf-8')
+                    if clipboard == 'c':
+                        QGuiApplication.clipboard().setText(decoded)
+                else:  # Clear
+                    if clipboard == 'c':
+                        QGuiApplication.clipboard().clear()
+        except (ValueError, base64.Error) as e:
+            self._logger.warning(f"Invalid selection data: {param}")
+
+    def _process_osc(self, sequence: str):
+        """Handle Operating System Command sequences."""
+        # Remove ESC] prefix and terminator (BEL or ST)
+        if sequence.endswith('\x07'):  # BEL
+            params = sequence[2:-1]
+        elif sequence.endswith('\x1b\\'):  # ST
+            params = sequence[2:-2]
+        else:
+            return
+
+        try:
+            # Split into command number and parameter
+            parts = params.split(';', 1)
+            command = int(parts[0])
+            param = parts[1] if len(parts) > 1 else ''
+
+            if command == 0:  # Set window title and icon name
+#                self.window_title_changed.emit(param)
+                pass
+
+            elif command == 1:  # Set icon name only
+#                self.icon_name_changed.emit(param)
+                pass
+
+            elif command == 2:  # Set window title only
+#                self.window_title_changed.emit(param)
+                pass
+
+            elif command == 4:  # Change/query color number
+                # Format: 4;index;spec
+                color_parts = param.split(';')
+                if len(color_parts) >= 2:
+                    index = int(color_parts[0])
+                    if len(color_parts) == 1:  # Query
+                        # Should emit response with current color
+                        pass
+                    else:  # Set
+                        color_spec = color_parts[1]
+                        # Parse color spec and update color table
+#                        self._update_color(index, color_spec)
+
+            elif command == 7:  # Set working directory
+                self._current_directory = param
+
+            elif command in (10, 11, 12, 13, 14, 15, 16, 17, 19):  # Set/query various resources
+                # 10: text foreground
+                # 11: text background
+                # etc.
+                if param == '?':  # Query
+                    # Should emit response with current value
+                    pass
+                else:
+                    self._update_terminal_resource(command, param)
+
+            elif command == 52:  # Manipulate selection data
+                # Handle clipboard operations
+                self._handle_selection_data(param)
+
+            elif command == 104:  # Reset color number
+                if param:  # Reset specific colors
+                    for spec in param.split(';'):
+                        try:
+                            index = int(spec)
+#                            self._reset_color(index)
+                        except ValueError:
+                            pass
+                else:  # Reset all colors
+#                    self._reset_all_colors()
+                    pass
+
+            elif command == 110:  # Reset text foreground color
+#                self._reset_color(10)
+                pass
+
+            elif command == 111:  # Reset text background color
+#                self._reset_color(11)
+                pass
+
+            elif command == 112:  # Reset text cursor color
+#                self._reset_color(12)
+                pass
+
+        except (ValueError, IndexError) as e:
+            self._logger.warning(f"Invalid OSC sequence: {sequence}, error: {e}")
+
+    def _handle_alternate_screen(self, enable: bool):
+        """Switch between main and alternate screen buffers."""
+        if enable == self._using_alternate_screen:
+            return
+
+        if enable:
+            # Save main screen state
+            self._main_screen_buffer = self._lines[:]
+            self._main_screen_cursor = (self._cursor_row, self._cursor_col)
+            self._main_screen_attrs = {
+                'fg': self._current_fg,
+                'bg': self._current_bg,
+                'attrs': self._current_attributes
+            }
+
+            # Clear and initialize alternate screen
+            self._lines = []
+            self._add_new_lines(self._rows)
+            self._cursor_row = 0
+            self._cursor_col = 0
+
+        else:
+            # Restore main screen
+            self._lines = self._main_screen_buffer
+            self._cursor_row, self._cursor_col = self._main_screen_cursor
+            self._current_fg = self._main_screen_attrs['fg']
+            self._current_bg = self._main_screen_attrs['bg']
+            self._current_attributes = self._main_screen_attrs['attrs']
+
+        self._using_alternate_screen = enable
+        self.update()
+
+    def _process_private_mode(self, params: str, set_mode: bool):
+        """Handle DEC private mode sequences (DECSET/DECRST)."""
+        try:
+            modes = [int(x) for x in params.split(';')]
+            for mode in modes:
+                if mode == 1:  # DECCKM - Application Cursor Keys
+                    self._application_cursor_keys = set_mode
+                elif mode == 3:  # DECCOLM - 80/132 Column Mode
+                    # In xterm this changes column count but for now we'll ignore
+                    pass
+                elif mode == 6:  # DECOM - Origin Mode
+                    self._origin_mode = set_mode
+                    if set_mode:
+                        self._cursor_row = self._scroll_region_top
+                        self._cursor_col = 0
+                elif mode == 7:  # DECAWM - Auto-wrap Mode
+                    self._auto_wrap = set_mode
+                elif mode == 12:  # att610 - Start/Stop Blinking Cursor
+                    self._cursor_blink = set_mode
+                elif mode == 25:  # DECTCEM - Text Cursor Enable Mode
+                    self._cursor_visible = set_mode
+                elif mode == 1000:  # X11 mouse reporting - normal tracking mode
+                    self._mouse_tracking = set_mode
+                    self._mouse_tracking_mode = 1000 if set_mode else 0
+                elif mode == 1002:  # X11 mouse reporting - button event tracking
+                    self._mouse_tracking = set_mode
+                    self._mouse_tracking_mode = 1002 if set_mode else 0
+                elif mode == 1003:  # X11 mouse reporting - any event tracking
+                    self._mouse_tracking = set_mode
+                    self._mouse_tracking_mode = 1003 if set_mode else 0
+                elif mode == 1004:  # Send focus in/out events
+                    self._focus_tracking = set_mode
+                elif mode == 1005:  # UTF-8 mouse mode
+                    self._mouse_utf8_mode = set_mode
+                elif mode == 1006:  # SGR mouse mode
+                    self._mouse_sgr_mode = set_mode
+                elif mode == 1047:  # Use Alternate Screen Buffer
+                    self._handle_alternate_screen(set_mode)
+                elif mode == 1048:  # Save/Restore cursor
+                    if set_mode:
+#                        self._save_cursor()
+                        pass
+                    else:
+#                        self._restore_cursor()
+                        pass
+                elif mode == 1049:  # Alternate Screen + save/restore cursor
+                    if set_mode:
+#                        self._save_cursor()
+                        self._handle_alternate_screen(True)
+                    else:
+                        self._handle_alternate_screen(False)
+#                        self._restore_cursor()
+                elif mode == 2004:  # Bracketed paste mode
+                    self._bracketed_paste = set_mode
+        except ValueError as e:
+            self._logger.warning(f"Invalid private mode parameter: {params}")
+
     def _process_sgr(self, params: list[int]) -> None:
         """Process SGR (Select Graphic Rendition) sequence."""
         i = 0
@@ -426,6 +642,21 @@ class TerminalWidget(QWidget):
 
     def _process_escape_sequence(self, sequence: str) -> None:
         """Process ANSI escape sequence."""
+        # OSC sequences
+        if sequence.startswith('\x1b]'):
+            self._process_osc(sequence)
+            return
+
+        # Private mode sequences
+        if sequence.startswith('\x1b[?'):
+            code = sequence[-1]
+            params = sequence[3:-1]  # Remove ESC[? and final character
+            if code == 'h':
+                self._process_private_mode(params, True)
+            elif code == 'l':
+                self._process_private_mode(params, False)
+            return
+
         # CSI sequences
         if sequence.startswith('\x1b['):
             code = sequence[-1]
@@ -556,7 +787,6 @@ class TerminalWidget(QWidget):
                 self._process_sgr(params)
 
             elif code == 'r':  # DECSTBM - Set Scrolling Region
-                return
                 params = sequence[2:-1].split(';')
                 top = max(0, int(params[0]) - 1) if params and params[0].isdigit() else 0
                 bottom = min(self._rows, int(params[1])) if len(params) > 1 and params[1].isdigit() else self._rows
@@ -877,31 +1107,117 @@ class TerminalWidget(QWidget):
 
         return (row, col)
 
+    def _make_sgr_mouse_report(self, row: int, col: int, button: Qt.MouseButton, pressed: bool) -> str:
+        """Create an SGR mouse report."""
+        btn_num = {
+            Qt.LeftButton: 0,
+            Qt.MiddleButton: 1,
+            Qt.RightButton: 2
+        }.get(button, 3)
+
+        if not pressed:
+            btn_num += 3
+
+        return f"\x1b[<{btn_num};{col + 1};{row + 1}{'M' if pressed else 'm'}"
+
+    def _make_normal_mouse_report(self, row: int, col: int, button: Qt.MouseButton) -> str:
+        """Create a normal X10/X11 mouse report."""
+        btn_num = {
+            Qt.LeftButton: 0,
+            Qt.MiddleButton: 1,
+            Qt.RightButton: 2
+        }.get(button, 3)
+
+        # Ensure values fit in a byte
+        cb = 32 + btn_num
+        cx = 32 + min(255, col + 1)
+        cy = 32 + min(255, row + 1)
+
+        return f"\x1b[M{chr(cb)}{chr(cx)}{chr(cy)}"
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        """Handle mouse press for selection."""
+        """Handle mouse press for both tracking and selection."""
         if event.button() == Qt.LeftButton:
+            # Handle text selection
             self._selecting = True
             pos = self._pixel_pos_to_text_pos(event.position().toPoint())
             self._selection_start = pos
             self._selection_end = pos
             self._update_text_cursor()
             self.update()
+
+        # Handle mouse tracking if enabled
+        if self._mouse_tracking:
+            pos = event.position().toPoint()
+            button = event.button()
+            row, col = self._pixel_pos_to_text_pos(pos)
+
+            # Construct mouse report based on mode
+            if self._mouse_sgr_mode:
+                report = self._make_sgr_mouse_report(row, col, button, True)
+            else:
+                report = self._make_normal_mouse_report(row, col, button)
+
+            if report:
+                self.data_ready.emit(report.encode())
+
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        """Handle mouse release for selection."""
+        """Handle mouse release for both tracking and selection."""
         if event.button() == Qt.LeftButton:
             self._selecting = False
+
+        # Handle mouse tracking if enabled
+        if self._mouse_tracking:
+            pos = event.position().toPoint()
+            button = event.button()
+            row, col = self._pixel_pos_to_text_pos(pos)
+
+            if self._mouse_sgr_mode:
+                report = self._make_sgr_mouse_report(row, col, button, False)
+                if report:
+                    self.data_ready.emit(report.encode())
+
         super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        """Handle mouse movement for selection."""
+        """Handle mouse movement for selection and tracking."""
+        # Handle text selection
         if self._selecting:
             pos = self._pixel_pos_to_text_pos(event.position().toPoint())
             if pos != self._selection_end:
                 self._selection_end = pos
                 self._update_text_cursor()
                 self.update()
+
+        # Handle mouse tracking if enabled and in button event mode (1002) or any event mode (1003)
+        if self._mouse_tracking and self._mouse_tracking_mode in (1002, 1003):
+            row, col = self._pixel_pos_to_text_pos(event.position().toPoint())
+            buttons = event.buttons()
+
+            # For 1002 mode, only report if buttons are pressed
+            if self._mouse_tracking_mode == 1002 and not buttons:
+                return
+
+            btn_num = 32  # Default to button release
+            if buttons & Qt.LeftButton:
+                btn_num = 32
+            elif buttons & Qt.MiddleButton:
+                btn_num = 33
+            elif buttons & Qt.RightButton:
+                btn_num = 34
+
+            if self._mouse_sgr_mode:
+                report = f"\x1b[<{btn_num};{col + 1};{row + 1}M"
+            else:
+                cb = 32 + btn_num
+                cx = 32 + min(255, col + 1)
+                cy = 32 + min(255, row + 1)
+                report = f"\x1b[M{chr(cb)}{chr(cx)}{chr(cy)}"
+
+            self.data_ready.emit(report.encode())
+
         super().mouseMoveEvent(event)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
