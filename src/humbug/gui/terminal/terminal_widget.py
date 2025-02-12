@@ -8,7 +8,7 @@ import logging
 import struct
 from typing import List, Optional, Tuple
 
-from PySide6.QtWidgets import QWidget, QAbstractScrollArea
+from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetrics, QFont,
@@ -18,6 +18,7 @@ from PySide6.QtGui import (
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_manager import LanguageManager
 
 
 @dataclass
@@ -139,6 +140,9 @@ class TerminalWidget(QAbstractScrollArea):
         self._logger = logging.getLogger("TerminalWidget")
         self._style_manager = StyleManager()
 
+        # Initialize language manager for localization
+        self._language_manager = LanguageManager()
+
         # Set up scrollbar behavior
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -245,6 +249,10 @@ class TerminalWidget(QAbstractScrollArea):
         self._update_dimensions()
         self._initialize_buffer()
 
+        # Set context menu policy
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_terminal_context_menu)
+
         # Connect style changed signal
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
@@ -252,6 +260,28 @@ class TerminalWidget(QAbstractScrollArea):
     def focusNextPrevChild(self, _next: bool) -> bool:
         """Override to prevent tab from changing focus."""
         return False
+
+    def _show_terminal_context_menu(self, pos) -> None:
+        """
+        Show a context menu for the terminal widget.
+
+        Args:
+            pos: Position in widget coordinates
+        """
+        # Create context menu
+        menu = QMenu(self)
+
+        # Standard edit actions
+        copy_action = menu.addAction(self._language_manager.strings.copy)
+        copy_action.setEnabled(self.has_selection())
+        copy_action.triggered.connect(self.copy)
+
+        paste_action = menu.addAction(self._language_manager.strings.paste)
+        paste_action.setEnabled(True)
+        paste_action.triggered.connect(self.paste)
+
+        # Show menu at the global position
+        menu.exec_(self.mapToGlobal(pos))
 
     def _handle_style_changed(self):
         """Handle style changes."""
