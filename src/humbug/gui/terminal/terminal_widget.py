@@ -519,7 +519,8 @@ class TerminalWidget(QAbstractScrollArea):
             self._main_screen_attrs = {
                 'fg': self._current_fg,
                 'bg': self._current_bg,
-                'attrs': self._current_attributes
+                'attrs': self._current_attributes,
+                'scroll_value': self.verticalScrollBar().value()
             }
 
             # Clear and initialize alternate screen
@@ -535,6 +536,12 @@ class TerminalWidget(QAbstractScrollArea):
             self._current_fg = self._main_screen_attrs['fg']
             self._current_bg = self._main_screen_attrs['bg']
             self._current_attributes = self._main_screen_attrs['attrs']
+
+            # Update scrollbar for main screen
+            self._update_scrollbar()
+
+            self.verticalScrollBar().setValue(self._main_screen_attrs['scroll_value'])
+            self._auto_scroll = (self._main_screen_attrs['scroll_value'] == self.verticalScrollBar().maximum())
 
         self._using_alternate_screen = enable
         self.viewport().update()
@@ -1565,7 +1572,7 @@ class TerminalWidget(QAbstractScrollArea):
         if self._cursor_visible:
             cursor_line = len(self._lines) - self._rows + self._cursor_row
             visible_cursor_row = cursor_line - first_visible_line
-            
+
             if 0 <= visible_cursor_row < self._rows:  # Only draw if cursor is in visible area
                 cursor_x = self._cursor_col * char_width
                 cursor_y = visible_cursor_row * char_height
