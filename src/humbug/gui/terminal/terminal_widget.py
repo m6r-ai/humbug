@@ -122,12 +122,16 @@ class TerminalWidget(QWidget):
         self._scroll_region_bottom = self._rows
 
         self._using_alternate_screen = False
+        self._main_screen_buffer = None
+        self._main_screen_cursor = None
+        self._main_screen_attrs = None
 
         # Window/terminal state
         self._terminal_title = ""
         self._current_directory = None
 
         # Operation modes
+        self._application_keypad_mode = False
         self._application_cursor_keys = False
         self._origin_mode = False
         self._auto_wrap = True
@@ -1220,11 +1224,94 @@ class TerminalWidget(QWidget):
 
         super().mouseMoveEvent(event)
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:
-        """Handle key press events."""
+    def keyPressEvent(self, event: QKeyEvent):
+        """Handle key press events including control sequences."""
         text = event.text()
-        if text:
+        key = event.key()
+        modifiers = event.modifiers()
+
+        # Handle keypad in application mode
+        if self._application_keypad_mode and not modifiers:
+            # Map keypad keys to application mode sequences
+            keypad_map = {
+                Qt.Key_0: b'\x1bOp',
+                Qt.Key_1: b'\x1bOq',
+                Qt.Key_2: b'\x1bOr',
+                Qt.Key_3: b'\x1bOs',
+                Qt.Key_4: b'\x1bOt',
+                Qt.Key_5: b'\x1bOu',
+                Qt.Key_6: b'\x1bOv',
+                Qt.Key_7: b'\x1bOw',
+                Qt.Key_8: b'\x1bOx',
+                Qt.Key_9: b'\x1bOy',
+                Qt.Key_Minus: b'\x1bOm',
+                Qt.Key_Plus: b'\x1bOl',
+                Qt.Key_Period: b'\x1bOn',
+                Qt.Key_Enter: b'\x1bOM',
+            }
+
+            if key in keypad_map:
+                self.data_ready.emit(keypad_map[key])
+                event.accept()
+                return
+
+        # Handle control key combinations
+        if modifiers & Qt.ControlModifier:
+            if key >= Qt.Key_A and key <= Qt.Key_Z:
+                # Calculate control character (1-26)
+                ctrl_char = bytes([key - Qt.Key_A + 1])
+                self.data_ready.emit(ctrl_char)
+                event.accept()
+                return
+
+            # Handle special control sequences
+            ctrl_map = {
+                Qt.Key_2: b'\x00',  # Ctrl+@, Ctrl+2
+                Qt.Key_3: b'\x1b',  # Ctrl+[, Ctrl+3
+                Qt.Key_4: b'\x1c',  # Ctrl+\, Ctrl+4
+                Qt.Key_5: b'\x1d',  # Ctrl+], Ctrl+5
+                Qt.Key_6: b'\x1e',  # Ctrl+^, Ctrl+6
+                Qt.Key_7: b'\x1f',  # Ctrl+_, Ctrl+7
+                Qt.Key_8: b'\x7f',  # Ctrl+8 (delete)
+            }
+            if key in ctrl_map:
+                self.data_ready.emit(ctrl_map[key])
+                event.accept()
+                return
+
+        # Handle application cursor key mode and normal mode
+        if self._application_cursor_keys:
+            # Handle cursor keys in application mode
+            if key == Qt.Key_Up:
+                self.data_ready.emit(b'\x1bOA')
+            elif key == Qt.Key_Down:
+                self.data_ready.emit(b'\x1bOB')
+            elif key == Qt.Key_Right:
+                self.data_ready.emit(b'\x1bOC')
+            elif key == Qt.Key_Left:
+                self.data_ready.emit(b'\x1bOD')
+        else:
+            # Normal mode key handling
+            if key == Qt.Key_Up:
+                self.data_ready.emit(b'\x1b[A')
+            elif key == Qt.Key_Down:
+                self.data_ready.emit(b'\x1b[B')
+            elif key == Qt.Key_Right:
+                self.data_ready.emit(b'\x1b[C')
+            elif key == Qt.Key_Left:
+                self.data_ready.emit(b'\x1b[D')
+
+        if key == Qt.Key_Return or key == Qt.Key_Enter:
+            self.data_ready.emit(b'\r')
+        elif key == Qt.Key_Backspace:
+            self.data_ready.emit(b'\x7f' if modifiers & Qt.ControlModifier else b'\b')
+        elif key == Qt.Key_Delete:
+            self.data_ready.emit(b'\x1b[3~')
+        elif key == Qt.Key_Tab:
+            self.data_ready.emit(b'\t')
+        elif text:
             self.data_ready.emit(text.encode())
+
         event.accept()
 
     def resizeEvent(self, event: QResizeEvent) -> None:
