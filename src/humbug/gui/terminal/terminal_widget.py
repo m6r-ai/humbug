@@ -569,6 +569,8 @@ class TerminalWidget(QAbstractScrollArea):
         if enable == self._using_alternate_screen:
             return
 
+        self._clear_selection()
+
         if enable:
             # Save main screen state
             self._main_screen_buffer = self._lines[:]
@@ -581,7 +583,6 @@ class TerminalWidget(QAbstractScrollArea):
             }
 
             # Clear and initialize alternate screen
-            self._clear_selection()
             self._lines = []
             self._add_new_lines(self._rows)
             self._cursor_row = 0
