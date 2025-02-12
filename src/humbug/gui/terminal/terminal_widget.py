@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QWidget, QAbstractScrollArea
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetrics, QFont,
-    QResizeEvent, QKeyEvent, QMouseEvent, QTextCursor,
+    QResizeEvent, QKeyEvent, QMouseEvent,
     QGuiApplication, QWheelEvent
 )
 
@@ -96,6 +96,35 @@ class TerminalLine:
         return (' ', CharacterAttributes.NONE, None, None)
 
 
+@dataclass
+class TerminalSelection:
+    """Represents a selection in the terminal."""
+    start_row: int
+    start_col: int
+    end_row: int
+    end_col: int
+
+    def is_empty(self) -> bool:
+        """Check if selection is empty."""
+        return (
+            self.start_row == self.end_row and
+            self.start_col == self.end_col
+        )
+
+    def normalize(self) -> 'TerminalSelection':
+        """Return normalized selection (start before end)."""
+        if (
+            (self.start_row > self.end_row) or
+            (self.start_row == self.end_row and self.start_col > self.end_col)
+        ):
+            return TerminalSelection(
+                self.end_row, self.end_col,
+                self.start_row, self.start_col
+            )
+
+        return self
+
+
 class TerminalWidget(QAbstractScrollArea):
     """Terminal widget implementation."""
 
@@ -163,8 +192,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._saved_cursor = None  # For save/restore cursor position
 
         # Selection state
-        self._selection_start: Optional[Tuple[int, int]] = None  # (row, col)
-        self._selection_end: Optional[Tuple[int, int]] = None    # (row, col)
+        self._selection: Optional[TerminalSelection] = None
         self._selecting = False
 
         # Color tables for ANSI colors
@@ -198,9 +226,6 @@ class TerminalWidget(QAbstractScrollArea):
         # ANSI escape sequence handling
         self._escape_seq_buffer = ""
         self._in_escape_seq = False
-
-        # Text cursor for selection
-        self._text_cursor = QTextCursor()
 
         # Default colors (can be customized later)
         self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
@@ -1207,9 +1232,7 @@ class TerminalWidget(QAbstractScrollArea):
             # Handle text selection
             self._selecting = True
             pos = self._pixel_pos_to_text_pos(event.position().toPoint())
-            self._selection_start = pos
-            self._selection_end = pos
-            self._update_text_cursor()
+            self._selection = TerminalSelection(pos[0], pos[1], pos[0], pos[1])
             self.viewport().update()
 
         # Handle mouse tracking if enabled
@@ -1250,11 +1273,12 @@ class TerminalWidget(QAbstractScrollArea):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Handle mouse movement for selection and tracking."""
         # Handle text selection
-        if self._selecting:
+        if self._selecting and self._selection is not None:
             pos = self._pixel_pos_to_text_pos(event.position().toPoint())
-            if pos != self._selection_end:
-                self._selection_end = pos
-                self._update_text_cursor()
+            if (pos[0] != self._selection.end_row or
+                pos[1] != self._selection.end_col):
+                self._selection.end_row = pos[0]
+                self._selection.end_col = pos[1]
                 self.viewport().update()
 
         # Handle mouse tracking if enabled and in button event mode (1002) or any event mode (1003)
@@ -1512,17 +1536,13 @@ class TerminalWidget(QAbstractScrollArea):
                 )
 
         # Draw selection if active
-        if self._selection_start and self._selection_end:
-            start_row, start_col = self._selection_start
-            end_row, end_col = self._selection_end
-
-            # Ensure start is before end
-            if (start_row > end_row) or (start_row == end_row and start_col > end_col):
-                start_row, start_col, end_row, end_col = end_row, end_col, start_row, start_col
+        if self.has_selection():
+            selection = self._selection.normalize()
 
             # Adjust for scroll position
-            visible_start_row = start_row - first_visible_line
-            visible_end_row = end_row - first_visible_line
+            first_visible_line = self.verticalScrollBar().value()
+            visible_start_row = selection.start_row - first_visible_line
+            visible_end_row = selection.end_row - first_visible_line
 
             selection_color = self.palette().highlight().color()
             selection_text_color = self.palette().highlightedText().color()
@@ -1531,8 +1551,8 @@ class TerminalWidget(QAbstractScrollArea):
                 y = row * char_height
 
                 # Calculate selection range for this row
-                row_start = start_col if row + first_visible_line == start_row else 0
-                row_end = end_col if row + first_visible_line == end_row else self._cols
+                row_start = selection.start_col if row + first_visible_line == selection.start_row else 0
+                row_end = selection.end_col if row + first_visible_line == selection.end_row else self._cols
 
                 # Draw selection background
                 selection_rect = QRect(
@@ -1603,51 +1623,23 @@ class TerminalWidget(QAbstractScrollArea):
         vbar = self.verticalScrollBar()
         vbar.setValue(vbar.maximum())
 
-    def _update_text_cursor(self) -> None:
-        """Update text cursor based on selection state."""
-        if not self._selection_start or not self._selection_end:
-            self._text_cursor = QTextCursor()
-            return
-
-        # Create a cursor that represents the selection
-        cursor = QTextCursor()
-        cursor.setPosition(0)  # Start position
-
-        # Calculate selection range
-        start_row, start_col = self._selection_start
-        end_row, end_col = self._selection_end
-
-        # Ensure start is before end
-        if (start_row > end_row) or (start_row == end_row and start_col > end_col):
-            start_row, start_col, end_row, end_col = end_row, end_col, start_row, start_col
-
-        cursor.setPosition(start_row * self._cols + start_col)
-        cursor.setPosition(end_row * self._cols + end_col, QTextCursor.KeepAnchor)
-
-        self._text_cursor = cursor
-
     def _get_selected_text(self) -> str:
         """Get currently selected text."""
-        if not self._selection_start or not self._selection_end:
+        if not self.has_selection():
             return ""
 
-        # Calculate selection range
-        start_row, start_col = self._selection_start
-        end_row, end_col = self._selection_end
-
-        # Ensure start is before end
-        if (start_row > end_row) or (start_row == end_row and start_col > end_col):
-            start_row, start_col, end_row, end_col = end_row, end_col, start_row, start_col
+        # Get normalized selection
+        selection = self._selection.normalize()
 
         # Build selected text
         text = []
-        for row in range(start_row, end_row + 1):
+        for row in range(selection.start_row, selection.end_row + 1):
             line_index = len(self._lines) - self._rows + row
             if 0 <= line_index < len(self._lines):
                 line = self._lines[line_index]
 
-                start = start_col if row == start_row else 0
-                end = end_col if row == end_row else self._cols
+                start = selection.start_col if row == selection.start_row else 0
+                end = selection.end_col if row == selection.end_row else self._cols
 
                 row_text = ""
                 for col in range(start, end):
@@ -1660,32 +1652,19 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _clear_selection(self) -> None:
         """Clear current selection."""
-        self._selection_start = None
-        self._selection_end = None
-        self._update_text_cursor()
-        self.viewport().update()
+        if self._selection is not None:
+            self._selection = None
+            self.viewport().update()
 
-    # Interface methods required by TerminalTab
-    def textCursor(self) -> QTextCursor:
-        """Return current text cursor (for compatibility with QPlainTextEdit)."""
-        return self._text_cursor
+    def has_selection(self) -> bool:
+        """Check if there is an active selection."""
+        return self._selection is not None and not self._selection.is_empty()
 
-    def setTextCursor(self, cursor: QTextCursor) -> None:
-        """Set text cursor (for compatibility with QPlainTextEdit)."""
-        self._text_cursor = cursor
-        self.viewport().update()
-
-    def cut(self) -> None:
-        """Cut selected text to clipboard."""
-        self.copy()
-        self._clear_selection()
-
-    def copy(self) -> None:
+    def copy_selection(self) -> None:
         """Copy selected text to clipboard."""
-        if not self._selection_start or not self._selection_end:
+        if not self.has_selection():
             return
 
-        # Get selected text
         text = self._get_selected_text()
         if text:
             QGuiApplication.clipboard().setText(text)

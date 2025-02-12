@@ -376,22 +376,22 @@ class TerminalTab(TabBase):
         pass
 
     def can_cut(self) -> bool:
-        return self._terminal.textCursor().hasSelection()
+        return False
 
     def cut(self) -> None:
-        self._terminal.cut()
+        pass
 
     def can_copy(self) -> bool:
-        return self._terminal.textCursor().hasSelection()
+        return self._terminal.has_selection()
 
     def copy(self) -> None:
-        self._terminal.copy()
+        self._terminal.copy_selection()
 
     def can_paste(self) -> bool:
         return True
 
     def paste(self) -> None:
-        self._terminal.paste()
+        self._terminal.paste_clipboard()
 
     def show_find(self):
         """Show the find widget."""
