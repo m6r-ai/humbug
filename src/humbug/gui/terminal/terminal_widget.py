@@ -308,7 +308,11 @@ class TerminalWidget(QAbstractScrollArea):
             self._logger.warning(f"Invalid character dimensions: width={char_width}, height={char_height}")
             return TerminalSize(24, 80)  # Default fallback size
 
-        viewport_width = self.width()
+        # Get the width of the vertical scrollbar
+        scrollbar_width = self.verticalScrollBar().width()
+
+        # Calculate available viewport width, subtracting scrollbar width
+        viewport_width = max(0, self.width() - scrollbar_width)
         viewport_height = self.height()
 
         cols = max(viewport_width // char_width, 1)
@@ -360,7 +364,6 @@ class TerminalWidget(QAbstractScrollArea):
         """Initialize empty terminal buffer."""
         # Create initial lines
         self._lines = []
-        print(f"init buffer {self._rows}")
         self._add_new_lines(self._rows)
 
     def _handle_scroll(self, value: int):
@@ -1077,7 +1080,6 @@ class TerminalWidget(QAbstractScrollArea):
         # Handle printable characters
         if ord(char) >= 32:
             # Get current line
-            print(f"write char {repr(char)} {len(self._lines)} {self._rows}")
             line_index = len(self._lines) - self._rows + self._cursor_row
             if line_index >= 0 and line_index < len(self._lines):
                 # Are we trying to write past the end of the line?  If yes then wrap around
@@ -1089,7 +1091,6 @@ class TerminalWidget(QAbstractScrollArea):
                         # Add new line and scroll
                         self._add_new_lines(1)
 
-                print(f"update line {line_index} {self._cursor_col}")
                 line = self._lines[line_index]
 
                 # Write character
@@ -1176,7 +1177,6 @@ class TerminalWidget(QAbstractScrollArea):
         """Reflow terminal content for new dimensions."""
         # Create new lines with new width
         new_lines = []
-        print(f"reflow {old_rows},{old_cols} -> {self._rows},{self._cols}")
 
         # Copy content from old lines, truncating or padding as needed
         for old_line in self._lines:
@@ -1540,7 +1540,6 @@ class TerminalWidget(QAbstractScrollArea):
 
     def paintEvent(self, event: QPaintEvent) -> None:
         """Handle paint events efficiently."""
-        print("paint event")
         painter = QPainter(self.viewport())
 
         # Get font metrics for character dimensions
@@ -1681,7 +1680,6 @@ class TerminalWidget(QAbstractScrollArea):
         text = []
         for row in range(selection.start_row, selection.end_row + 1):
             line = self._lines[row]
-            print(f"line: {line}")
 
             start = selection.start_col if row == selection.start_row else 0
             end = selection.end_col if row == selection.end_row else self._cols
