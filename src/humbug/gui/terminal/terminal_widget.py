@@ -6,13 +6,17 @@ from enum import Flag, auto
 import array
 import logging
 import struct
+
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt, Signal, QRect, QPoint
+from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetrics, QFont,
     QResizeEvent, QKeyEvent, QMouseEvent, QTextCursor,
     QGuiApplication
 )
+
+from humbug.gui.color_role import ColorRole
+from humbug.gui.style_manager import StyleManager
 
 
 @dataclass
@@ -42,6 +46,11 @@ class CharacterAttributes(Flag):
     BOLD = auto()
     ITALIC = auto()
     UNDERLINE = auto()
+    STRIKE = auto()
+    HIDDEN = auto()
+    BLINK = auto()
+    INVERSE = auto()
+    DIM = auto()
     CUSTOM_FG = auto()
     CUSTOM_BG = auto()
 
@@ -96,6 +105,7 @@ class TerminalWidget(QWidget):
         """Initialize terminal widget."""
         super().__init__(parent)
         self._logger = logging.getLogger("TerminalWidget")
+        self._style_manager = StyleManager()
 
         # Enable focus and input
         self.setFocusPolicy(Qt.StrongFocus)
@@ -112,11 +122,40 @@ class TerminalWidget(QWidget):
         self._cursor_row = 0
         self._cursor_col = 0
         self._cursor_visible = True
+        self._saved_cursor = None  # For save/restore cursor position
 
         # Selection state
         self._selection_start: Optional[Tuple[int, int]] = None  # (row, col)
         self._selection_end: Optional[Tuple[int, int]] = None    # (row, col)
         self._selecting = False
+
+        # Color tables for ANSI colors
+        self._ansi_colors = {
+            # Standard colors (0-7)
+            0: ColorRole.TERM_BLACK,
+            1: ColorRole.TERM_RED,
+            2: ColorRole.TERM_GREEN,
+            3: ColorRole.TERM_YELLOW,
+            4: ColorRole.TERM_BLUE,
+            5: ColorRole.TERM_MAGENTA,
+            6: ColorRole.TERM_CYAN,
+            7: ColorRole.TERM_WHITE,
+
+            # Bright colors (8-15) if needed
+            8: ColorRole.TERM_BRIGHT_BLACK,
+            9: ColorRole.TERM_BRIGHT_RED,
+            10: ColorRole.TERM_BRIGHT_GREEN,
+            11: ColorRole.TERM_BRIGHT_YELLOW,
+            12: ColorRole.TERM_BRIGHT_BLUE,
+            13: ColorRole.TERM_BRIGHT_MAGENTA,
+            14: ColorRole.TERM_BRIGHT_CYAN,
+            15: ColorRole.TERM_BRIGHT_WHITE,
+        }
+
+        # Current rendering attributes
+        self._current_attributes = CharacterAttributes.NONE
+        self._current_fg = None  # Used when CUSTOM_FG is set
+        self._current_bg = None  # Used when CUSTOM_BG is set
 
         # ANSI escape sequence handling
         self._escape_seq_buffer = ""
@@ -126,14 +165,39 @@ class TerminalWidget(QWidget):
         self._text_cursor = QTextCursor()
 
         # Default colors (can be customized later)
-        self._default_fg = QColor(Qt.white).rgb()
-        self._default_bg = QColor(Qt.black).rgb()
+        self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
+        self._default_bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
+
+        # Blink state
+        self._blink_state = False
+        self._blink_timer = QTimer(self)
+        self._blink_timer.timeout.connect(self._toggle_blink)
+        self._blink_timer.start(500)  # Toggle every 500ms
 
         self._current_size = None
 
         # Calculate initial size
         self._update_dimensions()
         self._initialize_buffer()
+
+        # Connect style changed signal
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_style_changed()
+
+    def _handle_style_changed(self):
+        """Handle style changes."""
+        # Update terminal font
+        font = QFont(self._style_manager.monospace_font_families)
+        base_size = self._style_manager.base_font_size
+        font.setPointSizeF(base_size * self._style_manager.zoom_factor)
+        self.setFont(font)
+
+        # Update default colors from style manager
+        self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY).rgb()
+        self._default_bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE).rgb()
+
+        # Force redraw with new colors
+        self.update()
 
     def calculate_size(self) -> TerminalSize:
         """Calculate current terminal size in rows and columns."""
@@ -184,6 +248,190 @@ class TerminalWidget(QWidget):
 
             self._lines.append(line)
 
+    def _process_sgr(self, params: list[int]) -> None:
+        """Process SGR (Select Graphic Rendition) sequence."""
+        i = 0
+        while i < len(params):
+            param = params[i]
+
+            if param == 0:  # Reset
+                self._current_attributes = CharacterAttributes.NONE
+                self._current_fg = None
+                self._current_bg = None
+
+            elif param == 1:  # Bold
+                self._current_attributes |= CharacterAttributes.BOLD
+
+            elif param == 2:  # Dim
+                self._current_attributes |= CharacterAttributes.DIM
+
+            elif param == 3:  # Italic
+                self._current_attributes |= CharacterAttributes.ITALIC
+
+            elif param == 4:  # Underline
+                self._current_attributes |= CharacterAttributes.UNDERLINE
+
+            elif param == 5:  # Blink
+                self._current_attributes |= CharacterAttributes.BLINK
+
+            elif param == 7:  # Inverse
+                self._current_attributes |= CharacterAttributes.INVERSE
+
+            elif param == 8:  # Hidden
+                self._current_attributes |= CharacterAttributes.HIDDEN
+
+            elif param == 9:  # Strike
+                self._current_attributes |= CharacterAttributes.STRIKE
+
+            elif 30 <= param <= 37:  # Standard foreground color
+                self._current_attributes |= CharacterAttributes.CUSTOM_FG
+                color_role = self._ansi_colors[param - 30]
+                self._current_fg = self._style_manager.get_color(color_role).rgb()
+
+            elif 40 <= param <= 47:  # Standard background color
+                self._current_attributes |= CharacterAttributes.CUSTOM_BG
+                color_role = self._ansi_colors[param - 40]
+                self._current_bg = self._style_manager.get_color(color_role).rgb()
+
+            elif param == 38:  # Extended foreground color
+                if i + 2 < len(params):
+                    if params[i + 1] == 5:  # 256 colors
+                        color_index = params[i + 2]
+                        if color_index < 16:  # Use our color table for first 16 colors
+                            self._current_attributes |= CharacterAttributes.CUSTOM_FG
+                            color_role = self._ansi_colors[color_index]
+                            self._current_fg = self._style_manager.get_color(color_role).rgb()
+                        else:
+                            # For other colors, construct RGB directly
+                            self._current_attributes |= CharacterAttributes.CUSTOM_FG
+                            self._current_fg = self._xterm_to_rgb(color_index)
+                        i += 2
+                    elif params[i + 1] == 2 and i + 4 < len(params):  # RGB
+                        r, g, b = params[i + 2:i + 5]
+                        self._current_attributes |= CharacterAttributes.CUSTOM_FG
+                        self._current_fg = (r << 16) | (g << 8) | b
+                        i += 4
+
+            elif param == 48:  # Extended background color
+                if i + 2 < len(params):
+                    if params[i + 1] == 5:  # 256 colors
+                        color_index = params[i + 2]
+                        if color_index < 16:  # Use our color table for first 16 colors
+                            self._current_attributes |= CharacterAttributes.CUSTOM_BG
+                            color_role = self._ansi_colors[color_index]
+                            self._current_bg = self._style_manager.get_color(color_role).rgb()
+                        else:
+                            # For other colors, construct RGB directly
+                            self._current_attributes |= CharacterAttributes.CUSTOM_BG
+                            self._current_bg = self._xterm_to_rgb(color_index)
+                        i += 2
+                    elif params[i + 1] == 2 and i + 4 < len(params):  # RGB
+                        r, g, b = params[i + 2:i + 5]
+                        self._current_attributes |= CharacterAttributes.CUSTOM_BG
+                        self._current_bg = (r << 16) | (g << 8) | b
+                        i += 4
+
+            i += 1
+
+    def _clear_region(self, start_row, start_col, end_row, end_col):
+        """Clear a rectangular region of the terminal."""
+        for row in range(start_row, end_row + 1):
+            line_index = len(self._lines) - self._rows + row
+            if 0 <= line_index < len(self._lines):
+                line = self._lines[line_index]
+                start = start_col if row == start_row else 0
+                end = end_col if row == end_row else self._cols - 1
+                for col in range(start, end + 1):
+                    line.set_character(col, ' ')
+
+    def _process_escape_sequence(self, sequence: str) -> None:
+        """Process ANSI escape sequence."""
+        # CSI sequences
+        if sequence.startswith('\x1b['):
+            code = sequence[-1]
+            # Parse just what we need based on the sequence
+            if code == 'm':  # SGR - Select Graphic Rendition
+                params = sequence[2:-1].split(';')
+                params = [int(p) if p.isdigit() else 0 for p in params]
+                self._process_sgr(params)
+
+            elif code == 'A':  # Up
+                param = sequence[2:-1]
+                amount = int(param) if param.isdigit() else 1
+                self._cursor_row = max(0, self._cursor_row - amount)
+
+            elif code == 'B':  # Down
+                param = sequence[2:-1]
+                amount = int(param) if param.isdigit() else 1
+                self._cursor_row = min(self._rows - 1, self._cursor_row + amount)
+
+            elif code == 'C':  # Forward
+                param = sequence[2:-1]
+                amount = int(param) if param.isdigit() else 1
+                self._cursor_col = min(self._cols - 1, self._cursor_col + amount)
+
+            elif code == 'D':  # Backward
+                param = sequence[2:-1]
+                amount = int(param) if param.isdigit() else 1
+                self._cursor_col = max(0, self._cursor_col - amount)
+
+            elif code == 'H':  # Cursor position
+                pos = sequence[2:-1].split(';')
+                row = int(pos[0]) if pos and pos[0].isdigit() else 1
+                col = int(pos[1]) if len(pos) > 1 and pos[1].isdigit() else 1
+                self._cursor_row = min(self._rows - 1, max(0, row - 1))  # Convert to 0-based
+                self._cursor_col = min(self._cols - 1, max(0, col - 1))
+
+            elif code == 'J':  # Clear screen
+                param = sequence[2:-1]
+                mode = int(param) if param.isdigit() else 0
+                if mode == 0:  # Clear from cursor to end
+                    self._clear_region(self._cursor_row, self._cursor_col,
+                                     self._rows - 1, self._cols - 1)
+                elif mode == 1:  # Clear from start to cursor
+                    self._clear_region(0, 0, self._cursor_row, self._cursor_col)
+                elif mode == 2:  # Clear entire screen
+                    self._clear_region(0, 0, self._rows - 1, self._cols - 1)
+
+            elif code == 'K':  # Clear line
+                param = sequence[2:-1]
+                mode = int(param) if param.isdigit() else 0
+                if mode == 0:  # Clear from cursor to end
+                    self._clear_region(self._cursor_row, self._cursor_col,
+                                     self._cursor_row, self._cols - 1)
+                elif mode == 1:  # Clear from start to cursor
+                    self._clear_region(self._cursor_row, 0,
+                                     self._cursor_row, self._cursor_col)
+                elif mode == 2:  # Clear entire line
+                    self._clear_region(self._cursor_row, 0,
+                                     self._cursor_row, self._cols - 1)
+
+            elif code == 's':  # Save cursor position
+                self._saved_cursor = (self._cursor_row, self._cursor_col)
+
+            elif code == 'u':  # Restore cursor position
+                if self._saved_cursor:
+                    self._cursor_row, self._cursor_col = self._saved_cursor
+
+        # Simple escape sequences
+        elif len(sequence) == 2:
+            if sequence[1] == 'M':  # Reverse Index
+                if self._cursor_row == 0:
+                    self._add_new_lines(1)
+                else:
+                    self._cursor_row -= 1
+            elif sequence[1] == 'D':  # Index
+                if self._cursor_row == self._rows - 1:
+                    self._add_new_lines(1)
+                else:
+                    self._cursor_row += 1
+            elif sequence[1] == 'E':  # Next Line
+                if self._cursor_row == self._rows - 1:
+                    self._add_new_lines(1)
+                else:
+                    self._cursor_row += 1
+                self._cursor_col = 0
+
     def _write_char(self, char: str) -> None:
         """Write a single character at the current cursor position."""
         if char == '\r':
@@ -218,7 +466,13 @@ class TerminalWidget(QWidget):
                 line = self._lines[line_index]
 
                 # Write character
-                line.set_character(self._cursor_col, char)
+                line.set_character(
+                    self._cursor_col,
+                    char,
+                    self._current_attributes,
+                    self._current_fg if self._current_attributes & CharacterAttributes.CUSTOM_FG else None,
+                    self._current_bg if self._current_attributes & CharacterAttributes.CUSTOM_BG else None
+                )
 
                 # Move cursor
                 self._cursor_col += 1
@@ -257,7 +511,7 @@ class TerminalWidget(QWidget):
 
                 # Process escape sequence when complete
                 if self._is_escape_sequence_complete(self._escape_seq_buffer):
-#                    self._process_escape_sequence(self._escape_seq_buffer)
+                    self._process_escape_sequence(self._escape_seq_buffer)
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
                 elif len(self._escape_seq_buffer) > 128:  # Safety limit
@@ -389,6 +643,68 @@ class TerminalWidget(QWidget):
         print("resizeevent")
         self._update_dimensions()
 
+    def _toggle_blink(self):
+        """Toggle blink state and update display if needed."""
+        old_state = self._blink_state
+        self._blink_state = not self._blink_state
+        # Only update if we have any blinking characters
+        if any(any((line.get_character(col)[1] & CharacterAttributes.BLINK)
+                for col in range(self._cols))
+                for line in self._lines[-self._rows:]):
+            self.update()
+
+    def _draw_character(
+        self,
+        painter: QPainter,
+        x: int,
+        y: int,
+        char: str,
+        attributes: CharacterAttributes,
+        fg_color: Optional[int],
+        bg_color: Optional[int],
+        char_width: int,
+        char_height: int,
+        fm: QFontMetrics
+    ) -> None:
+        """Draw a single character cell with attributes."""
+        # Handle inverse video by swapping colors
+        if attributes & CharacterAttributes.INVERSE:
+            if fg_color is not None or bg_color is not None:
+                fg_color, bg_color = bg_color, fg_color
+            else:
+                fg_color, bg_color = self._default_bg, self._default_fg
+
+        # Draw background
+        bg = QColor(bg_color) if bg_color is not None and (attributes & CharacterAttributes.CUSTOM_BG) else QColor(self._default_bg)
+        painter.fillRect(QRect(x, y, char_width, char_height), bg)
+
+        # Handle hidden text by using background color for foreground
+        if attributes & CharacterAttributes.HIDDEN:
+            fg_color = bg_color if bg_color is not None else self._default_bg
+
+        # Set up font attributes
+        font = painter.font()
+        font.setBold(bool(attributes & CharacterAttributes.BOLD))
+        font.setItalic(bool(attributes & CharacterAttributes.ITALIC))
+        font.setUnderline(bool(attributes & CharacterAttributes.UNDERLINE))
+        font.setStrikeOut(bool(attributes & CharacterAttributes.STRIKE))
+
+        # Handle dim text by using alpha channel
+        if attributes & CharacterAttributes.DIM:
+            fg = QColor(fg_color) if fg_color is not None and (attributes & CharacterAttributes.CUSTOM_FG) else QColor(self._default_fg)
+            fg.setAlpha(128)  # 50% opacity
+            painter.setPen(fg)
+        else:
+            fg = QColor(fg_color) if fg_color is not None and (attributes & CharacterAttributes.CUSTOM_FG) else QColor(self._default_fg)
+            painter.setPen(fg)
+
+        painter.setFont(font)
+
+        # Draw the character
+        # Note: Blinking would be handled by a timer updating the visibility
+        if not (attributes & CharacterAttributes.BLINK and self._blink_state):
+            painter.drawText(x, y + fm.ascent(), char)
+
     def paintEvent(self, event: QPaintEvent) -> None:
         """Handle paint events efficiently."""
         print("paint event")
@@ -424,32 +740,8 @@ class TerminalWidget(QWidget):
 
                 # Get character
                 char, attributes, fg_color, bg_color = line.get_character(col)
-
-                # Draw background if not default
-                if bg_color is not None:
-                    painter.fillRect(
-                        QRect(x, y, char_width, char_height),
-                        QColor(bg_color)
-                    )
-
-                # Set up font attributes
-                font = painter.font()
-                if attributes & CharacterAttributes.BOLD:
-                    font.setBold(True)
-                if attributes & CharacterAttributes.ITALIC:
-                    font.setItalic(True)
-                if attributes & CharacterAttributes.UNDERLINE:
-                    font.setUnderline(True)
-
-                painter.setFont(font)
-
-                # Draw character
-                if fg_color is not None:
-                    painter.setPen(QColor(fg_color))
-                else:
-                    painter.setPen(QColor(self._default_fg))
-
-                painter.drawText(x, y + fm.ascent(), char)
+                self._draw_character(painter, x, y, char, attributes, fg_color, bg_color,
+                                    char_width, char_height, fm)
 
         # Draw selection if active
         if self._selection_start and self._selection_end:
