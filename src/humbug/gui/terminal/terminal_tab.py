@@ -2,6 +2,7 @@
 
 import asyncio
 from asyncio.subprocess import Process
+import fcntl
 import logging
 import os
 import pty
@@ -63,26 +64,38 @@ class TerminalTab(TabBase):
         self._process: Optional[Process] = None
         self._tasks: Set[asyncio.Task] = set()
         self._running = True
-        self._master_fd = None
+        self._main_fd = None
 
         # Initialize window size handling
-        self._install_sigwinch_handler()
         self._terminal.size_changed.connect(self._handle_terminal_resize)
 
         # Start local shell process
         self._create_tracked_task(self._start_process())
 
-    def _install_sigwinch_handler(self):
-        """Install SIGWINCH handler for terminal size changes."""
-        loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGWINCH, self._handle_terminal_resize)
+    def _update_pty_size(self, fd: int) -> None:
+        """Update PTY size using current terminal dimensions.
+
+        Args:
+            fd: File descriptor for PTY
+
+        Raises:
+            OSError: If ioctl call fails
+        """
+        try:
+            size = self._terminal._calculate_size()
+            fcntl.ioctl(fd, termios.TIOCSWINSZ, size.to_struct())
+        except OSError as e:
+            self._logger.error(f"Failed to update PTY size: {e}")
+            raise
 
     def _handle_terminal_resize(self):
         """Handle terminal window resize events."""
-        if self._master_fd is not None:
+        if self._main_fd is not None:
             try:
-                print("terminal resize")
-                self._terminal.update_pty_size(self._master_fd)
+                self._update_pty_size(self._main_fd)
+
+                # Signal the shell process group
+                os.killpg(os.getpgid(self._process.pid), signal.SIGWINCH)
             except OSError as e:
                 self._logger.error(f"Failed to handle window resize: {e}")
 
@@ -109,52 +122,54 @@ class TerminalTab(TabBase):
             shell = os.environ.get('SHELL', '/bin/sh')
 
             # Create pseudo-terminal
-            master_fd, slave_fd = pty.openpty()
+            main_fd, secondary_fd = pty.openpty()
 
             # Set raw mode
-            mode = termios.tcgetattr(slave_fd)
+            mode = termios.tcgetattr(secondary_fd)
             mode[3] &= ~(termios.ECHO | termios.ICANON)  # Turn off echo and canonical mode
-            termios.tcsetattr(slave_fd, termios.TCSAFLUSH, mode)
+            termios.tcsetattr(secondary_fd, termios.TCSAFLUSH, mode)
 
             try:
-                print("start process")
-                self._terminal.update_pty_size(master_fd)
+                self._update_pty_size(main_fd)
             except OSError as e:
                 self._logger.warning(f"Failed to set initial terminal size: {e}")
 
-            # Start process with the slave end of the pty
+            # Start process with the secondary end of the pty
             self._process = await asyncio.create_subprocess_exec(
                 shell,
-                stdin=slave_fd,
-                stdout=slave_fd,
-                stderr=slave_fd,
+                stdin=secondary_fd,
+                stdout=secondary_fd,
+                stderr=secondary_fd,
                 start_new_session=True
             )
 
-            # Close slave fd as the subprocess has it
-            os.close(slave_fd)
+            # Close secondary fd as the subprocess has it
+            os.close(secondary_fd)
+
+            # Signal the process group
+            os.killpg(os.getpgid(self._process.pid), signal.SIGWINCH)
 
             self._logger.debug(f"Process started with pid {self._process.pid}")
 
-            # Create task for reading from master_fd
-            self._create_tracked_task(self._read_loop(master_fd))
+            # Create task for reading from main_fd
+            self._create_tracked_task(self._read_loop(main_fd))
 
-            # Store master fd for writing
-            self._master_fd = master_fd
+            # Store main fd for writing
+            self._main_fd = main_fd
 
         except Exception as e:
             self._logger.error("Failed to start terminal process: %s", str(e))
             self._terminal.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
-    async def _read_loop(self, master_fd):
-        """Read data from the master end of the pty."""
+    async def _read_loop(self, main_fd):
+        """Read data from the main end of the pty."""
         try:
             while self._running:
                 try:
                     r, w, e = await asyncio.get_event_loop().run_in_executor(
                         None,
                         select.select,
-                        [master_fd],
+                        [main_fd],
                         [],
                         [],
                         0.1  # Add timeout to allow checking _running
@@ -163,9 +178,9 @@ class TerminalTab(TabBase):
                     if not r:
                         continue
 
-                    if master_fd in r:
+                    if main_fd in r:
                         try:
-                            data = os.read(master_fd, 1024)
+                            data = os.read(main_fd, 1024)
                             if not data:
                                 break
 
@@ -180,9 +195,9 @@ class TerminalTab(TabBase):
         except Exception as e:
             self._logger.error("Error in read loop: %s", str(e))
         finally:
-            if self._master_fd is not None:
+            if self._main_fd is not None:
                 try:
-                    os.close(master_fd)
+                    os.close(main_fd)
                 except OSError:
                     pass
 
@@ -190,8 +205,8 @@ class TerminalTab(TabBase):
     def _handle_data_ready(self, data: bytes):
         """Handle data from terminal."""
         try:
-            if self._master_fd is not None and self._running:
-                os.write(self._master_fd, data)
+            if self._main_fd is not None and self._running:
+                os.write(self._main_fd, data)
         except Exception as e:
             self._logger.error("Failed to write to process: %s", str(e))
 
@@ -237,13 +252,13 @@ class TerminalTab(TabBase):
                 self._logger.error("Error terminating process: %s", str(e))
             self._process = None
 
-        # Close master fd if it exists
-        if self._master_fd is not None:
+        # Close main fd if it exists
+        if self._main_fd is not None:
             try:
-                os.close(self._master_fd)
+                os.close(self._main_fd)
             except OSError:
                 pass
-            self._master_fd = None
+            self._main_fd = None
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Get serializable state."""

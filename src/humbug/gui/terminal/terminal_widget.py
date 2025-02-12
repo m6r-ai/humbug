@@ -1,13 +1,11 @@
 """Terminal widget implementation."""
 
 from dataclasses import dataclass
-import fcntl
 from typing import Optional, Tuple
 import re
 import logging
 from enum import IntEnum
 import struct
-import termios
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Signal, Qt, QTimer, QRect
@@ -810,7 +808,6 @@ class TerminalWidget(QPlainTextEdit):
                 current_format.setProperty(FormatProperty.CUSTOM_BACKGROUND, True)
 
             else:
-                print(f"SGR code {code} - not handled")
                 self._logger.debug(f"SGR code {code} - not handled")
 
         self._current_text_format = current_format
@@ -1046,7 +1043,6 @@ class TerminalWidget(QPlainTextEdit):
         if not old_size:
             return
 
-        print("reflow start")
         doc_rows = self.document().blockCount()
         new_rows = new_size.rows
         old_rows = old_size.rows
@@ -1096,22 +1092,6 @@ class TerminalWidget(QPlainTextEdit):
         cursor_rect = self._get_cursor_rect()
         if cursor_rect:
             self.viewport().update(cursor_rect)
-
-    def update_pty_size(self, fd: int) -> None:
-        """Update PTY size using current terminal dimensions.
-
-        Args:
-            fd: File descriptor for PTY
-
-        Raises:
-            OSError: If ioctl call fails
-        """
-        try:
-            size = self._calculate_size()
-            fcntl.ioctl(fd, termios.TIOCSWINSZ, size.to_struct())
-        except OSError as e:
-            self._logger.error(f"Failed to update PTY size: {e}")
-            raise
 
     def insertFromMimeData(self, source):
         """Handle paste events with support for bracketed paste mode."""
@@ -1420,7 +1400,7 @@ class TerminalWidget(QPlainTextEdit):
 
     def _handle_mode_setting(self, command: str, params: str):
         """Handle mode setting sequences."""
-        set_mode = (command == 'h')
+        set_mode = command == 'h'
         if params.startswith('?'):  # Private modes
             self._handle_private_mode(params[1:], set_mode)
         else:  # ANSI modes
