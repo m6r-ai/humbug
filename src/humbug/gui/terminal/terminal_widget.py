@@ -1014,6 +1014,15 @@ class TerminalWidget(QAbstractScrollArea):
             print(f"write char {repr(char)} {len(self._lines)} {self._rows}")
             line_index = len(self._lines) - self._rows + self._cursor_row
             if line_index >= 0 and line_index < len(self._lines):
+                # Are we trying to write past the end of the line?  If yes then wrap around
+                if self._cursor_col >= self._cols:
+                    self._cursor_col = 0
+                    if self._cursor_row < self._rows - 1:
+                        self._cursor_row += 1
+                    else:
+                        # Add new line and scroll
+                        self._add_new_lines(1)
+
                 print(f"update line {line_index} {self._cursor_col}")
                 line = self._lines[line_index]
 
@@ -1028,13 +1037,6 @@ class TerminalWidget(QAbstractScrollArea):
 
                 # Move cursor
                 self._cursor_col += 1
-                if self._cursor_col >= self._cols:
-                    self._cursor_col = 0
-                    if self._cursor_row < self._rows - 1:
-                        self._cursor_row += 1
-                    else:
-                        # Add new line and scroll
-                        self._add_new_lines(1)
 
     def put_data(self, data: bytes) -> None:
         """Display received data with ANSI sequence handling.
