@@ -2,7 +2,7 @@ Context: Terminal Emulator Implementation
     The terminal emulator support Linux xterm capabilities, i.e. a superset of VT220.
 
     Context: Implementation Details
-        The terminal display is handled by using a QPlainTextEdit widget.  This is supposed to be pre-allocated to the size
+        The terminal display is handled by a custom widget.  This is supposed to be pre-allocated to the size
         of the visible terminal.  Also any secondary screen must also be preallocated the same way.
 
         Context: Multiple displays
@@ -21,7 +21,6 @@ Context: Terminal Emulator Implementation
             terminal emulator).
 
             The user is able to use the UI scrollbars to scroll through this history and view previous terminal outputs.
-            This scrollback is done through the built-in capabilities of the QPlaintTextEdit.
 
         Context: Terminal input cursor
             The input cursor is where new characters are written to the terminal display.
@@ -29,20 +28,12 @@ Context: Terminal Emulator Implementation
             The terminal cursor is only ever visible in the active portion of the terminal (the lines at the end) and
             cannot be moved into the history.
 
-            Context: Implementation of cursor
-                The input cursor is tracked independently of the QPlainTextEdit widget and always represents
-                character co-ordinates in the active part of the terminal window.
-
-                We must not use the Qt cursor for this input cursor because we use the Qt cursor to handle text
-                selection operations.  As such we (not Qt) are responsible for painting the input cursor and tracking
-                its position.
-
         Context: Mouse selection of text
             The mouse may be used to select text in any part of the active or history buffer.  This is done using the Qt
             cursor and allows the user to copy text.
 
             This leads to a key requirement, that the selection of text in the history and the active area of the
-            terminal must be done in the same QPlainTextEdit otherwise this regions will be discontinuous.
+            terminal must be done in the same widget otherwise this regions will be discontinuous.
 
         Context: Window resizing
             When the window resizes then the terminal emulator must reflow the text and ensure every line of history is
@@ -53,13 +44,6 @@ Context: Terminal Emulator Implementation
             are pre-allocate and writes to the terminal overwrite them.  As this is a terminal emulator the lines are a
             known fixed width (the width of the terminal) and we do not have to consider any characters beyond this as
             there will never be any characters beyond the end of the pre-allocated line.
-
-            If the terminal is scrolled upwards (e.g. by a newline operation) then a new pre-allocated line must be added
-            as the end of the QPlainTextEdit control.
-
-            The last line of the pre-allocted buffer must not have a newline on it.  This prevents the Qt system creating
-            an empty blank line at the end of the QPlainTextEdit.  Instead, this newline must be added at the end of
-            the last line before the scrolling operation occurs and before a new empty blank line is added.
 
             Both the primary and secondary displays use pre-allocation.  The primary display pre-allocation occurs when
             the terminal is started, while the secondary displays are pre-allocated as they are initiated.
