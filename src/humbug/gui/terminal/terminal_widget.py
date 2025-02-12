@@ -1,18 +1,19 @@
 """Terminal widget implementation."""
 
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
-from enum import Flag, auto
 import array
+import base64
+from dataclasses import dataclass
+from enum import Flag, auto
 import logging
 import struct
+from typing import List, Optional, Tuple
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QAbstractScrollArea
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetrics, QFont,
     QResizeEvent, QKeyEvent, QMouseEvent, QTextCursor,
-    QGuiApplication
+    QGuiApplication, QWheelEvent
 )
 
 from humbug.gui.color_role import ColorRole
@@ -95,7 +96,7 @@ class TerminalLine:
         return (' ', CharacterAttributes.NONE, None, None)
 
 
-class TerminalWidget(QWidget):
+class TerminalWidget(QAbstractScrollArea):
     """Terminal widget implementation."""
 
     data_ready = Signal(bytes)  # Emitted when user input is ready
@@ -106,6 +107,14 @@ class TerminalWidget(QWidget):
         super().__init__(parent)
         self._logger = logging.getLogger("TerminalWidget")
         self._style_manager = StyleManager()
+
+        # Set up scrollbar behavior
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        # Connect scrollbar signals
+        self.verticalScrollBar().valueChanged.connect(self._handle_scroll)
+        self._auto_scroll = True
 
         # Enable focus and input
         self.setFocusPolicy(Qt.StrongFocus)
@@ -213,6 +222,10 @@ class TerminalWidget(QWidget):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+    def focusNextPrevChild(self, _next: bool) -> bool:
+        """Override to prevent tab from changing focus."""
+        return False
+
     def _handle_style_changed(self):
         """Handle style changes."""
         # Update terminal font
@@ -226,7 +239,7 @@ class TerminalWidget(QWidget):
         self._default_bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE).rgb()
 
         # Force redraw with new colors
-        self.update()
+        self.viewport().update()
 
     def calculate_size(self) -> TerminalSize:
         """Calculate current terminal size in rows and columns."""
@@ -293,15 +306,51 @@ class TerminalWidget(QWidget):
         print(f"init buffer {self._rows}")
         self._add_new_lines(self._rows)
 
+    def _handle_scroll(self, value: int):
+        """Handle scrollbar value changes."""
+        # Get maximum scroll value
+        vbar = self.verticalScrollBar()
+        max_scroll = vbar.maximum()
+
+        # Update auto-scroll state based on position
+        self._auto_scroll = value == max_scroll
+
+        # Update viewport offset
+        self._viewport_offset = value
+
+        # Update viewport
+        self.viewport().update()
+
+    def _update_scrollbar(self):
+        """Update scrollbar range based on content size."""
+        history_lines = max(0, len(self._lines) - self._rows)
+
+        # Set range and update scroll position if needed
+        vbar = self.verticalScrollBar()
+        old_at_bottom = vbar.value() == vbar.maximum()
+        vbar.setRange(0, history_lines)
+
+        # If we were at bottom before, stay at bottom
+        if old_at_bottom:
+            vbar.setValue(vbar.maximum())
+
     def _add_new_lines(self, count: int) -> None:
         """Add new empty lines to the buffer."""
         for _ in range(count):
             line = TerminalLine(self._cols)
             # Fill line with spaces using default attributes
+
             for i in range(self._cols):
                 line.set_character(i, ' ')
 
             self._lines.append(line)
+
+        # Update scrollbar range
+        self._update_scrollbar()
+
+        # If auto-scroll is enabled, scroll to show new content
+        if self._auto_scroll:
+            self._scroll_to_bottom()
 
     def _xterm_to_rgb(self, color_index: int) -> int:
         """
@@ -364,15 +413,14 @@ class TerminalWidget(QWidget):
                     pass
                 elif data:  # Set
                     # Base64 decode data and update clipboard
-                    import base64
                     decoded = base64.b64decode(data).decode('utf-8')
                     if clipboard == 'c':
                         QGuiApplication.clipboard().setText(decoded)
                 else:  # Clear
                     if clipboard == 'c':
                         QGuiApplication.clipboard().clear()
-        except (ValueError, base64.Error) as e:
-            self._logger.warning(f"Invalid selection data: {param}")
+        except (ValueError, TypeError) as e:
+            self._logger.warning(f"Invalid selection data: {param}: {e}")
 
     def _process_osc(self, sequence: str):
         """Handle Operating System Command sequences."""
@@ -489,7 +537,7 @@ class TerminalWidget(QWidget):
             self._current_attributes = self._main_screen_attrs['attrs']
 
         self._using_alternate_screen = enable
-        self.update()
+        self.viewport().update()
 
     def _process_private_mode(self, params: str, set_mode: bool):
         """Handle DEC private mode sequences (DECSET/DECRST)."""
@@ -915,6 +963,7 @@ class TerminalWidget(QWidget):
             line = TerminalLine(self._cols)
             for col in range(self._cols):
                 line.set_character(col, ' ')
+
             self._lines.insert(end, line)
 
     def _scroll_down(self, count: int) -> None:
@@ -932,6 +981,7 @@ class TerminalWidget(QWidget):
             line = TerminalLine(self._cols)
             for col in range(self._cols):
                 line.set_character(col, ' ')
+
             self._lines.insert(start, line)
 
     def _write_char(self, char: str) -> None:
@@ -986,9 +1036,6 @@ class TerminalWidget(QWidget):
                         # Add new line and scroll
                         self._add_new_lines(1)
 
-                # Update the affected area
-                self.update()
-
     def put_data(self, data: bytes) -> None:
         """Display received data with ANSI sequence handling.
 
@@ -1029,6 +1076,9 @@ class TerminalWidget(QWidget):
                 self._write_char(char)
 
             i += 1
+
+        # Update the affected area
+        self.viewport().update()
 
     def _is_escape_sequence_complete(self, sequence: str) -> bool:
         """Check if an escape sequence is complete.
@@ -1097,8 +1147,11 @@ class TerminalWidget(QWidget):
             if self._scroll_region_top >= self._scroll_region_bottom:
                 self._scroll_region_top = max(0, self._scroll_region_bottom - 1)
 
+        # Update scrollbar after reflowing content
+        self._update_scrollbar()
+
         # Force complete repaint
-        self.update()
+        self.viewport().update()
 
     def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
         """Convert pixel coordinates to text position."""
@@ -1148,7 +1201,7 @@ class TerminalWidget(QWidget):
             self._selection_start = pos
             self._selection_end = pos
             self._update_text_cursor()
-            self.update()
+            self.viewport().update()
 
         # Handle mouse tracking if enabled
         if self._mouse_tracking:
@@ -1193,7 +1246,7 @@ class TerminalWidget(QWidget):
             if pos != self._selection_end:
                 self._selection_end = pos
                 self._update_text_cursor()
-                self.update()
+                self.viewport().update()
 
         # Handle mouse tracking if enabled and in button event mode (1002) or any event mode (1003)
         if self._mouse_tracking and self._mouse_tracking_mode in (1002, 1003):
@@ -1223,6 +1276,23 @@ class TerminalWidget(QWidget):
             self.data_ready.emit(report.encode())
 
         super().mouseMoveEvent(event)
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        """Handle mouse wheel scrolling."""
+        if event.modifiers() & Qt.ControlModifier:
+            # Let parent handle if Control is pressed (e.g., for zoom)
+            event.ignore()
+            return
+
+        # Calculate number of lines to scroll
+        delta = event.angleDelta().y()
+        lines = delta // 40  # Adjust divisor to control scroll speed
+
+        # Update scroll position
+        vbar = self.verticalScrollBar()
+        vbar.setValue(vbar.value() - lines)
+
+        event.accept()
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle key press events including control sequences."""
@@ -1317,8 +1387,15 @@ class TerminalWidget(QWidget):
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
         super().resizeEvent(event)
-        print("resizeevent")
+
         self._update_dimensions()
+
+        # Update scrollbar after resize
+        self._update_scrollbar()
+
+        # Maintain auto-scroll state
+        if self._auto_scroll:
+            self._scroll_to_bottom()
 
     def _toggle_blink(self):
         """Toggle blink state and update display if needed."""
@@ -1328,7 +1405,7 @@ class TerminalWidget(QWidget):
         if any(any((line.get_character(col)[1] & CharacterAttributes.BLINK)
                 for col in range(self._cols))
                 for line in self._lines[-self._rows:]):
-            self.update()
+            self.viewport().update()
 
     def _draw_character(
         self,
@@ -1385,7 +1462,7 @@ class TerminalWidget(QWidget):
     def paintEvent(self, event: QPaintEvent) -> None:
         """Handle paint events efficiently."""
         print("paint event")
-        painter = QPainter(self)
+        painter = QPainter(self.viewport())
 
         # Get font metrics for character dimensions
         fm = QFontMetrics(self.font())
@@ -1394,6 +1471,9 @@ class TerminalWidget(QWidget):
 
         # Get the region that needs repainting
         region = event.rect()
+
+        # Calculate scroll position - show newest lines when scrollbar at bottom
+        first_visible_line = self.verticalScrollBar().value()
 
         # Calculate the character cell range to repaint
         start_row = max(0, region.top() // char_height)
@@ -1406,8 +1486,8 @@ class TerminalWidget(QWidget):
             y = row * char_height
 
             # Get actual line index accounting for scroll position
-            line_index = len(self._lines) - self._rows + row
-            if line_index < 0 or line_index >= len(self._lines):
+            line_index = first_visible_line + row
+            if line_index >= len(self._lines):
                 continue
 
             line = self._lines[line_index]
@@ -1415,10 +1495,12 @@ class TerminalWidget(QWidget):
             for col in range(start_col, end_col):
                 x = col * char_width
 
-                # Get character
+                # Get character and attributes
                 char, attributes, fg_color, bg_color = line.get_character(col)
-                self._draw_character(painter, x, y, char, attributes, fg_color, bg_color,
-                                    char_width, char_height, fm)
+                self._draw_character(
+                    painter, x, y, char, attributes, fg_color, bg_color,
+                    char_width, char_height, fm
+                )
 
         # Draw selection if active
         if self._selection_start and self._selection_end:
@@ -1429,18 +1511,19 @@ class TerminalWidget(QWidget):
             if (start_row > end_row) or (start_row == end_row and start_col > end_col):
                 start_row, start_col, end_row, end_col = end_row, end_col, start_row, start_col
 
+            # Adjust for scroll position
+            visible_start_row = start_row - first_visible_line
+            visible_end_row = end_row - first_visible_line
+
             selection_color = self.palette().highlight().color()
             selection_text_color = self.palette().highlightedText().color()
 
-            for row in range(max(start_row, 0), min(end_row + 1, self._rows)):
-                if row < start_row or row > end_row:
-                    continue
-
+            for row in range(max(visible_start_row, 0), min(visible_end_row + 1, self._rows)):
                 y = row * char_height
 
                 # Calculate selection range for this row
-                row_start = start_col if row == start_row else 0
-                row_end = end_col if row == end_row else self._cols
+                row_start = start_col if row + first_visible_line == start_row else 0
+                row_end = end_col if row + first_visible_line == end_row else self._cols
 
                 # Draw selection background
                 selection_rect = QRect(
@@ -1450,12 +1533,12 @@ class TerminalWidget(QWidget):
                     char_height
                 )
 
-                if selection_rect.intersects(event.rect()):
+                if selection_rect.intersects(region):
                     painter.fillRect(selection_rect, selection_color)
 
                     # Draw selected text
-                    line_index = len(self._lines) - self._rows + row
-                    if 0 <= line_index < len(self._lines):
+                    line_index = first_visible_line + row
+                    if line_index < len(self._lines):
                         line = self._lines[line_index]
                         for col in range(row_start, row_end):
                             x = col * char_width
@@ -1476,31 +1559,40 @@ class TerminalWidget(QWidget):
                             painter.setPen(selection_text_color)
                             painter.drawText(x, y + fm.ascent(), char)
 
-        # Draw cursor if visible
-        if self._cursor_visible and self._viewport_offset == 0:
-            cursor_x = self._cursor_col * char_width
-            cursor_y = self._cursor_row * char_height
+        # Draw cursor if visible and in view
+        if self._cursor_visible:
+            cursor_line = len(self._lines) - self._rows + self._cursor_row
+            visible_cursor_row = cursor_line - first_visible_line
+            
+            if 0 <= visible_cursor_row < self._rows:  # Only draw if cursor is in visible area
+                cursor_x = self._cursor_col * char_width
+                cursor_y = visible_cursor_row * char_height
 
-            if QRect(cursor_x, cursor_y, char_width, char_height).intersects(region):
-                # Get character under cursor for inversion
-                line_index = len(self._lines) - self._rows + self._cursor_row
-                if 0 <= line_index < len(self._lines):
-                    line = self._lines[line_index]
-                    char, _attributes, _fg_color, _bg_color = line.get_character(self._cursor_col)
+                cursor_rect = QRect(cursor_x, cursor_y, char_width, char_height)
+                if cursor_rect.intersects(region):
+                    # Get character under cursor for inversion
+                    if cursor_line < len(self._lines):
+                        line = self._lines[cursor_line]
+                        char, _attributes, _fg_color, _bg_color = line.get_character(self._cursor_col)
 
-                    # Draw inverted cursor block
-                    painter.fillRect(
-                        cursor_x, cursor_y, char_width, char_height,
-                        self.palette().text().color()
-                    )
+                        # Draw inverted cursor block
+                        painter.fillRect(
+                            cursor_x, cursor_y, char_width, char_height,
+                            self.palette().text().color()
+                        )
 
-                    # Draw character in inverted colors
-                    painter.setPen(self.palette().base().color())
-                    painter.drawText(
-                        cursor_x,
-                        cursor_y + fm.ascent(),
-                        char
-                    )
+                        # Draw character in inverted colors
+                        painter.setPen(self.palette().base().color())
+                        painter.drawText(
+                            cursor_x,
+                            cursor_y + fm.ascent(),
+                            char
+                        )
+
+    def _scroll_to_bottom(self):
+        """Scroll the view to show the bottom of the terminal."""
+        vbar = self.verticalScrollBar()
+        vbar.setValue(vbar.maximum())
 
     def _update_text_cursor(self) -> None:
         """Update text cursor based on selection state."""
@@ -1562,7 +1654,7 @@ class TerminalWidget(QWidget):
         self._selection_start = None
         self._selection_end = None
         self._update_text_cursor()
-        self.update()
+        self.viewport().update()
 
     # Interface methods required by TerminalTab
     def textCursor(self) -> QTextCursor:
@@ -1572,7 +1664,7 @@ class TerminalWidget(QWidget):
     def setTextCursor(self, cursor: QTextCursor) -> None:
         """Set text cursor (for compatibility with QPlainTextEdit)."""
         self._text_cursor = cursor
-        self.update()
+        self.viewport().update()
 
     def cut(self) -> None:
         """Cut selected text to clipboard."""
@@ -1595,22 +1687,6 @@ class TerminalWidget(QWidget):
         if text:
             self.put_data(text.encode())
 
-    def scroll_to(self, position: int) -> None:
-        """
-        Scroll terminal to specified position.
-
-        Args:
-            position: Number of lines to scroll up from bottom
-        """
-        old_offset = self._viewport_offset
-        self._viewport_offset = min(
-            max(0, position),
-            max(0, len(self._lines) - self._rows)
-        )
-
-        if self._viewport_offset != old_offset:
-            self.update()
-
     def clear(self) -> None:
         """Clear the terminal."""
         self._lines = []
@@ -1618,4 +1694,4 @@ class TerminalWidget(QWidget):
         self._cursor_row = 0
         self._cursor_col = 0
         self._clear_selection()
-        self.update()
+        self.viewport().update()
