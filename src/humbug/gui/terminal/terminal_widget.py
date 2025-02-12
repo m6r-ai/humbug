@@ -118,6 +118,9 @@ class TerminalWidget(QWidget):
         self._rows = 0
         self._cols = 0
 
+        self._scroll_region_top = 0
+        self._scroll_region_bottom = self._rows
+
         # Cursor state
         self._cursor_row = 0
         self._cursor_col = 0
@@ -225,9 +228,35 @@ class TerminalWidget(QWidget):
             old_rows, old_cols = self._rows, self._cols
             self._rows, self._cols = new_size.rows, new_size.cols
 
+            # Calculate scroll region adjustments
             if old_rows > 0 and old_cols > 0:
-                print("update dims")
+                # Calculate the relative positions of scroll regions
+                old_top_ratio = self._scroll_region_top / old_rows
+                old_bottom_ratio = self._scroll_region_bottom / old_rows
+
+                # Adjust scroll region to maintain relative positioning
+                self._scroll_region_top = min(
+                    round(old_top_ratio * self._rows),
+                    self._rows - 1
+                )
+                self._scroll_region_bottom = min(
+                    round(old_bottom_ratio * self._rows),
+                    self._rows
+                )
+
+                # Ensure minimum scroll region size of 1 line
+                if self._scroll_region_bottom <= self._scroll_region_top:
+                    self._scroll_region_bottom = min(
+                        self._scroll_region_top + 1,
+                        self._rows
+                    )
+
                 self._reflow_content(old_rows, old_cols)
+
+            else:
+                # Initial setup - scroll region is full terminal
+                self._scroll_region_top = 0
+                self._scroll_region_bottom = self._rows
 
             self.size_changed.emit()
 
@@ -247,6 +276,57 @@ class TerminalWidget(QWidget):
                 line.set_character(i, ' ')
 
             self._lines.append(line)
+
+    def _xterm_to_rgb(self, color_index: int) -> int:
+        """
+        Convert xterm-256 color index to RGB value.
+
+        Args:
+            color_index: Color index from 0-255
+
+        Returns:
+            32-bit RGB color value (0x00RRGGBB format)
+
+        The xterm-256 color scheme consists of:
+        - Colors 0-15: Standard ANSI colors (handled by _ansi_colors)
+        - Colors 16-231: 6x6x6 RGB color cube
+        - Colors 232-255: Grayscale colors
+        """
+        # Use color table for standard colors (0-15)
+        if color_index < 16:
+            color_role = self._ansi_colors[color_index]
+            return self._style_manager.get_color(color_role).rgb()
+
+        # Handle 6x6x6 color cube (indices 16-231)
+        if color_index < 232:
+            # Remove the 16 basic colors offset
+            color_index -= 16
+
+            # Extract RGB components
+            # Each component has 6 possible values: 0, 95, 135, 175, 215, 255
+            blue = color_index % 6
+            green = (color_index // 6) % 6
+            red = color_index // 36
+
+            # Convert to actual RGB values
+            # The formula converts index (0-5) to actual color value
+            def component_to_value(component: int) -> int:
+                if component == 0:
+                    return 0
+                return 40 * component + 55
+
+            r = component_to_value(red)
+            g = component_to_value(green)
+            b = component_to_value(blue)
+
+            return (r << 16) | (g << 8) | b
+
+        # Handle grayscale colors (indices 232-255)
+        # These are evenly spaced from dark to light
+        # First gray (232) is 8,8,8
+        # Last gray (255) is 238,238,238
+        gray_value = 8 + (color_index - 232) * 10
+        return (gray_value << 16) | (gray_value << 8) | gray_value
 
     def _process_sgr(self, params: list[int]) -> None:
         """Process SGR (Select Graphic Rendition) sequence."""
@@ -349,13 +429,9 @@ class TerminalWidget(QWidget):
         # CSI sequences
         if sequence.startswith('\x1b['):
             code = sequence[-1]
+            print(f"escape code {code}")
             # Parse just what we need based on the sequence
-            if code == 'm':  # SGR - Select Graphic Rendition
-                params = sequence[2:-1].split(';')
-                params = [int(p) if p.isdigit() else 0 for p in params]
-                self._process_sgr(params)
-
-            elif code == 'A':  # Up
+            if code == 'A':  # Up
                 param = sequence[2:-1]
                 amount = int(param) if param.isdigit() else 1
                 self._cursor_row = max(0, self._cursor_row - amount)
@@ -375,6 +451,11 @@ class TerminalWidget(QWidget):
                 amount = int(param) if param.isdigit() else 1
                 self._cursor_col = max(0, self._cursor_col - amount)
 
+            elif code == 'G':  # CHA - Cursor Horizontal Absolute
+                param = sequence[2:-1]
+                col = max(0, int(param) - 1) if param.isdigit() else 1  # Convert 1-based to 0-based
+                self._cursor_col = min(col, self._cols - 1)
+
             elif code == 'H':  # Cursor position
                 pos = sequence[2:-1].split(';')
                 row = int(pos[0]) if pos and pos[0].isdigit() else 1
@@ -386,8 +467,12 @@ class TerminalWidget(QWidget):
                 param = sequence[2:-1]
                 mode = int(param) if param.isdigit() else 0
                 if mode == 0:  # Clear from cursor to end
-                    self._clear_region(self._cursor_row, self._cursor_col,
-                                     self._rows - 1, self._cols - 1)
+                    self._clear_region(
+                        self._cursor_row,
+                        self._cursor_col,
+                        self._rows - 1,
+                        self._cols - 1
+                    )
                 elif mode == 1:  # Clear from start to cursor
                     self._clear_region(0, 0, self._cursor_row, self._cursor_col)
                 elif mode == 2:  # Clear entire screen
@@ -397,14 +482,89 @@ class TerminalWidget(QWidget):
                 param = sequence[2:-1]
                 mode = int(param) if param.isdigit() else 0
                 if mode == 0:  # Clear from cursor to end
-                    self._clear_region(self._cursor_row, self._cursor_col,
-                                     self._cursor_row, self._cols - 1)
+                    self._clear_region(
+                        self._cursor_row,
+                        self._cursor_col,
+                        self._cursor_row,
+                        self._cols - 1
+                    )
                 elif mode == 1:  # Clear from start to cursor
-                    self._clear_region(self._cursor_row, 0,
-                                     self._cursor_row, self._cursor_col)
+                    self._clear_region(
+                        self._cursor_row,
+                        0,
+                        self._cursor_row,
+                        self._cursor_col
+                    )
                 elif mode == 2:  # Clear entire line
-                    self._clear_region(self._cursor_row, 0,
-                                     self._cursor_row, self._cols - 1)
+                    self._clear_region(
+                        self._cursor_row,
+                        0,
+                        self._cursor_row,
+                        self._cols - 1
+                    )
+
+            elif code == 'L':  # IL - Insert Line
+                param = sequence[2:-1]
+                count = max(1, int(param) if param.isdigit() else 0)
+                self._insert_lines(count)
+
+            elif code == 'M':  # DL - Delete Line
+                param = sequence[2:-1]
+                count = max(1, int(param) if param.isdigit() else 0)
+                self._delete_lines(count)
+
+            elif code == 'P':  # DCH - Delete Character
+                param = sequence[2:-1]
+                count = max(1, int(param) if param.isdigit() else 0)
+                self._delete_chars(count)
+
+            elif code == 'S':  # SU - Scroll Up
+                param = sequence[2:-1]
+                count = max(1, int(param) if param.isdigit() else 0)
+                self._scroll_up(count)
+
+            elif code == 'T':  # SD - Scroll Down
+                param = sequence[2:-1]
+                count = max(1, int(param) if param.isdigit() else 0)
+                self._scroll_down(count)
+
+            elif code == 'X':  # ECH - Erase Character
+                param = sequence[2:-1]
+                count = max(1, int(param) if param.isdigit() else 0)
+                self._erase_chars(count)
+
+            elif code == '@':  # ICH - Insert Character
+                param = sequence[2:-1]
+                count = max(1, int(param) if param.isdigit() else 0)
+                self._insert_chars(count)
+
+            elif code == 'd':  # VPA - Line Position Absolute
+                param = sequence[2:-1]
+                row = max(0, int(param) - 1) if param.isdigit() else 1 # Convert 1-based to 0-based
+                self._cursor_row = min(row, self._rows - 1)
+
+            elif code == 'f':  # HVP - Horizontal & Vertical Position
+                pos = sequence[2:-1].split(';')
+                row = int(pos[0]) if pos and pos[0].isdigit() else 1
+                col = int(pos[1]) if len(pos) > 1 and pos[1].isdigit() else 1
+                self._cursor_row = min(self._rows - 1, max(0, row - 1))  # Convert to 0-based
+                self._cursor_col = min(self._cols - 1, max(0, col - 1))
+
+            elif code == 'm':  # SGR - Select Graphic Rendition
+                params = sequence[2:-1].split(';')
+                params = [int(p) if p.isdigit() else 0 for p in params]
+                self._process_sgr(params)
+
+            elif code == 'r':  # DECSTBM - Set Scrolling Region
+                return
+                params = sequence[2:-1].split(';')
+                top = max(0, int(params[0]) - 1) if params and params[0].isdigit() else 0
+                bottom = min(self._rows, int(params[1])) if len(params) > 1 and params[1].isdigit() else self._rows
+                if top < bottom:
+                    self._scroll_region_top = top
+                    self._scroll_region_bottom = bottom
+                    self._cursor_row = 0
+                    self._cursor_col = 0
 
             elif code == 's':  # Save cursor position
                 self._saved_cursor = (self._cursor_row, self._cursor_col)
@@ -431,6 +591,114 @@ class TerminalWidget(QWidget):
                 else:
                     self._cursor_row += 1
                 self._cursor_col = 0
+
+    def _insert_lines(self, count: int) -> None:
+        """Insert blank lines at cursor position."""
+        if not (self._scroll_region_top <= self._cursor_row < self._scroll_region_bottom):
+            return
+
+        # Calculate lines to move
+        start = len(self._lines) - self._rows + self._cursor_row
+        end = len(self._lines) - self._rows + self._scroll_region_bottom
+
+        # Create new blank lines
+        new_lines = []
+        for _ in range(count):
+            line = TerminalLine(self._cols)
+            for col in range(self._cols):
+                line.set_character(col, ' ')
+            new_lines.append(line)
+
+        # Insert new lines and remove excess
+        self._lines[start:start] = new_lines
+        self._lines[end:end + count] = []
+
+    def _delete_lines(self, count: int) -> None:
+        """Delete lines at cursor position."""
+        if not (self._scroll_region_top <= self._cursor_row < self._scroll_region_bottom):
+            return
+
+        # Calculate lines to remove
+        start = len(self._lines) - self._rows + self._cursor_row
+        end = len(self._lines) - self._rows + self._scroll_region_bottom
+
+        # Remove lines and add blank lines at bottom
+        del self._lines[start:min(start + count, end)]
+        for _ in range(count):
+            line = TerminalLine(self._cols)
+            for col in range(self._cols):
+                line.set_character(col, ' ')
+            self._lines.insert(end, line)
+
+    def _insert_chars(self, count: int) -> None:
+        """Insert blank characters at cursor position."""
+        line_index = len(self._lines) - self._rows + self._cursor_row
+        if 0 <= line_index < len(self._lines):
+            line = self._lines[line_index]
+            # Move existing characters right
+            for col in range(self._cols - 1, self._cursor_col - 1, -1):
+                if col >= self._cursor_col + count:
+                    char, attrs, fg, bg = line.get_character(col - count)
+                    line.set_character(col, char, attrs, fg, bg)
+
+            # Insert spaces
+            for col in range(self._cursor_col, min(self._cursor_col + count, self._cols)):
+                line.set_character(col, ' ')
+
+    def _delete_chars(self, count: int) -> None:
+        """Delete characters at cursor position."""
+        line_index = len(self._lines) - self._rows + self._cursor_row
+        if 0 <= line_index < len(self._lines):
+            line = self._lines[line_index]
+            # Move characters left
+            for col in range(self._cursor_col, self._cols):
+                if col + count < self._cols:
+                    char, attrs, fg, bg = line.get_character(col + count)
+                    line.set_character(col, char, attrs, fg, bg)
+                else:
+                    line.set_character(col, ' ')
+
+    def _erase_chars(self, count: int) -> None:
+        """Erase characters at cursor position."""
+        line_index = len(self._lines) - self._rows + self._cursor_row
+        if 0 <= line_index < len(self._lines):
+            line = self._lines[line_index]
+            for col in range(self._cursor_col, min(self._cursor_col + count, self._cols)):
+                line.set_character(col, ' ')
+
+    def _scroll_up(self, count: int) -> None:
+        """Scroll up within current scroll region."""
+        if self._scroll_region_top >= self._scroll_region_bottom:
+            return
+
+        # Calculate actual lines in scroll region
+        start = len(self._lines) - self._rows + self._scroll_region_top
+        end = len(self._lines) - self._rows + self._scroll_region_bottom
+
+        # Remove lines from top and add blank lines at bottom
+        del self._lines[start:min(start + count, end)]
+        for _ in range(count):
+            line = TerminalLine(self._cols)
+            for col in range(self._cols):
+                line.set_character(col, ' ')
+            self._lines.insert(end, line)
+
+    def _scroll_down(self, count: int) -> None:
+        """Scroll down within current scroll region."""
+        if self._scroll_region_top >= self._scroll_region_bottom:
+            return
+
+        # Calculate actual lines in scroll region
+        start = len(self._lines) - self._rows + self._scroll_region_top
+        end = len(self._lines) - self._rows + self._scroll_region_bottom
+
+        # Remove lines from bottom and add blank lines at top
+        del self._lines[max(start, end - count):end]
+        for _ in range(count):
+            line = TerminalLine(self._cols)
+            for col in range(self._cols):
+                line.set_character(col, ' ')
+            self._lines.insert(start, line)
 
     def _write_char(self, char: str) -> None:
         """Write a single character at the current cursor position."""
@@ -588,6 +856,12 @@ class TerminalWidget(QWidget):
         # Update cursor position if needed
         self._cursor_col = min(self._cursor_col, self._cols - 1)
         self._cursor_row = min(self._cursor_row, self._rows - 1)
+
+        # Ensure scroll region stays within bounds
+        if self._scroll_region_bottom > self._rows:
+            self._scroll_region_bottom = self._rows
+            if self._scroll_region_top >= self._scroll_region_bottom:
+                self._scroll_region_top = max(0, self._scroll_region_bottom - 1)
 
         # Force complete repaint
         self.update()
