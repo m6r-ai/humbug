@@ -126,7 +126,8 @@ class TerminalTab(TabBase):
 
             # Set raw mode
             mode = termios.tcgetattr(secondary_fd)
-            mode[3] &= ~(termios.ECHO | termios.ICANON)  # Turn off echo and canonical mode
+            mode[3] &= ~(termios.ECHO | termios.ICANON)  # Turn off echo, canonical mode, and signal generation
+            mode[3] |= termios.ISIG
             termios.tcsetattr(secondary_fd, termios.TCSAFLUSH, mode)
 
             try:
@@ -166,6 +167,17 @@ class TerminalTab(TabBase):
         try:
             while self._running:
                 try:
+                    # Check if process has ended
+                    if self._process:
+                        try:
+                            returncode = self._process.returncode
+                            if returncode is not None:
+                                self._logger.info(f"Shell process ended with return code {returncode}")
+                                break
+                        except Exception as e:
+                            self._logger.error(f"Error checking process status: {e}")
+                            break
+
                     r, w, e = await asyncio.get_event_loop().run_in_executor(
                         None,
                         select.select,
@@ -185,7 +197,8 @@ class TerminalTab(TabBase):
                                 break
 
                             self._terminal.put_data(data)
-                        except OSError:
+                        except OSError as e:
+                            self._logger.error(f"Error reading from PTY: {e}")
                             break
                 except (OSError, select.error) as e:
                     if not self._running:
@@ -200,6 +213,9 @@ class TerminalTab(TabBase):
                     os.close(main_fd)
                 except OSError:
                     pass
+
+            # Inform the terminal that the process has ended
+            self._terminal.put_data(b"\r\n[Process completed]\r\n")
 
     @Slot(bytes)
     def _handle_data_ready(self, data: bytes):
