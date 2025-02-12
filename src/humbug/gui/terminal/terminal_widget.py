@@ -269,6 +269,9 @@ class TerminalWidget(QPlainTextEdit):
             new_col = min(self._cursor_col + spaces, self._current_size.cols - 1)
             self._update_cursor_position(self._cursor_row, new_col)
             return
+        elif ord(text) >= 0 and ord(text) < 32:
+            print(f"unexpected char {repr(text)}")
+            return
 
         cursor = self.textCursor()
         cursor.beginEditBlock()
@@ -282,13 +285,10 @@ class TerminalWidget(QPlainTextEdit):
                     self._handle_newline_scroll()
                     self._update_cursor_position(self._cursor_row, 0)
 
-            # Calculate target block by counting back from end of document
-            doc_block_count = self.document().blockCount()
-            target_block = doc_block_count - self._current_size.rows + self._cursor_row
-
             # Position cursor and insert character
-            cursor.movePosition(QTextCursor.Start)
-            cursor.movePosition(QTextCursor.NextBlock, n=target_block)
+            cursor.movePosition(QTextCursor.End)
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.PreviousBlock, n=self._current_size.rows - 1 - self._cursor_row)
             cursor.movePosition(QTextCursor.Right, n=self._cursor_col)
 
             # Replace character
@@ -345,29 +345,16 @@ class TerminalWidget(QPlainTextEdit):
             # Calculate block numbers for the scroll region
             first_active = max(0, self.document().blockCount() - self._current_size.rows)
             top_block = first_active + top
-            bottom_block = first_active + bottom
 
-            # Move lines down one by one while maintaining pre-allocation,
-            # starting from bottom to avoid overwriting
-            for block_num in range(top_block, bottom_block, 1):
-                cursor.movePosition(QTextCursor.Start)
-                cursor.movePosition(QTextCursor.NextBlock, n=block_num)
-
-                # Get next line's content
-                next_cursor = QTextCursor(cursor)
-                next_cursor.movePosition(QTextCursor.Start)
-                next_cursor.movePosition(QTextCursor.NextBlock, n=block_num + 1)
-                next_cursor.movePosition(QTextCursor.EndOfBlock, QTextCursor.KeepAnchor)
-                next_line = next_cursor.selection()
-
-                # Replace current line content
-                cursor.movePosition(QTextCursor.EndOfBlock, QTextCursor.KeepAnchor)
-                cursor.insertFragment(next_line)
-
-            # Clear the bottom line, keeping pre-allocation
             cursor.movePosition(QTextCursor.End)
-            cursor.movePosition(QTextCursor.StartOfBlock, QTextCursor.KeepAnchor)
+            cursor.movePosition(QTextCursor.PreviousBlock, n=self._current_size.rows - 1 - bottom)
+            cursor.insertBlock()
             cursor.insertText(' ' * self._current_size.cols, self._current_text_format)
+
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.NextBlock, n=top_block)
+            cursor.movePosition(QTextCursor.NextBlock, QTextCursor.KeepAnchor)
+            cursor.removeSelectedText()
 
         finally:
             cursor.endEditBlock()
@@ -392,7 +379,7 @@ class TerminalWidget(QPlainTextEdit):
             bottom_block = first_active + bottom
 
             # Move lines down one by one while maintaining pre-allocation,
-            # starting from bottom to avoid overwriting
+            # starting from the bottom to avoid overwriting
             for block_num in range(bottom_block, top_block, -1):
                 cursor.movePosition(QTextCursor.Start)
                 cursor.movePosition(QTextCursor.NextBlock, n=block_num)
