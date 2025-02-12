@@ -581,6 +581,7 @@ class TerminalWidget(QAbstractScrollArea):
             }
 
             # Clear and initialize alternate screen
+            self._clear_selection()
             self._lines = []
             self._add_new_lines(self._rows)
             self._cursor_row = 0
