@@ -781,7 +781,7 @@ class TerminalWidget(QAbstractScrollArea):
         # CSI sequences
         if sequence.startswith('\x1b['):
             code = sequence[-1]
-            print(f"escape code {code}")
+            print(f"CSI code {code}")
             # Parse just what we need based on the sequence
             if code == 'A':  # Up
                 param = sequence[2:-1]
@@ -914,8 +914,8 @@ class TerminalWidget(QAbstractScrollArea):
                 if top < bottom:
                     self._scroll_region_top = top
                     self._scroll_region_bottom = bottom
-                    self._cursor_row = 0
-                    self._cursor_col = 0
+#                    self._cursor_row = 0
+#                    self._cursor_col = 0
 
             elif code == 's':  # Save cursor position
                 self._saved_cursor = (self._cursor_row, self._cursor_col)
@@ -926,22 +926,31 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Simple escape sequences
         elif len(sequence) == 2:
-            if sequence[1] == 'M':  # Reverse Index
-                if self._cursor_row == 0:
-                    self._add_new_lines(1)
-                else:
-                    self._cursor_row -= 1
-            elif sequence[1] == 'D':  # Index
+            code = sequence[1]
+            print(f"ESC code {code}")
+            if code == 'D':  # Index
                 if self._cursor_row == self._rows - 1:
                     self._add_new_lines(1)
                 else:
                     self._cursor_row += 1
-            elif sequence[1] == 'E':  # Next Line
+            elif code == 'E':  # Next Line
                 if self._cursor_row == self._rows - 1:
                     self._add_new_lines(1)
                 else:
                     self._cursor_row += 1
                 self._cursor_col = 0
+            elif code == 'M':  # Reverse Index
+                if self._cursor_row == 0:
+                    # Add blank linke at the top and remove line from the bottom
+                    line = TerminalLine(self._cols)
+                    for col in range(self._cols):
+                        line.set_character(col, ' ')
+
+                    start = len(self._lines) - self._rows + self._cursor_row
+                    self._lines.insert(start, line)
+                    del self._lines[-1]
+                else:
+                    self._cursor_row -= 1
 
     def _insert_lines(self, count: int) -> None:
         """Insert blank lines at cursor position."""
