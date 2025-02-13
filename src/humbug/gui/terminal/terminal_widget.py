@@ -1112,7 +1112,7 @@ class TerminalWidget(QAbstractScrollArea):
             self._cursor_col = 0
             return
 
-        if char == '\n':
+        if char in '\n\f\v':
             if self._cursor_row == self._rows - 1:
                 # Add new line to history and scroll
                 self._add_new_lines(1)
@@ -1174,8 +1174,16 @@ class TerminalWidget(QAbstractScrollArea):
         i = 0
         while i < len(text):
             char = text[i]
+            i += 1
 
             if self._in_escape_seq:
+                # Is this character a control character?  If yes, then we have to process it immediately
+                # Weird eh?  But this is what a slow serial terminal needed and tools like vttest check
+                # for this!
+                if char in '\r\n\b\f\t\v':
+                    self._write_char(char)
+                    continue
+
                 self._escape_seq_buffer += char
 
                 # Process escape sequence when complete
@@ -1195,8 +1203,6 @@ class TerminalWidget(QAbstractScrollArea):
 
             else:
                 self._write_char(char)
-
-            i += 1
 
         # Update the affected area
         self.viewport().update()
