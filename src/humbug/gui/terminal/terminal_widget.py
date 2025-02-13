@@ -317,6 +317,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         cols = max(viewport_width // char_width, 1)
         rows = max(viewport_height // char_height, 1)
+        print(f"size: {rows}x{cols}")
 
         return TerminalSize(rows, cols)
 
@@ -325,8 +326,10 @@ class TerminalWidget(QAbstractScrollArea):
         new_size = self.calculate_size()
 
         if new_size.cols != self._cols or new_size.rows != self._rows:
-            old_rows, old_cols = self._rows, self._cols
-            self._rows, self._cols = new_size.rows, new_size.cols
+            old_rows = self._rows
+            old_cols = self._cols
+            self._rows = new_size.rows
+            self._cols = new_size.cols
 
             # Calculate scroll region adjustments
             if old_rows > 0 and old_cols > 0:
@@ -484,6 +487,8 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _process_osc(self, sequence: str):
         """Handle Operating System Command sequences."""
+        print(f"OSC: {repr(sequence)}")
+
         # Remove ESC] prefix and terminator (BEL or ST)
         if sequence.endswith('\x07'):  # BEL
             params = sequence[2:-1]
@@ -761,6 +766,175 @@ class TerminalWidget(QAbstractScrollArea):
                 for col in range(start, end + 1):
                     line.set_character(col, ' ')
 
+    def _process_csi(self, sequence: str) -> None:
+        code = sequence[-1]
+        print(f"CSI code {code}: {repr(sequence)}")
+
+        # Parse just what we need based on the sequence
+        if code == 'A':  # Up
+            param = sequence[2:-1]
+            amount = max(1, int(param)) if param.isdigit() else 1
+            self._cursor_row = max(0, self._cursor_row - amount)
+            print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
+
+        elif code == 'B':  # Down
+            param = sequence[2:-1]
+            amount = max(1, int(param)) if param.isdigit() else 1
+            self._cursor_row = min(self._rows - 1, self._cursor_row + amount)
+            print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
+
+        elif code == 'C':  # Forward
+            param = sequence[2:-1]
+            amount = max(1, int(param)) if param.isdigit() else 1
+            self._cursor_col = min(self._cols - 1, self._cursor_col + amount)
+            print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
+
+        elif code == 'D':  # Backward
+            param = sequence[2:-1]
+            amount = max(1, int(param)) if param.isdigit() else 1
+            self._cursor_col = max(0, self._cursor_col - amount)
+            print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
+
+        elif code == 'G':  # CHA - Cursor Horizontal Absolute
+            param = sequence[2:-1]
+            col = max(0, int(param) - 1) if param.isdigit() else 1  # Convert 1-based to 0-based
+            self._cursor_col = min(col, self._cols - 1)
+
+        elif code == 'H':  # Cursor position
+            pos = sequence[2:-1].split(';')
+            row = int(pos[0]) if pos and pos[0].isdigit() else 1
+            col = int(pos[1]) if len(pos) > 1 and pos[1].isdigit() else 1
+            self._cursor_row = min(self._rows - 1, max(0, row - 1))  # Convert to 0-based
+            self._cursor_col = min(self._cols - 1, max(0, col - 1))
+
+        elif code == 'J':  # Clear screen
+            param = sequence[2:-1]
+            mode = int(param) if param.isdigit() else 0
+            if mode == 0:  # Clear from cursor to end
+                self._clear_region(
+                    self._cursor_row,
+                    self._cursor_col,
+                    self._rows - 1,
+                    self._cols - 1
+                )
+            elif mode == 1:  # Clear from start to cursor
+                self._clear_region(0, 0, self._cursor_row, self._cursor_col)
+            elif mode == 2:  # Clear entire screen
+                self._clear_region(0, 0, self._rows - 1, self._cols - 1)
+
+        elif code == 'K':  # Clear line
+            param = sequence[2:-1]
+            mode = int(param) if param.isdigit() else 0
+            if mode == 0:  # Clear from cursor to end
+                self._clear_region(
+                    self._cursor_row,
+                    self._cursor_col,
+                    self._cursor_row,
+                    self._cols - 1
+                )
+            elif mode == 1:  # Clear from start to cursor
+                self._clear_region(
+                    self._cursor_row,
+                    0,
+                    self._cursor_row,
+                    self._cursor_col
+                )
+            elif mode == 2:  # Clear entire line
+                self._clear_region(
+                    self._cursor_row,
+                    0,
+                    self._cursor_row,
+                    self._cols - 1
+                )
+
+        elif code == 'L':  # IL - Insert Line
+            param = sequence[2:-1]
+            count = max(1, int(param) if param.isdigit() else 0)
+            self._insert_lines(count)
+
+        elif code == 'M':  # DL - Delete Line
+            param = sequence[2:-1]
+            count = max(1, int(param) if param.isdigit() else 0)
+            self._delete_lines(count)
+
+        elif code == 'P':  # DCH - Delete Character
+            param = sequence[2:-1]
+            count = max(1, int(param) if param.isdigit() else 0)
+            self._delete_chars(count)
+
+        elif code == 'S':  # SU - Scroll Up
+            param = sequence[2:-1]
+            count = max(1, int(param) if param.isdigit() else 0)
+            self._scroll_up(count)
+
+        elif code == 'T':  # SD - Scroll Down
+            param = sequence[2:-1]
+            count = max(1, int(param) if param.isdigit() else 0)
+            self._scroll_down(count)
+
+        elif code == 'X':  # ECH - Erase Character
+            param = sequence[2:-1]
+            count = max(1, int(param) if param.isdigit() else 0)
+            self._erase_chars(count)
+
+        elif code == '@':  # ICH - Insert Character
+            param = sequence[2:-1]
+            count = max(1, int(param) if param.isdigit() else 0)
+            self._insert_chars(count)
+
+        elif code == 'd':  # VPA - Line Position Absolute
+            param = sequence[2:-1]
+            row = max(0, int(param) - 1) if param.isdigit() else 1 # Convert 1-based to 0-based
+            self._cursor_row = min(row, self._rows - 1)
+
+        elif code == 'f':  # HVP - Horizontal & Vertical Position
+            pos = sequence[2:-1].split(';')
+            row = int(pos[0]) if pos and pos[0].isdigit() else 1
+            col = int(pos[1]) if len(pos) > 1 and pos[1].isdigit() else 1
+            self._cursor_row = min(self._rows - 1, max(0, row - 1))  # Convert to 0-based
+            self._cursor_col = min(self._cols - 1, max(0, col - 1))
+
+        elif code == 'm':  # SGR - Select Graphic Rendition
+            params = sequence[2:-1].split(';')
+            params = [int(p) if p.isdigit() else 0 for p in params]
+            self._process_sgr(params)
+
+        elif code == 'r':  # DECSTBM - Set Scrolling Region
+            params = sequence[2:-1].split(';')
+            top = max(0, int(params[0]) - 1) if params and params[0].isdigit() else 0
+            bottom = min(self._rows, int(params[1])) if len(params) > 1 and params[1].isdigit() else self._rows
+            if top < bottom:
+                self._scroll_region_top = top
+                self._scroll_region_bottom = bottom
+#                    self._cursor_row = 0
+#                    self._cursor_col = 0
+
+        elif code == 's':  # Save cursor position
+            self._saved_cursor = (self._cursor_row, self._cursor_col)
+
+        elif code == 'u':  # Restore cursor position
+            if self._saved_cursor:
+                self._cursor_row, self._cursor_col = self._saved_cursor
+
+        else:
+            print(f"Unknown CSI sequence {repr(sequence)}")
+            self._logger.warning(f"Unknown CSI sequence {repr(sequence)}")
+
+    def _process_dec_special(self, sequence: str) -> None:
+        code = sequence[-1]
+        print(f"DEC special code {code}: {repr(sequence)}")
+
+        if code == '8':
+            for r in range(self._rows):
+                ln = len(self._lines) - self._rows + r
+                line = self._lines[ln]
+                for c in range(self._cols):
+                    line.set_character(c, 'E')
+
+        else:
+            print(f"Unknown CSI sequence {repr(sequence)}")
+            self._logger.warning(f"Unknown CSI sequence {repr(sequence)}")
+
     def _process_escape_sequence(self, sequence: str) -> None:
         """Process ANSI escape sequence."""
         # OSC sequences
@@ -771,6 +945,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Private mode sequences
         if sequence.startswith('\x1b[?'):
             code = sequence[-1]
+            print(f"PM code {code}: {repr(sequence)}")
             params = sequence[3:-1]  # Remove ESC[? and final character
             if code == 'h':
                 self._process_private_mode(params, True)
@@ -780,154 +955,18 @@ class TerminalWidget(QAbstractScrollArea):
 
         # CSI sequences
         if sequence.startswith('\x1b['):
-            code = sequence[-1]
-            print(f"CSI code {code}")
-            # Parse just what we need based on the sequence
-            if code == 'A':  # Up
-                param = sequence[2:-1]
-                amount = int(param) if param.isdigit() else 1
-                self._cursor_row = max(0, self._cursor_row - amount)
+            self._process_csi(sequence)
+            return
 
-            elif code == 'B':  # Down
-                param = sequence[2:-1]
-                amount = int(param) if param.isdigit() else 1
-                self._cursor_row = min(self._rows - 1, self._cursor_row + amount)
-
-            elif code == 'C':  # Forward
-                param = sequence[2:-1]
-                amount = int(param) if param.isdigit() else 1
-                self._cursor_col = min(self._cols - 1, self._cursor_col + amount)
-
-            elif code == 'D':  # Backward
-                param = sequence[2:-1]
-                amount = int(param) if param.isdigit() else 1
-                self._cursor_col = max(0, self._cursor_col - amount)
-
-            elif code == 'G':  # CHA - Cursor Horizontal Absolute
-                param = sequence[2:-1]
-                col = max(0, int(param) - 1) if param.isdigit() else 1  # Convert 1-based to 0-based
-                self._cursor_col = min(col, self._cols - 1)
-
-            elif code == 'H':  # Cursor position
-                pos = sequence[2:-1].split(';')
-                row = int(pos[0]) if pos and pos[0].isdigit() else 1
-                col = int(pos[1]) if len(pos) > 1 and pos[1].isdigit() else 1
-                self._cursor_row = min(self._rows - 1, max(0, row - 1))  # Convert to 0-based
-                self._cursor_col = min(self._cols - 1, max(0, col - 1))
-
-            elif code == 'J':  # Clear screen
-                param = sequence[2:-1]
-                mode = int(param) if param.isdigit() else 0
-                if mode == 0:  # Clear from cursor to end
-                    self._clear_region(
-                        self._cursor_row,
-                        self._cursor_col,
-                        self._rows - 1,
-                        self._cols - 1
-                    )
-                elif mode == 1:  # Clear from start to cursor
-                    self._clear_region(0, 0, self._cursor_row, self._cursor_col)
-                elif mode == 2:  # Clear entire screen
-                    self._clear_region(0, 0, self._rows - 1, self._cols - 1)
-
-            elif code == 'K':  # Clear line
-                param = sequence[2:-1]
-                mode = int(param) if param.isdigit() else 0
-                if mode == 0:  # Clear from cursor to end
-                    self._clear_region(
-                        self._cursor_row,
-                        self._cursor_col,
-                        self._cursor_row,
-                        self._cols - 1
-                    )
-                elif mode == 1:  # Clear from start to cursor
-                    self._clear_region(
-                        self._cursor_row,
-                        0,
-                        self._cursor_row,
-                        self._cursor_col
-                    )
-                elif mode == 2:  # Clear entire line
-                    self._clear_region(
-                        self._cursor_row,
-                        0,
-                        self._cursor_row,
-                        self._cols - 1
-                    )
-
-            elif code == 'L':  # IL - Insert Line
-                param = sequence[2:-1]
-                count = max(1, int(param) if param.isdigit() else 0)
-                self._insert_lines(count)
-
-            elif code == 'M':  # DL - Delete Line
-                param = sequence[2:-1]
-                count = max(1, int(param) if param.isdigit() else 0)
-                self._delete_lines(count)
-
-            elif code == 'P':  # DCH - Delete Character
-                param = sequence[2:-1]
-                count = max(1, int(param) if param.isdigit() else 0)
-                self._delete_chars(count)
-
-            elif code == 'S':  # SU - Scroll Up
-                param = sequence[2:-1]
-                count = max(1, int(param) if param.isdigit() else 0)
-                self._scroll_up(count)
-
-            elif code == 'T':  # SD - Scroll Down
-                param = sequence[2:-1]
-                count = max(1, int(param) if param.isdigit() else 0)
-                self._scroll_down(count)
-
-            elif code == 'X':  # ECH - Erase Character
-                param = sequence[2:-1]
-                count = max(1, int(param) if param.isdigit() else 0)
-                self._erase_chars(count)
-
-            elif code == '@':  # ICH - Insert Character
-                param = sequence[2:-1]
-                count = max(1, int(param) if param.isdigit() else 0)
-                self._insert_chars(count)
-
-            elif code == 'd':  # VPA - Line Position Absolute
-                param = sequence[2:-1]
-                row = max(0, int(param) - 1) if param.isdigit() else 1 # Convert 1-based to 0-based
-                self._cursor_row = min(row, self._rows - 1)
-
-            elif code == 'f':  # HVP - Horizontal & Vertical Position
-                pos = sequence[2:-1].split(';')
-                row = int(pos[0]) if pos and pos[0].isdigit() else 1
-                col = int(pos[1]) if len(pos) > 1 and pos[1].isdigit() else 1
-                self._cursor_row = min(self._rows - 1, max(0, row - 1))  # Convert to 0-based
-                self._cursor_col = min(self._cols - 1, max(0, col - 1))
-
-            elif code == 'm':  # SGR - Select Graphic Rendition
-                params = sequence[2:-1].split(';')
-                params = [int(p) if p.isdigit() else 0 for p in params]
-                self._process_sgr(params)
-
-            elif code == 'r':  # DECSTBM - Set Scrolling Region
-                params = sequence[2:-1].split(';')
-                top = max(0, int(params[0]) - 1) if params and params[0].isdigit() else 0
-                bottom = min(self._rows, int(params[1])) if len(params) > 1 and params[1].isdigit() else self._rows
-                if top < bottom:
-                    self._scroll_region_top = top
-                    self._scroll_region_bottom = bottom
-#                    self._cursor_row = 0
-#                    self._cursor_col = 0
-
-            elif code == 's':  # Save cursor position
-                self._saved_cursor = (self._cursor_row, self._cursor_col)
-
-            elif code == 'u':  # Restore cursor position
-                if self._saved_cursor:
-                    self._cursor_row, self._cursor_col = self._saved_cursor
+        # DEC special sequences
+        if sequence.startswith('\x1b#'):
+            self._process_dec_special(sequence)
+            return
 
         # Simple escape sequences
-        elif len(sequence) == 2:
+        if len(sequence) == 2:
             code = sequence[1]
-            print(f"ESC code {code}")
+            print(f"ESC code {code}: {repr(sequence)}")
             if code == 'D':  # Index
                 if self._cursor_row == self._rows - 1:
                     self._add_new_lines(1)
@@ -951,6 +990,11 @@ class TerminalWidget(QAbstractScrollArea):
                     del self._lines[-1]
                 else:
                     self._cursor_row -= 1
+
+            return
+
+        print(f"Unknown ESC sequence: {repr(sequence)}")
+        self._logger.warning(f"Unknown ESC sequence: {repr(sequence)}")
 
     def _insert_lines(self, count: int) -> None:
         """Insert blank lines at cursor position."""
@@ -1141,6 +1185,7 @@ class TerminalWidget(QAbstractScrollArea):
                     self._in_escape_seq = False
                 elif len(self._escape_seq_buffer) > 128:  # Safety limit
                     self._logger.warning(f"Escape sequence too long, discarding: {repr(self._escape_seq_buffer)}")
+                    print(f"Escape sequence too long, discarding: {repr(self._escape_seq_buffer)}")
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
 
@@ -1157,7 +1202,8 @@ class TerminalWidget(QAbstractScrollArea):
         self.viewport().update()
 
     def _is_escape_sequence_complete(self, sequence: str) -> bool:
-        """Check if an escape sequence is complete.
+        """
+        Check if an escape sequence is complete.
 
         Args:
             sequence: The escape sequence to check
@@ -1176,6 +1222,9 @@ class TerminalWidget(QAbstractScrollArea):
 
         if sequence.startswith('\x1bP'):  # DCS sequence
             return sequence.endswith('\x1b\\')
+
+        if sequence.startswith('\x1b#'):  # line attributes sequence
+            return len(sequence) == 3
 
         # Simple ESC sequences
         return len(sequence) == 2 and sequence[1] in '=>\7\\8cDEHM'
