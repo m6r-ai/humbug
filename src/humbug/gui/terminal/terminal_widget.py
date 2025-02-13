@@ -164,10 +164,10 @@ class TerminalWidget(QAbstractScrollArea):
         # the scroll region.
         self._scroll_region_top = 0
         self._scroll_region_bottom = self._rows
+        self._scroll_region_rows = self._rows
 
         # Origin mode row offset
         self._origin_mode = False
-        self._origin_top = 0
 
         self._using_alternate_screen = False
         self._main_screen_buffer = None
@@ -340,11 +340,13 @@ class TerminalWidget(QAbstractScrollArea):
             print(f"update bottom {self._scroll_region_bottom} {old_rows} {new_size.rows}")
 
             # Ensure minimum scroll region size of 2 lines
-            if self._scroll_region_bottom < self._scroll_region_top + 2:
+            if self._scroll_region_bottom < self._scroll_region_top + 1:
                 self._scroll_region_bottom = min(
                     self._scroll_region_top + 2,
                     self._rows
                 )
+
+            self._scroll_region_rows = self._scroll_region_bottom - self._scroll_region_top
 
             # Calculate scroll region adjustments
             if old_rows > 0 and old_cols > 0:
@@ -602,6 +604,7 @@ class TerminalWidget(QAbstractScrollArea):
                     self.clear()
                     self._scroll_region_top = 0
                     self._scroll_region_bottom = self._rows
+                    self._scroll_region_rows = self._rows
                 elif mode == 6:  # DECOM - Origin Mode
                     self._origin_mode = set_mode
                     self._cursor_row = 0
@@ -758,7 +761,8 @@ class TerminalWidget(QAbstractScrollArea):
         elif code == 'B':  # Down
             param = sequence[2:-1]
             amount = max(1, int(param)) if param.isdigit() else 1
-            self._cursor_row = min(self._rows - 1, self._cursor_row + amount)
+            max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
+            self._cursor_row = min(max_rows - 1, self._cursor_row + amount)
             print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
 
         elif code == 'C':  # Forward
@@ -782,7 +786,8 @@ class TerminalWidget(QAbstractScrollArea):
             pos = sequence[2:-1].split(';')
             row = int(pos[0]) if pos and pos[0].isdigit() else 1
             col = int(pos[1]) if len(pos) > 1 and pos[1].isdigit() else 1
-            self._cursor_row = min(self._rows - 1, max(0, row - 1))  # Convert to 0-based
+            max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
+            self._cursor_row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
             self._cursor_col = min(self._cols - 1, max(0, col - 1))
 
         elif code == 'J':  # Clear screen
@@ -863,13 +868,15 @@ class TerminalWidget(QAbstractScrollArea):
         elif code == 'd':  # VPA - Line Position Absolute
             param = sequence[2:-1]
             row = max(0, int(param) - 1) if param.isdigit() else 1 # Convert 1-based to 0-based
-            self._cursor_row = min(row, self._rows - 1)
+            max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
+            self._cursor_row = min(row, max_rows - 1)
 
         elif code == 'f':  # HVP - Horizontal & Vertical Position
             pos = sequence[2:-1].split(';')
             row = int(pos[0]) if pos and pos[0].isdigit() else 1
             col = int(pos[1]) if len(pos) > 1 and pos[1].isdigit() else 1
-            self._cursor_row = min(self._rows - 1, max(0, row - 1))  # Convert to 0-based
+            max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
+            self._cursor_row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
             self._cursor_col = min(self._cols - 1, max(0, col - 1))
 
         elif code == 'm':  # SGR - Select Graphic Rendition
@@ -884,6 +891,7 @@ class TerminalWidget(QAbstractScrollArea):
             if top < bottom:
                 self._scroll_region_top = top
                 self._scroll_region_bottom = bottom
+                self._scroll_region_rows = bottom - top
                 print(f"STBM set bottom {self._scroll_region_bottom}")
                 # TODO: we need to think about origin mode
 
@@ -946,20 +954,25 @@ class TerminalWidget(QAbstractScrollArea):
             code = sequence[1]
             print(f"ESC code {code}: {repr(sequence)}")
             if code == 'D':  # Index
-                if self._cursor_row != self._scroll_region_bottom - 1:
-                    self._cursor_row = min(self._cursor_row + 1, self._rows - 1)
+                cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+                if cursor_row != self._scroll_region_bottom - 1:
+                    max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
+                    self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
                 else:
                     self._scroll_up(1)
             elif code == 'E':  # Next Line
                 self._cursor_col = 0
-                if self._cursor_row != self._scroll_region_bottom - 1:
-                    self._cursor_row += 1
+                cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+                if cursor_row != self._scroll_region_bottom - 1:
+                    max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
+                    self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
                 else:
                     self._scroll_up(1)
 
             elif code == 'M':  # Reverse Index
-                if self._cursor_row != self._scroll_region_top:
-                    self._cursor_row -= 1
+                cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+                if cursor_row != self._scroll_region_top:
+                    self._cursor_row = max(0, self._cursor_row - 1)
                 else:
                     self._scroll_down(1)
 
@@ -970,21 +983,18 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _insert_lines(self, count: int) -> None:
         """Insert blank lines at cursor position."""
-        if not (self._scroll_region_top <= self._cursor_row < self._scroll_region_bottom):
+        cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+        if not (self._scroll_region_top <= cursor_row < self._scroll_region_bottom):
             return
 
         # Calculate lines to move
-        start = len(self._lines) - self._rows + self._cursor_row
+        start = len(self._lines) - self._rows + cursor_row
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
         # Create new blank lines
         new_lines = []
         for _ in range(count):
-            line = TerminalLine(self._cols)
-            for col in range(self._cols):
-                line.set_character(col, ' ')
-
-            new_lines.append(line)
+            new_lines.append(self._get_new_line())
 
         # Insert new lines and remove excess
         self._lines[start:start] = new_lines
@@ -992,25 +1002,23 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _delete_lines(self, count: int) -> None:
         """Delete lines at cursor position."""
-        if not (self._scroll_region_top <= self._cursor_row < self._scroll_region_bottom):
+        cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+        if not (self._scroll_region_top <= cursor_row < self._scroll_region_bottom):
             return
 
         # Calculate lines to remove
-        start = len(self._lines) - self._rows + self._cursor_row
+        start = len(self._lines) - self._rows + cursor_row
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
         # Remove lines and add blank lines at bottom
         del self._lines[start:min(start + count, end)]
         for _ in range(count):
-            line = TerminalLine(self._cols)
-            for col in range(self._cols):
-                line.set_character(col, ' ')
-
-            self._lines.insert(end, line)
+            self._lines.insert(end, self._get_new_line())
 
     def _insert_chars(self, count: int) -> None:
         """Insert blank characters at cursor position."""
-        line_index = len(self._lines) - self._rows + self._cursor_row
+        cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+        line_index = len(self._lines) - self._rows + cursor_row
         if 0 <= line_index < len(self._lines):
             line = self._lines[line_index]
             # Move existing characters right
@@ -1025,7 +1033,8 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _delete_chars(self, count: int) -> None:
         """Delete characters at cursor position."""
-        line_index = len(self._lines) - self._rows + self._cursor_row
+        cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+        line_index = len(self._lines) - self._rows + cursor_row
         if 0 <= line_index < len(self._lines):
             line = self._lines[line_index]
             # Move characters left
@@ -1038,7 +1047,8 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _erase_chars(self, count: int) -> None:
         """Erase characters at cursor position."""
-        line_index = len(self._lines) - self._rows + self._cursor_row
+        cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+        line_index = len(self._lines) - self._rows + cursor_row
         if 0 <= line_index < len(self._lines):
             line = self._lines[line_index]
             for col in range(self._cursor_col, min(self._cursor_col + count, self._cols)):
@@ -1046,18 +1056,15 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _scroll_up(self, count: int) -> None:
         """Scroll up within current scroll region."""
-        if self._scroll_region_top >= self._scroll_region_bottom:
-            return
-
         # Calculate actual lines in scroll region
         start = len(self._lines) - self._rows + self._scroll_region_top
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
         # Remove lines from top and add blank lines at bottom
         for _ in range(count):
-            if self._scroll_region_bottom != self._rows:
-                scrolled_line = self._lines.pop(start - 1)
-                self._lines.insert(len(self._lines) - self._rows, scrolled_line)
+            if self._scroll_region_top != 0:
+                scrolled_line = self._lines.pop(start)
+                self._lines.insert(len(self._lines) - self._rows + 1, scrolled_line)
 
             line = self._get_new_line()
             self._lines.insert(end, line)
@@ -1066,29 +1073,37 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _scroll_down(self, count: int) -> None:
         """Scroll down within current scroll region."""
-        if self._scroll_region_top >= self._scroll_region_bottom:
-            return
-
         # Calculate actual lines in scroll region
         start = len(self._lines) - self._rows + self._scroll_region_top
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
+        for i in range(len(self._lines)):
+            ch, _a, _b, _c = self._lines[i].get_character(0)
+            print(f"b {i + 1}: {ch}")
+
         # Remove lines from bottom and add blank lines at top
-        del self._lines[max(start, end - count):end]
         for _ in range(count):
+            del self._lines[end - 1]
             line = self._get_new_line()
             self._lines.insert(start, line)
 
+        for i in range(len(self._lines)):
+            ch, _a, _b, _c = self._lines[i].get_character(0)
+            print(f"a {i + 1}: {ch}")
+
     def _write_char(self, char: str) -> None:
         """Write a single character at the current cursor position."""
+        cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
+        max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
+
         if char == '\r':
             self._cursor_col = 0
             return
 
         if char in '\n\f\v':
             print(f"nl: {self._cursor_row} {self._scroll_region_bottom}")
-            if self._cursor_row != self._scroll_region_bottom - 1:
-                self._cursor_row = min(self._cursor_row + 1, self._rows - 1)
+            if cursor_row != self._scroll_region_bottom - 1:
+                self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
             else:
                 self._scroll_up(1)
 
@@ -1109,12 +1124,12 @@ class TerminalWidget(QAbstractScrollArea):
             # Are we trying to write past the end of the line?  If yes then wrap around
             if self._cursor_col >= self._cols:
                 self._cursor_col = 0
-                if self._cursor_row != self._scroll_region_bottom - 1:
-                    self._cursor_row = min(self._cursor_row + 1, self._rows - 1)
+                if cursor_row != self._scroll_region_bottom - 1:
+                    self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
                 else:
                     self._scroll_up(1)
 
-            line_index = len(self._lines) - self._rows + self._cursor_row
+            line_index = len(self._lines) - self._rows + cursor_row
             line = self._lines[line_index]
 
             # Write character
@@ -1232,24 +1247,13 @@ class TerminalWidget(QAbstractScrollArea):
         lines_needed = self._rows - len(new_lines)
         if lines_needed > 0:
             for _ in range(lines_needed):
-                new_line = TerminalLine(self._cols)
-                for col in range(self._cols):
-                    new_line.set_character(col, ' ')
-
-                new_lines.append(new_line)
+                new_lines.append(self._get_new_line())
 
         self._lines = new_lines
 
         # Update cursor position if needed
         self._cursor_col = min(self._cursor_col, self._cols - 1)
         self._cursor_row = min(self._cursor_row, self._rows - 1)
-
-        # Ensure scroll region stays within bounds
-        if self._scroll_region_bottom > self._rows:
-            self._scroll_region_bottom = self._rows
-            print(f"reflow set bottom {self._scroll_region_bottom}")
-            if self._scroll_region_top >= self._scroll_region_bottom:
-                self._scroll_region_top = max(0, self._scroll_region_bottom - 1)
 
         # Update scrollbar after reflowing content
         self._update_scrollbar()
