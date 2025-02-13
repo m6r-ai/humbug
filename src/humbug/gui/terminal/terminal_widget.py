@@ -149,21 +149,25 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Connect scrollbar signals
         self.verticalScrollBar().valueChanged.connect(self._handle_scroll)
-        self._auto_scroll = True
 
         # Enable focus and input
         self.setFocusPolicy(Qt.StrongFocus)
 
         # Storage for terminal content
         self._lines: List[TerminalLine] = []
-        self._viewport_offset = 0  # Lines scrolled up from bottom
 
         # Terminal dimensions
         self._rows = 0
         self._cols = 0
 
+        # Scroll region tracking.  Note: the bottom row is actually the first row that is outside
+        # the scroll region.
         self._scroll_region_top = 0
         self._scroll_region_bottom = self._rows
+
+        # Origin mode row offset
+        self._origin_mode = False
+        self._origin_top = 0
 
         self._using_alternate_screen = False
         self._main_screen_buffer = None
@@ -177,7 +181,6 @@ class TerminalWidget(QAbstractScrollArea):
         # Operation modes
         self._application_keypad_mode = False
         self._application_cursor_keys = False
-        self._origin_mode = False
         self._auto_wrap = True
         self._bracketed_paste = False
 
@@ -331,35 +334,21 @@ class TerminalWidget(QAbstractScrollArea):
             self._rows = new_size.rows
             self._cols = new_size.cols
 
-            # Calculate scroll region adjustments
-            if old_rows > 0 and old_cols > 0:
-                # Calculate the relative positions of scroll regions
-                old_top_ratio = self._scroll_region_top / old_rows
-                old_bottom_ratio = self._scroll_region_bottom / old_rows
+            self._scroll_region_bottom = min(
+                self._scroll_region_bottom + self._rows - old_rows, self._rows
+            )
+            print(f"update bottom {self._scroll_region_bottom} {old_rows} {new_size.rows}")
 
-                # Adjust scroll region to maintain relative positioning
-                self._scroll_region_top = min(
-                    round(old_top_ratio * self._rows),
-                    self._rows - 1
-                )
+            # Ensure minimum scroll region size of 2 lines
+            if self._scroll_region_bottom < self._scroll_region_top + 2:
                 self._scroll_region_bottom = min(
-                    round(old_bottom_ratio * self._rows),
+                    self._scroll_region_top + 2,
                     self._rows
                 )
 
-                # Ensure minimum scroll region size of 1 line
-                if self._scroll_region_bottom <= self._scroll_region_top:
-                    self._scroll_region_bottom = min(
-                        self._scroll_region_top + 1,
-                        self._rows
-                    )
-
+            # Calculate scroll region adjustments
+            if old_rows > 0 and old_cols > 0:
                 self._reflow_content(old_rows, old_cols)
-
-            else:
-                # Initial setup - scroll region is full terminal
-                self._scroll_region_top = 0
-                self._scroll_region_bottom = self._rows
 
             self.size_changed.emit()
 
@@ -371,17 +360,6 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _handle_scroll(self, value: int):
         """Handle scrollbar value changes."""
-        # Get maximum scroll value
-        vbar = self.verticalScrollBar()
-        max_scroll = vbar.maximum()
-
-        # Update auto-scroll state based on position
-        self._auto_scroll = value == max_scroll
-
-        # Update viewport offset
-        self._viewport_offset = value
-
-        # Update viewport
         self.viewport().update()
 
     def _update_scrollbar(self):
@@ -397,23 +375,22 @@ class TerminalWidget(QAbstractScrollArea):
         if old_at_bottom:
             vbar.setValue(vbar.maximum())
 
+    def _get_new_line(self) -> TerminalLine:
+        line = TerminalLine(self._cols)
+        # Fill line with spaces using default attributes
+
+        for i in range(self._cols):
+            line.set_character(i, ' ')
+
+        return line
+
     def _add_new_lines(self, count: int) -> None:
         """Add new empty lines to the buffer."""
         for _ in range(count):
-            line = TerminalLine(self._cols)
-            # Fill line with spaces using default attributes
-
-            for i in range(self._cols):
-                line.set_character(i, ' ')
-
-            self._lines.append(line)
+            self._lines.append(self._get_new_line())
 
         # Update scrollbar range
         self._update_scrollbar()
-
-        # If auto-scroll is enabled, scroll to show new content
-        if self._auto_scroll:
-            self._scroll_to_bottom()
 
     def _xterm_to_rgb(self, color_index: int) -> int:
         """
@@ -589,6 +566,7 @@ class TerminalWidget(QAbstractScrollArea):
                 'attrs': self._current_attributes,
                 'scroll_value': self.verticalScrollBar().value()
             }
+            # TODO: add support for saving the origin mode settings
 
             # Clear and initialize alternate screen
             self._lines = []
@@ -608,7 +586,6 @@ class TerminalWidget(QAbstractScrollArea):
             self._update_scrollbar()
 
             self.verticalScrollBar().setValue(self._main_screen_attrs['scroll_value'])
-            self._auto_scroll = (self._main_screen_attrs['scroll_value'] == self.verticalScrollBar().maximum())
 
         self._using_alternate_screen = enable
         self.viewport().update()
@@ -625,9 +602,8 @@ class TerminalWidget(QAbstractScrollArea):
                     pass
                 elif mode == 6:  # DECOM - Origin Mode
                     self._origin_mode = set_mode
-                    if set_mode:
-                        self._cursor_row = self._scroll_region_top
-                        self._cursor_col = 0
+                    self._cursor_row = 0
+                    self._cursor_col = 0
                 elif mode == 7:  # DECAWM - Auto-wrap Mode
                     self._auto_wrap = set_mode
                 elif mode == 12:  # att610 - Start/Stop Blinking Cursor
@@ -906,8 +882,8 @@ class TerminalWidget(QAbstractScrollArea):
             if top < bottom:
                 self._scroll_region_top = top
                 self._scroll_region_bottom = bottom
-#                    self._cursor_row = 0
-#                    self._cursor_col = 0
+                print(f"STBM set bottom {self._scroll_region_bottom}")
+                # TODO: we need to think about origin mode
 
         elif code == 's':  # Save cursor position
             self._saved_cursor = (self._cursor_row, self._cursor_col)
@@ -968,28 +944,22 @@ class TerminalWidget(QAbstractScrollArea):
             code = sequence[1]
             print(f"ESC code {code}: {repr(sequence)}")
             if code == 'D':  # Index
-                if self._cursor_row == self._rows - 1:
-                    self._add_new_lines(1)
+                if self._cursor_row != self._scroll_region_bottom - 1:
+                    self._cursor_row = min(self._cursor_row + 1, self._rows - 1)
                 else:
-                    self._cursor_row += 1
+                    self._scroll_up(1)
             elif code == 'E':  # Next Line
-                if self._cursor_row == self._rows - 1:
-                    self._add_new_lines(1)
-                else:
-                    self._cursor_row += 1
                 self._cursor_col = 0
-            elif code == 'M':  # Reverse Index
-                if self._cursor_row == 0:
-                    # Add blank linke at the top and remove line from the bottom
-                    line = TerminalLine(self._cols)
-                    for col in range(self._cols):
-                        line.set_character(col, ' ')
-
-                    start = len(self._lines) - self._rows + self._cursor_row
-                    self._lines.insert(start, line)
-                    del self._lines[-1]
+                if self._cursor_row != self._scroll_region_bottom - 1:
+                    self._cursor_row += 1
                 else:
+                    self._scroll_up(1)
+
+            elif code == 'M':  # Reverse Index
+                if self._cursor_row != self._scroll_region_top:
                     self._cursor_row -= 1
+                else:
+                    self._scroll_down(1)
 
             return
 
@@ -1011,6 +981,7 @@ class TerminalWidget(QAbstractScrollArea):
             line = TerminalLine(self._cols)
             for col in range(self._cols):
                 line.set_character(col, ' ')
+
             new_lines.append(line)
 
         # Insert new lines and remove excess
@@ -1032,6 +1003,7 @@ class TerminalWidget(QAbstractScrollArea):
             line = TerminalLine(self._cols)
             for col in range(self._cols):
                 line.set_character(col, ' ')
+
             self._lines.insert(end, line)
 
     def _insert_chars(self, count: int) -> None:
@@ -1080,13 +1052,15 @@ class TerminalWidget(QAbstractScrollArea):
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
         # Remove lines from top and add blank lines at bottom
-        del self._lines[start:min(start + count, end)]
         for _ in range(count):
-            line = TerminalLine(self._cols)
-            for col in range(self._cols):
-                line.set_character(col, ' ')
+            if self._scroll_region_bottom != self._rows:
+                scrolled_line = self._lines.pop(start - 1)
+                self._lines.insert(len(self._lines) - self._rows, scrolled_line)
 
+            line = self._get_new_line()
             self._lines.insert(end, line)
+
+        self._update_scrollbar()
 
     def _scroll_down(self, count: int) -> None:
         """Scroll down within current scroll region."""
@@ -1100,10 +1074,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Remove lines from bottom and add blank lines at top
         del self._lines[max(start, end - count):end]
         for _ in range(count):
-            line = TerminalLine(self._cols)
-            for col in range(self._cols):
-                line.set_character(col, ' ')
-
+            line = self._get_new_line()
             self._lines.insert(start, line)
 
     def _write_char(self, char: str) -> None:
@@ -1113,11 +1084,12 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         if char in '\n\f\v':
-            if self._cursor_row == self._rows - 1:
-                # Add new line to history and scroll
-                self._add_new_lines(1)
+            print(f"nl: {self._cursor_row} {self._scroll_region_bottom}")
+            if self._cursor_row != self._scroll_region_bottom - 1:
+                self._cursor_row = min(self._cursor_row + 1, self._rows - 1)
             else:
-                self._cursor_row += 1
+                self._scroll_up(1)
+
             return
 
         if char == '\b':
@@ -1135,11 +1107,10 @@ class TerminalWidget(QAbstractScrollArea):
             # Are we trying to write past the end of the line?  If yes then wrap around
             if self._cursor_col >= self._cols:
                 self._cursor_col = 0
-                if self._cursor_row < self._rows - 1:
-                    self._cursor_row += 1
+                if self._cursor_row != self._scroll_region_bottom - 1:
+                    self._cursor_row = min(self._cursor_row + 1, self._rows - 1)
                 else:
-                    # Add new line and scroll
-                    self._add_new_lines(1)
+                    self._scroll_up(1)
 
             line_index = len(self._lines) - self._rows + self._cursor_row
             line = self._lines[line_index]
@@ -1274,6 +1245,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Ensure scroll region stays within bounds
         if self._scroll_region_bottom > self._rows:
             self._scroll_region_bottom = self._rows
+            print(f"reflow set bottom {self._scroll_region_bottom}")
             if self._scroll_region_top >= self._scroll_region_bottom:
                 self._scroll_region_top = max(0, self._scroll_region_bottom - 1)
 
@@ -1533,10 +1505,6 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Update scrollbar after resize
         self._update_scrollbar()
-
-        # Maintain auto-scroll state
-        if self._auto_scroll:
-            self._scroll_to_bottom()
 
     def _toggle_blink(self):
         """Toggle blink state and update display if needed."""
