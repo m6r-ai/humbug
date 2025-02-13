@@ -1,14 +1,12 @@
 """Terminal tab implementation."""
 
 import asyncio
-from asyncio.subprocess import Process
 import fcntl
 import logging
 import os
-import pty
-import termios
 import select
 import signal
+import termios
 from typing import Dict, Optional, Set
 
 from PySide6.QtWidgets import QVBoxLayout
@@ -20,6 +18,7 @@ from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.terminal.terminal_process import TerminalProcess
 from humbug.gui.terminal.terminal_widget import TerminalWidget
 from humbug.gui.status_message import StatusMessage
 
@@ -61,7 +60,7 @@ class TerminalTab(TabBase):
         self._install_activation_tracking(self._terminal)
 
         # Initialize process and task tracking
-        self._process: Optional[Process] = None
+        self._terminal_process = TerminalProcess()
         self._tasks: Set[asyncio.Task] = set()
         self._running = True
         self._main_fd = None
@@ -95,7 +94,9 @@ class TerminalTab(TabBase):
                 self._update_pty_size(self._main_fd)
 
                 # Signal the shell process group
-                os.killpg(os.getpgid(self._process.pid), signal.SIGWINCH)
+                pid = self._terminal_process.get_process_id()
+                if pid:
+                    os.killpg(os.getpgid(pid), signal.SIGWINCH)
             except OSError as e:
                 self._logger.error(f"Failed to handle window resize: {e}")
 
@@ -119,44 +120,20 @@ class TerminalTab(TabBase):
         try:
             self._logger.debug("Starting terminal process...")
 
-            shell = os.environ.get('SHELL', '/bin/sh')
+            # Start process using our new implementation
+            pid, main_fd = await self._terminal_process.start(self._command)
+            self._main_fd = main_fd
 
-            # Create pseudo-terminal
-            main_fd, secondary_fd = pty.openpty()
+            self._logger.debug(f"Process started with pid {pid}")
 
-            # Set raw mode
-            mode = termios.tcgetattr(secondary_fd)
-            mode[3] &= ~(termios.ECHO | termios.ICANON)  # Turn off echo, canonical mode, and signal generation
-            mode[3] |= termios.ISIG
-            termios.tcsetattr(secondary_fd, termios.TCSAFLUSH, mode)
-
+            # Update initial terminal size
             try:
                 self._update_pty_size(main_fd)
             except OSError as e:
                 self._logger.warning(f"Failed to set initial terminal size: {e}")
 
-            # Start process with the secondary end of the pty
-            self._process = await asyncio.create_subprocess_exec(
-                shell,
-                stdin=secondary_fd,
-                stdout=secondary_fd,
-                stderr=secondary_fd,
-                start_new_session=True
-            )
-
-            # Close secondary fd as the subprocess has it
-            os.close(secondary_fd)
-
-            # Signal the process group
-            os.killpg(os.getpgid(self._process.pid), signal.SIGWINCH)
-
-            self._logger.debug(f"Process started with pid {self._process.pid}")
-
             # Create task for reading from main_fd
             self._create_tracked_task(self._read_loop(main_fd))
-
-            # Store main fd for writing
-            self._main_fd = main_fd
 
         except Exception as e:
             self._logger.error("Failed to start terminal process: %s", str(e))
@@ -168,15 +145,9 @@ class TerminalTab(TabBase):
             while self._running:
                 try:
                     # Check if process has ended
-                    if self._process:
-                        try:
-                            returncode = self._process.returncode
-                            if returncode is not None:
-                                self._logger.info(f"Shell process ended with return code {returncode}")
-                                break
-                        except Exception as e:
-                            self._logger.error(f"Error checking process status: {e}")
-                            break
+                    if not self._terminal_process.is_running():
+                        self._logger.info("Shell process ended")
+                        break
 
                     r, w, e = await asyncio.get_event_loop().run_in_executor(
                         None,
@@ -207,12 +178,6 @@ class TerminalTab(TabBase):
                     break
         except Exception as e:
             self._logger.error("Error in read loop: %s", str(e))
-        finally:
-            if self._main_fd is not None:
-                try:
-                    os.close(main_fd)
-                except OSError:
-                    pass
 
         # Only show completion message if not in cleanup
         if self._running:
@@ -239,7 +204,6 @@ class TerminalTab(TabBase):
         self._terminal.setFont(font)
 
         # Apply consistent styling to both the terminal widget and its viewport
-        # This ensures the background color is applied correctly to the entire widget
         self.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
@@ -286,24 +250,9 @@ class TerminalTab(TabBase):
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
 
-        # Terminate process if it exists
-        if self._process:
-            try:
-                self._process.terminate()
-                await asyncio.wait_for(self._process.wait(), timeout=1.0)
-            except asyncio.TimeoutError:
-                self._process.kill()  # Force kill if terminate doesn't work
-            except Exception as e:
-                self._logger.error("Error terminating process: %s", str(e))
-            self._process = None
-
-        # Close main fd if it exists
-        if self._main_fd is not None:
-            try:
-                os.close(self._main_fd)
-            except OSError:
-                pass
-            self._main_fd = None
+        # Use new termination method
+        await self._terminal_process.terminate()
+        self._main_fd = None
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Get serializable state."""
@@ -352,52 +301,67 @@ class TerminalTab(TabBase):
         asyncio.create_task(self._cleanup())
 
     def can_save(self) -> bool:
+        """Check if terminal can be saved."""
         return False
 
     def save(self) -> bool:
+        """Save terminal (not supported)."""
         return True
 
     def can_save_as(self) -> bool:
+        """Check if terminal can be saved as (not supported)."""
         return False
 
     def save_as(self) -> bool:
+        """Save terminal as (not supported)."""
         return True
 
     def can_undo(self) -> bool:
+        """Check if terminal can undo (not supported)."""
         return False
 
     def undo(self) -> None:
+        """Undo terminal operation (not supported)."""
         pass
 
     def can_redo(self) -> bool:
+        """Check if terminal can redo (not supported)."""
         return False
 
     def redo(self) -> None:
+        """Redo terminal operation (not supported)."""
         pass
 
     def can_cut(self) -> bool:
+        """Check if terminal can cut (not supported)."""
         return False
 
     def cut(self) -> None:
+        """Cut terminal selection (not supported)."""
         pass
 
     def can_copy(self) -> bool:
+        """Check if terminal can copy."""
         return self._terminal.has_selection()
 
     def copy(self) -> None:
+        """Copy terminal selection."""
         self._terminal.copy()
 
     def can_paste(self) -> bool:
+        """Check if terminal can paste."""
         return True
 
     def paste(self) -> None:
+        """Paste into terminal."""
         self._terminal.paste()
 
     def show_find(self):
-        """Show the find widget."""
+        """Show the find widget (not supported)."""
         pass  # Terminal doesn't support find yet
 
     def can_submit(self) -> bool:
+        """Check if terminal can submit (not supported)."""
         return False
 
     def update_status(self) -> None:
