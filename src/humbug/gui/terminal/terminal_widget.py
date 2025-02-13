@@ -653,6 +653,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _process_sgr(self, params: list[int]) -> None:
         """Process SGR (Select Graphic Rendition) sequence."""
+        print(f"SGR {params}")
         i = 0
         while i < len(params):
             param = params[i]
@@ -733,6 +734,10 @@ class TerminalWidget(QAbstractScrollArea):
                         self._current_attributes |= CharacterAttributes.CUSTOM_BG
                         self._current_bg = (r << 16) | (g << 8) | b
                         i += 4
+
+            else:
+                print(f"Unknown SGR sequence {params}")
+                self._logger.warning(f"Unknown SGR sequence {params}")
 
             i += 1
 
@@ -1103,7 +1108,6 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         if char in '\n\f\v':
-            print(f"nl: {self._cursor_row} {self._scroll_region_bottom}")
             if cursor_row != self._scroll_region_bottom - 1:
                 self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
             else:
@@ -1128,6 +1132,7 @@ class TerminalWidget(QAbstractScrollArea):
                 self._cursor_col = 0
                 if cursor_row != self._scroll_region_bottom - 1:
                     self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
+                    cursor_row += 1
                 else:
                     self._scroll_up(1)
 
