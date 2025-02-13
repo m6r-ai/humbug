@@ -599,7 +599,9 @@ class TerminalWidget(QAbstractScrollArea):
                     self._application_cursor_keys = set_mode
                 elif mode == 3:  # DECCOLM - 80/132 Column Mode
                     # In xterm this changes column count but for now we'll ignore
-                    pass
+                    self.clear()
+                    self._scroll_region_top = 0
+                    self._scroll_region_bottom = self._rows
                 elif mode == 6:  # DECOM - Origin Mode
                     self._origin_mode = set_mode
                     self._cursor_row = 0
