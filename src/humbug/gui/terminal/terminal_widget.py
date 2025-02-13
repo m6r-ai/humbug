@@ -991,14 +991,15 @@ class TerminalWidget(QAbstractScrollArea):
         start = len(self._lines) - self._rows + cursor_row
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
-        # Create new blank lines
-        new_lines = []
-        for _ in range(count):
-            new_lines.append(self._get_new_line())
+        # Clip the count
+        count = min(count, end - start)
 
-        # Insert new lines and remove excess
-        self._lines[start:start] = new_lines
-        self._lines[end:end + count] = []
+        # Insert blank lines at the cursor and delete them at the end of the scrolling region
+        for _ in range(count):
+            self._lines.insert(start, self._get_new_line())
+            del self._lines[end]
+
+        self._cursor_col = 0
 
     def _delete_lines(self, count: int) -> None:
         """Delete lines at cursor position."""
@@ -1010,10 +1011,15 @@ class TerminalWidget(QAbstractScrollArea):
         start = len(self._lines) - self._rows + cursor_row
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
-        # Remove lines and add blank lines at bottom
-        del self._lines[start:min(start + count, end)]
+        # Clip the count
+        count = min(count, end - start)
+
+        # Insert blank lines at the end of the scrolling region and remove them at the cursor
         for _ in range(count):
             self._lines.insert(end, self._get_new_line())
+            del self._lines[start]
+
+        self._cursor_col = 0
 
     def _insert_chars(self, count: int) -> None:
         """Insert blank characters at cursor position."""
@@ -1060,16 +1066,21 @@ class TerminalWidget(QAbstractScrollArea):
         start = len(self._lines) - self._rows + self._scroll_region_top
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
-        # Remove lines from top and add blank lines at bottom
+        # Insert blank lines at the bottom of the scrolling region and remove lines from the top
         for _ in range(count):
-            if self._scroll_region_top != 0:
+            self._lines.insert(end, self._get_new_line())
+
+            # If we're using the main screen and the scrolling region top is the top of the screen
+            # the we don't actually delete anything, we simply let the scrolled line roll into
+            # the history buffer
+            if self._using_alternate_screen or self._scroll_region_top != 0:
                 scrolled_line = self._lines.pop(start)
-                self._lines.insert(len(self._lines) - self._rows + 1, scrolled_line)
+                if not self._using_alternate_screen:
+                    self._lines.insert(len(self._lines) - self._rows, scrolled_line)
 
-            line = self._get_new_line()
-            self._lines.insert(end, line)
-
-        self._update_scrollbar()
+        # If we made our history longer then we need to update the scrollbar position
+        if not self._using_alternate_screen:
+            self._update_scrollbar()
 
     def _scroll_down(self, count: int) -> None:
         """Scroll down within current scroll region."""
@@ -1077,19 +1088,10 @@ class TerminalWidget(QAbstractScrollArea):
         start = len(self._lines) - self._rows + self._scroll_region_top
         end = len(self._lines) - self._rows + self._scroll_region_bottom
 
-        for i in range(len(self._lines)):
-            ch, _a, _b, _c = self._lines[i].get_character(0)
-            print(f"b {i + 1}: {ch}")
-
-        # Remove lines from bottom and add blank lines at top
+        # Insert blank lines at the top of the scrolling region and remove lines from the bottom
         for _ in range(count):
-            del self._lines[end - 1]
-            line = self._get_new_line()
-            self._lines.insert(start, line)
-
-        for i in range(len(self._lines)):
-            ch, _a, _b, _c = self._lines[i].get_character(0)
-            print(f"a {i + 1}: {ch}")
+            self._lines.insert(start, self._get_new_line())
+            del self._lines[end]
 
     def _write_char(self, char: str) -> None:
         """Write a single character at the current cursor position."""
