@@ -1179,6 +1179,13 @@ class TerminalWidget(QAbstractScrollArea):
                     self._write_char(char)
                     continue
 
+                # If we find another escape character then this suggests we've just seen something we
+                # didn't understand.  We'll log it and move on
+                if char == '\x1b':
+                    self._logger.warning(f"Unknown escape sequence - discarding: {repr(self._escape_seq_buffer)}")
+                    print(f"Unknown escape sequence - discarding: {repr(self._escape_seq_buffer)}")
+                    self._escape_seq_buffer = ""
+
                 self._escape_seq_buffer += char
 
                 # Process escape sequence when complete
