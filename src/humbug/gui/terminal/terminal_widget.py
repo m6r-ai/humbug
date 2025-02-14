@@ -1,11 +1,8 @@
 """Terminal widget implementation."""
 
-import array
 import base64
 from dataclasses import dataclass
-from enum import Flag, auto
 import logging
-import struct
 from typing import List, Optional, Tuple
 
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
@@ -18,114 +15,10 @@ from PySide6.QtGui import (
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.terminal.terminal_line import CharacterAttributes, TerminalLine
+from humbug.gui.terminal.terminal_selection import TerminalSelection
+from humbug.gui.terminal.terminal_size import TerminalSize
 from humbug.language.language_manager import LanguageManager
-
-
-@dataclass
-class TerminalSize:
-    """Terminal size in rows and columns."""
-    rows: int
-    cols: int
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, TerminalSize):
-            return False
-        return self.rows == other.rows and self.cols == other.cols
-
-    def to_struct(self) -> bytes:
-        """
-        Convert terminal size to struct format for TIOCSWINSZ.
-
-        Returns:
-            bytes: Packed struct in format suitable for TIOCSWINSZ ioctl
-        """
-        return struct.pack('HHHH', self.rows, self.cols, 0, 0)
-
-
-class CharacterAttributes(Flag):
-    """Bit flags for character attributes."""
-    NONE = 0
-    BOLD = auto()
-    ITALIC = auto()
-    UNDERLINE = auto()
-    STRIKE = auto()
-    HIDDEN = auto()
-    BLINK = auto()
-    INVERSE = auto()
-    DIM = auto()
-    CUSTOM_FG = auto()
-    CUSTOM_BG = auto()
-
-
-class TerminalLine:
-    """Fixed-width line of terminal characters."""
-    def __init__(self, width: int):
-        """Initialize empty line with given width."""
-        self.width = width
-        # For each character cell we store:
-        # - Unicode codepoint (4 bytes)
-        # - Attributes flags (4 bytes)
-        # - FG color (4 bytes)
-        # - BG color (4 bytes)
-        self.data = array.array('L', [0] * (width * 4))
-
-    def set_character(
-        self,
-        index: int,
-        char: str,
-        attributes: CharacterAttributes = CharacterAttributes.NONE,
-        fg_color: Optional[int] = None,
-        bg_color: Optional[int] = None
-    ):
-        """Set character and attributes at position."""
-        if 0 <= index < self.width:
-            base = index * 4
-            self.data[base] = ord(char)
-            self.data[base + 1] = attributes.value
-            self.data[base + 2] = fg_color if fg_color is not None else 0
-            self.data[base + 3] = bg_color if bg_color is not None else 0
-
-    def get_character(self, index: int) -> Tuple[str, CharacterAttributes, Optional[int], Optional[int]]:
-        """Get character and attributes at position."""
-        if 0 <= index < self.width:
-            base = index * 4
-            char = chr(self.data[base])
-            attributes = CharacterAttributes(self.data[base + 1])
-            fg_color = self.data[base + 2] if self.data[base + 2] != 0 else None
-            bg_color = self.data[base + 3] if self.data[base + 3] != 0 else None
-            return (char, attributes, fg_color, bg_color)
-        return (' ', CharacterAttributes.NONE, None, None)
-
-
-@dataclass
-class TerminalSelection:
-    """Represents a selection in the terminal."""
-    start_row: int
-    start_col: int
-    end_row: int
-    end_col: int
-
-    def is_empty(self) -> bool:
-        """Check if selection is empty."""
-        return (
-            self.start_row == self.end_row and
-            self.start_col == self.end_col
-        )
-
-    def normalize(self) -> 'TerminalSelection':
-        """Return normalized selection (start before end)."""
-        if (
-            (self.start_row > self.end_row) or
-            (self.start_row == self.end_row and self.start_col > self.end_col)
-        ):
-            return TerminalSelection(
-                self.end_row,
-                self.end_col,
-                self.start_row,
-                self.start_col
-            )
-
-        return self
 
 
 class TerminalWidget(QAbstractScrollArea):
