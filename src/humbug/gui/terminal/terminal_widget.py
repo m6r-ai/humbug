@@ -607,6 +607,15 @@ class TerminalWidget(QAbstractScrollArea):
             buffer.cursor.col = min(buffer.cols - 1, max(0, col - 1))
             buffer.cursor.delayed_wrap = False
 
+        elif code == 'g':  # TBC - Tab clear
+            params = [int(p) if p.isdigit() else 0 for p in sequence[2:-1].split(';')] if sequence[2:-1] else [0]
+            mode = params[0] if params else 0
+
+            if mode == 0:  # Clear tab stop at current position
+                buffer.tab_stops.clear_tab_stop(buffer.cursor.col)
+            elif mode == 3:  # Clear all tab stops
+                buffer.tab_stops.clear_all_tab_stops()
+
         elif code == 'm':  # SGR - Select Graphic Rendition
             self._process_sgr(params)
 
@@ -701,6 +710,10 @@ class TerminalWidget(QAbstractScrollArea):
                 else:
                     self._scroll_up(1)
                 buffer.cursor.delayed_wrap = False
+
+            # Add handling for tab stop sequences
+            elif code == 'H':  # HTS - Set tab stop at current position
+                buffer.tab_stops.set_tab_stop(buffer.cursor.col)
 
             elif code == 'M':  # Reverse Index
                 cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
@@ -879,9 +892,15 @@ class TerminalWidget(QAbstractScrollArea):
                 self._scroll_up(1)
 
         if char == '\t':
-            # Move to next tab stop (every 8 columns)
-            spaces = 8 - (buffer.cursor.col % 8)
-            buffer.cursor.col = min(buffer.cursor.col + spaces, buffer.cols - 1)
+            # Get next tab stop
+            next_stop = buffer.tab_stops.get_next_tab_stop(buffer.cursor.col)
+            if next_stop is not None:
+                # Move to tab stop
+                buffer.cursor.col = next_stop
+            else:
+                # Move to end of line if no more stops
+                buffer.cursor.col = buffer.cols - 1
+
             return
 
         # Handle printable characters

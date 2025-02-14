@@ -1,7 +1,7 @@
 """Terminal buffer state management."""
 
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple, Set
 
 from humbug.gui.terminal.terminal_line import CharacterAttributes, TerminalLine
 
@@ -53,6 +53,102 @@ class MouseTrackingState:
 
 
 @dataclass
+class TabStopState:
+    """State of terminal tab stops."""
+    # Default tab stop width (8 characters)
+    DEFAULT_TAB_WIDTH = 8
+
+    # Width of terminal in columns
+    cols: int
+
+    # Set of custom tab stop positions (column numbers)
+    # Empty set means using default tab stops every 8 chars
+    custom_stops: Set[int] = field(default_factory=set)
+
+    def __init__(self, cols: int):
+        """
+        Initialize tab stop state.
+
+        Args:
+            cols: Width of terminal in columns
+        """
+        self.cols = cols
+        self.custom_stops = set()
+
+    def copy_tab_stops(self) -> 'TabStopState':
+        """
+        Create a deep copy of tab stops state.
+
+        Returns:
+            A new TabStopState with copied data
+        """
+        new_state = TabStopState(cols=self.cols)
+        new_state.custom_stops = self.custom_stops.copy()
+        return new_state
+
+    def set_tab_stop(self, col: int) -> None:
+        """
+        Set a tab stop at the specified column.
+
+        Args:
+            col: Column number for tab stop
+        """
+        if 0 <= col < self.cols:
+            self.custom_stops.add(col)
+
+    def clear_tab_stop(self, col: int) -> None:
+        """
+        Clear tab stop at specified column.
+
+        Args:
+            col: Column number to clear
+        """
+        self.custom_stops.discard(col)
+
+    def clear_all_tab_stops(self) -> None:
+        """Clear all custom tab stops."""
+        self.custom_stops.clear()
+
+    def get_next_tab_stop(self, current_col: int) -> Optional[int]:
+        """
+        Get next tab stop position from current column.
+
+        Args:
+            current_col: Current column position
+
+        Returns:
+            Next tab stop position or None if at end of line
+        """
+        if current_col >= self.cols - 1:
+            return None
+
+        # If using custom tab stops
+        if self.custom_stops:
+            # Find next custom stop after current position
+            next_stops = [col for col in self.custom_stops if col > current_col]
+            if next_stops:
+                return min(next_stops)
+            return None
+
+        # Using default tab stops every 8 chars
+        next_stop = ((current_col // self.DEFAULT_TAB_WIDTH) + 1) * self.DEFAULT_TAB_WIDTH
+        if next_stop >= self.cols:
+            return None
+        return next_stop
+
+    def resize(self, new_cols: int) -> None:
+        """
+        Handle terminal resize.
+
+        Args:
+            new_cols: New width in columns
+        """
+        # Remove any custom stops beyond new width
+        self.custom_stops = {col for col in self.custom_stops if col < new_cols}
+        self.cols = new_cols
+
+
+@dataclass
 class TerminalBufferSnapshot:
     """Snapshot of terminal buffer state."""
     lines: List[TerminalLine]
@@ -61,6 +157,7 @@ class TerminalBufferSnapshot:
     scroll_region: ScrollRegion
     modes: OperatingModes
     mouse_tracking: MouseTrackingState
+    tab_stops: TabStopState
     focus_tracking: bool
     scroll_value: int
 
@@ -89,6 +186,7 @@ class TerminalBuffer:
         self.scroll_region = ScrollRegion(bottom=rows, rows=rows)
         self.modes = OperatingModes()
         self.mouse_tracking = MouseTrackingState()
+        self.tab_stops = TabStopState(cols)
         self.focus_tracking = False
         self.scroll_value = 0
 
@@ -155,7 +253,6 @@ class TerminalBuffer:
         self.scroll_region.bottom = min(
             self.scroll_region.bottom + new_rows - old_rows, new_rows
         )
-        print(f"update bottom {self.scroll_region.bottom} {old_rows} {new_rows}")
 
         # Ensure minimum scroll region size of 2 lines
         if self.scroll_region.bottom < self.scroll_region.top + 1:
@@ -165,6 +262,8 @@ class TerminalBuffer:
             )
 
         self.scroll_region.rows = self.scroll_region.bottom - self.scroll_region.top
+
+        self.tab_stops.resize(new_cols)
 
     def clear(self) -> None:
         """Clear the buffer contents."""
@@ -214,6 +313,7 @@ class TerminalBuffer:
                 utf8_mode=self.mouse_tracking.utf8_mode,
                 sgr_mode=self.mouse_tracking.sgr_mode
             ),
+            tab_stops=self.tab_stops.copy_tab_stops(),
             focus_tracking=self.focus_tracking,
             scroll_value=self.scroll_value
         )
@@ -231,5 +331,6 @@ class TerminalBuffer:
         self.scroll_region = snapshot.scroll_region
         self.modes = snapshot.modes
         self.mouse_tracking = snapshot.mouse_tracking
+        self.tab_stops = snapshot.tab_stops
         self.focus_tracking = snapshot.focus_tracking
         self.scroll_value = snapshot.scroll_value
