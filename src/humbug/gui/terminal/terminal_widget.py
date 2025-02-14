@@ -196,6 +196,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Cursor state
         self._cursor_row = 0
         self._cursor_col = 0
+        self._cursor_delayed_wrap = False
         self._cursor_visible = True
         self._cursor_blink = True
         self._saved_cursor = None  # For save/restore cursor position
@@ -575,6 +576,7 @@ class TerminalWidget(QAbstractScrollArea):
             self._add_new_lines(self._rows)
             self._cursor_row = 0
             self._cursor_col = 0
+            self._cursor_delayed_wrap = False
 
         else:
             # Restore main screen
@@ -609,6 +611,7 @@ class TerminalWidget(QAbstractScrollArea):
                     self._origin_mode = set_mode
                     self._cursor_row = 0
                     self._cursor_col = 0
+                    self._cursor_delayed_wrap = False
                 elif mode == 7:  # DECAWM - Auto-wrap Mode
                     self._auto_wrap = set_mode
                 elif mode == 12:  # att610 - Start/Stop Blinking Cursor
@@ -761,6 +764,7 @@ class TerminalWidget(QAbstractScrollArea):
             param = sequence[2:-1]
             amount = max(1, int(param)) if param.isdigit() else 1
             self._cursor_row = max(0, self._cursor_row - amount)
+            self._cursor_delayed_wrap = False
             print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
 
         elif code == 'B':  # Down
@@ -768,24 +772,28 @@ class TerminalWidget(QAbstractScrollArea):
             amount = max(1, int(param)) if param.isdigit() else 1
             max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
             self._cursor_row = min(max_rows - 1, self._cursor_row + amount)
+            self._cursor_delayed_wrap = False
             print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
 
         elif code == 'C':  # Forward
             param = sequence[2:-1]
             amount = max(1, int(param)) if param.isdigit() else 1
             self._cursor_col = min(self._cols - 1, self._cursor_col + amount)
+            self._cursor_delayed_wrap = False
             print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
 
         elif code == 'D':  # Backward
             param = sequence[2:-1]
             amount = max(1, int(param)) if param.isdigit() else 1
             self._cursor_col = max(0, self._cursor_col - amount)
+            self._cursor_delayed_wrap = False
             print(f"csr at {self._cursor_row},{self._cursor_col} {amount}")
 
         elif code == 'G':  # CHA - Cursor Horizontal Absolute
             param = sequence[2:-1]
             col = max(0, int(param) - 1) if param.isdigit() else 1  # Convert 1-based to 0-based
             self._cursor_col = min(col, self._cols - 1)
+            self._cursor_delayed_wrap = False
 
         elif code == 'H':  # Cursor position
             pos = sequence[2:-1].split(';')
@@ -794,6 +802,7 @@ class TerminalWidget(QAbstractScrollArea):
             max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
             self._cursor_row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
             self._cursor_col = min(self._cols - 1, max(0, col - 1))
+            self._cursor_delayed_wrap = False
 
         elif code == 'J':  # Clear screen
             param = sequence[2:-1]
@@ -875,6 +884,7 @@ class TerminalWidget(QAbstractScrollArea):
             row = max(0, int(param) - 1) if param.isdigit() else 1 # Convert 1-based to 0-based
             max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
             self._cursor_row = min(row, max_rows - 1)
+            self._cursor_delayed_wrap = False
 
         elif code == 'f':  # HVP - Horizontal & Vertical Position
             pos = sequence[2:-1].split(';')
@@ -883,6 +893,7 @@ class TerminalWidget(QAbstractScrollArea):
             max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
             self._cursor_row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
             self._cursor_col = min(self._cols - 1, max(0, col - 1))
+            self._cursor_delayed_wrap = False
 
         elif code == 'm':  # SGR - Select Graphic Rendition
             params = sequence[2:-1].split(';')
@@ -965,14 +976,19 @@ class TerminalWidget(QAbstractScrollArea):
                     self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
                 else:
                     self._scroll_up(1)
+
+                self._cursor_delayed_wrap = False
             elif code == 'E':  # Next Line
                 self._cursor_col = 0
+                self._cursor_delayed_wrap = False
                 cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
                 if cursor_row != self._scroll_region_bottom - 1:
                     max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
                     self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
                 else:
                     self._scroll_up(1)
+
+                self._cursor_delayed_wrap = False
 
             elif code == 'M':  # Reverse Index
                 cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
@@ -981,6 +997,10 @@ class TerminalWidget(QAbstractScrollArea):
                 else:
                     self._scroll_down(1)
 
+                self._cursor_delayed_wrap = False
+
+            print(f"Unknown simple ESC sequence: {repr(sequence)}")
+            self._logger.warning(f"Unknown simple ESC sequence: {repr(sequence)}")
             return
 
         print(f"Unknown ESC sequence: {repr(sequence)}")
@@ -1005,6 +1025,7 @@ class TerminalWidget(QAbstractScrollArea):
             del self._lines[end]
 
         self._cursor_col = 0
+        self._cursor_delayed_wrap = False
 
     def _delete_lines(self, count: int) -> None:
         """Delete lines at cursor position."""
@@ -1025,6 +1046,7 @@ class TerminalWidget(QAbstractScrollArea):
             del self._lines[start]
 
         self._cursor_col = 0
+        self._cursor_delayed_wrap = False
 
     def _insert_chars(self, count: int) -> None:
         """Insert blank characters at cursor position."""
@@ -1103,8 +1125,11 @@ class TerminalWidget(QAbstractScrollArea):
         cursor_row = self._cursor_row if not self._origin_mode else self._cursor_row + self._scroll_region_top
         max_rows = self._rows if not self._origin_mode else self._scroll_region_rows
 
+        print(f"write char: {repr(char)}")
+
         if char == '\r':
             self._cursor_col = 0
+            self._cursor_delayed_wrap = False
             return
 
         if char in '\n\f\v':
@@ -1113,11 +1138,25 @@ class TerminalWidget(QAbstractScrollArea):
             else:
                 self._scroll_up(1)
 
+            self._cursor_delayed_wrap = False
             return
 
         if char == '\b':
             self._cursor_col = max(0, self._cursor_col - 1)
+            self._cursor_delayed_wrap = False
+            print(f"new col: {self._cursor_col}")
             return
+
+        # From this point on we're dealing with "printable" characters and we should now handle
+        # delayed wrapping
+        if self._cursor_delayed_wrap:
+            self._cursor_col = 0
+            self._cursor_delayed_wrap = False
+            if cursor_row != self._scroll_region_bottom - 1:
+                self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
+                cursor_row += 1
+            else:
+                self._scroll_up(1)
 
         if char == '\t':
             # Move to next tab stop (every 8 columns)
@@ -1127,18 +1166,10 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle printable characters
         if ord(char) >= 32:
-            # Are we trying to write past the end of the line?  If yes then wrap around
-            if self._cursor_col >= self._cols:
-                self._cursor_col = 0
-                if cursor_row != self._scroll_region_bottom - 1:
-                    self._cursor_row = min(self._cursor_row + 1, max_rows - 1)
-                    cursor_row += 1
-                else:
-                    self._scroll_up(1)
-
             line_index = len(self._lines) - self._rows + cursor_row
             line = self._lines[line_index]
 
+            print(f"wc: {self._cursor_row},{self._cursor_col}: {char}")
             # Write character
             line.set_character(
                 self._cursor_col,
@@ -1148,8 +1179,13 @@ class TerminalWidget(QAbstractScrollArea):
                 self._current_bg if self._current_attributes & CharacterAttributes.CUSTOM_BG else None
             )
 
-            # Move cursor
-            self._cursor_col += 1
+            # Move cursor, but handle the special case of writing in the last column.  If we write in the
+            # last column we don't move the cursor but set a "delayed wrap" flag that will trigger a
+            # wrap around on the next printable character being written to the terminal.
+            if self._cursor_col == self._cols - 1:
+                self._cursor_delayed_wrap = True
+            else:
+                self._cursor_col += 1
 
     def put_data(self, data: bytes) -> None:
         """Display received data with ANSI sequence handling.
@@ -1774,5 +1810,6 @@ class TerminalWidget(QAbstractScrollArea):
         self._add_new_lines(self._rows)
         self._cursor_row = 0
         self._cursor_col = 0
+        self._cursor_delayed_wrap = False
         self._clear_selection()
         self.viewport().update()
