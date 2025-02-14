@@ -429,6 +429,30 @@ class TerminalWidget(QAbstractScrollArea):
             elif param == 9:  # Strike
                 buffer.attributes.current |= CharacterAttributes.STRIKE
 
+            elif param == 21:  # Normal intensity (not bold)
+                buffer.attributes.current &= ~CharacterAttributes.BOLD
+
+            elif param == 22:  # Normal intensity (not bold and not dim)
+                buffer.attributes.current &= ~(CharacterAttributes.BOLD | CharacterAttributes.DIM)
+
+            elif param == 23:  # Not italic
+                buffer.attributes.current &= ~CharacterAttributes.ITALIC
+
+            elif param == 24:  # Not underlined
+                buffer.attributes.current &= ~CharacterAttributes.UNDERLINE
+
+            elif param == 25:  # Not blinking
+                buffer.attributes.current &= ~CharacterAttributes.BLINK
+
+            elif param == 27:  # Not inverse
+                buffer.attributes.current &= ~CharacterAttributes.INVERSE
+
+            elif param == 28:  # Not hidden
+                buffer.attributes.current &= ~CharacterAttributes.HIDDEN
+
+            elif param == 29:  # Not strike
+                buffer.attributes.current &= ~CharacterAttributes.STRIKE
+
             elif 30 <= param <= 37:  # Standard foreground color
                 buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
                 color_role = self._ansi_colors[param - 30]
@@ -1285,20 +1309,28 @@ class TerminalWidget(QAbstractScrollArea):
         fm: QFontMetrics
     ) -> None:
         """Draw a single character cell with attributes."""
-        # Handle inverse video by swapping colors
-        if attributes & CharacterAttributes.INVERSE:
-            if fg_color is not None or bg_color is not None:
-                fg_color, bg_color = bg_color, fg_color
-            else:
-                fg_color, bg_color = self._default_bg, self._default_fg
+        # Determine initial colors, considering custom and default colors
+        fg = (QColor(fg_color) if fg_color is not None and (attributes & CharacterAttributes.CUSTOM_FG)
+            else QColor(self._default_fg))
+        bg = (QColor(bg_color) if bg_color is not None and (attributes & CharacterAttributes.CUSTOM_BG)
+            else QColor(self._default_bg))
 
-        # Draw background
-        bg = QColor(bg_color) if bg_color is not None and (attributes & CharacterAttributes.CUSTOM_BG) else QColor(self._default_bg)
-        painter.fillRect(QRect(x, y, char_width, char_height), bg)
+        # Handle inverse video by swapping foreground and background colors
+        if attributes & CharacterAttributes.INVERSE:
+            fg, bg = bg, fg
 
         # Handle hidden text by using background color for foreground
         if attributes & CharacterAttributes.HIDDEN:
-            fg_color = bg_color if bg_color is not None else self._default_bg
+            fg = QColor(bg)
+
+        # Draw background
+        painter.fillRect(QRect(x, y, char_width, char_height), bg)
+
+        # Handle dim text by using alpha channel
+        if attributes & CharacterAttributes.DIM:
+            fg.setAlpha(128)  # 50% opacity
+
+        painter.setPen(fg)
 
         # Set up font attributes
         font = painter.font()
@@ -1306,16 +1338,6 @@ class TerminalWidget(QAbstractScrollArea):
         font.setItalic(bool(attributes & CharacterAttributes.ITALIC))
         font.setUnderline(bool(attributes & CharacterAttributes.UNDERLINE))
         font.setStrikeOut(bool(attributes & CharacterAttributes.STRIKE))
-
-        # Handle dim text by using alpha channel
-        if attributes & CharacterAttributes.DIM:
-            fg = QColor(fg_color) if fg_color is not None and (attributes & CharacterAttributes.CUSTOM_FG) else QColor(self._default_fg)
-            fg.setAlpha(128)  # 50% opacity
-            painter.setPen(fg)
-        else:
-            fg = QColor(fg_color) if fg_color is not None and (attributes & CharacterAttributes.CUSTOM_FG) else QColor(self._default_fg)
-            painter.setPen(fg)
-
         painter.setFont(font)
 
         # Draw the character if it's not blinking or if it's in the visible blink phase
