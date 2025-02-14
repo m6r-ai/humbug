@@ -63,6 +63,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._current_directory = None
         self._escape_seq_buffer = ""
         self._in_escape_seq = False
+        self._screen_reverse_mode = False
 
         self._mouse_tracking = MouseTrackingState()
 
@@ -347,6 +348,9 @@ class TerminalWidget(QAbstractScrollArea):
                     buffer.scroll_region.rows = buffer.rows
                     self._update_scrollbar()
                     self.viewport().update()
+                elif mode == 5:  # DECSCNM - Screen Mode (Reverse)
+                    self._screen_reverse_mode = set_mode
+                    self.viewport().update()  # Force redraw with new colors
                 elif mode == 6:  # DECOM - Origin Mode
                     buffer.modes.origin = set_mode
                     buffer.cursor.row = 0
@@ -402,6 +406,9 @@ class TerminalWidget(QAbstractScrollArea):
                             buffer.modes.origin = origin
                 elif mode == 2004:  # Bracketed paste mode
                     buffer.modes.bracketed_paste = set_mode
+                else:
+                    print(f"Unknown PM operation {mode}")
+                    self._logger.warning(f"Unknown PM operation {mode}")
         except ValueError as e:
             self._logger.warning(f"Invalid private mode parameter: {params}")
 
@@ -1329,6 +1336,10 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle inverse video by swapping foreground and background colors
         if attributes & CharacterAttributes.INVERSE:
+            fg, bg = bg, fg
+
+        # Handle global screen reverse mode - swap colors if enabled
+        if self._screen_reverse_mode:
             fg, bg = bg, fg
 
         # Handle hidden text by using background color for foreground
