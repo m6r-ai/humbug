@@ -735,7 +735,22 @@ class TerminalWidget(QAbstractScrollArea):
             code = sequence[1]
             buffer = self._current_buffer
             print(f"ESC code {code}: {repr(sequence)}")
-            if code == 'D':  # Index
+            if code == '7':  # ESC 7 - Save Cursor
+                buffer = self._current_buffer
+                buffer.cursor.saved_position = (
+                    buffer.cursor.row,
+                    buffer.cursor.col,
+                    buffer.cursor.delayed_wrap,
+                    buffer.modes.origin
+                )
+
+            elif code == '8':  # ESC 8 - Restore Cursor
+                buffer = self._current_buffer
+                if buffer.cursor.saved_position:
+                    buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
+                    buffer.modes.origin = origin
+
+            elif code == 'D':  # Index
                 cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
                 if cursor_row != buffer.scroll_region.bottom - 1:
                     max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
@@ -1049,7 +1064,8 @@ class TerminalWidget(QAbstractScrollArea):
             return len(sequence) == 3
 
         # Simple ESC sequences
-        return len(sequence) == 2 and sequence[1] in '=>\7\\8cDEHM'
+        return len(sequence) == 2 and sequence[1] in '78DEHM'
+
     def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
         """Convert pixel coordinates to text position.
 
