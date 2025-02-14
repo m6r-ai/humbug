@@ -44,15 +44,6 @@ class OperatingModes:
 
 
 @dataclass
-class MouseTrackingState:
-    """Mouse tracking configuration."""
-    enabled: bool = False
-    mode: int = 0  # 0=off, 1000=normal, 1002=button, 1003=any
-    utf8_mode: bool = False
-    sgr_mode: bool = False
-
-
-@dataclass
 class TabStopState:
     """State of terminal tab stops."""
     # Default tab stop width (8 characters)
@@ -156,7 +147,6 @@ class TerminalBufferSnapshot:
     attributes: AttributeState
     scroll_region: ScrollRegion
     modes: OperatingModes
-    mouse_tracking: MouseTrackingState
     tab_stops: TabStopState
     focus_tracking: bool
     scroll_value: int
@@ -185,7 +175,6 @@ class TerminalBuffer:
         self.attributes = AttributeState()
         self.scroll_region = ScrollRegion(bottom=rows, rows=rows)
         self.modes = OperatingModes()
-        self.mouse_tracking = MouseTrackingState()
         self.tab_stops = TabStopState(cols)
         self.focus_tracking = False
         self.scroll_value = 0
@@ -307,12 +296,6 @@ class TerminalBuffer:
                 application_cursor=self.modes.application_cursor,
                 bracketed_paste=self.modes.bracketed_paste
             ),
-            mouse_tracking=MouseTrackingState(
-                enabled=self.mouse_tracking.enabled,
-                mode=self.mouse_tracking.mode,
-                utf8_mode=self.mouse_tracking.utf8_mode,
-                sgr_mode=self.mouse_tracking.sgr_mode
-            ),
             tab_stops=self.tab_stops.copy_tab_stops(),
             focus_tracking=self.focus_tracking,
             scroll_value=self.scroll_value
@@ -330,7 +313,6 @@ class TerminalBuffer:
         self.attributes = snapshot.attributes
         self.scroll_region = snapshot.scroll_region
         self.modes = snapshot.modes
-        self.mouse_tracking = snapshot.mouse_tracking
         self.tab_stops = snapshot.tab_stops
         self.focus_tracking = snapshot.focus_tracking
         self.scroll_value = snapshot.scroll_value

@@ -1,6 +1,7 @@
 """Terminal widget implementation."""
 
 import base64
+from dataclasses import dataclass
 import logging
 from typing import Optional, Tuple
 
@@ -18,6 +19,15 @@ from humbug.gui.terminal.terminal_buffer import TerminalBuffer, CharacterAttribu
 from humbug.gui.terminal.terminal_selection import TerminalSelection
 from humbug.gui.terminal.terminal_size import TerminalSize
 from humbug.language.language_manager import LanguageManager
+
+
+@dataclass
+class MouseTrackingState:
+    """Mouse tracking configuration."""
+    enabled: bool = False
+    mode: int = 0  # 0=off, 1000=normal, 1002=button, 1003=any
+    utf8_mode: bool = False
+    sgr_mode: bool = False
 
 
 class TerminalWidget(QAbstractScrollArea):
@@ -53,6 +63,8 @@ class TerminalWidget(QAbstractScrollArea):
         self._current_directory = None
         self._escape_seq_buffer = ""
         self._in_escape_seq = False
+
+        self._mouse_tracking = MouseTrackingState()
 
         # Default colors
         self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
@@ -347,20 +359,20 @@ class TerminalWidget(QAbstractScrollArea):
                 elif mode == 25:  # DECTCEM - Text Cursor Enable Mode
                     buffer.cursor.visible = set_mode
                 elif mode == 1000:  # X11 mouse reporting - normal tracking mode
-                    buffer.mouse_tracking.enabled = set_mode
-                    buffer.mouse_tracking.mode = 1000 if set_mode else 0
+                    self._mouse_tracking.enabled = set_mode
+                    self._mouse_tracking.mode = 1000 if set_mode else 0
                 elif mode == 1002:  # X11 mouse reporting - button event tracking
-                    buffer.mouse_tracking.enabled = set_mode
-                    buffer.mouse_tracking.mode = 1002 if set_mode else 0
+                    self._mouse_tracking.enabled = set_mode
+                    self._mouse_tracking.mode = 1002 if set_mode else 0
                 elif mode == 1003:  # X11 mouse reporting - any event tracking
-                    buffer.mouse_tracking.enabled = set_mode
-                    buffer.mouse_tracking.mode = 1003 if set_mode else 0
+                    self._mouse_tracking.enabled = set_mode
+                    self._mouse_tracking.mode = 1003 if set_mode else 0
                 elif mode == 1004:  # Send focus in/out events
                     buffer.focus_tracking = set_mode
                 elif mode == 1005:  # UTF-8 mouse mode
-                    buffer.mouse_tracking.utf8_mode = set_mode
+                    self._mouse_tracking.utf8_mode = set_mode
                 elif mode == 1006:  # SGR mouse mode
-                    buffer.mouse_tracking.sgr_mode = set_mode
+                    self._mouse_tracking.sgr_mode = set_mode
                 elif mode == 1047:  # Use Alternate Screen Buffer
                     self._handle_alternate_screen(set_mode)
                 elif mode == 1048:  # Save/Restore cursor
@@ -1094,13 +1106,13 @@ class TerminalWidget(QAbstractScrollArea):
             self.viewport().update()
 
         # Handle mouse tracking if enabled
-        if buffer.mouse_tracking.enabled:
+        if self._mouse_tracking.enabled:
             pos = event.position().toPoint()
             button = event.button()
             row, col = self._pixel_pos_to_text_pos(pos)
 
             # Construct mouse report based on mode
-            if buffer.mouse_tracking.sgr_mode:
+            if self._mouse_tracking.sgr_mode:
                 report = self._make_sgr_mouse_report(row, col, button, True)
             else:
                 report = self._make_normal_mouse_report(row, col, button)
@@ -1117,12 +1129,12 @@ class TerminalWidget(QAbstractScrollArea):
             self._selecting = False
 
         # Handle mouse tracking if enabled
-        if buffer.mouse_tracking.enabled:
+        if self._mouse_tracking.enabled:
             pos = event.position().toPoint()
             button = event.button()
             row, col = self._pixel_pos_to_text_pos(pos)
 
-            if buffer.mouse_tracking.sgr_mode:
+            if self._mouse_tracking.sgr_mode:
                 report = self._make_sgr_mouse_report(row, col, button, False)
                 if report:
                     self.data_ready.emit(report.encode())
@@ -1142,12 +1154,12 @@ class TerminalWidget(QAbstractScrollArea):
                 self.viewport().update()
 
         # Handle mouse tracking if enabled and in button event mode (1002) or any event mode (1003)
-        if buffer.mouse_tracking.enabled and buffer.mouse_tracking.mode in (1002, 1003):
+        if self._mouse_tracking.enabled and self._mouse_tracking.mode in (1002, 1003):
             row, col = self._pixel_pos_to_text_pos(event.position().toPoint())
             buttons = event.buttons()
 
             # For 1002 mode, only report if buttons are pressed
-            if buffer.mouse_tracking.mode == 1002 and not buttons:
+            if self._mouse_tracking.mode == 1002 and not buttons:
                 return
 
             btn_num = 32  # Default to button release
@@ -1158,7 +1170,7 @@ class TerminalWidget(QAbstractScrollArea):
             elif buttons & Qt.RightButton:
                 btn_num = 34
 
-            if buffer.mouse_tracking.sgr_mode:
+            if self._mouse_tracking.sgr_mode:
                 report = f"\x1b[<{btn_num};{col + 1};{row + 1}M"
             else:
                 cb = 32 + btn_num
