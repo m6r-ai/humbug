@@ -137,78 +137,6 @@ class TerminalState:
         gray_value = 8 + (color_index - 232) * 10
         return (gray_value << 16) | (gray_value << 8) | gray_value
 
-    def _write_char(self, char: str) -> None:
-        """Write a single character at the current cursor position."""
-        buffer = self._current_buffer
-
-        if char == '\r':
-            buffer.cursor.col = 0
-            buffer.cursor.delayed_wrap = False
-            return
-
-        if char in '\n\f\v':
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            if cursor_row != buffer.scroll_region.bottom - 1:
-                max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-                buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
-                buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            else:
-                buffer.scroll_up(1)
-
-            buffer.cursor.delayed_wrap = False
-            return
-
-        if char == '\b':
-            buffer.cursor.col = max(0, buffer.cursor.col - 1)
-            buffer.cursor.delayed_wrap = False
-            return
-
-        # Handle delayed wrapping for printable characters
-        if buffer.cursor.delayed_wrap:
-            buffer.cursor.col = 0
-            buffer.cursor.delayed_wrap = False
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            if cursor_row != buffer.scroll_region.bottom - 1:
-                max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-                buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
-                buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-                cursor_row += 1
-            else:
-                buffer.scroll_up(1)
-
-        if char == '\t':
-            # Get next tab stop
-            next_stop = buffer.tab_stops.get_next_tab_stop(buffer.cursor.col)
-            if next_stop is not None:
-                # Move to tab stop
-                buffer.cursor.col = next_stop
-            else:
-                # Move to end of line if no more stops
-                buffer.cursor.col = buffer.cols - 1
-
-            return
-
-        # Handle printable characters
-        if ord(char) >= 32:
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            line_index = len(buffer.lines) - buffer.rows + cursor_row
-            line = buffer.lines[line_index]
-
-            # Write character
-            line.set_character(
-                buffer.cursor.col,
-                char,
-                buffer.attributes.current,
-                buffer.attributes.foreground if buffer.attributes.current & CharacterAttributes.CUSTOM_FG else None,
-                buffer.attributes.background if buffer.attributes.current & CharacterAttributes.CUSTOM_BG else None
-            )
-
-            # Handle cursor movement and wrapping
-            if buffer.cursor.col == buffer.cols - 1:
-                buffer.cursor.delayed_wrap = buffer.modes.auto_wrap
-            else:
-                buffer.cursor.col += 1
-
     def put_data(self, data: bytes) -> None:
         """
         Process received terminal data.
@@ -229,7 +157,7 @@ class TerminalState:
             if self._in_escape_seq:
                 # Handle escape sequence processing
                 if char in '\r\n\b\f\t\v':
-                    self._write_char(char)
+                    self._current_buffer.write_char(char)
                     continue
 
                 if char == '\x1b':
@@ -256,7 +184,7 @@ class TerminalState:
                 self._escape_seq_buffer = char
 
             else:
-                self._write_char(char)
+                self._current_buffer.write_char(char)
 
     def _is_escape_sequence_complete(self, sequence: str) -> bool:
         """

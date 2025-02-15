@@ -445,6 +445,78 @@ class TerminalBuffer:
             for col in range(cursor_col, min(cursor_col + count, self.cols)):
                 line.set_character(col, ' ')
 
+    def write_char(self, char: str) -> None:
+        """
+        Write a single character at the current cursor position and update cursor.
+
+        Args:
+            char: Character to write
+        """
+        # Handle delayed wrapping for printable characters
+        if self.cursor.delayed_wrap and ord(char) >= 32:
+            self.cursor.col = 0
+            self.cursor.delayed_wrap = False
+            cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
+            if cursor_row != self.scroll_region.bottom - 1:
+                max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
+                self.cursor.row = min(self.cursor.row + 1, max_rows - 1)
+                self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
+            else:
+                self.scroll_up(1)
+
+        # Get effective cursor row considering origin mode
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
+
+        # Handle different character types
+        if char == '\r':
+            self.cursor.col = 0
+            self.cursor.delayed_wrap = False
+            return
+
+        if char in '\n\f\v':
+            if cursor_row != self.scroll_region.bottom - 1:
+                max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
+                self.cursor.row = min(self.cursor.row + 1, max_rows - 1)
+                self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
+            else:
+                self.scroll_up(1)
+            self.cursor.delayed_wrap = False
+            return
+
+        if char == '\b':
+            self.cursor.col = max(0, self.cursor.col - 1)
+            self.cursor.delayed_wrap = False
+            return
+
+        if char == '\t':
+            next_stop = self.tab_stops.get_next_tab_stop(self.cursor.col)
+            if next_stop is not None:
+                self.cursor.col = next_stop
+            else:
+                self.cursor.col = self.cols - 1
+            return
+
+        # Handle printable characters
+        if ord(char) >= 32:
+            line_index = len(self.lines) - self.rows + cursor_row
+            if 0 <= line_index < len(self.lines):
+                line = self.lines[line_index]
+
+                # Write character with current attributes
+                line.set_character(
+                    self.cursor.col,
+                    char,
+                    self.attributes.current,
+                    self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None,
+                    self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+                )
+
+                # Update cursor position and handle wrapping
+                if self.cursor.col == self.cols - 1:
+                    self.cursor.delayed_wrap = self.modes.auto_wrap
+                else:
+                    self.cursor.col += 1
+
     def create_snapshot(self) -> 'TerminalBufferSnapshot':
         """
         Create a snapshot of the current buffer state.
