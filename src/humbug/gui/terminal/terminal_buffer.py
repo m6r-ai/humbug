@@ -445,6 +445,36 @@ class TerminalBuffer:
             for col in range(cursor_col, min(cursor_col + count, self.cols)):
                 line.set_character(col, ' ')
 
+    def move_cursor_up(self, amount: int) -> None:
+        """Move cursor up by specified amount."""
+        self.cursor.row = max(0, self.cursor.row - amount)
+        self.cursor.delayed_wrap = False
+
+    def move_cursor_down(self, amount: int) -> None:
+        """Move cursor down by specified amount."""
+        max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
+        self.cursor.row = min(max_rows - 1, self.cursor.row + amount)
+        self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
+        self.cursor.delayed_wrap = False
+
+    def move_cursor_forward(self, amount: int) -> None:
+        """Move cursor forward by specified amount."""
+        self.cursor.col = min(self.cols - 1, self.cursor.col + amount)
+        self.cursor.delayed_wrap = False
+
+    def move_cursor_back(self, amount: int) -> None:
+        """Move cursor back by specified amount."""
+        self.cursor.col = max(0, self.cursor.col - amount)
+        self.cursor.delayed_wrap = False
+
+    def set_cursor_position(self, row: int, col: int) -> None:
+        """Set absolute cursor position."""
+        max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
+        self.cursor.row = min(max_rows - 1, max(0, row))
+        self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
+        self.cursor.col = min(self.cols - 1, max(0, col))
+        self.cursor.delayed_wrap = False
+
     def write_char(self, char: str) -> None:
         """
         Write a single character at the current cursor position and update cursor.

@@ -475,21 +475,13 @@ class TerminalState:
         params = [int(p) if p.isdigit() else 0 for p in params_str.split(';')] if params_str else [0]
 
         if code == 'A':  # CUU - Cursor Up
-            amount = max(1, params[0])
-            buffer.cursor.row = max(0, buffer.cursor.row - amount)
-            buffer.cursor.delayed_wrap = False
+            buffer.move_cursor_up(max(1, params[0]))
 
         elif code == 'B':  # CUD - Cursor Down
-            amount = max(1, params[0])
-            max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-            buffer.cursor.row = min(max_rows - 1, buffer.cursor.row + amount)
-            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            buffer.cursor.delayed_wrap = False
+            buffer.move_cursor_down(max(1, params[0]))
 
         elif code == 'C':  # CUF - Cursor Forward
-            amount = max(1, params[0])
-            buffer.cursor.col = min(buffer.cols - 1, buffer.cursor.col + amount)
-            buffer.cursor.delayed_wrap = False
+            buffer.move_cursor_forward(max(1, params[0]))
 
         elif code == 'D':  # CUB - Cursor Back
             amount = max(1, params[0])
@@ -502,13 +494,9 @@ class TerminalState:
             buffer.cursor.delayed_wrap = False
 
         elif code == 'H':  # CUP - Cursor Position
-            row = params[0] if params else 1
-            col = params[1] if len(params) > 1 else 1
-            max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-            buffer.cursor.row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
-            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            buffer.cursor.col = min(buffer.cols - 1, max(0, col - 1))
-            buffer.cursor.delayed_wrap = False
+            row = params[0] - 1 if params else 0
+            col = params[1] - 1 if len(params) > 1 else 0
+            buffer.set_cursor_position(row, col)
 
         elif code == 'J':  # ED - Erase in Display
             mode = params[0] if params else 0
@@ -595,11 +583,7 @@ class TerminalState:
         elif code == 'f':  # HVP - Horizontal and Vertical Position
             row = params[0] if params else 1
             col = params[1] if len(params) > 1 else 1
-            max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-            buffer.cursor.row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
-            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            buffer.cursor.col = min(buffer.cols - 1, max(0, col - 1))
-            buffer.cursor.delayed_wrap = False
+            buffer.set_cursor_position(row, col)
 
         elif code == 'g':  # TBC - Tab clear
             mode = params[0] if params else 0
