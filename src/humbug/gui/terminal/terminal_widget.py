@@ -384,6 +384,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Set range and update scroll position if needed
         vbar = self.verticalScrollBar()
+        vbar.setPageStep(buffer.rows)
         old_at_bottom = vbar.value() == vbar.maximum()
         vbar.setRange(0, history_lines)
 
@@ -522,10 +523,6 @@ class TerminalWidget(QAbstractScrollArea):
             self._current_buffer = self._main_buffer
             self._alternate_buffer = None
 
-        # Update scrollbar for current buffer
-        self._update_scrollbar()
-        self.viewport().update()
-
     def _process_private_mode(self, params: str, set_mode: bool):
         """Handle DEC private mode sequences (DECSET/DECRST)."""
         buffer = self._current_buffer
@@ -542,11 +539,8 @@ class TerminalWidget(QAbstractScrollArea):
                     buffer.scroll_region.top = 0
                     buffer.scroll_region.bottom = buffer.rows
                     buffer.scroll_region.rows = buffer.rows
-                    self._update_scrollbar()
-                    self.viewport().update()
                 elif mode == 5:  # DECSCNM - Screen Mode (Reverse)
                     self._screen_reverse_mode = set_mode
-                    self.viewport().update()  # Force redraw with new colors
                 elif mode == 6:  # DECOM - Origin Mode
                     buffer.modes.origin = set_mode
                     buffer.cursor.row = 0
@@ -1099,10 +1093,6 @@ class TerminalWidget(QAbstractScrollArea):
                 if buffer != self._alternate_buffer:
                     buffer.lines.insert(len(buffer.lines) - buffer.rows, scrolled_line)
 
-        # Update scrollbar if history changed
-        if buffer == self._main_buffer:
-            self._update_scrollbar()
-
     def _scroll_down(self, count: int) -> None:
         """Scroll down within current scroll region."""
         buffer = self._current_buffer
@@ -1241,6 +1231,7 @@ class TerminalWidget(QAbstractScrollArea):
                 self._write_char(char)
 
         # Update the affected area
+        self._update_scrollbar()
         self.viewport().update()
 
     def _is_escape_sequence_complete(self, sequence: str) -> bool:
