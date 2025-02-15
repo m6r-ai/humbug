@@ -840,7 +840,7 @@ class TabManager(QWidget):
             return tab
 
         if state.type == TabType.TERMINAL:
-           return TerminalTab.restore_from_state(state, self)
+            return TerminalTab.restore_from_state(state, self)
 
         return None
 

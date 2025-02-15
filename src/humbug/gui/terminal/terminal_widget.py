@@ -3,7 +3,7 @@
 import base64
 from dataclasses import dataclass
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer
@@ -15,7 +15,7 @@ from PySide6.QtGui import (
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.terminal.terminal_buffer import TerminalBuffer, CharacterAttributes
+from humbug.gui.terminal.terminal_buffer import TerminalBuffer, CharacterAttributes, TerminalBufferSnapshot
 from humbug.gui.terminal.terminal_selection import TerminalSelection
 from humbug.language.language_manager import LanguageManager
 
@@ -102,8 +102,217 @@ class TerminalWidget(QAbstractScrollArea):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+    def _create_state_metadata(self) -> Dict:
+        """
+        Create metadata dictionary capturing widget state.
+
+        Returns:
+            Dictionary containing terminal widget state metadata
+        """
+        metadata = {}
+
+        # Capture main buffer state
+        metadata['main_buffer'] = self._serialize_buffer_snapshot(
+            self._current_buffer.create_snapshot()
+        )
+
+        # Capture alternate buffer state if it exists
+        if self._alternate_buffer:
+            metadata['alternate_buffer'] = self._serialize_buffer_snapshot(
+                self._alternate_buffer.create_snapshot()
+            )
+
+        # Capture terminal dimensions
+        rows, cols = self.get_terminal_size()
+        metadata['dimensions'] = {
+            'rows': rows,
+            'cols': cols
+        }
+
+        # Capture additional state
+        metadata['terminal_title'] = self._terminal_title
+        metadata['screen_reverse_mode'] = self._screen_reverse_mode
+        metadata['mouse_tracking'] = {
+            'enabled': self._mouse_tracking.enabled,
+            'mode': self._mouse_tracking.mode,
+            'utf8_mode': self._mouse_tracking.utf8_mode,
+            'sgr_mode': self._mouse_tracking.sgr_mode
+        }
+
+        # Capture current directory if set
+        if self._current_directory:
+            metadata['current_directory'] = self._current_directory
+
+        return metadata
+
+    def _serialize_buffer_snapshot(self, snapshot: TerminalBufferSnapshot) -> Dict:
+        """
+        Convert buffer snapshot to serializable dictionary.
+
+        Args:
+            snapshot: Buffer snapshot to serialize
+
+        Returns:
+            Dictionary containing serialized snapshot data
+        """
+        serialized = {
+            'cursor': {
+                'row': snapshot.cursor.row,
+                'col': snapshot.cursor.col,
+                'visible': snapshot.cursor.visible,
+                'blink': snapshot.cursor.blink,
+                'delayed_wrap': snapshot.cursor.delayed_wrap
+            },
+            'attributes': {
+                'current': snapshot.attributes.current.value,
+                'foreground': snapshot.attributes.foreground,
+                'background': snapshot.attributes.background
+            },
+            'scroll_region': {
+                'top': snapshot.scroll_region.top,
+                'bottom': snapshot.scroll_region.bottom,
+                'rows': snapshot.scroll_region.rows
+            },
+            'modes': {
+                'origin': snapshot.modes.origin,
+                'auto_wrap': snapshot.modes.auto_wrap,
+                'application_keypad': snapshot.modes.application_keypad,
+                'application_cursor': snapshot.modes.application_cursor,
+                'bracketed_paste': snapshot.modes.bracketed_paste
+            },
+            'history_scrollback': snapshot.history_scrollback,
+            'max_cursor_row': snapshot.max_cursor_row
+        }
+
+        # Serialize line data
+        serialized['lines'] = []
+        for line in snapshot.lines:
+            line_data = []
+            for col in range(line.width):
+                char, attrs, fg, bg = line.get_character(col)
+                line_data.append({
+                    'char': char,
+                    'attributes': attrs.value,
+                    'fg_color': fg,
+                    'bg_color': bg
+                })
+            serialized['lines'].append(line_data)
+
+        return serialized
+
+    def restore_from_metadata(self, metadata: Dict) -> None:
+        """
+        Restore terminal state from metadata.
+
+        Args:
+            metadata: Dictionary containing state metadata
+        """
+        # Restore dimensions first
+        dims = metadata['dimensions']
+
+        # Restore main buffer
+        main_buffer = self._deserialize_buffer_snapshot(
+            metadata['main_buffer'],
+            dims['rows'],
+            dims['cols']
+        )
+        self._main_buffer = main_buffer
+        self._current_buffer = main_buffer
+
+        # Restore alternate buffer if it existed
+        if 'alternate_buffer' in metadata:
+            self._alternate_buffer = self._deserialize_buffer_snapshot(
+                metadata['alternate_buffer'],
+                dims['rows'],
+                dims['cols']
+            )
+
+        # Restore terminal title
+        self._terminal_title = metadata['terminal_title']
+
+        # Restore screen mode
+        self._screen_reverse_mode = metadata['screen_reverse_mode']
+
+        # Restore mouse tracking
+        tracking = metadata['mouse_tracking']
+        self._mouse_tracking.enabled = tracking['enabled']
+        self._mouse_tracking.mode = tracking['mode']
+        self._mouse_tracking.utf8_mode = tracking['utf8_mode']
+        self._mouse_tracking.sgr_mode = tracking['sgr_mode']
+
+        # Restore current directory if it was set
+        if 'current_directory' in metadata:
+            self._current_directory = metadata['current_directory']
+
+        # Update display
+        self.update_dimensions()
+        self.viewport().update()
+        self._update_scrollbar()
+
+    def _deserialize_buffer_snapshot(self, data: Dict, rows: int, cols: int) -> TerminalBuffer:
+        """
+        Create new terminal buffer from serialized snapshot data.
+
+        Args:
+            data: Dictionary containing serialized snapshot data
+            rows: Number of rows for new buffer
+            cols: Number of columns for new buffer
+
+        Returns:
+            New TerminalBuffer with restored state
+        """
+        # Create new buffer with specified dimensions
+        buffer = TerminalBuffer(rows, cols, data['history_scrollback'])
+
+        # Restore line data
+        buffer.lines.clear()
+        for line_data in data['lines']:
+            line = buffer.get_new_line()
+            for col, char_data in enumerate(line_data):
+                line.set_character(
+                    col,
+                    char_data['char'],
+                    CharacterAttributes(char_data['attributes']),
+                    char_data['fg_color'],
+                    char_data['bg_color']
+                )
+            buffer.lines.append(line)
+
+        # Restore cursor state
+        cursor_data = data['cursor']
+        buffer.cursor.row = cursor_data['row']
+        buffer.cursor.col = cursor_data['col']
+        buffer.cursor.visible = cursor_data['visible']
+        buffer.cursor.blink = cursor_data['blink']
+        buffer.cursor.delayed_wrap = cursor_data['delayed_wrap']
+
+        # Restore attributes
+        attr_data = data['attributes']
+        buffer.attributes.current = CharacterAttributes(attr_data['current'])
+        buffer.attributes.foreground = attr_data['foreground']
+        buffer.attributes.background = attr_data['background']
+
+        # Restore scroll region
+        scroll_data = data['scroll_region']
+        buffer.scroll_region.top = scroll_data['top']
+        buffer.scroll_region.bottom = scroll_data['bottom']
+        buffer.scroll_region.rows = scroll_data['rows']
+
+        # Restore modes
+        mode_data = data['modes']
+        buffer.modes.origin = mode_data['origin']
+        buffer.modes.auto_wrap = mode_data['auto_wrap']
+        buffer.modes.application_keypad = mode_data['application_keypad']
+        buffer.modes.application_cursor = mode_data['application_cursor']
+        buffer.modes.bracketed_paste = mode_data['bracketed_paste']
+
+        buffer.max_cursor_row = data['max_cursor_row']
+
+        return buffer
+
     def focusNextPrevChild(self, _next: bool) -> bool:
-        """Override to prevent tab from changing focus."""
+        """
+        Override to prevent tab from changing focus."""
         return False
 
     def _show_terminal_context_menu(self, pos) -> None:
@@ -1116,7 +1325,6 @@ class TerminalWidget(QAbstractScrollArea):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press for both tracking and selection."""
-        buffer = self._current_buffer
         if event.button() == Qt.LeftButton:
             # Handle text selection
             self._selecting = True
@@ -1143,7 +1351,6 @@ class TerminalWidget(QAbstractScrollArea):
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """Handle mouse release for both tracking and selection."""
-        buffer = self._current_buffer
         if event.button() == Qt.LeftButton:
             self._selecting = False
 
@@ -1162,7 +1369,6 @@ class TerminalWidget(QAbstractScrollArea):
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Handle mouse movement for selection and tracking."""
-        buffer = self._current_buffer
         # Handle text selection
         if self._selecting and self._selection is not None:
             pos = self._pixel_pos_to_text_pos(event.position().toPoint())

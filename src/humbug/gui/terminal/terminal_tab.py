@@ -259,19 +259,59 @@ class TerminalTab(TabBase):
         self._main_fd = None
 
     def get_state(self, temp_state: bool = False) -> TabState:
-        """Get serializable state."""
+        """
+        Get serializable state.
+
+        For temporary state (like moving tabs), this includes:
+        1. Terminal visual state (buffers, cursor, etc.)
+        2. Process state (open file descriptors and PIDs)
+        3. Command used to start the terminal
+
+        For permanent state, only includes:
+        1. Command used to start the terminal
+        2. Basic terminal settings
+
+        Args:
+            temp_state: Whether this is for temporary state capture
+
+        Returns:
+            TabState containing tab state
+        """
+        metadata = {}
+
+        # Store command for both persistent and temporary state
+        if self._command:
+            metadata["command"] = self._command
+
+        # Only store process/display state for temporary moves
+        if temp_state:
+            metadata.update(self._terminal._create_state_metadata())
+            # Store reference to this tab for process transfer
+            metadata['source_tab'] = self
+            metadata['is_ephemeral'] = True
+
         return TabState(
             type=TabType.TERMINAL,
             tab_id=self._tab_id,
             path="terminal://local",
-            metadata={
-                "command": self._command
-            } if temp_state else None
+            metadata=metadata
         )
 
     @classmethod
     def restore_from_state(cls, state: TabState, parent=None) -> 'TerminalTab':
-        """Restore terminal from saved state."""
+        """
+        Restore terminal from saved state.
+
+        Args:
+            state: State to restore from
+            parent: Optional parent widget
+
+        Returns:
+            New TerminalTab instance
+
+        Raises:
+            ValueError: If state has invalid tab type
+        """
         if state.type != TabType.TERMINAL:
             raise ValueError(f"Invalid tab type for TerminalTab: {state.type}")
 
@@ -279,22 +319,49 @@ class TerminalTab(TabBase):
         if state.metadata:
             command = state.metadata.get("command")
 
-        return cls(state.tab_id, command, parent)
+        tab = cls(state.tab_id, command, parent)
+
+        # Only restore process/display state if this is ephemeral (temp) state
+        if state.metadata and state.metadata.get('is_ephemeral'):
+            tab._terminal.restore_from_metadata(state.metadata)
+
+            # If we have a source tab, transfer the process
+            if 'source_tab' in state.metadata:
+                source_tab = state.metadata['source_tab']
+                tab._transfer_process_from(source_tab)
+
+        return tab
+
+    def _transfer_process_from(self, source_tab: 'TerminalTab') -> None:
+        """
+        Transfer terminal process state from another tab.
+
+        Args:
+            source_tab: Source terminal tab to transfer from
+        """
+        # Stop process management in source tab without terminating process
+        source_tab._running = False
+        if source_tab._tasks:
+            for task in source_tab._tasks:
+                task.cancel()
+        source_tab._tasks.clear()
+
+        # Transfer file descriptors and process ID
+        self._terminal_process = source_tab._terminal_process
+        self._main_fd = source_tab._main_fd
+
+        # Clear references in source tab
+        source_tab._terminal_process = None
+        source_tab._main_fd = None
+
+        # Start read loop in this tab
+        self._create_tracked_task(self._read_loop(self._main_fd))
 
     def set_cursor_position(self, position: Dict[str, int]) -> None:
-        """Set cursor position."""
-        self._terminal._update_cursor_position(
-            position.get("line", 0),
-            position.get("column", 0)
-        )
+        pass
 
     def get_cursor_position(self) -> Dict[str, int]:
-        """Get current cursor position."""
-        cursor = self._terminal.textCursor()
-        return {
-            "line": cursor.blockNumber(),
-            "column": cursor.columnNumber()
-        }
+        pass
 
     def can_close(self) -> bool:
         """Check if terminal can be closed."""
