@@ -139,15 +139,7 @@ class TerminalState:
 
     def _clear_region(self, start_row: int, start_col: int, end_row: int, end_col: int) -> None:
         """Clear a rectangular region of the terminal."""
-        buffer = self._current_buffer
-        for row in range(start_row, end_row + 1):
-            line_index = len(buffer.lines) - buffer.rows + row
-            if 0 <= line_index < len(buffer.lines):
-                line = buffer.lines[line_index]
-                start = start_col if row == start_row else 0
-                end = end_col if row == end_row else buffer.cols - 1
-                for col in range(start, end + 1):
-                    line.set_character(col, ' ')
+        self._current_buffer.clear_region(start_row, start_col, end_row, end_col)
 
     def _write_char(self, char: str) -> None:
         """Write a single character at the current cursor position."""
@@ -223,35 +215,11 @@ class TerminalState:
 
     def _scroll_up(self, count: int) -> None:
         """Scroll up within current scroll region."""
-        buffer = self._current_buffer
-
-        # Calculate actual lines in scroll region
-        start = len(buffer.lines) - buffer.rows + buffer.scroll_region.top
-        end = len(buffer.lines) - buffer.rows + buffer.scroll_region.bottom
-
-        # Insert blank lines at the bottom of the scrolling region and remove lines from the top
-        for _ in range(count):
-            buffer.lines.insert(end, buffer.get_new_line())
-
-            # If we're using the main screen and the scrolling region top is the top of the screen
-            # then we don't actually delete anything, we simply let the scrolled line roll into
-            # the history buffer
-            if buffer == self._alternate_buffer or buffer.scroll_region.top != 0:
-                scrolled_line = buffer.lines.pop(start)
-                if buffer != self._alternate_buffer:
-                    buffer.lines.insert(len(buffer.lines) - buffer.rows, scrolled_line)
+        self._current_buffer.scroll_up(count)
 
     def _scroll_down(self, count: int) -> None:
         """Scroll down within current scroll region."""
-        buffer = self._current_buffer
-        # Calculate actual lines in scroll region
-        start = len(buffer.lines) - buffer.rows + buffer.scroll_region.top
-        end = len(buffer.lines) - buffer.rows + buffer.scroll_region.bottom
-
-        # Insert blank lines at the top of the scrolling region and remove lines from the bottom
-        for _ in range(count):
-            buffer.lines.insert(start, buffer.get_new_line())
-            del buffer.lines[end]
+        self._current_buffer.scroll_down(count)
 
     def put_data(self, data: bytes) -> None:
         """
@@ -747,21 +715,7 @@ class TerminalState:
         """Insert blank lines at cursor position."""
         buffer = self._current_buffer
         cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        if not (buffer.scroll_region.top <= cursor_row < buffer.scroll_region.bottom):
-            return
-
-        # Calculate lines to move
-        start = len(buffer.lines) - buffer.rows + cursor_row
-        end = len(buffer.lines) - buffer.rows + buffer.scroll_region.bottom
-
-        # Clip the count
-        count = min(count, end - start)
-
-        # Insert blank lines at the cursor and delete them at the end of the scrolling region
-        for _ in range(count):
-            buffer.lines.insert(start, buffer.get_new_line())
-            del buffer.lines[end]
-
+        buffer.insert_lines(count, cursor_row)
         buffer.cursor.col = 0
         buffer.cursor.delayed_wrap = False
 
@@ -769,21 +723,7 @@ class TerminalState:
         """Delete lines at cursor position."""
         buffer = self._current_buffer
         cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        if not (buffer.scroll_region.top <= cursor_row < buffer.scroll_region.bottom):
-            return
-
-        # Calculate lines to remove
-        start = len(buffer.lines) - buffer.rows + cursor_row
-        end = len(buffer.lines) - buffer.rows + buffer.scroll_region.bottom
-
-        # Clip the count
-        count = min(count, end - start)
-
-        # Insert blank lines at the end of the scrolling region and remove them at the cursor
-        for _ in range(count):
-            buffer.lines.insert(end, buffer.get_new_line())
-            del buffer.lines[start]
-
+        buffer.delete_lines(count, cursor_row)
         buffer.cursor.col = 0
         buffer.cursor.delayed_wrap = False
 
@@ -791,43 +731,19 @@ class TerminalState:
         """Insert blank characters at cursor position."""
         buffer = self._current_buffer
         cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        line_index = len(buffer.lines) - buffer.rows + cursor_row
-        if 0 <= line_index < len(buffer.lines):
-            line = buffer.lines[line_index]
-            # Move existing characters right
-            for col in range(buffer.cols - 1, buffer.cursor.col - 1, -1):
-                if col >= buffer.cursor.col + count:
-                    char, attrs, fg, bg = line.get_character(col - count)
-                    line.set_character(col, char, attrs, fg, bg)
-
-            # Insert spaces
-            for col in range(buffer.cursor.col, min(buffer.cursor.col + count, buffer.cols)):
-                line.set_character(col, ' ')
+        buffer.insert_chars(count, cursor_row, buffer.cursor.col)
 
     def _delete_chars(self, count: int) -> None:
         """Delete characters at cursor position."""
         buffer = self._current_buffer
         cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        line_index = len(buffer.lines) - buffer.rows + cursor_row
-        if 0 <= line_index < len(buffer.lines):
-            line = buffer.lines[line_index]
-            # Move characters left
-            for col in range(buffer.cursor.col, buffer.cols):
-                if col + count < buffer.cols:
-                    char, attrs, fg, bg = line.get_character(col + count)
-                    line.set_character(col, char, attrs, fg, bg)
-                else:
-                    line.set_character(col, ' ')
+        buffer.delete_chars(count, cursor_row, buffer.cursor.col)
 
     def _erase_chars(self, count: int) -> None:
         """Erase characters at cursor position."""
         buffer = self._current_buffer
         cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        line_index = len(buffer.lines) - buffer.rows + cursor_row
-        if 0 <= line_index < len(buffer.lines):
-            line = buffer.lines[line_index]
-            for col in range(buffer.cursor.col, min(buffer.cursor.col + count, buffer.cols)):
-                line.set_character(col, ' ')
+        buffer.erase_chars(count, cursor_row, buffer.cursor.col)
 
     def _process_sgr(self, params: list[int]) -> None:
         """Process SGR (Select Graphic Rendition) sequence."""

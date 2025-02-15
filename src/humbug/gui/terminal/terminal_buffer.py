@@ -284,6 +284,167 @@ class TerminalBuffer:
         self.attributes = AttributeState()
         self.scroll_region = ScrollRegion(bottom=self.rows, rows=self.rows)
 
+    def scroll_up(self, count: int) -> None:
+        """
+        Scroll up within current scroll region.
+
+        Args:
+            count: Number of lines to scroll
+        """
+        # Calculate actual lines in scroll region
+        start = len(self.lines) - self.rows + self.scroll_region.top
+        end = len(self.lines) - self.rows + self.scroll_region.bottom
+
+        # Insert blank lines at the bottom of the scrolling region and remove lines from the top
+        for _ in range(count):
+            self.lines.insert(end, self.get_new_line())
+
+            # If we're using the main screen and the scrolling region top is the top of the screen
+            # then we don't actually delete anything, we simply let the scrolled line roll into
+            # the history buffer
+            if not self.history_scrollback or self.scroll_region.top != 0:
+                scrolled_line = self.lines.pop(start)
+                if self.history_scrollback:
+                    self.lines.insert(len(self.lines) - self.rows, scrolled_line)
+
+    def scroll_down(self, count: int) -> None:
+        """
+        Scroll down within current scroll region.
+
+        Args:
+            count: Number of lines to scroll
+        """
+        # Calculate actual lines in scroll region
+        start = len(self.lines) - self.rows + self.scroll_region.top
+        end = len(self.lines) - self.rows + self.scroll_region.bottom
+
+        # Insert blank lines at the top of the scrolling region and remove lines from the bottom
+        for _ in range(count):
+            self.lines.insert(start, self.get_new_line())
+            del self.lines[end]
+
+    def clear_region(self, start_row: int, start_col: int, end_row: int, end_col: int) -> None:
+        """
+        Clear a rectangular region of the terminal.
+
+        Args:
+            start_row: Starting row
+            start_col: Starting column
+            end_row: Ending row
+            end_col: Ending column
+        """
+        for row in range(start_row, end_row + 1):
+            line_index = len(self.lines) - self.rows + row
+            if 0 <= line_index < len(self.lines):
+                line = self.lines[line_index]
+                start = start_col if row == start_row else 0
+                end = end_col if row == end_row else self.cols - 1
+                for col in range(start, end + 1):
+                    line.set_character(col, ' ')
+
+    def insert_lines(self, count: int, cursor_row: int) -> None:
+        """
+        Insert blank lines at cursor position.
+
+        Args:
+            count: Number of lines to insert
+            cursor_row: Current cursor row position
+        """
+        if not (self.scroll_region.top <= cursor_row < self.scroll_region.bottom):
+            return
+
+        # Calculate lines to move
+        start = len(self.lines) - self.rows + cursor_row
+        end = len(self.lines) - self.rows + self.scroll_region.bottom
+
+        # Clip the count
+        count = min(count, end - start)
+
+        # Insert blank lines at the cursor and delete them at the end of the scrolling region
+        for _ in range(count):
+            self.lines.insert(start, self.get_new_line())
+            del self.lines[end]
+
+    def delete_lines(self, count: int, cursor_row: int) -> None:
+        """
+        Delete lines at cursor position.
+
+        Args:
+            count: Number of lines to delete
+            cursor_row: Current cursor row position
+        """
+        if not (self.scroll_region.top <= cursor_row < self.scroll_region.bottom):
+            return
+
+        # Calculate lines to remove
+        start = len(self.lines) - self.rows + cursor_row
+        end = len(self.lines) - self.rows + self.scroll_region.bottom
+
+        # Clip the count
+        count = min(count, end - start)
+
+        # Insert blank lines at the end of the scrolling region and remove them at the cursor
+        for _ in range(count):
+            self.lines.insert(end, self.get_new_line())
+            del self.lines[start]
+
+    def insert_chars(self, count: int, cursor_row: int, cursor_col: int) -> None:
+        """
+        Insert blank characters at cursor position.
+
+        Args:
+            count: Number of characters to insert
+            cursor_row: Current cursor row position
+            cursor_col: Current cursor column position
+        """
+        line_index = len(self.lines) - self.rows + cursor_row
+        if 0 <= line_index < len(self.lines):
+            line = self.lines[line_index]
+            # Move existing characters right
+            for col in range(self.cols - 1, cursor_col - 1, -1):
+                if col >= cursor_col + count:
+                    char, attrs, fg, bg = line.get_character(col - count)
+                    line.set_character(col, char, attrs, fg, bg)
+
+            # Insert spaces
+            for col in range(cursor_col, min(cursor_col + count, self.cols)):
+                line.set_character(col, ' ')
+
+    def delete_chars(self, count: int, cursor_row: int, cursor_col: int) -> None:
+        """
+        Delete characters at cursor position.
+
+        Args:
+            count: Number of characters to delete
+            cursor_row: Current cursor row position
+            cursor_col: Current cursor column position
+        """
+        line_index = len(self.lines) - self.rows + cursor_row
+        if 0 <= line_index < len(self.lines):
+            line = self.lines[line_index]
+            # Move characters left
+            for col in range(cursor_col, self.cols):
+                if col + count < self.cols:
+                    char, attrs, fg, bg = line.get_character(col + count)
+                    line.set_character(col, char, attrs, fg, bg)
+                else:
+                    line.set_character(col, ' ')
+
+    def erase_chars(self, count: int, cursor_row: int, cursor_col: int) -> None:
+        """
+        Erase characters at cursor position.
+
+        Args:
+            count: Number of characters to erase
+            cursor_row: Current cursor row position
+            cursor_col: Current cursor column position
+        """
+        line_index = len(self.lines) - self.rows + cursor_row
+        if 0 <= line_index < len(self.lines):
+            line = self.lines[line_index]
+            for col in range(cursor_col, min(cursor_col + count, self.cols)):
+                line.set_character(col, ' ')
+
     def create_snapshot(self) -> 'TerminalBufferSnapshot':
         """
         Create a snapshot of the current buffer state.
