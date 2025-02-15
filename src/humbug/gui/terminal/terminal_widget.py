@@ -341,6 +341,7 @@ class TerminalWidget(QAbstractScrollArea):
                 elif mode == 6:  # DECOM - Origin Mode
                     buffer.modes.origin = set_mode
                     buffer.cursor.row = 0
+                    buffer.max_cursor_row = 0
                     buffer.cursor.col = 0
                     buffer.cursor.delayed_wrap = False
                 elif mode == 7:  # DECAWM - Auto-wrap Mode
@@ -532,6 +533,7 @@ class TerminalWidget(QAbstractScrollArea):
             amount = max(1, params[0])
             max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
             buffer.cursor.row = min(max_rows - 1, buffer.cursor.row + amount)
+            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
             buffer.cursor.delayed_wrap = False
 
         elif code == 'C':  # CUF - Cursor Forward
@@ -554,6 +556,7 @@ class TerminalWidget(QAbstractScrollArea):
             col = params[1] if len(params) > 1 else 1
             max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
             buffer.cursor.row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
+            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
             buffer.cursor.col = min(buffer.cols - 1, max(0, col - 1))
             buffer.cursor.delayed_wrap = False
 
@@ -627,6 +630,7 @@ class TerminalWidget(QAbstractScrollArea):
             row = max(0, params[0] - 1) if params else 0  # Convert 1-based to 0-based
             max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
             buffer.cursor.row = min(row, max_rows - 1)
+            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
             buffer.cursor.delayed_wrap = False
 
         elif code == 'f':  # HVP - Horizontal and Vertical Position
@@ -634,6 +638,7 @@ class TerminalWidget(QAbstractScrollArea):
             col = params[1] if len(params) > 1 else 1
             max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
             buffer.cursor.row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
+            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
             buffer.cursor.col = min(buffer.cols - 1, max(0, col - 1))
             buffer.cursor.delayed_wrap = False
 
@@ -742,6 +747,7 @@ class TerminalWidget(QAbstractScrollArea):
                 if cursor_row != buffer.scroll_region.bottom - 1:
                     max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
                     buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
+                    buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
                 else:
                     self._scroll_up(1)
                 buffer.cursor.delayed_wrap = False
@@ -752,6 +758,7 @@ class TerminalWidget(QAbstractScrollArea):
                 if cursor_row != buffer.scroll_region.bottom - 1:
                     max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
                     buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
+                    buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
                 else:
                     self._scroll_up(1)
                 buffer.cursor.delayed_wrap = False
@@ -913,6 +920,7 @@ class TerminalWidget(QAbstractScrollArea):
             if cursor_row != buffer.scroll_region.bottom - 1:
                 max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
                 buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
+                buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
             else:
                 self._scroll_up(1)
 
@@ -932,6 +940,7 @@ class TerminalWidget(QAbstractScrollArea):
             if cursor_row != buffer.scroll_region.bottom - 1:
                 max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
                 buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
+                buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
                 cursor_row += 1
             else:
                 self._scroll_up(1)

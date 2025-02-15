@@ -149,7 +149,7 @@ class TerminalBufferSnapshot:
     modes: OperatingModes
     tab_stops: TabStopState
     focus_tracking: bool
-    scroll_value: int
+    max_cursor_row: int
 
 
 class TerminalBuffer:
@@ -177,7 +177,7 @@ class TerminalBuffer:
         self.modes = OperatingModes()
         self.tab_stops = TabStopState(cols)
         self.focus_tracking = False
-        self.scroll_value = 0
+        self.max_cursor_row = 0
 
     def get_new_line(self) -> TerminalLine:
         """"Get a new blank line."""
@@ -209,9 +209,15 @@ class TerminalBuffer:
         self.rows = new_rows
         self.cols = new_cols
 
-        # If our new size is smaller than our old one we need to remove rows
-        if new_rows < old_rows:
-            del self.lines[new_rows - old_rows:]
+        # If we're shrinking the visible display, look to see if we have any lines at the bottom of
+        # the screen that we've never visited.  If we do then start by removing them!
+        delete_rows = 0
+        if old_rows > new_rows:
+            delete_rows = max(0, old_rows - max(new_rows, self.max_cursor_row + 1))
+            if delete_rows:
+                del self.lines[-delete_rows:]
+
+        old_line_count = len(self.lines)
 
         # Create new lines with new width
         new_lines = []
@@ -232,15 +238,23 @@ class TerminalBuffer:
             new_lines.append(new_line)
 
         # Add additional empty lines if needed
-        while len(new_lines) < new_rows:
+        add_rows = max(0, new_rows - len(new_lines))
+        for _ in range(add_rows):
             new_lines.append(self.get_new_line())
 
         # Update buffer contents
         self.lines = new_lines
 
         # Adjust cursor position
+        if old_line_count + add_rows >= new_rows:
+            self.cursor.row = max(0, self.cursor.row + new_rows - old_rows - add_rows + delete_rows)
+
         self.cursor.col = min(self.cursor.col, new_cols - 1)
         self.cursor.row = min(self.cursor.row, new_rows - 1)
+
+        # Our max cursor row position becomes "sticky" once it hits the bottom row of the screen
+        if self.max_cursor_row >= old_rows - 1:
+            self.max_cursor_row = new_rows - 1 - add_rows
 
         # Adjust scroll region
         self.scroll_region.bottom = min(
@@ -302,7 +316,7 @@ class TerminalBuffer:
             ),
             tab_stops=self.tab_stops.copy_tab_stops(),
             focus_tracking=self.focus_tracking,
-            scroll_value=self.scroll_value
+            max_cursor_row=self.max_cursor_row
         )
 
     def restore_from_snapshot(self, snapshot: 'TerminalBufferSnapshot') -> None:
@@ -319,4 +333,4 @@ class TerminalBuffer:
         self.modes = snapshot.modes
         self.tab_stops = snapshot.tab_stops
         self.focus_tracking = snapshot.focus_tracking
-        self.scroll_value = snapshot.scroll_value
+        self.max_cursor_row = snapshot.max_cursor_row
