@@ -137,10 +137,6 @@ class TerminalState:
         gray_value = 8 + (color_index - 232) * 10
         return (gray_value << 16) | (gray_value << 8) | gray_value
 
-    def _clear_region(self, start_row: int, start_col: int, end_row: int, end_col: int) -> None:
-        """Clear a rectangular region of the terminal."""
-        self._current_buffer.clear_region(start_row, start_col, end_row, end_col)
-
     def _write_char(self, char: str) -> None:
         """Write a single character at the current cursor position."""
         buffer = self._current_buffer
@@ -157,7 +153,7 @@ class TerminalState:
                 buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
                 buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
             else:
-                self._scroll_up(1)
+                buffer.scroll_up(1)
 
             buffer.cursor.delayed_wrap = False
             return
@@ -178,7 +174,7 @@ class TerminalState:
                 buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
                 cursor_row += 1
             else:
-                self._scroll_up(1)
+                buffer.scroll_up(1)
 
         if char == '\t':
             # Get next tab stop
@@ -212,14 +208,6 @@ class TerminalState:
                 buffer.cursor.delayed_wrap = buffer.modes.auto_wrap
             else:
                 buffer.cursor.col += 1
-
-    def _scroll_up(self, count: int) -> None:
-        """Scroll up within current scroll region."""
-        self._current_buffer.scroll_up(count)
-
-    def _scroll_down(self, count: int) -> None:
-        """Scroll down within current scroll region."""
-        self._current_buffer.scroll_down(count)
 
     def put_data(self, data: bytes) -> None:
         """
@@ -364,7 +352,7 @@ class TerminalState:
                     buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
                     buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
                 else:
-                    self._scroll_up(1)
+                    buffer.scroll_up(1)
                 buffer.cursor.delayed_wrap = False
 
             elif code == 'E':  # Next Line
@@ -375,7 +363,7 @@ class TerminalState:
                     buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
                     buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
                 else:
-                    self._scroll_up(1)
+                    buffer.scroll_up(1)
                 buffer.cursor.delayed_wrap = False
 
             elif code == 'H':  # HTS - Set tab stop at current position
@@ -386,7 +374,7 @@ class TerminalState:
                 if cursor_row != buffer.scroll_region.top:
                     buffer.cursor.row = max(0, buffer.cursor.row - 1)
                 else:
-                    self._scroll_down(1)
+                    buffer.scroll_down(1)
                 buffer.cursor.delayed_wrap = False
 
             else:
@@ -597,35 +585,35 @@ class TerminalState:
         elif code == 'J':  # ED - Erase in Display
             mode = params[0] if params else 0
             if mode == 0:  # Clear from cursor to end
-                self._clear_region(
+                buffer.clear_region(
                     buffer.cursor.row,
                     buffer.cursor.col,
                     buffer.rows - 1,
                     buffer.cols - 1
                 )
             elif mode == 1:  # Clear from start to cursor
-                self._clear_region(0, 0, buffer.cursor.row, buffer.cursor.col)
+                buffer.clear_region(0, 0, buffer.cursor.row, buffer.cursor.col)
             elif mode == 2:  # Clear entire screen
-                self._clear_region(0, 0, buffer.rows - 1, buffer.cols - 1)
+                buffer.clear_region(0, 0, buffer.rows - 1, buffer.cols - 1)
 
         elif code == 'K':  # EL - Erase in Line
             mode = params[0] if params else 0
             if mode == 0:  # Clear from cursor to end
-                self._clear_region(
+                buffer.clear_region(
                     buffer.cursor.row,
                     buffer.cursor.col,
                     buffer.cursor.row,
                     buffer.cols - 1
                 )
             elif mode == 1:  # Clear from start to cursor
-                self._clear_region(
+                buffer.clear_region(
                     buffer.cursor.row,
                     0,
                     buffer.cursor.row,
                     buffer.cursor.col
                 )
             elif mode == 2:  # Clear entire line
-                self._clear_region(
+                buffer.clear_region(
                     buffer.cursor.row,
                     0,
                     buffer.cursor.row,
@@ -634,31 +622,40 @@ class TerminalState:
 
         elif code == 'L':  # IL - Insert Line
             count = max(1, params[0] if params else 1)
-            self._insert_lines(count)
+            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
+            buffer.insert_lines(count, cursor_row)
+            buffer.cursor.col = 0
+            buffer.cursor.delayed_wrap = False
 
         elif code == 'M':  # DL - Delete Line
             count = max(1, params[0] if params else 1)
-            self._delete_lines(count)
+            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
+            buffer.delete_lines(count, cursor_row)
+            buffer.cursor.col = 0
+            buffer.cursor.delayed_wrap = False
 
         elif code == 'P':  # DCH - Delete Character
             count = max(1, params[0] if params else 1)
-            self._delete_chars(count)
+            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
+            buffer.delete_chars(count, cursor_row, buffer.cursor.col)
 
         elif code == 'S':  # SU - Scroll Up
             count = max(1, params[0] if params else 1)
-            self._scroll_up(count)
+            buffer.scroll_up(count)
 
         elif code == 'T':  # SD - Scroll Down
             count = max(1, params[0] if params else 1)
-            self._scroll_down(count)
+            buffer.scroll_down(count)
 
         elif code == 'X':  # ECH - Erase Character
             count = max(1, params[0] if params else 1)
-            self._erase_chars(count)
+            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
+            buffer.erase_chars(count, cursor_row, buffer.cursor.col)
 
         elif code == '@':  # ICH - Insert Character
             count = max(1, params[0] if params else 1)
-            self._insert_chars(count)
+            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
+            buffer.insert_chars(count, cursor_row, buffer.cursor.col)
 
         elif code == 'd':  # VPA - Line Position Absolute
             row = max(0, params[0] - 1) if params else 0  # Convert 1-based to 0-based
@@ -710,40 +707,6 @@ class TerminalState:
 
         else:
             self._logger.warning(f"Unknown CSI sequence {repr(sequence)}")
-
-    def _insert_lines(self, count: int) -> None:
-        """Insert blank lines at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        buffer.insert_lines(count, cursor_row)
-        buffer.cursor.col = 0
-        buffer.cursor.delayed_wrap = False
-
-    def _delete_lines(self, count: int) -> None:
-        """Delete lines at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        buffer.delete_lines(count, cursor_row)
-        buffer.cursor.col = 0
-        buffer.cursor.delayed_wrap = False
-
-    def _insert_chars(self, count: int) -> None:
-        """Insert blank characters at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        buffer.insert_chars(count, cursor_row, buffer.cursor.col)
-
-    def _delete_chars(self, count: int) -> None:
-        """Delete characters at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        buffer.delete_chars(count, cursor_row, buffer.cursor.col)
-
-    def _erase_chars(self, count: int) -> None:
-        """Erase characters at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        buffer.erase_chars(count, cursor_row, buffer.cursor.col)
 
     def _process_sgr(self, params: list[int]) -> None:
         """Process SGR (Select Graphic Rendition) sequence."""
