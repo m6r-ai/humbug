@@ -148,14 +148,14 @@ class TerminalBufferSnapshot:
     scroll_region: ScrollRegion
     modes: OperatingModes
     tab_stops: TabStopState
-    focus_tracking: bool
+    history_scrollback: bool
     max_cursor_row: int
 
 
 class TerminalBuffer:
     """Manages the state of a terminal screen buffer."""
 
-    def __init__(self, rows: int, cols: int):
+    def __init__(self, rows: int, cols: int, history_scrollback: bool):
         """
         Initialize terminal buffer.
 
@@ -176,7 +176,7 @@ class TerminalBuffer:
         self.scroll_region = ScrollRegion(bottom=rows, rows=rows)
         self.modes = OperatingModes()
         self.tab_stops = TabStopState(cols)
-        self.focus_tracking = False
+        self.history_scrollback = history_scrollback
         self.max_cursor_row = 0
 
     def get_new_line(self) -> TerminalLine:
@@ -241,6 +241,10 @@ class TerminalBuffer:
         add_rows = max(0, new_rows - len(new_lines))
         for _ in range(add_rows):
             new_lines.append(self.get_new_line())
+
+        # If we don't have a history scrollback then clip the line count
+        if not self.history_scrollback and self.rows < len(new_lines):
+            new_lines = new_lines[-self.rows:]
 
         # Update buffer contents
         self.lines = new_lines
@@ -315,7 +319,7 @@ class TerminalBuffer:
                 bracketed_paste=self.modes.bracketed_paste
             ),
             tab_stops=self.tab_stops.copy_tab_stops(),
-            focus_tracking=self.focus_tracking,
+            history_scrollback=self.history_scrollback,
             max_cursor_row=self.max_cursor_row
         )
 
@@ -332,5 +336,5 @@ class TerminalBuffer:
         self.scroll_region = snapshot.scroll_region
         self.modes = snapshot.modes
         self.tab_stops = snapshot.tab_stops
-        self.focus_tracking = snapshot.focus_tracking
+        self.history_scrollback = snapshot.history_scrollback
         self.max_cursor_row = snapshot.max_cursor_row

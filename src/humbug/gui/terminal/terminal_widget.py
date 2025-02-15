@@ -49,7 +49,7 @@ class TerminalWidget(QAbstractScrollArea):
         self.setFocusPolicy(Qt.StrongFocus)
 
         # Initialize buffers
-        self._main_buffer = TerminalBuffer(24, 80)  # Default size
+        self._main_buffer = TerminalBuffer(24, 80, True)  # Default size
         self._alternate_buffer = None
         self._current_buffer = self._main_buffer
 
@@ -307,7 +307,7 @@ class TerminalWidget(QAbstractScrollArea):
         if enable:
             if not self._alternate_buffer:
                 buffer = self._current_buffer
-                self._alternate_buffer = TerminalBuffer(buffer.rows, buffer.cols)
+                self._alternate_buffer = TerminalBuffer(buffer.rows, buffer.cols, False)
             self._current_buffer = self._alternate_buffer
         else:
             self._current_buffer = self._main_buffer

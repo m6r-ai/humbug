@@ -165,7 +165,7 @@ class TerminalTab(TabBase):
 
                     if main_fd in r:
                         try:
-                            data = os.read(main_fd, 1024)
+                            data = os.read(main_fd, 8192)
                             if not data:
                                 break
 
