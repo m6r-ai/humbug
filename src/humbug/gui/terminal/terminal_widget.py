@@ -1,7 +1,5 @@
 """Terminal widget implementation."""
 
-import base64
-from dataclasses import dataclass
 import logging
 from typing import Optional, Tuple, Dict
 
@@ -15,18 +13,9 @@ from PySide6.QtGui import (
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.terminal.terminal_buffer import TerminalBuffer, CharacterAttributes, TerminalBufferSnapshot
 from humbug.gui.terminal.terminal_selection import TerminalSelection
-from humbug.language.language_manager import LanguageManager
-
-
-@dataclass
-class MouseTrackingState:
-    """Mouse tracking configuration."""
-    enabled: bool = False
-    mode: int = 0  # 0=off, 1000=normal, 1002=button, 1003=any
-    utf8_mode: bool = False
-    sgr_mode: bool = False
+from humbug.gui.terminal.terminal_state import TerminalState
+from humbug.gui.terminal.terminal_buffer import CharacterAttributes
 
 
 class TerminalWidget(QAbstractScrollArea):
@@ -40,7 +29,6 @@ class TerminalWidget(QAbstractScrollArea):
         super().__init__(parent)
         self._logger = logging.getLogger("TerminalWidget")
         self._style_manager = StyleManager()
-        self._language_manager = LanguageManager()
 
         # Set up scrollbar behavior
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -48,23 +36,12 @@ class TerminalWidget(QAbstractScrollArea):
         self.verticalScrollBar().valueChanged.connect(self._handle_scroll)
         self.setFocusPolicy(Qt.StrongFocus)
 
-        # Initialize buffers
-        self._main_buffer = TerminalBuffer(24, 80, True)  # Default size
-        self._alternate_buffer = None
-        self._current_buffer = self._main_buffer
+        # Initialize terminal state
+        self._state = TerminalState(24, 80)  # Default size
 
         # Selection state
         self._selection: Optional[TerminalSelection] = None
         self._selecting = False
-
-        # Terminal state
-        self._terminal_title = ""
-        self._current_directory = None
-        self._escape_seq_buffer = ""
-        self._in_escape_seq = False
-        self._screen_reverse_mode = False
-
-        self._mouse_tracking = MouseTrackingState()
 
         # Default colors
         self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
@@ -90,6 +67,9 @@ class TerminalWidget(QAbstractScrollArea):
             15: ColorRole.TERM_BRIGHT_WHITE,
         }
 
+        # Initialize color mapping in state
+        self._update_colors()
+
         # Blink handling
         self._blink_state = False
         self._blink_timer = QTimer(self)
@@ -102,245 +82,29 @@ class TerminalWidget(QAbstractScrollArea):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
-    def _create_state_metadata(self) -> Dict:
-        """
-        Create metadata dictionary capturing widget state.
-
-        Returns:
-            Dictionary containing terminal widget state metadata
-        """
-        metadata = {}
-
-        # Capture main buffer state
-        metadata['main_buffer'] = self._serialize_buffer_snapshot(
-            self._current_buffer.create_snapshot()
+    def _update_colors(self) -> None:
+        """Update color mappings in terminal state."""
+        # Update default colors
+        self._state.set_default_colors(
+            self._default_fg.rgb(),
+            self._default_bg.rgb()
         )
 
-        # Capture alternate buffer state if it exists
-        if self._alternate_buffer:
-            metadata['alternate_buffer'] = self._serialize_buffer_snapshot(
-                self._alternate_buffer.create_snapshot()
-            )
-
-        # Capture terminal dimensions
-        rows, cols = self.get_terminal_size()
-        metadata['dimensions'] = {
-            'rows': rows,
-            'cols': cols
+        # Update ANSI color mapping
+        color_map = {
+            index: self._style_manager.get_color(role).rgb()
+            for index, role in self._ansi_colors.items()
         }
-
-        # Capture additional state
-        metadata['terminal_title'] = self._terminal_title
-        metadata['screen_reverse_mode'] = self._screen_reverse_mode
-        metadata['mouse_tracking'] = {
-            'enabled': self._mouse_tracking.enabled,
-            'mode': self._mouse_tracking.mode,
-            'utf8_mode': self._mouse_tracking.utf8_mode,
-            'sgr_mode': self._mouse_tracking.sgr_mode
-        }
-
-        # Capture current directory if set
-        if self._current_directory:
-            metadata['current_directory'] = self._current_directory
-
-        return metadata
-
-    def _serialize_buffer_snapshot(self, snapshot: TerminalBufferSnapshot) -> Dict:
-        """
-        Convert buffer snapshot to serializable dictionary.
-
-        Args:
-            snapshot: Buffer snapshot to serialize
-
-        Returns:
-            Dictionary containing serialized snapshot data
-        """
-        serialized = {
-            'cursor': {
-                'row': snapshot.cursor.row,
-                'col': snapshot.cursor.col,
-                'visible': snapshot.cursor.visible,
-                'blink': snapshot.cursor.blink,
-                'delayed_wrap': snapshot.cursor.delayed_wrap
-            },
-            'attributes': {
-                'current': snapshot.attributes.current.value,
-                'foreground': snapshot.attributes.foreground,
-                'background': snapshot.attributes.background
-            },
-            'scroll_region': {
-                'top': snapshot.scroll_region.top,
-                'bottom': snapshot.scroll_region.bottom,
-                'rows': snapshot.scroll_region.rows
-            },
-            'modes': {
-                'origin': snapshot.modes.origin,
-                'auto_wrap': snapshot.modes.auto_wrap,
-                'application_keypad': snapshot.modes.application_keypad,
-                'application_cursor': snapshot.modes.application_cursor,
-                'bracketed_paste': snapshot.modes.bracketed_paste
-            },
-            'history_scrollback': snapshot.history_scrollback,
-            'max_cursor_row': snapshot.max_cursor_row
-        }
-
-        # Serialize line data
-        serialized['lines'] = []
-        for line in snapshot.lines:
-            line_data = []
-            for col in range(line.width):
-                char, attrs, fg, bg = line.get_character(col)
-                line_data.append({
-                    'char': char,
-                    'attributes': attrs.value,
-                    'fg_color': fg,
-                    'bg_color': bg
-                })
-            serialized['lines'].append(line_data)
-
-        return serialized
-
-    def restore_from_metadata(self, metadata: Dict) -> None:
-        """
-        Restore terminal state from metadata.
-
-        Args:
-            metadata: Dictionary containing state metadata
-        """
-        # Restore dimensions first
-        dims = metadata['dimensions']
-
-        # Restore main buffer
-        main_buffer = self._deserialize_buffer_snapshot(
-            metadata['main_buffer'],
-            dims['rows'],
-            dims['cols']
-        )
-        self._main_buffer = main_buffer
-        self._current_buffer = main_buffer
-
-        # Restore alternate buffer if it existed
-        if 'alternate_buffer' in metadata:
-            self._alternate_buffer = self._deserialize_buffer_snapshot(
-                metadata['alternate_buffer'],
-                dims['rows'],
-                dims['cols']
-            )
-
-        # Restore terminal title
-        self._terminal_title = metadata['terminal_title']
-
-        # Restore screen mode
-        self._screen_reverse_mode = metadata['screen_reverse_mode']
-
-        # Restore mouse tracking
-        tracking = metadata['mouse_tracking']
-        self._mouse_tracking.enabled = tracking['enabled']
-        self._mouse_tracking.mode = tracking['mode']
-        self._mouse_tracking.utf8_mode = tracking['utf8_mode']
-        self._mouse_tracking.sgr_mode = tracking['sgr_mode']
-
-        # Restore current directory if it was set
-        if 'current_directory' in metadata:
-            self._current_directory = metadata['current_directory']
-
-        # Update display
-        self.update_dimensions()
-        self.viewport().update()
-        self._update_scrollbar()
-
-    def _deserialize_buffer_snapshot(self, data: Dict, rows: int, cols: int) -> TerminalBuffer:
-        """
-        Create new terminal buffer from serialized snapshot data.
-
-        Args:
-            data: Dictionary containing serialized snapshot data
-            rows: Number of rows for new buffer
-            cols: Number of columns for new buffer
-
-        Returns:
-            New TerminalBuffer with restored state
-        """
-        # Create new buffer with specified dimensions
-        buffer = TerminalBuffer(rows, cols, data['history_scrollback'])
-
-        # Restore line data
-        buffer.lines.clear()
-        for line_data in data['lines']:
-            line = buffer.get_new_line()
-            for col, char_data in enumerate(line_data):
-                line.set_character(
-                    col,
-                    char_data['char'],
-                    CharacterAttributes(char_data['attributes']),
-                    char_data['fg_color'],
-                    char_data['bg_color']
-                )
-            buffer.lines.append(line)
-
-        # Restore cursor state
-        cursor_data = data['cursor']
-        buffer.cursor.row = cursor_data['row']
-        buffer.cursor.col = cursor_data['col']
-        buffer.cursor.visible = cursor_data['visible']
-        buffer.cursor.blink = cursor_data['blink']
-        buffer.cursor.delayed_wrap = cursor_data['delayed_wrap']
-
-        # Restore attributes
-        attr_data = data['attributes']
-        buffer.attributes.current = CharacterAttributes(attr_data['current'])
-        buffer.attributes.foreground = attr_data['foreground']
-        buffer.attributes.background = attr_data['background']
-
-        # Restore scroll region
-        scroll_data = data['scroll_region']
-        buffer.scroll_region.top = scroll_data['top']
-        buffer.scroll_region.bottom = scroll_data['bottom']
-        buffer.scroll_region.rows = scroll_data['rows']
-
-        # Restore modes
-        mode_data = data['modes']
-        buffer.modes.origin = mode_data['origin']
-        buffer.modes.auto_wrap = mode_data['auto_wrap']
-        buffer.modes.application_keypad = mode_data['application_keypad']
-        buffer.modes.application_cursor = mode_data['application_cursor']
-        buffer.modes.bracketed_paste = mode_data['bracketed_paste']
-
-        buffer.max_cursor_row = data['max_cursor_row']
-
-        return buffer
-
-    def focusNextPrevChild(self, _next: bool) -> bool:
-        """
-        Override to prevent tab from changing focus."""
-        return False
-
-    def _show_terminal_context_menu(self, pos) -> None:
-        """
-        Show a context menu for the terminal widget.
-
-        Args:
-            pos: Position in widget coordinates
-        """
-        menu = QMenu(self)
-
-        # Standard edit actions
-        copy_action = menu.addAction(self._language_manager.strings.copy)
-        copy_action.setEnabled(self.has_selection())
-        copy_action.triggered.connect(self.copy)
-
-        paste_action = menu.addAction(self._language_manager.strings.paste)
-        paste_action.setEnabled(True)
-        paste_action.triggered.connect(self.paste)
-
-        # Show menu at the global position
-        menu.exec_(self.mapToGlobal(pos))
+        self._state.set_ansi_colors(color_map)
 
     def _handle_style_changed(self):
         """Handle style changes."""
-        # Update default colors from style manager
-        self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY).rgb()
-        self._default_bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE).rgb()
+        # Update default colors
+        self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
+        self._default_bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
+
+        # Update color mappings in state
+        self._update_colors()
 
         # Force redraw with new colors
         self.viewport().update()
@@ -364,14 +128,11 @@ class TerminalWidget(QAbstractScrollArea):
 
             cols = max(viewport_width // char_width, 1)
             rows = max(viewport_height // char_height, 1)
-            print(f"size: {rows}x{cols} - viewport: {viewport_height}x{viewport_width} - char: {char_height}x{char_width}")
 
-        buffer = self._current_buffer
-
-        if cols != buffer.cols or rows != buffer.rows:
-            buffer.resize(rows, cols)
-            self._update_scrollbar()
-            self.size_changed.emit()
+        # Update state dimensions
+        self._state.resize(rows, cols)
+        self._update_scrollbar()
+        self.size_changed.emit()
 
     def _handle_scroll(self, value: int):
         """Handle scrollbar value changes."""
@@ -379,7 +140,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _update_scrollbar(self):
         """Update scrollbar range based on content size."""
-        buffer = self._current_buffer
+        buffer = self._state.current_buffer
         history_lines = max(0, len(buffer.lines) - buffer.rows)
 
         # Set range and update scroll position if needed
@@ -392,875 +153,22 @@ class TerminalWidget(QAbstractScrollArea):
         if old_at_bottom:
             vbar.setValue(vbar.maximum())
 
-    def _xterm_to_rgb(self, color_index: int) -> int:
-        """
-        Convert xterm-256 color index to RGB value.
-
-        Args:
-            color_index: Color index from 0-255
-
-        Returns:
-            32-bit RGB color value (0x00RRGGBB format)
-
-        The xterm-256 color scheme consists of:
-        - Colors 0-15: Standard ANSI colors (handled by _ansi_colors)
-        - Colors 16-231: 6x6x6 RGB color cube
-        - Colors 232-255: Grayscale colors
-        """
-        # Use color table for standard colors (0-15)
-        if color_index < 16:
-            color_role = self._ansi_colors[color_index]
-            return self._style_manager.get_color(color_role).rgb()
-
-        # Handle 6x6x6 color cube (indices 16-231)
-        if color_index < 232:
-            # Remove the 16 basic colors offset
-            color_index -= 16
-
-            # Extract RGB components
-            # Each component has 6 possible values: 0, 95, 135, 175, 215, 255
-            blue = color_index % 6
-            green = (color_index // 6) % 6
-            red = color_index // 36
-
-            # Convert to actual RGB values
-            def component_to_value(component: int) -> int:
-                if component == 0:
-                    return 0
-                return 40 * component + 55
-
-            r = component_to_value(red)
-            g = component_to_value(green)
-            b = component_to_value(blue)
-
-            return (r << 16) | (g << 8) | b
-
-        # Handle grayscale colors (indices 232-255)
-        # These are evenly spaced from dark to light
-        # First gray (232) is 8,8,8
-        # Last gray (255) is 238,238,238
-        gray_value = 8 + (color_index - 232) * 10
-        return (gray_value << 16) | (gray_value << 8) | gray_value
-
-    def _handle_selection_data(self, param: str):
-        """Handle OSC 52 selection data operations."""
-        try:
-            clipboard, data = param.split(';', 1)
-            if clipboard in ('c', 'p', 's'):  # Primary, clipboard, or secondary selection
-                if data == '?':  # Query
-                    # Should emit response with current selection
-                    pass
-                elif data:  # Set
-                    # Base64 decode data and update clipboard
-                    decoded = base64.b64decode(data).decode('utf-8')
-                    if clipboard == 'c':
-                        QGuiApplication.clipboard().setText(decoded)
-                else:  # Clear
-                    if clipboard == 'c':
-                        QGuiApplication.clipboard().clear()
-        except (ValueError, TypeError) as e:
-            self._logger.warning(f"Invalid selection data: {param}: {e}")
-
-    def _process_osc(self, sequence: str):
-        """Handle Operating System Command sequences."""
-        print(f"OSC: {repr(sequence)}")
-
-        # Remove ESC] prefix and terminator (BEL or ST)
-        if sequence.endswith('\x07'):  # BEL
-            params = sequence[2:-1]
-        elif sequence.endswith('\x1b\\'):  # ST
-            params = sequence[2:-2]
-        else:
-            return
-
-        try:
-            # Split into command number and parameter
-            parts = params.split(';', 1)
-            command = int(parts[0])
-            param = parts[1] if len(parts) > 1 else ''
-
-            if command == 0:  # Set window title and icon name
-                self._terminal_title = param
-
-            elif command == 1:  # Set icon name only
-                pass
-
-            elif command == 2:  # Set window title only
-                self._terminal_title = param
-
-            elif command == 4:  # Change/query color number
-                # Format: 4;index;spec
-                color_parts = param.split(';')
-                if len(color_parts) >= 2:
-                    if len(color_parts) == 1:  # Query
-                        pass
-                    else:  # Set
-                        pass
-
-            elif command == 7:  # Set working directory
-                self._current_directory = param
-
-            elif command == 52:  # Manipulate selection data
-                self._handle_selection_data(param)
-
-        except (ValueError, IndexError) as e:
-            self._logger.warning(f"Invalid OSC sequence: {sequence}, error: {e}")
-
-    def _handle_alternate_screen(self, enable: bool):
-        """Switch between main and alternate screen buffers."""
-        if (enable and self._current_buffer == self._alternate_buffer) or \
-           (not enable and self._current_buffer == self._main_buffer):
-            return
-
-        self._clear_selection()
-
-        if enable:
-            if not self._alternate_buffer:
-                buffer = self._current_buffer
-                self._alternate_buffer = TerminalBuffer(buffer.rows, buffer.cols, False)
-            self._current_buffer = self._alternate_buffer
-        else:
-            self._current_buffer = self._main_buffer
-            self._alternate_buffer = None
-
-    def _process_private_mode(self, params: str, set_mode: bool):
-        """Handle DEC private mode sequences (DECSET/DECRST)."""
-        buffer = self._current_buffer
-        try:
-            modes = [int(x) for x in params.split(';')]
-            for mode in modes:
-                if mode == 1:  # DECCKM - Application Cursor Keys
-                    buffer.modes.application_cursor = set_mode
-                elif mode == 3:  # DECCOLM - 80/132 Column Mode
-                    # In xterm this changes column count but for now we'll ignore
-                    buffer = self._current_buffer
-                    buffer.clear()
-                    self._clear_selection()
-                    buffer.scroll_region.top = 0
-                    buffer.scroll_region.bottom = buffer.rows
-                    buffer.scroll_region.rows = buffer.rows
-                elif mode == 5:  # DECSCNM - Screen Mode (Reverse)
-                    self._screen_reverse_mode = set_mode
-                elif mode == 6:  # DECOM - Origin Mode
-                    buffer.modes.origin = set_mode
-                    buffer.cursor.row = 0
-                    buffer.max_cursor_row = 0
-                    buffer.cursor.col = 0
-                    buffer.cursor.delayed_wrap = False
-                elif mode == 7:  # DECAWM - Auto-wrap Mode
-                    buffer.modes.auto_wrap = set_mode
-                elif mode == 12:  # att610 - Start/Stop Blinking Cursor
-                    buffer.cursor.blink = set_mode
-                elif mode == 25:  # DECTCEM - Text Cursor Enable Mode
-                    buffer.cursor.visible = set_mode
-                elif mode == 1000:  # X11 mouse reporting - normal tracking mode
-                    self._mouse_tracking.enabled = set_mode
-                    self._mouse_tracking.mode = 1000 if set_mode else 0
-                elif mode == 1002:  # X11 mouse reporting - button event tracking
-                    self._mouse_tracking.enabled = set_mode
-                    self._mouse_tracking.mode = 1002 if set_mode else 0
-                elif mode == 1003:  # X11 mouse reporting - any event tracking
-                    self._mouse_tracking.enabled = set_mode
-                    self._mouse_tracking.mode = 1003 if set_mode else 0
-                elif mode == 1004:  # Send focus in/out events
-                    buffer.focus_tracking = set_mode
-                elif mode == 1005:  # UTF-8 mouse mode
-                    self._mouse_tracking.utf8_mode = set_mode
-                elif mode == 1006:  # SGR mouse mode
-                    self._mouse_tracking.sgr_mode = set_mode
-                elif mode == 1047:  # Use Alternate Screen Buffer
-                    self._handle_alternate_screen(set_mode)
-                elif mode == 1048:  # Save/Restore cursor
-                    if set_mode:
-                        buffer.cursor.saved_position = (
-                            buffer.cursor.row,
-                            buffer.cursor.col,
-                            buffer.cursor.delayed_wrap,
-                            buffer.modes.origin
-                        )
-                    elif buffer.cursor.saved_position:
-                        buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
-                        buffer.modes.origin = origin
-                elif mode == 1049:  # Alternate Screen + save/restore cursor
-                    if set_mode:
-                        buffer.cursor.saved_position = (
-                            buffer.cursor.row,
-                            buffer.cursor.col,
-                            buffer.cursor.delayed_wrap,
-                            buffer.modes.origin
-                        )
-                        self._handle_alternate_screen(True)
-                    else:
-                        self._handle_alternate_screen(False)
-                        if buffer.cursor.saved_position:
-                            buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
-                            buffer.modes.origin = origin
-                elif mode == 2004:  # Bracketed paste mode
-                    buffer.modes.bracketed_paste = set_mode
-                else:
-                    print(f"Unknown PM operation {mode}")
-                    self._logger.warning(f"Unknown PM operation {mode}")
-        except ValueError as e:
-            self._logger.warning(f"Invalid private mode parameter: {params}")
-
-    def _process_sgr(self, params: list[int]) -> None:
-        """Process SGR (Select Graphic Rendition) sequence."""
-        buffer = self._current_buffer
-        i = 0
-        while i < len(params):
-            param = params[i]
-
-            if param == 0:  # Reset
-                buffer.attributes.current = CharacterAttributes.NONE
-                buffer.attributes.foreground = None
-                buffer.attributes.background = None
-
-            elif param == 1:  # Bold
-                buffer.attributes.current |= CharacterAttributes.BOLD
-
-            elif param == 2:  # Dim
-                buffer.attributes.current |= CharacterAttributes.DIM
-
-            elif param == 3:  # Italic
-                buffer.attributes.current |= CharacterAttributes.ITALIC
-
-            elif param == 4:  # Underline
-                buffer.attributes.current |= CharacterAttributes.UNDERLINE
-
-            elif param == 5:  # Blink
-                buffer.attributes.current |= CharacterAttributes.BLINK
-
-            elif param == 7:  # Inverse
-                buffer.attributes.current |= CharacterAttributes.INVERSE
-
-            elif param == 8:  # Hidden
-                buffer.attributes.current |= CharacterAttributes.HIDDEN
-
-            elif param == 9:  # Strike
-                buffer.attributes.current |= CharacterAttributes.STRIKE
-
-            elif param == 21:  # Normal intensity (not bold)
-                buffer.attributes.current &= ~CharacterAttributes.BOLD
-
-            elif param == 22:  # Normal intensity (not bold and not dim)
-                buffer.attributes.current &= ~(CharacterAttributes.BOLD | CharacterAttributes.DIM)
-
-            elif param == 23:  # Not italic
-                buffer.attributes.current &= ~CharacterAttributes.ITALIC
-
-            elif param == 24:  # Not underlined
-                buffer.attributes.current &= ~CharacterAttributes.UNDERLINE
-
-            elif param == 25:  # Not blinking
-                buffer.attributes.current &= ~CharacterAttributes.BLINK
-
-            elif param == 27:  # Not inverse
-                buffer.attributes.current &= ~CharacterAttributes.INVERSE
-
-            elif param == 28:  # Not hidden
-                buffer.attributes.current &= ~CharacterAttributes.HIDDEN
-
-            elif param == 29:  # Not strike
-                buffer.attributes.current &= ~CharacterAttributes.STRIKE
-
-            elif 30 <= param <= 37:  # Standard foreground color
-                buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
-                color_role = self._ansi_colors[param - 30]
-                buffer.attributes.foreground = self._style_manager.get_color(color_role).rgb()
-
-            elif 40 <= param <= 47:  # Standard background color
-                buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
-                color_role = self._ansi_colors[param - 40]
-                buffer.attributes.background = self._style_manager.get_color(color_role).rgb()
-
-            elif param == 38:  # Extended foreground color
-                if i + 2 < len(params):
-                    if params[i + 1] == 5:  # 256 colors
-                        color_index = params[i + 2]
-                        buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
-                        buffer.attributes.foreground = self._xterm_to_rgb(color_index)
-                        i += 2
-                    elif params[i + 1] == 2 and i + 4 < len(params):  # RGB
-                        r, g, b = params[i + 2:i + 5]
-                        buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
-                        buffer.attributes.foreground = (r << 16) | (g << 8) | b
-                        i += 4
-
-            elif param == 48:  # Extended background color
-                if i + 2 < len(params):
-                    if params[i + 1] == 5:  # 256 colors
-                        color_index = params[i + 2]
-                        buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
-                        buffer.attributes.background = self._xterm_to_rgb(color_index)
-                        i += 2
-                    elif params[i + 1] == 2 and i + 4 < len(params):  # RGB
-                        r, g, b = params[i + 2:i + 5]
-                        buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
-                        buffer.attributes.background = (r << 16) | (g << 8) | b
-                        i += 4
-
-            else:
-                print(f"Unknown SGR sequence {params}")
-                self._logger.warning(f"Unknown SGR sequence {params}")
-
-            i += 1
-
-    def _clear_region(self, start_row: int, start_col: int, end_row: int, end_col: int) -> None:
-        """Clear a rectangular region of the terminal."""
-        buffer = self._current_buffer
-        for row in range(start_row, end_row + 1):
-            line_index = len(buffer.lines) - buffer.rows + row
-            if 0 <= line_index < len(buffer.lines):
-                line = buffer.lines[line_index]
-                start = start_col if row == start_row else 0
-                end = end_col if row == end_row else buffer.cols - 1
-                for col in range(start, end + 1):
-                    line.set_character(col, ' ')
-
-    def _process_csi(self, sequence: str) -> None:
-        """Process CSI (Control Sequence Introducer) sequence."""
-        buffer = self._current_buffer
-        code = sequence[-1]
-        print(f"CSI code {code}: {repr(sequence)}")
-
-        # Parse parameters
-        params_str = sequence[2:-1]  # Remove ESC[ and final character
-        params = [int(p) if p.isdigit() else 0 for p in params_str.split(';')] if params_str else [0]
-
-        if code == 'A':  # CUU - Cursor Up
-            amount = max(1, params[0])
-            buffer.cursor.row = max(0, buffer.cursor.row - amount)
-            buffer.cursor.delayed_wrap = False
-
-        elif code == 'B':  # CUD - Cursor Down
-            amount = max(1, params[0])
-            max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-            buffer.cursor.row = min(max_rows - 1, buffer.cursor.row + amount)
-            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            buffer.cursor.delayed_wrap = False
-
-        elif code == 'C':  # CUF - Cursor Forward
-            amount = max(1, params[0])
-            buffer.cursor.col = min(buffer.cols - 1, buffer.cursor.col + amount)
-            buffer.cursor.delayed_wrap = False
-
-        elif code == 'D':  # CUB - Cursor Back
-            amount = max(1, params[0])
-            buffer.cursor.col = max(0, buffer.cursor.col - amount)
-            buffer.cursor.delayed_wrap = False
-
-        elif code == 'G':  # CHA - Cursor Horizontal Absolute
-            col = max(0, params[0] - 1)  # Convert 1-based to 0-based
-            buffer.cursor.col = min(col, buffer.cols - 1)
-            buffer.cursor.delayed_wrap = False
-
-        elif code == 'H':  # CUP - Cursor Position
-            row = params[0] if params else 1
-            col = params[1] if len(params) > 1 else 1
-            max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-            buffer.cursor.row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
-            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            buffer.cursor.col = min(buffer.cols - 1, max(0, col - 1))
-            buffer.cursor.delayed_wrap = False
-
-        elif code == 'J':  # ED - Erase in Display
-            mode = params[0] if params else 0
-            if mode == 0:  # Clear from cursor to end
-                self._clear_region(
-                    buffer.cursor.row,
-                    buffer.cursor.col,
-                    buffer.rows - 1,
-                    buffer.cols - 1
-                )
-            elif mode == 1:  # Clear from start to cursor
-                self._clear_region(0, 0, buffer.cursor.row, buffer.cursor.col)
-            elif mode == 2:  # Clear entire screen
-                self._clear_region(0, 0, buffer.rows - 1, buffer.cols - 1)
-
-        elif code == 'K':  # EL - Erase in Line
-            mode = params[0] if params else 0
-            if mode == 0:  # Clear from cursor to end
-                self._clear_region(
-                    buffer.cursor.row,
-                    buffer.cursor.col,
-                    buffer.cursor.row,
-                    buffer.cols - 1
-                )
-            elif mode == 1:  # Clear from start to cursor
-                self._clear_region(
-                    buffer.cursor.row,
-                    0,
-                    buffer.cursor.row,
-                    buffer.cursor.col
-                )
-            elif mode == 2:  # Clear entire line
-                self._clear_region(
-                    buffer.cursor.row,
-                    0,
-                    buffer.cursor.row,
-                    buffer.cols - 1
-                )
-
-        elif code == 'L':  # IL - Insert Line
-            count = max(1, params[0] if params else 1)
-            self._insert_lines(count)
-
-        elif code == 'M':  # DL - Delete Line
-            count = max(1, params[0] if params else 1)
-            self._delete_lines(count)
-
-        elif code == 'P':  # DCH - Delete Character
-            count = max(1, params[0] if params else 1)
-            self._delete_chars(count)
-
-        elif code == 'S':  # SU - Scroll Up
-            count = max(1, params[0] if params else 1)
-            self._scroll_up(count)
-
-        elif code == 'T':  # SD - Scroll Down
-            count = max(1, params[0] if params else 1)
-            self._scroll_down(count)
-
-        elif code == 'X':  # ECH - Erase Character
-            count = max(1, params[0] if params else 1)
-            self._erase_chars(count)
-
-        elif code == '@':  # ICH - Insert Character
-            count = max(1, params[0] if params else 1)
-            self._insert_chars(count)
-
-        elif code == 'd':  # VPA - Line Position Absolute
-            row = max(0, params[0] - 1) if params else 0  # Convert 1-based to 0-based
-            max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-            buffer.cursor.row = min(row, max_rows - 1)
-            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            buffer.cursor.delayed_wrap = False
-
-        elif code == 'f':  # HVP - Horizontal and Vertical Position
-            row = params[0] if params else 1
-            col = params[1] if len(params) > 1 else 1
-            max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-            buffer.cursor.row = min(max_rows - 1, max(0, row - 1))  # Convert to 0-based
-            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            buffer.cursor.col = min(buffer.cols - 1, max(0, col - 1))
-            buffer.cursor.delayed_wrap = False
-
-        elif code == 'g':  # TBC - Tab clear
-            params = [int(p) if p.isdigit() else 0 for p in sequence[2:-1].split(';')] if sequence[2:-1] else [0]
-            mode = params[0] if params else 0
-
-            if mode == 0:  # Clear tab stop at current position
-                buffer.tab_stops.clear_tab_stop(buffer.cursor.col)
-            elif mode == 3:  # Clear all tab stops
-                buffer.tab_stops.clear_all_tab_stops()
-
-        elif code == 'm':  # SGR - Select Graphic Rendition
-            self._process_sgr(params)
-
-        elif code == 'r':  # DECSTBM - Set Top and Bottom Margins
-            top = max(0, params[0] - 1) if params else 0
-            bottom = min(buffer.rows, params[1]) if len(params) > 1 and params[1] else buffer.rows
-            if top < bottom:
-                buffer.scroll_region.top = top
-                buffer.scroll_region.bottom = bottom
-                buffer.scroll_region.rows = bottom - top
-
-        elif code == 's':  # Save cursor position
-            buffer.cursor.saved_position = (
-                buffer.cursor.row,
-                buffer.cursor.col,
-                buffer.cursor.delayed_wrap,
-                buffer.modes.origin
-            )
-
-        elif code == 'u':  # Restore cursor position
-            if buffer.cursor.saved_position:
-                buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
-                buffer.modes.origin = origin
-
-        else:
-            print(f"Unknown CSI sequence {repr(sequence)}")
-            self._logger.warning(f"Unknown CSI sequence {repr(sequence)}")
-
-    def _process_dec_special(self, sequence: str) -> None:
-        """Process DEC special sequences."""
-        buffer = self._current_buffer
-        code = sequence[-1]
-
-        if code == '8':  # DECALN - Screen Alignment Pattern
-            for r in range(buffer.rows):
-                line_index = len(buffer.lines) - buffer.rows + r
-                line = buffer.lines[line_index]
-                for c in range(buffer.cols):
-                    line.set_character(c, 'E')
-        else:
-            print(f"Unknown DEC special sequence {repr(sequence)}")
-            self._logger.warning(f"Unknown DEC special sequence {repr(sequence)}")
-
-    def _process_escape_sequence(self, sequence: str) -> None:
-        """Process ANSI escape sequence."""
-        # OSC sequences
-        if sequence.startswith('\x1b]'):
-            self._process_osc(sequence)
-            return
-
-        # Private mode sequences
-        if sequence.startswith('\x1b[?'):
-            code = sequence[-1]
-            print(f"PM code {code}: {repr(sequence)}")
-            params = sequence[3:-1]  # Remove ESC[? and final character
-            if code == 'h':
-                self._process_private_mode(params, True)
-            elif code == 'l':
-                self._process_private_mode(params, False)
-            return
-
-        # CSI sequences
-        if sequence.startswith('\x1b['):
-            self._process_csi(sequence)
-            return
-
-        # DEC special sequences
-        if sequence.startswith('\x1b#'):
-            self._process_dec_special(sequence)
-            return
-
-        # Simple escape sequences
-        if len(sequence) == 2:
-            code = sequence[1]
-            buffer = self._current_buffer
-            print(f"ESC code {code}: {repr(sequence)}")
-            if code == '7':  # ESC 7 - Save Cursor
-                buffer = self._current_buffer
-                buffer.cursor.saved_position = (
-                    buffer.cursor.row,
-                    buffer.cursor.col,
-                    buffer.cursor.delayed_wrap,
-                    buffer.modes.origin
-                )
-
-            elif code == '8':  # ESC 8 - Restore Cursor
-                buffer = self._current_buffer
-                if buffer.cursor.saved_position:
-                    buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
-                    buffer.modes.origin = origin
-
-            elif code == 'D':  # Index
-                cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-                if cursor_row != buffer.scroll_region.bottom - 1:
-                    max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-                    buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
-                    buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-                else:
-                    self._scroll_up(1)
-                buffer.cursor.delayed_wrap = False
-
-            elif code == 'E':  # Next Line
-                buffer.cursor.col = 0
-                cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-                if cursor_row != buffer.scroll_region.bottom - 1:
-                    max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-                    buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
-                    buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-                else:
-                    self._scroll_up(1)
-                buffer.cursor.delayed_wrap = False
-
-            # Add handling for tab stop sequences
-            elif code == 'H':  # HTS - Set tab stop at current position
-                buffer.tab_stops.set_tab_stop(buffer.cursor.col)
-
-            elif code == 'M':  # Reverse Index
-                cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-                if cursor_row != buffer.scroll_region.top:
-                    buffer.cursor.row = max(0, buffer.cursor.row - 1)
-                else:
-                    self._scroll_down(1)
-                buffer.cursor.delayed_wrap = False
-
-            else:
-                print(f"Unknown simple ESC sequence: {repr(sequence)}")
-                self._logger.warning(f"Unknown simple ESC sequence: {repr(sequence)}")
-
-            return
-
-        print(f"Unknown ESC sequence: {repr(sequence)}")
-        self._logger.warning(f"Unknown ESC sequence: {repr(sequence)}")
-
-    def _insert_lines(self, count: int) -> None:
-        """Insert blank lines at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        if not (buffer.scroll_region.top <= cursor_row < buffer.scroll_region.bottom):
-            return
-
-        # Calculate lines to move
-        start = len(buffer.lines) - buffer.rows + cursor_row
-        end = len(buffer.lines) - buffer.rows + buffer.scroll_region.bottom
-
-        # Clip the count
-        count = min(count, end - start)
-
-        # Insert blank lines at the cursor and delete them at the end of the scrolling region
-        for _ in range(count):
-            buffer.lines.insert(start, buffer.get_new_line())
-            del buffer.lines[end]
-
-        buffer.cursor.col = 0
-        buffer.cursor.delayed_wrap = False
-
-    def _delete_lines(self, count: int) -> None:
-        """Delete lines at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        if not (buffer.scroll_region.top <= cursor_row < buffer.scroll_region.bottom):
-            return
-
-        # Calculate lines to remove
-        start = len(buffer.lines) - buffer.rows + cursor_row
-        end = len(buffer.lines) - buffer.rows + buffer.scroll_region.bottom
-
-        # Clip the count
-        count = min(count, end - start)
-
-        # Insert blank lines at the end of the scrolling region and remove them at the cursor
-        for _ in range(count):
-            buffer.lines.insert(end, buffer.get_new_line())
-            del buffer.lines[start]
-
-        buffer.cursor.col = 0
-        buffer.cursor.delayed_wrap = False
-
-    def _insert_chars(self, count: int) -> None:
-        """Insert blank characters at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        line_index = len(buffer.lines) - buffer.rows + cursor_row
-        if 0 <= line_index < len(buffer.lines):
-            line = buffer.lines[line_index]
-            # Move existing characters right
-            for col in range(buffer.cols - 1, buffer.cursor.col - 1, -1):
-                if col >= buffer.cursor.col + count:
-                    char, attrs, fg, bg = line.get_character(col - count)
-                    line.set_character(col, char, attrs, fg, bg)
-
-            # Insert spaces
-            for col in range(buffer.cursor.col, min(buffer.cursor.col + count, buffer.cols)):
-                line.set_character(col, ' ')
-
-    def _delete_chars(self, count: int) -> None:
-        """Delete characters at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        line_index = len(buffer.lines) - buffer.rows + cursor_row
-        if 0 <= line_index < len(buffer.lines):
-            line = buffer.lines[line_index]
-            # Move characters left
-            for col in range(buffer.cursor.col, buffer.cols):
-                if col + count < buffer.cols:
-                    char, attrs, fg, bg = line.get_character(col + count)
-                    line.set_character(col, char, attrs, fg, bg)
-                else:
-                    line.set_character(col, ' ')
-
-    def _erase_chars(self, count: int) -> None:
-        """Erase characters at cursor position."""
-        buffer = self._current_buffer
-        cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-        line_index = len(buffer.lines) - buffer.rows + cursor_row
-        if 0 <= line_index < len(buffer.lines):
-            line = buffer.lines[line_index]
-            for col in range(buffer.cursor.col, min(buffer.cursor.col + count, buffer.cols)):
-                line.set_character(col, ' ')
-
-    def _scroll_up(self, count: int) -> None:
-        """Scroll up within current scroll region."""
-        buffer = self._current_buffer
-
-        # Calculate actual lines in scroll region
-        start = len(buffer.lines) - buffer.rows + buffer.scroll_region.top
-        end = len(buffer.lines) - buffer.rows + buffer.scroll_region.bottom
-
-        # Insert blank lines at the bottom of the scrolling region and remove lines from the top
-        for _ in range(count):
-            buffer.lines.insert(end, buffer.get_new_line())
-
-            # If we're using the main screen and the scrolling region top is the top of the screen
-            # then we don't actually delete anything, we simply let the scrolled line roll into
-            # the history buffer
-            if buffer == self._alternate_buffer or buffer.scroll_region.top != 0:
-                scrolled_line = buffer.lines.pop(start)
-                if buffer != self._alternate_buffer:
-                    buffer.lines.insert(len(buffer.lines) - buffer.rows, scrolled_line)
-
-    def _scroll_down(self, count: int) -> None:
-        """Scroll down within current scroll region."""
-        buffer = self._current_buffer
-        # Calculate actual lines in scroll region
-        start = len(buffer.lines) - buffer.rows + buffer.scroll_region.top
-        end = len(buffer.lines) - buffer.rows + buffer.scroll_region.bottom
-
-        # Insert blank lines at the top of the scrolling region and remove lines from the bottom
-        for _ in range(count):
-            buffer.lines.insert(start, buffer.get_new_line())
-            del buffer.lines[end]
-
-    def _write_char(self, char: str) -> None:
-        """Write a single character at the current cursor position."""
-        buffer = self._current_buffer
-
-        if char == '\r':
-            buffer.cursor.col = 0
-            buffer.cursor.delayed_wrap = False
-            return
-
-        if char in '\n\f\v':
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            if cursor_row != buffer.scroll_region.bottom - 1:
-                max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-                buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
-                buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            else:
-                self._scroll_up(1)
-
-            buffer.cursor.delayed_wrap = False
-            return
-
-        if char == '\b':
-            buffer.cursor.col = max(0, buffer.cursor.col - 1)
-            buffer.cursor.delayed_wrap = False
-            return
-
-        # Handle delayed wrapping for printable characters
-        if buffer.cursor.delayed_wrap:
-            buffer.cursor.col = 0
-            buffer.cursor.delayed_wrap = False
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            if cursor_row != buffer.scroll_region.bottom - 1:
-                max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-                buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
-                buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-                cursor_row += 1
-            else:
-                self._scroll_up(1)
-
-        if char == '\t':
-            # Get next tab stop
-            next_stop = buffer.tab_stops.get_next_tab_stop(buffer.cursor.col)
-            if next_stop is not None:
-                # Move to tab stop
-                buffer.cursor.col = next_stop
-            else:
-                # Move to end of line if no more stops
-                buffer.cursor.col = buffer.cols - 1
-
-            return
-
-        # Handle printable characters
-        if ord(char) >= 32:
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            line_index = len(buffer.lines) - buffer.rows + cursor_row
-            line = buffer.lines[line_index]
-
-            # Write character
-            line.set_character(
-                buffer.cursor.col,
-                char,
-                buffer.attributes.current,
-                buffer.attributes.foreground if buffer.attributes.current & CharacterAttributes.CUSTOM_FG else None,
-                buffer.attributes.background if buffer.attributes.current & CharacterAttributes.CUSTOM_BG else None
-            )
-
-            # Handle cursor movement and wrapping
-            if buffer.cursor.col == buffer.cols - 1:
-                buffer.cursor.delayed_wrap = buffer.modes.auto_wrap
-            else:
-                buffer.cursor.col += 1
-
-    def put_data(self, data: bytes) -> None:
-        """
-        Display received data with ANSI sequence handling.
-
-        Args:
-            data: Raw bytes from terminal
-
-        Raises:
-            UnicodeDecodeError: If data cannot be decoded
-        """
-        text = data.decode(errors='replace')
-
-        print(f"put data {repr(text)}")
-        i = 0
-        while i < len(text):
-            char = text[i]
-            i += 1
-
-            if self._in_escape_seq:
-                # Is this character a control character?  If yes, then we have to process it immediately
-                # Weird eh?  But this is what a slow serial terminal needed and tools like vttest check
-                # for this!
-                if char in '\r\n\b\f\t\v':
-                    self._write_char(char)
-                    continue
-
-                # If we find another escape character then this suggests we've just seen something we
-                # didn't understand.  We'll log it and move on
-                if char == '\x1b':
-                    self._logger.warning(f"Unknown escape sequence - discarding: {repr(self._escape_seq_buffer)}")
-                    print(f"Unknown escape sequence - discarding: {repr(self._escape_seq_buffer)}")
-                    self._escape_seq_buffer = ""
-
-                self._escape_seq_buffer += char
-
-                # Process escape sequence when complete
-                if self._is_escape_sequence_complete(self._escape_seq_buffer):
-                    self._process_escape_sequence(self._escape_seq_buffer)
-                    self._escape_seq_buffer = ""
-                    self._in_escape_seq = False
-                elif len(self._escape_seq_buffer) > 128:  # Safety limit
-                    self._logger.warning(f"Escape sequence too long, discarding: {repr(self._escape_seq_buffer)}")
-                    print(f"Escape sequence too long, discarding: {repr(self._escape_seq_buffer)}")
-                    self._escape_seq_buffer = ""
-                    self._in_escape_seq = False
-
-            elif char == '\x1b':  # Start of new escape sequence
-                self._in_escape_seq = True
-                self._escape_seq_buffer = char
-
-            else:
-                self._write_char(char)
-
-        # Update the affected area
-        self._update_scrollbar()
-        self.viewport().update()
-
-    def _is_escape_sequence_complete(self, sequence: str) -> bool:
-        """
-        Check if an escape sequence is complete.
-
-        Args:
-            sequence: The escape sequence to check
-
-        Returns:
-            bool: True if the sequence is complete
-        """
-        if len(sequence) < 2:
-            return False
-
-        if sequence.startswith('\x1b]'):  # OSC sequence
-            return sequence.endswith('\x07') or sequence.endswith('\x1b\\')
-
-        if sequence.startswith('\x1b['):  # CSI sequence
-            return sequence[-1].isalpha() or sequence[-1] in '@`~'
-
-        if sequence.startswith('\x1bP'):  # DCS sequence
-            return sequence.endswith('\x1b\\')
-
-        if sequence.startswith('\x1b#'):  # line attributes sequence
-            return len(sequence) == 3
-
-        # Simple ESC sequences
-        return len(sequence) == 2 and sequence[1] in '78DEHM'
+    def _scroll_to_bottom(self):
+        """Scroll the view to show the bottom of the terminal."""
+        vbar = self.verticalScrollBar()
+        vbar.setValue(vbar.maximum())
+
+    def _toggle_blink(self):
+        """Toggle blink state and update display if needed."""
+        buffer = self._state.current_buffer
+        old_state = self._blink_state
+        self._blink_state = not self._blink_state
+
+        # Only update if we have any blinking characters
+        if any(any((line.get_character(col)[1] & CharacterAttributes.BLINK)
+                for col in range(buffer.cols))
+                for line in buffer.lines[-buffer.rows:]):
+            self.viewport().update()
 
     def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
         """Convert pixel coordinates to text position.
@@ -1271,7 +179,7 @@ class TerminalWidget(QAbstractScrollArea):
         Returns:
             Tuple of (row, col) in terminal buffer coordinates
         """
-        buffer = self._current_buffer
+        buffer = self._state.current_buffer
         fm = QFontMetrics(self.font())
         char_width = fm.horizontalAdvance(' ')
         char_height = fm.height()
@@ -1324,13 +232,13 @@ class TerminalWidget(QAbstractScrollArea):
             self.viewport().update()
 
         # Handle mouse tracking if enabled
-        if self._mouse_tracking.enabled:
+        if self._state.mouse_tracking.enabled:
             pos = event.position().toPoint()
             button = event.button()
             row, col = self._pixel_pos_to_text_pos(pos)
 
             # Construct mouse report based on mode
-            if self._mouse_tracking.sgr_mode:
+            if self._state.mouse_tracking.sgr_mode:
                 report = self._make_sgr_mouse_report(row, col, button, True)
             else:
                 report = self._make_normal_mouse_report(row, col, button)
@@ -1346,12 +254,12 @@ class TerminalWidget(QAbstractScrollArea):
             self._selecting = False
 
         # Handle mouse tracking if enabled
-        if self._mouse_tracking.enabled:
+        if self._state.mouse_tracking.enabled:
             pos = event.position().toPoint()
             button = event.button()
             row, col = self._pixel_pos_to_text_pos(pos)
 
-            if self._mouse_tracking.sgr_mode:
+            if self._state.mouse_tracking.sgr_mode:
                 report = self._make_sgr_mouse_report(row, col, button, False)
                 if report:
                     self.data_ready.emit(report.encode())
@@ -1370,12 +278,15 @@ class TerminalWidget(QAbstractScrollArea):
                 self.viewport().update()
 
         # Handle mouse tracking if enabled and in button event mode (1002) or any event mode (1003)
-        if self._mouse_tracking.enabled and self._mouse_tracking.mode in (1002, 1003):
+        if (
+            self._state.mouse_tracking.enabled and
+            self._state.mouse_tracking.mode in (1002, 1003)
+        ):
             row, col = self._pixel_pos_to_text_pos(event.position().toPoint())
             buttons = event.buttons()
 
             # For 1002 mode, only report if buttons are pressed
-            if self._mouse_tracking.mode == 1002 and not buttons:
+            if self._state.mouse_tracking.mode == 1002 and not buttons:
                 return
 
             btn_num = 32  # Default to button release
@@ -1386,7 +297,7 @@ class TerminalWidget(QAbstractScrollArea):
             elif buttons & Qt.RightButton:
                 btn_num = 34
 
-            if self._mouse_tracking.sgr_mode:
+            if self._state.mouse_tracking.sgr_mode:
                 report = f"\x1b[<{btn_num};{col + 1};{row + 1}M"
             else:
                 cb = 32 + btn_num
@@ -1417,7 +328,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle key press events including control sequences."""
-        buffer = self._current_buffer
+        buffer = self._state.current_buffer
         text = event.text()
         key = event.key()
         modifiers = event.modifiers()
@@ -1471,59 +382,46 @@ class TerminalWidget(QAbstractScrollArea):
                 event.accept()
                 return
 
-        # Handle application cursor key mode and normal mode
+        # Handle cursor keys based on mode
         if buffer.modes.application_cursor:
-            # Handle cursor keys in application mode
-            if key == Qt.Key_Up:
-                self.data_ready.emit(b'\x1bOA')
-            elif key == Qt.Key_Down:
-                self.data_ready.emit(b'\x1bOB')
-            elif key == Qt.Key_Right:
-                self.data_ready.emit(b'\x1bOC')
-            elif key == Qt.Key_Left:
-                self.data_ready.emit(b'\x1bOD')
+            cursor_map = {
+                Qt.Key_Up: b'\x1bOA',
+                Qt.Key_Down: b'\x1bOB',
+                Qt.Key_Right: b'\x1bOC',
+                Qt.Key_Left: b'\x1bOD'
+            }
         else:
-            # Normal mode key handling
-            if key == Qt.Key_Up:
-                self.data_ready.emit(b'\x1b[A')
-            elif key == Qt.Key_Down:
-                self.data_ready.emit(b'\x1b[B')
-            elif key == Qt.Key_Right:
-                self.data_ready.emit(b'\x1b[C')
-            elif key == Qt.Key_Left:
-                self.data_ready.emit(b'\x1b[D')
+            cursor_map = {
+                Qt.Key_Up: b'\x1b[A',
+                Qt.Key_Down: b'\x1b[B',
+                Qt.Key_Right: b'\x1b[C',
+                Qt.Key_Left: b'\x1b[D'
+            }
 
-        if key == Qt.Key_Return or key == Qt.Key_Enter:
-            self.data_ready.emit(b'\r')
-        elif key == Qt.Key_Backspace:
-            self.data_ready.emit(b'\x7f' if modifiers & Qt.ControlModifier else b'\b')
-        elif key == Qt.Key_Delete:
-            self.data_ready.emit(b'\x1b[3~')
-        elif key == Qt.Key_Tab:
-            self.data_ready.emit(b'\t')
-        elif text:
+        if key in cursor_map:
+            self.data_ready.emit(cursor_map[key])
+            event.accept()
+            return
+
+        # Handle other special keys
+        special_map = {
+            Qt.Key_Return: b'\r',
+            Qt.Key_Enter: b'\r',
+            Qt.Key_Backspace: b'\x7f' if modifiers & Qt.ControlModifier else b'\b',
+            Qt.Key_Delete: b'\x1b[3~',
+            Qt.Key_Tab: b'\t'
+        }
+
+        if key in special_map:
+            self.data_ready.emit(special_map[key])
+            event.accept()
+            return
+
+        # Handle regular text input
+        if text:
             self.data_ready.emit(text.encode())
 
         event.accept()
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        """Handle resize events."""
-        print("resize event")
-        super().resizeEvent(event)
-        self.update_dimensions()
-        self.viewport().update()
-
-    def _toggle_blink(self):
-        """Toggle blink state and update display if needed."""
-        buffer = self._current_buffer
-        old_state = self._blink_state
-        self._blink_state = not self._blink_state
-
-        # Only update if we have any blinking characters
-        if any(any((line.get_character(col)[1] & CharacterAttributes.BLINK)
-                for col in range(buffer.cols))
-                for line in buffer.lines[-buffer.rows:]):
-            self.viewport().update()
 
     def _draw_character(
         self,
@@ -1541,16 +439,16 @@ class TerminalWidget(QAbstractScrollArea):
         """Draw a single character cell with attributes."""
         # Determine initial colors, considering custom and default colors
         fg = (QColor(fg_color) if fg_color is not None and (attributes & CharacterAttributes.CUSTOM_FG)
-            else QColor(self._default_fg))
+              else QColor(self._default_fg.rgb()))
         bg = (QColor(bg_color) if bg_color is not None and (attributes & CharacterAttributes.CUSTOM_BG)
-            else QColor(self._default_bg))
+              else QColor(self._default_bg.rgb()))
 
         # Handle inverse video by swapping foreground and background colors
         if attributes & CharacterAttributes.INVERSE:
             fg, bg = bg, fg
 
         # Handle global screen reverse mode - swap colors if enabled
-        if self._screen_reverse_mode:
+        if self._state.screen_reverse_mode:
             fg, bg = bg, fg
 
         # Handle hidden text by using background color for foreground
@@ -1581,7 +479,7 @@ class TerminalWidget(QAbstractScrollArea):
     def paintEvent(self, event: QPaintEvent) -> None:
         """Handle paint events efficiently."""
         painter = QPainter(self.viewport())
-        buffer = self._current_buffer
+        buffer = self._state.current_buffer
 
         # Get font metrics for character dimensions
         fm = QFontMetrics(self.font())
@@ -1703,17 +601,12 @@ class TerminalWidget(QAbstractScrollArea):
                             char
                         )
 
-    def _scroll_to_bottom(self):
-        """Scroll the view to show the bottom of the terminal."""
-        vbar = self.verticalScrollBar()
-        vbar.setValue(vbar.maximum())
-
     def _get_selected_text(self) -> str:
         """Get currently selected text."""
         if not self.has_selection():
             return ""
 
-        buffer = self._current_buffer
+        buffer = self._state.current_buffer
         # Get normalized selection
         selection = self._selection.normalize()
 
@@ -1759,8 +652,66 @@ class TerminalWidget(QAbstractScrollArea):
         """Paste text from clipboard."""
         text = QGuiApplication.clipboard().text()
         if text:
-            self.data_ready.emit(text.encode())
+            # Handle bracketed paste mode
+            if self._state.current_buffer.modes.bracketed_paste:
+                self.data_ready.emit(b'\x1b[200~')  # Start bracketed paste
+                self.data_ready.emit(text.encode())
+                self.data_ready.emit(b'\x1b[201~')  # End bracketed paste
+            else:
+                self.data_ready.emit(text.encode())
+
+    def _show_terminal_context_menu(self, pos) -> None:
+        """Show context menu for terminal operations."""
+        menu = QMenu(self)
+
+        # Copy action
+        copy_action = menu.addAction("Copy")
+        copy_action.setEnabled(self.has_selection())
+        copy_action.triggered.connect(self.copy)
+
+        # Paste action
+        paste_action = menu.addAction("Paste")
+        paste_action.setEnabled(True)
+        paste_action.triggered.connect(self.paste)
+
+        # Show menu at click position
+        menu.exec_(self.mapToGlobal(pos))
+
+    def put_data(self, data: bytes) -> None:
+        """Display received data with ANSI sequence handling."""
+        self._state.put_data(data)
+        self.viewport().update()
+        self._update_scrollbar()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """Handle resize events."""
+        super().resizeEvent(event)
+        self.update_dimensions()
+        self.viewport().update()
+
+    def focusNextPrevChild(self, _next: bool) -> bool:
+        """Override to prevent tab from changing focus."""
+        return False
 
     def get_terminal_size(self) -> Tuple[int, int]:
-        buffer = self._current_buffer
-        return (buffer.rows, buffer.cols)
+        """Get current terminal dimensions."""
+        return self._state.get_terminal_size()
+
+    def create_state_metadata(self) -> Dict:
+        """Create metadata dictionary capturing widget state."""
+        return self._state.create_state_metadata()
+
+    def restore_from_metadata(self, metadata: Dict) -> None:
+        """Restore terminal state from metadata."""
+        self._state.restore_from_metadata(metadata)
+        self._clear_selection()
+        self.viewport().update()
+        self._update_scrollbar()
+
+    def get_title(self) -> str:
+        """Get current terminal title."""
+        return self._state.terminal_title
+
+    def get_current_directory(self) -> Optional[str]:
+        """Get current working directory if known."""
+        return self._state._current_directory
