@@ -6,6 +6,7 @@ import logging
 import os
 import select
 import signal
+import struct
 import termios
 from typing import Dict, Optional, Set
 
@@ -81,8 +82,8 @@ class TerminalTab(TabBase):
             OSError: If ioctl call fails
         """
         try:
-            size = self._terminal.calculate_size()
-            fcntl.ioctl(fd, termios.TIOCSWINSZ, size.to_struct())
+            rows, cols = self._terminal.get_terminal_size()
+            fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
         except OSError as e:
             self._logger.error(f"Failed to update PTY size: {e}")
             raise
@@ -95,6 +96,7 @@ class TerminalTab(TabBase):
 
                 # Signal the shell process group
                 pid = self._terminal_process.get_process_id()
+                print(f"signal shell {os.getpgid(pid)}")
                 if pid:
                     os.killpg(os.getpgid(pid), signal.SIGWINCH)
             except OSError as e:
@@ -238,6 +240,8 @@ class TerminalTab(TabBase):
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
         """)
+
+        self._terminal.update_dimensions()
 
     async def _cleanup(self):
         """Clean up resources."""

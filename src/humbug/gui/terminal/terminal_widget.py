@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer
 from PySide6.QtGui import (
-    QPainter, QPaintEvent, QColor, QFontMetrics, QFont,
+    QPainter, QPaintEvent, QColor, QFontMetrics,
     QResizeEvent, QKeyEvent, QMouseEvent,
     QGuiApplication, QWheelEvent
 )
@@ -17,7 +17,6 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.terminal.terminal_buffer import TerminalBuffer, CharacterAttributes
 from humbug.gui.terminal.terminal_selection import TerminalSelection
-from humbug.gui.terminal.terminal_size import TerminalSize
 from humbug.language.language_manager import LanguageManager
 
 
@@ -98,7 +97,6 @@ class TerminalWidget(QAbstractScrollArea):
         self._blink_timer.start(500)  # Toggle every 500ms
 
         # Initialize size and connect signals
-        self._update_dimensions()
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_terminal_context_menu)
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -131,12 +129,6 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _handle_style_changed(self):
         """Handle style changes."""
-        # Update terminal font
-        font = QFont(self._style_manager.monospace_font_families)
-        base_size = self._style_manager.base_font_size
-        font.setPointSizeF(base_size * self._style_manager.zoom_factor)
-        self.setFont(font)
-
         # Update default colors from style manager
         self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY).rgb()
         self._default_bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE).rgb()
@@ -144,36 +136,32 @@ class TerminalWidget(QAbstractScrollArea):
         # Force redraw with new colors
         self.viewport().update()
 
-    def calculate_size(self) -> TerminalSize:
-        """Calculate current terminal size in rows and columns."""
+    def update_dimensions(self) -> None:
+        """Update terminal dimensions based on widget size and font metrics."""
         fm = QFontMetrics(self.font())
         char_width = fm.horizontalAdvance(' ')
         char_height = fm.height()
 
-        if char_width <= 0 or char_height <= 0:
-            self._logger.warning(f"Invalid character dimensions: width={char_width}, height={char_height}")
-            return TerminalSize(24, 80)  # Default fallback size
+        rows = 24  # Default dimensions
+        cols = 80
 
-        # Get the width of the vertical scrollbar
-        scrollbar_width = self.verticalScrollBar().width()
+        if char_width > 0 and char_height > 0:
+            # Get the width of the vertical scrollbar
+            scrollbar_width = self.verticalScrollBar().width()
 
-        # Calculate available viewport width, subtracting scrollbar width
-        viewport_width = max(0, self.width() - scrollbar_width)
-        viewport_height = self.height()
+            # Calculate available viewport width, subtracting scrollbar width
+            viewport_width = max(0, self.width() - scrollbar_width)
+            viewport_height = self.height()
 
-        cols = max(viewport_width // char_width, 1)
-        rows = max(viewport_height // char_height, 1)
-        print(f"size: {rows}x{cols}")
+            cols = max(viewport_width // char_width, 1)
+            rows = max(viewport_height // char_height, 1)
+            print(f"size: {rows}x{cols} - viewport: {viewport_height}x{viewport_width} - char: {char_height}x{char_width}")
 
-        return TerminalSize(rows, cols)
-
-    def _update_dimensions(self) -> None:
-        """Update terminal dimensions based on widget size and font metrics."""
-        new_size = self.calculate_size()
         buffer = self._current_buffer
 
-        if new_size.cols != buffer.cols or new_size.rows != buffer.rows:
-            buffer.resize(new_size.rows, new_size.cols)
+        if cols != buffer.cols or rows != buffer.rows:
+            buffer.resize(rows, cols)
+            self._update_scrollbar()
             self.size_changed.emit()
 
     def _handle_scroll(self, value: int):
@@ -266,7 +254,6 @@ class TerminalWidget(QAbstractScrollArea):
     def _process_osc(self, sequence: str):
         """Handle Operating System Command sequences."""
         print(f"OSC: {repr(sequence)}")
-        buffer = self._current_buffer
 
         # Remove ESC] prefix and terminator (BEL or ST)
         if sequence.endswith('\x07'):  # BEL
@@ -319,8 +306,8 @@ class TerminalWidget(QAbstractScrollArea):
 
         if enable:
             if not self._alternate_buffer:
-                size = self.calculate_size()
-                self._alternate_buffer = TerminalBuffer(size.rows, size.cols)
+                buffer = self._current_buffer
+                self._alternate_buffer = TerminalBuffer(buffer.rows, buffer.cols)
             self._current_buffer = self._alternate_buffer
         else:
             self._current_buffer = self._main_buffer
@@ -1315,8 +1302,10 @@ class TerminalWidget(QAbstractScrollArea):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
+        print("resize event")
         super().resizeEvent(event)
-        self._update_dimensions()
+        self.update_dimensions()
+        self.viewport().update()
 
     def _toggle_blink(self):
         """Toggle blink state and update display if needed."""
@@ -1565,3 +1554,7 @@ class TerminalWidget(QAbstractScrollArea):
         text = QGuiApplication.clipboard().text()
         if text:
             self.data_ready.emit(text.encode())
+
+    def get_terminal_size(self) -> Tuple[int, int]:
+        buffer = self._current_buffer
+        return (buffer.rows, buffer.cols)

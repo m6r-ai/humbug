@@ -209,6 +209,10 @@ class TerminalBuffer:
         self.rows = new_rows
         self.cols = new_cols
 
+        # If our new size is smaller than our old one we need to remove rows
+        if new_rows < old_rows:
+            del self.lines[new_rows - old_rows:]
+
         # Create new lines with new width
         new_lines = []
 
