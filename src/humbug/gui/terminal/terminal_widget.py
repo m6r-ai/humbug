@@ -490,15 +490,18 @@ class TerminalWidget(QAbstractScrollArea):
                 # 3. Has default colors
                 # 4. Screen reverse mode is OFF
                 # Otherwise spaces need to be painted for correct background color
-                if (char == ' ' and attrs == CharacterAttributes.NONE and 
+                if (char == ' ' and attrs == CharacterAttributes.NONE and
                     fg_color is None and bg_color is None and
                     not self._state.screen_reverse_mode):
                     if current_run:
-                        self._draw_character_run(painter, current_run, current_attrs, 
-                                            current_colors, char_width, char_height, 
-                                            ascent, default_fg, default_bg, 
-                                            font_variants)
+                        self._draw_character_run(
+                            painter, current_run, current_attrs,
+                            current_colors, char_width, char_height,
+                            ascent, default_fg, default_bg,
+                            font_variants
+                        )
                         current_run = []
+
                     # If we're skipping this space, still need to paint default background
                     painter.fillRect(x, y, char_width, char_height, default_bg)
                     continue
@@ -510,10 +513,13 @@ class TerminalWidget(QAbstractScrollArea):
                 else:
                     # Draw previous run if it exists
                     if current_run:
-                        self._draw_character_run(painter, current_run, current_attrs,
-                                            current_colors, char_width, char_height,
-                                            ascent, default_fg, default_bg,
-                                            font_variants)
+                        self._draw_character_run(
+                            painter, current_run, current_attrs,
+                            current_colors, char_width, char_height,
+                            ascent, default_fg, default_bg,
+                            font_variants
+                        )
+
                     # Start new run
                     current_run = [(char, x, y)]
                     current_attrs = attrs
@@ -521,43 +527,68 @@ class TerminalWidget(QAbstractScrollArea):
 
             # Draw final run for this row
             if current_run:
-                self._draw_character_run(painter, current_run, current_attrs,
-                                    current_colors, char_width, char_height,
-                                    ascent, default_fg, default_bg, font_variants)
+                self._draw_character_run(
+                    painter, current_run, current_attrs,
+                    current_colors, char_width, char_height,
+                    ascent, default_fg, default_bg, font_variants
+                )
 
         # Draw selection overlay if present
         if self.has_selection():
-            self._draw_selection(painter, event.rect(), char_width, char_height,
-                            first_visible_line, terminal_rows, terminal_cols,
-                            terminal_history_lines, ascent)
+            self._draw_selection(
+                painter, event.rect(), char_width, char_height,
+                first_visible_line, terminal_rows, terminal_cols,
+                terminal_history_lines, ascent
+            )
 
         # Draw cursor if visible
         if buffer.cursor.visible:
-            self._draw_cursor(painter, buffer, char_width, char_height,
-                            terminal_rows, terminal_history_lines,
-                            first_visible_line, ascent)
+            self._draw_cursor(
+                painter, buffer, char_width, char_height,
+                terminal_rows, terminal_history_lines,
+                first_visible_line, ascent
+            )
 
         py_elapsed = (time.perf_counter() - py_start) * 1000
         print(f"painter elapsed {py_elapsed:.2f}")
 
-    def _create_font_variant(self, base_font: QFont, bold: bool = False,
-                            italic: bool = False, underline: bool = False,
-                            strike: bool = False) -> QFont:
+    def _create_font_variant(
+        self,
+        base_font: QFont,
+        bold: bool = False,
+        italic: bool = False,
+        underline: bool = False,
+        strike: bool = False
+    ) -> QFont:
         """Create and return a font variant."""
         font = QFont(base_font)
         if bold:
             font.setBold(True)
+
         if italic:
             font.setItalic(True)
+
         if underline:
             font.setUnderline(True)
+
         if strike:
             font.setStrikeOut(True)
+
         return font
 
-    def _draw_character_run(self, painter: QPainter, run: list, attrs: CharacterAttributes,
-                        colors: tuple, char_width: int, char_height: int, ascent: int,
-                        default_fg: QColor, default_bg: QColor, font_variants: dict) -> None:
+    def _draw_character_run(
+        self,
+        painter: QPainter,
+        run: list,
+        attrs: CharacterAttributes,
+        colors: tuple,
+        char_width: int,
+        char_height: int,
+        ascent: int,
+        default_fg: QColor,
+        default_bg: QColor,
+        font_variants: dict
+    ) -> None:
         """Draw a run of characters with the same attributes efficiently."""
         if not run:
             return
@@ -625,9 +656,18 @@ class TerminalWidget(QAbstractScrollArea):
             for char, x, y in run:
                 painter.drawText(x, y + ascent, char)
 
-    def _draw_selection(self, painter: QPainter, region: QRect, char_width: int,
-                    char_height: int, first_visible_line: int, terminal_rows: int,
-                    terminal_cols: int, terminal_history_lines: int, ascent: int) -> None:
+    def _draw_selection(
+        self,
+        painter: QPainter,
+        region: QRect,
+        char_width: int,
+        char_height: int,
+        first_visible_line: int,
+        terminal_rows: int,
+        terminal_cols: int,
+        terminal_history_lines: int,
+        ascent: int
+    ) -> None:
         """Draw text selection overlay."""
         selection = self._selection.normalize()
         visible_start_row = selection.start_row - first_visible_line
@@ -658,9 +698,17 @@ class TerminalWidget(QAbstractScrollArea):
                         char, _attrs, _fg, _bg = line.get_character(col)
                         painter.drawText(col * char_width, y + ascent, char)
 
-    def _draw_cursor(self, painter: QPainter, buffer, char_width: int, char_height: int,
-                    terminal_rows: int, terminal_history_lines: int,
-                    first_visible_line: int, ascent: int) -> None:
+    def _draw_cursor(
+        self,
+        painter: QPainter,
+        buffer,
+        char_width: int,
+        char_height: int,
+        terminal_rows: int,
+        terminal_history_lines: int,
+        first_visible_line: int,
+        ascent: int
+    ) -> None:
         """Draw terminal cursor."""
         cursor_line = terminal_history_lines - terminal_rows + buffer.cursor.row
         visible_cursor_row = cursor_line - first_visible_line
