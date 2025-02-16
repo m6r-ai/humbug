@@ -24,6 +24,53 @@ from humbug.gui.terminal.terminal_widget import TerminalWidget
 from humbug.gui.status_message import StatusMessage
 
 
+class UTF8Buffer:
+    """Class to handle UTF-8 character streams."""
+    def __init__(self):
+        self.buffer = b''
+
+    def add_data(self, data: bytes) -> bytes:
+        self.buffer += data
+
+        # Find the last complete character
+        boundary = self.find_last_complete_character()
+
+        # Split at the boundary
+        complete = self.buffer[:boundary]
+        self.buffer = self.buffer[boundary:]
+        return complete
+
+    def find_last_complete_character(self) -> int:
+        """
+        Returns the index where the last complete UTF-8 character ends in the buffer.
+        Returns 0 if no complete characters are found.
+        """
+        i = len(self.buffer)
+        while i > 0:
+            i -= 1
+            byte = self.buffer[i]
+
+            # If we find a start byte (not continuation byte)
+            if byte & 0b11000000 != 0b10000000:
+                # Check if this starts a complete sequence
+                if byte & 0b10000000 == 0:  # ASCII byte
+                    return i + 1
+                elif (byte & 0b11100000) == 0b11000000:  # 2-byte sequence
+                    if i + 2 <= len(self.buffer):
+                        return i + 2
+                elif (byte & 0b11100000) == 0b11100000:  # 3-byte sequence
+                    if i + 3 <= len(self.buffer):
+                        return i + 3
+                elif (byte & 0b11110000) == 0b11110000:  # 4-byte sequence
+                    if i + 4 <= len(self.buffer):
+                        return i + 4
+
+                # If we get here, we found an incomplete sequence
+                return i
+
+        return 0  # No complete characters found
+
+
 class TerminalTab(TabBase):
     """Tab containing a terminal emulator."""
 
@@ -144,6 +191,8 @@ class TerminalTab(TabBase):
     async def _read_loop(self, main_fd):
         """Read data from the main end of the pty."""
         try:
+            utf8_buffer = UTF8Buffer()
+
             while self._running:
                 try:
                     # Check if process has ended
@@ -169,7 +218,9 @@ class TerminalTab(TabBase):
                             if not data:
                                 break
 
-                            self._terminal.put_data(data)
+                            complete_data = utf8_buffer.add_data(data)
+                            if complete_data:
+                                self._terminal.put_data(complete_data)
                         except OSError as e:
                             self._logger.error("Error reading from PTY: %s", e)
                             break
