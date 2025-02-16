@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetrics,
     QResizeEvent, QKeyEvent, QMouseEvent,
-    QGuiApplication, QWheelEvent
+    QGuiApplication, QWheelEvent, QFont
 )
 
 from humbug.gui.color_role import ColorRole
@@ -417,186 +417,268 @@ class TerminalWidget(QAbstractScrollArea):
 
         event.accept()
 
-    def _draw_character(
-        self,
-        painter: QPainter,
-        x: int,
-        y: int,
-        char: str,
-        attributes: CharacterAttributes,
-        fg_color: Optional[int],
-        bg_color: Optional[int],
-        char_width: int,
-        char_height: int,
-        fm: QFontMetrics
-    ) -> None:
-        """Draw a single character cell with attributes."""
-        # Determine initial colors, considering custom and default colors
-        fg = (QColor(fg_color) if fg_color is not None and (attributes & CharacterAttributes.CUSTOM_FG)
-              else QColor(self._default_fg.rgb()))
-        bg = (QColor(bg_color) if bg_color is not None and (attributes & CharacterAttributes.CUSTOM_BG)
-              else QColor(self._default_bg.rgb()))
-
-        # Handle inverse video by swapping foreground and background colors
-        if attributes & CharacterAttributes.INVERSE:
-            fg, bg = bg, fg
-
-        # Handle global screen reverse mode - swap colors if enabled
-        if self._state.screen_reverse_mode:
-            fg, bg = bg, fg
-
-        # Handle hidden text by using background color for foreground
-        if attributes & CharacterAttributes.HIDDEN:
-            fg = QColor(bg)
-
-        # Draw background
-        painter.fillRect(QRect(x, y, char_width, char_height), bg)
-
-        # Handle dim text by using alpha channel
-        if attributes & CharacterAttributes.DIM:
-            fg.setAlpha(128)  # 50% opacity
-
-        painter.setPen(fg)
-
-        # Set up font attributes
-        font = painter.font()
-        font.setBold(bool(attributes & CharacterAttributes.BOLD))
-        font.setItalic(bool(attributes & CharacterAttributes.ITALIC))
-        font.setUnderline(bool(attributes & CharacterAttributes.UNDERLINE))
-        font.setStrikeOut(bool(attributes & CharacterAttributes.STRIKE))
-        painter.setFont(font)
-
-        # Draw the character if it's not blinking or if it's in the visible blink phase
-        if not (attributes & CharacterAttributes.BLINK and self._blink_state):
-            painter.drawText(x, y + fm.ascent(), char)
-
     def paintEvent(self, event: QPaintEvent) -> None:
         """Handle paint events efficiently."""
+        import time
+        py_start = time.perf_counter()
         painter = QPainter(self.viewport())
         buffer = self._state.current_buffer
 
-        terminal_rows, terminal_cols = self._state.get_terminal_size()
-        terminal_history_lines = self._state.terminal_history_lines
-
-        # Get font metrics for character dimensions
+        # Get font metrics for character dimensions - cache these values
         fm = QFontMetrics(self.font())
         char_width = fm.horizontalAdvance(' ')
         char_height = fm.height()
+        ascent = fm.ascent()
 
-        # Get the region that needs repainting
-        region = event.rect()
-
-        # Calculate scroll position
+        # Pre-calculate dimensions
+        terminal_rows, terminal_cols = self._state.get_terminal_size()
+        terminal_history_lines = self._state.terminal_history_lines
         first_visible_line = self.verticalScrollBar().value()
 
-        # Calculate the character cell range to repaint
-        start_row = max(0, region.top() // char_height)
+        # Get clip region and calculate visible character range
+        region = event.rect()
+        start_row = region.top() // char_height
         end_row = min(terminal_rows, (region.bottom() + char_height - 1) // char_height)
-        start_col = max(0, region.left() // char_width)
+        start_col = region.left() // char_width
         end_col = min(terminal_cols, (region.right() + char_width - 1) // char_width)
 
-        # Paint visible character cells
+        # Pre-create QColor objects for default colors
+        default_fg = QColor(self._default_fg.rgb())
+        default_bg = QColor(self._default_bg.rgb())
+
+        # Create a reusable QRect for character cells
+        char_rect = QRect(0, 0, char_width, char_height)
+
+        # Pre-create common font variants
+        base_font = painter.font()
+        font_variants = {
+            CharacterAttributes.BOLD: self._create_font_variant(base_font, bold=True),
+            CharacterAttributes.ITALIC: self._create_font_variant(base_font, italic=True),
+            CharacterAttributes.UNDERLINE: self._create_font_variant(base_font, underline=True),
+            CharacterAttributes.STRIKE: self._create_font_variant(base_font, strike=True),
+            CharacterAttributes.BOLD | CharacterAttributes.ITALIC: self._create_font_variant(base_font, bold=True, italic=True),
+            CharacterAttributes.BOLD | CharacterAttributes.UNDERLINE: self._create_font_variant(base_font, bold=True, underline=True),
+            CharacterAttributes.BOLD | CharacterAttributes.STRIKE: self._create_font_variant(base_font, bold=True, strike=True),
+            CharacterAttributes.ITALIC | CharacterAttributes.UNDERLINE: self._create_font_variant(base_font, italic=True, underline=True),
+            CharacterAttributes.ITALIC | CharacterAttributes.STRIKE: self._create_font_variant(base_font, italic=True, strike=True),
+            CharacterAttributes.UNDERLINE | CharacterAttributes.STRIKE: self._create_font_variant(base_font, underline=True, strike=True),
+            CharacterAttributes.BOLD | CharacterAttributes.ITALIC | CharacterAttributes.UNDERLINE: self._create_font_variant(base_font, bold=True, italic=True, underline=True),
+            CharacterAttributes.BOLD | CharacterAttributes.ITALIC | CharacterAttributes.STRIKE: self._create_font_variant(base_font, bold=True, italic=True, strike=True),
+            # Add other common combinations as needed
+        }
+
+        # Batch similar characters together
         for row in range(start_row, end_row):
             y = row * char_height
-
-            # Get actual line index accounting for scroll position
             line_index = first_visible_line + row
+
             if line_index >= terminal_history_lines:
-                continue
+                break
 
             line = buffer.lines[line_index]
+            current_run = []
+            current_attrs = None
+            current_colors = None
 
             for col in range(start_col, end_col):
                 x = col * char_width
+                char, attrs, fg_color, bg_color = line.get_character(col)
 
-                # Get character and attributes
-                char, attributes, fg_color, bg_color = line.get_character(col)
-                self._draw_character(
-                    painter, x, y, char, attributes, fg_color, bg_color,
-                    char_width, char_height, fm
-                )
+                # We can skip processing if:
+                # 1. Character is a space
+                # 2. Has default attributes
+                # 3. Has default colors
+                # 4. Screen reverse mode is OFF
+                # Otherwise spaces need to be painted for correct background color
+                if (char == ' ' and attrs == CharacterAttributes.NONE and 
+                    fg_color is None and bg_color is None and
+                    not self._state.screen_reverse_mode):
+                    if current_run:
+                        self._draw_character_run(painter, current_run, current_attrs, 
+                                            current_colors, char_width, char_height, 
+                                            ascent, default_fg, default_bg, 
+                                            font_variants)
+                        current_run = []
+                    # If we're skipping this space, still need to paint default background
+                    painter.fillRect(x, y, char_width, char_height, default_bg)
+                    continue
 
-        # Draw selection if active
+                # Check if this character can be batched with the current run
+                colors = (fg_color, bg_color)
+                if attrs == current_attrs and colors == current_colors:
+                    current_run.append((char, x, y))
+                else:
+                    # Draw previous run if it exists
+                    if current_run:
+                        self._draw_character_run(painter, current_run, current_attrs,
+                                            current_colors, char_width, char_height,
+                                            ascent, default_fg, default_bg,
+                                            font_variants)
+                    # Start new run
+                    current_run = [(char, x, y)]
+                    current_attrs = attrs
+                    current_colors = colors
+
+            # Draw final run for this row
+            if current_run:
+                self._draw_character_run(painter, current_run, current_attrs,
+                                    current_colors, char_width, char_height,
+                                    ascent, default_fg, default_bg, font_variants)
+
+        # Draw selection overlay if present
         if self.has_selection():
-            selection = self._selection.normalize()
+            self._draw_selection(painter, event.rect(), char_width, char_height,
+                            first_visible_line, terminal_rows, terminal_cols,
+                            terminal_history_lines, ascent)
 
-            # Adjust for scroll position
-            visible_start_row = selection.start_row - first_visible_line
-            visible_end_row = selection.end_row - first_visible_line
-
-            selection_color = self.palette().highlight().color()
-            selection_text_color = self.palette().highlightedText().color()
-
-            for row in range(max(visible_start_row, 0), min(visible_end_row + 1, terminal_rows)):
-                y = row * char_height
-
-                # Calculate selection range for this row
-                row_start = selection.start_col if row + first_visible_line == selection.start_row else 0
-                row_end = selection.end_col if row + first_visible_line == selection.end_row else terminal_cols
-
-                # Draw selection background
-                selection_rect = QRect(
-                    row_start * char_width,
-                    y,
-                    (row_end - row_start) * char_width,
-                    char_height
-                )
-
-                if selection_rect.intersects(region):
-                    painter.fillRect(selection_rect, selection_color)
-
-                    # Draw selected text
-                    line_index = first_visible_line + row
-                    if line_index < terminal_history_lines:
-                        line = buffer.lines[line_index]
-                        for col in range(row_start, row_end):
-                            x = col * char_width
-                            char, attributes, _fg_color, _bg_color = line.get_character(col)
-
-                            # Set up font attributes
-                            font = painter.font()
-                            if attributes & CharacterAttributes.BOLD:
-                                font.setBold(True)
-                            if attributes & CharacterAttributes.ITALIC:
-                                font.setItalic(True)
-                            if attributes & CharacterAttributes.UNDERLINE:
-                                font.setUnderline(True)
-
-                            painter.setFont(font)
-
-                            # Draw with selection colors
-                            painter.setPen(selection_text_color)
-                            painter.drawText(x, y + fm.ascent(), char)
-
-        # Draw cursor if visible and in view
+        # Draw cursor if visible
         if buffer.cursor.visible:
-            cursor_line = terminal_history_lines - terminal_rows + buffer.cursor.row
-            visible_cursor_row = cursor_line - first_visible_line
+            self._draw_cursor(painter, buffer, char_width, char_height,
+                            terminal_rows, terminal_history_lines,
+                            first_visible_line, ascent)
 
-            if 0 <= visible_cursor_row < terminal_rows:  # Only draw if cursor is in visible area
-                cursor_x = buffer.cursor.col * char_width
-                cursor_y = visible_cursor_row * char_height
+        py_elapsed = (time.perf_counter() - py_start) * 1000
+        print(f"painter elapsed {py_elapsed:.2f}")
 
-                cursor_rect = QRect(cursor_x, cursor_y, char_width, char_height)
-                if cursor_rect.intersects(region):
-                    # Get character under cursor for inversion
-                    if cursor_line < terminal_history_lines:
-                        line = buffer.lines[cursor_line]
-                        char, _attributes, _fg_color, _bg_color = line.get_character(buffer.cursor.col)
+    def _create_font_variant(self, base_font: QFont, bold: bool = False,
+                            italic: bool = False, underline: bool = False,
+                            strike: bool = False) -> QFont:
+        """Create and return a font variant."""
+        font = QFont(base_font)
+        if bold:
+            font.setBold(True)
+        if italic:
+            font.setItalic(True)
+        if underline:
+            font.setUnderline(True)
+        if strike:
+            font.setStrikeOut(True)
+        return font
 
-                        # Draw inverted cursor block
-                        painter.fillRect(
-                            cursor_x, cursor_y, char_width, char_height,
-                            self.palette().text().color()
-                        )
+    def _draw_character_run(self, painter: QPainter, run: list, attrs: CharacterAttributes,
+                        colors: tuple, char_width: int, char_height: int, ascent: int,
+                        default_fg: QColor, default_bg: QColor, font_variants: dict) -> None:
+        """Draw a run of characters with the same attributes efficiently."""
+        if not run:
+            return
 
-                        # Draw character in inverted colors
-                        painter.setPen(self.palette().base().color())
-                        painter.drawText(
-                            cursor_x,
-                            cursor_y + fm.ascent(),
-                            char
-                        )
+        # Set up colors
+        fg_color, bg_color = colors
+        fg = (QColor(fg_color) if fg_color is not None and
+            (attrs & CharacterAttributes.CUSTOM_FG) else default_fg)
+        bg = (QColor(bg_color) if bg_color is not None and
+            (attrs & CharacterAttributes.CUSTOM_BG) else default_bg)
+
+        # Handle inverse video
+        if attrs & CharacterAttributes.INVERSE:
+            fg, bg = bg, fg
+
+        # Handle screen reverse mode
+        if self._state.screen_reverse_mode:
+            fg, bg = bg, fg
+
+        # Handle hidden text
+        if attrs & CharacterAttributes.HIDDEN:
+            fg = bg
+
+        # Draw background for entire run
+        x_start = run[0][1]
+        y = run[0][2]
+        width = (run[-1][1] - x_start) + char_width
+        painter.fillRect(x_start, y, width, char_height, bg)
+
+        # Handle dim text
+        if attrs & CharacterAttributes.DIM:
+            fg.setAlpha(128)
+
+        # Set text color
+        painter.setPen(fg)
+
+        # Set font based on attributes
+        # Build font key from relevant attributes
+        font_key = CharacterAttributes.NONE
+        if attrs & CharacterAttributes.BOLD:
+            font_key |= CharacterAttributes.BOLD
+
+        if attrs & CharacterAttributes.ITALIC:
+            font_key |= CharacterAttributes.ITALIC
+
+        if attrs & CharacterAttributes.UNDERLINE:
+            font_key |= CharacterAttributes.UNDERLINE
+
+        if attrs & CharacterAttributes.STRIKE:
+            font_key |= CharacterAttributes.STRIKE
+
+        # Use cached font variant if available, otherwise create base font with attributes
+        if font_key in font_variants:
+            painter.setFont(font_variants[font_key])
+        else:
+            font = QFont(painter.font())
+            font.setBold(bool(attrs & CharacterAttributes.BOLD))
+            font.setItalic(bool(attrs & CharacterAttributes.ITALIC))
+            font.setUnderline(bool(attrs & CharacterAttributes.UNDERLINE))
+            font.setStrikeOut(bool(attrs & CharacterAttributes.STRIKE))
+            painter.setFont(font)
+
+        # Draw all characters in run
+        if not (attrs & CharacterAttributes.BLINK and self._blink_state):
+            for char, x, y in run:
+                painter.drawText(x, y + ascent, char)
+
+    def _draw_selection(self, painter: QPainter, region: QRect, char_width: int,
+                    char_height: int, first_visible_line: int, terminal_rows: int,
+                    terminal_cols: int, terminal_history_lines: int, ascent: int) -> None:
+        """Draw text selection overlay."""
+        selection = self._selection.normalize()
+        visible_start_row = selection.start_row - first_visible_line
+        visible_end_row = selection.end_row - first_visible_line
+
+        selection_color = self.palette().highlight().color()
+        selection_text_color = self.palette().highlightedText().color()
+
+        for row in range(max(visible_start_row, 0), min(visible_end_row + 1, terminal_rows)):
+            y = row * char_height
+            row_start = selection.start_col if row + first_visible_line == selection.start_row else 0
+            row_end = selection.end_col if row + first_visible_line == selection.end_row else terminal_cols
+
+            selection_rect = QRect(
+                row_start * char_width,
+                y,
+                (row_end - row_start) * char_width,
+                char_height
+            )
+
+            if selection_rect.intersects(region):
+                painter.fillRect(selection_rect, selection_color)
+                line_index = first_visible_line + row
+                if line_index < terminal_history_lines:
+                    line = self._state.current_buffer.lines[line_index]
+                    painter.setPen(selection_text_color)
+                    for col in range(row_start, row_end):
+                        char, _attrs, _fg, _bg = line.get_character(col)
+                        painter.drawText(col * char_width, y + ascent, char)
+
+    def _draw_cursor(self, painter: QPainter, buffer, char_width: int, char_height: int,
+                    terminal_rows: int, terminal_history_lines: int,
+                    first_visible_line: int, ascent: int) -> None:
+        """Draw terminal cursor."""
+        cursor_line = terminal_history_lines - terminal_rows + buffer.cursor.row
+        visible_cursor_row = cursor_line - first_visible_line
+
+        if 0 <= visible_cursor_row < terminal_rows:
+            cursor_x = buffer.cursor.col * char_width
+            cursor_y = visible_cursor_row * char_height
+
+            if cursor_line < terminal_history_lines:
+                line = buffer.lines[cursor_line]
+                char, _attrs, _fg, _bg = line.get_character(buffer.cursor.col)
+
+                painter.fillRect(
+                    cursor_x, cursor_y, char_width, char_height,
+                    self.palette().text().color()
+                )
+                painter.setPen(self.palette().base().color())
+                painter.drawText(cursor_x, cursor_y + ascent, char)
 
     def _get_selected_text(self) -> str:
         """Get currently selected text."""
