@@ -134,7 +134,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._update_scrollbar()
         self.size_changed.emit()
 
-    def _handle_scroll(self, value: int):
+    def _handle_scroll(self, _value: int):
         """Handle scrollbar value changes."""
         self.viewport().update()
 

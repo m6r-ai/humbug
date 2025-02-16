@@ -85,7 +85,7 @@ class TerminalTab(TabBase):
             rows, cols = self._terminal.get_terminal_size()
             fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
         except OSError as e:
-            self._logger.error(f"Failed to update PTY size: {e}")
+            self._logger.error("Failed to update PTY size: %s", e)
             raise
 
     def _handle_terminal_resize(self):
@@ -100,7 +100,7 @@ class TerminalTab(TabBase):
                 if pid:
                     os.killpg(os.getpgid(pid), signal.SIGWINCH)
             except OSError as e:
-                self._logger.error(f"Failed to handle window resize: {e}")
+                self._logger.error("Failed to handle window resize: %s", e)
 
     def _create_tracked_task(self, coro) -> asyncio.Task:
         """
@@ -126,19 +126,19 @@ class TerminalTab(TabBase):
             pid, main_fd = await self._terminal_process.start(self._command)
             self._main_fd = main_fd
 
-            self._logger.debug(f"Process started with pid {pid}")
+            self._logger.debug("Process started with pid %d", pid)
 
             # Update initial terminal size
             try:
                 self._update_pty_size(main_fd)
             except OSError as e:
-                self._logger.warning(f"Failed to set initial terminal size: {e}")
+                self._logger.warning("Failed to set initial terminal size: %s", e)
 
             # Create task for reading from main_fd
             self._create_tracked_task(self._read_loop(main_fd))
 
         except Exception as e:
-            self._logger.error("Failed to start terminal process: %s", str(e))
+            self._logger.error("Failed to start terminal process: %s", e)
             self._terminal.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
     async def _read_loop(self, main_fd):
@@ -151,7 +151,7 @@ class TerminalTab(TabBase):
                         self._logger.info("Shell process ended")
                         break
 
-                    r, w, e = await asyncio.get_event_loop().run_in_executor(
+                    r, _w, e = await asyncio.get_event_loop().run_in_executor(
                         None,
                         select.select,
                         [main_fd],
@@ -171,7 +171,7 @@ class TerminalTab(TabBase):
 
                             self._terminal.put_data(data)
                         except OSError as e:
-                            self._logger.error(f"Error reading from PTY: {e}")
+                            self._logger.error("Error reading from PTY: %s", e)
                             break
                 except (OSError, select.error) as e:
                     if not self._running:
@@ -186,7 +186,7 @@ class TerminalTab(TabBase):
             try:
                 self._terminal.put_data(b"\r\n[Process completed]\r\n")
             except Exception as e:
-                self._logger.debug(f"Could not write completion message: {e}")
+                self._logger.debug("Could not write completion message: %s", e)
 
     @Slot(bytes)
     def _handle_data_ready(self, data: bytes):
@@ -393,7 +393,6 @@ class TerminalTab(TabBase):
 
     def undo(self) -> None:
         """Undo terminal operation (not supported)."""
-        pass
 
     def can_redo(self) -> bool:
         """Check if terminal can redo (not supported)."""
@@ -401,7 +400,6 @@ class TerminalTab(TabBase):
 
     def redo(self) -> None:
         """Redo terminal operation (not supported)."""
-        pass
 
     def can_cut(self) -> bool:
         """Check if terminal can cut (not supported)."""
@@ -409,7 +407,6 @@ class TerminalTab(TabBase):
 
     def cut(self) -> None:
         """Cut terminal selection (not supported)."""
-        pass
 
     def can_copy(self) -> bool:
         """Check if terminal can copy."""
@@ -429,7 +426,6 @@ class TerminalTab(TabBase):
 
     def show_find(self):
         """Show the find widget (not supported)."""
-        pass  # Terminal doesn't support find yet
 
     def can_submit(self) -> bool:
         """Check if terminal can submit (not supported)."""

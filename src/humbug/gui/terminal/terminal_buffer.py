@@ -143,10 +143,10 @@ class TabStopState:
 class BufferState:
     """Serializable terminal buffer state."""
     lines: list[dict]  # List of line states
-    cursor: dict      # Cursor state
+    cursor: dict  # Cursor state
     attributes: dict  # Attribute state
     scroll_region: dict  # Scroll region state
-    modes: dict      # Operating modes state
+    modes: dict  # Operating modes state
     history_scrollback: bool
     max_cursor_row: int
     dimensions: dict  # Buffer dimensions
@@ -466,7 +466,7 @@ class TerminalBuffer:
             count: Number of lines to insert
         """
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
-        if not (self.scroll_region.top <= cursor_row < self.scroll_region.bottom):
+        if not self.scroll_region.top <= cursor_row < self.scroll_region.bottom:
             return
 
         # Calculate lines to move
@@ -492,7 +492,7 @@ class TerminalBuffer:
             count: Number of lines to delete
         """
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
-        if not (self.scroll_region.top <= cursor_row < self.scroll_region.bottom):
+        if not self.scroll_region.top <= cursor_row < self.scroll_region.bottom:
             return
 
         # Calculate lines to remove
@@ -817,3 +817,17 @@ class TerminalBuffer:
                     self.cursor.delayed_wrap = self.modes.auto_wrap
                 else:
                     self.cursor.col += 1
+
+    @property
+    def history_lines(self) -> int:
+        """Get the number of lines of history including the current display buffer"""
+        return len(self.lines)
+
+    def blinking_chars_on_screen(self):
+        """Determine if there are any blinking characters on-screen."""
+        for line in self.lines[-self.rows:]:
+            for col in range(self.cols):
+                if line.get_character(col)[1] & CharacterAttributes.BLINK:
+                    return True
+
+        return False

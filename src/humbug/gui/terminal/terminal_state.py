@@ -161,7 +161,7 @@ class TerminalState:
 
                 if char == '\x1b':
                     self._logger.warning(
-                        f"Unknown escape sequence - discarding: {repr(self._escape_seq_buffer)}"
+                        "Unknown escape sequence - discarding: %r", self._escape_seq_buffer
                     )
                     self._escape_seq_buffer = ""
 
@@ -173,7 +173,7 @@ class TerminalState:
                     self._in_escape_seq = False
                 elif len(self._escape_seq_buffer) > 128:  # Safety limit
                     self._logger.warning(
-                        f"Escape sequence too long, discarding: {repr(self._escape_seq_buffer)}"
+                        "Escape sequence too long, discarding: %r", self._escape_seq_buffer
                     )
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
@@ -222,7 +222,7 @@ class TerminalState:
             buffer.decaln()
 
         else:
-            self._logger.warning(f"Unknown DEC special sequence {repr(sequence)}")
+            self._logger.warning("Unknown DEC special sequence %r", sequence)
 
     def _process_escape_sequence(self, sequence: str) -> None:
         """Process ANSI escape sequence."""
@@ -275,11 +275,11 @@ class TerminalState:
                 buffer.reverse_index()
 
             else:
-                self._logger.warning(f"Unknown simple ESC sequence: {repr(sequence)}")
+                self._logger.warning("Unknown simple ESC sequence: %r", sequence)
 
             return
 
-        self._logger.warning(f"Unknown ESC sequence: {repr(sequence)}")
+        self._logger.warning("Unknown ESC sequence: %r", sequence)
 
     def _process_osc(self, sequence: str):
         """Handle Operating System Command sequences."""
@@ -322,7 +322,7 @@ class TerminalState:
                 self._handle_selection_data(param)
 
         except (ValueError, IndexError) as e:
-            self._logger.warning(f"Invalid OSC sequence: {sequence}, error: {e}")
+            self._logger.warning("Invalid OSC sequence: %r, error: %s", sequence, e)
 
     def _handle_selection_data(self, param: str):
         """Handle OSC 52 selection data operations."""
@@ -340,7 +340,7 @@ class TerminalState:
                 else:  # Clear
                     self.clipboard_data = None
         except (ValueError, TypeError) as e:
-            self._logger.warning(f"Invalid selection data: {param}: {e}")
+            self._logger.warning("Invalid selection data: %r: %s", param, e)
 
     def _process_private_mode(self, params: str, set_mode: bool):
         """Handle DEC private mode sequences (DECSET/DECRST)."""
@@ -396,9 +396,9 @@ class TerminalState:
                 elif mode == 2004:  # Bracketed paste mode
                     buffer.modes.bracketed_paste = set_mode
                 else:
-                    self._logger.warning(f"Unknown PM operation {mode}")
+                    self._logger.warning("Unknown PM operation %d", mode)
         except ValueError as e:
-            self._logger.warning(f"Invalid private mode parameter: {params}")
+            self._logger.warning("Invalid private mode parameter: %r, error: %s", params, e)
 
     def _handle_alternate_screen(self, enable: bool):
         """Switch between main and alternate screen buffers."""
@@ -500,7 +500,7 @@ class TerminalState:
             buffer.restore_cursor()
 
         else:
-            self._logger.warning(f"Unknown CSI sequence {repr(sequence)}")
+            self._logger.warning("Unknown CSI sequence %r", sequence)
 
     def _process_sgr(self, params: list[int]) -> None:
         """Process SGR (Select Graphic Rendition) sequence."""
@@ -597,7 +597,7 @@ class TerminalState:
                         i += 4
 
             else:
-                self._logger.warning(f"Unknown SGR sequence {params}")
+                self._logger.warning("Unknown SGR sequence: %r", params)
 
             i += 1
 
@@ -689,7 +689,7 @@ class TerminalState:
     @property
     def terminal_history_lines(self) -> int:
         """Get the number of lines of history including the current display"""
-        return len(self._current_buffer.lines)
+        return self._current_buffer.history_lines
 
     @property
     def application_cursor_mode(self) -> bool:
@@ -708,13 +708,4 @@ class TerminalState:
 
     def blinking_chars_on_screen(self):
         """Determine if there are any blinking characters on-screen."""
-
-        buffer = self.current_buffer
-
-        # Scan visible lines
-        for line in buffer.lines[-buffer.rows:]:
-            for col in range(buffer.cols):
-                if line.get_character(col)[1] & CharacterAttributes.BLINK:
-                    return True
-
-        return False
+        return self._current_buffer.blinking_chars_on_screen()
