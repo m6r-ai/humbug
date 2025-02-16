@@ -271,7 +271,7 @@ class TabManager(QWidget):
                         target_column.tabBar().moveTab(current_index, target_index)
 
         except (ConversationError, OSError) as e:
-            self._logger.error("Failed to open dropped file '%s': %s", file_path, str(e))
+            self._logger.exception("Failed to open dropped file '%s': %s", file_path, str(e))
 
     def handle_file_rename(self, old_path: str, new_path: str):
         """Handle renaming of files by updating any open tabs.
@@ -709,7 +709,7 @@ class TabManager(QWidget):
             return conversation_tab
 
         except ConversationError as e:
-            self._logger.error("Failed to open conversation: %s", str(e))
+            self._logger.exception("Failed to open conversation: %s", str(e))
             raise
 
     def can_fork_conversation(self) -> bool:
@@ -733,7 +733,7 @@ class TabManager(QWidget):
             self.add_tab(new_tab, f"Conv: {new_tab.tab_id}")
 
         except ConversationError as e:
-            self._logger.error("Failed to fork conversation: %s", str(e))
+            self._logger.exception("Failed to fork conversation: %s", str(e))
             raise
 
     def _fork_conversation(self):
@@ -785,7 +785,7 @@ class TabManager(QWidget):
                     state_dict = state.to_dict()
                     tab_states.append(state_dict)
                 except Exception as e:
-                    self._logger.error("Failed to save tab manager state: %s", str(e))
+                    self._logger.exception("Failed to save tab manager state: %s", str(e))
                     continue
             tab_columns.append(tab_states)
 
@@ -822,7 +822,7 @@ class TabManager(QWidget):
                 self.add_tab(tab, title)
 
             except Exception as e:
-                self._logger.error("Failed to restore tab manager state: %s", str(e))
+                self._logger.exception("Failed to restore tab manager state: %s", str(e))
                 continue
 
     def _restore_tab_from_state(self, state: TabState) -> Optional[TabBase]:
