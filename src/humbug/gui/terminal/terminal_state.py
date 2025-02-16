@@ -261,17 +261,10 @@ class TerminalState:
             buffer = self._current_buffer
 
             if code == '7':  # ESC 7 - Save Cursor
-                buffer.cursor.saved_position = (
-                    buffer.cursor.row,
-                    buffer.cursor.col,
-                    buffer.cursor.delayed_wrap,
-                    buffer.modes.origin
-                )
+                buffer.save_cursor()
 
             elif code == '8':  # ESC 8 - Restore Cursor
-                if buffer.cursor.saved_position:
-                    buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
-                    buffer.modes.origin = origin
+                buffer.restore_cursor()
 
             elif code == 'D':  # Index
                 cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
@@ -420,29 +413,16 @@ class TerminalState:
                     self._handle_alternate_screen(set_mode)
                 elif mode == 1048:  # Save/Restore cursor
                     if set_mode:
-                        buffer.cursor.saved_position = (
-                            buffer.cursor.row,
-                            buffer.cursor.col,
-                            buffer.cursor.delayed_wrap,
-                            buffer.modes.origin
-                        )
-                    elif buffer.cursor.saved_position:
-                        buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
-                        buffer.modes.origin = origin
+                        buffer.save_cursor()
+                    else:
+                        buffer.restore_cursor()
                 elif mode == 1049:  # Alternate Screen + save/restore cursor
                     if set_mode:
-                        buffer.cursor.saved_position = (
-                            buffer.cursor.row,
-                            buffer.cursor.col,
-                            buffer.cursor.delayed_wrap,
-                            buffer.modes.origin
-                        )
+                        buffer.save_cursor()
                         self._handle_alternate_screen(True)
                     else:
                         self._handle_alternate_screen(False)
-                        if buffer.cursor.saved_position:
-                            buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
-                            buffer.modes.origin = origin
+                        self.current_buffer.restore_cursor()
                 elif mode == 2004:  # Bracketed paste mode
                     buffer.modes.bracketed_paste = set_mode
                 else:
@@ -484,9 +464,7 @@ class TerminalState:
             buffer.move_cursor_forward(max(1, params[0]))
 
         elif code == 'D':  # CUB - Cursor Back
-            amount = max(1, params[0])
-            buffer.cursor.col = max(0, buffer.cursor.col - amount)
-            buffer.cursor.delayed_wrap = False
+            buffer.move_cursor_back(max(1, params[0]))
 
         elif code == 'G':  # CHA - Cursor Horizontal Absolute
             col = max(0, params[0] - 1)  # Convert 1-based to 0-based
@@ -538,22 +516,15 @@ class TerminalState:
 
         elif code == 'L':  # IL - Insert Line
             count = max(1, params[0] if params else 1)
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            buffer.insert_lines(count, cursor_row)
-            buffer.cursor.col = 0
-            buffer.cursor.delayed_wrap = False
+            buffer.insert_lines(count)
 
         elif code == 'M':  # DL - Delete Line
             count = max(1, params[0] if params else 1)
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            buffer.delete_lines(count, cursor_row)
-            buffer.cursor.col = 0
-            buffer.cursor.delayed_wrap = False
+            buffer.delete_lines(count)
 
         elif code == 'P':  # DCH - Delete Character
             count = max(1, params[0] if params else 1)
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            buffer.delete_chars(count, cursor_row, buffer.cursor.col)
+            buffer.delete_chars(count)
 
         elif code == 'S':  # SU - Scroll Up
             count = max(1, params[0] if params else 1)
@@ -565,13 +536,11 @@ class TerminalState:
 
         elif code == 'X':  # ECH - Erase Character
             count = max(1, params[0] if params else 1)
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            buffer.erase_chars(count, cursor_row, buffer.cursor.col)
+            buffer.erase_chars(count)
 
         elif code == '@':  # ICH - Insert Character
             count = max(1, params[0] if params else 1)
-            cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-            buffer.insert_chars(count, cursor_row, buffer.cursor.col)
+            buffer.insert_chars(count)
 
         elif code == 'd':  # VPA - Line Position Absolute
             row = max(0, params[0] - 1) if params else 0  # Convert 1-based to 0-based
@@ -605,17 +574,10 @@ class TerminalState:
                 buffer.scroll_region.rows = bottom - top
 
         elif code == 's':  # Save cursor position
-            buffer.cursor.saved_position = (
-                buffer.cursor.row,
-                buffer.cursor.col,
-                buffer.cursor.delayed_wrap,
-                buffer.modes.origin
-            )
+            buffer.save_cursor()
 
         elif code == 'u':  # Restore cursor position
-            if buffer.cursor.saved_position:
-                buffer.cursor.row, buffer.cursor.col, buffer.cursor.delayed_wrap, origin = buffer.cursor.saved_position
-                buffer.modes.origin = origin
+            buffer.restore_cursor()
 
         else:
             self._logger.warning(f"Unknown CSI sequence {repr(sequence)}")

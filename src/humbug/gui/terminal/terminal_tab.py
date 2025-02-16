@@ -179,7 +179,7 @@ class TerminalTab(TabBase):
                     self._logger.error("Error reading from terminal: %s", str(e))
                     break
         except Exception as e:
-            self._logger.error("Error in read loop: %s", str(e))
+            self._logger.exception("Error in read loop: %s", str(e))
 
         # Only show completion message if not in cleanup
         if self._running:

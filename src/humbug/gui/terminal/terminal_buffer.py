@@ -342,14 +342,14 @@ class TerminalBuffer:
                 for col in range(start, end + 1):
                     line.set_character(col, ' ')
 
-    def insert_lines(self, count: int, cursor_row: int) -> None:
+    def insert_lines(self, count: int) -> None:
         """
         Insert blank lines at cursor position.
 
         Args:
             count: Number of lines to insert
-            cursor_row: Current cursor row position
         """
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         if not (self.scroll_region.top <= cursor_row < self.scroll_region.bottom):
             return
 
@@ -365,14 +365,17 @@ class TerminalBuffer:
             self.lines.insert(start, self.get_new_line())
             del self.lines[end]
 
-    def delete_lines(self, count: int, cursor_row: int) -> None:
+        self.cursor.col = 0
+        self.cursor.delayed_wrap = False
+
+    def delete_lines(self, count: int) -> None:
         """
         Delete lines at cursor position.
 
         Args:
             count: Number of lines to delete
-            cursor_row: Current cursor row position
         """
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         if not (self.scroll_region.top <= cursor_row < self.scroll_region.bottom):
             return
 
@@ -388,15 +391,18 @@ class TerminalBuffer:
             self.lines.insert(end, self.get_new_line())
             del self.lines[start]
 
-    def insert_chars(self, count: int, cursor_row: int, cursor_col: int) -> None:
+        self.cursor.col = 0
+        self.cursor.delayed_wrap = False
+
+    def insert_chars(self, count: int) -> None:
         """
         Insert blank characters at cursor position.
 
         Args:
             count: Number of characters to insert
-            cursor_row: Current cursor row position
-            cursor_col: Current cursor column position
         """
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
+        cursor_col = self.cursor.col
         line_index = len(self.lines) - self.rows + cursor_row
         if 0 <= line_index < len(self.lines):
             line = self.lines[line_index]
@@ -410,15 +416,15 @@ class TerminalBuffer:
             for col in range(cursor_col, min(cursor_col + count, self.cols)):
                 line.set_character(col, ' ')
 
-    def delete_chars(self, count: int, cursor_row: int, cursor_col: int) -> None:
+    def delete_chars(self, count: int) -> None:
         """
         Delete characters at cursor position.
 
         Args:
             count: Number of characters to delete
-            cursor_row: Current cursor row position
-            cursor_col: Current cursor column position
         """
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
+        cursor_col = self.cursor.col
         line_index = len(self.lines) - self.rows + cursor_row
         if 0 <= line_index < len(self.lines):
             line = self.lines[line_index]
@@ -430,15 +436,15 @@ class TerminalBuffer:
                 else:
                     line.set_character(col, ' ')
 
-    def erase_chars(self, count: int, cursor_row: int, cursor_col: int) -> None:
+    def erase_chars(self, count: int) -> None:
         """
         Erase characters at cursor position.
 
         Args:
             count: Number of characters to erase
-            cursor_row: Current cursor row position
-            cursor_col: Current cursor column position
         """
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
+        cursor_col = self.cursor.col
         line_index = len(self.lines) - self.rows + cursor_row
         if 0 <= line_index < len(self.lines):
             line = self.lines[line_index]
@@ -474,6 +480,23 @@ class TerminalBuffer:
         self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
         self.cursor.col = min(self.cols - 1, max(0, col))
         self.cursor.delayed_wrap = False
+
+    def save_cursor(self) -> None:
+        """Save the cursor state."""
+        self.cursor.saved_position = (
+            self.cursor.row,
+            self.cursor.col,
+            self.cursor.delayed_wrap,
+            self.modes.origin
+        )
+
+    def restore_cursor(self) -> None:
+        """Restore the cursor state."""
+        if not self.cursor.saved_position:
+            return
+
+        self.cursor.row, self.cursor.col, self.cursor.delayed_wrap, origin = self.cursor.saved_position
+        self.modes.origin = origin
 
     def write_char(self, char: str) -> None:
         """
