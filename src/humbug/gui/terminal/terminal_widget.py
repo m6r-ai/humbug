@@ -355,9 +355,22 @@ class TerminalWidget(QAbstractScrollArea):
         key = event.key()
         modifiers = event.modifiers()
 
+        # Handle Alt/Meta key combinations
+        if modifiers & Qt.AltModifier:
+            # Alt + letter sends ESC + letter
+            if key >= Qt.Key_A and key <= Qt.Key_Z:
+                self.data_ready.emit(b'\x1b' + chr(key).lower().encode())
+                event.accept()
+                return
+
+            # Alt + number sends ESC + number
+            if key >= Qt.Key_0 and key <= Qt.Key_9:
+                self.data_ready.emit(b'\x1b' + chr(key).encode())
+                event.accept()
+                return
+
         # Handle keypad in application mode
         if self._state.application_keypad_mode and not modifiers:
-            # Map keypad keys to application mode sequences
             keypad_map = {
                 Qt.Key_0: b'\x1bOp',
                 Qt.Key_1: b'\x1bOq',
@@ -373,12 +386,77 @@ class TerminalWidget(QAbstractScrollArea):
                 Qt.Key_Plus: b'\x1bOl',
                 Qt.Key_Period: b'\x1bOn',
                 Qt.Key_Enter: b'\x1bOM',
+                Qt.Key_Equal: b'\x1bOX',  # equals key
+                Qt.Key_Slash: b'\x1bOo',  # divide key
+                Qt.Key_Asterisk: b'\x1bOj', # multiply key
             }
 
             if key in keypad_map:
                 self.data_ready.emit(keypad_map[key])
                 event.accept()
                 return
+
+        # Handle Shift + Function keys
+        if modifiers & Qt.ShiftModifier:
+            shift_fn_map = {
+                Qt.Key_F1: b'\x1b[1;2P',
+                Qt.Key_F2: b'\x1b[1;2Q',
+                Qt.Key_F3: b'\x1b[1;2R',
+                Qt.Key_F4: b'\x1b[1;2S',
+                Qt.Key_F5: b'\x1b[15;2~',
+                Qt.Key_F6: b'\x1b[17;2~',
+                Qt.Key_F7: b'\x1b[18;2~',
+                Qt.Key_F8: b'\x1b[19;2~',
+                Qt.Key_F9: b'\x1b[20;2~',
+                Qt.Key_F10: b'\x1b[21;2~',
+                Qt.Key_F11: b'\x1b[23;2~',
+                Qt.Key_F12: b'\x1b[24;2~',
+            }
+            if key in shift_fn_map:
+                self.data_ready.emit(shift_fn_map[key])
+                event.accept()
+                return
+
+        # Handle Control + Function keys
+        if modifiers & Qt.ControlModifier:
+            ctrl_fn_map = {
+                Qt.Key_F1: b'\x1b[1;5P',
+                Qt.Key_F2: b'\x1b[1;5Q',
+                Qt.Key_F3: b'\x1b[1;5R',
+                Qt.Key_F4: b'\x1b[1;5S',
+                Qt.Key_F5: b'\x1b[15;5~',
+                Qt.Key_F6: b'\x1b[17;5~',
+                Qt.Key_F7: b'\x1b[18;5~',
+                Qt.Key_F8: b'\x1b[19;5~',
+                Qt.Key_F9: b'\x1b[20;5~',
+                Qt.Key_F10: b'\x1b[21;5~',
+                Qt.Key_F11: b'\x1b[23;5~',
+                Qt.Key_F12: b'\x1b[24;5~',
+            }
+            if key in ctrl_fn_map:
+                self.data_ready.emit(ctrl_fn_map[key])
+                event.accept()
+                return
+
+        # Handle standard function keys
+        fn_map = {
+            Qt.Key_F1: b'\x1bOP',
+            Qt.Key_F2: b'\x1bOQ',
+            Qt.Key_F3: b'\x1bOR',
+            Qt.Key_F4: b'\x1bOS',
+            Qt.Key_F5: b'\x1b[15~',
+            Qt.Key_F6: b'\x1b[17~',
+            Qt.Key_F7: b'\x1b[18~',
+            Qt.Key_F8: b'\x1b[19~',
+            Qt.Key_F9: b'\x1b[20~',
+            Qt.Key_F10: b'\x1b[21~',
+            Qt.Key_F11: b'\x1b[23~',
+            Qt.Key_F12: b'\x1b[24~',
+        }
+        if key in fn_map and not modifiers:
+            self.data_ready.emit(fn_map[key])
+            event.accept()
+            return
 
         # Handle control key combinations
         if modifiers & Qt.ControlModifier:
@@ -398,6 +476,11 @@ class TerminalWidget(QAbstractScrollArea):
                 Qt.Key_6: b'\x1e',  # Ctrl+^, Ctrl+6
                 Qt.Key_7: b'\x1f',  # Ctrl+_, Ctrl+7
                 Qt.Key_8: b'\x7f',  # Ctrl+8 (delete)
+                Qt.Key_Space: b'\x00',  # Ctrl+Space
+                Qt.Key_Backslash: b'\x1c',  # Ctrl+\
+                Qt.Key_BracketRight: b'\x1d',  # Ctrl+]
+                Qt.Key_BracketLeft: b'\x1b',  # Ctrl+[
+                Qt.Key_Minus: b'\x1f',  # Ctrl+-
             }
             if key in ctrl_map:
                 self.data_ready.emit(ctrl_map[key])
@@ -410,18 +493,37 @@ class TerminalWidget(QAbstractScrollArea):
                 Qt.Key_Up: b'\x1bOA',
                 Qt.Key_Down: b'\x1bOB',
                 Qt.Key_Right: b'\x1bOC',
-                Qt.Key_Left: b'\x1bOD'
+                Qt.Key_Left: b'\x1bOD',
+                Qt.Key_Home: b'\x1bOH',
+                Qt.Key_End: b'\x1bOF',
             }
         else:
             cursor_map = {
                 Qt.Key_Up: b'\x1b[A',
                 Qt.Key_Down: b'\x1b[B',
                 Qt.Key_Right: b'\x1b[C',
-                Qt.Key_Left: b'\x1b[D'
+                Qt.Key_Left: b'\x1b[D',
+                Qt.Key_Home: b'\x1b[H',
+                Qt.Key_End: b'\x1b[F',
             }
 
+        # Add control and shift modifiers for cursor keys
         if key in cursor_map:
-            self.data_ready.emit(cursor_map[key])
+            base_seq = cursor_map[key]
+            if modifiers & Qt.ControlModifier:
+                if b'O' in base_seq:
+                    mod_seq = base_seq.replace(b'O', b'[1;5')
+                else:
+                    mod_seq = base_seq[:-1] + b';5' + base_seq[-1:]
+                self.data_ready.emit(mod_seq)
+            elif modifiers & Qt.ShiftModifier:
+                if b'O' in base_seq:
+                    mod_seq = base_seq.replace(b'O', b'[1;2')
+                else:
+                    mod_seq = base_seq[:-1] + b';2' + base_seq[-1:]
+                self.data_ready.emit(mod_seq)
+            else:
+                self.data_ready.emit(base_seq)
             event.accept()
             return
 
@@ -431,7 +533,11 @@ class TerminalWidget(QAbstractScrollArea):
             Qt.Key_Enter: b'\r',
             Qt.Key_Backspace: b'\x7f' if modifiers & Qt.ControlModifier else b'\b',
             Qt.Key_Delete: b'\x1b[3~',
-            Qt.Key_Tab: b'\t'
+            Qt.Key_Insert: b'\x1b[2~',
+            Qt.Key_PageUp: b'\x1b[5~',
+            Qt.Key_PageDown: b'\x1b[6~',
+            Qt.Key_Tab: b'\t',
+            Qt.Key_Backtab: b'\x1b[Z',  # Shift+Tab
         }
 
         if key in special_map:
@@ -447,8 +553,6 @@ class TerminalWidget(QAbstractScrollArea):
 
     def paintEvent(self, event: QPaintEvent) -> None:
         """Handle paint events efficiently."""
-        import time
-        py_start = time.perf_counter()
         painter = QPainter(self.viewport())
         buffer = self._state.current_buffer
 
@@ -573,9 +677,6 @@ class TerminalWidget(QAbstractScrollArea):
                 terminal_rows, terminal_history_lines,
                 first_visible_line, ascent
             )
-
-        py_elapsed = (time.perf_counter() - py_start) * 1000
-        print(f"painter elapsed {py_elapsed:.2f}")
 
     def _create_font_variant(
         self,
@@ -737,7 +838,6 @@ class TerminalWidget(QAbstractScrollArea):
         """Draw terminal cursor."""
         # Don't draw cursor if it's blinking and in the off state
         # Note: We use not self._blink_state to keep in sync with blinking text
-        print(f"blink cursor: {buffer.cursor.blink}")
         if buffer.cursor.blink and not self._blink_state:
             return
 
