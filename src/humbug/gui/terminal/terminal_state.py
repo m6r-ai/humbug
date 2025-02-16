@@ -211,7 +211,7 @@ class TerminalState:
             return len(sequence) == 3
 
         # Simple ESC sequences
-        return len(sequence) == 2 and sequence[1] in '78DEHM'
+        return len(sequence) == 2 and sequence[1] in '78=>DEFHMNOVWXZ\\^_clmno|}~'
 
     def _process_dec_special(self, sequence: str) -> None:
         """Process DEC special sequences."""
@@ -566,10 +566,6 @@ class TerminalState:
                 buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
                 buffer.attributes.foreground = self._ansi_colors[param - 30]
 
-            elif 40 <= param <= 47:  # Standard background color
-                buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
-                buffer.attributes.background = self._ansi_colors[param - 40]
-
             elif param == 38:  # Extended foreground color
                 if i + 2 < len(params):
                     if params[i + 1] == 5:  # 256 colors
@@ -583,6 +579,14 @@ class TerminalState:
                         buffer.attributes.foreground = (r << 16) | (g << 8) | b
                         i += 4
 
+            elif param == 39:  # Default foreground color
+                buffer.attributes.current &= ~CharacterAttributes.CUSTOM_FG
+                buffer.attributes.foreground = None
+
+            elif 40 <= param <= 47:  # Standard background color
+                buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
+                buffer.attributes.background = self._ansi_colors[param - 40]
+
             elif param == 48:  # Extended background color
                 if i + 2 < len(params):
                     if params[i + 1] == 5:  # 256 colors
@@ -595,6 +599,18 @@ class TerminalState:
                         buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
                         buffer.attributes.background = (r << 16) | (g << 8) | b
                         i += 4
+
+            elif param == 49:  # Default background color
+                buffer.attributes.current &= ~CharacterAttributes.CUSTOM_BG
+                buffer.attributes.background = None
+
+            elif 90 <= param <= 97:  # Bright foreground colors
+                buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
+                buffer.attributes.foreground = self._ansi_colors[param - 90 + 8]  # Map to bright color indices
+
+            elif 100 <= param <= 107:  # Bright background colors
+                buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
+                buffer.attributes.background = self._ansi_colors[param - 100 + 8]  # Map to bright color indices
 
             else:
                 self._logger.warning("Unknown SGR sequence: %r", params)
