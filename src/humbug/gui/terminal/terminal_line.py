@@ -36,9 +36,9 @@ class TerminalLine:
         self,
         index: int,
         char: str,
-        attributes: CharacterAttributes = CharacterAttributes.NONE,
-        fg_color: Optional[int] = None,
-        bg_color: Optional[int] = None
+        attributes: CharacterAttributes,
+        fg_color: Optional[int],
+        bg_color: Optional[int]
     ):
         """Set character and attributes at position."""
         if 0 <= index < self.width:
