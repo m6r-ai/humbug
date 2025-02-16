@@ -690,3 +690,18 @@ class TerminalState:
     def terminal_history_lines(self) -> int:
         """Get the number of lines of history including the current display"""
         return len(self._current_buffer.lines)
+
+    @property
+    def application_cursor_mode(self) -> bool:
+        """Get if terminal is in application cursor mode."""
+        return self._current_buffer.modes.application_cursor
+
+    @property
+    def application_keypad_mode(self) -> bool:
+        """Get if terminal is in application keypad mode."""
+        return self._current_buffer.modes.application_keypad
+
+    @property
+    def bracketed_paste_mode(self) -> bool:
+        """Get if terminal is in bracketed paste mode."""
+        return self._current_buffer.modes.bracketed_paste

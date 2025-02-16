@@ -330,13 +330,12 @@ class TerminalWidget(QAbstractScrollArea):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle key press events including control sequences."""
-        buffer = self._state.current_buffer
         text = event.text()
         key = event.key()
         modifiers = event.modifiers()
 
         # Handle keypad in application mode
-        if buffer.modes.application_keypad and not modifiers:
+        if self._state.application_keypad_mode and not modifiers:
             # Map keypad keys to application mode sequences
             keypad_map = {
                 Qt.Key_0: b'\x1bOp',
@@ -385,7 +384,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
         # Handle cursor keys based on mode
-        if buffer.modes.application_cursor:
+        if self._state.application_cursor_mode:
             cursor_map = {
                 Qt.Key_Up: b'\x1bOA',
                 Qt.Key_Down: b'\x1bOB',
@@ -661,7 +660,7 @@ class TerminalWidget(QAbstractScrollArea):
         text = QGuiApplication.clipboard().text()
         if text:
             # Handle bracketed paste mode
-            if self._state.current_buffer.modes.bracketed_paste:
+            if self._state.bracketed_paste_mode:
                 self.data_ready.emit(b'\x1b[200~')  # Start bracketed paste
                 self.data_ready.emit(text.encode())
                 self.data_ready.emit(b'\x1b[201~')  # End bracketed paste
