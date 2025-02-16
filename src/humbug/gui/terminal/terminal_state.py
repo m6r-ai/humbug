@@ -7,7 +7,8 @@ from typing import Dict, Tuple
 
 from humbug.gui.terminal.terminal_buffer import (
     TerminalBuffer, CharacterAttributes,
-    TerminalBufferSnapshot
+    TerminalBufferSnapshot, CursorState, AttributeState,
+    ScrollRegion, OperatingModes
 )
 
 
@@ -789,13 +790,12 @@ class TerminalState:
         self.resize(dims['rows'], dims['cols'])
 
         # Restore main buffer
-        main_buffer = self._deserialize_buffer_snapshot(
+        self._main_buffer = self._deserialize_buffer_snapshot(
             metadata['main_buffer'],
             dims['rows'],
             dims['cols']
         )
-        self._main_buffer = main_buffer
-        self._current_buffer = main_buffer
+        self._current_buffer = self._main_buffer
 
         # Restore alternate buffer if it existed
         if 'alternate_buffer' in metadata:
@@ -805,10 +805,8 @@ class TerminalState:
                 dims['cols']
             )
 
-        # Restore terminal title
+        # Restore terminal title and modes
         self._terminal_title = metadata['terminal_title']
-
-        # Restore screen mode
         self._screen_reverse_mode = metadata['screen_reverse_mode']
 
         # Restore mouse tracking
@@ -837,8 +835,8 @@ class TerminalState:
         # Create new buffer with specified dimensions
         buffer = TerminalBuffer(rows, cols, data['history_scrollback'])
 
-        # Restore line data
-        buffer.lines.clear()
+        # Create lines
+        lines = []
         for line_data in data['lines']:
             line = buffer.get_new_line()
             for col, char_data in enumerate(line_data):
@@ -849,38 +847,42 @@ class TerminalState:
                     char_data['fg_color'],
                     char_data['bg_color']
                 )
-            buffer.lines.append(line)
+            lines.append(line)
 
-        # Restore cursor state
-        cursor_data = data['cursor']
-        buffer.cursor.row = cursor_data['row']
-        buffer.cursor.col = cursor_data['col']
-        buffer.cursor.visible = cursor_data['visible']
-        buffer.cursor.blink = cursor_data['blink']
-        buffer.cursor.delayed_wrap = cursor_data['delayed_wrap']
+        # Create snapshot with deserialized data
+        snapshot = TerminalBufferSnapshot(
+            lines=lines,
+            cursor=CursorState(
+                row=data['cursor']['row'],
+                col=data['cursor']['col'],
+                visible=data['cursor']['visible'],
+                blink=data['cursor']['blink'],
+                delayed_wrap=data['cursor']['delayed_wrap']
+            ),
+            attributes=AttributeState(
+                current=CharacterAttributes(data['attributes']['current']),
+                foreground=data['attributes']['foreground'],
+                background=data['attributes']['background']
+            ),
+            scroll_region=ScrollRegion(
+                top=data['scroll_region']['top'],
+                bottom=data['scroll_region']['bottom'],
+                rows=data['scroll_region']['rows']
+            ),
+            modes=OperatingModes(
+                origin=data['modes']['origin'],
+                auto_wrap=data['modes']['auto_wrap'],
+                application_keypad=data['modes']['application_keypad'],
+                application_cursor=data['modes']['application_cursor'],
+                bracketed_paste=data['modes']['bracketed_paste']
+            ),
+            tab_stops=buffer.tab_stops.copy_tab_stops(),
+            history_scrollback=data['history_scrollback'],
+            max_cursor_row=data['max_cursor_row']
+        )
 
-        # Restore attributes
-        attr_data = data['attributes']
-        buffer.attributes.current = CharacterAttributes(attr_data['current'])
-        buffer.attributes.foreground = attr_data['foreground']
-        buffer.attributes.background = attr_data['background']
-
-        # Restore scroll region
-        scroll_data = data['scroll_region']
-        buffer.scroll_region.top = scroll_data['top']
-        buffer.scroll_region.bottom = scroll_data['bottom']
-        buffer.scroll_region.rows = scroll_data['rows']
-
-        # Restore modes
-        mode_data = data['modes']
-        buffer.modes.origin = mode_data['origin']
-        buffer.modes.auto_wrap = mode_data['auto_wrap']
-        buffer.modes.application_keypad = mode_data['application_keypad']
-        buffer.modes.application_cursor = mode_data['application_cursor']
-        buffer.modes.bracketed_paste = mode_data['bracketed_paste']
-
-        buffer.max_cursor_row = data['max_cursor_row']
-
+        # Restore buffer state using snapshot
+        buffer.restore_from_snapshot(snapshot)
         return buffer
 
     def get_terminal_size(self) -> Tuple[int, int]:

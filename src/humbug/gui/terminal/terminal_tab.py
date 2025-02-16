@@ -285,7 +285,7 @@ class TerminalTab(TabBase):
 
         # Only store process/display state for temporary moves
         if temp_state:
-            metadata.update(self._terminal._create_state_metadata())
+            metadata.update(self._terminal.create_state_metadata())
             # Store reference to this tab for process transfer
             metadata['source_tab'] = self
             metadata['is_ephemeral'] = True
