@@ -161,7 +161,7 @@ class TerminalWidget(QAbstractScrollArea):
     def _toggle_blink(self):
         """Toggle blink state and update display if needed."""
         self._blink_state = not self._blink_state
-        if (self._state.blinking_chars_on_screen()):
+        if self._state.blinking_chars_on_screen():
             self.viewport().update()
 
     def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
