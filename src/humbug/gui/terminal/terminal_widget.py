@@ -140,12 +140,12 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _update_scrollbar(self):
         """Update scrollbar range based on content size."""
-        buffer = self._state.current_buffer
-        history_lines = max(0, len(buffer.lines) - buffer.rows)
+        terminal_rows = self._state.terminal_rows
+        history_lines = max(0, self._state.terminal_history_lines - terminal_rows)
 
         # Set range and update scroll position if needed
         vbar = self.verticalScrollBar()
-        vbar.setPageStep(buffer.rows)
+        vbar.setPageStep(terminal_rows)
         old_at_bottom = vbar.value() == vbar.maximum()
         vbar.setRange(0, history_lines)
 
@@ -161,13 +161,14 @@ class TerminalWidget(QAbstractScrollArea):
     def _toggle_blink(self):
         """Toggle blink state and update display if needed."""
         buffer = self._state.current_buffer
-        old_state = self._blink_state
         self._blink_state = not self._blink_state
+
+        terminal_rows, terminal_cols = self._state.get_terminal_size()
 
         # Only update if we have any blinking characters
         if any(any((line.get_character(col)[1] & CharacterAttributes.BLINK)
-                for col in range(buffer.cols))
-                for line in buffer.lines[-buffer.rows:]):
+                for col in range(terminal_cols))
+                for line in buffer.lines[-terminal_rows:]):
             self.viewport().update()
 
     def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
@@ -179,14 +180,15 @@ class TerminalWidget(QAbstractScrollArea):
         Returns:
             Tuple of (row, col) in terminal buffer coordinates
         """
-        buffer = self._state.current_buffer
         fm = QFontMetrics(self.font())
         char_width = fm.horizontalAdvance(' ')
         char_height = fm.height()
 
+        terminal_rows, terminal_cols = self._state.get_terminal_size()
+
         # Convert pixel position to viewport row/col
-        viewport_col = max(0, min(pos.x() // char_width, buffer.cols - 1))
-        viewport_row = max(0, min(pos.y() // char_height, buffer.rows - 1))
+        viewport_col = max(0, min(pos.x() // char_width, terminal_cols - 1))
+        viewport_row = max(0, min(pos.y() // char_height, terminal_rows - 1))
 
         # Adjust row for scroll position
         first_visible_line = self.verticalScrollBar().value()
@@ -481,6 +483,9 @@ class TerminalWidget(QAbstractScrollArea):
         painter = QPainter(self.viewport())
         buffer = self._state.current_buffer
 
+        terminal_rows, terminal_cols = self._state.get_terminal_size()
+        terminal_history_lines = self._state.terminal_history_lines
+
         # Get font metrics for character dimensions
         fm = QFontMetrics(self.font())
         char_width = fm.horizontalAdvance(' ')
@@ -494,9 +499,9 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Calculate the character cell range to repaint
         start_row = max(0, region.top() // char_height)
-        end_row = min(buffer.rows, (region.bottom() + char_height - 1) // char_height)
+        end_row = min(terminal_rows, (region.bottom() + char_height - 1) // char_height)
         start_col = max(0, region.left() // char_width)
-        end_col = min(buffer.cols, (region.right() + char_width - 1) // char_width)
+        end_col = min(terminal_cols, (region.right() + char_width - 1) // char_width)
 
         # Paint visible character cells
         for row in range(start_row, end_row):
@@ -504,7 +509,7 @@ class TerminalWidget(QAbstractScrollArea):
 
             # Get actual line index accounting for scroll position
             line_index = first_visible_line + row
-            if line_index >= len(buffer.lines):
+            if line_index >= terminal_history_lines:
                 continue
 
             line = buffer.lines[line_index]
@@ -530,12 +535,12 @@ class TerminalWidget(QAbstractScrollArea):
             selection_color = self.palette().highlight().color()
             selection_text_color = self.palette().highlightedText().color()
 
-            for row in range(max(visible_start_row, 0), min(visible_end_row + 1, buffer.rows)):
+            for row in range(max(visible_start_row, 0), min(visible_end_row + 1, terminal_rows)):
                 y = row * char_height
 
                 # Calculate selection range for this row
                 row_start = selection.start_col if row + first_visible_line == selection.start_row else 0
-                row_end = selection.end_col if row + first_visible_line == selection.end_row else buffer.cols
+                row_end = selection.end_col if row + first_visible_line == selection.end_row else terminal_cols
 
                 # Draw selection background
                 selection_rect = QRect(
@@ -550,7 +555,7 @@ class TerminalWidget(QAbstractScrollArea):
 
                     # Draw selected text
                     line_index = first_visible_line + row
-                    if line_index < len(buffer.lines):
+                    if line_index < terminal_history_lines:
                         line = buffer.lines[line_index]
                         for col in range(row_start, row_end):
                             x = col * char_width
@@ -573,17 +578,17 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Draw cursor if visible and in view
         if buffer.cursor.visible:
-            cursor_line = len(buffer.lines) - buffer.rows + buffer.cursor.row
+            cursor_line = terminal_history_lines - terminal_rows + buffer.cursor.row
             visible_cursor_row = cursor_line - first_visible_line
 
-            if 0 <= visible_cursor_row < buffer.rows:  # Only draw if cursor is in visible area
+            if 0 <= visible_cursor_row < terminal_rows:  # Only draw if cursor is in visible area
                 cursor_x = buffer.cursor.col * char_width
                 cursor_y = visible_cursor_row * char_height
 
                 cursor_rect = QRect(cursor_x, cursor_y, char_width, char_height)
                 if cursor_rect.intersects(region):
                     # Get character under cursor for inversion
-                    if cursor_line < len(buffer.lines):
+                    if cursor_line < terminal_history_lines:
                         line = buffer.lines[cursor_line]
                         char, _attributes, _fg_color, _bg_color = line.get_character(buffer.cursor.col)
 
@@ -607,18 +612,21 @@ class TerminalWidget(QAbstractScrollArea):
             return ""
 
         buffer = self._state.current_buffer
+        terminal_cols = self._state.terminal_columns
+        terminal_history_lines = self._state.terminal_history_lines
+
         # Get normalized selection
         selection = self._selection.normalize()
 
         # Build selected text
         text = []
         for row in range(selection.start_row, selection.end_row + 1):
-            if row >= len(buffer.lines):
+            if row >= terminal_history_lines:
                 break
 
             line = buffer.lines[row]
             start = selection.start_col if row == selection.start_row else 0
-            end = selection.end_col if row == selection.end_row else buffer.cols
+            end = selection.end_col if row == selection.end_row else terminal_cols
 
             row_text = ""
             for col in range(start, end):

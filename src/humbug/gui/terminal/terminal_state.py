@@ -675,3 +675,18 @@ class TerminalState:
         """
         buffer = self._current_buffer
         return (buffer.rows, buffer.cols)
+
+    @property
+    def terminal_rows(self) -> int:
+        """Get the number of rows in the terminal display."""
+        return self._current_buffer.rows
+
+    @property
+    def terminal_columns(self) -> int:
+        """Get the number of columns in the terminal display."""
+        return self._current_buffer.cols
+
+    @property
+    def terminal_history_lines(self) -> int:
+        """Get the number of lines of history including the current display"""
+        return len(self._current_buffer.lines)
