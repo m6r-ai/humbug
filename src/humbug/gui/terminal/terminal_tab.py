@@ -18,7 +18,9 @@ from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.gui.color_role import ColorRole
+from humbug.gui.find_widget import FindWidget
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.terminal.terminal_find import TerminalFind
 from humbug.gui.terminal.terminal_process import TerminalProcess
 from humbug.gui.terminal.terminal_widget import TerminalWidget
 from humbug.gui.status_message import StatusMessage
@@ -93,9 +95,20 @@ class TerminalTab(TabBase):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(0)
 
+        # Add find widget at top (initially hidden)
+        self._find_widget = FindWidget()
+        self._find_widget.hide()
+        self._find_widget.closed.connect(self._close_find)
+        self._find_widget.find_next.connect(lambda: self._find_next(True))
+        self._find_widget.find_previous.connect(lambda: self._find_next(False))
+        layout.addWidget(self._find_widget)
+
         # Create terminal widget
         self._terminal = TerminalWidget(self)
         layout.addWidget(self._terminal)
+
+        # Create find handler
+        self._find_handler = TerminalFind(self._terminal)
 
         # Connect signals
         self._terminal.data_ready.connect(self._handle_data_ready)
@@ -476,7 +489,19 @@ class TerminalTab(TabBase):
         self._terminal.paste()
 
     def show_find(self):
-        """Show the find widget (not supported)."""
+        """Show the find widget."""
+        # Get the selected text if any
+        if self._terminal.has_selection():
+            text = self._terminal._get_selected_text()
+            # Only use selection if it's on a single line
+            if '\n' not in text:
+                self._find_widget.set_search_text(text)
+            else:
+                self._find_widget.set_search_text("")
+        else:
+            self._find_widget.set_search_text("")
+
+        self._find_widget.show()
 
     def can_submit(self) -> bool:
         """Check if terminal can submit (not supported)."""
@@ -486,3 +511,15 @@ class TerminalTab(TabBase):
         """Update status bar."""
         message = StatusMessage("Terminal: local")
         self.status_message.emit(message)
+
+    def _close_find(self):
+        """Close the find widget and clear search state."""
+        self._find_widget.hide()
+        self._find_handler.clear()
+
+    def _find_next(self, forward: bool = True):
+        """Find next/previous match."""
+        text = self._find_widget.get_search_text()
+        self._find_handler.find_text(text, forward)
+        current, total = self._find_handler.get_match_status()
+        self._find_widget.set_match_status(current, total)

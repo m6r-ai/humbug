@@ -1,14 +1,14 @@
 """Terminal widget implementation."""
 
 import logging
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, List
 
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetrics,
     QResizeEvent, QKeyEvent, QMouseEvent,
-    QGuiApplication, QWheelEvent, QFont
+    QGuiApplication, QWheelEvent, QFont, QTextCharFormat
 )
 
 from humbug.gui.color_role import ColorRole
@@ -38,6 +38,9 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Initialize terminal state
         self._state = TerminalState(24, 80)  # Default size
+
+        # Initialize highlight tracking
+        self._search_highlights = {}
 
         # Selection state
         self._selection: Optional[TerminalSelection] = None
@@ -744,7 +747,32 @@ class TerminalWidget(QAbstractScrollArea):
         x_start = run[0][1]
         y = run[0][2]
         width = (run[-1][1] - x_start) + char_width
-        painter.fillRect(x_start, y, width, char_height, bg)
+        row = (y // char_height) + self.verticalScrollBar().value()
+
+        # Get any search highlights for this row
+        highlights = self.get_row_highlights(row)
+
+        # If no highlights, draw the entire background at once
+        if not highlights:
+            painter.fillRect(x_start, y, width, char_height, bg)
+        else:
+            # With highlights, draw background segments
+            for col in range(width // char_width):
+                x = x_start + (col * char_width)
+                highlight_format = None
+                actual_col = (x - x_start) // char_width
+
+                # Check if this position is highlighted
+                for start_col, end_col, fmt in highlights:
+                    if start_col <= actual_col < end_col:
+                        highlight_format = fmt
+                        break
+
+                # Draw background with appropriate color
+                painter.fillRect(
+                    x, y, char_width, char_height,
+                    highlight_format.background() if highlight_format else bg
+                )
 
         # Handle dim text
         if attrs & CharacterAttributes.DIM:
@@ -995,3 +1023,33 @@ class TerminalWidget(QAbstractScrollArea):
     def get_current_directory(self) -> Optional[str]:
         """Get current working directory if known."""
         return self._state._current_directory
+
+    def set_search_highlights(self, row: int, highlights: List[Tuple[int, int, QTextCharFormat]]) -> None:
+        """Set search highlights for a given row.
+
+        Args:
+            row: Row to set highlights for
+            highlights: List of (start_col, end_col, format) highlight ranges
+        """
+        if highlights:
+            self._search_highlights[row] = highlights
+        else:
+            self._search_highlights.pop(row, None)
+
+        self.viewport().update()
+
+    def clear_search_highlights(self) -> None:
+        """Clear all search highlights."""
+        self._search_highlights.clear()
+        self.viewport().update()
+
+    def get_row_highlights(self, row: int) -> List[Tuple[int, int, QTextCharFormat]]:
+        """Get highlights for a given row.
+
+        Args:
+            row: Row to get highlights for
+
+        Returns:
+            List of (start_col, end_col, format) highlight ranges
+        """
+        return self._search_highlights.get(row, [])
