@@ -76,6 +76,8 @@ class TerminalWidget(QAbstractScrollArea):
         self._blink_timer.timeout.connect(self._toggle_blink)
         self._blink_timer.start(500)  # Toggle every 500ms
 
+        self._has_focus = self.hasFocus()
+
         # Initialize size and connect signals
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_terminal_context_menu)
@@ -836,9 +838,13 @@ class TerminalWidget(QAbstractScrollArea):
         ascent: int
     ) -> None:
         """Draw terminal cursor."""
-        # Don't draw cursor if it's blinking and in the off state
-        # Note: We use not self._blink_state to keep in sync with blinking text
-        if buffer.cursor.blink and not self._blink_state:
+        # Don't draw cursor if:
+        # 1. Cursor is not visible
+        # 2. Widget doesn't have focus
+        # 3. Cursor is blinking and in off state
+        if (not buffer.cursor.visible or
+            not self._has_focus or
+            (buffer.cursor.blink and not self._blink_state)):
             return
 
         cursor_line = terminal_history_lines - terminal_rows + buffer.cursor.row
@@ -954,6 +960,18 @@ class TerminalWidget(QAbstractScrollArea):
     def focusNextPrevChild(self, _next: bool) -> bool:
         """Override to prevent tab from changing focus."""
         return False
+
+    def focusInEvent(self, event):
+        """Handle focus in event."""
+        super().focusInEvent(event)
+        self._has_focus = True
+        self.viewport().update()
+
+    def focusOutEvent(self, event):
+        """Handle focus out event."""
+        super().focusOutEvent(event)
+        self._has_focus = False
+        self.viewport().update()
 
     def get_terminal_size(self) -> Tuple[int, int]:
         """Get current terminal dimensions."""
