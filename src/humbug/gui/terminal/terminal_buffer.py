@@ -166,10 +166,6 @@ class TerminalBuffer:
         self.rows = rows
         self.cols = cols
 
-        # Initialize line storage
-        self.lines: List[TerminalLine] = []
-        self._add_new_lines(rows)
-
         # Initialize state objects
         self.cursor = CursorState()
         self.attributes = AttributeState()
@@ -178,6 +174,10 @@ class TerminalBuffer:
         self.tab_stops = TabStopState(cols)
         self.history_scrollback = history_scrollback
         self.max_cursor_row = 0
+
+        # Initialize line storage
+        self.lines: List[TerminalLine] = []
+        self._add_new_lines(rows)
 
     def get_state(self) -> BufferState:
         """
@@ -300,8 +300,10 @@ class TerminalBuffer:
         line = TerminalLine(self.cols)
         # Fill line with spaces using default attributes
 
+        fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
+        bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
         for i in range(self.cols):
-            line.set_character(i, ' ')
+            line.set_character(i, ' ', self.attributes.current, fg, bg)
 
         return line
 
@@ -338,6 +340,9 @@ class TerminalBuffer:
         # Create new lines with new width
         new_lines = []
 
+        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+
         # Copy content from old lines
         for old_line in self.lines:
             new_line = TerminalLine(new_cols)
@@ -349,7 +354,7 @@ class TerminalBuffer:
 
             # Pad with spaces if needed
             for col in range(old_cols, new_cols):
-                new_line.set_character(col, ' ')
+                new_line.set_character(col, ' ', self.attributes.current, default_fg, default_bg)
 
             new_lines.append(new_line)
 
@@ -449,6 +454,9 @@ class TerminalBuffer:
             end_row: Ending row
             end_col: Ending column
         """
+        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+
         for row in range(start_row, end_row + 1):
             line_index = len(self.lines) - self.rows + row
             if 0 <= line_index < len(self.lines):
@@ -456,7 +464,7 @@ class TerminalBuffer:
                 start = start_col if row == start_row else 0
                 end = end_col if row == end_row else self.cols - 1
                 for col in range(start, end + 1):
-                    line.set_character(col, ' ')
+                    line.set_character(col, ' ', self.attributes.current, default_fg, default_bg)
 
     def insert_lines(self, count: int) -> None:
         """
@@ -517,6 +525,9 @@ class TerminalBuffer:
         Args:
             count: Number of characters to insert
         """
+        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         cursor_col = self.cursor.col
         line_index = len(self.lines) - self.rows + cursor_row
@@ -530,7 +541,7 @@ class TerminalBuffer:
 
             # Insert spaces
             for col in range(cursor_col, min(cursor_col + count, self.cols)):
-                line.set_character(col, ' ')
+                line.set_character(col, ' ', self.attributes.current, default_fg, default_bg)
 
     def delete_chars(self, count: int) -> None:
         """
@@ -539,6 +550,9 @@ class TerminalBuffer:
         Args:
             count: Number of characters to delete
         """
+        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         cursor_col = self.cursor.col
         line_index = len(self.lines) - self.rows + cursor_row
@@ -550,7 +564,7 @@ class TerminalBuffer:
                     char, attrs, fg, bg = line.get_character(col + count)
                     line.set_character(col, char, attrs, fg, bg)
                 else:
-                    line.set_character(col, ' ')
+                    line.set_character(col, ' ', self.attributes.current, default_fg, default_bg)
 
     def erase_chars(self, count: int) -> None:
         """
@@ -559,13 +573,16 @@ class TerminalBuffer:
         Args:
             count: Number of characters to erase
         """
+        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         cursor_col = self.cursor.col
         line_index = len(self.lines) - self.rows + cursor_row
         if 0 <= line_index < len(self.lines):
             line = self.lines[line_index]
             for col in range(cursor_col, min(cursor_col + count, self.cols)):
-                line.set_character(col, ' ')
+                line.set_character(col, ' ', self.attributes.current, default_fg, default_bg)
 
     def erase_in_display(self, mode: int) -> None:
         """Handle erase is display commands."""
@@ -740,11 +757,14 @@ class TerminalBuffer:
 
     def decaln(self) -> None:
         """Display the DECALN screen alignment pattern."""
+        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+
         for r in range(self.rows):
             line_index = len(self.lines) - self.rows + r
             line = self.lines[line_index]
             for c in range(self.cols):
-                line.set_character(c, 'E')
+                line.set_character(c, 'E', self.attributes.current, default_fg, default_bg)
 
     def write_char(self, char: str) -> None:
         """

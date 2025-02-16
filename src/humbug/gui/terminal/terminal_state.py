@@ -147,6 +147,7 @@ class TerminalState:
             UnicodeDecodeError: If data cannot be decoded
         """
         text = data.decode(errors='replace')
+        print(f"data: {repr(text)}")
 
         i = 0
         while i < len(text):
@@ -168,6 +169,7 @@ class TerminalState:
                 self._escape_seq_buffer += char
 
                 if self._is_escape_sequence_complete(self._escape_seq_buffer):
+                    print(f"esc: {repr(self._escape_seq_buffer)}")
                     self._process_escape_sequence(self._escape_seq_buffer)
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
