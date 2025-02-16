@@ -359,17 +359,13 @@ class TerminalState:
                 elif mode == 5:  # DECSCNM - Screen Mode (Reverse)
                     self._screen_reverse_mode = set_mode
                 elif mode == 6:  # DECOM - Origin Mode
-                    buffer.modes.origin = set_mode
-                    buffer.cursor.row = 0
-                    buffer.max_cursor_row = 0
-                    buffer.cursor.col = 0
-                    buffer.cursor.delayed_wrap = False
+                    buffer.set_origin(set_mode)
                 elif mode == 7:  # DECAWM - Auto-wrap Mode
                     buffer.modes.auto_wrap = set_mode
                 elif mode == 12:  # att610 - Start/Stop Blinking Cursor
-                    buffer.cursor.blink = set_mode
+                    buffer.set_cursor_blink(set_mode)
                 elif mode == 25:  # DECTCEM - Text Cursor Enable Mode
-                    buffer.cursor.visible = set_mode
+                    buffer.set_cursor_visible(set_mode)
                 elif mode == 1000:  # X11 mouse reporting - normal tracking mode
                     self._mouse_tracking.enabled = set_mode
                     self._mouse_tracking.mode = 1000 if set_mode else 0
@@ -379,8 +375,6 @@ class TerminalState:
                 elif mode == 1003:  # X11 mouse reporting - any event tracking
                     self._mouse_tracking.enabled = set_mode
                     self._mouse_tracking.mode = 1003 if set_mode else 0
-                elif mode == 1004:  # Send focus in/out events
-                    buffer.focus_tracking = set_mode
                 elif mode == 1005:  # UTF-8 mouse mode
                     self._mouse_tracking.utf8_mode = set_mode
                 elif mode == 1006:  # SGR mouse mode
@@ -450,42 +444,10 @@ class TerminalState:
             buffer.set_cursor_position(max(1, params[0]), col)
 
         elif code == 'J':  # ED - Erase in Display
-            mode = params[0] if params else 0
-            if mode == 0:  # Clear from cursor to end
-                buffer.clear_region(
-                    buffer.cursor.row,
-                    buffer.cursor.col,
-                    buffer.rows - 1,
-                    buffer.cols - 1
-                )
-            elif mode == 1:  # Clear from start to cursor
-                buffer.clear_region(0, 0, buffer.cursor.row, buffer.cursor.col)
-            elif mode == 2:  # Clear entire screen
-                buffer.clear_region(0, 0, buffer.rows - 1, buffer.cols - 1)
+            buffer.erase_in_display(params[0])
 
         elif code == 'K':  # EL - Erase in Line
-            mode = params[0] if params else 0
-            if mode == 0:  # Clear from cursor to end
-                buffer.clear_region(
-                    buffer.cursor.row,
-                    buffer.cursor.col,
-                    buffer.cursor.row,
-                    buffer.cols - 1
-                )
-            elif mode == 1:  # Clear from start to cursor
-                buffer.clear_region(
-                    buffer.cursor.row,
-                    0,
-                    buffer.cursor.row,
-                    buffer.cursor.col
-                )
-            elif mode == 2:  # Clear entire line
-                buffer.clear_region(
-                    buffer.cursor.row,
-                    0,
-                    buffer.cursor.row,
-                    buffer.cols - 1
-                )
+            buffer.erase_in_line(params[0])
 
         elif code == 'L':  # IL - Insert Line
             buffer.insert_lines(max(1, params[0]))

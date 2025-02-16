@@ -567,6 +567,44 @@ class TerminalBuffer:
             for col in range(cursor_col, min(cursor_col + count, self.cols)):
                 line.set_character(col, ' ')
 
+    def erase_in_display(self, mode: int) -> None:
+        """Handle erase is display commands."""
+        if mode == 0:  # Clear from cursor to end
+            self.clear_region(
+                self.cursor.row,
+                self.cursor.col,
+                self.rows - 1,
+                self.cols - 1
+            )
+        elif mode == 1:  # Clear from start to cursor
+            self.clear_region(0, 0, self.cursor.row, self.cursor.col)
+        elif mode == 2:  # Clear entire screen
+            self.clear_region(0, 0, self.rows - 1, self.cols - 1)
+
+    def erase_in_line(self, mode: int) -> None:
+        """Handle erase in line commands."""
+        if mode == 0:  # Clear from cursor to end
+            self.clear_region(
+                self.cursor.row,
+                self.cursor.col,
+                self.cursor.row,
+                self.cols - 1
+            )
+        elif mode == 1:  # Clear from start to cursor
+            self.clear_region(
+                self.cursor.row,
+                0,
+                self.cursor.row,
+                self.cursor.col
+            )
+        elif mode == 2:  # Clear entire line
+            self.clear_region(
+                self.cursor.row,
+                0,
+                self.cursor.row,
+                self.cols - 1
+            )
+
     def move_cursor_up(self, amount: int) -> None:
         """Move cursor up by specified amount."""
         self.cursor.row = max(0, self.cursor.row - amount)
@@ -671,6 +709,22 @@ class TerminalBuffer:
         self.cursor.col = 0
         self.cursor.row = 0
         self.cursor.delayed_wrap = False
+
+    def set_origin(self, origin_mode: bool) -> None:
+        """Set or reset origin mode."""
+        self.modes.origin = origin_mode
+        self.cursor.row = 0
+        self.max_cursor_row = 0
+        self.cursor.col = 0
+        self.cursor.delayed_wrap = False
+
+    def set_cursor_blink(self, blink_mode: bool) -> None:
+        """Set or reset cursor blink mode."""
+        self.cursor.blink = blink_mode
+
+    def set_cursor_visible(self, visible_mode: bool) -> None:
+        """Set or reset cursor visibility."""
+        self.cursor.visible = visible_mode
 
     def set_tab_stop(self) -> None:
         """Set a tab stop at the current column."""
