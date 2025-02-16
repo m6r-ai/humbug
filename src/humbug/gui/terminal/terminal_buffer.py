@@ -592,9 +592,21 @@ class TerminalBuffer:
     def set_cursor_position(self, row: int, col: int) -> None:
         """Set absolute cursor position."""
         max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
-        self.cursor.row = min(max_rows - 1, max(0, row))
+        self.cursor.row = min(max_rows - 1, max(0, row - 1))
         self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
-        self.cursor.col = min(self.cols - 1, max(0, col))
+        self.cursor.col = min(self.cols - 1, max(0, col - 1))
+        self.cursor.delayed_wrap = False
+
+    def set_cursor_horizontal(self, col: int) -> None:
+        """Set the absolute horizontal cursor position."""
+        self.cursor.col = col - 1
+        self.cursor.delayed_wrap = False
+
+    def set_cursor_vertical(self, row: int) -> None:
+        """Set the absolute vertical cursor position."""
+        max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
+        self.cursor.row = min(row - 1, max_rows - 1)
+        self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
         self.cursor.delayed_wrap = False
 
     def save_cursor(self) -> None:
@@ -613,6 +625,72 @@ class TerminalBuffer:
 
         self.cursor.row, self.cursor.col, self.cursor.delayed_wrap, origin = self.cursor.saved_position
         self.modes.origin = origin
+
+    def index(self) -> None:
+        """Handle the index operation."""
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
+        if cursor_row != self.scroll_region.bottom - 1:
+            max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
+            self.cursor.row = min(self.cursor.row + 1, max_rows - 1)
+            self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
+        else:
+            self.scroll_up(1)
+
+        self.cursor.delayed_wrap = False
+
+    def reverse_index(self) -> None:
+        """Handle the reverse index operation."""
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
+        if cursor_row != self.scroll_region.top:
+            self.cursor.row = max(0, self.cursor.row - 1)
+        else:
+            self.scroll_down(1)
+
+        self.cursor.delayed_wrap = False
+
+    def next_line(self) -> None:
+        """Handle the next line operation."""
+        self.cursor.col = 0
+        cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
+        if cursor_row != self.scroll_region.bottom - 1:
+            max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
+            self.cursor.row = min(self.cursor.row + 1, max_rows - 1)
+            self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
+        else:
+            self.scroll_up(1)
+
+        self.cursor.delayed_wrap = False
+
+    def set_top_and_bottom_margins(self, top: int, bottom: int) -> None:
+        """Set the top and bottom margins."""
+        if top < bottom:
+            self.scroll_region.top = top - 1
+            self.scroll_region.bottom = bottom
+            self.scroll_region.rows = bottom - top + 1
+
+        self.cursor.col = 0
+        self.cursor.row = 0
+        self.cursor.delayed_wrap = False
+
+    def set_tab_stop(self) -> None:
+        """Set a tab stop at the current column."""
+        self.tab_stops.set_tab_stop(self.cursor.col)
+
+    def clear_tab_stop(self) -> None:
+        """Clear a tab stop at the current column."""
+        self.tab_stops.clear_tab_stop(self.cursor.col)
+
+    def clear_all_tab_stops(self) -> None:
+        """Clear all tab stops."""
+        self.tab_stops.clear_all_tab_stops()
+
+    def decaln(self) -> None:
+        """Display the DECALN screen alignment pattern."""
+        for r in range(self.rows):
+            line_index = len(self.lines) - self.rows + r
+            line = self.lines[line_index]
+            for c in range(self.cols):
+                line.set_character(c, 'E')
 
     def write_char(self, char: str) -> None:
         """

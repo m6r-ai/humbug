@@ -219,11 +219,8 @@ class TerminalState:
         code = sequence[-1]
 
         if code == '8':  # DECALN - Screen Alignment Pattern
-            for r in range(buffer.rows):
-                line_index = len(buffer.lines) - buffer.rows + r
-                line = buffer.lines[line_index]
-                for c in range(buffer.cols):
-                    line.set_character(c, 'E')
+            buffer.decaln()
+
         else:
             self._logger.warning(f"Unknown DEC special sequence {repr(sequence)}")
 
@@ -266,36 +263,16 @@ class TerminalState:
                 buffer.restore_cursor()
 
             elif code == 'D':  # Index
-                cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-                if cursor_row != buffer.scroll_region.bottom - 1:
-                    max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-                    buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
-                    buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-                else:
-                    buffer.scroll_up(1)
-                buffer.cursor.delayed_wrap = False
+                buffer.index()
 
             elif code == 'E':  # Next Line
-                buffer.cursor.col = 0
-                cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-                if cursor_row != buffer.scroll_region.bottom - 1:
-                    max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-                    buffer.cursor.row = min(buffer.cursor.row + 1, max_rows - 1)
-                    buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-                else:
-                    buffer.scroll_up(1)
-                buffer.cursor.delayed_wrap = False
+                buffer.next_line()
 
             elif code == 'H':  # HTS - Set tab stop at current position
-                buffer.tab_stops.set_tab_stop(buffer.cursor.col)
+                buffer.set_tab_stop()
 
             elif code == 'M':  # Reverse Index
-                cursor_row = buffer.cursor.row if not buffer.modes.origin else buffer.cursor.row + buffer.scroll_region.top
-                if cursor_row != buffer.scroll_region.top:
-                    buffer.cursor.row = max(0, buffer.cursor.row - 1)
-                else:
-                    buffer.scroll_down(1)
-                buffer.cursor.delayed_wrap = False
+                buffer.reverse_index()
 
             else:
                 self._logger.warning(f"Unknown simple ESC sequence: {repr(sequence)}")
@@ -466,14 +443,11 @@ class TerminalState:
             buffer.move_cursor_back(max(1, params[0]))
 
         elif code == 'G':  # CHA - Cursor Horizontal Absolute
-            col = max(0, params[0] - 1)  # Convert 1-based to 0-based
-            buffer.cursor.col = min(col, buffer.cols - 1)
-            buffer.cursor.delayed_wrap = False
+            buffer.set_cursor_horizontal(max(1, params[0]))
 
         elif code == 'H':  # CUP - Cursor Position
-            row = params[0] - 1 if params else 0
-            col = params[1] - 1 if len(params) > 1 else 0
-            buffer.set_cursor_position(row, col)
+            col = max(1, params[1]) if len(params) > 1 else 1
+            buffer.set_cursor_position(max(1, params[0]), col)
 
         elif code == 'J':  # ED - Erase in Display
             mode = params[0] if params else 0
@@ -514,63 +488,48 @@ class TerminalState:
                 )
 
         elif code == 'L':  # IL - Insert Line
-            count = max(1, params[0] if params else 1)
-            buffer.insert_lines(count)
+            buffer.insert_lines(max(1, params[0]))
 
         elif code == 'M':  # DL - Delete Line
-            count = max(1, params[0] if params else 1)
-            buffer.delete_lines(count)
+            buffer.delete_lines(max(1, params[0]))
 
         elif code == 'P':  # DCH - Delete Character
-            count = max(1, params[0] if params else 1)
-            buffer.delete_chars(count)
+            buffer.delete_chars(max(1, params[0]))
 
         elif code == 'S':  # SU - Scroll Up
-            count = max(1, params[0] if params else 1)
-            buffer.scroll_up(count)
+            buffer.scroll_up(max(1, params[0]))
 
         elif code == 'T':  # SD - Scroll Down
-            count = max(1, params[0] if params else 1)
-            buffer.scroll_down(count)
+            buffer.scroll_down(max(1, params[0]))
 
         elif code == 'X':  # ECH - Erase Character
-            count = max(1, params[0] if params else 1)
-            buffer.erase_chars(count)
+            buffer.erase_chars(max(1, params[0]))
 
         elif code == '@':  # ICH - Insert Character
-            count = max(1, params[0] if params else 1)
-            buffer.insert_chars(count)
+            buffer.insert_chars(max(1, params[0]))
 
         elif code == 'd':  # VPA - Line Position Absolute
-            row = max(0, params[0] - 1) if params else 0  # Convert 1-based to 0-based
-            max_rows = buffer.rows if not buffer.modes.origin else buffer.scroll_region.rows
-            buffer.cursor.row = min(row, max_rows - 1)
-            buffer.max_cursor_row = max(buffer.max_cursor_row, buffer.cursor.row)
-            buffer.cursor.delayed_wrap = False
+            buffer.set_cursor_vertical(max(1, params[0]))
 
         elif code == 'f':  # HVP - Horizontal and Vertical Position
-            row = params[0] if params else 1
-            col = params[1] if len(params) > 1 else 1
-            buffer.set_cursor_position(row, col)
+            col = max(1, params[1]) if len(params) > 1 else 1
+            buffer.set_cursor_position(max(1, params[0]), col)
 
         elif code == 'g':  # TBC - Tab clear
             mode = params[0] if params else 0
 
             if mode == 0:  # Clear tab stop at current position
-                buffer.tab_stops.clear_tab_stop(buffer.cursor.col)
+                buffer.clear_tab_stop()
             elif mode == 3:  # Clear all tab stops
-                buffer.tab_stops.clear_all_tab_stops()
+                buffer.clear_all_tab_stops()
 
         elif code == 'm':  # SGR - Select Graphic Rendition
             self._process_sgr(params)
 
         elif code == 'r':  # DECSTBM - Set Top and Bottom Margins
-            top = max(0, params[0] - 1) if params else 0
-            bottom = min(buffer.rows, params[1]) if len(params) > 1 and params[1] else buffer.rows
-            if top < bottom:
-                buffer.scroll_region.top = top
-                buffer.scroll_region.bottom = bottom
-                buffer.scroll_region.rows = bottom - top
+            top = max(1, params[0])
+            bottom = max(1, params[1]) if len(params) > 1 else buffer.rows
+            buffer.set_top_and_bottom_margins(top, bottom)
 
         elif code == 's':  # Save cursor position
             buffer.save_cursor()
