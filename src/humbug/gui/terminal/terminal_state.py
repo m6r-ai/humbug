@@ -3,12 +3,10 @@
 import base64
 import logging
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 
 from humbug.gui.terminal.terminal_buffer import (
-    TerminalBuffer, CharacterAttributes,
-    TerminalBufferSnapshot, CursorState, AttributeState,
-    ScrollRegion, OperatingModes
+    TerminalBuffer, CharacterAttributes
 )
 
 
@@ -682,7 +680,7 @@ class TerminalState:
 
             i += 1
 
-    def create_state_metadata(self) -> Dict:
+    def create_state_metadata(self) -> Dict[str, Any]:
         """
         Create metadata dictionary capturing current state.
 
@@ -691,24 +689,14 @@ class TerminalState:
         """
         metadata = {}
 
-        # Capture main buffer state
-        metadata['main_buffer'] = self._serialize_buffer_snapshot(
-            self._main_buffer.create_snapshot()
-        )
+        # Get state from main buffer
+        metadata['main_buffer'] = self._main_buffer.get_state()
 
-        # Capture alternate buffer state if it exists
+        # Get alternate buffer state if it exists
         if self._alternate_buffer:
-            metadata['alternate_buffer'] = self._serialize_buffer_snapshot(
-                self._alternate_buffer.create_snapshot()
-            )
+            metadata['alternate_buffer'] = self._alternate_buffer.get_state()
 
-        # Capture terminal dimensions
-        metadata['dimensions'] = {
-            'rows': self._current_buffer.rows,
-            'cols': self._current_buffer.cols
-        }
-
-        # Capture additional state
+        # Additional terminal state
         metadata['terminal_title'] = self._terminal_title
         metadata['screen_reverse_mode'] = self._screen_reverse_mode
         metadata['mouse_tracking'] = {
@@ -723,89 +711,27 @@ class TerminalState:
 
         return metadata
 
-    def _serialize_buffer_snapshot(self, snapshot: TerminalBufferSnapshot) -> Dict:
-        """
-        Convert buffer snapshot to serializable dictionary.
-
-        Args:
-            snapshot: Buffer snapshot to serialize
-
-        Returns:
-            Dictionary containing serialized snapshot data
-        """
-        serialized = {
-            'cursor': {
-                'row': snapshot.cursor.row,
-                'col': snapshot.cursor.col,
-                'visible': snapshot.cursor.visible,
-                'blink': snapshot.cursor.blink,
-                'delayed_wrap': snapshot.cursor.delayed_wrap
-            },
-            'attributes': {
-                'current': snapshot.attributes.current.value,
-                'foreground': snapshot.attributes.foreground,
-                'background': snapshot.attributes.background
-            },
-            'scroll_region': {
-                'top': snapshot.scroll_region.top,
-                'bottom': snapshot.scroll_region.bottom,
-                'rows': snapshot.scroll_region.rows
-            },
-            'modes': {
-                'origin': snapshot.modes.origin,
-                'auto_wrap': snapshot.modes.auto_wrap,
-                'application_keypad': snapshot.modes.application_keypad,
-                'application_cursor': snapshot.modes.application_cursor,
-                'bracketed_paste': snapshot.modes.bracketed_paste
-            },
-            'history_scrollback': snapshot.history_scrollback,
-            'max_cursor_row': snapshot.max_cursor_row
-        }
-
-        # Serialize line data
-        serialized['lines'] = []
-        for line in snapshot.lines:
-            line_data = []
-            for col in range(line.width):
-                char, attrs, fg, bg = line.get_character(col)
-                line_data.append({
-                    'char': char,
-                    'attributes': attrs.value,
-                    'fg_color': fg,
-                    'bg_color': bg
-                })
-            serialized['lines'].append(line_data)
-
-        return serialized
-
-    def restore_from_metadata(self, metadata: Dict) -> None:
+    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
         """
         Restore terminal state from metadata.
 
         Args:
             metadata: Dictionary containing state metadata
         """
-        # Restore dimensions first
-        dims = metadata['dimensions']
-        self.resize(dims['rows'], dims['cols'])
-
-        # Restore main buffer
-        self._main_buffer = self._deserialize_buffer_snapshot(
-            metadata['main_buffer'],
-            dims['rows'],
-            dims['cols']
-        )
+        # Restore buffer states
+        self._main_buffer.restore_state(metadata['main_buffer'])
         self._current_buffer = self._main_buffer
 
-        # Restore alternate buffer if it existed
         if 'alternate_buffer' in metadata:
-            self._alternate_buffer = self._deserialize_buffer_snapshot(
-                metadata['alternate_buffer'],
-                dims['rows'],
-                dims['cols']
-            )
+            if not self._alternate_buffer:
+                self._alternate_buffer = TerminalBuffer(
+                    metadata['alternate_buffer'].dimensions['rows'],
+                    metadata['alternate_buffer'].dimensions['cols'],
+                    False
+                )
+            self._alternate_buffer.restore_state(metadata['alternate_buffer'])
 
-        # Restore terminal title and modes
+        # Restore terminal settings
         self._terminal_title = metadata['terminal_title']
         self._screen_reverse_mode = metadata['screen_reverse_mode']
 
@@ -816,74 +742,8 @@ class TerminalState:
         self._mouse_tracking.utf8_mode = tracking['utf8_mode']
         self._mouse_tracking.sgr_mode = tracking['sgr_mode']
 
-        # Restore current directory if it was set
         if 'current_directory' in metadata:
             self._current_directory = metadata['current_directory']
-
-    def _deserialize_buffer_snapshot(self, data: Dict, rows: int, cols: int) -> TerminalBuffer:
-        """
-        Create new terminal buffer from serialized snapshot data.
-
-        Args:
-            data: Dictionary containing serialized snapshot data
-            rows: Number of rows for new buffer
-            cols: Number of columns for new buffer
-
-        Returns:
-            New TerminalBuffer with restored state
-        """
-        # Create new buffer with specified dimensions
-        buffer = TerminalBuffer(rows, cols, data['history_scrollback'])
-
-        # Create lines
-        lines = []
-        for line_data in data['lines']:
-            line = buffer.get_new_line()
-            for col, char_data in enumerate(line_data):
-                line.set_character(
-                    col,
-                    char_data['char'],
-                    CharacterAttributes(char_data['attributes']),
-                    char_data['fg_color'],
-                    char_data['bg_color']
-                )
-            lines.append(line)
-
-        # Create snapshot with deserialized data
-        snapshot = TerminalBufferSnapshot(
-            lines=lines,
-            cursor=CursorState(
-                row=data['cursor']['row'],
-                col=data['cursor']['col'],
-                visible=data['cursor']['visible'],
-                blink=data['cursor']['blink'],
-                delayed_wrap=data['cursor']['delayed_wrap']
-            ),
-            attributes=AttributeState(
-                current=CharacterAttributes(data['attributes']['current']),
-                foreground=data['attributes']['foreground'],
-                background=data['attributes']['background']
-            ),
-            scroll_region=ScrollRegion(
-                top=data['scroll_region']['top'],
-                bottom=data['scroll_region']['bottom'],
-                rows=data['scroll_region']['rows']
-            ),
-            modes=OperatingModes(
-                origin=data['modes']['origin'],
-                auto_wrap=data['modes']['auto_wrap'],
-                application_keypad=data['modes']['application_keypad'],
-                application_cursor=data['modes']['application_cursor'],
-                bracketed_paste=data['modes']['bracketed_paste']
-            ),
-            tab_stops=buffer.tab_stops.copy_tab_stops(),
-            history_scrollback=data['history_scrollback'],
-            max_cursor_row=data['max_cursor_row']
-        )
-
-        # Restore buffer state using snapshot
-        buffer.restore_from_snapshot(snapshot)
-        return buffer
 
     def get_terminal_size(self) -> Tuple[int, int]:
         """

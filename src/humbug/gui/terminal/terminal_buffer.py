@@ -140,16 +140,16 @@ class TabStopState:
 
 
 @dataclass
-class TerminalBufferSnapshot:
-    """Snapshot of terminal buffer state."""
-    lines: List[TerminalLine]
-    cursor: CursorState
-    attributes: AttributeState
-    scroll_region: ScrollRegion
-    modes: OperatingModes
-    tab_stops: TabStopState
+class BufferState:
+    """Serializable terminal buffer state."""
+    lines: list[dict]  # List of line states
+    cursor: dict      # Cursor state
+    attributes: dict  # Attribute state
+    scroll_region: dict  # Scroll region state
+    modes: dict      # Operating modes state
     history_scrollback: bool
     max_cursor_row: int
+    dimensions: dict  # Buffer dimensions
 
 
 class TerminalBuffer:
@@ -178,6 +178,122 @@ class TerminalBuffer:
         self.tab_stops = TabStopState(cols)
         self.history_scrollback = history_scrollback
         self.max_cursor_row = 0
+
+    def get_state(self) -> BufferState:
+        """
+        Get serializable buffer state.
+
+        Returns:
+            BufferState containing complete buffer state
+        """
+        # Serialize line data
+        lines_data = []
+        for line in self.lines:
+            line_data = []
+            for col in range(line.width):
+                char, attrs, fg, bg = line.get_character(col)
+                line_data.append({
+                    'char': char,
+                    'attributes': attrs.value,
+                    'fg_color': fg,
+                    'bg_color': bg
+                })
+            lines_data.append(line_data)
+
+        return BufferState(
+            lines=lines_data,
+            cursor={
+                'row': self.cursor.row,
+                'col': self.cursor.col,
+                'visible': self.cursor.visible,
+                'blink': self.cursor.blink,
+                'delayed_wrap': self.cursor.delayed_wrap,
+                'saved_position': self.cursor.saved_position
+            },
+            attributes={
+                'current': self.attributes.current.value,
+                'foreground': self.attributes.foreground,
+                'background': self.attributes.background
+            },
+            scroll_region={
+                'top': self.scroll_region.top,
+                'bottom': self.scroll_region.bottom,
+                'rows': self.scroll_region.rows
+            },
+            modes={
+                'origin': self.modes.origin,
+                'auto_wrap': self.modes.auto_wrap,
+                'application_keypad': self.modes.application_keypad,
+                'application_cursor': self.modes.application_cursor,
+                'bracketed_paste': self.modes.bracketed_paste
+            },
+            history_scrollback=self.history_scrollback,
+            max_cursor_row=self.max_cursor_row,
+            dimensions={
+                'rows': self.rows,
+                'cols': self.cols
+            }
+        )
+
+    def restore_state(self, state: BufferState) -> None:
+        """
+        Restore buffer state from saved state.
+
+        Args:
+            state: BufferState to restore from
+        """
+        # First resize buffer if needed
+        if (state.dimensions['rows'] != self.rows or
+            state.dimensions['cols'] != self.cols):
+            self.resize(state.dimensions['rows'], state.dimensions['cols'])
+
+        # Restore lines
+        self.lines = []
+        for line_data in state.lines:
+            line = self.get_new_line()
+            for col, char_data in enumerate(line_data):
+                line.set_character(
+                    col,
+                    char_data['char'],
+                    CharacterAttributes(char_data['attributes']),
+                    char_data['fg_color'],
+                    char_data['bg_color']
+                )
+            self.lines.append(line)
+
+        # Restore cursor state
+        self.cursor = CursorState(
+            row=state.cursor['row'],
+            col=state.cursor['col'],
+            visible=state.cursor['visible'],
+            blink=state.cursor['blink'],
+            delayed_wrap=state.cursor['delayed_wrap'],
+            saved_position=state.cursor['saved_position']
+        )
+
+        # Restore other state components
+        self.attributes = AttributeState(
+            current=CharacterAttributes(state.attributes['current']),
+            foreground=state.attributes['foreground'],
+            background=state.attributes['background']
+        )
+
+        self.scroll_region = ScrollRegion(
+            top=state.scroll_region['top'],
+            bottom=state.scroll_region['bottom'],
+            rows=state.scroll_region['rows']
+        )
+
+        self.modes = OperatingModes(
+            origin=state.modes['origin'],
+            auto_wrap=state.modes['auto_wrap'],
+            application_keypad=state.modes['application_keypad'],
+            application_cursor=state.modes['application_cursor'],
+            bracketed_paste=state.modes['bracketed_paste']
+        )
+
+        self.history_scrollback = state.history_scrollback
+        self.max_cursor_row = state.max_cursor_row
 
     def get_new_line(self) -> TerminalLine:
         """"Get a new blank line."""
@@ -569,58 +685,3 @@ class TerminalBuffer:
                     self.cursor.delayed_wrap = self.modes.auto_wrap
                 else:
                     self.cursor.col += 1
-
-    def create_snapshot(self) -> 'TerminalBufferSnapshot':
-        """
-        Create a snapshot of the current buffer state.
-
-        Returns:
-            TerminalBufferSnapshot containing current state
-        """
-        return TerminalBufferSnapshot(
-            lines=self.lines[:],
-            cursor=CursorState(
-                row=self.cursor.row,
-                col=self.cursor.col,
-                visible=self.cursor.visible,
-                blink=self.cursor.blink,
-                delayed_wrap=self.cursor.delayed_wrap,
-                saved_position=self.cursor.saved_position
-            ),
-            attributes=AttributeState(
-                current=self.attributes.current,
-                foreground=self.attributes.foreground,
-                background=self.attributes.background
-            ),
-            scroll_region=ScrollRegion(
-                top=self.scroll_region.top,
-                bottom=self.scroll_region.bottom,
-                rows=self.scroll_region.rows
-            ),
-            modes=OperatingModes(
-                origin=self.modes.origin,
-                auto_wrap=self.modes.auto_wrap,
-                application_keypad=self.modes.application_keypad,
-                application_cursor=self.modes.application_cursor,
-                bracketed_paste=self.modes.bracketed_paste
-            ),
-            tab_stops=self.tab_stops.copy_tab_stops(),
-            history_scrollback=self.history_scrollback,
-            max_cursor_row=self.max_cursor_row
-        )
-
-    def restore_from_snapshot(self, snapshot: 'TerminalBufferSnapshot') -> None:
-        """
-        Restore buffer state from a snapshot.
-
-        Args:
-            snapshot: TerminalBufferSnapshot to restore from
-        """
-        self.lines = snapshot.lines[:]
-        self.cursor = snapshot.cursor
-        self.attributes = snapshot.attributes
-        self.scroll_region = snapshot.scroll_region
-        self.modes = snapshot.modes
-        self.tab_stops = snapshot.tab_stops
-        self.history_scrollback = snapshot.history_scrollback
-        self.max_cursor_row = snapshot.max_cursor_row
