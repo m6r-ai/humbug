@@ -163,6 +163,34 @@ class TerminalWidget(QAbstractScrollArea):
         self._blink_state = not self._blink_state
         if self._state.blinking_chars_on_screen():
             self.viewport().update()
+            return
+
+        # Always update if cursor is visible and blinking
+        buffer = self._state.current_buffer
+        cursor = buffer.cursor
+        if cursor.visible and cursor.blink:
+            # Calculate cursor rect for optimized update
+            fm = QFontMetrics(self.font())
+            char_width = fm.horizontalAdvance(' ')
+            char_height = fm.height()
+
+            # Convert cursor position to viewport coordinates
+            history_lines = self._state.terminal_history_lines
+            terminal_rows = self._state.terminal_rows
+            first_visible_line = self.verticalScrollBar().value()
+
+            cursor_line = history_lines - terminal_rows + cursor.row
+            visible_cursor_row = cursor_line - first_visible_line
+
+            if 0 <= visible_cursor_row < terminal_rows:
+                # Only update the cursor region
+                cursor_rect = QRect(
+                    cursor.col * char_width,
+                    visible_cursor_row * char_height,
+                    char_width,
+                    char_height
+                )
+                self.viewport().update(cursor_rect)
 
     def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
         """Convert pixel coordinates to text position.
@@ -446,9 +474,6 @@ class TerminalWidget(QAbstractScrollArea):
         default_fg = QColor(self._default_fg.rgb())
         default_bg = QColor(self._default_bg.rgb())
 
-        # Create a reusable QRect for character cells
-        char_rect = QRect(0, 0, char_width, char_height)
-
         # Pre-create common font variants
         base_font = painter.font()
         font_variants = {
@@ -710,6 +735,12 @@ class TerminalWidget(QAbstractScrollArea):
         ascent: int
     ) -> None:
         """Draw terminal cursor."""
+        # Don't draw cursor if it's blinking and in the off state
+        # Note: We use not self._blink_state to keep in sync with blinking text
+        print(f"blink cursor: {buffer.cursor.blink}")
+        if buffer.cursor.blink and not self._blink_state:
+            return
+
         cursor_line = terminal_history_lines - terminal_rows + buffer.cursor.row
         visible_cursor_row = cursor_line - first_visible_line
 
@@ -721,6 +752,7 @@ class TerminalWidget(QAbstractScrollArea):
                 line = buffer.lines[cursor_line]
                 char, _attrs, _fg, _bg = line.get_character(buffer.cursor.col)
 
+                # Draw inverted cursor
                 painter.fillRect(
                     cursor_x, cursor_y, char_width, char_height,
                     self.palette().text().color()
