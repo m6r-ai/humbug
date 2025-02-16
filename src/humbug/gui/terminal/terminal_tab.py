@@ -43,7 +43,7 @@ class TerminalTab(TabBase):
 
         # Create layout
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(0)
 
         # Create terminal widget
