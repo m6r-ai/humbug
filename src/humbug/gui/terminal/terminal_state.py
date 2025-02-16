@@ -705,3 +705,16 @@ class TerminalState:
     def bracketed_paste_mode(self) -> bool:
         """Get if terminal is in bracketed paste mode."""
         return self._current_buffer.modes.bracketed_paste
+
+    def blinking_chars_on_screen(self):
+        """Determine if there are any blinking characters on-screen."""
+
+        buffer = self.current_buffer
+
+        # Scan visible lines
+        for line in buffer.lines[-buffer.rows:]:
+            for col in range(buffer.cols):
+                if line.get_character(col)[1] & CharacterAttributes.BLINK:
+                    return True
+
+        return False
