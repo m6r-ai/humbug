@@ -54,15 +54,12 @@ if sys.platform == 'win32':
             ("Y", WORD)
         ]
 
-
-    class SECURITY_ATTRIBUTES(Structure):
-        """Windows SECURITY_ATTRIBUTES structure."""
+    class STARTUPINFOEX(Structure):
+        """Windows STARTUPINFOEX structure."""
         _fields_ = [
-            ("nLength", DWORD),
-            ("lpSecurityDescriptor", LPVOID),
-            ("bInheritHandle", BOOL)
+            ("StartupInfo", STARTUPINFO),
+            ("lpAttributeList", LPVOID)
         ]
-
 
     class PROCESS_INFORMATION(Structure):
         """Windows PROCESS_INFORMATION structure."""
@@ -71,30 +68,6 @@ if sys.platform == 'win32':
             ("hThread", HANDLE),
             ("dwProcessId", DWORD),
             ("dwThreadId", DWORD)
-        ]
-
-
-    class STARTUPINFO(Structure):
-        """Windows STARTUPINFO structure."""
-        _fields_ = [
-            ("cb", DWORD),
-            ("lpReserved", LPWSTR),
-            ("lpDesktop", LPWSTR),
-            ("lpTitle", LPWSTR),
-            ("dwX", DWORD),
-            ("dwY", DWORD),
-            ("dwXSize", DWORD),
-            ("dwYSize", DWORD),
-            ("dwXCountChars", DWORD),
-            ("dwYCountChars", DWORD),
-            ("dwFillAttribute", DWORD),
-            ("dwFlags", DWORD),
-            ("wShowWindow", WORD),
-            ("cbReserved2", WORD),
-            ("lpReserved2", POINTER(BYTE)),
-            ("hStdInput", HANDLE),
-            ("hStdOutput", HANDLE),
-            ("hStdError", HANDLE)
         ]
 
 
@@ -260,13 +233,12 @@ if sys.platform == 'win32':
     class WindowsTerminalProcess(TerminalProcessBase):
         """Windows-specific terminal process implementation using ConPTY."""
 
-        PSEUDOCONSOLE_INHERIT_CURSOR = 0x1
-
         def __init__(self):
             """Initialize Windows terminal process."""
             super().__init__()
             self._pty_handle = None
             self._process_handle = None
+            self._thread_handle = None
             self._pipe_in = None
             self._pipe_out = None
 
@@ -285,56 +257,27 @@ if sys.platform == 'win32':
             self._ClosePseudoConsole = kernel32.ClosePseudoConsole
             self._ClosePseudoConsole.argtypes = [HANDLE]
 
-            self._CreatePipe = kernel32.CreatePipe
-            self._CreatePipe.restype = BOOL
-            self._CreatePipe.argtypes = [
-                POINTER(HANDLE),
-                POINTER(HANDLE),
-                POINTER(SECURITY_ATTRIBUTES),
-                DWORD
-            ]
-
-            self._CreateProcessW = kernel32.CreateProcessW
-            self._CreateProcessW.restype = BOOL
-            self._CreateProcessW.argtypes = [
-                LPCWSTR,
-                LPWSTR,
-                POINTER(SECURITY_ATTRIBUTES),
-                POINTER(SECURITY_ATTRIBUTES),
-                BOOL,
-                DWORD,
-                LPVOID,
-                LPCWSTR,
-                POINTER(STARTUPINFO),
-                POINTER(PROCESS_INFORMATION)
-            ]
-
-        def _create_pipe(self) -> Tuple[HANDLE, HANDLE]:
-            """Create a new pipe with appropriate security attributes."""
-            sa = SECURITY_ATTRIBUTES()
-            sa.nLength = ctypes.sizeof(SECURITY_ATTRIBUTES)
-            sa.bInheritHandle = True
-            sa.lpSecurityDescriptor = None
-
-            read_handle = HANDLE()
-            write_handle = HANDLE()
-
-            if not self._CreatePipe(
-                pointer(read_handle),
-                pointer(write_handle),
-                pointer(sa),
-                0
-            ):
-                raise OSError(f"Failed to create pipe: {ctypes.get_last_error()}")
-
-            return read_handle, write_handle
-
         async def start(self, command: Optional[str] = None) -> Tuple[int, int]:
-            """Start a new terminal process using ConPTY."""
+            """Start a new terminal process using ConPTY.
+
+            Args:
+                command: Optional command to run instead of shell
+
+            Returns:
+                Tuple of (process_id, master_fd)
+            """
             try:
                 # Create pipes for ConPTY
-                pipe_in_read, pipe_in_write = self._create_pipe()
-                pipe_out_read, pipe_out_write = self._create_pipe()
+                pipe_in_read = HANDLE()
+                pipe_in_write = HANDLE()
+                pipe_out_read = HANDLE()
+                pipe_out_write = HANDLE()
+
+                # Create the pipes
+                if not windll.kernel32.CreatePipe(byref(pipe_in_read), byref(pipe_in_write), None, 0):
+                    raise OSError("Failed to create input pipe")
+                if not windll.kernel32.CreatePipe(byref(pipe_out_read), byref(pipe_out_write), None, 0):
+                    raise OSError("Failed to create output pipe")
 
                 # Create ConPTY
                 coord = COORD(80, 24)  # Initial size
@@ -343,7 +286,7 @@ if sys.platform == 'win32':
                     coord,
                     pipe_in_read,
                     pipe_out_write,
-                    self.PSEUDOCONSOLE_INHERIT_CURSOR,
+                    0,  # No special flags
                     pointer(pty_handle)
                 )
 
@@ -352,45 +295,67 @@ if sys.platform == 'win32':
 
                 # Store handles
                 self._pty_handle = pty_handle
-                self._pipe_in = pipe_in_write
-                self._pipe_out = pipe_out_read
+                self._pipe_in = pipe_in_write.value
+                self._pipe_out = pipe_out_read.value
 
-                # Close unused pipe ends
+                # Close the pipe ends passed to ConPTY as we don't need them
                 windll.kernel32.CloseHandle(pipe_in_read)
                 windll.kernel32.CloseHandle(pipe_out_write)
 
-                # Start the process
-                startup_info = STARTUPINFO()
-                startup_info.cb = ctypes.sizeof(STARTUPINFO)
-                startup_info.dwFlags = 0
-                process_info = PROCESS_INFORMATION()
+                # Initialize startup info with ConPTY
+                startup_info_ex = STARTUPINFOEX()
+                startup_info_ex.StartupInfo.cb = ctypes.sizeof(STARTUPINFOEX)
 
-                # Create process with ConPTY
-                shell = command if command else os.environ.get('COMSPEC', 'cmd.exe')
-                creation_flags = CREATE_NO_WINDOW
+                # Allocate attribute list
+                size = DWORD()
+                windll.kernel32.InitializeProcThreadAttributeList(None, 1, 0, byref(size))
+                startup_info_ex.lpAttributeList = ctypes.create_string_buffer(size.value)
 
-                if not self._CreateProcessW(
-                    None,
-                    shell,
-                    None,
-                    None,
-                    True,
-                    creation_flags,
-                    None,
-                    None,
-                    pointer(startup_info),
-                    pointer(process_info)
+                # Initialize attribute list
+                if not windll.kernel32.InitializeProcThreadAttributeList(
+                    startup_info_ex.lpAttributeList, 1, 0, byref(size)
                 ):
-                    raise OSError(f"Failed to create process: {ctypes.get_last_error()}")
+                    raise OSError("Failed to initialize attribute list")
 
+                # Set ConPTY attribute
+                if not windll.kernel32.UpdateProcThreadAttribute(
+                    startup_info_ex.lpAttributeList,
+                    0,
+                    PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
+                    pty_handle,
+                    ctypes.sizeof(HANDLE),
+                    None,
+                    None
+                ):
+                    raise OSError("Failed to set pseudoconsole attribute")
+
+                # Create the process
+                process_info = PROCESS_INFORMATION()
+                shell = command if command else os.environ.get('COMSPEC', 'cmd.exe')
+
+                if not windll.kernel32.CreateProcessW(
+                    None,                           # No module name (use command line)
+                    shell,                          # Command line
+                    None,                           # Process handle not inheritable
+                    None,                           # Thread handle not inheritable
+                    False,                          # Set handle inheritance to FALSE
+                    EXTENDED_STARTUPINFO_PRESENT,   # Creation flags
+                    None,                           # Use parent's environment block
+                    None,                           # Use parent's starting directory
+                    byref(startup_info_ex.StartupInfo),  # Pointer to STARTUPINFO
+                    byref(process_info)             # Pointer to PROCESS_INFORMATION
+                ):
+                    raise OSError("Failed to create process")
+
+                # Store process info
                 self._process_handle = process_info.hProcess
+                self._thread_handle = process_info.hThread
                 self._process_id = process_info.dwProcessId
-                self._main_fd = msvcrt.open_osfhandle(self._pipe_out.value, os.O_RDWR)
 
-                # Close thread handle as we don't need it
-                windll.kernel32.CloseHandle(process_info.hThread)
+                # Convert the pipe handle to a file descriptor
+                self._main_fd = msvcrt.open_osfhandle(self._pipe_out, os.O_RDWR)
 
-                return process_info.dwProcessId, self._main_fd
+                return self._process_id, self._main_fd
 
             except Exception as e:
                 self._logger.exception("Failed to start ConPTY process: %s", e)
@@ -406,12 +371,15 @@ if sys.platform == 'win32':
                     self._logger.warning("Error closing ConPTY: %s", e)
                 self._pty_handle = None
 
-            if self._process_handle:
-                try:
-                    windll.kernel32.CloseHandle(self._process_handle)
-                except Exception as e:
-                    self._logger.warning("Error closing process handle: %s", e)
-                self._process_handle = None
+            for handle in (self._process_handle, self._thread_handle):
+                if handle:
+                    try:
+                        windll.kernel32.CloseHandle(handle)
+                    except Exception as e:
+                        self._logger.warning("Error closing handle: %s", e)
+
+            self._process_handle = None
+            self._thread_handle = None
 
             for handle in (self._pipe_in, self._pipe_out):
                 if handle:
@@ -443,10 +411,10 @@ if sys.platform == 'win32':
                 return False
 
             exit_code = DWORD()
-            if not windll.kernel32.GetExitCodeProcess(self._process_handle, pointer(exit_code)):
+            if not windll.kernel32.GetExitCodeProcess(self._process_handle, byref(exit_code)):
                 return False
 
-            return exit_code.value == STILL_ACTIVE
+            return exit_code.value == 259  # STILL_ACTIVE
 
 
 def create_terminal_process() -> TerminalProcessBase:

@@ -12,8 +12,6 @@ from typing import Dict, Optional, Set
 if sys.platform != 'win32':
     import fcntl
     import termios
-else:
-    import msvcrt
 
 from PySide6.QtWidgets import QVBoxLayout
 from PySide6.QtCore import Slot
@@ -28,6 +26,16 @@ from humbug.gui.terminal.terminal_find import TerminalFind
 from humbug.gui.terminal.terminal_process import create_terminal_process
 from humbug.gui.terminal.terminal_widget import TerminalWidget
 from humbug.gui.status_message import StatusMessage
+
+
+def _windows_read(self,fd, size):
+    """Read from Windows file handle."""
+    try:
+        return os.read(fd, size)
+    except OSError as e:
+        if e.winerror == 109:  # ERROR_BROKEN_PIPE
+            return b''
+        raise
 
 
 class UTF8Buffer:
@@ -207,142 +215,60 @@ class TerminalTab(TabBase):
             self._terminal.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
     async def _read_loop(self, main_fd):
-        """Read data from the main end of the pty/conpty."""
+        """Read data from the terminal."""
         try:
             utf8_buffer = UTF8Buffer()
 
-            if sys.platform == 'win32':
-                # Windows read loop using overlapped I/O
-                from ctypes import windll, create_string_buffer, c_ulong, byref, Structure, c_void_p
-                from ctypes.wintypes import HANDLE, DWORD, BOOL
-
-                class OVERLAPPED(Structure):
-                    _fields_ = [
-                        ("Internal", DWORD),
-                        ("InternalHigh", DWORD),
-                        ("Offset", DWORD),
-                        ("OffsetHigh", DWORD),
-                        ("hEvent", HANDLE)
-                    ]
-
-                # Create event for overlapped I/O
-                event = windll.kernel32.CreateEventW(None, True, False, None)
-                if not event:
-                    raise OSError(f"Failed to create event: {windll.kernel32.GetLastError()}")
-
+            while self._running:
                 try:
-                    # Buffer for ReadFile
-                    buf = create_string_buffer(8192)
-                    bytes_read = c_ulong(0)
-                    overlapped = OVERLAPPED()
-                    overlapped.hEvent = event
+                    # Check if process has ended
+                    if not self._terminal_process.is_running():
+                        self._logger.info("Shell process ended")
+                        break
 
-                    while self._running:
-                        try:
-                            # Check if process has ended
-                            if not self._terminal_process.is_running():
-                                self._logger.info("Shell process ended")
-                                break
-
-                            # Start asynchronous read
-                            handle = msvcrt.get_osfhandle(main_fd)
-                            success = windll.kernel32.ReadFile(
-                                handle,          # handle to pipe
-                                buf,             # buffer to receive data
-                                8192,            # size of buffer in bytes
-                                byref(bytes_read),  # number of bytes read
-                                byref(overlapped)   # overlapped structure
+                    # Read with a timeout using run_in_executor
+                    try:
+                        if sys.platform == 'win32':
+                            data = await asyncio.get_event_loop().run_in_executor(
+                                None, 
+                                self._windows_read,
+                                main_fd,
+                                8192
+                            )
+                        else:
+                            # Unix read path using select
+                            r, _w, _e = await asyncio.get_event_loop().run_in_executor(
+                                None,
+                                select.select,
+                                [main_fd],
+                                [],
+                                [],
+                                0.1
                             )
 
-                            if not success:
-                                error = windll.kernel32.GetLastError()
-                                if error == 997:  # ERROR_IO_PENDING
-                                    # Wait for the read to complete with a timeout
-                                    INFINITE = 0xFFFFFFFF
-                                    timeout_ms = 100  # 100ms timeout
-                                    wait_result = windll.kernel32.WaitForSingleObject(event, timeout_ms)
-                                    
-                                    if wait_result == 0:  # WAIT_OBJECT_0
-                                        # Get results of the read
-                                        if not windll.kernel32.GetOverlappedResult(
-                                            handle,
-                                            byref(overlapped),
-                                            byref(bytes_read),
-                                            False  # don't wait
-                                        ):
-                                            error = windll.kernel32.GetLastError()
-                                            if error == 109:  # ERROR_BROKEN_PIPE
-                                                break
-                                            raise OSError(f"GetOverlappedResult failed: {error}")
-                                    elif wait_result == 258:  # WAIT_TIMEOUT
-                                        # Timeout is normal, just continue
-                                        continue
-                                    else:
-                                        raise OSError(f"WaitForSingleObject failed: {windll.kernel32.GetLastError()}")
-                                elif error == 109:  # ERROR_BROKEN_PIPE
-                                    break
-                                else:
-                                    raise OSError(f"ReadFile failed: {error}")
+                            if not r:
+                                continue
 
-                            # Process any read data
-                            if bytes_read.value > 0:
-                                data = buf.raw[:bytes_read.value]
-                                complete_data = utf8_buffer.add_data(data)
-                                if complete_data:
-                                    self._terminal.put_data(complete_data)
+                            data = os.read(main_fd, 8192)
 
-                            # Reset event for next read
-                            windll.kernel32.ResetEvent(event)
-
-                        except Exception as e:
-                            if not self._running:
-                                break
-                            self._logger.exception("Error in Windows read loop: %s", str(e))
+                        if not data:
                             break
 
-                finally:
-                    # Clean up event
-                    if event:
-                        windll.kernel32.CloseHandle(event)
+                        complete_data = utf8_buffer.add_data(data)
+                        if complete_data:
+                            self._terminal.put_data(complete_data)
 
-            else:
-                # Unix read loop using select
-                while self._running:
-                    try:
-                        # Check if process has ended
-                        if not self._terminal_process.is_running():
-                            self._logger.info("Shell process ended")
-                            break
-
-                        r, _w, _e = await asyncio.get_event_loop().run_in_executor(
-                            None,
-                            select.select,
-                            [main_fd],
-                            [],
-                            [],
-                            0.1  # Add timeout to allow checking _running
-                        )
-
-                        if not r:
-                            continue
-
-                        if main_fd in r:
-                            try:
-                                data = os.read(main_fd, 8192)
-                                if not data:
-                                    break
-
-                                complete_data = utf8_buffer.add_data(data)
-                                if complete_data:
-                                    self._terminal.put_data(complete_data)
-                            except OSError as e:
-                                self._logger.exception("Error reading from PTY: %s", e)
-                                break
-                    except (OSError, select.error) as e:
+                    except OSError as e:
                         if not self._running:
                             break
-                        self._logger.exception("Error in Unix read loop: %s", str(e))
+                        self._logger.exception("Error reading from terminal: %s", str(e))
                         break
+
+                except Exception as e:
+                    if not self._running:
+                        break
+                    self._logger.exception("Error in read loop: %s", str(e))
+                    break
 
         except Exception as e:
             self._logger.exception("Error in read loop: %s", str(e))
