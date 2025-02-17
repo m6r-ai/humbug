@@ -36,6 +36,8 @@ class TerminalWidget(QAbstractScrollArea):
         self.verticalScrollBar().valueChanged.connect(self._handle_scroll)
         self.setFocusPolicy(Qt.StrongFocus)
 
+        self.setViewportMargins(4, 4, 4, 4)
+
         # Initialize terminal state
         self._state = TerminalState(24, 80)  # Default size
 
