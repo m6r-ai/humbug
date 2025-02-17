@@ -1,14 +1,17 @@
 """Terminal tab implementation."""
 
 import asyncio
-import fcntl
 import logging
 import os
 import select
 import signal
 import struct
-import termios
+import sys
 from typing import Dict, Optional, Set
+
+if sys.platform != 'win32':
+    import fcntl
+    import termios
 
 from PySide6.QtWidgets import QVBoxLayout
 from PySide6.QtCore import Slot
@@ -140,25 +143,27 @@ class TerminalTab(TabBase):
         Raises:
             OSError: If ioctl call fails
         """
-        try:
-            rows, cols = self._terminal.get_terminal_size()
-            fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
-        except OSError as e:
-            self._logger.exception("Failed to update PTY size: %s", e)
-            raise
+        if sys.platform != 'win32':
+            try:
+                rows, cols = self._terminal.get_terminal_size()
+                fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
+            except OSError as e:
+                self._logger.exception("Failed to update PTY size: %s", e)
+                raise
 
     def _handle_terminal_resize(self):
         """Handle terminal window resize events."""
-        if self._main_fd is not None:
-            try:
-                self._update_pty_size(self._main_fd)
+        if sys.platform != 'win32':
+            if self._main_fd is not None:
+                try:
+                    self._update_pty_size(self._main_fd)
 
-                # Signal the shell process group
-                pid = self._terminal_process.get_process_id()
-                if pid:
-                    os.killpg(os.getpgid(pid), signal.SIGWINCH)
-            except OSError as e:
-                self._logger.exception("Failed to handle window resize: %s", e)
+                    # Signal the shell process group
+                    pid = self._terminal_process.get_process_id()
+                    if pid:
+                        os.killpg(os.getpgid(pid), signal.SIGWINCH)
+                except OSError as e:
+                    self._logger.exception("Failed to handle window resize: %s", e)
 
     def _create_tracked_task(self, coro) -> asyncio.Task:
         """
