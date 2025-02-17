@@ -169,6 +169,28 @@ class TerminalWidget(QAbstractScrollArea):
         if old_at_bottom:
             vbar.setValue(vbar.maximum())
 
+    def scroll_to_match(self, row: int) -> None:
+        """
+        Scroll to ensure a specific row is visible.
+
+        Args:
+            row: Row to scroll to
+        """
+        visible_lines = int((self.viewport().height() - (2 * 4)) / self._char_height)
+
+        # Get effective row position in viewport
+        scroll_pos = self.verticalScrollBar().value()
+        viewport_row = row - scroll_pos
+
+        # If row is outside visible area, scroll to it
+        if viewport_row < 0:
+            # Row is above visible area - scroll up
+            self.verticalScrollBar().setValue(row)
+        elif viewport_row >= visible_lines:
+            # Row is below visible area - scroll down
+            scroll_to = row - visible_lines + 1
+            self.verticalScrollBar().setValue(scroll_to)
+
     def _scroll_to_bottom(self):
         """Scroll the view to show the bottom of the terminal."""
         vbar = self.verticalScrollBar()
@@ -718,6 +740,22 @@ class TerminalWidget(QAbstractScrollArea):
 
         return font
 
+    def _get_highlight_format(self, is_current: bool) -> QTextCharFormat:
+        """Get highlight format based on whether it's the current match.
+
+        Args:
+            is_current: Whether this is the current match
+
+        Returns:
+            QTextCharFormat configured for the match
+        """
+        fmt = QTextCharFormat()
+        if is_current:
+            fmt.setBackground(self._style_manager.get_color(ColorRole.TEXT_SELECTED))
+        else:
+            fmt.setBackground(self._style_manager.get_color(ColorRole.TEXT_DIM_SELECTED))
+        return fmt
+
     def _draw_character_run(
         self,
         painter: QPainter,
@@ -829,16 +867,19 @@ class TerminalWidget(QAbstractScrollArea):
             col = int(x / self._char_width)
 
             # Find highlight at this position
-            highlight_format = None
-            for start_col, end_col, fmt in highlights:
+            is_highlighted = False
+            is_current = False
+            for start_col, end_col, current in highlights:
                 if start_col <= col < end_col:
-                    highlight_format = fmt
+                    is_highlighted = True
+                    is_current = current
                     break
 
             # Calculate colors for this character
-            if highlight_format:
-                fg_brush = highlight_format.foreground()
-                bg_brush = highlight_format.background()
+            if is_highlighted:
+                fmt = self._get_highlight_format(is_current)
+                fg_brush = fmt.foreground()
+                bg_brush = fmt.background()
                 char_colors = (
                     fg_brush.color() if fg_brush.style() != Qt.NoBrush else fg,
                     bg_brush.color() if bg_brush.style() != Qt.NoBrush else bg
@@ -1069,12 +1110,12 @@ class TerminalWidget(QAbstractScrollArea):
         """Get current working directory if known."""
         return self._state._current_directory
 
-    def set_search_highlights(self, row: int, highlights: List[Tuple[int, int, QTextCharFormat]]) -> None:
+    def set_search_highlights(self, row: int, highlights: List[Tuple[int, int, bool]]) -> None:
         """Set search highlights for a given row.
 
         Args:
             row: Row to set highlights for
-            highlights: List of (start_col, end_col, format) highlight ranges
+            highlights: List of (start_col, end_col, is_current) highlight ranges
         """
         if highlights:
             self._search_highlights[row] = highlights
