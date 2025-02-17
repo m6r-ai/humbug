@@ -238,12 +238,12 @@ class TerminalTab(TabBase):
                             if complete_data:
                                 self._terminal.put_data(complete_data)
                         except OSError as e:
-                            self._logger.error("Error reading from PTY: %s", e)
+                            self._logger.exception("Error reading from PTY: %s", e)
                             break
                 except (OSError, select.error) as e:
                     if not self._running:
                         break
-                    self._logger.error("Error reading from terminal: %s", str(e))
+                    self._logger.exception("Error reading from terminal: %s", str(e))
                     break
         except Exception as e:
             self._logger.exception("Error in read loop: %s", str(e))
