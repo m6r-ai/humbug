@@ -332,7 +332,10 @@ if sys.platform == 'win32':
                 # Allocate attribute list
                 size = DWORD()
                 windll.kernel32.InitializeProcThreadAttributeList(None, 1, 0, byref(size))
-                startup_info_ex.lpAttributeList = ctypes.create_string_buffer(size.value)
+
+                # Allocate memory for attribute list
+                buffer = ctypes.create_string_buffer(size.value)
+                startup_info_ex.lpAttributeList = ctypes.cast(buffer, LPVOID)
 
                 # Initialize attribute list
                 if not windll.kernel32.InitializeProcThreadAttributeList(
