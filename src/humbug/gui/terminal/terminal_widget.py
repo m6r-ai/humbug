@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Dict, List
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer, QPointF, QRectF
 from PySide6.QtGui import (
-    QPainter, QPaintEvent, QColor, QFontMetrics, QFontMetricsF,
+    QPainter, QPaintEvent, QColor, QFontMetricsF,
     QResizeEvent, QKeyEvent, QMouseEvent,
     QGuiApplication, QWheelEvent, QFont, QTextCharFormat
 )
@@ -134,23 +134,17 @@ class TerminalWidget(QAbstractScrollArea):
 
     def update_dimensions(self) -> None:
         """Update terminal dimensions based on widget size and font metrics."""
-        fm = QFontMetrics(self.font())
-        char_width = fm.horizontalAdvance(' ')
-        char_height = fm.height()
 
-        rows = 24  # Default dimensions
-        cols = 80
+        # Get the width of the vertical scrollbar
+        scrollbar_width = self.verticalScrollBar().width()
 
-        if char_width > 0 and char_height > 0:
-            # Get the width of the vertical scrollbar
-            scrollbar_width = self.verticalScrollBar().width()
+        # Calculate available viewport width, subtracting scrollbar width and margins
+        viewport_width = max(0, self.width() - scrollbar_width - (2 * 4))
+        viewport_height = self.height() - (2 * 4)
 
-            # Calculate available viewport width, subtracting scrollbar width
-            viewport_width = max(0, self.width() - scrollbar_width)
-            viewport_height = self.height()
-
-            cols = max(viewport_width // char_width, 1)
-            rows = max(viewport_height // char_height, 1)
+        cols = int(max(viewport_width / self._char_width, 1))
+        rows = int(max(viewport_height / self._char_height, 1))
+        print(f"size {rows},{cols}, {viewport_height},{viewport_width}, {viewport_height /self._char_height}, {viewport_width/self._char_width}")
 
         # Update state dimensions
         self._state.resize(rows, cols)
@@ -192,11 +186,6 @@ class TerminalWidget(QAbstractScrollArea):
         buffer = self._state.current_buffer
         cursor = buffer.cursor
         if cursor.visible and cursor.blink:
-            # Calculate cursor rect for optimized update
-            fm = QFontMetrics(self.font())
-            char_width = fm.horizontalAdvance(' ')
-            char_height = fm.height()
-
             # Convert cursor position to viewport coordinates
             history_lines = self._state.terminal_history_lines
             terminal_rows = self._state.terminal_rows
@@ -207,12 +196,18 @@ class TerminalWidget(QAbstractScrollArea):
 
             if 0 <= visible_cursor_row < terminal_rows:
                 # Only update the cursor region
-                cursor_rect = QRect(
-                    cursor.col * char_width,
-                    visible_cursor_row * char_height,
-                    char_width,
-                    char_height
+                cursor_x = cursor.col * self._char_width
+                cursor_y = visible_cursor_row * self._char_height
+
+                # Create QRectF for precise cursor region, but convert to QRect for update
+                cursor_rect_f = QRectF(
+                    cursor_x,
+                    cursor_y,
+                    self._char_width,
+                    self._char_height
                 )
+                # Add a small padding to ensure we capture the full character
+                cursor_rect = cursor_rect_f.adjusted(-1, -1, 1, 1).toRect()
                 self.viewport().update(cursor_rect)
 
     def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
@@ -779,8 +774,8 @@ class TerminalWidget(QAbstractScrollArea):
 
         # If no highlights or blinking chars, draw entire run at once
         if not highlights and not (attrs & CharacterAttributes.BLINK):
-            x_start = run[0][1]  # This is now a float
-            y = run[0][2]        # This is now a float
+            x_start = run[0][1]
+            y = run[0][2]
             width = (run[-1][1] - x_start) + self._char_width
 
             # Draw background - use ceil for width to ensure complete coverage
@@ -806,8 +801,9 @@ class TerminalWidget(QAbstractScrollArea):
         def draw_batch():
             if not current_batch:
                 return
-            x_start = current_batch[0][1]  # Float position
-            y = current_batch[0][2]        # Float position
+
+            x_start = current_batch[0][1]
+            y = current_batch[0][2]
             width = (current_batch[-1][1] - x_start) + self._char_width
 
             # Draw background
