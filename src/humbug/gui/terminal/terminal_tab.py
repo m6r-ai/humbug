@@ -209,27 +209,20 @@ class TerminalTab(TabBase):
         try:
             utf8_buffer = UTF8Buffer()
 
-            while self._running:
-                try:
-                    # Check if process has ended
-                    if not self._terminal_process.is_running():
-                        self._logger.info("Shell process ended")
-                        break
+            if sys.platform == 'win32':
+                # Windows read loop using ReadFile
+                while self._running:
+                    try:
+                        # Check if process has ended
+                        if not self._terminal_process.is_running():
+                            self._logger.info("Shell process ended")
+                            break
 
-                    r, _w, e = await asyncio.get_event_loop().run_in_executor(
-                        None,
-                        select.select,
-                        [main_fd],
-                        [],
-                        [],
-                        0.1  # Add timeout to allow checking _running
-                    )
+                        # Use asyncio.sleep to allow other tasks to run
+                        await asyncio.sleep(0)
 
-                    if not r:
-                        continue
-
-                    if main_fd in r:
                         try:
+                            # Read data using regular file operations
                             data = os.read(main_fd, 8192)
                             if not data:
                                 break
@@ -238,13 +231,55 @@ class TerminalTab(TabBase):
                             if complete_data:
                                 self._terminal.put_data(complete_data)
                         except OSError as e:
-                            self._logger.exception("Error reading from PTY: %s", e)
+                            if e.winerror == 232:  # Pipe has been closed
+                                break
+                            self._logger.exception("Error reading from ConPTY: %s", e)
                             break
-                except (OSError, select.error) as e:
-                    if not self._running:
+
+                    except Exception as e:
+                        if not self._running:
+                            break
+                        self._logger.exception("Error in Windows read loop: %s", str(e))
                         break
-                    self._logger.exception("Error reading from terminal: %s", str(e))
-                    break
+            else:
+                # Unix read loop using select
+                while self._running:
+                    try:
+                        # Check if process has ended
+                        if not self._terminal_process.is_running():
+                            self._logger.info("Shell process ended")
+                            break
+
+                        r, _w, _e = await asyncio.get_event_loop().run_in_executor(
+                            None,
+                            select.select,
+                            [main_fd],
+                            [],
+                            [],
+                            0.1  # Add timeout to allow checking _running
+                        )
+
+                        if not r:
+                            continue
+
+                        if main_fd in r:
+                            try:
+                                data = os.read(main_fd, 8192)
+                                if not data:
+                                    break
+
+                                complete_data = utf8_buffer.add_data(data)
+                                if complete_data:
+                                    self._terminal.put_data(complete_data)
+                            except OSError as e:
+                                self._logger.exception("Error reading from PTY: %s", e)
+                                break
+                    except (OSError, select.error) as e:
+                        if not self._running:
+                            break
+                        self._logger.exception("Error in Unix read loop: %s", str(e))
+                        break
+
         except Exception as e:
             self._logger.exception("Error in read loop: %s", str(e))
 
