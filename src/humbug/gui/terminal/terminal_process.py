@@ -54,6 +54,29 @@ if sys.platform == 'win32':
             ("Y", WORD)
         ]
 
+    class STARTUPINFO(Structure):
+        """Windows STARTUPINFO structure."""
+        _fields_ = [
+            ("cb", DWORD),
+            ("lpReserved", LPWSTR),
+            ("lpDesktop", LPWSTR),
+            ("lpTitle", LPWSTR),
+            ("dwX", DWORD),
+            ("dwY", DWORD),
+            ("dwXSize", DWORD),
+            ("dwYSize", DWORD),
+            ("dwXCountChars", DWORD),
+            ("dwYCountChars", DWORD),
+            ("dwFillAttribute", DWORD),
+            ("dwFlags", DWORD),
+            ("wShowWindow", WORD),
+            ("cbReserved2", WORD),
+            ("lpReserved2", POINTER(BYTE)),
+            ("hStdInput", HANDLE),
+            ("hStdOutput", HANDLE),
+            ("hStdError", HANDLE)
+        ]
+
     class STARTUPINFOEX(Structure):
         """Windows STARTUPINFOEX structure."""
         _fields_ = [
