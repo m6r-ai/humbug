@@ -82,6 +82,9 @@ class TerminalFind:
                         ))
                         pos += 1
 
+            # Set selection active if we found any matches
+            self._selection_active = bool(self._matches)
+
         if not self._matches:
             return
 
