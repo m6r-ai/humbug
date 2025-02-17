@@ -145,7 +145,7 @@ class TerminalTab(TabBase):
             rows, cols = self._terminal.get_terminal_size()
             fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
         except OSError as e:
-            self._logger.error("Failed to update PTY size: %s", e)
+            self._logger.exception("Failed to update PTY size: %s", e)
             raise
 
     def _handle_terminal_resize(self):
@@ -156,11 +156,10 @@ class TerminalTab(TabBase):
 
                 # Signal the shell process group
                 pid = self._terminal_process.get_process_id()
-                print(f"signal shell {os.getpgid(pid)}")
                 if pid:
                     os.killpg(os.getpgid(pid), signal.SIGWINCH)
             except OSError as e:
-                self._logger.error("Failed to handle window resize: %s", e)
+                self._logger.exception("Failed to handle window resize: %s", e)
 
     def _create_tracked_task(self, coro) -> asyncio.Task:
         """
@@ -263,12 +262,6 @@ class TerminalTab(TabBase):
 
     def _handle_style_changed(self):
         """Handle style changes."""
-        # Update terminal font
-        font = QFont(self._style_manager.monospace_font_families)
-        base_size = self._style_manager.base_font_size
-        font.setPointSizeF(base_size * self._style_manager.zoom_factor)
-        self._terminal.setFont(font)
-
         # Apply consistent styling to both the terminal widget and its viewport
         self.setStyleSheet(f"""
             QWidget {{

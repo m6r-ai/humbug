@@ -106,6 +106,12 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _handle_style_changed(self):
         """Handle style changes."""
+        # Update terminal font
+        font = QFont(self._style_manager.monospace_font_families)
+        base_size = self._style_manager.base_font_size
+        font.setPointSizeF(base_size * self._style_manager.zoom_factor)
+        self.setFont(font)
+
         # Update default colors
         self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
         self._default_bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
@@ -754,10 +760,13 @@ class TerminalWidget(QAbstractScrollArea):
         font_key = CharacterAttributes.NONE
         if attrs & CharacterAttributes.BOLD:
             font_key |= CharacterAttributes.BOLD
+
         if attrs & CharacterAttributes.ITALIC:
             font_key |= CharacterAttributes.ITALIC
+
         if attrs & CharacterAttributes.UNDERLINE:
             font_key |= CharacterAttributes.UNDERLINE
+
         if attrs & CharacterAttributes.STRIKE:
             font_key |= CharacterAttributes.STRIKE
 
