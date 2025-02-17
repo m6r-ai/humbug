@@ -12,6 +12,8 @@ from typing import Dict, Optional, Set
 if sys.platform != 'win32':
     import fcntl
     import termios
+else:
+    import msvcrt
 
 from PySide6.QtWidgets import QVBoxLayout
 from PySide6.QtCore import Slot
@@ -205,12 +207,18 @@ class TerminalTab(TabBase):
             self._terminal.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
     async def _read_loop(self, main_fd):
-        """Read data from the main end of the pty."""
+        """Read data from the main end of the pty/conpty."""
         try:
             utf8_buffer = UTF8Buffer()
 
             if sys.platform == 'win32':
-                # Windows read loop using ReadFile
+                # Windows read loop using ReadFile via ctypes
+                from ctypes import windll, create_string_buffer, c_ulong, byref
+
+                # Buffer for ReadFile
+                buf = create_string_buffer(8192)
+                bytes_read = c_ulong(0)
+
                 while self._running:
                     try:
                         # Check if process has ended
@@ -218,29 +226,43 @@ class TerminalTab(TabBase):
                             self._logger.info("Shell process ended")
                             break
 
-                        # Use asyncio.sleep to allow other tasks to run
-                        await asyncio.sleep(0)
+                        # Use ReadFile with our buffer
+                        handle = msvcrt.get_osfhandle(main_fd)
+                        success = windll.kernel32.ReadFile(
+                            handle,  # handle to pipe
+                            buf,     # buffer to receive data
+                            8192,    # size of buffer in bytes
+                            byref(bytes_read),  # number of bytes read
+                            None    # not overlapped
+                        )
 
-                        try:
-                            # Read data using regular file operations
-                            data = os.read(main_fd, 8192)
-                            if not data:
+                        # Handle read results
+                        if success:
+                            if bytes_read.value > 0:
+                                # We got some data
+                                data = buf.raw[:bytes_read.value]
+                                complete_data = utf8_buffer.add_data(data)
+                                if complete_data:
+                                    self._terminal.put_data(complete_data)
+                            else:
+                                # EOF condition
                                 break
-
-                            complete_data = utf8_buffer.add_data(data)
-                            if complete_data:
-                                self._terminal.put_data(complete_data)
-                        except OSError as e:
-                            if e.winerror == 232:  # Pipe has been closed
+                        else:
+                            error = windll.kernel32.GetLastError()
+                            if error == 109:  # ERROR_BROKEN_PIPE
                                 break
-                            self._logger.exception("Error reading from ConPTY: %s", e)
+                            self._logger.error(f"ReadFile failed with error: {error}")
                             break
+
+                        # Small sleep to prevent busy-waiting
+                        await asyncio.sleep(0.001)
 
                     except Exception as e:
                         if not self._running:
                             break
                         self._logger.exception("Error in Windows read loop: %s", str(e))
                         break
+
             else:
                 # Unix read loop using select
                 while self._running:
