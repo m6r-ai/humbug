@@ -12,7 +12,6 @@ from typing import Dict, Optional, Set
 
 from PySide6.QtWidgets import QVBoxLayout
 from PySide6.QtCore import Slot
-from PySide6.QtGui import QFont
 
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
@@ -21,7 +20,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.terminal.terminal_find import TerminalFind
-from humbug.gui.terminal.terminal_process import TerminalProcess
+from humbug.gui.terminal.terminal_process import create_terminal_process
 from humbug.gui.terminal.terminal_widget import TerminalWidget
 from humbug.gui.status_message import StatusMessage
 
@@ -121,7 +120,7 @@ class TerminalTab(TabBase):
         self._install_activation_tracking(self._terminal)
 
         # Initialize process and task tracking
-        self._terminal_process = TerminalProcess()
+        self._terminal_process = create_terminal_process()
         self._tasks: Set[asyncio.Task] = set()
         self._running = True
         self._main_fd = None
