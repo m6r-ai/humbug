@@ -718,8 +718,10 @@ class TerminalBuffer:
 
     def set_top_and_bottom_margins(self, top: int, bottom: int) -> None:
         """Set the top and bottom margins."""
+        top = min(max(0, top - 1), self.rows - 1)
+        bottom = min(max(0, bottom), self.rows)
         if top < bottom:
-            self.scroll_region.top = top - 1
+            self.scroll_region.top = top
             self.scroll_region.bottom = bottom
             self.scroll_region.rows = bottom - top + 1
 
