@@ -491,10 +491,9 @@ class TerminalTab(TabBase):
                 self._find_widget.set_search_text(text)
             else:
                 self._find_widget.set_search_text("")
-        else:
-            self._find_widget.set_search_text("")
 
         self._find_widget.show()
+        self._find_widget.setFocus()
 
     def can_submit(self) -> bool:
         """Check if terminal can submit (not supported)."""

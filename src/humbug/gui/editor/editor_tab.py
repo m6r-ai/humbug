@@ -675,6 +675,7 @@ class EditorTab(TabBase):
                 self._find_widget.set_search_text("")
 
         self._find_widget.show()
+        self._find_widget.setFocus()
 
     def _close_find(self):
         """Close the find widget and clear search state."""
