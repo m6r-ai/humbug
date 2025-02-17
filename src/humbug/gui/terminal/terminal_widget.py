@@ -144,7 +144,6 @@ class TerminalWidget(QAbstractScrollArea):
 
         cols = int(max(viewport_width / self._char_width, 1))
         rows = int(max(viewport_height / self._char_height, 1))
-        print(f"size {rows},{cols}, {viewport_height},{viewport_width}, {viewport_height /self._char_height}, {viewport_width/self._char_width}")
 
         # Update state dimensions
         self._state.resize(rows, cols)
@@ -589,6 +588,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Pre-create common font variants
         base_font = painter.font()
         font_variants = {
+            CharacterAttributes.NONE: self._create_font_variant(base_font),
             CharacterAttributes.BOLD: self._create_font_variant(base_font, bold=True),
             CharacterAttributes.ITALIC: self._create_font_variant(base_font, italic=True),
             CharacterAttributes.UNDERLINE: self._create_font_variant(base_font, underline=True),
@@ -745,7 +745,10 @@ class TerminalWidget(QAbstractScrollArea):
             (attrs & CharacterAttributes.CUSTOM_BG) else default_bg)
 
         # Handle inverse video and screen reverse mode
-        if attrs & CharacterAttributes.INVERSE or self._state.screen_reverse_mode:
+        if attrs & CharacterAttributes.INVERSE:
+            fg, bg = bg, fg
+
+        if self._state.screen_reverse_mode:
             fg, bg = bg, fg
 
         # Handle hidden text
