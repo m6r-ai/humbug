@@ -153,19 +153,6 @@ if sys.platform != 'win32':
             """Start a new terminal process with proper PTY setup."""
             main_fd, secondary_fd = pty.openpty()
 
-            # Set raw mode on the PTY
-            mode = termios.tcgetattr(main_fd)
-            mode[tty.IFLAG] &= ~(termios.ICRNL | termios.IXON | termios.IXOFF | termios.ISTRIP)
-#            mode[tty.OFLAG] &= ~(termios.OPOST)
-            mode[tty.CFLAG] |= (termios.CS8)
-            mode[tty.LFLAG] &= ~(termios.ECHO | termios.ICANON | termios.IEXTEN | termios.ISIG)
-            mode[tty.CC][termios.VMIN] = 0
-            mode[tty.CC][termios.VTIME] = 0
-            termios.tcsetattr(main_fd, termios.TCSAFLUSH, mode)
-
-            # Set non-blocking mode on the master fd
-            self._set_nonblocking(main_fd)
-
             # Fork the process
             pid = os.fork()
 
@@ -204,6 +191,19 @@ if sys.platform != 'win32':
                 except Exception as e:
                     print(f"Child process failed: {e}", file=sys.stderr)
                     os._exit(1)
+
+            # Set raw mode on the PTY
+            mode = termios.tcgetattr(main_fd)
+            mode[tty.IFLAG] &= ~(termios.ICRNL | termios.IXON | termios.IXOFF | termios.ISTRIP)
+#            mode[tty.OFLAG] &= ~(termios.OPOST)
+            mode[tty.CFLAG] |= (termios.CS8)
+            mode[tty.LFLAG] &= ~(termios.ECHO | termios.ICANON | termios.IEXTEN | termios.ISIG)
+            mode[tty.CC][termios.VMIN] = 0
+            mode[tty.CC][termios.VTIME] = 0
+            termios.tcsetattr(main_fd, termios.TCSANOW, mode)
+
+            # Set non-blocking mode on the master fd
+            self._set_nonblocking(main_fd)
 
             # Parent process
             os.close(secondary_fd)
