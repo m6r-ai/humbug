@@ -164,6 +164,13 @@ if sys.platform != 'win32':
                     # Create new session
                     os.setsid()
 
+                    # Set up the terminal in the child process BEFORE making it controlling terminal
+                    slave_attr = termios.tcgetattr(secondary_fd)
+                    slave_attr[tty.IFLAG] = termios.ICRNL | termios.IXON
+                    slave_attr[tty.OFLAG] = termios.OPOST | termios.ONLCR
+                    slave_attr[tty.LFLAG] = termios.ISIG | termios.ICANON | termios.ECHO | termios.ECHOE | termios.ECHOK | termios.IEXTEN | termios.ECHOCTL | termios.ECHOKE
+                    termios.tcsetattr(secondary_fd, termios.TCSANOW, slave_attr)
+
                     # Make the PTY our controlling terminal
                     fcntl.ioctl(secondary_fd, termios.TIOCSCTTY, 0)
 
@@ -192,10 +199,12 @@ if sys.platform != 'win32':
                     print(f"Child process failed: {e}", file=sys.stderr)
                     os._exit(1)
 
-            # Set raw mode on the PTY
+            # Parent process
+            os.close(secondary_fd)
+
             mode = termios.tcgetattr(main_fd)
             mode[tty.IFLAG] &= ~(termios.ICRNL | termios.IXON | termios.IXOFF | termios.ISTRIP)
-#            mode[tty.OFLAG] &= ~(termios.OPOST)
+            mode[tty.OFLAG] &= ~(termios.OPOST)
             mode[tty.CFLAG] |= (termios.CS8)
             mode[tty.LFLAG] &= ~(termios.ECHO | termios.ICANON | termios.IEXTEN | termios.ISIG)
             mode[tty.CC][termios.VMIN] = 0
@@ -205,8 +214,6 @@ if sys.platform != 'win32':
             # Set non-blocking mode on the master fd
             self._set_nonblocking(main_fd)
 
-            # Parent process
-            os.close(secondary_fd)
             self._process_id = pid
             self._main_fd = main_fd
 
