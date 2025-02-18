@@ -14,6 +14,7 @@ if sys.platform != 'win32':
     import pty
     import termios
     import fcntl
+    import tty
 
 # Windows-specific imports
 if sys.platform == 'win32':
@@ -153,10 +154,14 @@ if sys.platform != 'win32':
             main_fd, secondary_fd = pty.openpty()
 
             # Set raw mode on the PTY
-            mode = termios.tcgetattr(secondary_fd)
-            mode[3] &= ~(termios.ECHO | termios.ICANON)
-            mode[3] |= termios.ISIG
-            termios.tcsetattr(secondary_fd, termios.TCSAFLUSH, mode)
+            mode = termios.tcgetattr(main_fd)
+            mode[tty.IFLAG] &= ~(termios.ICRNL | termios.IXON | termios.IXOFF | termios.ISTRIP)
+#            mode[tty.OFLAG] &= ~(termios.OPOST)
+            mode[tty.CFLAG] |= (termios.CS8)
+            mode[tty.LFLAG] &= ~(termios.ECHO | termios.ICANON | termios.IEXTEN | termios.ISIG)
+            mode[tty.CC][termios.VMIN] = 0
+            mode[tty.CC][termios.VTIME] = 0
+            termios.tcsetattr(main_fd, termios.TCSAFLUSH, mode)
 
             # Set non-blocking mode on the master fd
             self._set_nonblocking(main_fd)
