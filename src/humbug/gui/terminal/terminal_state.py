@@ -148,6 +148,8 @@ class TerminalState:
         """
         text = data.decode(errors='replace')
 
+        print(f"data: {repr(data)}")
+
         i = 0
         while i < len(text):
             char = text[i]
@@ -156,6 +158,7 @@ class TerminalState:
             if self._in_escape_seq:
                 # Handle escape sequence processing
                 if char in '\r\n\b\f\t\v':
+                    print(f"ctl: {repr(char)}")
                     self._current_buffer.write_char(char)
                     continue
 
@@ -168,6 +171,7 @@ class TerminalState:
                 self._escape_seq_buffer += char
 
                 if self._is_escape_sequence_complete(self._escape_seq_buffer):
+                    print(f"esc: {repr(self._escape_seq_buffer)}")
                     self._process_escape_sequence(self._escape_seq_buffer)
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
@@ -183,6 +187,7 @@ class TerminalState:
                 self._escape_seq_buffer = char
 
             else:
+                print(f"ch: {repr(char)}")
                 self._current_buffer.write_char(char)
 
     def _is_escape_sequence_complete(self, sequence: str) -> bool:
