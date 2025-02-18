@@ -148,8 +148,6 @@ class TerminalState:
         """
         text = data.decode(errors='replace')
 
-        print(f"data: {repr(data)}")
-
         i = 0
         while i < len(text):
             char = text[i]
