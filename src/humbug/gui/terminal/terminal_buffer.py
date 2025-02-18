@@ -250,7 +250,7 @@ class TerminalBuffer:
         # Restore lines
         self.lines = []
         for line_data in state.lines:
-            line = self.get_new_line()
+            line = self._get_new_line(len(line_data))
             for col, char_data in enumerate(line_data):
                 line.set_character(
                     col,
@@ -295,14 +295,14 @@ class TerminalBuffer:
         self.history_scrollback = state.history_scrollback
         self.max_cursor_row = state.max_cursor_row
 
-    def get_new_line(self) -> TerminalLine:
+    def _get_new_line(self, cols) -> TerminalLine:
         """"Get a new blank line."""
-        line = TerminalLine(self.cols)
+        line = TerminalLine(cols)
         # Fill line with spaces using default attributes
 
         fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
         bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
-        for i in range(self.cols):
+        for i in range(cols):
             line.set_character(i, ' ', self.attributes.current, fg, bg)
 
         return line
@@ -310,7 +310,7 @@ class TerminalBuffer:
     def _add_new_lines(self, count: int) -> None:
         """Add new empty lines to the buffer."""
         for _ in range(count):
-            self.lines.append(self.get_new_line())
+            self.lines.append(self._get_new_line(self.cols))
 
     def resize(self, new_rows: int, new_cols: int) -> None:
         """
@@ -321,7 +321,6 @@ class TerminalBuffer:
             new_cols: New number of columns
         """
         old_rows = self.rows
-        old_cols = self.cols
 
         # Update buffer dimensions
         self.rows = new_rows
@@ -345,15 +344,15 @@ class TerminalBuffer:
 
         # Copy content from old lines
         for old_line in self.lines:
-            new_line = TerminalLine(new_cols)
+            new_line = TerminalLine(max(new_cols, old_line.width))
 
             # Copy existing characters
-            for col in range(min(old_cols, new_cols)):
+            for col in range(old_line.width):
                 char, attrs, fg, bg = old_line.get_character(col)
                 new_line.set_character(col, char, attrs, fg, bg)
 
             # Pad with spaces if needed
-            for col in range(old_cols, new_cols):
+            for col in range(old_line.width, new_cols):
                 new_line.set_character(col, ' ', self.attributes.current, default_fg, default_bg)
 
             new_lines.append(new_line)
@@ -361,7 +360,7 @@ class TerminalBuffer:
         # Add additional empty lines if needed
         add_rows = max(0, new_rows - len(new_lines))
         for _ in range(add_rows):
-            new_lines.append(self.get_new_line())
+            new_lines.append(self._get_new_line(self.cols))
 
         # If we don't have a history scrollback then clip the line count
         if not self.history_scrollback and self.rows < len(new_lines):
@@ -418,7 +417,7 @@ class TerminalBuffer:
 
         # Insert blank lines at the bottom of the scrolling region and remove lines from the top
         for _ in range(count):
-            self.lines.insert(end, self.get_new_line())
+            self.lines.insert(end, self._get_new_line(self.cols))
 
             # If we're using the main screen and the scrolling region top is the top of the screen
             # then we don't actually delete anything, we simply let the scrolled line roll into
@@ -441,7 +440,7 @@ class TerminalBuffer:
 
         # Insert blank lines at the top of the scrolling region and remove lines from the bottom
         for _ in range(count):
-            self.lines.insert(start, self.get_new_line())
+            self.lines.insert(start, self._get_new_line(self.cols))
             del self.lines[end]
 
     def clear_region(self, start_row: int, start_col: int, end_row: int, end_col: int) -> None:
@@ -486,7 +485,7 @@ class TerminalBuffer:
 
         # Insert blank lines at the cursor and delete them at the end of the scrolling region
         for _ in range(count):
-            self.lines.insert(start, self.get_new_line())
+            self.lines.insert(start, self._get_new_line(self.cols))
             del self.lines[end]
 
         self.cursor.col = 0
@@ -512,7 +511,7 @@ class TerminalBuffer:
 
         # Insert blank lines at the end of the scrolling region and remove them at the cursor
         for _ in range(count):
-            self.lines.insert(end, self.get_new_line())
+            self.lines.insert(end, self._get_new_line(self.cols))
             del self.lines[start]
 
         self.cursor.col = 0
