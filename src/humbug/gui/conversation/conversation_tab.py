@@ -159,7 +159,7 @@ class ConversationTab(TabBase):
 
         # Handle pop-up context menu
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._create_context_menu)
+        self.customContextMenuRequested.connect(self._show_conversation_context_menu)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -1028,6 +1028,7 @@ class ConversationTab(TabBase):
                     self._find_widget.set_search_text("")
 
         self._find_widget.show()
+        self._find_widget.setFocus()
 
     def _close_find(self):
         """Close the find widget and clear search state."""
@@ -1043,7 +1044,7 @@ class ConversationTab(TabBase):
         current, total = self._find_handler.get_match_status()
         self._find_widget.set_match_status(current, total)
 
-    def _create_context_menu(self, pos) -> None:
+    def _show_conversation_context_menu(self, pos) -> None:
         """
         Create and show the context menu at the given position.
 

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLineEdit, QToolButton, QLabel
 )
 from PySide6.QtCore import Signal, Qt, QSize
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QFocusEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -140,16 +140,16 @@ class FindWidget(QWidget):
 
         super().keyPressEvent(event)
 
-    def showEvent(self, event):
-        """Focus search input when shown."""
-        super().showEvent(event)
-        self._search_input.setFocus()
-        self._search_input.selectAll()
-
     def closeEvent(self, event):
         """Emit closed signal when closing."""
         super().closeEvent(event)
         self.closed.emit()
+
+    def focusInEvent(self, event: QFocusEvent):
+        """Handle focus events."""
+        print(f"focus event: {self._search_input.text()}")
+        self._search_input.setFocus()
+        self._search_input.selectAll()
 
     def _update_match_status(self):
         """Update the match status display."""
