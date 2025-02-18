@@ -171,16 +171,15 @@ class TerminalTab(TabBase):
                         self._logger.info("Shell process ended")
                         break
 
-                    # Read using platform-specific implementation
+                    # Read using platform-specific implementation with timeout
                     try:
+                        # Call read_data directly without wait_for since it's already async
                         data = await self._terminal_process.read_data(8192)
-                        if not data:
-                            # No data available this loop, try again
-                            continue
 
-                        complete_data = utf8_buffer.add_data(data)
-                        if complete_data:
-                            self._terminal.put_data(complete_data)
+                        if data:
+                            complete_data = utf8_buffer.add_data(data)
+                            if complete_data:
+                                self._terminal.put_data(complete_data)
 
                     except EOFError:
                         # Terminal pipe closed/EOF reached
@@ -192,20 +191,26 @@ class TerminalTab(TabBase):
                         self._logger.exception("Error reading from terminal: %s", str(e))
                         break
 
+                except asyncio.CancelledError:
+                    # Task was cancelled, exit cleanly
+                    raise
                 except Exception as e:
                     if not self._running:
                         break
                     self._logger.exception("Error in read loop: %s", str(e))
                     break
 
+        except asyncio.CancelledError:
+            self._logger.debug("Read loop task cancelled")
+            raise  # Re-raise to ensure proper task cancellation
         except Exception as e:
             self._logger.exception("Error in read loop: %s", str(e))
-
-        if self._running and not self._transferring:
-            try:
-                self._terminal.put_data(b"\r\n[Process completed]\r\n")
-            except Exception as e:
-                self._logger.debug("Could not write completion message: %s", e)
+        finally:
+            if self._running and not self._transferring:
+                try:
+                    self._terminal.put_data(b"\r\n[Process completed]\r\n")
+                except Exception as e:
+                    self._logger.debug("Could not write completion message: %s", e)
 
     def _handle_data_ready(self, data: bytes):
         """Handle data from terminal."""
@@ -257,17 +262,41 @@ class TerminalTab(TabBase):
 
     async def _cleanup(self):
         """Clean up resources."""
-        self._running = False
+        try:
+            # First mark as not running to prevent new operations
+            self._running = False
 
-        # Cancel all pending tasks
-        for task in self._tasks:
-            task.cancel()
+            # Cancel all pending tasks and wait for them with a timeout
+            if self._tasks:
+                # Cancel all tasks
+                for task in self._tasks:
+                    if not task.done():
+                        task.cancel()
 
-        if self._tasks:
-            await asyncio.gather(*self._tasks, return_exceptions=True)
+                # Wait for all tasks to complete with timeout
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*self._tasks, return_exceptions=True),
+                        timeout=2.0
+                    )
+                except asyncio.TimeoutError:
+                    self._logger.warning("Timeout waiting for tasks to cancel")
 
-        # Terminate process using platform-specific implementation
-        await self._terminal_process.terminate()
+                # Clear task set
+                self._tasks.clear()
+
+            # Terminate process using platform-specific implementation
+            try:
+                await asyncio.wait_for(
+                    self._terminal_process.terminate(),
+                    timeout=2.0
+                )
+            except asyncio.TimeoutError:
+                self._logger.warning("Timeout waiting for terminal process to terminate")
+
+        except Exception as e:
+            self._logger.error("Error during cleanup: %s", str(e))
+            # Don't re-raise - we want to continue cleanup even if part fails
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """
@@ -397,7 +426,17 @@ class TerminalTab(TabBase):
 
     def close(self) -> None:
         """Close the terminal."""
-        asyncio.create_task(self._cleanup())
+        # Create cleanup task and add it to tracked tasks
+        cleanup_task = self._create_tracked_task(self._cleanup())
+
+        # Add error handler
+        def cleanup_error(task):
+            try:
+                task.result()
+            except Exception as e:
+                self._logger.error("Cleanup task failed: %s", str(e))
+
+        cleanup_task.add_done_callback(cleanup_error)
 
     def can_save(self) -> bool:
         """Check if terminal can be saved."""
