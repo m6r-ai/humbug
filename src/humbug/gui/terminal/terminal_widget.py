@@ -974,9 +974,9 @@ class TerminalWidget(QAbstractScrollArea):
                 # Draw inverted cursor using floating-point rectangle
                 painter.fillRect(
                     QRectF(cursor_x, cursor_y, self._char_width, self._char_height),
-                    self.palette().text().color()
+                    self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
                 )
-                painter.setPen(self.palette().base().color())
+                painter.setPen(self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE))
                 painter.drawText(
                     QPointF(cursor_x, cursor_y + self._char_ascent),
                     char
