@@ -8,6 +8,7 @@ version = "0.5"
 requires-python = ">=3.10"
 dependencies = [
     "aiohttp",
+    "certifi",
     "m6rclib",
     "pyside6",
     "qasync"

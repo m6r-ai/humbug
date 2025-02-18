@@ -2,15 +2,21 @@
 #
 # PyInstaller config file
 #
+from PyInstaller.utils.hooks import collect_data_files
+import certifi
+
 codesign_id = os.environ['CODESIGN_IDENTITY'] if 'CODESIGN_IDENTITY' in os.environ else None
 
 block_cipher = None
 
+# Collect certifi's CA bundle
+certifi_data = collect_data_files("certifi")
+
 a = Analysis(
-    ['src/humbug/__main__.py'],  # Adjust this to your actual entry point
+    ['src/humbug/__main__.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=certifi_data,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

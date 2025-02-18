@@ -4,10 +4,14 @@ from abc import ABC, abstractmethod
 import asyncio
 import json
 import logging
+import os
+import ssl
+import sys
 from typing import List, AsyncGenerator, Dict
 
 import aiohttp
 from aiohttp import ClientConnectorError, ClientError
+import certifi
 
 from humbug.ai.ai_response import AIResponse, AIError
 from humbug.ai.conversation_settings import ConversationSettings
@@ -26,6 +30,13 @@ class AIBackend(ABC):
         self._base_delay = 2
         self._rate_limiter = RateLimiter()
         self._logger = logging.getLogger(self.__class__.__name__) # Logger based on class name
+
+        if getattr(sys, "frozen", False):  # Check if running as a bundled app
+            cert_path = os.path.join(sys._MEIPASS, "certifi", "cacert.pem")
+        else:
+            cert_path = certifi.where()
+
+        self._ssl_context = ssl.create_default_context(cafile=cert_path)
 
     def update_conversation_settings(self, conversation_id: str, settings: ConversationSettings):
         """Update settings for a specific conversation."""
@@ -77,7 +88,7 @@ class AIBackend(ABC):
                 # Use explicit IPv4 for local connections as localhost can cause SSL issues!
                 url = url.replace("localhost", "127.0.0.1")
 
-                async with aiohttp.ClientSession() as session:
+                async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self._ssl_context)) as session:
                     async with session.post(
                         url,
                         headers=headers,
