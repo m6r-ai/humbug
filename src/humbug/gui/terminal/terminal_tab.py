@@ -1,18 +1,10 @@
 """Terminal tab implementation."""
 
 import asyncio
-import fcntl
 import logging
-import os
-import select
-import signal
-import struct
-import termios
 from typing import Dict, Optional, Set
 
 from PySide6.QtWidgets import QVBoxLayout
-from PySide6.QtCore import Slot
-from PySide6.QtGui import QFont
 
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
@@ -21,8 +13,8 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.terminal.terminal_find import TerminalFind
-from humbug.gui.terminal.terminal_process import TerminalProcess
 from humbug.gui.terminal.terminal_widget import TerminalWidget
+from humbug.gui.terminal.terminal_factory import create_terminal
 from humbug.gui.status_message import StatusMessage
 
 
@@ -32,8 +24,8 @@ class UTF8Buffer:
         self.buffer = b''
 
     def add_data(self, data: bytes) -> bytes:
+        """Add data to buffer and return complete UTF-8 characters."""
         self.buffer += data
-
         # Find the last complete character
         boundary = self.find_last_complete_character()
 
@@ -43,10 +35,7 @@ class UTF8Buffer:
         return complete
 
     def find_last_complete_character(self) -> int:
-        """
-        Returns the index where the last complete UTF-8 character ends in the buffer.
-        Returns 0 if no complete characters are found.
-        """
+        """Find index where last complete UTF-8 character ends."""
         i = len(self.buffer)
         while i > 0:
             i -= 1
@@ -66,11 +55,9 @@ class UTF8Buffer:
                 elif (byte & 0b11110000) == 0b11110000:  # 4-byte sequence
                     if i + 4 <= len(self.buffer):
                         return i + 4
-
                 # If we get here, we found an incomplete sequence
                 return i
-
-        return 0  # No complete characters found
+        return 0
 
 
 class TerminalTab(TabBase):
@@ -121,10 +108,10 @@ class TerminalTab(TabBase):
         self._install_activation_tracking(self._terminal)
 
         # Initialize process and task tracking
-        self._terminal_process = TerminalProcess()
+        self._terminal_process = create_terminal()
         self._tasks: Set[asyncio.Task] = set()
         self._running = True
-        self._main_fd = None
+        self._transferring = False
 
         # Initialize window size handling
         self._terminal.size_changed.connect(self._handle_terminal_resize)
@@ -132,34 +119,10 @@ class TerminalTab(TabBase):
         # Start local shell process
         self._create_tracked_task(self._start_process())
 
-    def _update_pty_size(self, fd: int) -> None:
-        """Update PTY size using current terminal dimensions.
-
-        Args:
-            fd: File descriptor for PTY
-
-        Raises:
-            OSError: If ioctl call fails
-        """
-        try:
-            rows, cols = self._terminal.get_terminal_size()
-            fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
-        except OSError as e:
-            self._logger.exception("Failed to update PTY size: %s", e)
-            raise
-
     def _handle_terminal_resize(self):
         """Handle terminal window resize events."""
-        if self._main_fd is not None:
-            try:
-                self._update_pty_size(self._main_fd)
-
-                # Signal the shell process group
-                pid = self._terminal_process.get_process_id()
-                if pid:
-                    os.killpg(os.getpgid(pid), signal.SIGWINCH)
-            except OSError as e:
-                self._logger.exception("Failed to handle window resize: %s", e)
+        rows, cols = self._terminal.get_terminal_size()
+        self._terminal_process.update_window_size(rows, cols)
 
     def _create_tracked_task(self, coro) -> asyncio.Task:
         """
@@ -181,27 +144,23 @@ class TerminalTab(TabBase):
         try:
             self._logger.debug("Starting terminal process...")
 
-            # Start process using our new implementation
-            pid, main_fd = await self._terminal_process.start(self._command)
-            self._main_fd = main_fd
-
+            # Start process using platform-specific implementation
+            pid, _main_fd = await self._terminal_process.start(self._command)
             self._logger.debug("Process started with pid %d", pid)
 
             # Update initial terminal size
-            try:
-                self._update_pty_size(main_fd)
-            except OSError as e:
-                self._logger.warning("Failed to set initial terminal size: %s", e)
+            rows, cols = self._terminal.get_terminal_size()
+            self._terminal_process.update_window_size(rows, cols)
 
-            # Create task for reading from main_fd
-            self._create_tracked_task(self._read_loop(main_fd))
+            # Create task for reading
+            self._create_tracked_task(self._read_loop())
 
         except Exception as e:
             self._logger.error("Failed to start terminal process: %s", e)
             self._terminal.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
-    async def _read_loop(self, main_fd):
-        """Read data from the main end of the pty."""
+    async def _read_loop(self):
+        """Read data from the terminal."""
         try:
             utf8_buffer = UTF8Buffer()
 
@@ -212,51 +171,47 @@ class TerminalTab(TabBase):
                         self._logger.info("Shell process ended")
                         break
 
-                    r, _w, e = await asyncio.get_event_loop().run_in_executor(
-                        None,
-                        select.select,
-                        [main_fd],
-                        [],
-                        [],
-                        0.1  # Add timeout to allow checking _running
-                    )
+                    # Read using platform-specific implementation
+                    try:
+                        data = await self._terminal_process.read_data(8192)
+                        if not data:
+                            # No data available this loop, try again
+                            continue
 
-                    if not r:
-                        continue
+                        complete_data = utf8_buffer.add_data(data)
+                        if complete_data:
+                            self._terminal.put_data(complete_data)
 
-                    if main_fd in r:
-                        try:
-                            data = os.read(main_fd, 8192)
-                            if not data:
-                                break
-
-                            complete_data = utf8_buffer.add_data(data)
-                            if complete_data:
-                                self._terminal.put_data(complete_data)
-                        except OSError as e:
-                            self._logger.error("Error reading from PTY: %s", e)
+                    except EOFError:
+                        # Terminal pipe closed/EOF reached
+                        self._logger.info("Terminal pipe closed")
+                        break
+                    except OSError as e:
+                        if not self._running:
                             break
-                except (OSError, select.error) as e:
+                        self._logger.exception("Error reading from terminal: %s", str(e))
+                        break
+
+                except Exception as e:
                     if not self._running:
                         break
-                    self._logger.error("Error reading from terminal: %s", str(e))
+                    self._logger.exception("Error in read loop: %s", str(e))
                     break
+
         except Exception as e:
             self._logger.exception("Error in read loop: %s", str(e))
 
-        # Only show completion message if not in cleanup
-        if self._running:
+        if self._running and not self._transferring:
             try:
                 self._terminal.put_data(b"\r\n[Process completed]\r\n")
             except Exception as e:
                 self._logger.debug("Could not write completion message: %s", e)
 
-    @Slot(bytes)
     def _handle_data_ready(self, data: bytes):
         """Handle data from terminal."""
         try:
-            if self._main_fd is not None and self._running:
-                os.write(self._main_fd, data)
+            if self._running:
+                asyncio.create_task(self._terminal_process.write_data(data))
         except Exception as e:
             self._logger.error("Failed to write to process: %s", str(e))
 
@@ -311,9 +266,8 @@ class TerminalTab(TabBase):
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
 
-        # Use new termination method
+        # Terminate process using platform-specific implementation
         await self._terminal_process.terminate()
-        self._main_fd = None
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """
@@ -393,32 +347,49 @@ class TerminalTab(TabBase):
         """
         Transfer terminal process state from another tab.
 
+        This method safely transfers ownership of a running terminal process
+        from one tab to another, ensuring proper cleanup and preventing
+        resource leaks.
+
         Args:
             source_tab: Source terminal tab to transfer from
         """
+        if not source_tab._terminal_process:
+            return
+
+        # Mark source tab as transferring to prevent completion message
+        source_tab._transferring = True
+
         # Stop process management in source tab without terminating process
         source_tab._running = False
-        if source_tab._tasks:
-            for task in source_tab._tasks:
-                task.cancel()
+
+        # Cancel all tasks in source tab
+        for task in source_tab._tasks:
+            task.cancel()
         source_tab._tasks.clear()
 
-        # Transfer file descriptors and process ID
-        self._terminal_process = source_tab._terminal_process
-        self._main_fd = source_tab._main_fd
+        # Create a new terminal implementation for this tab
+        self._terminal_process = create_terminal()
 
-        # Clear references in source tab
-        source_tab._terminal_process = None
-        source_tab._main_fd = None
+        # Transfer the process state
+        source_tab._terminal_process.transfer_to(self._terminal_process)
 
-        # Start read loop in this tab
-        self._create_tracked_task(self._read_loop(self._main_fd))
+        # Create new read loop task in this tab
+        self._create_tracked_task(self._read_loop())
+
+        # Log transfer for debugging
+        self._logger.debug(
+            "Transferred process %d from tab %s to tab %s",
+            self._terminal_process.get_process_id(),
+            source_tab._tab_id,
+            self._tab_id
+        )
 
     def set_cursor_position(self, position: Dict[str, int]) -> None:
-        pass
+        """Not supported for terminal tabs."""
 
     def get_cursor_position(self) -> Dict[str, int]:
-        pass
+        """Not supported for terminal tabs."""
 
     def can_close(self) -> bool:
         """Check if terminal can be closed."""
