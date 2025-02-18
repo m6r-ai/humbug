@@ -295,10 +295,10 @@ class WindowsTerminal(TerminalBase):
     async def read_data(self, size: int) -> bytes:
         """
         Read data from Windows terminal.
-        
+
         Returns:
             bytes: Data read from terminal
-            
+
         Raises:
             EOFError: If pipe is closed/broken
             OSError: On other errors
@@ -351,7 +351,7 @@ class WindowsTerminal(TerminalBase):
         other._pipe_out = self._pipe_out
         other._main_fd = self._main_fd
         other._running = True
-        
+
         # Clear our state without closing handles
         self._process_id = None
         self._process_handle = None

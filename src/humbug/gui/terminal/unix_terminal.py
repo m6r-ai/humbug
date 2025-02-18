@@ -160,10 +160,10 @@ class UnixTerminal(TerminalBase):
     async def read_data(self, size: int) -> bytes:
         """
         Read data from Unix terminal.
-        
+
         Returns:
             bytes: Data read from terminal, or empty bytes if no data available.
-            
+
         Raises:
             EOFError: If pipe is closed/EOF reached
             OSError: On actual errors
@@ -179,15 +179,19 @@ class UnixTerminal(TerminalBase):
                 [],
                 0.1
             )
-            
+
             if not r:
                 return b''  # No data available within timeout
-                
+
             # Read now that select indicated data is available
             data = os.read(self._main_fd, size)
             if not data:  # Empty read after select indicated data means EOF
                 raise EOFError("Terminal pipe closed")
+
             return data
+
+        except BlockingIOError:  # EAGAIN/EWOULDBLOCK
+            return b''  # No data available right now
 
         except OSError as e:
             if not self._running:
@@ -206,7 +210,7 @@ class UnixTerminal(TerminalBase):
         other._process_id = self._process_id
         other._main_fd = self._main_fd
         other._running = True
-        
+
         # Clear our state without closing fd
         self._process_id = None
         self._main_fd = None

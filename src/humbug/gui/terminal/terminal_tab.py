@@ -111,6 +111,7 @@ class TerminalTab(TabBase):
         self._terminal_process = create_terminal()
         self._tasks: Set[asyncio.Task] = set()
         self._running = True
+        self._transferring = False
 
         # Initialize window size handling
         self._terminal.size_changed.connect(self._handle_terminal_resize)
@@ -200,7 +201,7 @@ class TerminalTab(TabBase):
         except Exception as e:
             self._logger.exception("Error in read loop: %s", str(e))
 
-        if self._running:
+        if self._running and not self._transferring:
             try:
                 self._terminal.put_data(b"\r\n[Process completed]\r\n")
             except Exception as e:
@@ -355,6 +356,9 @@ class TerminalTab(TabBase):
         """
         if not source_tab._terminal_process:
             return
+
+        # Mark source tab as transferring to prevent completion message
+        source_tab._transferring = True
 
         # Stop process management in source tab without terminating process
         source_tab._running = False
