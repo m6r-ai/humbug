@@ -63,14 +63,27 @@ class Lexer(ABC):
             if (not filter_list) or (token.type not in filter_list):
                 return token
 
-    def peek_next_token(self, filter_list: List=None) -> Optional[Token]:
+    def peek_next_token(self, filter_list: List=None, offset: int=0) -> Optional[Token]:
         """
-        Get the next token that does not have a type found in the filter list.
+        Get the token that is 'offset' positions ahead, skipping filtered tokens.
 
-        :return: The next syntactic Token or None if none found.
+        Args:
+            filter_list: Optional list of token types to skip
+            offset: How many non-filtered tokens to look ahead (default 0)
+
+        Returns:
+            The token at the specified offset, or None if none found
         """
         current_token_index = self._next_token
-        token = self.get_next_token(filter_list)
+        skipped = 0
+        token = None
+
+        while skipped <= offset:
+            token = self.get_next_token(filter_list)
+            if not token:
+                break
+            skipped += 1
+
         self._next_token = current_token_index
         return token
 

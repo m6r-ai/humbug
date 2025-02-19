@@ -39,6 +39,7 @@ LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.html': ProgrammingLanguage.HTML,
     '.htm': ProgrammingLanguage.HTML,
     '.hxx': ProgrammingLanguage.CPP,
+    '.java': ProgrammingLanguage.JAVA,
     '.js': ProgrammingLanguage.JAVASCRIPT,
     '.json': ProgrammingLanguage.JSON,
     '.jsx': ProgrammingLanguage.JAVASCRIPT,
@@ -411,11 +412,15 @@ class EditorTab(TabBase):
             ProgrammingLanguage.CPP: "C++",
             ProgrammingLanguage.CSS: "CSS",
             ProgrammingLanguage.HTML: "HTML",
+            ProgrammingLanguage.JAVA: "Java",
             ProgrammingLanguage.JAVASCRIPT: "JavaScript",
             ProgrammingLanguage.JSON: "JSON",
-            ProgrammingLanguage.TYPESCRIPT: "TypeScript",
-            ProgrammingLanguage.PYTHON: "Python",
+            ProgrammingLanguage.KOTLIN: "Kotlin",
             ProgrammingLanguage.METAPHOR: "Metaphor",
+            ProgrammingLanguage.MOVE: "Move",
+            ProgrammingLanguage.PYTHON: "Python",
+            ProgrammingLanguage.SCHEME: "Scheme",
+            ProgrammingLanguage.TYPESCRIPT: "TypeScript"
         }
         file_type = language_names.get(self._current_programming_language, "Text")
 

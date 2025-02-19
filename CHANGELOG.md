@@ -1,11 +1,12 @@
 # Changelog for Humbug
 
-## v0.5 (2025-02-04)
+## v0.5 (2025-02-19)
 
 New features:
 
 - Added a command line shell for users on Linux and MacOS.  This will let you open a
   terminal window and use command line tools.
+- Added a Java lexer/parser for syntax highlighting.
 - Added preliminary support for M6R AI backends.
 
 Internal structure changes:

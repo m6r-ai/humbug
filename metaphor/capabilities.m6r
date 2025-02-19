@@ -307,6 +307,8 @@ Context: Capabilities
                     The software supports terminal tabs.  These provide access to a shell environment via a terminal
                     emulator.
 
+                    Include: metaphor/terminal.m6r
+
             Context: Syntax highlighting
                 Code blocks and inline code will be syntax highlighted based on the programming language
                 or data format:

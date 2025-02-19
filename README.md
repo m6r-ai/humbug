@@ -38,12 +38,6 @@ TBD
 
 ## Features
 
-- **Multi-Tab Interface:**
-    - Supports multiple concurrent conversations with AI backends.
-    - Allows for editing of text files with syntax highlighting.
-    - Tabs can be arranged into multiple columns, with columns being able to split and merge.
-    - Tabs can be easily rearranged and closed.
-    - Drag and drop between columns.
 - **AI Interaction:**
     - Real-time streaming of AI responses.
     - Configurable AI model settings per conversation.
@@ -51,11 +45,15 @@ TBD
     - Configurable temperature settings for supported models.
     - Error handling and retry mechanisms for API requests.
 - **File Editing:**
-    - Syntax highlighting for various languages.  Currently supported: C, C++, CSS, HTML, JavaScript,
+    - Syntax highlighting for various languages.  Currently supported: C, C++, CSS, HTML, Java, JavaScript,
       JSON, Kotlin, Metaphor, Move, Python, Scheme, and TypeScript.
     - Auto-backup functionality for unsaved changes.
 - **Command Line Shell:**
     - Support for accessing the local shell on Linux and MacOS systems.
+- **Multi-Tab Interface:**
+    - Tabs can be arranged into multiple columns, with columns being able to split and merge.
+    - Tabs can be easily rearranged and closed.
+    - Drag and drop between columns.
 - **Mindspace Management:**
     - Project-specific environments with their own settings and state.
     - Mindspace settings include language, soft tabs, tab size, font size, and auto-backup options.

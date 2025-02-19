@@ -6,19 +6,17 @@ Context: Terminal Emulator Implementation
         of the visible terminal.  Also any secondary screen must also be preallocated the same way.
 
         Context: Multiple displays
-            The terminal supports a primary and secondary display.
+            The terminal supports a main and an alternate display.
 
-            Both have indepdendent histories and scrollback.
-
-            The primary dispaly retains its history indefinitely, but the secondard display history is reinitialized
-            each time the secondary display is invoked.
+            The main display retains its history indefinitely, but the alternate display history is reinitialized
+            each time the alternate display is invoked. 
 
         Context: History buffers
-            The terminal supports input history buffers.  The history buffer tracks what was previously on screen when
+            The main terminal display supports a history buffer.  The history buffer tracks what was previously on screen when
             a scroll-up operation occurs and the current state of the terminal (the current state is at the end of the
             buffer).  As such these are display buffers, not command buffers.  We are implementing a terminal emulator
             and thus have no idea what is a command and what is not (that's up to the application making use of the
-            terminal emulator).
+            terminal emulator).  The alternate display does not support a history buffer.
 
             The user is able to use the UI scrollbars to scroll through this history and view previous terminal outputs.
 
