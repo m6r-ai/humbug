@@ -939,4 +939,5 @@ class MainWindow(QMainWindow):
             return
 
         self._save_mindspace_state()
+        self._close_all_tabs()
         event.accept()
