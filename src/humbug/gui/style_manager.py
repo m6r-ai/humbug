@@ -362,6 +362,7 @@ class StyleManager(QObject):
         # Mapping from token type to colour
         colour_mapping = {
             "ADDRESS": ColorRole.SYNTAX_ADDRESS,
+            "ANNOTATION": ColorRole.SYNTAX_HEADING,
             "BACKTICK_CODE": ColorRole.SYNTAX_BACKTICK_CODE,
             "BOOLEAN": ColorRole.SYNTAX_NUMBER,
             "CHARACTER": ColorRole.SYNTAX_STRING,
@@ -372,6 +373,9 @@ class StyleManager(QObject):
             "ELEMENT": ColorRole.SYNTAX_ELEMENT,
             "ERROR": ColorRole.SYNTAX_ERROR,
             "FUNCTION_OR_METHOD": ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            "GENERIC_END": ColorRole.SYNTAX_OPERATOR,
+            "GENERIC_START": ColorRole.SYNTAX_OPERATOR,
+            "GENERIC_TYPE": ColorRole.SYNTAX_TYPE,
             "HEADING": ColorRole.SYNTAX_HEADING,
             "HTML_ATTRIBUTE": ColorRole.SYNTAX_HTML_ATTRIBUTE,
             "HTML_TAG": ColorRole.SYNTAX_HTML_TAG,

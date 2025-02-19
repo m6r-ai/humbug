@@ -89,6 +89,7 @@ class FileTreeIconProvider(QFileIconProvider):
             '.html': ('code', '#e34c26'), # HTML orange
             '.htm': ('code', '#e34c26'),  # HTML orange
             '.hxx': ('code', '#f34b7d'),  # C++ pink
+            '.java': ('code', None),      # Java files
             '.js': ('code', '#f1e05a'),   # JavaScript yellow
             '.jsx': ('code', '#f1e05a'),  # JavaScript yellow
             '.kt': ('code', '#f120aa'),   # Kotlin pink

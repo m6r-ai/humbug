@@ -15,6 +15,7 @@ LANGUAGE_MAPPING = {
     "cpp": ProgrammingLanguage.CPP,
     "css": ProgrammingLanguage.CSS,
     "html": ProgrammingLanguage.HTML,
+    "java": ProgrammingLanguage.JAVA,
     "javascript": ProgrammingLanguage.JAVASCRIPT,
     "json": ProgrammingLanguage.JSON,
     "kotlin": ProgrammingLanguage.KOTLIN,
