@@ -260,44 +260,6 @@ class TerminalTab(TabBase):
 
         self._terminal.update_dimensions()
 
-    async def _cleanup(self):
-        """Clean up resources."""
-        try:
-            # First mark as not running to prevent new operations
-            self._running = False
-
-            # Cancel all pending tasks and wait for them with a timeout
-            if self._tasks:
-                # Cancel all tasks
-                for task in self._tasks:
-                    if not task.done():
-                        task.cancel()
-
-                # Wait for all tasks to complete with timeout
-                try:
-                    await asyncio.wait_for(
-                        asyncio.gather(*self._tasks, return_exceptions=True),
-                        timeout=2.0
-                    )
-                except asyncio.TimeoutError:
-                    self._logger.warning("Timeout waiting for tasks to cancel")
-
-                # Clear task set
-                self._tasks.clear()
-
-            # Terminate process using platform-specific implementation
-            try:
-                await asyncio.wait_for(
-                    self._terminal_process.terminate(),
-                    timeout=2.0
-                )
-            except asyncio.TimeoutError:
-                self._logger.warning("Timeout waiting for terminal process to terminate")
-
-        except Exception as e:
-            self._logger.error("Error during cleanup: %s", str(e))
-            # Don't re-raise - we want to continue cleanup even if part fails
-
     def get_state(self, temp_state: bool = False) -> TabState:
         """
         Get serializable state.
@@ -426,17 +388,30 @@ class TerminalTab(TabBase):
 
     def close(self) -> None:
         """Close the terminal."""
-        # Create cleanup task and add it to tracked tasks
-        cleanup_task = self._create_tracked_task(self._cleanup())
+        # Immediately stop running and prevent further operations
+        self._running = False
+        self._transferring = False
 
-        # Add error handler
-        def cleanup_error(task):
+        # Cancel all existing tasks
+        for task in self._tasks:
+            if not task.done():
+                task.cancel()
+
+        # Clear task set
+        self._tasks.clear()
+
+        # Terminate process
+        if self._terminal_process:
             try:
-                task.result()
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Create and run termination task directly
+                    loop.create_task(self._terminal_process.terminate())
             except Exception as e:
-                self._logger.error("Cleanup task failed: %s", str(e))
+                self._logger.error(f"Error terminating process: {e}")
 
-        cleanup_task.add_done_callback(cleanup_error)
+        # Clear references
+        self._terminal_process = None
 
     def can_save(self) -> bool:
         """Check if terminal can be saved."""
