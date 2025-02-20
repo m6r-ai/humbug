@@ -254,7 +254,7 @@ class StyleManager(QObject):
             },
             ColorRole.SYNTAX_KEYWORD: {
                 ColorMode.DARK: "#ffc0eb",
-                ColorMode.LIGHT: "#c000a0"
+                ColorMode.LIGHT: "#c080a0"
             },
             ColorRole.SYNTAX_LANGUAGE: {
                 ColorMode.DARK: "#f0e060",
@@ -285,8 +285,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#484848"
             },
             ColorRole.SYNTAX_TYPE: {
-                ColorMode.DARK: "#e0a0ff",
-                ColorMode.LIGHT: "#8000c0"
+                ColorMode.DARK: "#30c090",
+                ColorMode.LIGHT: "#24906c"
             },
 
             # Terminal basic colors
@@ -390,6 +390,7 @@ class StyleManager(QObject):
             "PREPROCESSOR": ColorRole.SYNTAX_PREPROCESSOR,
             "REGEXP": ColorRole.SYNTAX_REGEXP,
             "RPAREN": ColorRole.SYNTAX_OPERATOR,
+            "RUNE": ColorRole.SYNTAX_STRING,
             "STRING": ColorRole.SYNTAX_STRING,
             "TEXT": ColorRole.SYNTAX_TEXT,
             "TYPE": ColorRole.SYNTAX_TYPE,
