@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Set
+from typing import Callable, Optional
 
 from humbug.syntax.lexer import Lexer, LexerState, Token
-from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 # Add Go to the ProgrammingLanguage enum if not already present
@@ -219,6 +217,55 @@ class GoLexer(Lexer):
             while (self._position < len(self._input) and
                    self._is_digit(self._input[self._position])):
                 self._position += 1
+
+    def _read_dot(self) -> None:
+        """
+        Read a dot operator or decimal point in a number.
+
+        Handles:
+        - Floating point numbers starting with dot (.123)
+        - Package member access (pkg.member)
+        - Variadic expressions (...) used in function parameters
+
+        In Go, a dot can be:
+        1. Start of a floating point number: .123
+        2. Package member access: fmt.Println
+        3. Part of variadic expression: func(args...)
+        """
+        start = self._position
+
+        # Check if it's the start of a number
+        if (self._position + 1 < len(self._input) and
+                self._is_digit(self._input[self._position + 1])):
+            self._position += 1  # Move past the dot
+            while (self._position < len(self._input) and
+                self._is_digit(self._input[self._position])):
+                self._position += 1
+
+            # Handle scientific notation if present
+            if (self._position < len(self._input) and
+                    self._input[self._position].lower() == 'e'):
+                self._position += 1
+                if self._position < len(self._input) and self._input[self._position] in ('+', '-'):
+                    self._position += 1
+                while (self._position < len(self._input) and
+                    self._is_digit(self._input[self._position])):
+                    self._position += 1
+
+            self._tokens.append(Token(
+                type='NUMBER',
+                value=self._input[start:self._position],
+                start=start
+            ))
+            return
+
+        # It's a regular dot operator (for package member access)
+        self._position += 1
+        self._tokens.append(Token(
+            type='OPERATOR',
+            value='.',
+            start=start
+        ))
 
     def _read_less_than(self) -> None:
         """
