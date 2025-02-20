@@ -88,6 +88,9 @@ class RustLexer(Lexer):
         if ch == '"':
             return self._read_string
 
+        if ch == '\'':
+            return self._read_quote
+
         if ch == '/':
             return self._read_forward_slash
 
@@ -276,14 +279,14 @@ class RustLexer(Lexer):
         """
         return {
             # Reserved keywords
-            'as', 'break', 'const', 'continue', 'crate', 'else', 'enum',
-            'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let',
+            'as', 'async', 'await', 'break', 'const', 'continue', 'crate', 'dyn',
+            'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let',
             'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return',
             'self', 'Self', 'static', 'struct', 'super', 'trait', 'true',
             'type', 'unsafe', 'use', 'where', 'while',
 
             # Reserved for future use
-            'abstract', 'async', 'become', 'box', 'do', 'final', 'macro',
+            'abstract', 'become', 'box', 'do', 'final', 'macro',
             'override', 'priv', 'try', 'typeof', 'unsized', 'virtual',
             'yield'
         }
@@ -442,6 +445,98 @@ class RustLexer(Lexer):
             start=start
         ))
 
+    def _read_quote(self) -> None:
+        """
+        Read a character literal or lifetime token.
+
+        Handles:
+        - Character literals
+        - Lifetime annotations
+        """
+        start = self._position
+        self._position += 1  # Skip the quote
+
+        # Check if this is potentially a lifetime
+        if (self._position < len(self._input) and
+                (self._is_letter(self._input[self._position]) or
+                self._input[self._position] == '_')):
+
+            self._tokens.append(Token(
+                type='LIFETIME',
+                value=self._input[start:self._position],
+                start=start
+            ))
+
+            self._read_identifier_or_keyword()
+            return
+
+        # Character literal
+        if self._position >= len(self._input):
+            self._tokens.append(Token(type='ERROR', value="'", start=start))
+            return
+
+        if self._input[self._position] == '\\':
+            self._position += 1
+            if self._position >= len(self._input):
+                self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                return
+
+            # Handle escape sequences
+            ch = self._input[self._position]
+            if ch in ('n', 'r', 't', '\\', '0', '\'', '"'):
+                self._position += 1
+            elif ch == 'x':  # \xHH
+                self._position += 1
+                for _ in range(2):
+                    if (self._position >= len(self._input) or
+                            not self._is_hex_digit(self._input[self._position])):
+                        self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                        return
+
+                    self._position += 1
+            elif ch == 'u':  # \u{HHHHHH}
+                self._position += 1
+                if (self._position >= len(self._input) or
+                        self._input[self._position] != '{'):
+                    self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                    return
+
+                self._position += 1
+
+                # Read 1-6 hex digits
+                hex_digits = 0
+                while (hex_digits < 6 and
+                    self._position < len(self._input) and
+                    self._is_hex_digit(self._input[self._position])):
+                    hex_digits += 1
+                    self._position += 1
+
+                if (self._position >= len(self._input) or
+                        self._input[self._position] != '}' or
+                        hex_digits == 0):
+                    self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                    return
+                self._position += 1
+            else:
+                self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                return
+        else:
+            # Single character
+            self._position += 1
+
+        # Expect closing quote
+        if (self._position >= len(self._input) or
+                self._input[self._position] != '\''):
+            self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+            return
+
+        self._position += 1
+        self._tokens.append(Token(
+            type='CHARACTER',
+            value=self._input[start:self._position],
+            start=start
+        ))
+
     def _read_forward_slash(self) -> None:
         """
         Read a forward slash token, which could be:
@@ -552,26 +647,14 @@ class RustLexer(Lexer):
         Read an operator or punctuation token.
         """
         operators = [
-            # Assignment operators
-            '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=',
-
-            # Arithmetic operators
-            '+', '-', '*', '/', '%',
-
-            # Comparison operators
-            '==', '!=', '>', '<', '>=', '<=',
-
-            # Logical operators
-            '&&', '||', '!',
-
-            # Bitwise operators
-            '&', '|', '^', '<<', '>>',
-
-            # Other operators
-            '::', '->', '=>', '..', '...', '@', '#',
-
-            # Delimiters
-            '(', ')', '[', ']', '{', '}', ',', ';', ':', '?'
+            '<<=', '>>=', '...', '..=',
+            '&&', '||', '<<', '>>', '+=', '-=', '*=', '/=',
+            '%=', '^=', '&=', '|=', '==', '!=', '>=', '<=',
+            '..', '::', '->', '=>',
+            '+', '-', '*', '/', '%', '^', '!', '&', '|',
+            '=', '>', '<', '@', '_', '.', ',', ';', ':',
+            '#', '$', '?',
+            '(', ')', '[', ']', '{', '}'
         ]
 
         for operator in operators:
