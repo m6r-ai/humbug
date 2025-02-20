@@ -64,21 +64,20 @@ class UnixTerminal(TerminalBase):
                 if secondary_fd > 2:
                     os.close(secondary_fd)
 
-                # Reset signal handlers
-                signal.signal(signal.SIGINT, signal.SIG_DFL)
-                signal.signal(signal.SIGQUIT, signal.SIG_DFL)
-                signal.signal(signal.SIGTSTP, signal.SIG_DFL)
-                signal.signal(signal.SIGTTIN, signal.SIG_DFL)
-                signal.signal(signal.SIGTTOU, signal.SIG_DFL)
-                signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+                # Reset all signals to their default handlers
+                for i in range(1, signal.NSIG):
+                    try:
+                        signal.signal(i, signal.SIG_DFL)
+                    except OSError:
+                        # Some signals can't be modified (like SIGKILL)
+                        pass
 
                 # Execute shell/command
                 shell = command if command else os.environ.get('SHELL', '/bin/sh')
                 os.execvp(shell.split()[0], shell.split())
 
             except Exception as e:
-                print(f"Child process failed: {e}", file=os.sys.stderr)
-                os._exit(1)
+                self._logger.exception(f"Child process failed: %s", str(e))
 
         # Parent process
         os.close(secondary_fd)
@@ -111,7 +110,7 @@ class UnixTerminal(TerminalBase):
         if self._process_id:
             try:
                 # Try graceful termination
-                os.killpg(os.getpgid(self._process_id), signal.SIGTERM)
+                os.killpg(os.getpgid(self._process_id), signal.SIGHUP)
 
                 # Wait for process
                 try:

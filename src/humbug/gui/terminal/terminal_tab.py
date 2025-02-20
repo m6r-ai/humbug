@@ -393,8 +393,10 @@ class TerminalTab(TabBase):
         self._transferring = False
 
         # Cancel all existing tasks
+        print("close terminal")
         for task in self._tasks:
             if not task.done():
+                print(f"cancelling task {task}")
                 task.cancel()
 
         # Clear task set
@@ -406,6 +408,7 @@ class TerminalTab(TabBase):
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
                     # Create and run termination task directly
+                    print("create terminate task")
                     loop.create_task(self._terminal_process.terminate())
             except Exception as e:
                 self._logger.error(f"Error terminating process: {e}")
