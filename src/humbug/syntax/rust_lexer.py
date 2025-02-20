@@ -287,3 +287,310 @@ class RustLexer(Lexer):
             'override', 'priv', 'try', 'typeof', 'unsized', 'virtual',
             'yield'
         }
+
+    def _read_number(self) -> None:
+        """
+        Read a numeric literal token.
+
+        Handles:
+        - Decimal integers (123, 123_456)
+        - Hex integers (0xff, 0xFF_FF)
+        - Octal integers (0o77, 0o77_77)
+        - Binary integers (0b1111, 0b1111_0000)
+        - Floating point (123.456, 1.23e-4, 1_234.567_89)
+        - Type suffixes (u8, i32, f64, etc.)
+        """
+        start = self._position
+
+        # Check for hex, octal, or binary prefix
+        if (self._input[self._position] == '0' and
+                self._position + 1 < len(self._input)):
+            prefix = self._input[self._position + 1].lower()
+            if prefix == 'x':  # Hexadecimal
+                self._position += 2
+                self._read_digits(self._is_hex_digit, '_')
+                self._read_type_suffix()
+                self._add_number_token(start)
+                return
+            elif prefix == 'o':  # Octal
+                self._position += 2
+                self._read_digits(self._is_octal_digit, '_')
+                self._read_type_suffix()
+                self._add_number_token(start)
+                return
+            elif prefix == 'b':  # Binary
+                self._position += 2
+                self._read_digits(self._is_binary_digit, '_')
+                self._read_type_suffix()
+                self._add_number_token(start)
+                return
+
+        # Decimal integer or float
+        self._read_digits(self._is_digit, '_')
+
+        # Check for decimal point
+        if (self._position < len(self._input) and
+                self._input[self._position] == '.'):
+            next_pos = self._position + 1
+            # Ensure it's not the range operator (..)
+            if (next_pos < len(self._input) and
+                    self._input[next_pos] != '.'):
+                self._position += 1
+                self._read_digits(self._is_digit, '_')
+
+        # Check for exponent
+        if self._position < len(self._input):
+            exp = self._input[self._position].lower()
+            if exp == 'e':
+                self._position += 1
+                if (self._position < len(self._input) and
+                        self._input[self._position] in '+-'):
+                    self._position += 1
+                self._read_digits(self._is_digit, '_')
+
+        # Read type suffix
+        self._read_type_suffix()
+        self._add_number_token(start)
+
+    def _read_digits(self, is_valid_digit: callable, separator: str = None) -> None:
+        """
+        Read a sequence of digits with optional separator.
+
+        Args:
+            is_valid_digit: Function to check if a character is a valid digit
+            separator: Optional separator character allowed between digits
+        """
+        has_digit = False
+        while self._position < len(self._input):
+            ch = self._input[self._position]
+            if is_valid_digit(ch):
+                has_digit = True
+                self._position += 1
+            elif separator and ch == separator and has_digit:
+                # Ensure we've seen at least one digit before a separator
+                self._position += 1
+            else:
+                break
+
+    def _read_type_suffix(self) -> None:
+        """
+        Read a numeric type suffix.
+        Handles integer suffixes (u8, i32, etc.) and float suffixes (f32, f64).
+        """
+        if self._position >= len(self._input):
+            return
+
+        # Check for float suffix
+        if self._input[self._position].lower() == 'f':
+            suffix_start = self._position
+            self._position += 1
+            if (self._position < len(self._input) and
+                    self._is_digit(self._input[self._position])):
+                self._position += 1
+                if (self._position < len(self._input) and
+                        self._is_digit(self._input[self._position])):
+                    self._position += 1
+            else:
+                # Invalid float suffix, reset position
+                self._position = suffix_start
+            return
+
+        # Check for integer suffix
+        suffix_chars = {'i', 'u'}
+        if self._input[self._position].lower() not in suffix_chars:
+            return
+
+        suffix_start = self._position
+        self._position += 1
+
+        # Read optional size (8, 16, 32, 64, 128, size)
+        if self._position < len(self._input):
+            if self._input[self._position:].startswith('size'):
+                self._position += 4
+            elif (self._position + 1 < len(self._input) and
+                    self._is_digit(self._input[self._position]) and
+                    self._is_digit(self._input[self._position + 1])):
+                self._position += 2
+                if (self._position < len(self._input) and
+                        self._is_digit(self._input[self._position])):
+                    self._position += 1
+            else:
+                # Invalid suffix, reset position
+                self._position = suffix_start
+
+    def _is_octal_digit(self, ch: str) -> bool:
+        """
+        Determines if a character is an octal digit.
+
+        Args:
+            ch: The character to check
+        Returns:
+            True if the character is an octal digit, False otherwise
+        """
+        return '0' <= ch <= '7'
+
+    def _add_number_token(self, start: int) -> None:
+        """
+        Add a number token to the token list.
+
+        Args:
+            start: Starting position of the number in the input
+        """
+        self._tokens.append(Token(
+            type='NUMBER',
+            value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _read_forward_slash(self) -> None:
+        """
+        Read a forward slash token, which could be:
+        - A line comment (//)
+        - A block comment (/* ... */)
+        - A division operator (/)
+        - A division-assignment operator (/=)
+        """
+        if self._position + 1 < len(self._input):
+            next_char = self._input[self._position + 1]
+            if next_char == '/':
+                self._read_line_comment()
+                return
+            if next_char == '*':
+                self._read_block_comment(2)
+                return
+            if next_char == '=':
+                start = self._position
+                self._position += 2
+                self._tokens.append(Token(
+                    type='OPERATOR',
+                    value='/=',
+                    start=start
+                ))
+                return
+
+        # Single division operator
+        start = self._position
+        self._position += 1
+        self._tokens.append(Token(
+            type='OPERATOR',
+            value='/',
+            start=start
+        ))
+
+    def _read_line_comment(self) -> None:
+        """
+        Read a line comment token (//).
+        Handles both regular comments (//) and doc comments (///).
+        """
+        start = self._position
+        self._position += 2  # Skip //
+
+        # Check for doc comment
+        is_doc = False
+        if self._position < len(self._input) and self._input[self._position] == '/':
+            is_doc = True
+            self._position += 1
+
+        while self._position < len(self._input) and self._input[self._position] != '\n':
+            self._position += 1
+
+        self._tokens.append(Token(
+            type='DOC_COMMENT' if is_doc else 'COMMENT',
+            value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _read_block_comment(self, skip_chars: int) -> None:
+        """
+        Read a block comment token.
+        Handles nested block comments and doc block comments.
+
+        Args:
+            skip_chars: Number of characters to skip at start
+        """
+        self._in_block_comment = True
+        self._block_comment_depth = 1
+        start = self._position
+        self._position += skip_chars  # Skip /*
+
+        # Check for doc comment
+        is_doc = False
+        if self._position < len(self._input) and self._input[self._position] == '*':
+            is_doc = True
+            self._position += 1
+
+        while self._position + 1 < len(self._input):
+            if (self._input[self._position] == '/' and
+                    self._input[self._position + 1] == '*'):
+                self._block_comment_depth += 1
+                self._position += 2
+                continue
+
+            if (self._input[self._position] == '*' and
+                    self._input[self._position + 1] == '/'):
+                self._block_comment_depth -= 1
+                if self._block_comment_depth == 0:
+                    self._in_block_comment = False
+                    self._position += 2
+                    break
+                self._position += 2
+                continue
+
+            self._position += 1
+
+        if self._in_block_comment:
+            self._position = len(self._input)
+
+        self._tokens.append(Token(
+            type='DOC_COMMENT' if is_doc else 'COMMENT',
+            value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _read_operator(self) -> None:
+        """
+        Read an operator or punctuation token.
+        """
+        operators = [
+            # Assignment operators
+            '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=',
+
+            # Arithmetic operators
+            '+', '-', '*', '/', '%',
+
+            # Comparison operators
+            '==', '!=', '>', '<', '>=', '<=',
+
+            # Logical operators
+            '&&', '||', '!',
+
+            # Bitwise operators
+            '&', '|', '^', '<<', '>>',
+
+            # Other operators
+            '::', '->', '=>', '..', '...', '@', '#',
+
+            # Delimiters
+            '(', ')', '[', ']', '{', '}', ',', ';', ':', '?'
+        ]
+
+        for operator in operators:
+            if self._input[self._position:].startswith(operator):
+                start = self._position
+                self._position += len(operator)
+                self._tokens.append(Token(
+                    type='OPERATOR',
+                    value=operator,
+                    start=start
+                ))
+                return
+
+        # If no operator matches, treat as error
+        start = self._position
+        ch = self._input[self._position]
+        self._position += 1
+        self._tokens.append(Token(
+            type='ERROR',
+            value=ch,
+            start=start
+        ))
