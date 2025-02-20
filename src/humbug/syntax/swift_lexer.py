@@ -360,15 +360,11 @@ class SwiftLexer(Lexer):
         Handles both standard operators and custom operators.
         """
         operators = [
-            '===', '!==', '>>>',  # Custom operators
-            '...', '..', '..<',   # Range operators
-            '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '&&=', '||=',  # Assignment operators
-            '&&', '||', '??',     # Logical operators
-            '<<', '>>', '<=', '>=', '==', '!=',  # Comparison operators
-            '->',                 # Function return type
-            '+', '-', '*', '/', '%', '&', '|', '^', '~', '!',  # Basic operators
-            '(', ')', '{', '}', '[', ']',  # Grouping
-            ',', ':', ';', '.', '?', '='    # Other punctuation
+            '===', '!==', '...', '..<', '<<=', '>>=',
+            '+=', '-=', '*=', '/=', '%=', '==', '!=', '>=', '<=', '??', '&&',
+            '||', '<<', '>>', '&+', '&-', '&*', '&=', '|=', '^=', '->',
+            '=', '+', '-', '*', '/', '%', '>', '<', '?', ':', '!', '~',
+            '&', '|', '^', ',', '(', ')', '{', '}', '[', ']', ';', '.'
         ]
 
         # Try to match standard operators first
@@ -489,9 +485,9 @@ class SwiftLexer(Lexer):
         """
         keywords = {
             # Declaration keywords
-            'associatedtype', 'class', 'deinit', 'enum', 'extension',
-            'fileprivate', 'func', 'import', 'init', 'inout', 'internal',
-            'let', 'open', 'operator', 'private', 'precedencegroup',
+            'associatedtype', 'borrowing', 'class', 'consuming', 'deinit', 'enum',
+            'extension', 'fileprivate', 'func', 'import', 'init', 'inout', 'internal',
+            'let', 'nonisolated', 'open', 'operator', 'private', 'precedencegroup',
             'protocol', 'public', 'rethrows', 'static', 'struct',
             'subscript', 'typealias', 'var',
 
@@ -501,14 +497,14 @@ class SwiftLexer(Lexer):
             'repeat', 'return', 'throw', 'switch', 'where', 'while',
 
             # Expression keywords
-            'as', 'Any', 'false', 'is', 'nil', 'super',
-            'self', 'Self', 'throws', 'true', 'try',
+            'Any', 'as', 'await', 'false', 'is', 'nil',
+            'self', 'Self', 'super', 'throws', 'true', 'try',
 
             # Special keywords
-            'associativity', 'convenience', 'dynamic', 'didSet',
+            'associativity', 'convenience', 'didSet', 'dynamic',
             'final', 'get', 'indirect', 'infix', 'lazy', 'left',
             'mutating', 'none', 'nonmutating', 'optional', 'override',
-            'postfix', 'precedence', 'prefix', 'Protocol', 'required',
+            'package', 'postfix', 'precedence', 'prefix', 'Protocol', 'required',
             'right', 'set', 'Type', 'unowned', 'weak', 'willSet'
         }
         return value in keywords
