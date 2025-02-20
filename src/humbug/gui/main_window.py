@@ -178,6 +178,14 @@ class MainWindow(QMainWindow):
 
         self._merge_column_right_action = QAction(strings.merge_column_right, self)
         self._merge_column_right_action.setShortcut(QKeySequence("Ctrl+]"))
+        
+        self._swap_column_left_action = QAction(strings.swap_column_left, self)
+        self._swap_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+
+        self._swap_column_right_action = QAction(strings.swap_column_right, self)
+        self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Shift+D"))
+
+        # Modify the _handle_language_changed method to set up these actions
 
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
@@ -237,6 +245,9 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._split_column_right_action)
         self._view_menu.addAction(self._merge_column_left_action)
         self._view_menu.addAction(self._merge_column_right_action)
+        # Add swap column actions
+        self._view_menu.addAction(self._swap_column_left_action)
+        self._view_menu.addAction(self._swap_column_right_action) 
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(1024, 600)
@@ -353,6 +364,16 @@ class MainWindow(QMainWindow):
         self._split_column_right_action.setText(strings.split_column_right)
         self._merge_column_left_action.setText(strings.merge_column_left)
         self._merge_column_right_action.setText(strings.merge_column_right)
+        # Swap column actions
+        # Get the language direction
+        left_to_right = self._language_manager.left_to_right
+
+        # Swap column actions
+        self._swap_column_left_action.triggered.disconnect()
+        self._swap_column_left_action.triggered.connect(lambda: self._swap_column(left_to_right))
+
+        self._swap_column_right_action.triggered.disconnect()
+        self._swap_column_right_action.triggered.connect(lambda: self._swap_column(not left_to_right))
 
         # Our logic for left and right reverses for right-to-left languages
         self._split_column_left_action.triggered.disconnect()
@@ -365,6 +386,10 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.triggered.connect(lambda: self._merge_column(not left_to_right))
 
         self._handle_style_changed()
+        
+    def _swap_column(self, swap_left: bool) -> None:
+        """Swap the current column."""
+        self._tab_manager.swap_column(swap_left)
 
     def _handle_column_state_changed(self):
         """Handle column state changes from tab manager."""
@@ -685,6 +710,14 @@ class MainWindow(QMainWindow):
         self._split_column_right_action.setEnabled(tab_manager.can_split_column())
         self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(left_to_right))
         self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(not left_to_right))
+        
+        # Swap column actions
+        left_to_right = self._language_manager.left_to_right
+        self._swap_column_left_action.setEnabled(len(tab_manager._tab_columns) > 1 and 
+                                                tab_manager._get_current_column() > 0)
+        self._swap_column_right_action.setEnabled(len(tab_manager._tab_columns) > 1 and 
+                                                tab_manager._get_current_column() < len(tab_manager._tab_columns) - 1)
+
 
     def _handle_style_changed(self) -> None:
         style_manager = self._style_manager

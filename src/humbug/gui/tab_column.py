@@ -1,5 +1,3 @@
-"""Columns for managing tabs with drag and drop support."""
-
 from PySide6.QtWidgets import QTabWidget
 from PySide6.QtCore import Signal, QEvent
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
@@ -22,13 +20,13 @@ class TabColumn(QTabWidget):
         self.setAcceptDrops(True)
 
         # Configure tab bar
-        self._tab_bar = self.tabBar()
-        self._tab_bar.setDrawBase(False)
-        self._tab_bar.setUsesScrollButtons(True)
+        tab_bar = self.tabBar()
+        tab_bar.setDrawBase(False)
+        tab_bar.setUsesScrollButtons(True)
 
         # Install event filter on all child widgets
         self.installEventFilter(self)
-        self._tab_bar.installEventFilter(self)
+        tab_bar.installEventFilter(self)
 
     def eventFilter(self, obj, event) -> bool:
         """Handle window activation and mouse events to detect active column."""

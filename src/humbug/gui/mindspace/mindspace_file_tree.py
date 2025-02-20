@@ -5,8 +5,9 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
-    QLabel, QSizePolicy
+    QLabel, QSizePolicy, QInputDialog, QMessageBox
 )
+from PySide6.QtGui import QAction
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
 
 from humbug.gui.color_role import ColorRole
@@ -101,37 +102,122 @@ class MindspaceFileTree(QWidget):
         """Show context menu for file tree items."""
         # Get the index at the clicked position
         index = self._tree_view.indexAt(position)
-        if not index.isValid():
-            return
-
-        # Get the file path
-        source_index = self._filter_model.mapToSource(index)
-        path = self._fs_model.filePath(source_index)
-
-        # Don't show menu for directories
-        if os.path.isdir(path):
-            return
-
+        
         # Create context menu
         menu = QMenu(self)
-        ext = os.path.splitext(path)[1].lower()
 
-        # Add rename option for conversation files
-        rename_action = None
-        if ext == '.conv':
-            rename_action = menu.addAction(self._language_manager.strings.rename_conversation)
+        # Determine the path and whether it's a file or directory
+        if index.isValid():
+            # Map to source model to get actual file path
+            source_index = self._filter_model.mapToSource(index)
+            path = self._fs_model.filePath(source_index)
+            is_dir = os.path.isdir(path)
+            
+            # Rename action
+            rename_action = menu.addAction(self._language_manager.strings.rename_conversation 
+                                           if not is_dir and path.lower().endswith('.conv') 
+                                           else "Rename")
+            
+            # Delete action
+            delete_action = menu.addAction("Delete")
             menu.addSeparator()
 
-        delete_action = menu.addAction(self._language_manager.strings.delete_file)
+        # New file/folder submenu
+        new_menu = menu.addMenu("New")
+        
+        # File type options
+        file_types = [
+            ("Text File", ".txt"),
+            ("Python File", ".py"),
+            ("Markdown File", ".md"),
+            ("JSON File", ".json"),
+            ("HTML File", ".html"),
+            ("CSS File", ".css"),
+            ("JavaScript File", ".js")
+        ]
+        
+        for name, ext in file_types:
+            new_file_action = new_menu.addAction(name)
+            new_file_action.triggered.connect(lambda checked, extension=ext: 
+                                              self._create_new_file(extension))
 
-        # Show menu and handle selection
+        # New folder action
+        new_folder_action = new_menu.addAction("Folder")
+
+        # Execute the menu
         action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
-        if action == delete_action:
-            self._handle_delete_file(path)
-            return
 
-        if ext == '.conv' and action == rename_action:
-            self._handle_rename_conversation(path)
+        # Handle actions
+        if index.isValid():
+            if action == rename_action:
+                if not is_dir and path.lower().endswith('.conv'):
+                    self._handle_rename_conversation(path)
+                else:
+                    self._rename_file(path)
+            elif action == delete_action:
+                self._handle_delete_file(path)
+
+    def _rename_file(self, path):
+        """Prompt user to rename a file and handle renaming."""
+        old_name = os.path.basename(path)
+        new_name, ok = QInputDialog.getText(
+            self, 
+            "Rename File", 
+            "Enter new name:", 
+            text=old_name
+        )
+        
+        if ok and new_name and new_name != old_name:
+            directory = os.path.dirname(path)
+            new_path = os.path.join(directory, new_name)
+            
+            try:
+                # Check if file already exists
+                if os.path.exists(new_path):
+                    QMessageBox.warning(
+                        self, 
+                        "Rename Error", 
+                        "A file with this name already exists."
+                    )
+                    return
+
+                os.rename(path, new_path)
+                # Emit signal for any necessary updates
+                self.file_renamed.emit(path, new_path)
+            except OSError as e:
+                QMessageBox.warning(
+                    self, 
+                    "Rename Error", 
+                    f"Could not rename file: {str(e)}"
+                )
+
+    def _create_new_file(self, extension):
+        """Create a new file with the specified extension."""
+        # Determine the current directory
+        current_path = self._mindspace_path or self._fs_model.rootPath()
+
+        # Generate a unique filename
+        base_name = f"new_file{extension}"
+        counter = 1
+        while os.path.exists(os.path.join(current_path, base_name)):
+            base_name = f"new_file_{counter}{extension}"
+            counter += 1
+
+        new_file_path = os.path.join(current_path, base_name)
+
+        try:
+            # Create an empty file
+            with open(new_file_path, 'w') as f:
+                pass
+            
+            # Emit signal to open the newly created file
+            self.file_activated.emit(new_file_path)
+        except OSError as e:
+            QMessageBox.warning(
+                self, 
+                "File Creation Error", 
+                f"Could not create file: {str(e)}"
+            )
 
     def _handle_delete_file(self, path: str):
         """Handle request to delete a file.

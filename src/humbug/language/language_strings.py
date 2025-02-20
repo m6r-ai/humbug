@@ -53,6 +53,8 @@ class LanguageStrings:
     split_column_right: str
     merge_column_left: str
     merge_column_right: str
+    swap_column_left: str
+    swap_column_right: str
 
     # Message roles and labels
     role_you: str
@@ -161,6 +163,11 @@ class LanguageStrings:
     conversation_status_temperature: str
     conversation_status_no_temperature: str
 
+    # Bookmark-related strings
+    bookmark_section: str = "Toggle Bookmark"
+    next_bookmark: str = "Next Bookmark"
+    previous_bookmark: str = "Previous Bookmark"
+
     @classmethod
     def get_strings(cls, code: LanguageCode) -> 'LanguageStrings':
         """Get strings for specified language code."""
@@ -179,6 +186,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         file_menu="File",
         edit_menu="Edit",
         view_menu="View",
+
+        # Bookmark-related strings
+        bookmark_section="Toggle Bookmark",
+        next_bookmark="Next Bookmark",
+        previous_bookmark="Previous Bookmark",
 
         # File menu items
         new_mindspace="New Mindspace",
@@ -216,6 +228,8 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         split_column_right="Split Column Right",
         merge_column_left="Merge Column Left",
         merge_column_right="Merge Column Right",
+        swap_column_left = "Swap Column Left",
+        swap_column_right = "Swap Column Right",
 
         # Message roles
         role_you="You",
@@ -372,6 +386,9 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         split_column_right="Diviser la colonne à droite",
         merge_column_left="Fusionner avec la colonne de gauche",
         merge_column_right="Fusionner avec la colonne de droite",
+        swap_column_left = "Échanger la colonne gauche",
+        swap_column_right = "Échanger la colonne de droite",
+        
 
         # Message roles
         role_you="Vous",
@@ -478,7 +495,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",
         conversation_status="Modèle : {model} | {temperature} | Dernière réponse - Entrée : {input_tokens} ({max_tokens}) | Sortie : {output_tokens}",
         conversation_status_temperature="Temp : {temperature:.1f}",
-        conversation_status_no_temperature="Temp : N/D"
+        conversation_status_no_temperature="Temp : N/D",
+
+        bookmark_section="Marquer/Démarquer",
+        next_bookmark="Signet suivant",
+        previous_bookmark="Signet précédent"
     ),
 
     LanguageCode.AR: LanguageStrings(
@@ -491,6 +512,11 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         file_menu="ملف",
         edit_menu="تحرير",
         view_menu="عرض",
+
+        # Arabic
+        bookmark_section="تبديل الإشارة",
+        next_bookmark="الإشارة التالية",
+        previous_bookmark="الإشارة السابقة",
 
         # File menu items
         new_mindspace="مساحة ذهنية جديدة",
@@ -528,6 +554,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         split_column_right="تقسيم العمود لليمين",
         merge_column_left="دمج مع العمود الأيسر",
         merge_column_right="دمج مع العمود الأيمن",
+        
+        swap_column_left = "عمود المبادلة إلى اليسار",
+        swap_column_right = "عمود المبادلة لليمين",
+        
 
         # Message roles
         role_you="أنت",
