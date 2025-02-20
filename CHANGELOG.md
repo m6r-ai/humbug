@@ -6,7 +6,7 @@ New features:
 
 - Added a command line shell for users on Linux and MacOS.  This will let you open a
   terminal window and use command line tools.
-- Added a Java lexer/parser for syntax highlighting.
+- Added Go, Java, Rust, and Swift lexers/parsers for syntax highlighting.
 - Added preliminary support for M6R AI backends.
 
 Internal structure changes:

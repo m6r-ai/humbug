@@ -16,6 +16,7 @@ from humbug.gui.main_window import MainWindow
 from humbug.syntax.c_parser import CParser  # noqa: F401
 from humbug.syntax.cpp_parser import CppParser  # noqa: F401
 from humbug.syntax.css_parser import CSSParser  # noqa: F401
+from humbug.syntax.go_parser import GoParser  # noqa: F401
 from humbug.syntax.html_parser import HTMLParser  # noqa: F401
 from humbug.syntax.java_parser import JavaParser  # noqa: F401
 from humbug.syntax.javascript_parser import JavaScriptParser  # noqa: F401
@@ -24,7 +25,9 @@ from humbug.syntax.kotlin_parser import KotlinParser  # noqa: F401
 from humbug.syntax.metaphor_parser import MetaphorParser  # noqa: F401
 from humbug.syntax.move_parser import MoveParser
 from humbug.syntax.python_parser import PythonParser  # noqa: F401
+from humbug.syntax.rust_parser import RustParser  # noqa: F401
 from humbug.syntax.scheme_parser import SchemeParser  # noqa: F401
+from humbug.syntax.swift_parser import SwiftParser  # noqa: F401
 from humbug.syntax.text_parser import TextParser  # noqa: F401
 from humbug.syntax.typescript_parser import TypeScriptParser  # noqa: F401
 from humbug.syntax.parser_registry import ParserRegistry

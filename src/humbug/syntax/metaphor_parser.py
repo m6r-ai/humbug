@@ -14,6 +14,7 @@ LANGUAGE_MAPPING = {
     "c++": ProgrammingLanguage.CPP,
     "cpp": ProgrammingLanguage.CPP,
     "css": ProgrammingLanguage.CSS,
+    "go": ProgrammingLanguage.GO,
     "html": ProgrammingLanguage.HTML,
     "java": ProgrammingLanguage.JAVA,
     "javascript": ProgrammingLanguage.JAVASCRIPT,
@@ -22,7 +23,9 @@ LANGUAGE_MAPPING = {
     "metaphor": ProgrammingLanguage.METAPHOR,
     "move": ProgrammingLanguage.MOVE,
     "python": ProgrammingLanguage.PYTHON,
+    "rust": ProgrammingLanguage.RUST,
     "scheme": ProgrammingLanguage.SCHEME,
+    "swift": ProgrammingLanguage.SWIFT,
     "typescript": ProgrammingLanguage.TYPESCRIPT
 }
 
