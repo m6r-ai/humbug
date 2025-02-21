@@ -167,6 +167,19 @@ class LanguageStrings:
     bookmark_section: str = "Toggle Bookmark"
     next_bookmark: str = "Next Bookmark"
     previous_bookmark: str = "Previous Bookmark"
+    
+    #Mindspace File Tree Edit Menu Errors and Options
+    rename: "Rename"
+    delete: "Delete"
+    new: "New"
+    new_folder: "Folder"
+    rename_file_title: "Rename File"
+    rename_file_prompt: "Enter new name:"
+    rename_error_title: "Rename Error"
+    rename_error_exists: "A file with this name already exists."
+    rename_error_generic: "Could not rename file: "
+    file_creation_error_title: "File Creation Error"
+    file_creation_error: "Could not create file: "
 
     @classmethod
     def get_strings(cls, code: LanguageCode) -> 'LanguageStrings':
@@ -336,7 +349,20 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",
         conversation_status="Model: {model} | {temperature} | Last response - Input: {input_tokens} ({max_tokens}) | Output: {output_tokens}",
         conversation_status_temperature="Temp: {temperature:.1f}",
-        conversation_status_no_temperature="Temp: N/A"
+        conversation_status_no_temperature="Temp: N/A",
+        
+        #Mindspace File Tree Edit Menu Errors and Options
+        rename= "Rename",
+        delete= "Delete",
+        new= "New",
+        new_folder= "Folder",
+        rename_file_title= "Rename File",
+        rename_file_prompt= "Enter new name:",
+        rename_error_title= "Rename Error",
+        rename_error_exists= "A file with this name already exists.",
+        rename_error_generic= "Could not rename file: ",
+        file_creation_error_title= "File Creation Error",
+        file_creation_error= "Could not create file: "
     ),
 
     LanguageCode.FR: LanguageStrings(
@@ -497,9 +523,23 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         conversation_status_temperature="Temp : {temperature:.1f}",
         conversation_status_no_temperature="Temp : N/D",
 
+        #Bookmark Actions
         bookmark_section="Marquer/Démarquer",
         next_bookmark="Signet suivant",
-        previous_bookmark="Signet précédent"
+        previous_bookmark="Signet précédent",
+        
+        #Mindspace File Tree Edit Menu Errors and Options
+        rename= "Renommer",
+        delete= "Supprimer",
+        new= "Nouveau",
+        new_folder= "Dossier",
+        rename_file_title= "Renommer le fichier",
+        rename_file_prompt= "Entrez un nouveau nom :",
+        rename_error_title= "Erreur de renommage",
+        rename_error_exists= "Un fichier avec ce nom existe déjà.",
+        rename_error_generic= "Impossible de renommer le fichier : ",
+        file_creation_error_title= "Erreur de création de fichier",
+        file_creation_error= "Impossible de créer le fichier : "
     ),
 
     LanguageCode.AR: LanguageStrings(
@@ -512,11 +552,6 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         file_menu="ملف",
         edit_menu="تحرير",
         view_menu="عرض",
-
-        # Arabic
-        bookmark_section="تبديل الإشارة",
-        next_bookmark="الإشارة التالية",
-        previous_bookmark="الإشارة السابقة",
 
         # File menu items
         new_mindspace="مساحة ذهنية جديدة",
@@ -664,6 +699,24 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
         conversation_status="النموذج: {model} | {temperature} | آخر رد - المدخلات: {input_tokens} ({max_tokens}) | المخرجات: {output_tokens}",
         conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
-        conversation_status_no_temperature="درجة الحرارة: غير متوفر"
+        conversation_status_no_temperature="درجة الحرارة: غير متوفر",
+        
+        # Bookmark 
+        bookmark_section="تبديل الإشارة",
+        next_bookmark="الإشارة التالية",
+        previous_bookmark="الإشارة السابقة",
+        
+        #Mindspace File Tree Edit Menu Errors and Options
+        rename= "إعادة التسمية",
+        delete= "حذف",
+        new= "جديد",
+        new_folder= "مجلد",
+        rename_file_title= "إعادة تسمية الملف",
+        rename_file_prompt= "أدخل اسمًا جديدًا:",
+        rename_error_title= "خطأ في إعادة التسمية",
+        rename_error_exists= "يوجد ملف بهذا الاسم بالفعل.",
+        rename_error_generic= "تعذر إعادة تسمية الملف: ",
+        file_creation_error_title= "خطأ في إنشاء الملف",
+        file_creation_error= "تعذر إنشاء الملف: "
     )
 }

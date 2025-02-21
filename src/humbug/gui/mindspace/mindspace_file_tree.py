@@ -5,7 +5,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
-    QLabel, QSizePolicy, QInputDialog, QMessageBox
+    QLabel, QSizePolicy, QInputDialog
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
@@ -105,6 +105,7 @@ class MindspaceFileTree(QWidget):
         
         # Create context menu
         menu = QMenu(self)
+        strings = self._language_manager.strings
 
         # Determine the path and whether it's a file or directory
         if index.isValid():
@@ -114,56 +115,59 @@ class MindspaceFileTree(QWidget):
             is_dir = os.path.isdir(path)
             
             # Rename action
-            rename_action = menu.addAction(self._language_manager.strings.rename_conversation 
-                                           if not is_dir and path.lower().endswith('.conv') 
-                                           else "Rename")
-            
+            rename_action = menu.addAction(
+                strings.rename_conversation if not is_dir and path.lower().endswith('.conv') 
+                else strings.rename
+            )
+
             # Delete action
-            delete_action = menu.addAction("Delete")
+            delete_action = menu.addAction(strings.delete)
             menu.addSeparator()
 
-        # New file/folder submenu
-        new_menu = menu.addMenu("New")
+            # New file/folder submenu
+            new_menu = menu.addMenu(strings.new)
+            
+            # File type options
+            file_types = [
+                ("Text File", ".txt"),
+                ("Python File", ".py"),
+                ("Markdown File", ".md"),
+                ("JSON File", ".json"),
+                ("HTML File", ".html"),
+                ("CSS File", ".css"),
+                ("JavaScript File", ".js")
+            ]
+            
+            for name, ext in file_types:
+                new_file_action = new_menu.addAction(name)
+                new_file_action.triggered.connect(lambda checked, extension=ext: 
+                                                self._create_new_file(extension))
+
+            # New folder action
+            new_folder_action = new_menu.addAction(strings.new_folder)
+
+            # Execute the menu
+            action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
+
+            if action:
+                if action == rename_action:
+                    if not is_dir and path.lower().endswith('.conv'):
+                        self._handle_rename_conversation(path)
+                    else:
+                        self._rename_file(path)
+                elif action == delete_action:
+                    self._handle_delete_file(path)
+
         
-        # File type options
-        file_types = [
-            ("Text File", ".txt"),
-            ("Python File", ".py"),
-            ("Markdown File", ".md"),
-            ("JSON File", ".json"),
-            ("HTML File", ".html"),
-            ("CSS File", ".css"),
-            ("JavaScript File", ".js")
-        ]
-        
-        for name, ext in file_types:
-            new_file_action = new_menu.addAction(name)
-            new_file_action.triggered.connect(lambda checked, extension=ext: 
-                                              self._create_new_file(extension))
-
-        # New folder action
-        new_folder_action = new_menu.addAction("Folder")
-
-        # Execute the menu
-        action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
-
-        # Handle actions
-        if index.isValid():
-            if action == rename_action:
-                if not is_dir and path.lower().endswith('.conv'):
-                    self._handle_rename_conversation(path)
-                else:
-                    self._rename_file(path)
-            elif action == delete_action:
-                self._handle_delete_file(path)
 
     def _rename_file(self, path):
         """Prompt user to rename a file and handle renaming."""
+        strings = self._language_manager.strings
         old_name = os.path.basename(path)
         new_name, ok = QInputDialog.getText(
             self, 
-            "Rename File", 
-            "Enter new name:", 
+            strings.rename_file_title, 
+            strings.rename_file_prompt, 
             text=old_name
         )
         
@@ -174,10 +178,10 @@ class MindspaceFileTree(QWidget):
             try:
                 # Check if file already exists
                 if os.path.exists(new_path):
-                    QMessageBox.warning(
+                    MessageBox.warning(
                         self, 
-                        "Rename Error", 
-                        "A file with this name already exists."
+                        strings.rename_error_title, 
+                        strings.rename_error_exists
                     )
                     return
 
@@ -185,14 +189,17 @@ class MindspaceFileTree(QWidget):
                 # Emit signal for any necessary updates
                 self.file_renamed.emit(path, new_path)
             except OSError as e:
-                QMessageBox.warning(
+                MessageBox.warning(
                     self, 
-                    "Rename Error", 
-                    f"Could not rename file: {str(e)}"
+                    strings.rename_error_title, 
+                    strings.rename_error_generic.format(str(e))
                 )
+
 
     def _create_new_file(self, extension):
         """Create a new file with the specified extension."""
+        strings = self._language_manager.strings
+        
         # Determine the current directory
         current_path = self._mindspace_path or self._fs_model.rootPath()
 
@@ -213,10 +220,10 @@ class MindspaceFileTree(QWidget):
             # Emit signal to open the newly created file
             self.file_activated.emit(new_file_path)
         except OSError as e:
-            QMessageBox.warning(
+            MessageBox.warning(
                 self, 
-                "File Creation Error", 
-                f"Could not create file: {str(e)}"
+                strings.file_creation_error_title, 
+                strings.file_creation_error.format(str(e))
             )
 
     def _handle_delete_file(self, path: str):

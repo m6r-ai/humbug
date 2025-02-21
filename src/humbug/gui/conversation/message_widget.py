@@ -109,7 +109,11 @@ class MessageWidget(QFrame):
         return text_area
 
     def _show_enhanced_text_context_menu(self, pos) -> None:
-        """Show an enhanced context menu for text areas."""
+        """Show an enhanced context menu for text areas, adding to standard edit menu.
+
+        Args:
+            pos: Position in text edit coordinates
+        """
         text_edit = self.sender()
 
         # Create standard menu first

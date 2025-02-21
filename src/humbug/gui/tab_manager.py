@@ -20,7 +20,7 @@ from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_column import TabColumn
-from humbug.gui.column_splitter import ColumnSplitter
+from humbug.gui.tab_column_splitter import TabColumnSplitter
 from humbug.gui.tab_label import TabLabel
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
@@ -84,7 +84,7 @@ class TabManager(QWidget):
         self._stack.addWidget(self._columns_widget)
 
         # Create splitter for columns
-        self._column_splitter = ColumnSplitter()
+        self._column_splitter = TabColumnSplitter()
         self._column_splitter.setHandleWidth(1)
         self._columns_layout.addWidget(self._column_splitter)
 
@@ -389,9 +389,18 @@ class TabManager(QWidget):
         self.column_state_changed.emit()
 
     def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
-        """Remove a column and resize the remaining columns."""
+        """
+        Remove a column and resize the remaining columns.
+
+        Args:
+            column_number: Index of the column to remove
+            column: Column widget to remove
+        """
         del self._tab_columns[column_number]
         column.deleteLater()
+        
+        # Resize splitter to evenly distribute space
+        # Note: We add 1 to column count because deletion hasn't processed yet
 
         # Distribute space evenly among remaining columns
         if self._tab_columns:
@@ -1020,7 +1029,7 @@ class TabManager(QWidget):
 
     def can_find(self) -> bool:
         tab = self._get_current_tab()
-        return (tab != None)
+        return (tab is not None)
 
     def find(self):
         tab = self._get_current_tab()

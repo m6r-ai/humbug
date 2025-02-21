@@ -180,10 +180,10 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setShortcut(QKeySequence("Ctrl+]"))
         
         self._swap_column_left_action = QAction(strings.swap_column_left, self)
-        self._swap_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        self._swap_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+L"))
 
         self._swap_column_right_action = QAction(strings.swap_column_right, self)
-        self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Shift+D"))
+        self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
 
         # Modify the _handle_language_changed method to set up these actions
 
@@ -713,10 +713,8 @@ class MainWindow(QMainWindow):
         
         # Swap column actions
         left_to_right = self._language_manager.left_to_right
-        self._swap_column_left_action.setEnabled(len(tab_manager._tab_columns) > 1 and 
-                                                tab_manager._get_current_column() > 0)
-        self._swap_column_right_action.setEnabled(len(tab_manager._tab_columns) > 1 and 
-                                                tab_manager._get_current_column() < len(tab_manager._tab_columns) - 1)
+        self._swap_column_left_action.setEnabled(tab_manager.can_swap_column(True))
+        self._swap_column_right_action.setEnabled(tab_manager.can_swap_column(False))
 
 
     def _handle_style_changed(self) -> None:

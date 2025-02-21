@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QSplitter
 
-class ColumnSplitter(QSplitter):
+class TabColumnSplitter(QSplitter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setChildrenCollapsible(True)

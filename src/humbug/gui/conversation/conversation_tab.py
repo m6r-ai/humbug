@@ -181,11 +181,6 @@ class ConversationTab(TabBase):
         # Update input widget streaming state text
         self._input.set_streaming(self._is_streaming)
 
-        # No need to explicitly update message widgets as they handle
-        # their own language change 
-        
-        super()._handle_language_changed()
-
         # Ensure language-specific strings are updated for bookmark-related actions
         strings = self._language_manager.strings
 
@@ -236,7 +231,7 @@ class ConversationTab(TabBase):
         Returns:
             TabState containing conversation-specific state
         """
-        metadata_state = super().get_state(temp_state).metadata or {}
+        metadata_state = {}
 
         if temp_state:
             bookmark_indices = [self._messages.index(msg) for msg in self._bookmarked_messages]
@@ -1125,26 +1120,18 @@ class ConversationTab(TabBase):
         settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
 
         # Show menu and handle selection
-        action = menu.exec_(self.mapToGlobal(pos))
-        if not action:
-            return
-
-        if action == fork_action:
-            self.forkRequested.emit()
-        elif action == settings_action:
-            self.show_conversation_settings_dialog() # Show menu and handle selection
-        action = menu.exec_(self.mapToGlobal(pos))
-        if not action:
-            return
-
-        if action == fork_action:
+        if action == settings_action:
+            self.show_conversation_settings_dialog() 
+        elif action == fork_action:
             self.forkRequested.emit()
         elif action == next_bookmark_action:
             self.navigate_bookmarks(forward=True)
         elif action == prev_bookmark_action:
             self.navigate_bookmarks(forward=False)
-        elif action == settings_action:
-            self.show_conversation_settings_dialog()
+            
+        action = menu.exec_(self.mapToGlobal(pos))
+        if not action:
+            return
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
