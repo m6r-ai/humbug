@@ -15,11 +15,9 @@ class GoParserState(ParserState):
 
     Attributes:
         in_element: Indicates if we're currently parsing an element access
-        in_import: Indicates if we're currently parsing an import statement
         in_struct_literal: Indicates if we're parsing a struct literal
     """
     in_element: bool = False
-    in_import: bool = False
     in_struct_literal: bool = False
 
 
@@ -56,13 +54,11 @@ class GoParser(Parser):
             - Tracking import statements
         """
         in_element = False
-        in_import = False
         in_struct_literal = False
         prev_lexer_state = None
 
         if prev_parser_state:
             in_element = prev_parser_state.in_element
-            in_import = prev_parser_state.in_import
             in_struct_literal = prev_parser_state.in_struct_literal
             prev_lexer_state = prev_parser_state.lexer_state
 
@@ -75,10 +71,7 @@ class GoParser(Parser):
                 break
 
             if token.type == 'KEYWORD':
-                if token.value == 'import':
-                    in_import = True
-                    in_struct_literal = False
-                elif token.value == 'struct':
+                if token.value == 'struct':
                     next_token = lexer.peek_next_token(['WHITESPACE'])
                     if next_token and next_token.type == 'OPERATOR' and next_token.value == '{':
                         in_struct_literal = True
@@ -91,7 +84,7 @@ class GoParser(Parser):
                 self._tokens.append(token)
                 continue
 
-            if token.type != 'IDENTIFIER' or in_import:
+            if token.type != 'IDENTIFIER':
                 self._tokens.append(token)
                 continue
 
@@ -152,6 +145,5 @@ class GoParser(Parser):
         parser_state.parsing_continuation = lexer_state.in_block_comment
         parser_state.lexer_state = lexer_state
         parser_state.in_element = in_element
-        parser_state.in_import = in_import
         parser_state.in_struct_literal = in_struct_literal
         return parser_state
