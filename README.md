@@ -45,8 +45,8 @@ TBD
     - Configurable temperature settings for supported models.
     - Error handling and retry mechanisms for API requests.
 - **File Editing:**
-    - Syntax highlighting for various languages.  Currently supported: C, C++, CSS, Go, HTML, Java, JavaScript,
-      JSON, Kotlin, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
+    - Syntax highlighting for various languages and file formats.  Currently supported: C, C++, CSS, Go, HTML, Java,
+      JavaScript, JSON, Kotlin, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
     - Auto-backup functionality for unsaved changes.
 - **Command Line Shell:**
     - Support for accessing the local shell on Linux and MacOS systems.
