@@ -75,6 +75,17 @@ Context: Capabilities
 
                 Column sizes are preserved between sessions.
 
+            Context: Column swapping
+                Users can swap columns using hotkeys:
+                - Ctrl+Shift+L: Swap current column with the column to its left
+                - Ctrl+Shift+R: Swap current column with the column to its right
+                
+                Column swapping rules:
+                - Only works when multiple columns are open
+                - Maintains the active tab and column state
+                - Preserves tab order within the swapped columns
+
+
         Context: File tree view
             The file tree displays the contents of the current mindspace:
 
@@ -102,12 +113,36 @@ Context: Capabilities
                 If the user clicks the right mouse button while a file is highlighted then they will be
                 given a pop-up menu.
 
-                Context: File deletion
-                    If the user selects "Delete File" then the system will confirm they
-                    want to delete it via a message box.  The message box will warn that deleting the file
-                    will also close any tabs based on the file and will discard any unsaved changes.  If the
-                    user agrees then the tabs will be closed and the file deleted.  If the user does not
-                    agree then the action will be cancelled.
+                Context: Pop-up menu
+                    If the user clicks the right mouse button while a file is highlighted then they will be
+                    given a pop-up menu.
+
+                    Context: File deletion
+                        If the user selects "Delete File" then the system will confirm they
+                        want to delete it via a message box.  The message box will warn that deleting the file
+                        will also close any tabs based on the file and will discard any unsaved changes.  If the
+                        user agrees then the tabs will be closed and the file deleted.  If the user does not
+                        agree then the action will be cancelled.
+
+                    Context: Rename file
+                        If the user selects "Rename File" then the system will pop up a dialog box
+                        that allows them to rename the file to any name that is not already used.
+
+                    Context: Create new file
+                        The pop-up menu supports creating new files based on syntax-highlighted file types.
+                        New files are created using templates supported by the application's syntax highlighters.
+
+                        Supported file types include:
+                        - Text files (.txt)
+                        - Python files (.py)
+                        - Markdown files (.md)
+                        - JSON files (.json)
+                        - HTML files (.html)
+                        - CSS files (.css)
+                        - JavaScript files (.js)
+
+                        When a file type is selected, a new file is created in the current directory 
+                        with a default name and the chosen file extension.
 
                 Context: Rename conversation
                     If the user selects "Rename Conversation" then the system will pop up a dialog box
@@ -258,6 +293,22 @@ Context: Capabilities
 
                         Context: Conversation settings
                             Selecting this will pop up the conversation settings dialog.
+
+                        Context: Bookmarking messages
+                            - Right-click on a message to toggle its bookmark status
+                            - Bookmarked messages are visually distinguished (e.g., with an icon or color)
+                            - Multiple messages can be bookmarked in a single conversation
+
+                        Context: Bookmark navigation
+                            - Right-click menu provides options to navigate bookmarks
+                            - Hotkeys for bookmark navigation:
+                                * Ctrl+Shift+N: Jump to next bookmarked message
+                                * Ctrl+Shift+P: Jump to previous bookmarked message
+                            
+                            Bookmark navigation rules:
+                            - Cycles through bookmarked messages in order of appearance
+                            - Wraps around to the first/last bookmark when reaching the end/beginning
+                            - Ensures the bookmarked message is fully visible in the conversation view
 
                 Context: Editor tabs
                     Each editor tab will be named with the filename being edited.
