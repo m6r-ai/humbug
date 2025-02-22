@@ -7,12 +7,12 @@ from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
     QLabel, QSizePolicy, QInputDialog
 )
-from PySide6.QtGui import QAction
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.conversation_rename_dialog import ConversationRenameDialog
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
+from humbug.gui.mindspace.conversation_rename_dialog import ConversationRenameDialog
+from humbug.gui.mindspace.file_rename_dialog import FileRenameDialog
 from humbug.gui.mindspace.file_tree_icon_provider import FileTreeIconProvider
 from humbug.gui.mindspace.file_tree_view import FileTreeView
 from humbug.gui.mindspace.mindspace_file_model import MindspaceFileModel
@@ -143,9 +143,6 @@ class MindspaceFileTree(QWidget):
                 new_file_action.triggered.connect(lambda checked, extension=ext: 
                                                 self._create_new_file(extension))
 
-            # New folder action
-            new_folder_action = new_menu.addAction(strings.new_folder)
-
             # Execute the menu
             action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
@@ -154,32 +151,32 @@ class MindspaceFileTree(QWidget):
                     if not is_dir and path.lower().endswith('.conv'):
                         self._handle_rename_conversation(path)
                     else:
-                        self._rename_file(path)
+                        self._handle_rename_file(path)
                 elif action == delete_action:
                     self._handle_delete_file(path)
 
-        
-
-    def _rename_file(self, path):
+    def _handle_rename_file(self, path):
         """Prompt user to rename a file and handle renaming."""
         strings = self._language_manager.strings
         old_name = os.path.basename(path)
-        new_name, ok = QInputDialog.getText(
-            self, 
-            strings.rename_file_title, 
-            strings.rename_file_prompt, 
-            text=old_name
-        )
-        
-        if ok and new_name and new_name != old_name:
+        dialog = FileRenameDialog(old_name, self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        new_name = dialog.get_name()
+        if not new_name:
+            return
+
+
+        if new_name != old_name:
             directory = os.path.dirname(path)
             new_path = os.path.join(directory, new_name)
-            
+
             try:
                 # Check if file already exists
                 if os.path.exists(new_path):
                     MessageBox.warning(
-                        self, 
+                        self,
                         strings.rename_error_title, 
                         strings.rename_error_exists
                     )
@@ -190,16 +187,15 @@ class MindspaceFileTree(QWidget):
                 self.file_renamed.emit(path, new_path)
             except OSError as e:
                 MessageBox.warning(
-                    self, 
+                    self,
                     strings.rename_error_title, 
                     strings.rename_error_generic.format(str(e))
                 )
 
-
     def _create_new_file(self, extension):
         """Create a new file with the specified extension."""
         strings = self._language_manager.strings
-        
+
         # Determine the current directory
         current_path = self._mindspace_path or self._fs_model.rootPath()
 
@@ -214,9 +210,9 @@ class MindspaceFileTree(QWidget):
 
         try:
             # Create an empty file
-            with open(new_file_path, 'w') as f:
+            with open(new_file_path, 'w', encoding='utf-8') as f:
                 pass
-            
+
             # Emit signal to open the newly created file
             self.file_activated.emit(new_file_path)
         except OSError as e:
