@@ -12,4 +12,3 @@ Cameron McFarlane [Camium02](https://github.com/Camium02)
 * Support swapping columns left and right.
 * Bookmarking messages in the conversation view.
 * Auto-merge columns when the column splitter is moved to nothing.
-
