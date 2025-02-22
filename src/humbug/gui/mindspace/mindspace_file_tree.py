@@ -5,7 +5,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
-    QLabel, QSizePolicy, QInputDialog
+    QLabel, QSizePolicy
 )
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
 
@@ -102,7 +102,7 @@ class MindspaceFileTree(QWidget):
         """Show context menu for file tree items."""
         # Get the index at the clicked position
         index = self._tree_view.indexAt(position)
-        
+
         # Create context menu
         menu = QMenu(self)
         strings = self._language_manager.strings
@@ -113,10 +113,10 @@ class MindspaceFileTree(QWidget):
             source_index = self._filter_model.mapToSource(index)
             path = self._fs_model.filePath(source_index)
             is_dir = os.path.isdir(path)
-            
+
             # Rename action
             rename_action = menu.addAction(
-                strings.rename_conversation if not is_dir and path.lower().endswith('.conv') 
+                strings.rename_conversation if not is_dir and path.lower().endswith('.conv')
                 else strings.rename
             )
 
@@ -126,7 +126,7 @@ class MindspaceFileTree(QWidget):
 
             # New file/folder submenu
             new_menu = menu.addMenu(strings.new)
-            
+
             # File type options
             file_types = [
                 ("Text File", ".txt"),
@@ -137,10 +137,10 @@ class MindspaceFileTree(QWidget):
                 ("CSS File", ".css"),
                 ("JavaScript File", ".js")
             ]
-            
+
             for name, ext in file_types:
                 new_file_action = new_menu.addAction(name)
-                new_file_action.triggered.connect(lambda checked, extension=ext: 
+                new_file_action.triggered.connect(lambda checked, extension=ext:
                                                 self._create_new_file(extension))
 
             # Execute the menu
@@ -167,7 +167,6 @@ class MindspaceFileTree(QWidget):
         if not new_name:
             return
 
-
         if new_name != old_name:
             directory = os.path.dirname(path)
             new_path = os.path.join(directory, new_name)
@@ -177,7 +176,7 @@ class MindspaceFileTree(QWidget):
                 if os.path.exists(new_path):
                     MessageBox.warning(
                         self,
-                        strings.rename_error_title, 
+                        strings.rename_error_title,
                         strings.rename_error_exists
                     )
                     return
@@ -188,7 +187,7 @@ class MindspaceFileTree(QWidget):
             except OSError as e:
                 MessageBox.warning(
                     self,
-                    strings.rename_error_title, 
+                    strings.rename_error_title,
                     strings.rename_error_generic.format(str(e))
                 )
 
@@ -210,15 +209,15 @@ class MindspaceFileTree(QWidget):
 
         try:
             # Create an empty file
-            with open(new_file_path, 'w', encoding='utf-8') as f:
+            with open(new_file_path, 'w', encoding='utf-8') as _f:
                 pass
 
             # Emit signal to open the newly created file
             self.file_activated.emit(new_file_path)
         except OSError as e:
             MessageBox.warning(
-                self, 
-                strings.file_creation_error_title, 
+                self,
+                strings.file_creation_error_title,
                 strings.file_creation_error.format(str(e))
             )
 
