@@ -186,6 +186,7 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Alt+]"))
 
         self._toggle_bookmark_action = QAction(strings.bookmark_section, self)
+        self._toggle_bookmark_action.setCheckable(True)
         self._toggle_bookmark_action.setShortcut(QKeySequence("Ctrl+B"))
         self._toggle_bookmark_action.triggered.connect(self._toggle_bookmark)
 

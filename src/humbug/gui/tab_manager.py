@@ -1222,6 +1222,14 @@ class TabManager(QWidget):
 
         return tab.can_toggle_bookmark()
 
+    def is_checked_bookmark(self) -> bool:
+        """Is the current bookmark set (checked)?"""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return False
+
+        return tab.is_checked_bookmark()
+
     def toggle_bookmark(self) -> None:
         """Handle toggling a bookmark."""
         tab = self._get_current_tab()

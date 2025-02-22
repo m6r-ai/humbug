@@ -1149,6 +1149,19 @@ class ConversationTab(TabBase):
 
         return True
 
+    def is_checked_bookmark(self) -> bool:
+        """Is the current bookmark set (checked)?"""
+        focus_widget = self.focusWidget()
+        if not focus_widget:
+            return False
+
+        while not isinstance(focus_widget, MessageWidget):
+            focus_widget = focus_widget.parentWidget()
+            if isinstance(focus_widget, ConversationTab):
+                return False
+
+        return focus_widget.is_bookmarked()
+
     def toggle_bookmark(self) -> None:
         """Toggle a bookmark at the current message."""
         focus_widget = self.focusWidget()
