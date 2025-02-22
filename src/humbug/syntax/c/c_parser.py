@@ -1,31 +1,34 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from humbug.syntax.c.c_lexer import CLexer
 from humbug.syntax.lexer import Token
-from humbug.syntax.c_parser import CParser, CParserState
-from humbug.syntax.cpp_lexer import CppLexer
-from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
+from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 @dataclass
-class CppParserState(CParserState):
+class CParserState(ParserState):
     """
-    State information for the Cpp parser.
+    State information for the C parser.
+
+    Attributes:
+        in_element: Indicates if we're currently parsing an element
     """
+    in_element: bool = False
 
 
-@ParserRegistry.register_parser(ProgrammingLanguage.CPP)
-class CppParser(CParser):
+@ParserRegistry.register_parser(ProgrammingLanguage.C)
+class CParser(Parser):
     """
-    Parser for C++ code.
+    Parser for C code.
 
-    This parser extends the C parser to handle C++-specific syntax while
-    maintaining the same token processing logic for function calls and
-    element access.
+    This parser processes tokens from the C lexer and handles special cases
+    like function calls and element access.
     """
 
-    def parse(self, prev_parser_state: Optional[CppParserState], input_str: str) -> CppParserState:
+    def parse(self, prev_parser_state: Optional[CParserState], input_str: str) -> CParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -39,8 +42,7 @@ class CppParser(CParser):
         Note:
             The parser converts identifier tokens to FUNCTION_OR_METHOD tokens
             when they're followed by parentheses, and to ELEMENT tokens when
-            they're part of a dotted or arrow access chain. It also handles
-            C++-specific cases like the 'this' keyword.
+            they're part of a dotted or arrow access chain.
         """
         in_element = False
         prev_lexer_state = None
@@ -48,7 +50,7 @@ class CppParser(CParser):
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = CppLexer()
+        lexer = CLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
@@ -57,14 +59,8 @@ class CppParser(CParser):
                 break
 
             if token.type != 'IDENTIFIER':
-                if token.type == 'OPERATOR' and token.value not in ('.', '->'):
-                    in_element = False
-                    self._tokens.append(token)
-                    continue
-
-                if token.type != 'KEYWORD' or token.value != 'this':
-                    self._tokens.append(token)
-                    continue
+                self._tokens.append(token)
+                continue
 
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
@@ -99,7 +95,7 @@ class CppParser(CParser):
 
             self._tokens.append(token)
 
-        parser_state = CppParserState()
+        parser_state = CParserState()
         parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
         parser_state.parsing_continuation = lexer_state.in_block_comment
         parser_state.lexer_state = lexer_state

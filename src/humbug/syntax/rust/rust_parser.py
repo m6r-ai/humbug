@@ -3,9 +3,9 @@ from typing import Optional
 
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_registry import ParserRegistry
-from humbug.syntax.rust_lexer import RustLexer
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.rust.rust_lexer import RustLexer
 
 
 @dataclass

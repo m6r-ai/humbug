@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.lexer import Token
+from humbug.syntax.move.move_lexer import MoveLexer
 from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.move_lexer import MoveLexer
-from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_registry import ParserRegistry
+from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 @dataclass

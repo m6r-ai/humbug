@@ -5,7 +5,7 @@ from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.swift_lexer import SwiftLexer
+from humbug.syntax.swift.swift_lexer import SwiftLexer
 
 
 @dataclass

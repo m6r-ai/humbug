@@ -1,34 +1,30 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from humbug.syntax.javascript.javascript_parser import JavaScriptParser, JavaScriptParserState
 from humbug.syntax.lexer import Token
-from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.python_lexer import PythonLexer
-from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_registry import ParserRegistry
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.typescript.typescript_lexer import TypeScriptLexer
 
 
 @dataclass
-class PythonParserState(ParserState):
+class TypeScriptParserState(JavaScriptParserState):
     """
-    State information for the Python parser.
-
-    Attributes:
-        in_element: Indicates if we're currently parsing an element
-    """
-    in_element: bool = False
-
-
-@ParserRegistry.register_parser(ProgrammingLanguage.PYTHON)
-class PythonParser(Parser):
-    """
-    Parser for Python code.
-
-    This parser processes tokens from the Python lexer and handles special cases
-    like function calls and element access.
+    State information for the Cpp parser.
     """
 
-    def parse(self, prev_parser_state: Optional[PythonParserState], input_str: str) -> PythonParserState:
+
+@ParserRegistry.register_parser(ProgrammingLanguage.TYPESCRIPT)
+class TypeScriptParser(JavaScriptParser):
+    """
+    Parser for TypeScript code.
+
+    This parser extends the JavaScript parser to handle TypeScript-specific syntax
+    and constructs.
+    """
+
+    def parse(self, prev_parser_state: Optional[TypeScriptParserState], input_str: str) -> TypeScriptParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -40,18 +36,16 @@ class PythonParser(Parser):
             The updated parser state after parsing
 
         Note:
-            The parser converts identifier tokens to FUNCTION_OR_METHOD tokens
-            when they're followed by parentheses, and to ELEMENT tokens when
-            they're part of a dotted access chain.
+            Uses the TypeScript lexer for token generation while maintaining the
+            JavaScript parsing logic.
         """
         in_element = False
-        in_import = False
         prev_lexer_state = None
         if prev_parser_state:
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = PythonLexer()
+        lexer = TypeScriptLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
@@ -59,12 +53,20 @@ class PythonParser(Parser):
             if not token:
                 break
 
-            if token.type == 'KEYWORD' and token.value in ('from', 'import'):
-                in_import = True
+            if token.type != 'IDENTIFIER':
+                if (token.type == 'OPERATOR' and
+                        token.value not in ('.', '?.')):
+                    in_element = False
+                    self._tokens.append(token)
+                    continue
 
-            if token.type != 'IDENTIFIER' and not in_import:
-                self._tokens.append(token)
-                continue
+                if token.type != 'KEYWORD':
+                    self._tokens.append(token)
+                    continue
+
+                if token.value != 'this' and not in_element:
+                    self._tokens.append(token)
+                    continue
 
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
@@ -84,7 +86,7 @@ class PythonParser(Parser):
                     continue
 
                 # Is the next token going to be an element?
-                if next_token.value == '.':
+                if next_token.value in ('.', '?.'):
                     next_in_element = True
 
             in_element = next_in_element
@@ -99,9 +101,9 @@ class PythonParser(Parser):
 
             self._tokens.append(token)
 
-        parser_state = PythonParserState()
-        parser_state.continuation_state = 1 if lexer_state.in_docstring else 0
-        parser_state.parsing_continuation = lexer_state.in_docstring
+        parser_state = TypeScriptParserState()
+        parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
+        parser_state.parsing_continuation = lexer_state.in_block_comment
         parser_state.lexer_state = lexer_state
         parser_state.in_element = in_element
         return parser_state

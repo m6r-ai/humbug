@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from humbug.syntax.json.json_lexer import JSONLexer
 from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.json_lexer import JSONLexer
-from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_registry import ParserRegistry
+from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 @dataclass

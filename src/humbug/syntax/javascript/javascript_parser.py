@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from humbug.syntax.javascript.javascript_lexer import JavaScriptLexer
 from humbug.syntax.lexer import Token
 from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.javascript_lexer import JavaScriptLexer
-from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_registry import ParserRegistry
+from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 @dataclass

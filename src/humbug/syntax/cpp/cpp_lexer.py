@@ -1,4 +1,4 @@
-from humbug.syntax.c_lexer import CLexer
+from humbug.syntax.c.c_lexer import CLexer
 from humbug.syntax.lexer import Token
 
 

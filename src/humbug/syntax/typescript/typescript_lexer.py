@@ -1,6 +1,6 @@
 from typing import Set
 
-from humbug.syntax.javascript_lexer import JavaScriptLexer
+from humbug.syntax.javascript.javascript_lexer import JavaScriptLexer
 
 
 class TypeScriptLexer(JavaScriptLexer):
