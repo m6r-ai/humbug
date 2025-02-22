@@ -178,7 +178,7 @@ class MainWindow(QMainWindow):
 
         self._merge_column_right_action = QAction(strings.merge_column_right, self)
         self._merge_column_right_action.setShortcut(QKeySequence("Ctrl+]"))
-        
+
         self._swap_column_left_action = QAction(strings.swap_column_left, self)
         self._swap_column_left_action.setShortcut(QKeySequence("Ctrl+Alt+["))
 
@@ -398,7 +398,7 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.triggered.connect(lambda: self._swap_column(not left_to_right))
 
         self._handle_style_changed()
-        
+
     def _swap_column(self, swap_left: bool) -> None:
         """Swap the current column."""
         self._tab_manager.swap_column(swap_left)
