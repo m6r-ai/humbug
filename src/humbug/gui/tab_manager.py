@@ -1220,7 +1220,7 @@ class TabManager(QWidget):
         if not tab or not isinstance(tab, ConversationTab):
             return False
 
-        return True
+        return tab.can_toggle_bookmark()
 
     def toggle_bookmark(self) -> None:
         """Handle toggling a bookmark."""
@@ -1228,7 +1228,7 @@ class TabManager(QWidget):
         if not tab or not isinstance(tab, ConversationTab):
             return
 
-        # Do toggle
+        tab.toggle_bookmark()
 
     def can_next_bookmark(self) -> bool:
         """Can we move to the next bookmark?"""
@@ -1236,7 +1236,7 @@ class TabManager(QWidget):
         if not tab or not isinstance(tab, ConversationTab):
             return False
 
-        return True
+        return tab.can_next_bookmark()
 
     def next_bookmark(self) -> None:
         """Handle navigating to the next bookmark."""
@@ -1244,7 +1244,7 @@ class TabManager(QWidget):
         if not tab or not isinstance(tab, ConversationTab):
             return
 
-        # Do nav
+        tab.next_bookmark()
 
     def can_previous_bookmark(self) -> bool:
         """Can we move to the next bookmark?"""
@@ -1252,7 +1252,7 @@ class TabManager(QWidget):
         if not tab or not isinstance(tab, ConversationTab):
             return False
 
-        return True
+        return tab.can_previous_bookmark()
 
     def previous_bookmark(self) -> None:
         """Handle navigating to the next bookmark."""
@@ -1260,4 +1260,4 @@ class TabManager(QWidget):
         if not tab or not isinstance(tab, ConversationTab):
             return
 
-        # Do nav
+        tab.previous_bookmark()

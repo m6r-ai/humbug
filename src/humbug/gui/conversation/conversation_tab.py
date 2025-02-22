@@ -308,14 +308,6 @@ class ConversationTab(TabBase):
         # Create new tab instance
         tab = cls(state.tab_id, state.path, state.timestamp, ai_backends, parent)
 
-        # Restore bookmarks if available
-        if state.metadata and 'bookmarks' in state.metadata:
-            bookmark_indices = state.metadata['bookmarks']
-            for index in bookmark_indices:
-                if 0 <= index < len(tab._messages):
-                    msg_widget = tab._messages[index]
-                    tab._toggle_message_bookmark(msg_widget)
-
         # Load conversation from transcript
         try:
             transcript = TranscriptHandler(state.path)
@@ -339,6 +331,13 @@ class ConversationTab(TabBase):
 
                     if "temperature" in state.metadata["settings"]:
                         tab._settings.temperature = state.metadata["settings"]["temperature"]
+
+                if 'bookmarks' in state.metadata:
+                    bookmark_indices = state.metadata['bookmarks']
+                    for index in bookmark_indices:
+                        if 0 <= index < len(tab._messages):
+                            msg_widget = tab._messages[index]
+                            tab._toggle_message_bookmark(msg_widget)
 
             return tab
 
@@ -1108,13 +1107,11 @@ class ConversationTab(TabBase):
 
         # Add bookmark navigation actions
         next_bookmark_action = menu.addAction(self._language_manager.strings.next_bookmark)
-        prev_bookmark_action = menu.addAction(self._language_manager.strings.previous_bookmark)
-
-        # Disable actions if no bookmarks
         next_bookmark_action.setEnabled(bool(self._bookmarked_messages))
+        prev_bookmark_action = menu.addAction(self._language_manager.strings.previous_bookmark)
         prev_bookmark_action.setEnabled(bool(self._bookmarked_messages))
-
         menu.addSeparator()
+
         settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
 
         action = menu.exec_(self.mapToGlobal(pos))
@@ -1122,14 +1119,14 @@ class ConversationTab(TabBase):
             return
 
         # Show menu and handle selection
-        if action == settings_action:
-            self.show_conversation_settings_dialog()
-        elif action == fork_action:
+        if action == fork_action:
             self.forkRequested.emit()
         elif action == next_bookmark_action:
-            self.navigate_bookmarks(forward=True)
+            self.next_bookmark()
         elif action == prev_bookmark_action:
-            self.navigate_bookmarks(forward=False)
+            self.previous_bookmark()
+        elif action == settings_action:
+            self.show_conversation_settings_dialog()
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
@@ -1138,3 +1135,45 @@ class ConversationTab(TabBase):
 
         if dialog.exec() == QDialog.Accepted:
             self.update_conversation_settings(dialog.get_settings())
+
+    def can_toggle_bookmark(self) -> bool:
+        """Can we toggle bookmarks?"""
+        focus_widget = self.focusWidget()
+        if not focus_widget:
+            return False
+
+        while not isinstance(focus_widget, MessageWidget):
+            focus_widget = focus_widget.parentWidget()
+            if isinstance(focus_widget, ConversationTab):
+                return False
+
+        return True
+
+    def toggle_bookmark(self) -> None:
+        """Toggle a bookmark at the current message."""
+        focus_widget = self.focusWidget()
+        if not focus_widget:
+            return
+
+        while not isinstance(focus_widget, MessageWidget):
+            focus_widget = focus_widget.parentWidget()
+            if isinstance(focus_widget, ConversationTab):
+                return
+
+        self._toggle_message_bookmark(focus_widget)
+
+    def can_next_bookmark(self) -> bool:
+        """Can we go to a next bookmark?"""
+        return bool(self._bookmarked_messages)
+
+    def next_bookmark(self) -> None:
+        """Move to the next bookmark."""
+        self.navigate_bookmarks(forward=True)
+
+    def can_previous_bookmark(self) -> bool:
+        """Can we go to a previous bookmark?"""
+        return bool(self._bookmarked_messages)
+
+    def previous_bookmark(self) -> None:
+        """Move to the previous bookmark."""
+        self.navigate_bookmarks(forward=False)

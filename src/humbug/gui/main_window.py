@@ -187,12 +187,15 @@ class MainWindow(QMainWindow):
 
         self._toggle_bookmark_action = QAction(strings.bookmark_section, self)
         self._toggle_bookmark_action.setShortcut(QKeySequence("Ctrl+B"))
+        self._toggle_bookmark_action.triggered.connect(self._toggle_bookmark)
 
         self._next_bookmark_action = QAction(strings.next_bookmark, self)
         self._next_bookmark_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
+        self._next_bookmark_action.triggered.connect(self._next_bookmark)
 
         self._previous_bookmark_action = QAction(strings.previous_bookmark, self)
         self._previous_bookmark_action.setShortcut(QKeySequence("Ctrl+Shift+P"))
+        self._previous_bookmark_action.triggered.connect(self._previous_bookmark)
 
         # Modify the _handle_language_changed method to set up these actions
 
@@ -379,12 +382,6 @@ class MainWindow(QMainWindow):
         # Get the language direction
         left_to_right = self._language_manager.left_to_right
 
-        # Swap column actions
-        self._swap_column_left_action.triggered.disconnect()
-        self._swap_column_left_action.triggered.connect(lambda: self._swap_column(left_to_right))
-
-        self._swap_column_right_action.triggered.disconnect()
-        self._swap_column_right_action.triggered.connect(lambda: self._swap_column(not left_to_right))
 
         # Our logic for left and right reverses for right-to-left languages
         self._split_column_left_action.triggered.disconnect()
@@ -395,6 +392,10 @@ class MainWindow(QMainWindow):
         self._merge_column_left_action.triggered.connect(lambda: self._merge_column(left_to_right))
         self._merge_column_right_action.triggered.disconnect()
         self._merge_column_right_action.triggered.connect(lambda: self._merge_column(not left_to_right))
+        self._swap_column_left_action.triggered.disconnect()
+        self._swap_column_left_action.triggered.connect(lambda: self._swap_column(left_to_right))
+        self._swap_column_right_action.triggered.disconnect()
+        self._swap_column_right_action.triggered.connect(lambda: self._swap_column(not left_to_right))
 
         self._handle_style_changed()
         
