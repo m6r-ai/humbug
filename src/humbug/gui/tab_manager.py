@@ -29,7 +29,6 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
-
 class TabData:
     """Encapsulates data related to a tab."""
     def __init__(self, tab: TabBase, title: str):
@@ -48,7 +47,6 @@ class TabData:
 class TabManager(QWidget):
     """Manages multiple tabs across one or two columns."""
 
-    column_state_changed = Signal()
     status_message = Signal(StatusMessage)
 
     def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
@@ -235,7 +233,6 @@ class TabManager(QWidget):
 
                     # Update tab highlighting
                     self._update_tabs()
-                    self.column_state_changed.emit()
                     break
 
     def _handle_tab_drop(self, tab_id: str, target_column: TabColumn, target_index: int) -> None:
@@ -272,7 +269,6 @@ class TabManager(QWidget):
 
         # Update active states
         self._update_tabs()
-        self.column_state_changed.emit()
 
     def _handle_file_drop(self, file_path: str, target_column: TabColumn, target_index: int) -> None:
         """
@@ -386,7 +382,6 @@ class TabManager(QWidget):
         # Update states
         self._active_column = target_column
         self._update_tabs()
-        self.column_state_changed.emit()
 
     def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
         """
@@ -523,7 +518,6 @@ class TabManager(QWidget):
                 self._remove_column_and_resize(column_number, column)
 
                 self._update_tabs()
-                self.column_state_changed.emit()
 
         # If no tabs remain clean up the display
         if not self._tabs:
@@ -636,7 +630,6 @@ class TabManager(QWidget):
 
         # Emit signal about column state change
         self._update_tabs()
-        self.column_state_changed.emit()
 
     def can_merge_column(self, merge_left: bool) -> bool:
         """Can the current column be merged?"""
@@ -673,7 +666,6 @@ class TabManager(QWidget):
 
         # Emit signal about column state change
         self._update_tabs()
-        self.column_state_changed.emit()
 
     def can_swap_column(self, swap_left: bool) -> bool:
         """
@@ -749,7 +741,6 @@ class TabManager(QWidget):
 
         # Emit signal about column state change
         self._update_tabs()
-        self.column_state_changed.emit()
 
     def _get_current_column(self) -> int:
         """Get index of currently active column."""

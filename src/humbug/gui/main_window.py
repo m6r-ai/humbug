@@ -306,7 +306,6 @@ class MainWindow(QMainWindow):
         self._status_bar.addPermanentWidget(self._status_right)
 
         self.setStatusBar(self._status_bar)
-        self._tab_manager.column_state_changed.connect(self._handle_column_state_changed)
         self._tab_manager.status_message.connect(self._handle_status_message)
 
         self._handle_language_changed()
@@ -390,11 +389,6 @@ class MainWindow(QMainWindow):
     def _swap_column(self, swap_left: bool) -> None:
         """Swap the current column."""
         self._tab_manager.swap_column(swap_left)
-
-    def _handle_column_state_changed(self):
-        """Handle column state changes from tab manager."""
-        # Save mindspace state when column configuration changes
-        self._save_mindspace_state()
 
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
