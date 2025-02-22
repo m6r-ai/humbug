@@ -3,7 +3,7 @@
 from datetime import datetime
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint
-from PySide6.QtGui import QCursor, QMouseEvent, QAction
+from PySide6.QtGui import QCursor, QMouseEvent
 
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
@@ -121,24 +121,24 @@ class MessageWidget(QFrame):
 
         # Add our custom actions
         menu.addSeparator()
-        
+
+        fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
+        menu.addSeparator()
+
         # Add bookmark action
         bookmark_action = menu.addAction(self._language_manager.strings.bookmark_section)
         bookmark_action.setCheckable(True)
         bookmark_action.setChecked(self._is_bookmarked)
-
-        fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
         menu.addSeparator()
+
         settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
 
         # Show menu and handle selection
         action = menu.exec_(text_edit.mapToGlobal(pos))
-        if action == bookmark_action:
-            # Toggle bookmark state
-            self._is_bookmarked = not self._is_bookmarked
-            self.bookmarkRequested.emit(self)
-        elif action == fork_action:
+        if action == fork_action:
             self.forkRequested.emit()
+        elif action == bookmark_action:
+            self.bookmarkRequested.emit(self)
         elif action == settings_action:
             self.settingsRequested.emit()
 
@@ -214,7 +214,7 @@ class MessageWidget(QFrame):
         if event.buttons() == Qt.MouseButton.LeftButton:
             self._mouse_left_button_pressed = True
 
-    def _on_mouse_released(self, event: QMouseEvent):
+    def _on_mouse_released(self, _event: QMouseEvent):
         """Handle mouse release from text area."""
         self._mouse_left_button_pressed = False
         self.mouseReleased.emit()

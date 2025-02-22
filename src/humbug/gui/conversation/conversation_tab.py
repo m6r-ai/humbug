@@ -181,9 +181,6 @@ class ConversationTab(TabBase):
         # Update input widget streaming state text
         self._input.set_streaming(self._is_streaming)
 
-        # Ensure language-specific strings are updated for bookmark-related actions
-        strings = self._language_manager.strings
-
         # Update find widget text if visible
         if not self._find_widget.isHidden():
             current, total = self._find_handler.get_match_status()
@@ -575,7 +572,7 @@ class ConversationTab(TabBase):
 
         # Get the bookmarked message and scroll to it
         bookmark = self._bookmarked_messages[self._current_bookmark_index]
-        
+
         # Ensure the bookmarked message is visible
         self._scroll_area.ensureWidgetVisible(bookmark)
 
@@ -1108,30 +1105,31 @@ class ConversationTab(TabBase):
         # Create menu actions
         fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
         menu.addSeparator()
+
         # Add bookmark navigation actions
         next_bookmark_action = menu.addAction(self._language_manager.strings.next_bookmark)
         prev_bookmark_action = menu.addAction(self._language_manager.strings.previous_bookmark)
-        
+
         # Disable actions if no bookmarks
         next_bookmark_action.setEnabled(bool(self._bookmarked_messages))
         prev_bookmark_action.setEnabled(bool(self._bookmarked_messages))
-        
+
         menu.addSeparator()
         settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
 
+        action = menu.exec_(self.mapToGlobal(pos))
+        if not action:
+            return
+
         # Show menu and handle selection
         if action == settings_action:
-            self.show_conversation_settings_dialog() 
+            self.show_conversation_settings_dialog()
         elif action == fork_action:
             self.forkRequested.emit()
         elif action == next_bookmark_action:
             self.navigate_bookmarks(forward=True)
         elif action == prev_bookmark_action:
             self.navigate_bookmarks(forward=False)
-            
-        action = menu.exec_(self.mapToGlobal(pos))
-        if not action:
-            return
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""

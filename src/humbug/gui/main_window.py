@@ -185,6 +185,15 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action = QAction(strings.swap_column_right, self)
         self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Alt+]"))
 
+        self._toggle_bookmark_action = QAction(strings.bookmark_section, self)
+        self._toggle_bookmark_action.setShortcut(QKeySequence("Ctrl+B"))
+
+        self._next_bookmark_action = QAction(strings.next_bookmark, self)
+        self._next_bookmark_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
+
+        self._previous_bookmark_action = QAction(strings.previous_bookmark, self)
+        self._previous_bookmark_action.setShortcut(QKeySequence("Ctrl+Shift+P"))
+
         # Modify the _handle_language_changed method to set up these actions
 
         self._menu_bar = QMenuBar(self)
@@ -245,9 +254,12 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._split_column_right_action)
         self._view_menu.addAction(self._merge_column_left_action)
         self._view_menu.addAction(self._merge_column_right_action)
-        # Add swap column actions
         self._view_menu.addAction(self._swap_column_left_action)
-        self._view_menu.addAction(self._swap_column_right_action) 
+        self._view_menu.addAction(self._swap_column_right_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._toggle_bookmark_action)
+        self._view_menu.addAction(self._next_bookmark_action)
+        self._view_menu.addAction(self._previous_bookmark_action)
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(1024, 600)
@@ -704,7 +716,10 @@ class MainWindow(QMainWindow):
         self._split_column_right_action.setEnabled(tab_manager.can_split_column())
         self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(left_to_right))
         self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(not left_to_right))
-        
+        self._toggle_bookmark_action.setEnabled(tab_manager.can_toggle_bookmark())
+        self._next_bookmark_action.setEnabled(tab_manager.can_next_bookmark())
+        self._previous_bookmark_action.setEnabled(tab_manager.can_previous_bookmark())
+
         # Swap column actions
         left_to_right = self._language_manager.left_to_right
         self._swap_column_left_action.setEnabled(tab_manager.can_swap_column(True))
@@ -903,6 +918,18 @@ class MainWindow(QMainWindow):
     def _submit_message(self):
         """Handle message submission."""
         self._tab_manager.submit_message()
+
+    def _toggle_bookmark(self):
+        """Handle toggling a bookmark."""
+        self._tab_manager.toggle_bookmark()
+
+    def _next_bookmark(self):
+        """Move to the next bookmark."""
+        self._tab_manager.next_bookmark()
+
+    def _previous_bookmark(self):
+        """Move to the previous bookmark."""
+        self._tab_manager.previous_bookmark()
 
     def _show_mindspace_settings_dialog(self):
         """Show the mindspace settings dialog."""

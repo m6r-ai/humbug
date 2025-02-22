@@ -1213,3 +1213,51 @@ class TabManager(QWidget):
 
         tab.cancel_current_tasks()
         return True
+
+    def can_toggle_bookmark(self) -> bool:
+        """Can we toggle a bookmark?"""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return False
+
+        return True
+
+    def toggle_bookmark(self) -> None:
+        """Handle toggling a bookmark."""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return
+
+        # Do toggle
+
+    def can_next_bookmark(self) -> bool:
+        """Can we move to the next bookmark?"""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return False
+
+        return True
+
+    def next_bookmark(self) -> None:
+        """Handle navigating to the next bookmark."""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return
+
+        # Do nav
+
+    def can_previous_bookmark(self) -> bool:
+        """Can we move to the next bookmark?"""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return False
+
+        return True
+
+    def previous_bookmark(self) -> None:
+        """Handle navigating to the next bookmark."""
+        tab = self._get_current_tab()
+        if not tab or not isinstance(tab, ConversationTab):
+            return
+
+        # Do nav
