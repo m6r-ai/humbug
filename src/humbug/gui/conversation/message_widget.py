@@ -3,7 +3,7 @@
 from datetime import datetime
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint
-from PySide6.QtGui import QCursor, QMouseEvent
+from PySide6.QtGui import QCursor, QMouseEvent, QAction
 
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
@@ -21,6 +21,7 @@ class MessageWidget(QFrame):
     mouseReleased = Signal()
     forkRequested = Signal()
     settingsRequested = Signal()
+    bookmarkRequested = Signal(object)  # Signal with the message widge
 
     def __init__(self, parent=None, is_input=False):
         """Initialize the message widget.
@@ -90,6 +91,9 @@ class MessageWidget(QFrame):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+        # Add bookmark status
+        self._is_bookmarked = False
+
     def _create_text_area(self) -> ConversationTextEdit:
         """Create and configure the text area.
 
@@ -117,16 +121,48 @@ class MessageWidget(QFrame):
 
         # Add our custom actions
         menu.addSeparator()
+        
+        # Add bookmark action
+        bookmark_action = menu.addAction(self._language_manager.strings.bookmark_section)
+        bookmark_action.setCheckable(True)
+        bookmark_action.setChecked(self._is_bookmarked)
+
         fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
         menu.addSeparator()
         settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
 
         # Show menu and handle selection
         action = menu.exec_(text_edit.mapToGlobal(pos))
-        if action == fork_action:
+        if action == bookmark_action:
+            # Toggle bookmark state
+            self._is_bookmarked = not self._is_bookmarked
+            self.bookmarkRequested.emit(self)
+        elif action == fork_action:
             self.forkRequested.emit()
         elif action == settings_action:
             self.settingsRequested.emit()
+
+    def is_bookmarked(self) -> bool:
+        """Check if this message is bookmarked."""
+        return self._is_bookmarked
+
+    def set_bookmarked(self, bookmarked: bool):
+        """Set the bookmarked state."""
+        self._is_bookmarked = bookmarked
+        self._update_bookmarked_style()
+
+    def _update_bookmarked_style(self):
+        """Update the visual style to indicate bookmark status."""
+        if self._is_bookmarked:
+            # Add a visual indicator for bookmarked messages
+            self.setStyleSheet(self.styleSheet() + """
+                QFrame {
+                    border: 2px solid #FFD700;  /* Gold border for bookmarks */
+                }
+            """)
+        else:
+            # Reset to default style
+            self._handle_style_changed()
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""

@@ -42,6 +42,7 @@ class ConversationTab(TabBase):
     """Unified conversation tab."""
 
     forkRequested = Signal()
+    bookmarkNavigationRequested = Signal(bool)  # True for next, False for previous
 
     def __init__(
         self,
@@ -68,6 +69,9 @@ class ConversationTab(TabBase):
         self._ai_backends = ai_backends
         self._current_tasks: List[asyncio.Task] = []
         self._last_submitted_message = None
+
+        self._bookmarked_messages: List[MessageWidget] = []
+        self._current_bookmark_index: Optional[int] = None
 
         # Create transcript handler with provided filename
         self._transcript_handler = TranscriptHandler(
@@ -177,8 +181,8 @@ class ConversationTab(TabBase):
         # Update input widget streaming state text
         self._input.set_streaming(self._is_streaming)
 
-        # No need to explicitly update message widgets as they handle
-        # their own language change events
+        # Ensure language-specific strings are updated for bookmark-related actions
+        strings = self._language_manager.strings
 
         # Update find widget text if visible
         if not self._find_widget.isHidden():
@@ -227,10 +231,11 @@ class ConversationTab(TabBase):
         Returns:
             TabState containing conversation-specific state
         """
-        metadata_state = {
-        }
+        metadata_state = {}
 
         if temp_state:
+            bookmark_indices = [self._messages.index(msg) for msg in self._bookmarked_messages]
+            metadata_state['bookmarks'] = bookmark_indices
             metadata_state["content"] = self._input.toPlainText()
             metadata_state["settings"] = {
                 "model": self._settings.model,
@@ -305,6 +310,14 @@ class ConversationTab(TabBase):
 
         # Create new tab instance
         tab = cls(state.tab_id, state.path, state.timestamp, ai_backends, parent)
+
+        # Restore bookmarks if available
+        if state.metadata and 'bookmarks' in state.metadata:
+            bookmark_indices = state.metadata['bookmarks']
+            for index in bookmark_indices:
+                if 0 <= index < len(tab._messages):
+                    msg_widget = tab._messages[index]
+                    tab._toggle_message_bookmark(msg_widget)
 
         # Load conversation from transcript
         try:
@@ -509,10 +522,13 @@ class ConversationTab(TabBase):
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
+        # Add bookmark-specific signal
+        msg_widget.bookmarkRequested.connect(self._toggle_message_bookmark)
         msg_widget.forkRequested.connect(self.forkRequested)
         msg_widget.settingsRequested.connect(self.show_conversation_settings_dialog)
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
+        msg_widget.set_content(message.content, message.source, message.timestamp)
         msg_widget.set_content(message.content, message.source, message.timestamp)
 
         # Add widget before input
@@ -526,6 +542,42 @@ class ConversationTab(TabBase):
         self._scroll_to_bottom()
 
         self._conversation.add_message(message)
+
+    def _toggle_message_bookmark(self, message_widget: MessageWidget):
+        """Toggle bookmark status for a message."""
+        if message_widget in self._bookmarked_messages:
+            # Remove bookmark
+            self._bookmarked_messages.remove(message_widget)
+            message_widget.set_bookmarked(False)
+        else:
+            # Add bookmark
+            self._bookmarked_messages.append(message_widget)
+            message_widget.set_bookmarked(True)
+
+        # Reset bookmark index when bookmarks change
+        self._current_bookmark_index = None
+
+    def navigate_bookmarks(self, forward: bool = True):
+        """Navigate between bookmarked messages."""
+        if not self._bookmarked_messages:
+            return
+
+        # Initialize bookmark index if not set
+        if self._current_bookmark_index is None:
+            # Start from the beginning or end based on navigation direction
+            self._current_bookmark_index = -1 if forward else len(self._bookmarked_messages)
+
+        # Calculate next bookmark index
+        if forward:
+            self._current_bookmark_index = (self._current_bookmark_index + 1) % len(self._bookmarked_messages)
+        else:
+            self._current_bookmark_index = (self._current_bookmark_index - 1) % len(self._bookmarked_messages)
+
+        # Get the bookmarked message and scroll to it
+        bookmark = self._bookmarked_messages[self._current_bookmark_index]
+        
+        # Ensure the bookmarked message is visible
+        self._scroll_area.ensureWidgetVisible(bookmark)
 
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
@@ -1056,17 +1108,30 @@ class ConversationTab(TabBase):
         # Create menu actions
         fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
         menu.addSeparator()
+        # Add bookmark navigation actions
+        next_bookmark_action = menu.addAction(self._language_manager.strings.next_bookmark)
+        prev_bookmark_action = menu.addAction(self._language_manager.strings.previous_bookmark)
+        
+        # Disable actions if no bookmarks
+        next_bookmark_action.setEnabled(bool(self._bookmarked_messages))
+        prev_bookmark_action.setEnabled(bool(self._bookmarked_messages))
+        
+        menu.addSeparator()
         settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
 
         # Show menu and handle selection
+        if action == settings_action:
+            self.show_conversation_settings_dialog() 
+        elif action == fork_action:
+            self.forkRequested.emit()
+        elif action == next_bookmark_action:
+            self.navigate_bookmarks(forward=True)
+        elif action == prev_bookmark_action:
+            self.navigate_bookmarks(forward=False)
+            
         action = menu.exec_(self.mapToGlobal(pos))
         if not action:
             return
-
-        if action == fork_action:
-            self.forkRequested.emit()
-        elif action == settings_action:
-            self.show_conversation_settings_dialog()
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
