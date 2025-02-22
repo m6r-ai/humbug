@@ -433,4 +433,9 @@ class MindspaceFileTree(QWidget):
                 margin: 0px;
                 border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
+            QMenu::right-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-right')});
+                width: 16px;
+                height: 16px;
+            }}
         """)
