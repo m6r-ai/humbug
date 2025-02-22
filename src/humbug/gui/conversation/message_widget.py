@@ -85,14 +85,14 @@ class MessageWidget(QFrame):
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode
 
+        # Add bookmark status
+        self._is_bookmarked = False
+
         # Track current message style
         self._current_style: MessageSource = None
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
-
-        # Add bookmark status
-        self._is_bookmarked = False
 
     def _create_text_area(self) -> ConversationTextEdit:
         """Create and configure the text area.
@@ -149,20 +149,7 @@ class MessageWidget(QFrame):
     def set_bookmarked(self, bookmarked: bool):
         """Set the bookmarked state."""
         self._is_bookmarked = bookmarked
-        self._update_bookmarked_style()
-
-    def _update_bookmarked_style(self):
-        """Update the visual style to indicate bookmark status."""
-        if self._is_bookmarked:
-            # Add a visual indicator for bookmarked messages
-            self.setStyleSheet(self.styleSheet() + """
-                QFrame {
-                    border: 2px solid #FFD700;  /* Gold border for bookmarks */
-                }
-            """)
-        else:
-            # Reset to default style
-            self._handle_style_changed()
+        self._handle_style_changed()
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
@@ -313,7 +300,6 @@ class MessageWidget(QFrame):
             }}
         """)
 
-
         # Header widget styling
         self._header.setStyleSheet(f"""
             QWidget {{
@@ -354,11 +340,13 @@ class MessageWidget(QFrame):
         """)
 
         # Main frame styling
+        border = ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else ColorRole.MESSAGE_BACKGROUND
         self.setStyleSheet(f"""
             QFrame {{
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: 8px;
+                border: 2px solid {self._style_manager.get_color_str(border)}
             }}
         """)
 

@@ -165,7 +165,7 @@ class StyleManager(QObject):
 
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
-                ColorMode.DARK: "#323232",
+                ColorMode.DARK: "#1c1c1c",
                 ColorMode.LIGHT: "#e4e4e4"
             },
             ColorRole.MESSAGE_USER: {
@@ -179,6 +179,10 @@ class StyleManager(QObject):
             ColorRole.MESSAGE_SYSTEM: {
                 ColorMode.DARK: "#c08080",
                 ColorMode.LIGHT: "#a04040"
+            },
+            ColorRole.MESSAGE_BOOKMARK: {
+                ColorMode.DARK: "#ffdf00",
+                ColorMode.LIGHT: "#806000"
             },
 
             # Status bar elements
