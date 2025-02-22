@@ -423,8 +423,14 @@ Context: Implementation
         Context: Dependencies
             Leverage standard library tools before custom solutions, unless specifically instructed.
 
+            Context: Qt widgets
+                Use the PySide6 widget library for the GUI
+
             Context: HTTP interations
                 Use the aiohttp library for HTTP interactions (e.g. the REST API).
+
+            Context: Certifi
+                Use the certifi package to ensure we have the right root certs available for SSL.
 
             Context: Metaphor compilation
                 Use the m6rclib library for Metaphor file compilation.
