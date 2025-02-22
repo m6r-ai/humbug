@@ -213,8 +213,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#202020"
             },
             ColorRole.SYNTAX_COMMENT: {
-                ColorMode.DARK: "#68d068",
-                ColorMode.LIGHT: "#408040"
+                ColorMode.DARK: "#68b068",
+                ColorMode.LIGHT: "#407040"
             },
             ColorRole.SYNTAX_CSS_AT_RULE: {
                 ColorMode.DARK: "#ffc0eb",
@@ -237,8 +237,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#806000"
             },
             ColorRole.SYNTAX_HEADING: {
-                ColorMode.DARK: "#9090f0",
-                ColorMode.LIGHT: "#4040c0"
+                ColorMode.DARK: "#b090f0",
+                ColorMode.LIGHT: "#5040c0"
             },
             ColorRole.SYNTAX_HTML_ATTRIBUTE: {
                 ColorMode.DARK: "#90e0e8",
@@ -363,6 +363,7 @@ class StyleManager(QObject):
         colour_mapping = {
             "ADDRESS": ColorRole.SYNTAX_ADDRESS,
             "ANNOTATION": ColorRole.SYNTAX_HEADING,
+            "ATTRIBUTE": ColorRole.SYNTAX_HEADING,
             "BACKTICK_CODE": ColorRole.SYNTAX_BACKTICK_CODE,
             "BOOLEAN": ColorRole.SYNTAX_NUMBER,
             "CHARACTER": ColorRole.SYNTAX_STRING,

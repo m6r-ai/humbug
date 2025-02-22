@@ -32,7 +32,6 @@ class GoParser(Parser):
     - Element access
     - Package imports
     - Struct literals
-    - Channel operations
     """
 
     def parse(self, prev_parser_state: Optional[GoParserState], input_str: str) -> GoParserState:
@@ -93,7 +92,7 @@ class GoParser(Parser):
                 next_token = lexer.peek_next_token(['WHITESPACE'])
                 if next_token and next_token.type == 'OPERATOR' and next_token.value == ':':
                     self._tokens.append(Token(
-                        type='STRUCT_FIELD',
+                        type='ELEMENT',
                         value=token.value,
                         start=token.start
                     ))
@@ -118,15 +117,6 @@ class GoParser(Parser):
                 # Check for method calls or element access
                 if next_token.value == '.':
                     next_in_element = True
-
-                # Check for channel operations
-                elif next_token.value == '<-':
-                    self._tokens.append(Token(
-                        type='CHANNEL',
-                        value=token.value,
-                        start=token.start
-                    ))
-                    continue
 
             in_element = next_in_element
 
