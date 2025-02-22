@@ -180,10 +180,10 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setShortcut(QKeySequence("Ctrl+]"))
         
         self._swap_column_left_action = QAction(strings.swap_column_left, self)
-        self._swap_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+L"))
+        self._swap_column_left_action.setShortcut(QKeySequence("Ctrl+Alt+["))
 
         self._swap_column_right_action = QAction(strings.swap_column_right, self)
-        self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
+        self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Alt+]"))
 
         # Modify the _handle_language_changed method to set up these actions
 

@@ -61,12 +61,16 @@ Context: Capabilities
                 If multiple columns are open then tabs can be moved from one column to another by dragging and
                 dropping them with the mouse.
 
-            Context: Column merging and splitting
+            Context: Column splitting and merging
                 Provided there is more than one tab open in the currently-active column, then the currently-active
                 column can be split, with the current open tab moving to the new column.
 
                 Provided there is more than one column open, then the current column can be merged with any
                 adjacent column, with all tabs moving to that column and the current column being closed.
+
+            Context: Column swapping
+                Provided there is more than one column open, the the current column can be swapped with any
+                adjacent column.
 
             Context: Column persistence
                 The column layout is persisted with the mindspace.
@@ -74,17 +78,6 @@ Context: Capabilities
                 Each tab's column position is restored when reopening a mindspace.
 
                 Column sizes are preserved between sessions.
-
-            Context: Column swapping
-                Users can swap columns using hotkeys:
-                - Ctrl+Shift+L: Swap current column with the column to its left
-                - Ctrl+Shift+R: Swap current column with the column to its right
-                
-                Column swapping rules:
-                - Only works when multiple columns are open
-                - Maintains the active tab and column state
-                - Preserves tab order within the swapped columns
-
 
         Context: File tree view
             The file tree displays the contents of the current mindspace:
@@ -1008,6 +1001,18 @@ Context: Capabilities
                 long as the current active column is not the right hand column.
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+]" for Windows).
+
+            Context: Swap Column Left
+                The "Swap Column Left" menu item will support swapping the current column with the one to its left as
+                long as the current active column is not the left hand column.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+[" for Windows).
+
+            Context: Swap Column Right
+                The "Swap Column Right" menu item will support ing the current column with the one to its right as
+                long as the current active column is not the right hand column.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+]" for Windows).
 
         Context: Menu styling
             Menus and menu items must have consistent visual styling:
