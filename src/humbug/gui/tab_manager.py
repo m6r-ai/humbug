@@ -205,7 +205,7 @@ class TabManager(QWidget):
             if editor_tab:
                 self._stack.setCurrentWidget(self._columns_widget)
 
-    def _handle_splitter_moved(self, pos: int, index: int):
+    def _handle_splitter_moved(self, _pos: int, _index: int):
         """Handle splitter movement and potential column merging."""
         sizes = self._column_splitter.sizes()
         min_width = 200  # Minimum width before merging
