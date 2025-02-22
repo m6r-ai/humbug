@@ -103,7 +103,7 @@ class LanguageStrings:
 
     # Conversation settings
     settings_model_label: str
-    settings_temp_label: str 
+    settings_temp_label: str
     settings_context_label: str
     settings_max_output_label: str
     settings_tokens_label: str
@@ -164,22 +164,22 @@ class LanguageStrings:
     conversation_status_no_temperature: str
 
     # Bookmark-related strings
-    bookmark_section: str = "Toggle Bookmark"
-    next_bookmark: str = "Next Bookmark"
-    previous_bookmark: str = "Previous Bookmark"
-    
-    #Mindspace File Tree Edit Menu Errors and Options
-    rename: "Rename"
-    delete: "Delete"
-    new: "New"
-    new_folder: "Folder"
-    rename_file_title: "Rename File"
-    rename_file_prompt: "Enter new name:"
-    rename_error_title: "Rename Error"
-    rename_error_exists: "A file with this name already exists."
-    rename_error_generic: "Could not rename file: "
-    file_creation_error_title: "File Creation Error"
-    file_creation_error: "Could not create file: "
+    bookmark_section: str
+    next_bookmark: str
+    previous_bookmark: str
+
+    # Mindspace File Tree Edit Menu Errors and Options
+    rename: str
+    delete: str
+    new: str
+    new_folder: str
+    rename_file_title: str
+    rename_file_prompt: str
+    rename_error_title: str
+    rename_error_exists: str
+    rename_error_generic: str
+    file_creation_error_title: str
+    file_creation_error: str
 
     @classmethod
     def get_strings(cls, code: LanguageCode) -> 'LanguageStrings':
@@ -350,8 +350,8 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         conversation_status="Model: {model} | {temperature} | Last response - Input: {input_tokens} ({max_tokens}) | Output: {output_tokens}",
         conversation_status_temperature="Temp: {temperature:.1f}",
         conversation_status_no_temperature="Temp: N/A",
-        
-        #Mindspace File Tree Edit Menu Errors and Options
+
+        # Mindspace File Tree Edit Menu Errors and Options
         rename= "Rename",
         delete= "Delete",
         new= "New",
@@ -414,7 +414,6 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         merge_column_right="Fusionner avec la colonne de droite",
         swap_column_left = "Échanger la colonne gauche",
         swap_column_right = "Échanger la colonne de droite",
-        
 
         # Message roles
         role_you="Vous",
@@ -527,8 +526,8 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         bookmark_section="Marquer/Démarquer",
         next_bookmark="Signet suivant",
         previous_bookmark="Signet précédent",
-        
-        #Mindspace File Tree Edit Menu Errors and Options
+
+        # Mindspace File Tree Edit Menu Errors and Options
         rename= "Renommer",
         delete= "Supprimer",
         new= "Nouveau",
@@ -589,10 +588,8 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         split_column_right="تقسيم العمود لليمين",
         merge_column_left="دمج مع العمود الأيسر",
         merge_column_right="دمج مع العمود الأيمن",
-        
         swap_column_left = "عمود المبادلة إلى اليسار",
         swap_column_right = "عمود المبادلة لليمين",
-        
 
         # Message roles
         role_you="أنت",
@@ -700,13 +697,13 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         conversation_status="النموذج: {model} | {temperature} | آخر رد - المدخلات: {input_tokens} ({max_tokens}) | المخرجات: {output_tokens}",
         conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
         conversation_status_no_temperature="درجة الحرارة: غير متوفر",
-        
-        # Bookmark 
+
+        # Bookmark
         bookmark_section="تبديل الإشارة",
         next_bookmark="الإشارة التالية",
         previous_bookmark="الإشارة السابقة",
-        
-        #Mindspace File Tree Edit Menu Errors and Options
+
+        # Mindspace File Tree Edit Menu Errors and Options
         rename= "إعادة التسمية",
         delete= "حذف",
         new= "جديد",
