@@ -413,7 +413,7 @@ class TerminalTab(TabBase):
                     # Create and run termination task directly
                     loop.create_task(self._terminal_process.terminate())
             except Exception as e:
-                self._logger.error(f"Error terminating process: {e}")
+                self._logger.exception("Error terminating process: %s", str(e))
 
         # Clear references
         self._terminal_process = None

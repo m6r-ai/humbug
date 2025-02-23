@@ -84,6 +84,7 @@ class WindowsTerminal(TerminalBase):
         self._thread_handle = None
         self._pipe_in = None
         self._pipe_out = None
+        self._main_fd = None
 
         # Load ConPTY functions
         self._load_conpty_functions()
@@ -246,7 +247,7 @@ class WindowsTerminal(TerminalBase):
             return self._process_id, self._main_fd
 
         except Exception as e:
-            self._logger.exception(f"Failed to start ConPTY process: {e}")
+            self._logger.exception("Failed to start ConPTY process: %s", str(e))
             self._cleanup_handles()
             raise
 
@@ -258,7 +259,7 @@ class WindowsTerminal(TerminalBase):
             try:
                 windll.kernel32.TerminateProcess(self._process_handle, 1)
             except Exception as e:
-                self._logger.warning(f"Error terminating process: {e}")
+                self._logger.warning("Error terminating process: %s", str(e))
 
         self._process_id = None
         self._cleanup_handles()
@@ -269,7 +270,7 @@ class WindowsTerminal(TerminalBase):
             try:
                 self._ClosePseudoConsole(self._pty_handle)
             except Exception as e:
-                self._logger.warning(f"Error closing ConPTY: {e}")
+                self._logger.warning("Error closing ConPTY: %s", str(e))
             self._pty_handle = None
 
         for handle in (self._process_handle, self._thread_handle):
@@ -277,7 +278,7 @@ class WindowsTerminal(TerminalBase):
                 try:
                     windll.kernel32.CloseHandle(handle)
                 except Exception as e:
-                    self._logger.warning(f"Error closing handle: {e}")
+                    self._logger.warning("Error closing handle: %s", str(e))
 
         self._process_handle = None
         self._thread_handle = None
@@ -287,7 +288,7 @@ class WindowsTerminal(TerminalBase):
                 try:
                     windll.kernel32.CloseHandle(handle)
                 except Exception as e:
-                    self._logger.warning(f"Error closing pipe handle: {e}")
+                    self._logger.warning("Error closing pipe handle: %s", str(e))
 
         self._pipe_in = None
         self._pipe_out = None
@@ -314,9 +315,9 @@ class WindowsTerminal(TerminalBase):
                     coord
                 )
                 if result != 0:
-                    self._logger.warning(f"Failed to resize ConPTY: {result}")
+                    self._logger.warning("Failed to resize ConPTY: %s", repr(result))
             except Exception as e:
-                self._logger.warning(f"Error updating window size: {e}")
+                self._logger.warning("Error updating window size: %s", str(e))
 
     async def read_data(self, size: int) -> bytes:
         """
