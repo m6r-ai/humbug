@@ -63,7 +63,7 @@ class UTF8Buffer:
 class TerminalTab(TabBase):
     """Tab containing a terminal emulator."""
 
-    def __init__(self, tab_id: str, command: Optional[str] = None, parent=None):
+    def __init__(self, tab_id: str, command: Optional[str] = None, parent=None, start_process: bool=True):
         """
         Initialize terminal tab.
 
@@ -117,7 +117,8 @@ class TerminalTab(TabBase):
         self._terminal.size_changed.connect(self._handle_terminal_resize)
 
         # Start local shell process
-        self._create_tracked_task(self._start_process())
+        if start_process:
+            self._create_tracked_task(self._start_process())
 
     def _handle_terminal_resize(self):
         """Handle terminal window resize events."""
@@ -318,10 +319,14 @@ class TerminalTab(TabBase):
             raise ValueError(f"Invalid tab type for TerminalTab: {state.type}")
 
         command = None
+        start_process = True
         if state.metadata:
             command = state.metadata.get("command")
 
-        tab = cls(state.tab_id, command, parent)
+            if state.metadata.get('is_ephemeral') and 'source_tab' in state.metadata:
+                start_process = False
+
+        tab = cls(state.tab_id, command, parent, start_process=start_process)
 
         # Only restore process/display state if this is ephemeral (temp) state
         if state.metadata and state.metadata.get('is_ephemeral'):
