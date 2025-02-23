@@ -4,10 +4,9 @@
 
 New features:
 
-- Added a command line shell for users on Linux and MacOS.  This will let you open a
+- Added a local command line/shell tab type.  This will let you open a
   terminal window and use command line tools.
 - Added Go, Java, Rust, and Swift lexers/parsers for syntax highlighting.
-- Added preliminary support for M6R AI backends.
 - Columns can now be merged by dragging one on top of another.
 - Columns can now be swapped with ones either side.
 - Messages can be bookmarked to make it quick to jump backwards and forwards.
@@ -16,6 +15,8 @@ Internal structure changes:
 
 - The conversation, editor, and mindspace UI functionality has been moved into separate
   subdirectories to make it easier to find related functionality.
+- Lexers and parsers have been moved into separate per-language subdirectories to ease
+  navigation of the code.
 
 Bug fixes:
 

@@ -32,9 +32,13 @@ that are expert on Humbug itself!
 
 ## What's New
 
-In 0.5 we've added a lot of new features aimed at making Humbug easier to use:
+In 0.5 we've added a lot of new features aimed at making Humbug more capable and easier to use:
 
-TBD
+- Terminal tabs that open a local shell on MacOS and Linux, or the Windows Command Prompt on Windows, to give
+  you access to command line applications (e.g. `git`, compilers, linters, `vim`, `mc`, etc.)
+- Support for bookmarking messages in conversations for easier navigation.
+- Syntax highlighting for Go, Java, Rust, and Swift.
+- Improved column management (auto-merging and swapping).
 
 ## Features
 
