@@ -79,10 +79,10 @@ class EditorFind:
         if not self._matches:
             return
 
-        selection_format = QTextCharFormat()
-        selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_SELECTED))
-        dim_selection_format = QTextCharFormat()
-        dim_selection_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_DIM_SELECTED))
+        found_format = QTextCharFormat()
+        found_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND))
+        dim_found_format = QTextCharFormat()
+        dim_found_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM))
 
         # Create extra selections list
         selections = []
@@ -99,9 +99,9 @@ class EditorFind:
 
             # Use different format for current match
             if i == self._current_match:
-                extra_selection.format = selection_format
+                extra_selection.format = found_format
             else:
-                extra_selection.format = dim_selection_format
+                extra_selection.format = dim_found_format
 
             selections.append(extra_selection)
 

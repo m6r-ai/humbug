@@ -753,9 +753,9 @@ class TerminalWidget(QAbstractScrollArea):
         """
         fmt = QTextCharFormat()
         if is_current:
-            fmt.setBackground(self._style_manager.get_color(ColorRole.TEXT_SELECTED))
+            fmt.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND))
         else:
-            fmt.setBackground(self._style_manager.get_color(ColorRole.TEXT_DIM_SELECTED))
+            fmt.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM))
         return fmt
 
     def _draw_character_run(
