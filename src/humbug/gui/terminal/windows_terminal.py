@@ -12,6 +12,10 @@ import msvcrt
 
 from humbug.gui.terminal.terminal_base import TerminalBase
 
+
+# Define DWORD_PTR for 64-bit compatibility
+DWORD_PTR = c_ulong if ctypes.sizeof(c_void_p) == 4 else ctypes.c_uint64
+
 # Windows Constants
 GENERIC_READ = 0x80000000
 GENERIC_WRITE = 0x40000000
@@ -121,8 +125,83 @@ class WindowsTerminal(TerminalBase):
         self._ResizePseudoConsole.argtypes = [HANDLE, COORD]
         self._ResizePseudoConsole.restype = DWORD
 
+    def initialize_process_attributes(self, pty_handle):
+        """Initialize process attributes for ConPTY."""
+        # Define function prototypes
+        InitializeProcThreadAttributeList = windll.kernel32.InitializeProcThreadAttributeList
+        InitializeProcThreadAttributeList.argtypes = [
+            LPVOID,          # lpAttributeList
+            DWORD,           # dwAttributeCount
+            DWORD,           # dwFlags
+            POINTER(c_size_t)  # lpSize
+        ]
+        InitializeProcThreadAttributeList.restype = BOOL
+
+        UpdateProcThreadAttribute = windll.kernel32.UpdateProcThreadAttribute
+        UpdateProcThreadAttribute.argtypes = [
+            LPVOID,          # lpAttributeList
+            DWORD,           # dwFlags
+            DWORD_PTR,       # Attribute
+            LPVOID,          # lpValue
+            c_size_t,        # cbSize
+            LPVOID,          # lpPreviousValue
+            LPVOID           # lpReturnSize
+        ]
+        UpdateProcThreadAttribute.restype = BOOL
+
+        # Create STARTUPINFOEX structure
+        startup_info_ex = STARTUPINFOEX()
+        startup_info_ex.StartupInfo.cb = ctypes.sizeof(STARTUPINFOEX)
+
+        # Get required size
+        size = c_size_t()
+        InitializeProcThreadAttributeList(None, 1, 0, byref(size))
+
+        # Allocate buffer
+        raw_buffer = ctypes.create_string_buffer(size.value)
+        startup_info_ex.lpAttributeList = ctypes.cast(raw_buffer, LPVOID)
+
+        # Initialize list
+        success = InitializeProcThreadAttributeList(
+            startup_info_ex.lpAttributeList,
+            1,
+            0,
+            byref(size)
+        )
+
+        if not success:
+            raise OSError(f"InitializeProcThreadAttributeList failed: {ctypes.get_last_error()}")
+
+        # Add the ConPTY attribute
+        PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x20016
+        handle_ptr = ctypes.pointer(pty_handle)
+        success = UpdateProcThreadAttribute(
+            startup_info_ex.lpAttributeList,
+            0,
+            PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
+            handle_ptr,
+            ctypes.sizeof(HANDLE),
+            None,
+            None
+        )
+
+        if not success:
+            raise OSError(f"UpdateProcThreadAttribute failed: {ctypes.get_last_error()}")
+
+        return startup_info_ex
+
     async def start(self, command: Optional[str] = None) -> Tuple[int, int]:
-        """Start Windows terminal process using ConPTY."""
+        """Start Windows terminal process using ConPTY.
+
+        Args:
+            command: Optional command to run. If None, uses default shell.
+
+        Returns:
+            Tuple of (process_id, file_descriptor)
+
+        Raises:
+            OSError: If terminal creation fails
+        """
         try:
             # Create pipes
             pipe_in_read = HANDLE()
@@ -160,36 +239,8 @@ class WindowsTerminal(TerminalBase):
             windll.kernel32.CloseHandle(pipe_in_read)
             windll.kernel32.CloseHandle(pipe_out_write)
 
-            # Initialize process startup info
-            startup_info_ex = STARTUPINFOEX()
-            startup_info_ex.StartupInfo.cb = ctypes.sizeof(STARTUPINFOEX)
-
-            # Allocate attribute list
-            size = DWORD()
-            windll.kernel32.InitializeProcThreadAttributeList(None, 1, 0, byref(size))
-
-            # Create attribute list buffer
-            buffer = ctypes.create_string_buffer(size.value)
-            startup_info_ex.lpAttributeList = ctypes.cast(buffer, LPVOID)
-
-            # Initialize attribute list
-            if not windll.kernel32.InitializeProcThreadAttributeList(
-                startup_info_ex.lpAttributeList, 1, 0, byref(size)
-            ):
-                raise OSError("Failed to initialize attribute list")
-
-            # Set ConPTY attribute
-            PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x20016
-            if not windll.kernel32.UpdateProcThreadAttribute(
-                startup_info_ex.lpAttributeList,
-                0,
-                PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
-                pty_handle,
-                ctypes.sizeof(HANDLE),
-                None,
-                None
-            ):
-                raise OSError("Failed to set pseudoconsole attribute")
+            # Initialize process attributes with ConPTY
+            startup_info_ex = self.initialize_process_attributes(pty_handle)
 
             # Create process
             process_info = PROCESS_INFORMATION()

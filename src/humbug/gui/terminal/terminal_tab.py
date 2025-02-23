@@ -157,7 +157,7 @@ class TerminalTab(TabBase):
             self._create_tracked_task(self._read_loop())
 
         except Exception as e:
-            self._logger.error("Failed to start terminal process: %s", e)
+            self._logger.exception("Failed to start terminal process: %s", str(e))
             self._terminal.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
     async def _read_loop(self):
