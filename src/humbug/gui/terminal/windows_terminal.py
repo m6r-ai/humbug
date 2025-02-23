@@ -125,6 +125,27 @@ class WindowsTerminal(TerminalBase):
         self._ResizePseudoConsole.argtypes = [HANDLE, COORD]
         self._ResizePseudoConsole.restype = DWORD
 
+        self._InitializeProcThreadAttributeList = kernel32.InitializeProcThreadAttributeList
+        self._InitializeProcThreadAttributeList.restype = BOOL
+        self._InitializeProcThreadAttributeList.argtypes = [
+            LPVOID,          # lpAttributeList
+            DWORD,           # dwAttributeCount
+            DWORD,           # dwFlags
+            POINTER(c_size_t)  # lpSize
+        ]
+
+        self._UpdateProcThreadAttribute = kernel32.UpdateProcThreadAttribute
+        self._UpdateProcThreadAttribute.restype = BOOL
+        self._UpdateProcThreadAttribute.argtypes = [
+            LPVOID,          # lpAttributeList
+            DWORD,           # dwFlags
+            DWORD_PTR,       # Attribute
+            LPVOID,          # lpValue
+            c_size_t,        # cbSize
+            LPVOID,          # lpPreviousValue
+            LPVOID           # lpReturnSize
+        ]
+
     async def start(self, command: Optional[str] = None) -> Tuple[int, int]:
         """Start Windows terminal process using ConPTY.
 
@@ -170,43 +191,20 @@ class WindowsTerminal(TerminalBase):
             self._pipe_in = pipe_in_write.value
             self._pipe_out = pipe_out_read.value
 
-            # Initialize process attributes with ConPTY
-            # Define function prototypes
-            InitializeProcThreadAttributeList = windll.kernel32.InitializeProcThreadAttributeList
-            InitializeProcThreadAttributeList.argtypes = [
-                LPVOID,          # lpAttributeList
-                DWORD,           # dwAttributeCount
-                DWORD,           # dwFlags
-                POINTER(c_size_t)  # lpSize
-            ]
-            InitializeProcThreadAttributeList.restype = BOOL
-
-            UpdateProcThreadAttribute = windll.kernel32.UpdateProcThreadAttribute
-            UpdateProcThreadAttribute.argtypes = [
-                LPVOID,          # lpAttributeList
-                DWORD,           # dwFlags
-                DWORD_PTR,       # Attribute
-                LPVOID,          # lpValue
-                c_size_t,        # cbSize
-                LPVOID,          # lpPreviousValue
-                LPVOID           # lpReturnSize
-            ]
-            UpdateProcThreadAttribute.restype = BOOL
-
             # Create STARTUPINFOEX structure
             startup_info_ex = STARTUPINFOEX()
             startup_info_ex.StartupInfo.cb = ctypes.sizeof(STARTUPINFOEX)
 
             # Get required size
             size = c_size_t()
-            InitializeProcThreadAttributeList(None, 1, 0, byref(size))
+            self._InitializeProcThreadAttributeList(None, 1, 0, byref(size))
 
             # Allocate buffer
             raw_buffer = ctypes.create_string_buffer(size.value)
             startup_info_ex.lpAttributeList = ctypes.cast(raw_buffer, LPVOID)
 
             # Initialize list
-            success = InitializeProcThreadAttributeList(
+            success = self._InitializeProcThreadAttributeList(
                 startup_info_ex.lpAttributeList,
                 1,
                 0,
@@ -219,7 +217,7 @@ class WindowsTerminal(TerminalBase):
             # Add the ConPTY attribute
             PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x20016
             handle_ptr = ctypes.pointer(pty_handle)
-            success = UpdateProcThreadAttribute(
+            success = self._UpdateProcThreadAttribute(
                 startup_info_ex.lpAttributeList,
                 0,
                 PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
