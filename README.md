@@ -176,20 +176,22 @@ python -m humbug
 
 - **General**
     - `Ctrl+Q` - Quit Humbug
-    - `Ctrl+Alt+N` - New Mindspace
-    - `Ctrl+Alt+O` - Open Mindspace
     - `Ctrl+Alt+W` - Close Mindspace
     - `Ctrl+Alt+,` - Mindspace Settings
 - **File Operations**
-    - `Ctrl+N` - New File
-    - `Ctrl+O` - Open File
+    - `Ctrl+Alt+N` - New Mindspace
     - `Ctrl+Shift+N` - New Conversation
-    - `Ctrl+Shift+O` - Open Conversation
     - `Ctrl+Shift+M` - New Metaphor Conversation
+    - `Ctrl+N` - New File
+    - `Ctrl+Alt+T` - New Terminal
+    - `Ctrl+Alt+O` - Open Mindspace
+    - `Ctrl+Shift+O` - Open Conversation
+    - `Ctrl+O` - Open File
+    - `Ctrl+Shift+F` - Fork Conversation
     - `Ctrl+S` - Save
     - `Ctrl+Shift+S` - Save As
+    - `Ctrl+Alt+W` - Close Mindspace
     - `Ctrl+W` - Close Tab
-    - `Ctrl+Shift+F` - Fork Conversation
 - **Edit Operations**
     - `Ctrl+J` - Submit Message
     - `Ctrl+Z` - Undo
@@ -198,17 +200,22 @@ python -m humbug
     - `Ctrl+C` - Copy
     - `Ctrl+V` - Paste
     - `Ctrl+,` - Open conversation settings
+    - `Ctrl+B` - Toggle bookmark
+    - `Ctrl+Shift+N` - Next bookmark
+    - `Ctrl+Shift+P` - Previous bookmark
 - **View Operations**
     - `Ctrl+=` - Zoom In
     - `Ctrl+-` - Zoom Out
     - `Ctrl+0` - Reset Zoom
-    - 'Ctrl+\' - Show All Columns
-    - 'Ctrl+Shift+[' - Split Column Left
-    - 'Ctrl+Shift+]' - Split Column Right
-    - 'Ctrl+[' - Merge Column Left
-    - 'Ctrl+]' - Merge Column Right
+    - `Ctrl+\` - Show All Columns
+    - `Ctrl+Shift+[` - Split Column Left
+    - `Ctrl+Shift+]` - Split Column Right
+    - `Ctrl+[` - Merge Column Left
+    - `Ctrl+]` - Merge Column Right
+    - `Ctrl+Alt+[` - Swap Column Left
+    - `Ctrl+Alt+]` - Swap Column Right
 - **Other**
-    - `Esc` - Cancel current AI response
+    - `Esc` - Cancel current AI response (while streaming)
 
 ## Development
 
