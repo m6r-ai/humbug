@@ -8,6 +8,9 @@ New features:
   terminal window and use command line tools.
 - Added Go, Java, Rust, and Swift lexers/parsers for syntax highlighting.
 - Added preliminary support for M6R AI backends.
+- Columns can now be merged by dragging one on top of another.
+- Columns can now be swapped with ones either side.
+- Messages can be bookmarked to make it quick to jump backwards and forwards.
 
 Internal structure changes:
 

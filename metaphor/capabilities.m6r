@@ -276,7 +276,7 @@ Context: Capabilities
                         Bookmark navigation rules:
                         - Cycles through bookmarked messages in order of appearance
                         - Wraps around to the first/last bookmark when reaching the end/beginning
-                        - Ensures the bookmarked message is fully visible in the conversation view
+                        - Restores the scroll position at the time a bookmark was set so we restore back to the same scroll position.
 
                     Context: Pop-up menu
                         If the user clicks the right mouse button in a conversation tab then they will be

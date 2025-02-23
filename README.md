@@ -50,8 +50,9 @@ TBD
     - Auto-backup functionality for unsaved changes.
 - **Command Line Shell:**
     - Support for accessing the local shell on Linux and MacOS systems.
+    - Full text search across the terminal history.
 - **Multi-Tab Interface:**
-    - Tabs can be arranged into multiple columns, with columns being able to split and merge.
+    - Tabs can be arranged into multiple columns, with columns being able to split, merge and swap.
     - Tabs can be easily rearranged and closed.
     - Drag and drop between columns.
 - **Mindspace Management:**
@@ -75,6 +76,7 @@ TBD
     - Full vertical scrollbar for history and input area.
     - Conversation transcript logging.
     - Full text search across all parts of a conversation.
+    - Bookmarks messages for rapid navigation.
 - **File Tree:**
     - Displays all files and folders in the mindspace directory.
     - Excludes the ".humbug" directory and other hidden files/folders.

@@ -1,6 +1,7 @@
 """Unified conversation tab implementation with correct scrolling and input expansion."""
 
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime
 import logging
 import os
@@ -38,6 +39,24 @@ from humbug.transcript.transcript_error import (
 from humbug.transcript.transcript_handler import TranscriptHandler
 
 
+@dataclass
+class BookmarkData:
+    """Data associated with a bookmarked message."""
+    widget: 'MessageWidget'
+    scroll_position: int
+
+    def __init__(self, widget: 'MessageWidget', scroll_position: int):
+        """
+        Initialize bookmark data.
+
+        Args:
+            widget: The bookmarked message widget
+            scroll_position: Vertical scroll position when bookmarked
+        """
+        self.widget = widget
+        self.scroll_position = scroll_position
+
+
 class ConversationTab(TabBase):
     """Unified conversation tab."""
 
@@ -70,7 +89,7 @@ class ConversationTab(TabBase):
         self._current_tasks: List[asyncio.Task] = []
         self._last_submitted_message = None
 
-        self._bookmarked_messages: List[MessageWidget] = []
+        self._bookmarked_messages: Dict[MessageWidget, BookmarkData] = {}
         self._current_bookmark_index: Optional[int] = None
 
         # Create transcript handler with provided filename
@@ -223,16 +242,19 @@ class ConversationTab(TabBase):
         return self._timestamp
 
     def get_state(self, temp_state: bool=False) -> TabState:
-        """Get serializable state for mindspace persistence.
-
-        Returns:
-            TabState containing conversation-specific state
-        """
+        """Get serializable state for mindspace persistence."""
         metadata_state = {}
 
         if temp_state:
-            bookmark_indices = [self._messages.index(msg) for msg in self._bookmarked_messages]
-            metadata_state['bookmarks'] = bookmark_indices
+            # Store bookmark positions with scroll data
+            bookmark_data = []
+            for message_widget, data in self._bookmarked_messages.items():
+                if message_widget in self._messages:
+                    bookmark_data.append({
+                        'index': self._messages.index(message_widget),
+                        'scroll_position': data.scroll_position
+                    })
+            metadata_state['bookmarks'] = bookmark_data
             metadata_state["content"] = self._input.toPlainText()
             metadata_state["settings"] = {
                 "model": self._settings.model,
@@ -333,11 +355,18 @@ class ConversationTab(TabBase):
                         tab._settings.temperature = state.metadata["settings"]["temperature"]
 
                 if 'bookmarks' in state.metadata:
-                    bookmark_indices = state.metadata['bookmarks']
-                    for index in bookmark_indices:
+                    bookmark_data = state.metadata['bookmarks']
+                    for data in bookmark_data:
+                        index = data['index']
+                        scroll_position = data['scroll_position']
                         if 0 <= index < len(tab._messages):
                             msg_widget = tab._messages[index]
-                            tab._toggle_message_bookmark(msg_widget)
+                            # Add bookmark with stored scroll position
+                            tab._bookmarked_messages[msg_widget] = BookmarkData(
+                                widget=msg_widget,
+                                scroll_position=scroll_position
+                            )
+                            msg_widget.set_bookmarked(True)
 
             return tab
 
@@ -543,11 +572,15 @@ class ConversationTab(TabBase):
         """Toggle bookmark status for a message."""
         if message_widget in self._bookmarked_messages:
             # Remove bookmark
-            self._bookmarked_messages.remove(message_widget)
+            del self._bookmarked_messages[message_widget]
             message_widget.set_bookmarked(False)
         else:
-            # Add bookmark
-            self._bookmarked_messages.append(message_widget)
+            # Add bookmark with current scroll position
+            scroll_position = self._scroll_area.verticalScrollBar().value()
+            self._bookmarked_messages[message_widget] = BookmarkData(
+                widget=message_widget,
+                scroll_position=scroll_position
+            )
             message_widget.set_bookmarked(True)
 
         # Reset bookmark index when bookmarks change
@@ -558,22 +591,25 @@ class ConversationTab(TabBase):
         if not self._bookmarked_messages:
             return
 
+        # Convert to list for ordered access while maintaining BookmarkData
+        bookmarked_items = list(self._bookmarked_messages.items())
+
         # Initialize bookmark index if not set
         if self._current_bookmark_index is None:
             # Start from the beginning or end based on navigation direction
-            self._current_bookmark_index = -1 if forward else len(self._bookmarked_messages)
+            self._current_bookmark_index = -1 if forward else len(bookmarked_items)
 
         # Calculate next bookmark index
         if forward:
-            self._current_bookmark_index = (self._current_bookmark_index + 1) % len(self._bookmarked_messages)
+            self._current_bookmark_index = (self._current_bookmark_index + 1) % len(bookmarked_items)
         else:
-            self._current_bookmark_index = (self._current_bookmark_index - 1) % len(self._bookmarked_messages)
+            self._current_bookmark_index = (self._current_bookmark_index - 1) % len(bookmarked_items)
 
-        # Get the bookmarked message and scroll to it
-        bookmark = self._bookmarked_messages[self._current_bookmark_index]
+        # Get the bookmarked message and its data
+        message_widget, bookmark_data = bookmarked_items[self._current_bookmark_index]
 
-        # Ensure the bookmarked message is visible
-        self._scroll_area.ensureWidgetVisible(bookmark)
+        # Restore the scroll position
+        self._scroll_area.verticalScrollBar().setValue(bookmark_data.scroll_position)
 
     def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
         """Handle selection changes in message widgets."""
@@ -1147,6 +1183,9 @@ class ConversationTab(TabBase):
             if isinstance(focus_widget, ConversationTab):
                 return False
 
+        if isinstance(focus_widget, ConversationInputWidget):
+            return False
+
         return True
 
     def is_checked_bookmark(self) -> bool:
@@ -1160,6 +1199,9 @@ class ConversationTab(TabBase):
             if isinstance(focus_widget, ConversationTab):
                 return False
 
+        if isinstance(focus_widget, ConversationInputWidget):
+            return False
+
         return focus_widget.is_bookmarked()
 
     def toggle_bookmark(self) -> None:
@@ -1172,6 +1214,9 @@ class ConversationTab(TabBase):
             focus_widget = focus_widget.parentWidget()
             if isinstance(focus_widget, ConversationTab):
                 return
+
+        if isinstance(focus_widget, ConversationInputWidget):
+            return
 
         self._toggle_message_bookmark(focus_widget)
 
