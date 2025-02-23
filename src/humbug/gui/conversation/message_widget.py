@@ -19,9 +19,6 @@ class MessageWidget(QFrame):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
-    forkRequested = Signal()
-    settingsRequested = Signal()
-    bookmarkRequested = Signal(object)  # Signal with the message widge
 
     def __init__(self, parent=None, is_input=False):
         """Initialize the message widget.
@@ -104,43 +101,10 @@ class MessageWidget(QFrame):
         text_area.setAcceptRichText(False)
         text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        text_area.setContextMenuPolicy(Qt.CustomContextMenu)
-        text_area.customContextMenuRequested.connect(self._show_enhanced_text_context_menu)
+
+        # Disable the standard context menu as our parent widget will handle that
+        text_area.setContextMenuPolicy(Qt.NoContextMenu)
         return text_area
-
-    def _show_enhanced_text_context_menu(self, pos) -> None:
-        """Show an enhanced context menu for text areas, adding to standard edit menu.
-
-        Args:
-            pos: Position in text edit coordinates
-        """
-        text_edit = self.sender()
-
-        # Create standard menu first
-        menu = text_edit.createStandardContextMenu()
-
-        # Add our custom actions
-        menu.addSeparator()
-
-        fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
-        menu.addSeparator()
-
-        # Add bookmark action
-        bookmark_action = menu.addAction(self._language_manager.strings.bookmark_section)
-        bookmark_action.setCheckable(True)
-        bookmark_action.setChecked(self._is_bookmarked)
-        menu.addSeparator()
-
-        settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
-
-        # Show menu and handle selection
-        action = menu.exec_(text_edit.mapToGlobal(pos))
-        if action == fork_action:
-            self.forkRequested.emit()
-        elif action == bookmark_action:
-            self.bookmarkRequested.emit(self)
-        elif action == settings_action:
-            self.settingsRequested.emit()
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""

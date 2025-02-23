@@ -134,8 +134,6 @@ class ConversationTab(TabBase):
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
         )
-        self._input.forkRequested.connect(self.forkRequested)
-        self._input.settingsRequested.connect(self.show_conversation_settings_dialog)
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
 
@@ -548,9 +546,6 @@ class ConversationTab(TabBase):
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
         # Add bookmark-specific signal
-        msg_widget.bookmarkRequested.connect(self._toggle_message_bookmark)
-        msg_widget.forkRequested.connect(self.forkRequested)
-        msg_widget.settingsRequested.connect(self.show_conversation_settings_dialog)
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
         msg_widget.set_content(message.content, message.source, message.timestamp)
@@ -1137,32 +1132,51 @@ class ConversationTab(TabBase):
         """
         menu = QMenu(self)
 
-        # Create menu actions
+        cut_action = menu.addAction(self._language_manager.strings.cut)
+        cut_action.setEnabled(self.can_cut())
+        copy_action = menu.addAction(self._language_manager.strings.copy)
+        copy_action.setEnabled(self.can_copy())
+        paste_action = menu.addAction(self._language_manager.strings.paste)
+        paste_action.setEnabled(self.can_paste())
+        menu.addSeparator()
+
         fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
         menu.addSeparator()
 
-        # Add bookmark navigation actions
-        next_bookmark_action = menu.addAction(self._language_manager.strings.next_bookmark)
-        next_bookmark_action.setEnabled(bool(self._bookmarked_messages))
-        prev_bookmark_action = menu.addAction(self._language_manager.strings.previous_bookmark)
-        prev_bookmark_action.setEnabled(bool(self._bookmarked_messages))
+        settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
         menu.addSeparator()
 
-        settings_action = menu.addAction(self._language_manager.strings.conversation_settings)
+        toggle_bookmark_action = menu.addAction(self._language_manager.strings.bookmark_section)
+        toggle_bookmark_action.setEnabled(self.can_toggle_bookmark())
+        toggle_bookmark_action.setCheckable(True)
+        toggle_bookmark_action.setChecked(self.is_checked_bookmark())
+        next_bookmark_action = menu.addAction(self._language_manager.strings.next_bookmark)
+        next_bookmark_action.setEnabled(self.can_next_bookmark())
+        prev_bookmark_action = menu.addAction(self._language_manager.strings.previous_bookmark)
+        prev_bookmark_action.setEnabled(self.can_previous_bookmark())
+        menu.addSeparator()
 
         action = menu.exec_(self.mapToGlobal(pos))
         if not action:
             return
 
         # Show menu and handle selection
-        if action == fork_action:
+        if action == cut_action:
+            self.cut()
+        elif action == copy_action:
+            self.copy()
+        elif action == paste_action:
+            self.paste()
+        elif action == fork_action:
             self.forkRequested.emit()
+        elif action == settings_action:
+            self.show_conversation_settings_dialog()
+        elif action == toggle_bookmark_action:
+            self.toggle_bookmark()
         elif action == next_bookmark_action:
             self.next_bookmark()
         elif action == prev_bookmark_action:
             self.previous_bookmark()
-        elif action == settings_action:
-            self.show_conversation_settings_dialog()
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
