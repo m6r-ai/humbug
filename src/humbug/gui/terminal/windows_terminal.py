@@ -6,8 +6,8 @@ import os
 from typing import Optional, Tuple
 import ctypes
 from ctypes import windll, byref, pointer, c_void_p, c_ulong, Structure
-from ctypes import c_char, c_wchar_p, c_size_t, c_char_p, POINTER, cast
-from ctypes.wintypes import HANDLE, DWORD, WORD, LPWSTR, BOOL, LPCWSTR, LPVOID, BYTE
+from ctypes import c_size_t, POINTER
+from ctypes.wintypes import HANDLE, DWORD, WORD, LPWSTR, BOOL, LPVOID, BYTE
 import msvcrt
 
 from humbug.gui.terminal.terminal_base import TerminalBase
@@ -17,23 +17,7 @@ from humbug.gui.terminal.terminal_base import TerminalBase
 DWORD_PTR = c_ulong if ctypes.sizeof(c_void_p) == 4 else ctypes.c_uint64
 
 # Windows Constants
-GENERIC_READ = 0x80000000
-GENERIC_WRITE = 0x40000000
-OPEN_EXISTING = 3
-FILE_FLAG_OVERLAPPED = 0x40000000
-PIPE_ACCESS_DUPLEX = 0x3
-PIPE_TYPE_BYTE = 0x0
-PIPE_READMODE_BYTE = 0x0
-PIPE_WAIT = 0x0
-PIPE_UNLIMITED_INSTANCES = 255
-ERROR_PIPE_BUSY = 231
-ERROR_MORE_DATA = 234
-INVALID_HANDLE_VALUE = HANDLE(-1)
-PROCESS_INFORMATION_CLASS = c_ulong
 EXTENDED_STARTUPINFO_PRESENT = 0x00080000
-CREATE_NEW_CONSOLE = 0x00000010
-CREATE_NO_WINDOW = 0x08000000
-STARTF_USESTDHANDLES = 0x00000100
 STILL_ACTIVE = 259
 
 
@@ -216,12 +200,11 @@ class WindowsTerminal(TerminalBase):
 
             # Add the ConPTY attribute
             PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x20016
-            handle_ptr = ctypes.pointer(pty_handle)
             success = self._UpdateProcThreadAttribute(
                 startup_info_ex.lpAttributeList,
                 0,
                 PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
-                handle_ptr,
+                pty_handle,
                 ctypes.sizeof(HANDLE),
                 None,
                 None
@@ -235,16 +218,16 @@ class WindowsTerminal(TerminalBase):
             shell = command if command else os.environ.get('COMSPEC', 'cmd.exe')
 
             if not windll.kernel32.CreateProcessW(
-                None,                           # No module name
-                shell,                          # Command line
-                None,                           # Process handle not inheritable
-                None,                           # Thread handle not inheritable
-                False,                          # Set handle inheritance to FALSE
-                EXTENDED_STARTUPINFO_PRESENT,   # Creation flags
-                None,                           # Use parent's environment block
-                None,                           # Use parent's starting directory
-                byref(startup_info_ex.StartupInfo),  # Pointer to STARTUPINFO
-                byref(process_info)             # Pointer to PROCESS_INFORMATION
+                None,
+                shell,
+                None,
+                None,
+                False,
+                EXTENDED_STARTUPINFO_PRESENT,
+                None,
+                None,
+                byref(startup_info_ex.StartupInfo),
+                byref(process_info)
             ):
                 raise OSError("Failed to create process")
 
