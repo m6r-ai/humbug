@@ -606,7 +606,7 @@ class ConversationTab(TabBase):
             self._current_bookmark_index = (self._current_bookmark_index - 1) % len(bookmarked_items)
 
         # Get the bookmarked message and its data
-        message_widget, bookmark_data = bookmarked_items[self._current_bookmark_index]
+        _message_widget, bookmark_data = bookmarked_items[self._current_bookmark_index]
 
         # Restore the scroll position
         self._scroll_area.verticalScrollBar().setValue(bookmark_data.scroll_position)
