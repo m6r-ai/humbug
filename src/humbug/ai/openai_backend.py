@@ -31,7 +31,7 @@ class OpenAIBackend(AIBackend):
         if ConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
-        self._logger.debug("stream message %s", data)
+        self._logger.debug("stream message %r", data)
         return data
 
     def _create_stream_response_handler(self):

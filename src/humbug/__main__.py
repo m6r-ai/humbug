@@ -138,7 +138,7 @@ class HumbugApplication(QApplication):
         return ret
 
 
-async def main():
+def main():
     install_global_exception_handler()
 
     # Get API keys from config and environment
@@ -154,32 +154,23 @@ async def main():
         print("Error: No AI backends could be initialized")
         return 1
 
-    # Create and show main window
-    window = MainWindow(ai_backends)
-    window.show()
-
-    return 0
-
-
-def run_app():
-    # Create application first
+    # Create application
     app = HumbugApplication(sys.argv)
 
     # Create and set event loop
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
 
+    window = MainWindow(ai_backends)
+    window.show()
+
     # Run the main function
     try:
         with loop:
-            exit_code = loop.run_until_complete(main())
-            # Only run forever if main succeeded
-            if exit_code == 0:
-                loop.run_forever()
-            return exit_code
+            loop.run_forever()
     except KeyboardInterrupt:
         return 0
 
 
 if __name__ == "__main__":
-    sys.exit(run_app())
+    sys.exit(main())

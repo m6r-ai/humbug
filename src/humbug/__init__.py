@@ -24,7 +24,8 @@ def setup_logging():
     handler = RotatingFileHandler(
         log_file,
         maxBytes=1024*1024,  # 1MB
-        backupCount=49  # Keep 50 files total (current + 49 backups)
+        backupCount=49,  # Keep 50 files total (current + 49 backups)
+        encoding='utf-8'
     )
 
     # Configure logging
