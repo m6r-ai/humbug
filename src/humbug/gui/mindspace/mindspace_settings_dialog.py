@@ -144,6 +144,7 @@ class MindspaceSettingsDialog(QDialog):
                 models.append(model)
 
         self._model_combo.addItems(models)
+        self._model_combo.currentTextChanged.connect(self._handle_value_change)
         model_layout.addWidget(self._model_label)
         model_layout.addStretch()
         model_layout.addWidget(self._model_combo)
@@ -159,14 +160,11 @@ class MindspaceSettingsDialog(QDialog):
         self._temp_spin.setDecimals(1)
         self._temp_spin.setMinimumWidth(300)
         self._temp_spin.setMinimumHeight(40)
+        self._temp_spin.valueChanged.connect(self._handle_value_change)
         temp_layout.addWidget(self._temp_label)
         temp_layout.addStretch()
         temp_layout.addWidget(self._temp_spin)
         layout.addLayout(temp_layout)
-
-        # Update model change handler
-        self._model_combo.currentTextChanged.connect(self._handle_model_change)
-        self._temp_spin.valueChanged.connect(self._handle_value_change)
 
         # Add spacing before buttons
         layout.addSpacing(24)
@@ -390,6 +388,8 @@ class MindspaceSettingsDialog(QDialog):
         self._font_size_label.setText(strings.font_size)
         self._auto_backup_label.setText(strings.auto_backup)
         self._backup_interval_label.setText(strings.backup_interval)
+        self._model_label.setText(strings.settings_model_label)
+        self._temp_label.setText(strings.settings_temp_label)
 
         # Update buttons
         self.ok_button.setText(strings.ok)
@@ -409,7 +409,12 @@ class MindspaceSettingsDialog(QDialog):
 
         # Get current temperature value based on model support
         current_model = self._model_combo.currentText()
-        current_temp = self._temp_spin.value() if ConversationSettings.supports_temperature(current_model) else None
+        supports_temp = ConversationSettings.supports_temperature(current_model)
+        current_temp = self._temp_spin.value() if supports_temp else None
+
+        self._temp_spin.setEnabled(supports_temp)
+        if not supports_temp:
+            self._temp_spin.setValue(0.0)
 
         # Compare temperatures accounting for None values
         temp_changed = False
@@ -430,13 +435,6 @@ class MindspaceSettingsDialog(QDialog):
             current_model != self._current_settings.model or
             temp_changed
         )
-
-    def _handle_model_change(self, model: str) -> None:
-        """Handle model selection changes."""
-        supports_temp = ConversationSettings.supports_temperature(model)
-        self._temp_spin.setEnabled(supports_temp)
-        if not supports_temp:
-            self._temp_spin.setValue(0.0)
 
     def get_settings(self) -> MindspaceSettings:
         """Get current settings from dialog."""
