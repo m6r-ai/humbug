@@ -33,6 +33,7 @@ from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.transcript.transcript_error import (
     TranscriptError, TranscriptFormatError, TranscriptIOError
 )
@@ -97,6 +98,8 @@ class ConversationTab(TabBase):
             path,
             timestamp
         )
+
+        self._mindspace_manager = MindspaceManager()
 
         self._conversation = ConversationHistory(tab_id)
         self._settings = ConversationSettings()
@@ -816,6 +819,13 @@ class ConversationTab(TabBase):
         Args:
             messages: List of Message objects to load
         """
+        # Establish a baseline for conversation settings
+        self.update_conversation_settings(ConversationSettings(
+            model=self._mindspace_manager.settings.model,
+            temperature=self._mindspace_manager.settings.temperature
+        ))
+
+        # Iterate over the messages
         for message in messages:
             self._add_message(message)
 
