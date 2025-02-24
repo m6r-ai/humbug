@@ -21,9 +21,9 @@ This means the AIs working on the code know what's there by intent, rather than 
 coded.  That helps us keep the implementation on track, but also makes it possible to discuss what the
 software does, why it does it, and how it does it.
 
-Here's Humbug in action with multiple conversations ongoing while also editing files.
+Here's Humbug in action with a conversation alongside a local shell showing the last commit before v0.5 shipped.
 
-![Humbug in action](./docs/humbug-v0.2-1.webp)
+![Humbug in action](./docs/humbug-v0.5-1.webp)
 
 This time we're using the Metaphor file `metaphor/humbug-expert.m6r` to create a couple of conversations
 that are expert on Humbug itself!
