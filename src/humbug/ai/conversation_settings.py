@@ -84,7 +84,7 @@ class ConversationSettings:
         """
         # Default to Gemini but this should be overridden based on available backends
         self.model = model
-        self.temperature = temperature if self.supports_temperature(model) else None
+        self.temperature = temperature
         model_limits = self.MODEL_LIMITS.get(model, {"context_window": 8192, "max_output_tokens": 2048})
         self.context_window = model_limits["context_window"]
         self.max_output_tokens = model_limits["max_output_tokens"]

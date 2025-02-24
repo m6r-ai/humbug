@@ -409,12 +409,9 @@ class MindspaceSettingsDialog(QDialog):
 
         # Get current temperature value based on model support
         current_model = self._model_combo.currentText()
+        current_temp = self._temp_spin.value()
         supports_temp = ConversationSettings.supports_temperature(current_model)
-        current_temp = self._temp_spin.value() if supports_temp else None
-
         self._temp_spin.setEnabled(supports_temp)
-        if not supports_temp:
-            self._temp_spin.setValue(0.0)
 
         # Compare temperatures accounting for None values
         temp_changed = False
@@ -446,7 +443,7 @@ class MindspaceSettingsDialog(QDialog):
             auto_backup=self._auto_backup_check.isChecked(),
             auto_backup_interval=self._backup_interval_spin.value(),
             model=self._model_combo.currentText(),
-            temperature=self._temp_spin.value() if ConversationSettings.supports_temperature(self._model_combo.currentText()) else None
+            temperature=self._temp_spin.value()
         )
 
     def set_settings(self, settings: MindspaceSettings) -> None:
@@ -463,17 +460,18 @@ class MindspaceSettingsDialog(QDialog):
             temperature=settings.temperature
         )
 
-        # Editor settings
-        self._soft_tabs_check.setChecked(settings.use_soft_tabs)
-        self._tab_size_spin.setValue(settings.tab_size)
-        self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
-        self._auto_backup_check.setChecked(settings.auto_backup)
-        self._backup_interval_spin.setValue(settings.auto_backup_interval)
-        self._backup_interval_spin.setEnabled(settings.auto_backup)
-
         # Set initial language selection
         current_index = self._language_combo.findData(self._language_manager.current_language)
         self._language_combo.setCurrentIndex(current_index)
+
+        self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
+
+        # Editor settings
+        self._soft_tabs_check.setChecked(settings.use_soft_tabs)
+        self._tab_size_spin.setValue(settings.tab_size)
+        self._auto_backup_check.setChecked(settings.auto_backup)
+        self._backup_interval_spin.setValue(settings.auto_backup_interval)
+        self._backup_interval_spin.setEnabled(settings.auto_backup)
 
         # Model selection
         model_index = self._model_combo.findText(settings.model)
@@ -483,10 +481,7 @@ class MindspaceSettingsDialog(QDialog):
         # Temperature setting
         supports_temp = ConversationSettings.supports_temperature(settings.model)
         self._temp_spin.setEnabled(supports_temp)
-        if supports_temp and settings.temperature is not None:
-            self._temp_spin.setValue(settings.temperature)
-        else:
-            self._temp_spin.setValue(0.0)
+        self._temp_spin.setValue(settings.temperature)
 
         # Reset the apply button state
         self.apply_button.setEnabled(False)
