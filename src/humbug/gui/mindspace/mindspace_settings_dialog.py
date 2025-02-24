@@ -132,8 +132,11 @@ class MindspaceSettingsDialog(QDialog):
         # Add model selection
         model_layout = QHBoxLayout()
         self._model_label = QLabel(strings.settings_model_label)
+        self._model_label.setMinimumHeight(40)
         self._model_combo = QComboBox()
         self._model_combo.setView(QListView())
+        self._model_combo.setMinimumWidth(300)
+        self._model_combo.setMinimumHeight(40)
         models = []
         for model in ConversationSettings.AVAILABLE_MODELS:
             provider = ConversationSettings.get_provider(model)
@@ -149,10 +152,13 @@ class MindspaceSettingsDialog(QDialog):
         # Add temperature setting
         temp_layout = QHBoxLayout()
         self._temp_label = QLabel(strings.settings_temp_label)
+        self._temp_label.setMinimumHeight(40)
         self._temp_spin = QDoubleSpinBox()
         self._temp_spin.setRange(0.0, 1.0)
         self._temp_spin.setSingleStep(0.1)
         self._temp_spin.setDecimals(1)
+        self._temp_spin.setMinimumWidth(300)
+        self._temp_spin.setMinimumHeight(40)
         temp_layout.addWidget(self._temp_label)
         temp_layout.addStretch()
         temp_layout.addWidget(self._temp_spin)
@@ -160,6 +166,7 @@ class MindspaceSettingsDialog(QDialog):
 
         # Update model change handler
         self._model_combo.currentTextChanged.connect(self._handle_model_change)
+        self._temp_spin.valueChanged.connect(self._handle_value_change)
 
         # Add spacing before buttons
         layout.addSpacing(24)
@@ -400,13 +407,28 @@ class MindspaceSettingsDialog(QDialog):
         if not self._current_settings:
             return
 
+        # Get current temperature value based on model support
+        current_model = self._model_combo.currentText()
+        current_temp = self._temp_spin.value() if ConversationSettings.supports_temperature(current_model) else None
+
+        # Compare temperatures accounting for None values
+        temp_changed = False
+        if current_temp is None and self._current_settings.temperature is None:
+            temp_changed = False
+        elif current_temp is None or self._current_settings.temperature is None:
+            temp_changed = True
+        else:
+            temp_changed = abs(current_temp - self._current_settings.temperature) > 0.01
+
         self.apply_button.setEnabled(
             self._language_combo.currentData() != self._current_settings.language or
             self._soft_tabs_check.isChecked() != self._current_settings.use_soft_tabs or
             self._tab_size_spin.value() != self._current_settings.tab_size or
             self._auto_backup_check.isChecked() != self._current_settings.auto_backup or
             self._backup_interval_spin.value() != self._current_settings.auto_backup_interval or
-            self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
+            self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size) or
+            current_model != self._current_settings.model or
+            temp_changed
         )
 
     def _handle_model_change(self, model: str) -> None:
