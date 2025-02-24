@@ -59,33 +59,6 @@ class MindspaceSettingsDialog(QDialog):
         # Connect language change handler
         self._language_combo.currentIndexChanged.connect(self._handle_value_change)
 
-        # Soft tabs setting
-        soft_tabs_layout = QHBoxLayout()
-        self._soft_tabs_label = QLabel(strings.use_soft_tabs)
-        self._soft_tabs_label.setMinimumHeight(40)
-        self._soft_tabs_check = QCheckBox()
-        self._soft_tabs_check.setMinimumHeight(40)
-        self._soft_tabs_check.setMinimumWidth(300)
-        self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
-        soft_tabs_layout.addWidget(self._soft_tabs_label)
-        soft_tabs_layout.addStretch()
-        soft_tabs_layout.addWidget(self._soft_tabs_check)
-        layout.addLayout(soft_tabs_layout)
-
-        # Tab size setting
-        tab_size_layout = QHBoxLayout()
-        self._tab_size_label = QLabel(strings.tab_size)
-        self._tab_size_label.setMinimumHeight(40)
-        self._tab_size_spin = QSpinBox()
-        self._tab_size_spin.setRange(1, 8)
-        self._tab_size_spin.setMinimumWidth(300)
-        self._tab_size_spin.setMinimumHeight(40)
-        self._tab_size_spin.valueChanged.connect(self._handle_value_change)
-        tab_size_layout.addWidget(self._tab_size_label)
-        tab_size_layout.addStretch()
-        tab_size_layout.addWidget(self._tab_size_spin)
-        layout.addLayout(tab_size_layout)
-
         font_size_layout = QHBoxLayout()
         self._font_size_label = QLabel(strings.font_size)
         self._font_size_label.setMinimumHeight(40)
@@ -101,33 +74,6 @@ class MindspaceSettingsDialog(QDialog):
         font_size_layout.addStretch()
         font_size_layout.addWidget(self._font_size_spin)
         layout.addLayout(font_size_layout)
-
-        # Add auto-backup settings
-        auto_backup_layout = QHBoxLayout()
-        self._auto_backup_label = QLabel(strings.auto_backup)
-        self._auto_backup_label.setMinimumHeight(40)
-        self._auto_backup_check = QCheckBox()
-        self._auto_backup_check.setMinimumHeight(40)
-        self._auto_backup_check.setMinimumWidth(300)
-        self._auto_backup_check.stateChanged.connect(self._handle_value_change)
-        auto_backup_layout.addWidget(self._auto_backup_label)
-        auto_backup_layout.addStretch()
-        auto_backup_layout.addWidget(self._auto_backup_check)
-        layout.addLayout(auto_backup_layout)
-
-        # Add auto-backup interval setting
-        backup_interval_layout = QHBoxLayout()
-        self._backup_interval_label = QLabel(strings.backup_interval)
-        self._backup_interval_label.setMinimumHeight(40)
-        self._backup_interval_spin = QSpinBox()
-        self._backup_interval_spin.setRange(60, 3600)  # 1 minute to 1 hour
-        self._backup_interval_spin.setMinimumWidth(300)
-        self._backup_interval_spin.setMinimumHeight(40)
-        self._backup_interval_spin.valueChanged.connect(self._handle_value_change)
-        backup_interval_layout.addWidget(self._backup_interval_label)
-        backup_interval_layout.addStretch()
-        backup_interval_layout.addWidget(self._backup_interval_spin)
-        layout.addLayout(backup_interval_layout)
 
         # Add model selection
         model_layout = QHBoxLayout()
@@ -165,6 +111,60 @@ class MindspaceSettingsDialog(QDialog):
         temp_layout.addStretch()
         temp_layout.addWidget(self._temp_spin)
         layout.addLayout(temp_layout)
+
+        # Soft tabs setting
+        soft_tabs_layout = QHBoxLayout()
+        self._soft_tabs_label = QLabel(strings.use_soft_tabs)
+        self._soft_tabs_label.setMinimumHeight(40)
+        self._soft_tabs_check = QCheckBox()
+        self._soft_tabs_check.setMinimumHeight(40)
+        self._soft_tabs_check.setMinimumWidth(300)
+        self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
+        soft_tabs_layout.addWidget(self._soft_tabs_label)
+        soft_tabs_layout.addStretch()
+        soft_tabs_layout.addWidget(self._soft_tabs_check)
+        layout.addLayout(soft_tabs_layout)
+
+        # Tab size setting
+        tab_size_layout = QHBoxLayout()
+        self._tab_size_label = QLabel(strings.tab_size)
+        self._tab_size_label.setMinimumHeight(40)
+        self._tab_size_spin = QSpinBox()
+        self._tab_size_spin.setRange(1, 8)
+        self._tab_size_spin.setMinimumWidth(300)
+        self._tab_size_spin.setMinimumHeight(40)
+        self._tab_size_spin.valueChanged.connect(self._handle_value_change)
+        tab_size_layout.addWidget(self._tab_size_label)
+        tab_size_layout.addStretch()
+        tab_size_layout.addWidget(self._tab_size_spin)
+        layout.addLayout(tab_size_layout)
+
+        # Add auto-backup settings
+        auto_backup_layout = QHBoxLayout()
+        self._auto_backup_label = QLabel(strings.auto_backup)
+        self._auto_backup_label.setMinimumHeight(40)
+        self._auto_backup_check = QCheckBox()
+        self._auto_backup_check.setMinimumHeight(40)
+        self._auto_backup_check.setMinimumWidth(300)
+        self._auto_backup_check.stateChanged.connect(self._handle_value_change)
+        auto_backup_layout.addWidget(self._auto_backup_label)
+        auto_backup_layout.addStretch()
+        auto_backup_layout.addWidget(self._auto_backup_check)
+        layout.addLayout(auto_backup_layout)
+
+        # Add auto-backup interval setting
+        backup_interval_layout = QHBoxLayout()
+        self._backup_interval_label = QLabel(strings.backup_interval)
+        self._backup_interval_label.setMinimumHeight(40)
+        self._backup_interval_spin = QSpinBox()
+        self._backup_interval_spin.setRange(60, 3600)  # 1 minute to 1 hour
+        self._backup_interval_spin.setMinimumWidth(300)
+        self._backup_interval_spin.setMinimumHeight(40)
+        self._backup_interval_spin.valueChanged.connect(self._handle_value_change)
+        backup_interval_layout.addWidget(self._backup_interval_label)
+        backup_interval_layout.addStretch()
+        backup_interval_layout.addWidget(self._backup_interval_spin)
+        layout.addLayout(backup_interval_layout)
 
         # Add spacing before buttons
         layout.addSpacing(24)
