@@ -1,15 +1,17 @@
 # Changelog for Humbug
 
-## v0.5 (2025-02-19)
+## v0.5 (2025-02-24)
 
 New features:
 
-- Added a local command line/shell tab type.  This will let you open a
-  terminal window and use command line tools.
+- Added a local command line/shell tab type.  This will let you open a Unix shell
+  on MacOS and Linux, or a command prompt on Windows.  From these you can use your standard
+  command line tools.
 - Added Go, Java, Rust, and Swift lexers/parsers for syntax highlighting.
 - Columns can now be merged by dragging one on top of another.
 - Columns can now be swapped with ones either side.
 - Messages can be bookmarked to make it quick to jump backwards and forwards.
+- A default AI model and temperature can now be set in the mindspace settings.
 
 Internal structure changes:
 
@@ -20,7 +22,7 @@ Internal structure changes:
 
 Bug fixes:
 
-- Resolve a problem with the conversation settings dialog.
+- Resolved a problem with the conversation settings dialog.
 
 ## v0.4 (2025-02-03)
 

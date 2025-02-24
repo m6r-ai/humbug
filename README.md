@@ -39,6 +39,7 @@ In 0.5 we've added a lot of new features aimed at making Humbug more capable and
 - Support for bookmarking messages in conversations for easier navigation.
 - Syntax highlighting for Go, Java, Rust, and Swift.
 - Improved column management (auto-merging and swapping).
+- Default AI model and temperature can now be set in mindspace settings.
 
 ## Features
 
@@ -203,6 +204,7 @@ python -m humbug
     - `Ctrl+X` - Cut
     - `Ctrl+C` - Copy
     - `Ctrl+V` - Paste
+    - `Ctrl+F` - Find
     - `Ctrl+,` - Open conversation settings
     - `Ctrl+B` - Toggle bookmark
     - `Ctrl+Shift+N` - Next bookmark
