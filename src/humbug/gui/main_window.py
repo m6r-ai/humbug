@@ -938,7 +938,7 @@ class MainWindow(QMainWindow):
         if not self._mindspace_manager.has_mindspace:
             return
 
-        dialog = MindspaceSettingsDialog(self)
+        dialog = MindspaceSettingsDialog(self._ai_backends, self)
         dialog.set_settings(self._mindspace_manager.settings)
 
         def handle_settings_changed(new_settings):

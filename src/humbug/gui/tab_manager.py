@@ -820,9 +820,13 @@ class TabManager(QWidget):
         )
         conversation_tab.forkRequested.connect(self._fork_conversation)
 
-        # Set default model based on available backends for any new conversation
-        default_model = ConversationSettings.get_default_model(self._ai_backends)
-        conversation_tab.update_conversation_settings(ConversationSettings(model=default_model))
+        # Set model based on mindspace settings
+        settings = self._mindspace_manager.settings
+        conversation_settings = ConversationSettings(
+            model=settings.model,
+            temperature=settings.temperature if ConversationSettings.supports_temperature(settings.model) else None
+        )
+        conversation_tab.update_conversation_settings(conversation_settings)
 
         self.add_tab(conversation_tab, f"Conv: {conversation_id}")
         return conversation_id

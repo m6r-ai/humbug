@@ -5,7 +5,7 @@ This dialog allows users to configure mindspace settings such as tab behavior an
 Settings are persisted to the mindspace's settings.json file.
 """
 
-from typing import Optional
+from typing import Optional, Dict
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
+from humbug.ai.ai_backend import AIBackend
+from humbug.ai.conversation_settings import ConversationSettings
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_code import LanguageCode
@@ -25,7 +27,7 @@ class MindspaceSettingsDialog(QDialog):
 
     settings_changed = Signal(MindspaceSettings)
 
-    def __init__(self, parent=None):
+    def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
         """Initialize the mindspace settings dialog.
 
         Args:
@@ -126,6 +128,38 @@ class MindspaceSettingsDialog(QDialog):
         backup_interval_layout.addStretch()
         backup_interval_layout.addWidget(self._backup_interval_spin)
         layout.addLayout(backup_interval_layout)
+
+        # Add model selection
+        model_layout = QHBoxLayout()
+        self._model_label = QLabel(strings.settings_model_label)
+        self._model_combo = QComboBox()
+        self._model_combo.setView(QListView())
+        models = []
+        for model in ConversationSettings.AVAILABLE_MODELS:
+            provider = ConversationSettings.get_provider(model)
+            if provider in ai_backends:
+                models.append(model)
+
+        self._model_combo.addItems(models)
+        model_layout.addWidget(self._model_label)
+        model_layout.addStretch()
+        model_layout.addWidget(self._model_combo)
+        layout.addLayout(model_layout)
+
+        # Add temperature setting
+        temp_layout = QHBoxLayout()
+        self._temp_label = QLabel(strings.settings_temp_label)
+        self._temp_spin = QDoubleSpinBox()
+        self._temp_spin.setRange(0.0, 1.0)
+        self._temp_spin.setSingleStep(0.1)
+        self._temp_spin.setDecimals(1)
+        temp_layout.addWidget(self._temp_label)
+        temp_layout.addStretch()
+        temp_layout.addWidget(self._temp_spin)
+        layout.addLayout(temp_layout)
+
+        # Update model change handler
+        self._model_combo.currentTextChanged.connect(self._handle_model_change)
 
         # Add spacing before buttons
         layout.addSpacing(24)
@@ -375,47 +409,66 @@ class MindspaceSettingsDialog(QDialog):
             self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
         )
 
+    def _handle_model_change(self, model: str) -> None:
+        """Handle model selection changes."""
+        supports_temp = ConversationSettings.supports_temperature(model)
+        self._temp_spin.setEnabled(supports_temp)
+        if not supports_temp:
+            self._temp_spin.setValue(0.0)
+
     def get_settings(self) -> MindspaceSettings:
-        """Get the current settings from the dialog."""
+        """Get current settings from dialog."""
         return MindspaceSettings(
             language=self._language_combo.currentData(),
             use_soft_tabs=self._soft_tabs_check.isChecked(),
             tab_size=self._tab_size_spin.value(),
             font_size=self._font_size_spin.value(),
             auto_backup=self._auto_backup_check.isChecked(),
-            auto_backup_interval=self._backup_interval_spin.value()
+            auto_backup_interval=self._backup_interval_spin.value(),
+            model=self._model_combo.currentText(),
+            temperature=self._temp_spin.value() if ConversationSettings.supports_temperature(self._model_combo.currentText()) else None
         )
 
     def set_settings(self, settings: MindspaceSettings) -> None:
-        """Set the current settings in the dialog."""
-        # Store initial language for potential cancel/revert
-        self._initial_settings = MindspaceSettings(
-            language=settings.language,
-            use_soft_tabs=settings.use_soft_tabs,
-            tab_size=settings.tab_size,
-            font_size=settings.font_size,
-            auto_backup=settings.auto_backup,
-            auto_backup_interval=settings.auto_backup_interval
-        )
+        """Update dialog with current settings."""
+        self._initial_settings = settings
         self._current_settings = MindspaceSettings(
             language=settings.language,
             use_soft_tabs=settings.use_soft_tabs,
             tab_size=settings.tab_size,
             font_size=settings.font_size,
             auto_backup=settings.auto_backup,
-            auto_backup_interval=settings.auto_backup_interval
+            auto_backup_interval=settings.auto_backup_interval,
+            model=settings.model,
+            temperature=settings.temperature
         )
 
+        # Editor settings
         self._soft_tabs_check.setChecked(settings.use_soft_tabs)
         self._tab_size_spin.setValue(settings.tab_size)
         self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
         self._auto_backup_check.setChecked(settings.auto_backup)
         self._backup_interval_spin.setValue(settings.auto_backup_interval)
+        self._backup_interval_spin.setEnabled(settings.auto_backup)
 
         # Set initial language selection
         current_index = self._language_combo.findData(self._language_manager.current_language)
         self._language_combo.setCurrentIndex(current_index)
 
+        # Model selection
+        model_index = self._model_combo.findText(settings.model)
+        if model_index >= 0:
+            self._model_combo.setCurrentIndex(model_index)
+
+        # Temperature setting
+        supports_temp = ConversationSettings.supports_temperature(settings.model)
+        self._temp_spin.setEnabled(supports_temp)
+        if supports_temp and settings.temperature is not None:
+            self._temp_spin.setValue(settings.temperature)
+        else:
+            self._temp_spin.setValue(0.0)
+
+        # Reset the apply button state
         self.apply_button.setEnabled(False)
 
     def _handle_apply(self) -> None:
