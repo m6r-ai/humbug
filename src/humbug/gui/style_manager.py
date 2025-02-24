@@ -89,8 +89,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#909090"
             },
             ColorRole.TEXT_SELECTED: {
-                ColorMode.DARK: "#606078",
-                ColorMode.LIGHT: "#b0b0d0"
+                ColorMode.DARK: "#404058",
+                ColorMode.LIGHT: "#c8c8dc"
             },
             ColorRole.TEXT_FOUND: {
                 ColorMode.DARK: "#885050",
@@ -170,7 +170,7 @@ class StyleManager(QObject):
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
                 ColorMode.DARK: "#1c1c1c",
-                ColorMode.LIGHT: "#e4e4e4"
+                ColorMode.LIGHT: "#e8e8e8"
             },
             ColorRole.MESSAGE_USER: {
                 ColorMode.DARK: "#80c080",
