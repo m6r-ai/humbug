@@ -444,51 +444,73 @@ Context: Capabilities
                 Context: Language
                     The language to be used by messages in the application can be selected from a drop-down list.
 
-                Context: Tab settings
-                    The visual tabs (e.g. editor and conversation) supports configurable tab character behavior.
-
-                    Context: Soft tabs
-                        The useSoftTabs setting controls whether pressing the tab key inserts literal
-                        tab characters or equivalent spaces.
-
-                    Context: Tab size
-                        The tabSize setting controls how many spaces wide a tab or soft tab will be.
-
                 Context: Font size
                     The fontSize setting controls the base font size used in editors and related text areas.
                     When not specified, the system default font size will be used.
 
                     The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
 
-                Context: Auto backup settings
-                    The editor supports automatic backup of unsaved changes.
+                Context: Conversation settings
+                    Context: AI Model
+                        The AI model is selected via a dropdown menu.
 
-                    Context: Auto backup
-                        The "Auto Backup" setting controls whether automatic backup is enabled.
+                        Available models should be configurable at application startup.
 
-                        When enabled, unsaved changes are automatically backed up at regular intervals.
-                        By default, this setting is disabled.
+                        If a model's provider is not available (no API key), that model should be disabled in the
+                        conversation settings.
 
-                    Context: Backup interval
-                        The "Backup Interval" setting controls how frequently backups occur.
+                        Changing the model only affects new conversations, not any existing ones.
 
-                        The interval can be set between 60 seconds (1 minute) and 3600 seconds (1 hour).
+                    Context: Temperature
+                        The temperature is set via a numeric input field that:
 
-                        Default interval is 300 seconds (5 minutes).
+                        - Accepts values between 0.0 and 1.0
+                        - Shows one decimal place
+                        - Has spinner arrows for adjustment
+                        - Default value is 0.7
 
-                    Context: Backup location
-                        For untitled files, backups are stored in the mindspace ".humbug/backups" directory with timestamp.
+                        Changing the temperature only affects new conversations, not any existing ones.
 
-                        For saved files, backups are stored alongside the original with ".backup" extension.
+                Context: Editor settings
+                    Context: Tab character settings
+                        The visual tabs (e.g. editor and conversation) supports configurable tab character behavior.
 
-                    Context: Backup behavior
-                        Backups only occur when:
+                        Context: Soft tabs
+                            The useSoftTabs setting controls whether pressing the tab key inserts literal
+                            tab characters or equivalent spaces.
 
-                        - Auto backup is enabled in mindspace settings
-                        - The file has unsaved changes
-                        - The specified backup interval has elapsed since last backup
+                        Context: Tab size
+                            The tabSize setting controls how many spaces wide a tab or soft tab will be.
 
-                        Backups do not replace the original file and are preserved until the file is saved.
+                    Context: Auto backup settings
+                        The editor supports automatic backup of unsaved changes.
+
+                        Context: Auto backup
+                            The "Auto Backup" setting controls whether automatic backup is enabled.
+
+                            When enabled, unsaved changes are automatically backed up at regular intervals.
+                            By default, this setting is disabled.
+
+                        Context: Backup interval
+                            The "Backup Interval" setting controls how frequently backups occur.
+
+                            The interval can be set between 60 seconds (1 minute) and 3600 seconds (1 hour).
+
+                            Default interval is 300 seconds (5 minutes).
+
+                        Context: Backup location
+                            For untitled files, backups are stored in the mindspace ".humbug/backups" directory with timestamp.
+
+                            For saved files, backups are stored alongside the original with ".backup" extension.
+
+                        Context: Backup behavior
+                            Backups only occur when:
+
+                            - Auto backup is enabled in mindspace settings
+                            - The file has unsaved changes
+                            - The specified backup interval has elapsed since last backup
+
+                            Backups do not replace the original file and are preserved until the file is saved.
 
         Context: Settings file
             The settings.json file contains mindspace-specific configuration.  The application validates this file
@@ -736,6 +758,9 @@ Context: Capabilities
             Context: New Conversation
                 The "New Conversation" menu item will create a new conversation tab.
 
+                On opening a new conversation the default conversation settings come from the currently active
+                mindspace settings.
+
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+N" for Windows).
 
                 This option is only valid if a mindspace is open.
@@ -752,6 +777,9 @@ Context: Capabilities
                 On successful compilation of the Metaphor file a new conversation will be opened, and
                 the compiled prompt will be inserted into the input control, with the cursor placed at
                 the end of the input.
+
+                On opening a new conversation the default conversation settings come from the currently active
+                mindspace settings.
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+M" for Windows).
 
@@ -1158,7 +1186,7 @@ Context: Capabilities
 
                 The dialog shows the current settings for the active conversation tab.
 
-                Context: Model Selection
+                Context: AI Model
                     The AI model is selected via a dropdown menu.
 
                     Available models should be configurable at application startup.
@@ -1168,7 +1196,7 @@ Context: Capabilities
                     If a model's provider is not available (no API key), that model should be disabled in the
                     conversation settings.
 
-                Context: Temperature Setting
+                Context: Temperature
                     The temperature is set via a numeric input field that:
 
                     - Accepts values between 0.0 and 1.0
