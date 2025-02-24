@@ -36,18 +36,18 @@ class MindspaceSettings:
 
     def save(self, path: str) -> None:
         data = {
-            "editor": {
-                "useSoftTabs": self.use_soft_tabs,
-                "tabSize": self.tab_size,
-                "fontSize": self.font_size,
-                "autoBackup": self.auto_backup,
-                "autoBackupInterval": self.auto_backup_interval,
-                "language": self.language.name
-            },
+            "language": self.language.name,
+            "fontSize": self.font_size,
             "conversation": {
                 "model": self.model,
                 "temperature": self.temperature
-            }
+            },
+            "editor": {
+                "useSoftTabs": self.use_soft_tabs,
+                "tabSize": self.tab_size,
+                "autoBackup": self.auto_backup,
+                "autoBackupInterval": self.auto_backup_interval,
+            },
         }
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
