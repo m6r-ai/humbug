@@ -7,4 +7,5 @@ class MessageSource(Enum):
     """Enumeration of possible message sources."""
     USER = "user"
     AI = "ai"
+    REASONING = "reasoning"
     SYSTEM = "system"

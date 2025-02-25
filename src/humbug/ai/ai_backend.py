@@ -125,6 +125,7 @@ class AIBackend(ABC):
                                 if attempt < self._max_retries - 1:
                                     delay = self._base_delay * (2 ** attempt)
                                     yield AIResponse(
+                                        reasoning="",
                                         content="",
                                         error=AIError(
                                             code="rate_limit",
@@ -138,6 +139,7 @@ class AIBackend(ABC):
                                     continue
 
                             yield AIResponse(
+                                reasoning="",
                                 content="",
                                 error=AIError(
                                     code=str(response.status),
@@ -168,12 +170,14 @@ class AIBackend(ABC):
                                 response_handler.update_from_chunk(chunk)
                                 if response_handler.error:
                                     yield AIResponse(
+                                        reasoning="",
                                         content="",
                                         error=response_handler.error
                                     )
                                     return
 
                                 yield AIResponse(
+                                    reasoning=response_handler.reasoning,
                                     content=response_handler.content,
                                     usage=response_handler.usage
                                 )
@@ -196,6 +200,7 @@ class AIBackend(ABC):
 
                 if attempt < self._max_retries - 1:
                     yield AIResponse(
+                        reasoning="",
                         content="",
                         error=AIError(
                             code="network_error",
@@ -209,6 +214,7 @@ class AIBackend(ABC):
                     continue
 
                 yield AIResponse(
+                    reasoning="",
                     content="",
                     error=AIError(
                         code="network_error",
@@ -223,6 +229,7 @@ class AIBackend(ABC):
                 # Handle non-retryable errors
                 self._logger.exception("Error processing AI response: %s", str(e))
                 yield AIResponse(
+                    reasoning="",
                     content="",
                     error=AIError(
                         code="error",

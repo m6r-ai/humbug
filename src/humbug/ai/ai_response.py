@@ -18,6 +18,7 @@ class AIError:
 @dataclass
 class AIResponse:
     """Response from an AI backend."""
+    reasoning: str
     content: str
     usage: Optional[AIUsage] = None
     error: Optional[AIError] = None

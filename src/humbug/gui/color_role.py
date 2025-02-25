@@ -45,7 +45,8 @@ class ColorRole(Enum):
     # Message colours
     MESSAGE_BACKGROUND = auto()         # Message background
     MESSAGE_USER = auto()               # User message background
-    MESSAGE_AI = auto()                 # AI message background
+    MESSAGE_AI = auto()                 # AI response background
+    MESSAGE_REASONING = auto()          # AI reasoning background
     MESSAGE_SYSTEM = auto()             # System message background
     MESSAGE_BOOKMARK = auto()           # Bookmark highlight
 

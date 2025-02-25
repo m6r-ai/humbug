@@ -104,6 +104,7 @@ class ConversationTab(TabBase):
         self._conversation = ConversationHistory(tab_id)
         self._settings = ConversationSettings()
         self._current_ai_message = None
+        self._current_reasoning_message = None
         self._messages: List[MessageWidget] = []
         self._message_with_selection: Optional[MessageWidget] = None
         self._is_streaming = False
@@ -537,8 +538,6 @@ class ConversationTab(TabBase):
 
         Args:
             message: The message text
-            style: The style type ('user', 'ai', or 'system')
-            timestamp: Optional ISO format timestamp string
         """
         msg_widget = MessageWidget(self)
         msg_widget.selectionChanged.connect(
@@ -721,6 +720,7 @@ class ConversationTab(TabBase):
 
     async def update_streaming_response(
         self,
+        reasoning: str,
         content: str,
         usage: Optional[Usage] = None,
         error: Optional[AIError] = None
@@ -733,6 +733,17 @@ class ConversationTab(TabBase):
                 self._input.set_streaming(False)
 
                 # For cancellation, preserve the partial response first
+                if self._current_reasoning_message:
+                    message = self._conversation.update_message(
+                        self._current_reasoning_message.id,
+                        content=self._current_reasoning_message.content,
+                        completed=False
+                    )
+                    if message:
+                        await self._write_transcript(message)
+
+                    self._current_reasoning_message = None
+
                 if self._current_ai_message:
                     message = self._conversation.update_message(
                         self._current_ai_message.id,
@@ -764,45 +775,92 @@ class ConversationTab(TabBase):
             self._is_streaming = True
             self._input.set_streaming(True)
 
-        # If our last message was not from the AI then create a new one.
-        if not self._current_ai_message:
-            # Create and add initial message
+        # If our message an AI response or is it the AI reasoning?
+        if content:
+            # We're handling a response.  Is this the first time we're seeing it?
+            if not self._current_ai_message:
+                # If we previously had reasoning from the AI then close that out
+                if self._current_reasoning_message:
+                    message = self._conversation.update_message(
+                        self._current_reasoning_message.id,
+                        reasoning,
+                        usage=usage,
+                        completed=True
+                    )
 
-            settings = self.get_settings()
-            message = Message.create(
-                MessageSource.AI,
-                content,
-                model=settings.model,
-                temperature=settings.temperature,
-                completed=False
-            )
-            self._add_message(message)
-            self._current_ai_message = message
-        else:
-            # Store current scroll position before appending.  If this insertion triggers a change
-            # in scrolling state then we'll get a signal and will adjust the scrollbar state based
-            # on this.
-            total_height = self._messages_container.height()
-            input_height = self._input.height()
-            self._last_insertion_point =  total_height - input_height - 2 * self._messages_layout.spacing()
+                    self._current_reasoning_message = None
 
-            # Update our message
-            self._messages[-1].set_content(content, MessageSource.AI, self._current_ai_message.timestamp)
+                # Create and add initial AI response message
+                settings = self.get_settings()
+                message = Message.create(
+                    MessageSource.AI,
+                    content,
+                    model=settings.model,
+                    temperature=settings.temperature,
+                    completed=False
+                )
+                self._add_message(message)
+                self._current_ai_message = message
+            else:
+                # Store current scroll position before appending.  If this insertion triggers a change
+                # in scrolling state then we'll get a signal and will adjust the scrollbar state based
+                # on this.
+                total_height = self._messages_container.height()
+                input_height = self._input.height()
+                self._last_insertion_point =  total_height - input_height - 2 * self._messages_layout.spacing()
 
-            # Update existing message
-            message = self._conversation.update_message(
-                self._current_ai_message.id,
-                content,
-                usage=usage,
-                completed=(usage is not None)
-            )
-            if not message:
-                return
+                # Update our message
+                self._messages[-1].set_content(content, MessageSource.AI, self._current_ai_message.timestamp)
+
+                # Update existing message
+                message = self._conversation.update_message(
+                    self._current_ai_message.id,
+                    content,
+                    usage=usage,
+                    completed=(usage is not None)
+                )
+                if not message:
+                    return
+        elif reasoning:
+            # We're handling reasoning from our AI.  Is it the first time we're seeting this?
+            if not self._current_reasoning_message:
+                # Create and add initial message
+                settings = self.get_settings()
+                message = Message.create(
+                    MessageSource.REASONING,
+                    reasoning,
+                    model=settings.model,
+                    temperature=settings.temperature,
+                    completed=False
+                )
+                self._add_message(message)
+                self._current_reasoning_message = message
+            else:
+                # Store current scroll position before appending.  If this insertion triggers a change
+                # in scrolling state then we'll get a signal and will adjust the scrollbar state based
+                # on this.
+                total_height = self._messages_container.height()
+                input_height = self._input.height()
+                self._last_insertion_point =  total_height - input_height - 2 * self._messages_layout.spacing()
+
+                # Update our message
+                self._messages[-1].set_content(reasoning, MessageSource.REASONING, self._current_reasoning_message.timestamp)
+
+                # Update existing message
+                message = self._conversation.update_message(
+                    self._current_reasoning_message.id,
+                    reasoning,
+                    usage=usage,
+                    completed=False
+                )
+                if not message:
+                    return
 
         if usage:
             self._is_streaming = False
             self._input.set_streaming(False)
             self.update_status()
+            self._current_reasoning_message = None
             self._current_ai_message = None
             await self._write_transcript(message)
             return
@@ -892,6 +950,7 @@ class ConversationTab(TabBase):
 
             async for response in stream:
                 await self.update_streaming_response(
+                    reasoning=response.reasoning,
                     content=response.content,
                     usage=response.usage,
                     error=response.error
@@ -910,6 +969,7 @@ class ConversationTab(TabBase):
             if self._is_streaming:
                 self._logger.debug("AI response failed (likely timeout)")
                 await self.update_streaming_response(
+                    reasoning="",
                     content="",
                     error=AIError(
                         code="cancelled",
@@ -924,6 +984,7 @@ class ConversationTab(TabBase):
         except asyncio.CancelledError:
             self._logger.debug("AI response cancelled")
             await self.update_streaming_response(
+                reasoning="",
                 content="",
                 error=AIError(
                     code="cancelled",
@@ -942,6 +1003,7 @@ class ConversationTab(TabBase):
                 str(e)
             )
             await self.update_streaming_response(
+                reasoning="",
                 content="",
                 error=AIError(
                     code="process_error",

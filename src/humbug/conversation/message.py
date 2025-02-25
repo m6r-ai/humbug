@@ -26,6 +26,7 @@ class Message:
     _SOURCE_TYPE_MAP = {
         MessageSource.USER: "user_message",
         MessageSource.AI: "ai_response",
+        MessageSource.REASONING: "ai_reasoning",
         MessageSource.SYSTEM: "system_message"
     }
     _TYPE_SOURCE_MAP = {v: k for k, v in _SOURCE_TYPE_MAP.items()}

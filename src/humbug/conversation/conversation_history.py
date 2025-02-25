@@ -66,19 +66,25 @@ class ConversationHistory:
         # We must see at least 2 messages so there's no point starting with the last one.
         while i < (len(self._messages) - 1):
             user_msg = self._messages[i]
-            if self._messages[i].source != MessageSource.USER:
-                i += 1
+            i += 1
+
+            if user_msg.source != MessageSource.USER:
                 continue
 
             # Found a user message, look for corresponding AI response
-            ai_msg = self._messages[i + 1]
-            if ai_msg.source != MessageSource.AI:
+            ai_msg = self._messages[i]
+            if ai_msg.source == MessageSource.REASONING:
+                # We're always safe to pick up this message because we always have one left
+                # after we complete this loop, so the worst that will happen is we'll pick
+                # up that user message.
                 i += 1
+                ai_msg = self._messages[i]
+
+            if ai_msg.source != MessageSource.AI:
                 continue
 
             # If we didn't complete or there were errors then we skip this
             if not ai_msg.completed or ai_msg.error:
-                i += 1
                 continue
 
             result.append({
@@ -90,7 +96,7 @@ class ConversationHistory:
                 "content": ai_msg.content
             })
 
-            i += 2
+            i += 1
 
         # The last message should be our user's message.
         user_msg = self._messages[-1]
@@ -99,7 +105,6 @@ class ConversationHistory:
             "content": user_msg.content
         })
 
-        print(f"messages for context: {result}")
         return result
 
     def get_token_counts(self) -> Dict[str, int]:

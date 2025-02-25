@@ -130,6 +130,7 @@ class MessageWidget(QFrame):
         role_text = {
             MessageSource.USER: strings.role_you,
             MessageSource.AI: strings.role_assistant,
+            MessageSource.REASONING: strings.role_reasoning,
             MessageSource.SYSTEM: strings.role_system
         }.get(self._message_source, "Unknown")
 
@@ -234,6 +235,7 @@ class MessageWidget(QFrame):
         role_colours = {
             MessageSource.USER: ColorRole.MESSAGE_USER,
             MessageSource.AI: ColorRole.MESSAGE_AI,
+            MessageSource.REASONING: ColorRole.MESSAGE_REASONING,
             MessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM
         }
 

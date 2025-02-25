@@ -12,12 +12,11 @@ class DeepseekStreamResponse:
 
     def __init__(self):
         """Initialize stream response handler."""
+        self.reasoning = ""
         self.content = ""
         self.usage: Optional[AIUsage] = None
         self.error: Optional[AIError] = None
         self._logger = logging.getLogger("DeepseekStreamResponse")
-        self._reasoning_started = False
-        self._content_started = False
 
     def update_from_chunk(self, chunk: dict) -> None:
         """Update from a response chunk and return new content if any."""
@@ -49,21 +48,11 @@ class DeepseekStreamResponse:
 
         delta = choices[0].get("delta", {})
         if "reasoning_content" in delta:
-            new_content = delta["reasoning_content"]
-            if new_content:
-                if not self._reasoning_started:
-                    self.content += "Reasoning:\n"
-                    self._reasoning_started = True
-
-                self.content += new_content
+            new_reasoning = delta["reasoning_content"]
+            if new_reasoning:
+                self.reasoning += new_reasoning
 
         if "content" in delta:
             new_content = delta["content"]
             if new_content:
-                if not self._content_started:
-                    if self._reasoning_started:
-                        self.content += "\nResponse:\n"
-
-                    self._content_started = True
-
                 self.content += new_content

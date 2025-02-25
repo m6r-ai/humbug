@@ -59,6 +59,7 @@ class LanguageStrings:
     # Message roles and labels
     role_you: str
     role_assistant: str
+    role_reasoning: str
     role_system: str
 
     # Find widget
@@ -247,7 +248,8 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Message roles
         role_you="You",
-        role_assistant="Assistant",
+        role_assistant="Assistant Response",
+        role_reasoning="Assistant Reasoning",
         role_system="System Message",
 
         # Find widget
@@ -419,7 +421,8 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Message roles
         role_you="Vous",
-        role_assistant="Assistant",
+        role_assistant="Réponse de l'assistant",
+        role_reasoning="Raisonnement de l'assistant",
         role_system="Message système",
 
         # Find widget
@@ -596,7 +599,8 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Message roles
         role_you="أنت",
-        role_assistant="المساعد",
+        role_assistant="رد المساعد",
+        role_reasoning="تفكير المساعد",
         role_system="رسالة النظام",
 
         # Find widget

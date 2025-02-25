@@ -196,8 +196,8 @@ Context: Capabilities
 
                         Each card has:
 
-                        - A header section containing the sender name ("You", "Assistant", or "System Message"), colour coded
-                        to show these in different colours based on the role.
+                        - A header section containing the sender name ("You", "Assitant Reasoning", "Assistant Response",
+                        or "System Message"), colour coded to show these in different colours based on the role.
                         - A content section.
                         - 8px spacing between cards
                         - 8px padding within the content area
@@ -222,7 +222,7 @@ Context: Capabilities
                             +------------------------------------------+
                                             ↕ 10px
                             +------------------------------------------+
-                            |  Assistant                               |
+                            |  Assistant Response                      |
                             |                                          |
                             |  This is an AI response that also wraps  |
                             |  across multiple lines as needed.        |
@@ -1394,6 +1394,9 @@ Context: Capabilities
     Context: AI interactions
         The AI backend supports streaming responses that arrive incrementally.  These should be displayed
         as they arrive with content continuing to be added as more arrives.
+
+        AI responses my be either "reasoning" or "response".  Reasoning occurs where a model explicitly
+        generates a series of responses to help it construct a response.
 
         Context: Streaming responses
             The backend provides chunks containing:

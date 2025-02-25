@@ -12,6 +12,7 @@ class GeminiStreamResponse:
 
     def __init__(self):
         """Initialize stream response handler."""
+        self.reasoning = ""
         self.content = ""
         self.usage: Optional[AIUsage] = None
         self.error: Optional[AIError] = None
