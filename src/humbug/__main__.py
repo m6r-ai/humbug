@@ -41,7 +41,7 @@ def get_api_keys() -> dict[str, str | None]:
     if it doesn't exist. Keys from this file will override environment variables.
 
     Returns:
-        dict: Dictionary containing API keys for OpenAI, Google, and Anthropic
+        dict: Dictionary containing API keys for Anthropic, Deepseek, Google, M6R, and OpenAI
 
     Raises:
         json.JSONDecodeError: If the API keys file exists but contains invalid JSON
@@ -50,10 +50,11 @@ def get_api_keys() -> dict[str, str | None]:
 
     # Initialize with environment variables
     api_keys = {
-        "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
-        "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
         "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY"),
-        "M6R_API_KEY": os.environ.get("M6R_API_KEY")
+        "DEEPSEEK_API_KEY": os.environ.get("DEEPSEEK_API_KEY"),
+        "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
+        "M6R_API_KEY": os.environ.get("M6R_API_KEY"),
+        "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY")
     }
 
     # Define the config directory and file path
@@ -72,10 +73,11 @@ def get_api_keys() -> dict[str, str | None]:
         if not os.path.exists(config_file):
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump({
-                    "OPENAI_API_KEY": "",
-                    "GOOGLE_API_KEY": "",
                     "ANTHROPIC_API_KEY": "",
-                    "M6R_API_KEY": ""
+                    "DEEPSEEK_API_KEY": "",
+                    "GOOGLE_API_KEY": "",
+                    "M6R_API_KEY": "",
+                    "OPENAI_API_KEY": ""
                 }, f, indent=4)
             os.chmod(config_file, 0o600)
         else:
@@ -144,12 +146,13 @@ def main():
     # Get API keys from config and environment
     api_keys = get_api_keys()
     anthropic_key = api_keys["ANTHROPIC_API_KEY"]
+    deepseek_key = api_keys["DEEPSEEK_API_KEY"]
     google_key = api_keys["GOOGLE_API_KEY"]
     m6r_key = api_keys["M6R_API_KEY"]
     openai_key = api_keys["OPENAI_API_KEY"]
 
     # Initialize components
-    ai_backends = AIProvider.create_backends(openai_key, google_key, anthropic_key, m6r_key)
+    ai_backends = AIProvider.create_backends(anthropic_key, deepseek_key, google_key, m6r_key, openai_key)
     if not ai_backends:
         print("Error: No AI backends could be initialized")
         return 1

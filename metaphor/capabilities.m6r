@@ -620,10 +620,11 @@ Context: Capabilities
 
                 ```json
                 {
-                    "OPENAI_API_KEY": "",
-                    "GOOGLE_API_KEY": "",
                     "ANTHROPIC_API_KEY": "",
-                    "M6R_API_KEY": ""
+                    "DEEPSEEK_API_KEY": "",
+                    "GOOGLE_API_KEY": "",
+                    "M6R_API_KEY": "",
+                    "OPENAI_API_KEY": ""
                 }
                 ```
 
@@ -641,9 +642,11 @@ Context: Capabilities
 
                     The environment variables checked are:
 
-                    - OPENAI_API_KEY for OpenAI models
-                    - GOOGLE_API_KEY for Google models
                     - ANTHROPIC_API_KEY for Anthropic models
+                    - DEEPSEEK_API_KEY for Deepseek models
+                    - GOOGLE_API_KEY for Google models
+                    - M6R_API_KEY for M6R models
+                    - OPENAI_API_KEY for OpenAI models
 
                 Context: File permissions
                     For security:
@@ -1423,6 +1426,7 @@ Context: Capabilities
             Models are provided by different AI services:
 
             - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022", "claude-3.7-sonnet-20250219"
+            - Deepseek models: "deepseek-chat", "deepseek-reasoner"
             - Google models: "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"
             - M6R models: "tessa"
             - Ollama models: "llama3.2", "phi4"
@@ -1444,6 +1448,8 @@ Context: Capabilities
         - claude-3-5-haiku-20241022: Supports temperature 0.0-1.0
         - claude-3-5-sonnet-20241022: Supports temperature 0.0-1.0
         - claude-3-7-sonnet-20240219: Supports temperature 0.0-1.0
+        - deepseek-chat: Supports temperature 0.0-1.0
+        - deepseek-reasoner: Supports temperature 0.0-1.0
         - gemini-1.5-flash: Supports temperature 0.0-1.0
         - gemini-1.5-pro: Supports temperature 0.0-1.0
         - gemini-2.0-flash-exp: Supports temperature 0.0-1.0

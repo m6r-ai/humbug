@@ -12,6 +12,10 @@ class ConversationSettings:
         "claude-3-5-sonnet-20241022",
         "claude-3-7-sonnet-20250219",
 
+        # Deepseek models
+        "deepseek-chat",
+        "deepseek-reasoner",
+
         # Google models
         "gemini-1.5-flash",
         "gemini-1.5-pro",
@@ -35,6 +39,8 @@ class ConversationSettings:
         "claude-3-5-haiku-20241022": "anthropic",
         "claude-3-5-sonnet-20241022": "anthropic",
         "claude-3-7-sonnet-20250219": "anthropic",
+        "deepseek-chat": "deepseek",
+        "deepseek-reasoner": "deepseek",
         "gemini-1.5-flash": "google",
         "gemini-1.5-pro": "google",
         "gemini-2.0-flash-exp": "google",
@@ -51,9 +57,12 @@ class ConversationSettings:
         "claude-3-5-haiku-20241022": True,
         "claude-3-5-sonnet-20241022": True,
         "claude-3-7-sonnet-20250219": True,
+        "deepseek-chat": True,
+        "deepseek-reasoner": True,
         "gemini-1.5-flash": True,
         "gemini-1.5-pro": True,
         "gemini-2.0-flash-exp": True,
+        "tessa": False,
         "llama3.2": True,
         "phi4": True,
         "gpt-4o-mini": True,
@@ -66,6 +75,8 @@ class ConversationSettings:
         "claude-3-5-haiku-20241022": {"context_window": 200000, "max_output_tokens": 4096},
         "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192},
         "claude-3-7-sonnet-20250219": {"context_window": 200000, "max_output_tokens": 64000},
+        "deepseek-chat": {"context_window": 64000, "max_output_tokens": 8192},
+        "deepseek-reasoner": {"context_window": 64000, "max_output_tokens": 8192},
         "gemini-1.5-flash": {"context_window": 1048576, "max_output_tokens": 8192},
         "gemini-1.5-pro": {"context_window": 2097152, "max_output_tokens": 8192},
         "gemini-2.0-flash-exp": {"context_window": 1048576, "max_output_tokens": 8192},
@@ -135,6 +146,10 @@ class ConversationSettings:
         # Then M6R
         if "m6r" in ai_backends:
             return "tessa"
+
+        # Then Deepseek
+        if "deepseek" in ai_backends:
+            return "deepseek-chat"
 
         # Finally OpenAI
         if "openai" in ai_backends:

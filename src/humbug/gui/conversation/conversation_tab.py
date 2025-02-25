@@ -912,6 +912,22 @@ class ConversationTab(TabBase):
                 except StopAsyncIteration:
                     break
 
+            # If we get here and are still marked as streaming then we failed to get a
+            # complete response before giving up.  This is a failure and should be handled as such.
+            if self._is_streaming:
+                self._logger.debug("AI response failed (likely timeout)")
+                await self.update_streaming_response(
+                    content="",
+                    error=AIError(
+                        code="cancelled",
+                        message="Server failed to complete response",
+                        retries_exhausted=True,
+                        details={"type": "CancelledError"}
+                    )
+                )
+                self._restore_last_message()
+                return
+
         except (asyncio.CancelledError, GeneratorExit):
             self._logger.debug("AI response cancelled")
             await self.update_streaming_response(

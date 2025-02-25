@@ -37,4 +37,6 @@ class OllamaStreamResponse:
             )
 
         if "message" in chunk and "content" in chunk["message"]:
-            self.content += chunk["message"]["content"]
+            content = chunk["message"]["content"]
+            if content:
+                self.content += content

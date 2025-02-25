@@ -76,6 +76,10 @@ Context: Implementation
                     - Overloaded error (too many requests)
                     - Model overloaded
 
+        Context: Deepseek REST endpoint
+            The Deepseek REST endpoint has the same form as the OpenAI REST endpoint, except for the endpoint
+            URL: "https://api.deepseek.com/chat/completions".
+
         Context: Google REST endpoint
             Messages are sent via a POST message.
 

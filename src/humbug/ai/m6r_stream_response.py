@@ -45,7 +45,10 @@ class M6RStreamResponse:
         elif event_type == "content":
             # Add new content
             if "text" in chunk:
-                self.content += chunk["text"]
+                text = chunk["text"]
+                if text:
+                    self.content += text
+
             # Track output tokens if provided
             if "usage" in chunk:
                 usage = chunk["usage"]

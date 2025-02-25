@@ -42,7 +42,9 @@ class GeminiStreamResponse:
             if "content" in candidate and "parts" in candidate["content"]:
                 for part in candidate["content"]["parts"]:
                     if "text" in part:
-                        self.content += part["text"]
+                        text = part["text"]
+                        if text:
+                            self.content += text
 
             # Check for completion reason
             if candidate.get("finishReason") == "STOP" and "usageMetadata" in chunk:
