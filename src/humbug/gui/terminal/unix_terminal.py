@@ -209,10 +209,12 @@ class UnixTerminal(TerminalBase):
     def transfer_to(self, other: 'TerminalBase') -> None:
         """Transfer Unix terminal ownership."""
         other._process_id = self._process_id
+        other._process_name = self._process_name
         other._main_fd = self._main_fd
         other._running = True
 
         # Clear our state without closing fd
         self._process_id = None
+        self._process_name = ""
         self._main_fd = None
         self._running = False

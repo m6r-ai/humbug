@@ -372,6 +372,7 @@ class WindowsTerminal(TerminalBase):
     def transfer_to(self, other: 'TerminalBase') -> None:
         """Transfer Windows terminal ownership."""
         other._process_id = self._process_id
+        other._process_name = self._process_name
         other._process_handle = self._process_handle
         other._thread_handle = self._thread_handle
         other._pty_handle = self._pty_handle
@@ -382,6 +383,7 @@ class WindowsTerminal(TerminalBase):
 
         # Clear our state without closing handles
         self._process_id = None
+        self._process_name = ""
         self._process_handle = None
         self._thread_handle = None
         self._pty_handle = None

@@ -378,6 +378,7 @@ class TerminalTab(TabBase):
         # Cancel all tasks in source tab
         for task in source_tab._tasks:
             task.cancel()
+
         source_tab._tasks.clear()
 
         # Create a new terminal implementation for this tab
