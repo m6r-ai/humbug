@@ -775,7 +775,7 @@ class ConversationTab(TabBase):
             self._is_streaming = True
             self._input.set_streaming(True)
 
-        # If our message an AI response or is it the AI reasoning?
+        # Is our message an AI response or is it the AI reasoning?
         if content:
             # We're handling a response.  Is this the first time we're seeing it?
             if not self._current_ai_message:
@@ -788,6 +788,7 @@ class ConversationTab(TabBase):
                         completed=True
                     )
 
+                    await self._write_transcript(message)
                     self._current_reasoning_message = None
 
                 # Create and add initial AI response message
@@ -821,7 +822,18 @@ class ConversationTab(TabBase):
                 )
                 if not message:
                     return
-        elif reasoning:
+            if usage:
+                self._is_streaming = False
+                self._input.set_streaming(False)
+                self.update_status()
+                self._current_reasoning_message = None
+                self._current_ai_message = None
+                await self._write_transcript(message)
+                return
+
+            return
+
+        if reasoning:
             # We're handling reasoning from our AI.  Is it the first time we're seeting this?
             if not self._current_reasoning_message:
                 # Create and add initial message
@@ -856,16 +868,6 @@ class ConversationTab(TabBase):
                 if not message:
                     return
 
-        if usage:
-            self._is_streaming = False
-            self._input.set_streaming(False)
-            self.update_status()
-            self._current_reasoning_message = None
-            self._current_ai_message = None
-            await self._write_transcript(message)
-            return
-
-        return
 
     def _load_message_history(self, messages: List[Message]):
         """
