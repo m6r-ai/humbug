@@ -16,6 +16,7 @@ from humbug.gui.terminal.terminal_find import TerminalFind
 from humbug.gui.terminal.terminal_widget import TerminalWidget
 from humbug.gui.terminal.terminal_factory import create_terminal
 from humbug.gui.status_message import StatusMessage
+from humbug.language.language_manager import LanguageManager
 
 
 class UTF8Buffer:
@@ -100,6 +101,9 @@ class TerminalTab(TabBase):
         # Connect signals
         self._terminal.data_ready.connect(self._handle_data_ready)
 
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+
         # Handle style changes
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
@@ -119,6 +123,16 @@ class TerminalTab(TabBase):
         # Start local shell process
         if start_process:
             self._create_tracked_task(self._start_process())
+
+    def _handle_language_changed(self) -> None:
+        """Update language-specific elements when language changes."""
+        # Update find widget text if visible
+        if not self._find_widget.isHidden():
+            current, total = self._find_handler.get_match_status()
+            self._find_widget.set_match_status(current, total)
+
+        # Update status bar
+        self.update_status()
 
     def _handle_terminal_resize(self):
         """Handle terminal window resize events."""
@@ -494,8 +508,14 @@ class TerminalTab(TabBase):
     def update_status(self) -> None:
         """Update status bar."""
         name = self._terminal_process.get_process_name()
-        rows, cols = self._terminal.get_terminal_size()
-        message = StatusMessage(f"Terminal: {name} ({cols}x{rows})")
+        rows, columns = self._terminal.get_terminal_size()
+        message = StatusMessage(
+            self._language_manager.strings.terminal_status.format(
+                name=name,
+                columns=columns,
+                rows=rows
+            )
+        )
         self.status_message.emit(message)
 
     def _close_find(self):

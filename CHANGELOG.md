@@ -7,6 +7,10 @@ New features:
 - Added support for Claude Sonnet 3.7.
 - Small improvements to the status messages for conversations and terminals.
 
+Bug fixes:
+
+- Corrected the missing language translations related to terminals.
+
 ## v0.5 (2025-02-24)
 
 New features:

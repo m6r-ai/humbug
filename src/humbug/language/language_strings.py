@@ -162,6 +162,7 @@ class LanguageStrings:
     conversation_status: str
     conversation_status_temperature: str
     conversation_status_no_temperature: str
+    terminal_status: str
 
     # Bookmark-related strings
     bookmark_section: str
@@ -350,6 +351,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         conversation_status="Model: {model} | {temperature} | Last response - Input: {input_tokens} ({max_input_tokens}) | Output: {output_tokens} ({max_output_tokens})",
         conversation_status_temperature="Temp: {temperature:.1f}",
         conversation_status_no_temperature="Temp: N/A",
+        terminal_status="Terminal: {name} ({columns}x{rows})",
 
         # Mindspace File Tree Edit Menu Errors and Options
         rename= "Rename",
@@ -381,7 +383,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         new_conversation="Nouvelle conversation",
         new_metaphor_conversation="Nouvelle conversation Metaphor...",
         new_file="Nouveau fichier",
-        new_terminal="TRANSLATE ME",
+        new_terminal="Nouveau terminal",
         open_mindspace="Ouvrir espace mental",
         open_conversation="Ouvrir conversation...",
         open_file="Ouvrir fichier...",
@@ -521,6 +523,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         conversation_status="Modèle : {model} | {temperature} | Dernière réponse - Entrée : {input_tokens} ({max_input_tokens}) | Sortie : {output_tokens} ({max_output_tokens})",
         conversation_status_temperature="Temp : {temperature:.1f}",
         conversation_status_no_temperature="Temp : N/D",
+        terminal_status="Terminal : {name} ({columns}x{rows})",
 
         #Bookmark Actions
         bookmark_section="Marquer/Démarquer",
@@ -557,7 +560,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         new_conversation="محادثة جديدة",
         new_metaphor_conversation="محادثة ميتافور جديدة...",
         new_file="ملف جديد",
-        new_terminal="TRANSLATE ME",
+        new_terminal="طرفية جديدة",
         open_mindspace="فتح مساحة ذهنية",
         open_conversation="فتح محادثة...",
         open_file="فتح ملف...",
@@ -697,6 +700,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         conversation_status="النموذج: {model} | {temperature} | آخر رد - المدخلات: {input_tokens} ({max_input_tokens}) | المخرجات: {output_tokens} ({max_output_tokens})",
         conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
         conversation_status_no_temperature="درجة الحرارة: غير متوفر",
+        terminal_status="طرفية: {name} ({columns}x{rows})",
 
         # Bookmark
         bookmark_section="تبديل الإشارة",
