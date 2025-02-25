@@ -33,13 +33,17 @@ class ConversationHistory:
                 if usage is not None:
                     old_usage = message.usage
                     message.usage = usage
+
                     # Only update token counts if we didn't have usage before
                     if old_usage is None:
                         self._last_response_tokens["input"] = usage.prompt_tokens
                         self._last_response_tokens["output"] = usage.completion_tokens
+
                 if completed is not None:
                     message.completed = completed
+
                 return message
+
         return None
 
     def get_messages(self) -> List[Message]:
