@@ -12,6 +12,7 @@ class TerminalBase(ABC):
         """Initialize terminal base."""
         self._logger = logging.getLogger(self.__class__.__name__)
         self._process_id: Optional[int] = None
+        self._process_name: str = ""
         self._running = True
 
     @abstractmethod
@@ -77,6 +78,10 @@ class TerminalBase(ABC):
     def get_process_id(self) -> Optional[int]:
         """Get process ID."""
         return self._process_id
+
+    def get_process_name(self) -> str:
+        """Get process name."""
+        return self._process_name
 
     def transfer_to(self, other: 'TerminalBase') -> None:
         """

@@ -217,6 +217,7 @@ class WindowsTerminal(TerminalBase):
             # Create process
             process_info = PROCESS_INFORMATION()
             shell = command if command else os.environ.get('COMSPEC', 'cmd.exe')
+            self._process_name = shell
 
             if not windll.kernel32.CreateProcessW(
                 None,

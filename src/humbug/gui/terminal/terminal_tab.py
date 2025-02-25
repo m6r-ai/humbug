@@ -124,6 +124,7 @@ class TerminalTab(TabBase):
         """Handle terminal window resize events."""
         rows, cols = self._terminal.get_terminal_size()
         self._terminal_process.update_window_size(rows, cols)
+        self.update_status()
 
     def _create_tracked_task(self, coro) -> asyncio.Task:
         """
@@ -152,6 +153,7 @@ class TerminalTab(TabBase):
             # Update initial terminal size
             rows, cols = self._terminal.get_terminal_size()
             self._terminal_process.update_window_size(rows, cols)
+            self.update_status()
 
             # Create task for reading
             self._create_tracked_task(self._read_loop())
@@ -491,7 +493,9 @@ class TerminalTab(TabBase):
 
     def update_status(self) -> None:
         """Update status bar."""
-        message = StatusMessage("Terminal: local")
+        name = self._terminal_process.get_process_name()
+        rows, cols = self._terminal.get_terminal_size()
+        message = StatusMessage(f"Terminal: {name} ({cols}x{rows})")
         self.status_message.emit(message)
 
     def _close_find(self):

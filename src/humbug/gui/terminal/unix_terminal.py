@@ -32,6 +32,8 @@ class UnixTerminal(TerminalBase):
         """Start Unix terminal process with proper PTY setup."""
         main_fd, secondary_fd = pty.openpty()
 
+        shell = command if command else os.environ.get('SHELL', '/bin/sh')
+
         # Fork process
         pid = os.fork()
 
@@ -73,7 +75,6 @@ class UnixTerminal(TerminalBase):
                         pass
 
                 # Execute shell/command
-                shell = command if command else os.environ.get('SHELL', '/bin/sh')
                 os.execvp(shell.split()[0], shell.split())
 
             except Exception as e:
@@ -98,6 +99,7 @@ class UnixTerminal(TerminalBase):
 
         self._set_nonblocking(main_fd)
 
+        self._process_name = shell
         self._process_id = pid
         self._main_fd = main_fd
 
