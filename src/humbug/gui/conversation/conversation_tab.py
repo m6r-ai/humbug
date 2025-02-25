@@ -659,8 +659,9 @@ class ConversationTab(TabBase):
                 model=self._settings.model,
                 temperature=temp_display,
                 input_tokens=counts['input'],
-                max_tokens=self._settings.context_window,
-                output_tokens=counts['output']
+                max_input_tokens=self._settings.context_window,
+                output_tokens=counts['output'],
+                max_output_tokens=self._settings.max_output_tokens
             )
         )
         self.status_message.emit(message)

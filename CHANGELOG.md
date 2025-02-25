@@ -2,6 +2,10 @@
 
 ## v0.6 (2025-02-xx)
 
+New features:
+
+- Added support for Claude Sonnet 3.7.
+
 ## v0.5 (2025-02-24)
 
 New features:

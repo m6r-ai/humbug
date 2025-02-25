@@ -347,7 +347,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Status bar
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",
-        conversation_status="Model: {model} | {temperature} | Last response - Input: {input_tokens} ({max_tokens}) | Output: {output_tokens}",
+        conversation_status="Model: {model} | {temperature} | Last response - Input: {input_tokens} ({max_input_tokens}) | Output: {output_tokens} ({max_output_tokens})",
         conversation_status_temperature="Temp: {temperature:.1f}",
         conversation_status_no_temperature="Temp: N/A",
 
@@ -518,7 +518,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",
-        conversation_status="Modèle : {model} | {temperature} | Dernière réponse - Entrée : {input_tokens} ({max_tokens}) | Sortie : {output_tokens}",
+        conversation_status="Modèle : {model} | {temperature} | Dernière réponse - Entrée : {input_tokens} ({max_input_tokens}) | Sortie : {output_tokens} ({max_output_tokens})",
         conversation_status_temperature="Temp : {temperature:.1f}",
         conversation_status_no_temperature="Temp : N/D",
 
@@ -694,7 +694,7 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
 
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
-        conversation_status="النموذج: {model} | {temperature} | آخر رد - المدخلات: {input_tokens} ({max_tokens}) | المخرجات: {output_tokens}",
+        conversation_status="النموذج: {model} | {temperature} | آخر رد - المدخلات: {input_tokens} ({max_input_tokens}) | المخرجات: {output_tokens} ({max_output_tokens})",
         conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
         conversation_status_no_temperature="درجة الحرارة: غير متوفر",
 
