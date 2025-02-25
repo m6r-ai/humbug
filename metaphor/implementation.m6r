@@ -344,6 +344,19 @@ Context: Implementation
             In this message, the content is what should be captured as the AI response, but capture the usage information
             in the JSON transcript.
 
+    Context: Terminal
+        Context: Custom widget
+            For performance reasons the terminal emulator window is implemented with a custom widget.
+
+        Context: Pre-allocated "active" display
+            The terminal emulator pre-allocates the display buffer for the active terminal.  All terminal character cells
+            are pre-allocated and writes to the terminal overwrite them.  As this is a terminal emulator the lines are a
+            known fixed width (the width of the terminal) and we do not have to consider any characters beyond this as
+            there will never be any characters beyond the end of the pre-allocated line.
+
+            Both the primary and secondary displays use pre-allocation.  The primary display pre-allocation occurs when
+            the terminal is started, while the secondary displays are pre-allocated as they are initiated.
+
     Context: Logging
         Where appropriate the application will log key operations, errors, and exceptions to a log file.  A new log file
         will be created at the start of each application run.

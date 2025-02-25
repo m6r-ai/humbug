@@ -351,7 +351,57 @@ Context: Capabilities
                     The software supports terminal tabs.  These provide access to a shell environment via a terminal
                     emulator.
 
-                    Include: metaphor/terminal.m6r
+                    On a Unix or Unix-like system this will provide access to the local shell.  One Windows systems this will provide
+                    access to the Windows command prompt.
+
+                    Context: Status bar
+                        The editor status bar shows:
+
+                        - Current command being used to implement the terminal.
+                        - Dimensions of the terminal (columns x rows)
+
+                    Context: Terminal Emulator Implementation
+                        The terminal emulator support xterm-256 capabilities, i.e. a superset of VT220.
+
+                        Context: Multiple displays
+                            The terminal supports a main and an alternate display.
+
+                            The main display retains its history indefinitely, but the alternate display history is reinitialized
+                            each time the alternate display is invoked.
+
+                        Context: History buffers
+                            The main terminal display supports a history buffer.  The history buffer tracks what was previously on screen when
+                            a scroll-up operation occurs and the current state of the terminal (the current state is at the end of the
+                            buffer).  As such these are display buffers, not command buffers.  We are implementing a terminal emulator
+                            and thus have no idea what is a command and what is not (that's up to the application making use of the
+                            terminal emulator).  The alternate display does not support a history buffer.
+
+                            The user is able to use the UI scrollbars to scroll through this history and view previous terminal outputs.
+
+                        Context: Terminal input cursor
+                            The input cursor is where new characters are written to the terminal display.
+
+                            The terminal cursor is only ever visible in the active portion of the terminal (the lines at the end) and
+                            cannot be moved into the history.
+
+                        Context: Mouse selection of text
+                            The mouse may be used to select text in any part of the active or history buffer.  This is done using the Qt
+                            cursor and allows the user to copy text.
+
+                            This leads to a key requirement, that the selection of text in the history and the active area of the
+                            terminal must be done in the same widget otherwise this regions will be discontinuous.
+
+                        Context: Window resizing
+                            When the window resizes then the terminal emulator must reflow the text and ensure every line of history is
+                            resized to the new width.
+
+                        Context: Non-printable characters
+                            This is a terminal emulator, so while we are using a document structure to represent the contents this is not
+                            a document.  For example, newline does not result in the cursor moving to the first column.  Instead,
+                            newline simply moves the cursor down one row, or causes the cursor to remain where it is if the cursor is
+                            on the last row.
+
+                            Non-printable characters do not cause line wraps.
 
             Context: Syntax highlighting
                 Code blocks and inline code will be syntax highlighted based on the programming language
