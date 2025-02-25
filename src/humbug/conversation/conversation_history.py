@@ -54,36 +54,52 @@ class ConversationHistory:
         """
         Get messages formatted for AI context.
 
+        We only return pairs of messages where we saw a user message and the matching completed
+        AI response.
+
         Returns:
             List of message dictionaries with role and content.
         """
         result = []
         i = 0
-        while i < len(self._messages):
-            if self._messages[i].source == MessageSource.USER:
-                # Found a user message, look for corresponding AI response
-                user_msg = self._messages[i]
-                ai_msg = None
-                if i + 1 < len(self._messages) and self._messages[i + 1].source == MessageSource.AI:
-                    ai_msg = self._messages[i + 1]
 
-                # Only include the exchange if:
-                # 1. It's a user message without an AI response yet (current exchange)
-                # 2. Or it's a completed exchange without errors
-                if (ai_msg is None) or (ai_msg.completed and not ai_msg.error):
-                    result.append({
-                        "role": "user",
-                        "content": user_msg.content
-                    })
-                    if ai_msg:
-                        result.append({
-                            "role": "assistant",
-                            "content": ai_msg.content
-                        })
-                        i += 1  # Skip the AI message since we've handled it
+        # We must see at least 2 messages so there's no point starting with the last one.
+        while i < (len(self._messages) - 1):
+            user_msg = self._messages[i]
+            if self._messages[i].source != MessageSource.USER:
+                i += 1
+                continue
 
-            i += 1  # Move to next message
+            # Found a user message, look for corresponding AI response
+            ai_msg = self._messages[i + 1]
+            if ai_msg.source != MessageSource.AI:
+                i += 1
+                continue
 
+            # If we didn't complete or there were errors then we skip this
+            if not ai_msg.completed or ai_msg.error:
+                i += 1
+                continue
+
+            result.append({
+                "role": "user",
+                "content": user_msg.content
+            })
+            result.append({
+                "role": "assistant",
+                "content": ai_msg.content
+            })
+
+            i += 2
+
+        # The last message should be our user's message.
+        user_msg = self._messages[-1]
+        result.append({
+            "role": "user",
+            "content": user_msg.content
+        })
+
+        print(f"messages for context: {result}")
         return result
 
     def get_token_counts(self) -> Dict[str, int]:

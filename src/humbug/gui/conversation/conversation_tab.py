@@ -485,10 +485,6 @@ class ConversationTab(TabBase):
             temperature=self._settings.temperature
         )
 
-    def get_message_context(self) -> List[str]:
-        """Get messages formatted for AI context."""
-        return self._conversation.get_messages_for_context()
-
     @Slot(int)
     def _on_scroll_value_changed(self, value: int):
         """
@@ -863,6 +859,7 @@ class ConversationTab(TabBase):
 
     async def _start_ai(self, message: str):
         """Submit the message to the AI and process the response."""
+        stream = None
         try:
             self._logger.debug("=== Starting new AI response ===")
 
@@ -889,7 +886,7 @@ class ConversationTab(TabBase):
 
             stream = backend.stream_message(
                 message,
-                self.get_message_context(),
+                self._conversation.get_messages_for_context(),
                 self.tab_id
             )
 
@@ -924,7 +921,7 @@ class ConversationTab(TabBase):
                 self._restore_last_message()
                 return
 
-        except (asyncio.CancelledError, GeneratorExit):
+        except asyncio.CancelledError:
             self._logger.debug("AI response cancelled")
             await self.update_streaming_response(
                 content="",
@@ -957,6 +954,14 @@ class ConversationTab(TabBase):
 
         finally:
             self._logger.debug("=== Finished AI response ===")
+
+            # Properly close the async generator if it exists
+            if stream is not None:
+                try:
+                    await stream.aclose()
+                except Exception as e:
+                    # Log but don't propagate generator cleanup errors
+                    self._logger.debug(f"Error during generator cleanup: {e}")
 
     def _restore_last_message(self):
         """Restore the last submitted message to the input box."""
