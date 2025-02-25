@@ -178,19 +178,6 @@ class AIBackend(ABC):
                                     usage=response_handler.usage
                                 )
 
-                            except asyncio.CancelledError:
-                                self._logger.exception("CancelledError")
-                                yield AIResponse(
-                                    content=response_handler.content,
-                                    error=AIError(
-                                        code="cancelled",
-                                        message="Request cancelled by user",
-                                        retries_exhausted=True,
-                                        details={"type": "CancelledError"}
-                                    )
-                                )
-                                return
-
                             except json.JSONDecodeError as e:
                                 self._logger.exception("JSON exception: %s", e)
                                 continue

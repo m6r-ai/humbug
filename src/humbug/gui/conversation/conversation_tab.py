@@ -861,8 +861,8 @@ class ConversationTab(TabBase):
         """Strip control characters from input text, preserving newlines and tabs."""
         return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
 
-    async def _process_ai_response(self, message: str):
-        """Process AI response with streaming."""
+    async def _start_ai(self, message: str):
+        """Submit the message to the AI and process the response."""
         try:
             self._logger.debug("=== Starting new AI response ===")
 
@@ -894,23 +894,19 @@ class ConversationTab(TabBase):
             )
 
             async for response in stream:
-                try:
-                    await self.update_streaming_response(
-                        content=response.content,
-                        usage=response.usage,
-                        error=response.error
-                    )
+                await self.update_streaming_response(
+                    content=response.content,
+                    usage=response.usage,
+                    error=response.error
+                )
 
-                    if response.error:
-                        if response.error.retries_exhausted:
-                            self._restore_last_message()
-                            return
+                if response.error:
+                    if response.error.retries_exhausted:
+                        self._restore_last_message()
+                        return
 
-                        # We're retrying - continue to the next attempt
-                        continue
-
-                except StopAsyncIteration:
-                    break
+                    # We're retrying - continue to the next attempt
+                    continue
 
             # If we get here and are still marked as streaming then we failed to get a
             # complete response before giving up.  This is a failure and should be handled as such.
@@ -1102,7 +1098,7 @@ class ConversationTab(TabBase):
         asyncio.create_task(self._write_transcript(message))
 
         # Start AI response
-        task = asyncio.create_task(self._process_ai_response(content))
+        task = asyncio.create_task(self._start_ai(content))
         self._current_tasks.append(task)
 
         def task_done_callback(task):
