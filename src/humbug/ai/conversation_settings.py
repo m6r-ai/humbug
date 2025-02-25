@@ -10,6 +10,7 @@ class ConversationSettings:
         # Anthropic models
         "claude-3-5-haiku-20241022",
         "claude-3-5-sonnet-20241022",
+        "claude-3-7-sonnet-20250219",
 
         # Google models
         "gemini-1.5-flash",
@@ -33,6 +34,7 @@ class ConversationSettings:
     PROVIDER_MAP = {
         "claude-3-5-haiku-20241022": "anthropic",
         "claude-3-5-sonnet-20241022": "anthropic",
+        "claude-3-7-sonnet-20250219": "anthropic",
         "gemini-1.5-flash": "google",
         "gemini-1.5-pro": "google",
         "gemini-2.0-flash-exp": "google",
@@ -48,6 +50,7 @@ class ConversationSettings:
     TEMPERATURE_SUPPORTED_MODELS = {
         "claude-3-5-haiku-20241022": True,
         "claude-3-5-sonnet-20241022": True,
+        "claude-3-7-sonnet-20250219": True,
         "gemini-1.5-flash": True,
         "gemini-1.5-pro": True,
         "gemini-2.0-flash-exp": True,
@@ -62,6 +65,7 @@ class ConversationSettings:
     MODEL_LIMITS = {
         "claude-3-5-haiku-20241022": {"context_window": 200000, "max_output_tokens": 4096},
         "claude-3-5-sonnet-20241022": {"context_window": 200000, "max_output_tokens": 8192},
+        "claude-3-7-sonnet-20250219": {"context_window": 200000, "max_output_tokens": 64000},
         "gemini-1.5-flash": {"context_window": 1048576, "max_output_tokens": 8192},
         "gemini-1.5-pro": {"context_window": 2097152, "max_output_tokens": 8192},
         "gemini-2.0-flash-exp": {"context_window": 1048576, "max_output_tokens": 8192},
