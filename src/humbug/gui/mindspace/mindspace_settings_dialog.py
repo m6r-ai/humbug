@@ -260,13 +260,6 @@ class MindspaceSettingsDialog(QDialog):
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
-            QSpinBox {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-            }}
             QDoubleSpinBox {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -297,6 +290,17 @@ class MindspaceSettingsDialog(QDialog):
             }}
             QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
                 image: none;
+            }}
+            QSpinBox {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+            }}
+            QSpinBox:disabled {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
             QSpinBox::up-button, QSpinBox::down-button {{
                 border: none;
@@ -407,6 +411,9 @@ class MindspaceSettingsDialog(QDialog):
         if not self._current_settings:
             return
 
+        auto_backup_checked = self._auto_backup_check.isChecked()
+        self._backup_interval_spin.setEnabled(auto_backup_checked)
+
         # Get current temperature value based on model support
         current_model = self._model_combo.currentText()
         current_temp = self._temp_spin.value()
@@ -426,7 +433,7 @@ class MindspaceSettingsDialog(QDialog):
             self._language_combo.currentData() != self._current_settings.language or
             self._soft_tabs_check.isChecked() != self._current_settings.use_soft_tabs or
             self._tab_size_spin.value() != self._current_settings.tab_size or
-            self._auto_backup_check.isChecked() != self._current_settings.auto_backup or
+            auto_backup_checked != self._current_settings.auto_backup or
             self._backup_interval_spin.value() != self._current_settings.auto_backup_interval or
             self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size) or
             current_model != self._current_settings.model or
