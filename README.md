@@ -34,7 +34,8 @@ that are expert on Humbug itself!
 
 In 0.6 we've:
 
-- TBD
+- Added support for Claude Sonnet 3.7.
+- Resolved lots of small bugs.
 
 ## Features
 

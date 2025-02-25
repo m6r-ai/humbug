@@ -9,7 +9,7 @@ New features:
 
 Bug fixes:
 
-- Corrected the missing language translations related to terminals.
+- Corrected the missing language translations for terminal status messages.
 
 ## v0.5 (2025-02-24)
 
