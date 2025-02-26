@@ -14,18 +14,17 @@ class M6RBackend(AIBackend):
         super().__init__()
         self._api_key = api_key
         self._api_url = "http://localhost:8080/v1/chat"  # Default to localhost
-        self._default_settings = ConversationSettings("tessa")  # Default to Tessa model
 
         # M6R uses standard SSE encoding
         self._uses_data = True
 
-    def _build_request_data(self, message: str, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
         """Build M6R-specific request data."""
         # Take existing messages and include current message
         messages = conversation_history.copy()
 
         data = {
-            "model": settings.model,  # Will be 'tessa' initially
+            "model": ConversationSettings.get_name(settings.model),
             "messages": messages,
             "stream": True
         }

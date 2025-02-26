@@ -370,7 +370,6 @@ class MindspaceSettingsDialog(QDialog):
 
         # Get model's reasoning capabilities
         capabilities = ConversationSettings.get_reasoning_capability(model)
-        print(f"capabilities {capabilities}")
 
         # Add NO_REASONING if supported
         if capabilities & ReasoningCapability.NO_REASONING:

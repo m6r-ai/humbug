@@ -37,7 +37,6 @@ class AnthropicStreamResponse:
 
         event_type = chunk.get("type")
 
-        print(f"chunk: {chunk}")
         if event_type == "message_start":
             # Track input tokens but don't expose them yet
             if "message" in chunk and "usage" in chunk["message"]:

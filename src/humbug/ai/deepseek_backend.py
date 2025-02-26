@@ -15,13 +15,13 @@ class DeepseekBackend(AIBackend):
         self._api_key = api_key
         self._api_url = "https://api.deepseek.com/chat/completions"
 
-    def _build_request_data(self, message: str, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
         """Build Deepseek-specific request data."""
         # conversation_history already contains properly formatted messages
         messages = conversation_history.copy()
 
         data = {
-            "model": settings.model,
+            "model": ConversationSettings.get_name(settings.model),
             "messages": messages,
             "stream": True,
             "stream_options": {"include_usage": True}

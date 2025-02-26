@@ -71,7 +71,15 @@ class ConversationSettings:
             context_window=200000,
             max_output_tokens=64000,
             supports_temperature=True,
-            reasoning_capabilities=ReasoningCapability.NO_REASONING | ReasoningCapability.VISIBLE_REASONING
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "claude-3-7-sonnet-20250219 (thinking)": AIModel(
+            name="claude-3-7-sonnet-20250219",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=64000,
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING
         ),
 
         # Deepseek models
@@ -229,6 +237,23 @@ class ConversationSettings:
             List of model names
         """
         return list(cls.MODELS.keys())
+
+    @classmethod
+    def get_name(cls, model: str) -> str:
+        """
+        Get the name for a given model.
+
+        Args:
+            model: Name of the model
+
+        Returns:
+            Model name or "unknown" if model not found
+        """
+        model_config = cls.MODELS.get(model)
+        if model_config:
+            return model_config.name
+
+        return "unknown"
 
     @classmethod
     def get_provider(cls, model: str) -> str:

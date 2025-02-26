@@ -15,13 +15,13 @@ class AnthropicBackend(AIBackend):
         self._api_key = api_key
         self._api_url = "https://api.anthropic.com/v1/messages"
 
-    def _build_request_data(self, message: str, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
         """Build Anthropic-specific request data."""
         # Take existing messages in correct format
         messages = conversation_history.copy()
 
         data = {
-            "model": settings.model,
+            "model": ConversationSettings.get_name(settings.model),
             "messages": messages,
             "max_tokens": settings.max_output_tokens,
             "stream": True

@@ -13,18 +13,16 @@ class OllamaBackend(AIBackend):
         """Initialize the Ollama backend."""
         super().__init__()
         self._api_url = "http://localhost:11434/api/chat"
-        self._default_settings = ConversationSettings("llama3.2")
 
         # Llama doesn't use normal SSE encoding!
         self._uses_data = False
 
-    def _build_request_data(self, message: str, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
         """Build Ollama-specific request data."""
         messages = conversation_history.copy()
-        messages.append({"role": "user", "content": message}) # Append user message
 
         data = {
-            "model": settings.model,
+            "model": ConversationSettings.get_name(settings.model),
             "messages": messages,
             "stream": True,
             "options": {

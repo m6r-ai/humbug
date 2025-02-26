@@ -47,7 +47,7 @@ class AIBackend(ABC):
         return self._conversation_settings.get(conversation_id, self._default_settings)
 
     @abstractmethod
-    def _build_request_data(self, message: str, conversation_history: List[str], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[str], settings: ConversationSettings) -> dict:
         """Abstract method to build backend-specific request data."""
 
     @abstractmethod
@@ -64,14 +64,13 @@ class AIBackend(ABC):
 
     async def stream_message(
         self,
-        message: str,
         conversation_history: List[str],
         conversation_id: str = None
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""
         settings = self.get_conversation_settings(conversation_id) if conversation_id else self._default_settings
         url = self._get_api_url(settings)
-        data = self._build_request_data(message, conversation_history, settings)
+        data = self._build_request_data(conversation_history, settings)
         headers = self._get_headers()
 
         attempt = 0

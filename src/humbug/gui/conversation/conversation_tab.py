@@ -917,7 +917,7 @@ class ConversationTab(TabBase):
         """Strip control characters from input text, preserving newlines and tabs."""
         return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
 
-    async def _start_ai(self, message: str):
+    async def _start_ai(self):
         """Submit the message to the AI and process the response."""
         stream = None
         try:
@@ -945,7 +945,6 @@ class ConversationTab(TabBase):
                 return
 
             stream = backend.stream_message(
-                message,
                 self._conversation.get_messages_for_context(),
                 self.tab_id
             )
@@ -1167,7 +1166,7 @@ class ConversationTab(TabBase):
         asyncio.create_task(self._write_transcript(message))
 
         # Start AI response
-        task = asyncio.create_task(self._start_ai(content))
+        task = asyncio.create_task(self._start_ai())
         self._current_tasks.append(task)
 
         def task_done_callback(task):

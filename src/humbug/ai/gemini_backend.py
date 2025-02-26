@@ -14,9 +14,8 @@ class GeminiBackend(AIBackend):
         super().__init__()
         self._api_key = api_key
         self._api_base = "https://generativelanguage.googleapis.com/v1beta/models"
-        self._default_settings = ConversationSettings("gemini-1.5-flash")
 
-    def _build_request_data(self, message: str, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
         """Build Gemini-specific request data."""
         contents = []
 
@@ -56,7 +55,8 @@ class GeminiBackend(AIBackend):
 
     def _get_api_url(self, settings: ConversationSettings) -> str:
         """Get the Gemini API URL."""
-        return f"{self._api_base}/{settings.model}:streamGenerateContent?alt=sse&key={self._api_key}"
+        model_path = ConversationSettings.get_name(settings.model)
+        return f"{self._api_base}/{model_path}:streamGenerateContent?alt=sse&key={self._api_key}"
 
     def _get_headers(self) -> dict:
         """Get the Gemini API headers."""
