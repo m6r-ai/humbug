@@ -1024,7 +1024,7 @@ class ConversationTab(TabBase):
                     await stream.aclose()
                 except Exception as e:
                     # Log but don't propagate generator cleanup errors
-                    self._logger.debug(f"Error during generator cleanup: {e}")
+                    self._logger.debug("Error during generator cleanup: %s", str(e))
 
     def _restore_last_message(self):
         """Restore the last submitted message to the input box."""
