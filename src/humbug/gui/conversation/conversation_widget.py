@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
@@ -641,7 +641,7 @@ class ConversationWidget(QWidget):
                 if not message:
                     return
 
-    def _load_message_history(self, messages: List[Message]):
+    def load_message_history(self, messages: List[Message]):
         """
         Load existing message history from transcript.
 
@@ -1069,3 +1069,74 @@ class ConversationWidget(QWidget):
     def get_conversation_history(self) -> ConversationHistory:
         """Get the conversation history object."""
         return self._conversation
+
+    def create_state_metadata(self) -> Dict[str, Any]:
+        """
+        Create metadata dictionary capturing current widget state.
+
+        Returns:
+            Dictionary containing conversation state metadata
+        """
+        metadata = {}
+
+        # Store bookmarks
+        bookmark_data = []
+        for message_widget, data in self._bookmarked_messages.items():
+            if message_widget in self._messages:
+                bookmark_data.append({
+                    'index': self._messages.index(message_widget),
+                    'scroll_position': data.scroll_position
+                })
+        metadata['bookmarks'] = bookmark_data
+
+        # Store current input content
+        metadata["content"] = self._input.toPlainText()
+
+        # Store current settings
+        settings = self.get_settings()
+        metadata["settings"] = {
+            "model": settings.model,
+            "temperature": settings.temperature,
+            "reasoning": settings.reasoning
+        }
+
+        return metadata
+
+    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+        """
+        Restore widget state from metadata.
+
+        Args:
+            metadata: Dictionary containing state metadata
+        """
+        if not metadata:
+            return
+
+        # Restore input content if specified
+        if "content" in metadata:
+            self.set_input_text(metadata["content"])
+
+        # Restore settings if specified
+        if "settings" in metadata:
+            settings = ConversationSettings(
+                model=metadata["settings"].get("model"),
+                temperature=metadata["settings"].get("temperature"),
+                reasoning=metadata["settings"].get("reasoning", None)
+            )
+            self.update_conversation_settings(settings)
+
+        # Restore bookmarks if specified
+        if 'bookmarks' in metadata:
+            bookmark_data = metadata['bookmarks']
+            for data in bookmark_data:
+                index = data['index']
+                scroll_position = data['scroll_position']
+                if 0 <= index < len(self._messages):
+                    msg_widget = self._messages[index]
+
+                    # Add bookmark with stored scroll position
+                    self._bookmarked_messages[msg_widget] = BookmarkData(
+                        widget=msg_widget,
+                        scroll_position=scroll_position
+                    )
+                    msg_widget.set_bookmarked(True)

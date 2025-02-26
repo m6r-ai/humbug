@@ -18,7 +18,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_error import ConversationError
 from humbug.gui.conversation.conversation_find import ConversationFind
 from humbug.gui.conversation.conversation_settings_dialog import ConversationSettingsDialog
-from humbug.gui.conversation.conversation_widget import ConversationWidget, BookmarkData
+from humbug.gui.conversation.conversation_widget import ConversationWidget
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
@@ -136,7 +136,7 @@ class ConversationTab(TabBase):
             raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
         # Load messages into the new tab
-        forked_tab._conversation_widget._load_message_history(messages)
+        forked_tab._conversation_widget.load_message_history(messages)
 
         return forked_tab
 
@@ -149,32 +149,10 @@ class ConversationTab(TabBase):
         """Get serializable state for mindspace persistence."""
         metadata_state = {}
 
+        # Store command for both persistent and temporary state
         if temp_state:
-            # For conversations, we need to capture:
-            # 1. Bookmarks
-            # 2. Current input text
-            # 3. Model settings
-
-            # Get bookmarks from widget
-            bookmark_data = []
-            for message_widget, data in self._conversation_widget._bookmarked_messages.items():
-                if message_widget in self._conversation_widget._messages:
-                    bookmark_data.append({
-                        'index': self._conversation_widget._messages.index(message_widget),
-                        'scroll_position': data.scroll_position
-                    })
-            metadata_state['bookmarks'] = bookmark_data
-
-            # Get current input content
-            metadata_state["content"] = self._conversation_widget._input.toPlainText()
-
-            # Get current settings
-            settings = self._conversation_widget.get_settings()
-            metadata_state["settings"] = {
-                "model": settings.model,
-                "temperature": settings.temperature,
-                "reasoning": settings.reasoning
-            }
+            # Get widget-specific metadata
+            metadata_state.update(self._conversation_widget.create_state_metadata())
 
         return TabState(
             type=TabType.CONVERSATION,
@@ -210,7 +188,7 @@ class ConversationTab(TabBase):
 
             # Create conversation tab
             conversation_tab = cls(conversation_id, path, timestamp, ai_backends, parent)
-            conversation_tab._conversation_widget._load_message_history(transcript_data.messages)
+            conversation_tab._conversation_widget.load_message_history(transcript_data.messages)
 
             return conversation_tab
 
@@ -223,19 +201,7 @@ class ConversationTab(TabBase):
 
     @classmethod
     def restore_from_state(cls, state: TabState, parent=None, ai_backends: Dict[str, AIBackend] = None) -> 'ConversationTab':
-        """Create and restore a conversation tab from serialized state.
-
-        Args:
-            state: TabState containing conversation-specific state
-            parent: Optional parent widget
-            ai_backends: Dictionary mapping provider names to AI backend instances
-
-        Returns:
-            Newly created and restored conversation tab
-
-        Raises:
-            ValueError: If state is invalid for conversation tab
-        """
+        """Create and restore a conversation tab from serialized state."""
         if state.type != TabType.CONVERSATION:
             raise ConversationError(f"Invalid tab type for ConversationTab: {state.type}")
 
@@ -255,37 +221,11 @@ class ConversationTab(TabBase):
                 raise ConversationError("Timestamp mismatch in transcript metadata")
 
             # Load the message history
-            tab._conversation_widget._load_message_history(transcript_data.messages)
+            tab._conversation_widget.load_message_history(transcript_data.messages)
 
-            # Restore content if specified
+            # Restore widget-specific state if metadata present
             if state.metadata:
-                # Restore input content if specified
-                if "content" in state.metadata:
-                    tab._conversation_widget.set_input_text(state.metadata["content"])
-
-                # Restore settings if specified
-                if "settings" in state.metadata:
-                    settings = ConversationSettings(
-                        model=state.metadata["settings"].get("model"),
-                        temperature=state.metadata["settings"].get("temperature"),
-                        reasoning=state.metadata["settings"].get("reasoning", None)
-                    )
-                    tab._conversation_widget.update_conversation_settings(settings)
-
-                # Restore bookmarks if specified
-                if 'bookmarks' in state.metadata:
-                    bookmark_data = state.metadata['bookmarks']
-                    for data in bookmark_data:
-                        index = data['index']
-                        scroll_position = data['scroll_position']
-                        if 0 <= index < len(tab._conversation_widget._messages):
-                            msg_widget = tab._conversation_widget._messages[index]
-                            # Add bookmark with stored scroll position
-                            tab._conversation_widget._bookmarked_messages[msg_widget] = BookmarkData(
-                                widget=msg_widget,
-                                scroll_position=scroll_position
-                            )
-                            msg_widget.set_bookmarked(True)
+                tab._conversation_widget.restore_from_metadata(state.metadata)
 
             return tab
 
