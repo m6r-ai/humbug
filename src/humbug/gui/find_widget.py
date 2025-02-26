@@ -147,7 +147,6 @@ class FindWidget(QWidget):
 
     def focusInEvent(self, event: QFocusEvent):
         """Handle focus events."""
-        print(f"focus event: {self._search_input.text()}")
         self._search_input.setFocus()
         self._search_input.selectAll()
 
