@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import json
 
-from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.conversation_settings import ConversationSettings, ReasoningCapability
 from humbug.language.language_code import LanguageCode
 
 
@@ -15,6 +15,7 @@ class MindspaceSettings:
     language: LanguageCode = LanguageCode.EN
     model: str = ConversationSettings.get_default_model({})  # Will be overridden with actual backends
     temperature: float = 0.7  # Default temperature
+    reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
 
     @classmethod
     def load(cls, path: str) -> "MindspaceSettings":
@@ -23,6 +24,8 @@ class MindspaceSettings:
             editor = data.get("editor", {})
             conversation = data.get("conversation", {})
             language_code = editor.get("language", "EN")
+            default_model = ConversationSettings.get_default_model({})
+            default_reasoning = ConversationSettings.get_reasoning_capability(default_model)
             return cls(
                 use_soft_tabs=editor.get("useSoftTabs", True),
                 tab_size=editor.get("tabSize", 4),
@@ -30,8 +33,9 @@ class MindspaceSettings:
                 auto_backup=editor.get("autoBackup", False),
                 auto_backup_interval=editor.get("autoBackupInterval", 300),
                 language=LanguageCode[language_code],
-                model=conversation.get("model", ConversationSettings.get_default_model({})),
-                temperature=conversation.get("temperature", 0.7)
+                model=conversation.get("model", default_model),
+                temperature=conversation.get("temperature", 0.7),
+                reasoning=conversation.get("reasoning", default_reasoning)
             )
 
     def save(self, path: str) -> None:
@@ -40,7 +44,8 @@ class MindspaceSettings:
             "fontSize": self.font_size,
             "conversation": {
                 "model": self.model,
-                "temperature": self.temperature
+                "temperature": self.temperature,
+                "reasoning": self.reasoning,
             },
             "editor": {
                 "useSoftTabs": self.use_soft_tabs,

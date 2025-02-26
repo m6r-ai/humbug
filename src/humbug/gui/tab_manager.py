@@ -824,7 +824,8 @@ class TabManager(QWidget):
         settings = self._mindspace_manager.settings
         conversation_settings = ConversationSettings(
             model=settings.model,
-            temperature=settings.temperature if ConversationSettings.supports_temperature(settings.model) else None
+            temperature=settings.temperature if ConversationSettings.supports_temperature(settings.model) else None,
+            reasoning=settings.reasoning
         )
         conversation_tab.update_conversation_settings(conversation_settings)
 

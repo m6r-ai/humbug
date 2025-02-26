@@ -186,13 +186,18 @@ class ConversationSettings:
     DEFAULT_MAX_OUTPUT_TOKENS = 2048
     DEFAULT_REASONING_CAPABILITY = ReasoningCapability.NO_REASONING
 
-    def __init__(self, model: str = "gemini-1.5-flash", temperature: float = 0.7):
+    def __init__(
+        self, model: str = "gemini-1.5-flash",
+        temperature: float = 0.7,
+        reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
+    ):
         """
         Initialize conversation settings with defaults.
 
         Args:
             model: Optional model name. If None, must be set later based on available backends
             temperature: Temperature setting (0.0-1.0)
+            reasoning: Reasoning capability
 
         Raises:
             ValueError: If temperature is out of valid range (0.0-1.0)
@@ -202,6 +207,7 @@ class ConversationSettings:
 
         self.model = model
         self.temperature = temperature
+        self.reasoning = reasoning
 
         model_config = self.MODELS.get(model)
         if model_config:
