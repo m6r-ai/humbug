@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.conversation_settings import ConversationSettings, ReasoningCapability
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
@@ -72,6 +72,20 @@ class ConversationSettingsDialog(QDialog):
         temp_layout.addStretch()
         temp_layout.addWidget(self._temp_spin)
         layout.addLayout(temp_layout)
+
+        # Reasoning capabilities
+        reasoning_layout = QHBoxLayout()
+        self._reasoning_label = QLabel("Reasoning Capabilities")  # We'll update this in _handle_language_changed
+        self._reasoning_label.setMinimumHeight(40)
+        self._reasoning_combo = QComboBox()
+        self._reasoning_combo.setView(QListView())
+        self._reasoning_combo.setMinimumWidth(300)
+        self._reasoning_combo.setMinimumHeight(40)
+        self._reasoning_combo.currentIndexChanged.connect(self._handle_value_change)
+        reasoning_layout.addWidget(self._reasoning_label)
+        reasoning_layout.addStretch()
+        reasoning_layout.addWidget(self._reasoning_combo)
+        layout.addLayout(reasoning_layout)
 
         # Context window display
         context_layout = QHBoxLayout()
@@ -242,6 +256,7 @@ class ConversationSettingsDialog(QDialog):
         # Update labels
         self._model_label.setText(strings.settings_model_label)
         self._temp_label.setText(strings.settings_temp_label)
+        self._reasoning_label.setText("Reasoning Capabilities")  # TODO: Add to language strings
         self._context_label.setText(strings.settings_context_label)
         self._output_label.setText(strings.settings_max_output_label)
 
@@ -254,10 +269,56 @@ class ConversationSettingsDialog(QDialog):
         if self._model_combo.currentText():
             self._update_model_displays(self._model_combo.currentText())
 
+    def _update_reasoning_combo(self, model: str) -> None:
+        """Update the reasoning combo box based on the current model's capabilities.
+
+        Args:
+            model: The selected model name
+        """
+        # Remember current selection
+        current_reasoning = None
+        if self._reasoning_combo.currentIndex() >= 0:
+            current_reasoning = self._reasoning_combo.currentData()
+
+        # Block signals while updating
+        self._reasoning_combo.blockSignals(True)
+        self._reasoning_combo.clear()
+
+        # Get model's reasoning capabilities
+        capabilities = ConversationSettings.get_reasoning_capability(model)
+
+        # Add NO_REASONING if supported
+        if capabilities & ReasoningCapability.NO_REASONING:
+            self._reasoning_combo.addItem("No Reasoning", ReasoningCapability.NO_REASONING)
+
+        # Add HIDDEN_REASONING if supported
+        if capabilities & ReasoningCapability.HIDDEN_REASONING:
+            self._reasoning_combo.addItem("Hidden Reasoning", ReasoningCapability.HIDDEN_REASONING)
+
+        # Add VISIBLE_REASONING if supported
+        if capabilities & ReasoningCapability.VISIBLE_REASONING:
+            self._reasoning_combo.addItem("Visible Reasoning", ReasoningCapability.VISIBLE_REASONING)
+
+        # Set previous selection if possible
+        if current_reasoning is not None:
+            for i in range(self._reasoning_combo.count()):
+                if self._reasoning_combo.itemData(i) == current_reasoning:
+                    self._reasoning_combo.setCurrentIndex(i)
+                    break
+
+        # Disable combo box if only one option
+        self._reasoning_combo.setEnabled(self._reasoning_combo.count() > 1)
+
+        # Unblock signals
+        self._reasoning_combo.blockSignals(False)
+
     def _update_model_displays(self, model: str) -> None:
         """Update the model-specific displays with proper localization."""
         strings = self._language_manager.strings
         limits = ConversationSettings.get_model_limits(model)
+
+        # Update reasoning capabilities dropdown
+        self._update_reasoning_combo(model)
 
         # Update context window display
         self._context_value.setText(
@@ -282,6 +343,8 @@ class ConversationSettingsDialog(QDialog):
 
         current_model = self._model_combo.currentText()
         current_temp = self._temp_spin.value()
+        current_reasoning = self._reasoning_combo.currentData()
+
         supports_temp = ConversationSettings.supports_temperature(current_model)
         self._temp_spin.setEnabled(supports_temp)
         self._update_model_displays(current_model)
@@ -295,13 +358,20 @@ class ConversationSettingsDialog(QDialog):
             temp_changed = abs(current_temp - self._current_settings.temperature) > 0.01
 
         model_changed = current_model != self._current_settings.model
-        self.apply_button.setEnabled(model_changed or temp_changed)
+        reasoning_changed = current_reasoning != self._current_settings.reasoning
+
+        self.apply_button.setEnabled(model_changed or temp_changed or reasoning_changed)
 
     def get_settings(self) -> ConversationSettings:
         """Get the current settings from the dialog."""
         model = self._model_combo.currentText()
         temperature = self._temp_spin.value()
-        return ConversationSettings(model=model, temperature=temperature)
+        reasoning = self._reasoning_combo.currentData()
+        return ConversationSettings(
+            model=model,
+            temperature=temperature,
+            reasoning=reasoning
+        )
 
     def set_settings(self, settings: ConversationSettings) -> None:
         """Set the current settings in the dialog."""
@@ -315,11 +385,13 @@ class ConversationSettingsDialog(QDialog):
 
         self._initial_settings = ConversationSettings(
             model=settings.model,
-            temperature=settings.temperature
+            temperature=settings.temperature,
+            reasoning=settings.reasoning
         )
         self._current_settings = ConversationSettings(
             model=settings.model,
-            temperature=settings.temperature
+            temperature=settings.temperature,
+            reasoning=settings.reasoning
         )
 
         # Model selection
@@ -329,9 +401,18 @@ class ConversationSettingsDialog(QDialog):
 
         self._update_model_displays(settings.model)
 
+        # Temperature setting
         supports_temp = ConversationSettings.supports_temperature(settings.model)
         self._temp_spin.setEnabled(supports_temp)
         self._temp_spin.setValue(settings.temperature)
+
+        # Reasoning capabilities
+        # Setting the model will populate the reasoning combo box
+        # We need to select the current reasoning setting
+        for i in range(self._reasoning_combo.count()):
+            if self._reasoning_combo.itemData(i) == settings.reasoning:
+                self._reasoning_combo.setCurrentIndex(i)
+                break
 
         # Reset the apply button state
         self.apply_button.setEnabled(False)

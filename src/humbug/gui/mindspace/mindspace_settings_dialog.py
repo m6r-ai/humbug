@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.conversation_settings import ConversationSettings, ReasoningCapability
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_code import LanguageCode
@@ -109,6 +109,20 @@ class MindspaceSettingsDialog(QDialog):
         temp_layout.addStretch()
         temp_layout.addWidget(self._temp_spin)
         layout.addLayout(temp_layout)
+
+        # Add reasoning capabilities
+        reasoning_layout = QHBoxLayout()
+        self._reasoning_label = QLabel("Reasoning Capabilities")  # TODO: Add to language strings
+        self._reasoning_label.setMinimumHeight(40)
+        self._reasoning_combo = QComboBox()
+        self._reasoning_combo.setView(QListView())
+        self._reasoning_combo.setMinimumWidth(300)
+        self._reasoning_combo.setMinimumHeight(40)
+        self._reasoning_combo.currentIndexChanged.connect(self._handle_value_change)
+        reasoning_layout.addWidget(self._reasoning_label)
+        reasoning_layout.addStretch()
+        reasoning_layout.addWidget(self._reasoning_combo)
+        layout.addLayout(reasoning_layout)
 
         # Soft tabs setting
         soft_tabs_layout = QHBoxLayout()
@@ -339,6 +353,56 @@ class MindspaceSettingsDialog(QDialog):
             }}
         """)
 
+    def _update_reasoning_combo(self, model: str) -> None:
+        """Update the reasoning combo box based on the current model's capabilities.
+
+        Args:
+            model: The selected model name
+        """
+        # Remember current selection
+        current_reasoning = None
+        if self._reasoning_combo.currentIndex() >= 0:
+            current_reasoning = self._reasoning_combo.currentData()
+
+        # Block signals while updating
+        self._reasoning_combo.blockSignals(True)
+        self._reasoning_combo.clear()
+
+        # Get model's reasoning capabilities
+        capabilities = ConversationSettings.get_reasoning_capability(model)
+        print(f"capabilities {capabilities}")
+
+        # Add NO_REASONING if supported
+        if capabilities & ReasoningCapability.NO_REASONING:
+            self._reasoning_combo.addItem("No Reasoning", ReasoningCapability.NO_REASONING)
+
+        # Add HIDDEN_REASONING if supported
+        if capabilities & ReasoningCapability.HIDDEN_REASONING:
+            self._reasoning_combo.addItem("Hidden Reasoning", ReasoningCapability.HIDDEN_REASONING)
+
+        # Add VISIBLE_REASONING if supported
+        if capabilities & ReasoningCapability.VISIBLE_REASONING:
+            self._reasoning_combo.addItem("Visible Reasoning", ReasoningCapability.VISIBLE_REASONING)
+
+        # Set previous selection if possible
+        if current_reasoning is not None:
+            index_found = False
+            for i in range(self._reasoning_combo.count()):
+                if self._reasoning_combo.itemData(i) == current_reasoning:
+                    self._reasoning_combo.setCurrentIndex(i)
+                    index_found = True
+                    break
+
+            # If the previous reasoning isn't available for this model, default to NO_REASONING
+            if not index_found:
+                self._reasoning_combo.setCurrentIndex(0)  # Select "No Reasoning"
+
+        # Disable combo box if only one option
+        self._reasoning_combo.setEnabled(self._reasoning_combo.count() > 1)
+
+        # Unblock signals
+        self._reasoning_combo.blockSignals(False)
+
     def _create_language_selector(self, parent) -> tuple[QHBoxLayout, QComboBox]:
         """Create language selection UI elements.
 
@@ -392,6 +456,7 @@ class MindspaceSettingsDialog(QDialog):
         self._backup_interval_label.setText(strings.backup_interval)
         self._model_label.setText(strings.settings_model_label)
         self._temp_label.setText(strings.settings_temp_label)
+        self._reasoning_label.setText("Reasoning Capabilities")  # TODO: Add to language strings
 
         # Update buttons
         self.ok_button.setText(strings.ok)
@@ -415,8 +480,14 @@ class MindspaceSettingsDialog(QDialog):
         # Get current temperature value based on model support
         current_model = self._model_combo.currentText()
         current_temp = self._temp_spin.value()
+        current_reasoning = self._reasoning_combo.currentData()
+
+        # Update reasoning capabilities when model changes
         supports_temp = ConversationSettings.supports_temperature(current_model)
         self._temp_spin.setEnabled(supports_temp)
+
+        # Update reasoning combo as needed
+        self._update_reasoning_combo(current_model)
 
         # Compare temperatures accounting for None values
         temp_changed = False
@@ -435,7 +506,8 @@ class MindspaceSettingsDialog(QDialog):
             self._backup_interval_spin.value() != self._current_settings.auto_backup_interval or
             self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size) or
             current_model != self._current_settings.model or
-            temp_changed
+            temp_changed or
+            current_reasoning != self._current_settings.reasoning
         )
 
     def get_settings(self) -> MindspaceSettings:
@@ -448,7 +520,8 @@ class MindspaceSettingsDialog(QDialog):
             auto_backup=self._auto_backup_check.isChecked(),
             auto_backup_interval=self._backup_interval_spin.value(),
             model=self._model_combo.currentText(),
-            temperature=self._temp_spin.value()
+            temperature=self._temp_spin.value(),
+            reasoning=self._reasoning_combo.currentData()
         )
 
     def set_settings(self, settings: MindspaceSettings) -> None:
@@ -462,7 +535,8 @@ class MindspaceSettingsDialog(QDialog):
             auto_backup=settings.auto_backup,
             auto_backup_interval=settings.auto_backup_interval,
             model=settings.model,
-            temperature=settings.temperature
+            temperature=settings.temperature,
+            reasoning=settings.reasoning
         )
 
         # Set initial language selection
@@ -487,6 +561,15 @@ class MindspaceSettingsDialog(QDialog):
         supports_temp = ConversationSettings.supports_temperature(settings.model)
         self._temp_spin.setEnabled(supports_temp)
         self._temp_spin.setValue(settings.temperature)
+
+        # Update reasoning options based on the selected model
+        self._update_reasoning_combo(settings.model)
+
+        # Select the current reasoning setting if possible
+        for i in range(self._reasoning_combo.count()):
+            if self._reasoning_combo.itemData(i) == settings.reasoning:
+                self._reasoning_combo.setCurrentIndex(i)
+                break
 
         # Reset the apply button state
         self.apply_button.setEnabled(False)

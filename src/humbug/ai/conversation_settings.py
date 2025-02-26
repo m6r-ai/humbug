@@ -7,7 +7,7 @@ from enum import Flag, auto
 class ReasoningCapability(Flag):
     """Flag enum for reasoning capabilities supported by models."""
 
-    NO_REASONING = 0
+    NO_REASONING = auto()
     HIDDEN_REASONING = auto()
     VISIBLE_REASONING = auto()
 
@@ -22,7 +22,7 @@ class AIModel:
         context_window: int,
         max_output_tokens: int,
         supports_temperature: bool,
-        reasoning_capabilities: ReasoningCapability = ReasoningCapability.NO_REASONING
+        reasoning_capabilities: ReasoningCapability
     ):
         """
         Initialize an AI model configuration.
@@ -300,6 +300,7 @@ class ConversationSettings:
             KeyError: If the model is not found
         """
         model_config = cls.MODELS.get(model)
+        print(f"get reasoning for {model}: {model_config.reasoning_capabilities.value}")
         if model_config:
             return model_config.reasoning_capabilities
 

@@ -26,6 +26,11 @@ class MindspaceSettings:
             language_code = editor.get("language", "EN")
             default_model = ConversationSettings.get_default_model({})
             default_reasoning = ConversationSettings.get_reasoning_capability(default_model)
+
+            # Handle reasoning bitflag from JSON
+            reasoning_value = conversation.get("reasoning", default_reasoning.value)
+            reasoning = ReasoningCapability(reasoning_value)
+
             return cls(
                 use_soft_tabs=editor.get("useSoftTabs", True),
                 tab_size=editor.get("tabSize", 4),
@@ -35,7 +40,7 @@ class MindspaceSettings:
                 language=LanguageCode[language_code],
                 model=conversation.get("model", default_model),
                 temperature=conversation.get("temperature", 0.7),
-                reasoning=conversation.get("reasoning", default_reasoning)
+                reasoning=reasoning
             )
 
     def save(self, path: str) -> None:
@@ -45,7 +50,7 @@ class MindspaceSettings:
             "conversation": {
                 "model": self.model,
                 "temperature": self.temperature,
-                "reasoning": self.reasoning,
+                "reasoning": self.reasoning.value,  # Use .value to get the integer value of the enum
             },
             "editor": {
                 "useSoftTabs": self.use_soft_tabs,
