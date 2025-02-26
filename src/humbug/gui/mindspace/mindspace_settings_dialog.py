@@ -112,7 +112,7 @@ class MindspaceSettingsDialog(QDialog):
 
         # Add reasoning capabilities
         reasoning_layout = QHBoxLayout()
-        self._reasoning_label = QLabel("Reasoning Capabilities")  # TODO: Add to language strings
+        self._reasoning_label = QLabel(strings.settings_reasoning_label)
         self._reasoning_label.setMinimumHeight(40)
         self._reasoning_combo = QComboBox()
         self._reasoning_combo.setView(QListView())
@@ -373,15 +373,15 @@ class MindspaceSettingsDialog(QDialog):
 
         # Add NO_REASONING if supported
         if capabilities & ReasoningCapability.NO_REASONING:
-            self._reasoning_combo.addItem("No Reasoning", ReasoningCapability.NO_REASONING)
+            self._reasoning_combo.addItem(self._language_manager.strings.settings_no_reasoning, ReasoningCapability.NO_REASONING)
 
         # Add HIDDEN_REASONING if supported
         if capabilities & ReasoningCapability.HIDDEN_REASONING:
-            self._reasoning_combo.addItem("Hidden Reasoning", ReasoningCapability.HIDDEN_REASONING)
+            self._reasoning_combo.addItem(self._language_manager.strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING)
 
         # Add VISIBLE_REASONING if supported
         if capabilities & ReasoningCapability.VISIBLE_REASONING:
-            self._reasoning_combo.addItem("Visible Reasoning", ReasoningCapability.VISIBLE_REASONING)
+            self._reasoning_combo.addItem(self._language_manager.strings.settings_visible_reasoning, ReasoningCapability.VISIBLE_REASONING)
 
         # Set previous selection if possible
         if current_reasoning is not None:
@@ -455,7 +455,8 @@ class MindspaceSettingsDialog(QDialog):
         self._backup_interval_label.setText(strings.backup_interval)
         self._model_label.setText(strings.settings_model_label)
         self._temp_label.setText(strings.settings_temp_label)
-        self._reasoning_label.setText("Reasoning Capabilities")  # TODO: Add to language strings
+        self._reasoning_label.setText(strings.settings_reasoning_label)
+        self._update_reasoning_combo(self._model_combo.currentText())
 
         # Update buttons
         self.ok_button.setText(strings.ok)

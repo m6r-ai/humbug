@@ -108,6 +108,10 @@ class LanguageStrings:
     settings_context_label: str
     settings_max_output_label: str
     settings_tokens_label: str
+    settings_reasoning_label: str
+    settings_no_reasoning: str
+    settings_hidden_reasoning: str
+    settings_visible_reasoning: str
 
     # File dialog titles
     file_dialog_open_metaphor: str
@@ -298,6 +302,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         settings_context_label="Context Window",
         settings_max_output_label="Max Output Tokens",
         settings_tokens_label="tokens",
+        settings_reasoning_label="Reasoning Capabilities",
+        settings_no_reasoning="No Reasoning",
+        settings_hidden_reasoning="Hidden Reasoning",
+        settings_visible_reasoning="Visible Reasoning",
 
         # File dialog titles
         file_dialog_open_metaphor="Open Metaphor File",
@@ -471,6 +479,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         settings_context_label="Fenêtre de contexte",
         settings_max_output_label="Jetons de sortie maximum",
         settings_tokens_label="jetons",
+        settings_reasoning_label="Capacités de raisonnement",
+        settings_no_reasoning="Sans raisonnement",
+        settings_hidden_reasoning="Raisonnement caché",
+        settings_visible_reasoning="Raisonnement visible",
 
         # File dialog titles
         file_dialog_open_metaphor="Ouvrir un fichier Metaphor",
@@ -649,6 +661,10 @@ _LANGUAGE_MAPPINGS: Dict[LanguageCode, LanguageStrings] = {
         settings_context_label="نافذة السياق",
         settings_max_output_label="الحد الأقصى للرموز الناتجة",
         settings_tokens_label="رمز",
+        settings_reasoning_label="قدرات التفكير",
+        settings_no_reasoning="بدون تفكير",
+        settings_hidden_reasoning="تفكير مخفي",
+        settings_visible_reasoning="تفكير مرئي",
 
         # File dialog titles
         file_dialog_open_metaphor="فتح ملف ميتافور",
