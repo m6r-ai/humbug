@@ -84,10 +84,8 @@ class MindspaceSettingsDialog(QDialog):
         self._model_combo.setMinimumWidth(300)
         self._model_combo.setMinimumHeight(40)
         models = []
-        for model in ConversationSettings.AVAILABLE_MODELS:
-            provider = ConversationSettings.get_provider(model)
-            if provider in ai_backends:
-                models.append(model)
+        for model in ConversationSettings.iter_models_by_backends(ai_backends):
+            models.append(model)
 
         self._model_combo.addItems(models)
         self._model_combo.currentTextChanged.connect(self._handle_value_change)

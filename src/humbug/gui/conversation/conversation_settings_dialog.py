@@ -306,10 +306,8 @@ class ConversationSettingsDialog(QDialog):
     def set_settings(self, settings: ConversationSettings) -> None:
         """Set the current settings in the dialog."""
         models = []
-        for model in ConversationSettings.AVAILABLE_MODELS:
-            provider = ConversationSettings.get_provider(model)
-            if provider in self._ai_backends:
-                models.append(model)
+        for model in ConversationSettings.iter_models_by_backends(self._ai_backends):
+            models.append(model)
 
         self._available_models = models
         self._model_combo.clear()
