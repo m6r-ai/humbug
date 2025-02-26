@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QWidget
 )
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QTextCursor
 
 from humbug.ai.conversation_settings import ConversationSettings
 from humbug.ai.ai_backend import AIBackend
@@ -240,24 +239,7 @@ class ConversationTab(TabBase):
         Args:
             position: Dictionary with 'line' and 'column' keys
         """
-        if not position:
-            return
-
-        cursor = self._conversation_widget._input.textCursor()
-        cursor.movePosition(QTextCursor.Start)
-
-        # Move cursor to specified position
-        for _ in range(position.get("line", 0)):
-            cursor.movePosition(QTextCursor.NextBlock)
-
-        cursor.movePosition(
-            QTextCursor.Right,
-            QTextCursor.MoveAnchor,
-            position.get("column", 0)
-        )
-
-        self._conversation_widget._input.setTextCursor(cursor)
-        self._conversation_widget._input.ensureCursorVisible()
+        self._conversation_widget.set_cursor_position(position)
 
     def get_cursor_position(self) -> Dict[str, int]:
         """Get current cursor position from input area.
@@ -265,11 +247,7 @@ class ConversationTab(TabBase):
         Returns:
             Dictionary with 'line' and 'column' keys
         """
-        cursor = self._conversation_widget._input.textCursor()
-        return {
-            "line": cursor.blockNumber(),
-            "column": cursor.columnNumber()
-        }
+        return self._conversation_widget.get_cursor_position()
 
     def update_path(self, new_id: str, new_path: str):
         """Update the conversation file path.
@@ -450,3 +428,7 @@ class ConversationTab(TabBase):
     def previous_bookmark(self) -> None:
         """Move to the previous bookmark."""
         self._conversation_widget.previous_bookmark()
+
+    def set_input_text(self, text: str):
+        """Set the input text."""
+        self._conversation_widget.set_input_text(text)

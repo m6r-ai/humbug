@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_response import AIError
@@ -1140,3 +1140,40 @@ class ConversationWidget(QWidget):
                         scroll_position=scroll_position
                     )
                     msg_widget.set_bookmarked(True)
+
+    def set_cursor_position(self, position: Dict[str, int]) -> None:
+        """Set cursor position in input area.
+
+        Args:
+            position: Dictionary with 'line' and 'column' keys
+        """
+        if not position:
+            return
+
+        cursor = self._input.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+
+        # Move cursor to specified position
+        for _ in range(position.get("line", 0)):
+            cursor.movePosition(QTextCursor.NextBlock)
+
+        cursor.movePosition(
+            QTextCursor.Right,
+            QTextCursor.MoveAnchor,
+            position.get("column", 0)
+        )
+
+        self._input.setTextCursor(cursor)
+        self._input.ensureCursorVisible()
+
+    def get_cursor_position(self) -> Dict[str, int]:
+        """Get current cursor position from input area.
+
+        Returns:
+            Dictionary with 'line' and 'column' keys
+        """
+        cursor = self._input.textCursor()
+        return {
+            "line": cursor.blockNumber(),
+            "column": cursor.columnNumber()
+        }
