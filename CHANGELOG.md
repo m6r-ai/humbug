@@ -5,10 +5,15 @@
 New features:
 
 - Added support for Claude Sonnet 3.7.
+- Added support for Deepseek Chat and Deepseek Reasoner models.
+- For AI models that expose reasoning steps, the conversation tabs now capture the
+  reasoning in a separate message box, after the user's message and before the AI's
+  full response.
 - Small improvements to the status messages for conversations and terminals.
 
 Bug fixes:
 
+- Resolved some problems with failure handling in the AI networking code.
 - Corrected the missing language translations for terminal status messages.
 
 ## v0.5 (2025-02-24)
