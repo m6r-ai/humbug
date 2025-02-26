@@ -16,6 +16,8 @@ Internal structure changes:
 - Reworked the ConversationSettings class to make it easier to add new models.  These are
   now handled via a single new dictionary entry.
 - Separated language translations into separate files/directories.
+- The ConversationTab class was much more complex than the equivalent EditorTab and
+  TerminalTab classes so refactored this to break out a new ConversationWidget class.
 
 Bug fixes:
 
