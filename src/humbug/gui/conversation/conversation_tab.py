@@ -642,7 +642,7 @@ class ConversationTab(TabBase):
         strings = self._language_manager.strings
 
         # Temperature display depends on whether it's available
-        if self._settings.temperature is not None:
+        if ConversationSettings.supports_temperature(self._settings.model):
             temp_display = strings.conversation_status_temperature.format(
                 temperature=self._settings.temperature
             )
