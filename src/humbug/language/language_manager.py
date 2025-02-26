@@ -1,7 +1,12 @@
 """Language management singleton."""
 
+from typing import Dict
+
 from PySide6.QtCore import QObject, Signal
 
+from humbug.language.en.en_strings import get_english_strings
+from humbug.language.fr.fr_strings import get_french_strings
+from humbug.language.ar.ar_strings import get_arabic_strings
 from humbug.language.language_code import LanguageCode
 from humbug.language.language_strings import LanguageStrings
 
@@ -22,11 +27,16 @@ class LanguageManager(QObject):
             super().__init__()
             self._current_language = LanguageCode.EN
             self._initialized = True
+            self._language_mappings: Dict[LanguageCode, LanguageStrings] = {
+                LanguageCode.EN: get_english_strings(),
+                LanguageCode.FR: get_french_strings(),
+                LanguageCode.AR: get_arabic_strings()
+            }
 
     @property
     def strings(self) -> LanguageStrings:
         """Get strings for current language."""
-        return LanguageStrings.get_strings(self._current_language)
+        return self._language_mappings[self._current_language]
 
     @property
     def current_language(self) -> LanguageCode:

@@ -15,6 +15,7 @@ Internal structure changes:
 
 - Reworked the ConversationSettings class to make it easier to add new models.  These are
   now handled via a single new dictionary entry.
+- Separated language translations into separate files/directories.
 
 Bug fixes:
 
