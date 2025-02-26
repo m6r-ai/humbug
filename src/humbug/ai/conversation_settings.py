@@ -1,6 +1,15 @@
 """Class to handle conversation settings."""
 
-from typing import Dict, Optional, List, Any
+from typing import Dict, List, Any
+from enum import Flag, auto
+
+
+class ReasoningCapability(Flag):
+    """Flag enum for reasoning capabilities supported by models."""
+
+    NO_REASONING = 0
+    HIDDEN_REASONING = auto()
+    VISIBLE_REASONING = auto()
 
 
 class AIModel:
@@ -12,7 +21,8 @@ class AIModel:
         provider: str,
         context_window: int,
         max_output_tokens: int,
-        supports_temperature: bool
+        supports_temperature: bool,
+        reasoning_capabilities: ReasoningCapability = ReasoningCapability.NO_REASONING
     ):
         """
         Initialize an AI model configuration.
@@ -23,12 +33,14 @@ class AIModel:
             context_window: Maximum context window size in tokens
             max_output_tokens: Maximum output tokens the model can generate
             supports_temperature: Whether the model supports temperature settings
+            reasoning_capabilities: Bitmap of reasoning capabilities supported by the model
         """
         self.name = name
         self.provider = provider
         self.context_window = context_window
         self.max_output_tokens = max_output_tokens
         self.supports_temperature = supports_temperature
+        self.reasoning_capabilities = reasoning_capabilities
 
 
 class ConversationSettings:
@@ -42,21 +54,24 @@ class ConversationSettings:
             provider="anthropic",
             context_window=200000,
             max_output_tokens=4096,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
         "claude-3-5-sonnet-20241022": AIModel(
             name="claude-3-5-sonnet-20241022",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=8192,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
         "claude-3-7-sonnet-20250219": AIModel(
             name="claude-3-7-sonnet-20250219",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=64000,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING | ReasoningCapability.VISIBLE_REASONING
         ),
 
         # Deepseek models
@@ -65,14 +80,16 @@ class ConversationSettings:
             provider="deepseek",
             context_window=64000,
             max_output_tokens=8192,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
         "deepseek-reasoner": AIModel(
             name="deepseek-reasoner",
             provider="deepseek",
             context_window=64000,
             max_output_tokens=8192,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING
         ),
 
         # Google models
@@ -81,21 +98,24 @@ class ConversationSettings:
             provider="google",
             context_window=1048576,
             max_output_tokens=8192,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
         "gemini-1.5-pro": AIModel(
             name="gemini-1.5-pro",
             provider="google",
             context_window=2097152,
             max_output_tokens=8192,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
         "gemini-2.0-flash-exp": AIModel(
             name="gemini-2.0-flash-exp",
             provider="google",
             context_window=1048576,
             max_output_tokens=8192,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
 
         # M6R models
@@ -104,7 +124,8 @@ class ConversationSettings:
             provider="m6r",
             context_window=1024,
             max_output_tokens=1024,
-            supports_temperature=False
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
 
         # Ollama models
@@ -113,14 +134,16 @@ class ConversationSettings:
             provider="ollama",
             context_window=2048,
             max_output_tokens=2048,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
         "phi4": AIModel(
             name="phi4",
             provider="ollama",
             context_window=2048,
             max_output_tokens=2048,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
 
         # OpenAI models
@@ -129,34 +152,39 @@ class ConversationSettings:
             provider="openai",
             context_window=128000,
             max_output_tokens=16384,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
         "gpt-4o": AIModel(
             name="gpt-4o",
             provider="openai",
             context_window=128000,
             max_output_tokens=16384,
-            supports_temperature=True
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
         "o1-mini": AIModel(
             name="o1-mini",
             provider="openai",
             context_window=128000,
             max_output_tokens=65536,
-            supports_temperature=False
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         ),
         "o1-preview": AIModel(
             name="o1-preview",
             provider="openai",
             context_window=200000,
             max_output_tokens=100000,
-            supports_temperature=False
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         )
     }
 
     # Default fallback values for unknown models
     DEFAULT_CONTEXT_WINDOW = 8192
     DEFAULT_MAX_OUTPUT_TOKENS = 2048
+    DEFAULT_REASONING_CAPABILITY = ReasoningCapability.NO_REASONING
 
     def __init__(self, model: str = "gemini-1.5-flash", temperature: float = 0.7):
         """
@@ -250,6 +278,26 @@ class ConversationSettings:
             "context_window": cls.DEFAULT_CONTEXT_WINDOW,
             "max_output_tokens": cls.DEFAULT_MAX_OUTPUT_TOKENS
         }
+
+    @classmethod
+    def get_reasoning_capability(cls, model: str) -> ReasoningCapability:
+        """
+        Get the reasoning capabilities supported by a model.
+
+        Args:
+            model: Name of the model
+
+        Returns:
+            ReasoningCapability bitmap of supported reasoning capabilities
+
+        Raises:
+            KeyError: If the model is not found
+        """
+        model_config = cls.MODELS.get(model)
+        if model_config:
+            return model_config.reasoning_capabilities
+
+        return cls.DEFAULT_REASONING_CAPABILITY
 
     @classmethod
     def iter_models_by_backends(cls, ai_backends: Dict[str, Any]):

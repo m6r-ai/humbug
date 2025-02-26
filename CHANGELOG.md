@@ -11,6 +11,11 @@ New features:
   full response.
 - Small improvements to the status messages for conversations and terminals.
 
+Internal structure changes:
+
+- Reworked the ConversationSettings class to make it easier to add new models.  These are
+  now handled via a single new dictionary entry.
+
 Bug fixes:
 
 - Resolved some problems with failure handling in the AI networking code.
