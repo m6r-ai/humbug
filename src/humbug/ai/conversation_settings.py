@@ -202,7 +202,9 @@ class ConversationSettings:
         Raises:
             ValueError: If temperature is out of valid range (0.0-1.0)
         """
-        if temperature and not 0 <= temperature <= 1:
+        if not temperature:
+            temperature = 0.7
+        elif not 0 <= temperature <= 1:
             raise ValueError("Temperature must be between 0.0 and 1.0")
 
         self.model = model

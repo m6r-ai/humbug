@@ -2,7 +2,7 @@
 from typing import Dict, List
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.conversation_settings import ConversationSettings, ReasoningCapability
 from humbug.ai.anthropic_stream_response import AnthropicStreamResponse
 
 
@@ -27,8 +27,17 @@ class AnthropicBackend(AIBackend):
             "stream": True
         }
 
+        # Add thinking configuration if VISIBLE_REASONING is enabled.  Set budget at 90% of the maximum token count.
+        thinking = False
+        if (settings.reasoning & ReasoningCapability.VISIBLE_REASONING) == ReasoningCapability.VISIBLE_REASONING:
+            thinking = True
+            data["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": int(settings.max_output_tokens * 0.9)
+            }
+
         # Only include temperature if supported by model
-        if ConversationSettings.supports_temperature(settings.model):
+        if not thinking and ConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
         return data

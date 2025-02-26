@@ -37,6 +37,7 @@ class AnthropicStreamResponse:
 
         event_type = chunk.get("type")
 
+        print(f"chunk: {chunk}")
         if event_type == "message_start":
             # Track input tokens but don't expose them yet
             if "message" in chunk and "usage" in chunk["message"]:
@@ -46,9 +47,9 @@ class AnthropicStreamResponse:
             delta = chunk.get("delta", {})
             if delta.get("type") == "text_delta":
                 self.content += delta.get("text", "")
-            elif delta.get("type" == "thinking_delta"):
+            elif delta.get("type") == "thinking_delta":
                 self.reasoning += delta.get("thinking", "")
-            elif delta.get("type" == "signature_delta"):
+            elif delta.get("type") == "signature_delta":
                 self.reasoning += delta.get("signature", "")
         elif event_type == "message_delta":
             # Track output tokens but don't expose them yet
