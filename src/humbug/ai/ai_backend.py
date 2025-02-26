@@ -95,6 +95,7 @@ class AIBackend(ABC):
                         json=data,
                         timeout=post_timeout
                     ) as response:
+                        # Did we get an error response?  If yes, then deal with it.
                         if response.status != 200:
                             response_message = await response.text()
 
@@ -150,6 +151,8 @@ class AIBackend(ABC):
                             )
                             return
 
+                        # We got a success code.  Create a response handler and start generating AIResponse
+                        # updates for each server-sent event we see.
                         response_handler = self._create_stream_response_handler()
                         async for line in response.content:
                             try:

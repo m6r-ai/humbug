@@ -34,7 +34,7 @@ that are expert on Humbug itself!
 
 In 0.6 we've:
 
-- Added support for Claude Sonnet 3.7.
+- Added support for Claude Sonnet 3.7 (chat and extended thinking).
 - Added support for Deepseek Chat and Deepseek Reasoner.
 - For AI models (such as Deepseek Reasoner) that expose their stream of reasoning the reasoning is published
   in a new conversation box inbetween the user's message and the AI's response.
