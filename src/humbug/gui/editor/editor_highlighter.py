@@ -68,6 +68,7 @@ class EditorHighlighter(QSyntaxHighlighter):
             # Apply syntax highlighting based on token types
             while True:
                 token = parser.get_next_token()
+                print(f"token: {token}")
                 if token is None:
                     break
 

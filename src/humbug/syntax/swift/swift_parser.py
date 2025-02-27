@@ -133,19 +133,14 @@ class SwiftParser(Parser):
                     if generic_angle_count == 0:
                         in_generic = False
 
-            # Handle string interpolation
-            elif token.type == 'INTERPOLATION_START':
-                self._handle_interpolation(token, lexer)
-                continue
-
             self._tokens.append(token)
 
         parser_state = SwiftParserState()
         parser_state.continuation_state = (
-            1 if lexer_state.in_block_comment or lexer_state.in_string_interpolation else 0
+            1 if lexer_state.in_block_comment else 0
         )
         parser_state.parsing_continuation = (
-            lexer_state.in_block_comment or lexer_state.in_string_interpolation
+            lexer_state.in_block_comment
         )
         parser_state.lexer_state = lexer_state
         parser_state.in_element = in_element
@@ -154,29 +149,3 @@ class SwiftParser(Parser):
         parser_state.in_generic = in_generic
         parser_state.generic_angle_count = generic_angle_count
         return parser_state
-
-    def _handle_interpolation(self, token: Token, lexer: SwiftLexer) -> None:
-        """
-        Handle string interpolation expressions.
-
-        Args:
-            token: The interpolation start token
-            lexer: The lexer instance for getting more tokens
-        """
-        self._tokens.append(token)
-        brace_count = 1  # We're already inside one expression
-
-        while True:
-            token = lexer.get_next_token()
-            if not token:
-                break
-
-            if token.type == 'OPERATOR':
-                if token.value == '{':
-                    brace_count += 1
-                elif token.value == '}':
-                    brace_count -= 1
-                    if brace_count == 0:
-                        break
-
-            self._tokens.append(token)

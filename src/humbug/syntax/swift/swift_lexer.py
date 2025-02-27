@@ -11,12 +11,8 @@ class SwiftLexerState(LexerState):
 
     Attributes:
         in_block_comment: Indicates if we're currently parsing a block comment
-        in_string_interpolation: Indicates if we're in a string interpolation expression
-        interpolation_depth: Number of nested interpolation expressions
     """
     in_block_comment: bool = False
-    in_string_interpolation: bool = False
-    interpolation_depth: int = 0
 
 
 class SwiftLexer(Lexer):
@@ -25,7 +21,6 @@ class SwiftLexer(Lexer):
 
     This lexer handles Swift-specific syntax including:
     - Keywords and context-sensitive keywords
-    - String literals with interpolation
     - Numbers with underscores and type inference
     - Operators (including custom operators)
     - Attributes and property wrappers
@@ -34,8 +29,6 @@ class SwiftLexer(Lexer):
     def __init__(self):
         super().__init__()
         self._in_block_comment = False
-        self._in_string_interpolation = False
-        self._interpolation_depth = 0
 
     def lex(self, prev_lexer_state: Optional[SwiftLexerState], input_str: str) -> SwiftLexerState:
         """
@@ -44,8 +37,6 @@ class SwiftLexer(Lexer):
         self._input = input_str
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
-            self._in_string_interpolation = prev_lexer_state.in_string_interpolation
-            self._interpolation_depth = prev_lexer_state.interpolation_depth
 
         if self._in_block_comment:
             self._read_block_comment(0)
@@ -55,8 +46,6 @@ class SwiftLexer(Lexer):
 
         lexer_state = SwiftLexerState()
         lexer_state.in_block_comment = self._in_block_comment
-        lexer_state.in_string_interpolation = self._in_string_interpolation
-        lexer_state.interpolation_depth = self._interpolation_depth
         return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
@@ -162,53 +151,17 @@ class SwiftLexer(Lexer):
 
     def _read_string(self) -> None:
         """
-        Read a string literal token, handling string interpolation.
+        Read a string literal token.
         """
         start = self._position
         self._position += 1  # Skip "
 
         while self._position < len(self._input):
             ch = self._input[self._position]
-
-            if ch == '\\' and self._position + 1 < len(self._input):
-                next_ch = self._input[self._position + 1]
-                if next_ch == '(':
-                    # Handle string interpolation
-                    self._tokens.append(Token(
-                        type='STRING',
-                        value=self._input[start:self._position],
-                        start=start
-                    ))
-                    self._position += 2  # Skip \(
-                    self._in_string_interpolation = True
-                    self._interpolation_depth += 1
-                    self._tokens.append(Token(
-                        type='INTERPOLATION_START',
-                        value='\\(',
-                        start=self._position - 2
-                    ))
-                    return
-                self._position += 2
-                continue
-
-            if ch == '"' and not self._in_string_interpolation:
-                self._position += 1
-                break
-
-            if ch == ')' and self._in_string_interpolation:
-                self._interpolation_depth -= 1
-                if self._interpolation_depth == 0:
-                    self._in_string_interpolation = False
-                self._tokens.append(Token(
-                    type='INTERPOLATION_END',
-                    value=')',
-                    start=self._position
-                ))
-                self._position += 1
-                start = self._position
-                continue
-
             self._position += 1
+
+            if ch == '"':
+                break
 
         self._tokens.append(Token(
             type='STRING',
