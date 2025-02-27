@@ -1177,3 +1177,34 @@ class ConversationWidget(QWidget):
             "line": cursor.blockNumber(),
             "column": cursor.columnNumber()
         }
+
+    def get_selected_text(self) -> str:
+        """
+        Get current selected text if any.
+
+        Returns:
+            The selected text or empty string
+        """
+        if self._message_with_selection:
+            cursor = self._message_with_selection._text_area.textCursor()
+            if cursor.hasSelection():
+                text = cursor.selectedText()
+                if '\u2029' not in text:  # Qt uses this for line breaks
+                    return text
+        elif self._input.hasFocus():
+            cursor = self._input.textCursor()
+            if cursor.hasSelection():
+                text = cursor.selectedText()
+                if '\u2029' not in text:
+                    return text
+
+        return ""
+
+    def get_searchable_widgets(self):
+        """
+        Get list of widgets that can be searched.
+
+        Returns:
+            List of MessageWidget instances including input widget
+        """
+        return self._messages + [self._input]

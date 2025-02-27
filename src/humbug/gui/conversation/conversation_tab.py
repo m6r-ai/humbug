@@ -342,22 +342,11 @@ class ConversationTab(TabBase):
     def show_find(self):
         """Show the find widget."""
         # Get selected text if any
-        if self._conversation_widget._message_with_selection:
-            cursor = self._conversation_widget._message_with_selection._text_area.textCursor()
-            if cursor.hasSelection():
-                text = cursor.selectedText()
-                if '\u2029' not in text:  # Qt uses this for line breaks
-                    self._find_widget.set_search_text(text)
-                else:
-                    self._find_widget.set_search_text("")
-        elif self._conversation_widget._input.hasFocus():
-            cursor = self._conversation_widget._input.textCursor()
-            if cursor.hasSelection():
-                text = cursor.selectedText()
-                if '\u2029' not in text:
-                    self._find_widget.set_search_text(text)
-                else:
-                    self._find_widget.set_search_text("")
+        selected_text = self._conversation_widget.get_selected_text()
+        if selected_text:
+            self._find_widget.set_search_text(selected_text)
+        else:
+            self._find_widget.set_search_text("")
 
         self._find_widget.show()
         self._find_widget.setFocus()
@@ -366,15 +355,13 @@ class ConversationTab(TabBase):
         """Close the find widget and clear search state."""
         self._find_widget.hide()
         self._find_handler.clear()
-        # Also clear any search highlights in the conversation widget
-        for message_widget in self._conversation_widget._messages + [self._conversation_widget._input]:
-            message_widget._text_area.setExtraSelections([])
+        # Use the existing method to clear search highlights
+        self._conversation_widget.clear_search_highlights()
 
     def _find_next(self, forward: bool = True):
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        # Include both messages and input widget in search
-        widgets = self._conversation_widget._messages + [self._conversation_widget._input]
+        widgets = self._conversation_widget.get_searchable_widgets()
         self._find_handler.find_text(text, widgets, forward)
         current, total = self._find_handler.get_match_status()
         self._find_widget.set_match_status(current, total)
