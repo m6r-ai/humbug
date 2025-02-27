@@ -119,22 +119,6 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement restore_from_state")
 
-    def set_cursor_position(self, position: Dict[str, int]) -> None:
-        """Set the cursor position in the tab's content.
-
-        Args:
-            position: Dictionary with cursor position information
-        """
-        raise NotImplementedError("Subclasses must implement set_cursor_position")
-
-    def get_cursor_position(self) -> Dict[str, int]:
-        """Get the current cursor position from the tab's content.
-
-        Returns:
-            Dictionary with cursor position information
-        """
-        raise NotImplementedError("Subclasses must implement get_cursor_position")
-
     def can_close(self) -> bool:
         """
         Check if the tab can be closed.

@@ -172,7 +172,7 @@ class EditorTab(TabBase):
             type=TabType.EDITOR,
             tab_id=self.tab_id,
             path=self._path if self._path else f"untitled-{self._untitled_number}",
-            cursor_position=self.get_cursor_position(),
+            cursor_position=self._get_cursor_position(),
             horizontal_scroll=self._editor.horizontalScrollBar().value(),
             vertical_scroll=self._editor.verticalScrollBar().value(),
             metadata=metadata_state
@@ -206,7 +206,7 @@ class EditorTab(TabBase):
 
         # Restore cursor position if present
         if state.cursor_position:
-            tab.set_cursor_position(state.cursor_position)
+            tab._set_cursor_position(state.cursor_position)
 
         # Restore scroll poisitions if present
         if state.horizontal_scroll:
@@ -217,8 +217,9 @@ class EditorTab(TabBase):
 
         return tab
 
-    def set_cursor_position(self, position: Dict[str, int]) -> None:
-        """Set cursor position in editor.
+    def _set_cursor_position(self, position: Dict[str, int]) -> None:
+        """
+        Set cursor position in editor.
 
         Args:
             position: Dictionary with 'line' and 'column' keys
@@ -242,7 +243,7 @@ class EditorTab(TabBase):
         self._editor.setTextCursor(cursor)
         self._editor.ensureCursorVisible()
 
-    def get_cursor_position(self) -> Dict[str, int]:
+    def _get_cursor_position(self) -> Dict[str, int]:
         """
         Get current cursor position from editor.
 

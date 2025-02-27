@@ -398,12 +398,6 @@ class TerminalTab(TabBase):
             self._tab_id
         )
 
-    def set_cursor_position(self, position: Dict[str, int]) -> None:
-        """Not supported for terminal tabs."""
-
-    def get_cursor_position(self) -> Dict[str, int]:
-        """Not supported for terminal tabs."""
-
     def can_close(self) -> bool:
         """Check if terminal can be closed."""
         return True

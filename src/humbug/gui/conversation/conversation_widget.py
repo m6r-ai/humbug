@@ -1072,6 +1072,7 @@ class ConversationWidget(QWidget):
 
         # Store current input content
         metadata["content"] = self._input.toPlainText()
+        metadata['cursor'] = self._get_cursor_position()
 
         # Store current settings
         settings = self.get_settings()
@@ -1096,6 +1097,9 @@ class ConversationWidget(QWidget):
         # Restore input content if specified
         if "content" in metadata:
             self.set_input_text(metadata["content"])
+
+        if "cursor" in metadata:
+            self._set_cursor_position(metadata["cursor"])
 
         # Restore settings if specified
         if "settings" in metadata:
@@ -1122,7 +1126,7 @@ class ConversationWidget(QWidget):
                     )
                     msg_widget.set_bookmarked(True)
 
-    def set_cursor_position(self, position: Dict[str, int]) -> None:
+    def _set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position in input area.
 
         Args:
@@ -1144,10 +1148,9 @@ class ConversationWidget(QWidget):
             position.get("column", 0)
         )
 
-        self._input.setTextCursor(cursor)
-        self._input.ensureCursorVisible()
+        self._input._text_area.setTextCursor(cursor)
 
-    def get_cursor_position(self) -> Dict[str, int]:
+    def _get_cursor_position(self) -> Dict[str, int]:
         """Get current cursor position from input area.
 
         Returns:

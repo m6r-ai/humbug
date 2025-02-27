@@ -229,22 +229,6 @@ class ConversationTab(TabBase):
         except Exception as e:
             raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
 
-    def set_cursor_position(self, position: Dict[str, int]) -> None:
-        """Set cursor position in input area.
-
-        Args:
-            position: Dictionary with 'line' and 'column' keys
-        """
-        self._conversation_widget.set_cursor_position(position)
-
-    def get_cursor_position(self) -> Dict[str, int]:
-        """Get current cursor position from input area.
-
-        Returns:
-            Dictionary with 'line' and 'column' keys
-        """
-        return self._conversation_widget.get_cursor_position()
-
     def update_path(self, new_id: str, new_path: str):
         """Update the conversation file path.
 

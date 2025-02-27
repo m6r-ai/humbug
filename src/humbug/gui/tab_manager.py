@@ -427,6 +427,7 @@ class TabManager(QWidget):
 
         current_tab.status_message.connect(self.status_message)
         current_tab.update_status()
+        current_tab.setFocus()
 
     def _handle_tab_changed(self, _index: int) -> None:
         """
