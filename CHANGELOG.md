@@ -23,6 +23,7 @@ Bug fixes:
 
 - Resolved some problems with failure handling in the AI networking code.
 - Corrected the missing language translations for terminal status messages.
+- Resolved a few problems with the Swift syntax highligher.
 
 ## v0.5 (2025-02-24)
 
