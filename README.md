@@ -1,4 +1,4 @@
-# Humbug v0.6
+# Humbug v0.7
 
 Humbug is a versatile, GUI-based application designed to place AI interactions at the heart of software
 product development.  It offers a user-friendly tabbed interface for managing simultaneous conversations
@@ -32,13 +32,9 @@ that are expert on Humbug itself!
 
 ## What's New
 
-In 0.6 we've:
+In 0.7 we've:
 
-- Added support for Claude Sonnet 3.7 (chat and extended thinking).
-- Added support for DeepSeek Chat and Deepseek Reasoner.
-- For AI models (such as DeepSeek Reasoner) that expose their stream of reasoning the reasoning is published
-  in a new conversation box inbetween the user's message and the AI's response.
-- Resolved lots of small bugs.
+- Done things!
 
 ## Features
 
