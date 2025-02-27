@@ -78,7 +78,7 @@ class ConversationTab(TabBase):
             tab_id, path, timestamp, ai_backends, self
         )
         self._conversation_widget.forkRequested.connect(self.forkRequested)
-        self._conversation_widget.status_message.connect(self._handle_status_message)
+        self._conversation_widget.status_updated.connect(self.update_status)
         self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
         layout.addWidget(self._conversation_widget)
 
@@ -105,10 +105,6 @@ class ConversationTab(TabBase):
 
         # Update status bar
         self.update_status()
-
-    def _handle_status_message(self, message: str) -> None:
-        """Handle status message from conversation widget."""
-        self.status_message.emit(StatusMessage(message))
 
     async def fork_conversation(self) -> 'ConversationTab':
         """Create a copy of this conversation with the same history."""
@@ -266,8 +262,28 @@ class ConversationTab(TabBase):
 
     def update_status(self) -> None:
         """Update status bar with token counts and settings."""
-        # For our refactored implementation, this is handled by the widget
-        self._conversation_widget._update_status()
+        counts = self._conversation_widget.get_token_counts()
+        settings = self._conversation_widget.get_settings()
+        strings = self._language_manager.strings
+
+        # Temperature display depends on whether it's available
+        if ConversationSettings.supports_temperature(settings.model):
+            temp_display = strings.conversation_status_temperature.format(
+                temperature=settings.temperature
+            )
+        else:
+            temp_display = strings.conversation_status_no_temperature
+
+        status = strings.conversation_status.format(
+            model=settings.model,
+            temperature=temp_display,
+            input_tokens=counts['input'],
+            max_input_tokens=settings.context_window,
+            output_tokens=counts['output'],
+            max_output_tokens=settings.max_output_tokens
+        )
+
+        self.status_message.emit(StatusMessage(status))
 
     def can_close(self) -> bool:
         """Check if terminal can be closed."""

@@ -51,7 +51,7 @@ class ConversationWidget(QWidget):
     """Widget for displaying conversation with message history and input."""
 
     # Signal to notify tab of status changes
-    status_message = Signal(str)
+    status_updated = Signal()
 
     # Signal for tab to handle forking a conversation
     forkRequested = Signal()
@@ -188,7 +188,7 @@ class ConversationWidget(QWidget):
         self._input.set_streaming(self._is_streaming)
 
         # Emit signal for status update
-        self._update_status()
+        self.status_updated.emit()
 
     @property
     def conversation_id(self) -> str:
@@ -257,7 +257,12 @@ class ConversationWidget(QWidget):
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
     def get_settings(self) -> ConversationSettings:
-        """Get current conversation settings."""
+        """
+        Get current conversation settings.
+
+        Returns:
+            Current conversation settings
+        """
         return ConversationSettings(
             model=self._settings.model,
             temperature=self._settings.temperature,
@@ -411,30 +416,6 @@ class ConversationWidget(QWidget):
         self._path = new_path
         self._conversation_id = new_id
         self._transcript_handler.update_path(new_path)
-
-    def _update_status(self) -> None:
-        """Update status information and emit signal."""
-        counts = self._conversation.get_token_counts()
-        strings = self._language_manager.strings
-
-        # Temperature display depends on whether it's available
-        if ConversationSettings.supports_temperature(self._settings.model):
-            temp_display = strings.conversation_status_temperature.format(
-                temperature=self._settings.temperature
-            )
-        else:
-            temp_display = strings.conversation_status_no_temperature
-
-        status = strings.conversation_status.format(
-            model=self._settings.model,
-            temperature=temp_display,
-            input_tokens=counts['input'],
-            max_input_tokens=self._settings.context_window,
-            output_tokens=counts['output'],
-            max_output_tokens=self._settings.max_output_tokens
-        )
-
-        self.status_message.emit(status)
 
     def _handle_edit_page_scroll(self) -> None:
         """
@@ -598,7 +579,7 @@ class ConversationWidget(QWidget):
             if usage:
                 self._is_streaming = False
                 self._input.set_streaming(False)
-                self._update_status()
+                self.status_updated.emit()
                 self._current_reasoning_message = None
                 self._current_ai_message = None
                 await self._write_transcript(message)
@@ -672,7 +653,7 @@ class ConversationWidget(QWidget):
                     ))
 
         # Update display with final state
-        self._update_status()
+        self.status_updated.emit()
 
         # Ensure we're scrolled to the end
         self._auto_scroll = True
@@ -828,7 +809,7 @@ class ConversationWidget(QWidget):
     def update_conversation_settings(self, new_settings: ConversationSettings):
         """Update conversation settings and associated backend."""
         self._settings = new_settings
-        self._update_status()
+        self.status_updated.emit()
         provider = ConversationSettings.get_provider(new_settings.model)
         backend = self._ai_backends.get(provider)
         if backend:
@@ -1177,6 +1158,15 @@ class ConversationWidget(QWidget):
             "line": cursor.blockNumber(),
             "column": cursor.columnNumber()
         }
+
+    def get_token_counts(self) -> dict:
+        """
+        Get the current token counts for status display.
+
+        Returns:
+            Dictionary with token count information
+        """
+        return self._conversation.get_token_counts()
 
     def get_selected_text(self) -> str:
         """
