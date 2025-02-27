@@ -79,7 +79,7 @@ class SwiftLexer(Lexer):
         if ch == '#':
             return self._read_directive_or_string
 
-        if self._is_letter(ch) or ch == '_':
+        if self._is_letter(ch) or ch == '_' or ch == '$':
             return self._read_identifier_or_keyword
 
         if self._is_digit(ch):
