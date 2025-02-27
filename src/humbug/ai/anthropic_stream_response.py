@@ -49,7 +49,11 @@ class AnthropicStreamResponse:
             elif delta.get("type") == "thinking_delta":
                 self.reasoning += delta.get("thinking", "")
             elif delta.get("type") == "signature_delta":
-                self.reasoning += delta.get("signature", "")
+                self.reasoning += "\n\nSignature: " + delta.get("signature", "") + "\n"
+        elif event_type == "content_block_start":
+            content_block = chunk.get("content_block", {})
+            if content_block.get("type") == "redacted_thinking":
+                self.reasoning += "\n\nRedacted: " + content_block.get("data", "") + "\n"
         elif event_type == "message_delta":
             # Track output tokens but don't expose them yet
             if "usage" in chunk:
