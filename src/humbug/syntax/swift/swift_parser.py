@@ -53,7 +53,6 @@ class SwiftParser(Parser):
             - Converting identifiers to ELEMENT tokens in property access chains
             - Tracking closure expressions and their brace depth
             - Tracking generic parameter lists and their angle bracket depth
-            - String interpolation expressions
         """
         in_element = False
         in_closure = False
@@ -137,10 +136,10 @@ class SwiftParser(Parser):
 
         parser_state = SwiftParserState()
         parser_state.continuation_state = (
-            1 if lexer_state.in_block_comment else 0
+            1 if lexer_state.in_block_comment or lexer_state.in_multiline_string else 0
         )
         parser_state.parsing_continuation = (
-            lexer_state.in_block_comment
+            lexer_state.in_block_comment or lexer_state.in_multiline_string
         )
         parser_state.lexer_state = lexer_state
         parser_state.in_element = in_element

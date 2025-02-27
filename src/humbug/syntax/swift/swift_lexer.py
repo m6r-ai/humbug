@@ -11,8 +11,10 @@ class SwiftLexerState(LexerState):
 
     Attributes:
         in_block_comment: Indicates if we're currently parsing a block comment
+        in_multiline_string: Indicates if we're currently parsing a multi-line string
     """
     in_block_comment: bool = False
+    in_multiline_string: bool = False
 
 
 class SwiftLexer(Lexer):
@@ -24,11 +26,13 @@ class SwiftLexer(Lexer):
     - Numbers with underscores and type inference
     - Operators (including custom operators)
     - Attributes and property wrappers
+    - Multi-line strings with triple double quotes
     """
 
     def __init__(self):
         super().__init__()
         self._in_block_comment = False
+        self._in_multiline_string = False
 
     def lex(self, prev_lexer_state: Optional[SwiftLexerState], input_str: str) -> SwiftLexerState:
         """
@@ -37,15 +41,20 @@ class SwiftLexer(Lexer):
         self._input = input_str
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
+            self._in_multiline_string = prev_lexer_state.in_multiline_string
 
         if self._in_block_comment:
             self._read_block_comment(0)
 
-        if not self._in_block_comment:
+        if self._in_multiline_string:
+            self._read_multiline_string(0)
+
+        if not self._in_block_comment and not self._in_multiline_string:
             self._inner_lex()
 
         lexer_state = SwiftLexerState()
         lexer_state.in_block_comment = self._in_block_comment
+        lexer_state.in_multiline_string = self._in_multiline_string
         return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
@@ -151,17 +160,57 @@ class SwiftLexer(Lexer):
 
     def _read_string(self) -> None:
         """
-        Read a string literal token.
+        Read a string literal token, which could be a single-line or multi-line string.
         """
+        # Check for multi-line string (triple double quotes)
+        if (self._position + 2 < len(self._input) and 
+                self._input[self._position:self._position + 3] == '"""'):
+            self._read_multiline_string(3)
+            return
+
+        # Standard single-line string
         start = self._position
-        self._position += 1  # Skip "
+        self._position += 1  # Skip initial "
 
         while self._position < len(self._input):
             ch = self._input[self._position]
+            if ch == '"':
+                self._position += 1
+                break
+            elif ch == '\\' and self._position + 1 < len(self._input):
+                # Skip escaped characters
+                self._position += 2
+            else:
+                self._position += 1
+
+        self._tokens.append(Token(
+            type='STRING',
+            value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _read_multiline_string(self, skip_chars: int) -> None:
+        """
+        Read a multi-line string literal token.
+
+        Args:
+            skip_chars: Number of characters to skip at the start
+        """
+        self._in_multiline_string = True
+        start = self._position
+        self._position += skip_chars  # Skip """
+
+        while (self._position + 2) < len(self._input):
+            if self._input[self._position:self._position + 3] == '"""':
+                self._in_multiline_string = False
+                self._position += 3
+                break
+
             self._position += 1
 
-            if ch == '"':
-                break
+        # If we're still in a multi-line string, we need to consume the whole input
+        if self._in_multiline_string:
+            self._position = len(self._input)
 
         self._tokens.append(Token(
             type='STRING',
