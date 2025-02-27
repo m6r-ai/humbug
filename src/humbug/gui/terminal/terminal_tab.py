@@ -492,7 +492,7 @@ class TerminalTab(TabBase):
         """Show the find widget."""
         # Get the selected text if any
         if self._terminal.has_selection():
-            text = self._terminal._get_selected_text()
+            text = self._terminal.get_selected_text()
             # Only use selection if it's on a single line
             if '\n' not in text:
                 self._find_widget.set_search_text(text)

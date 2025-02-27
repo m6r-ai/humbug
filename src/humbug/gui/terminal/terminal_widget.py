@@ -982,7 +982,7 @@ class TerminalWidget(QAbstractScrollArea):
                     char
                 )
 
-    def _get_selected_text(self) -> str:
+    def get_selected_text(self) -> str:
         """Get currently selected text."""
         if not self.has_selection():
             return ""
@@ -1028,7 +1028,7 @@ class TerminalWidget(QAbstractScrollArea):
         if not self.has_selection():
             return
 
-        text = self._get_selected_text()
+        text = self.get_selected_text()
         if text:
             QGuiApplication.clipboard().setText(text)
 
