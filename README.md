@@ -35,8 +35,8 @@ that are expert on Humbug itself!
 In 0.6 we've:
 
 - Added support for Claude Sonnet 3.7 (chat and extended thinking).
-- Added support for Deepseek Chat and Deepseek Reasoner.
-- For AI models (such as Deepseek Reasoner) that expose their stream of reasoning the reasoning is published
+- Added support for DeepSeek Chat and Deepseek Reasoner.
+- For AI models (such as DeepSeek Reasoner) that expose their stream of reasoning the reasoning is published
   in a new conversation box inbetween the user's message and the AI's response.
 - Resolved lots of small bugs.
 
@@ -45,8 +45,9 @@ In 0.6 we've:
 - **AI Interaction:**
     - Real-time streaming of AI responses.
     - Configurable AI model settings per conversation.
-    - Supports OpenAI, Google Gemini, Anthropic, and Ollama models (Ollama currently assumes local installs only).
+    - Supports Anthropic, DeepSeek, Google, Ollama, and OpenAI models (Ollama currently assumes local installs only).
     - Configurable temperature settings for supported models.
+    - Handles reasoning outputs for models that support them.
     - Error handling and retry mechanisms for API requests.
 - **File Editing:**
     - Syntax highlighting for various languages and file formats.  Currently supported: C, C++, CSS, Go, HTML, Java,
