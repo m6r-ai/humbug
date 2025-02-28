@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Dict, Optional, Set
+from typing import Optional, Set
 
 from PySide6.QtWidgets import QVBoxLayout
 
@@ -12,7 +12,6 @@ from humbug.gui.tab_type import TabType
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.terminal.terminal_find import TerminalFind
 from humbug.gui.terminal.terminal_widget import TerminalWidget
 from humbug.gui.terminal.terminal_factory import create_terminal
 from humbug.gui.status_message import StatusMessage
@@ -95,9 +94,6 @@ class TerminalTab(TabBase):
         self._terminal = TerminalWidget(self)
         layout.addWidget(self._terminal)
 
-        # Create find handler
-        self._find_handler = TerminalFind(self._terminal)
-
         # Connect signals
         self._terminal.data_ready.connect(self._handle_data_ready)
 
@@ -128,7 +124,7 @@ class TerminalTab(TabBase):
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._find_handler.get_match_status()
+            current, total = self._terminal.get_match_status()
             self._find_widget.set_match_status(current, total)
 
         # Update status bar
@@ -516,11 +512,11 @@ class TerminalTab(TabBase):
     def _close_find(self):
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._find_handler.clear()
+        self._terminal.clear_find()
 
     def _find_next(self, forward: bool = True):
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        self._find_handler.find_text(text, forward)
-        current, total = self._find_handler.get_match_status()
+        self._terminal.find_text(text, forward)
+        current, total = self._terminal.get_match_status()
         self._find_widget.set_match_status(current, total)
