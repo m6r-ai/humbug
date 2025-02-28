@@ -11,7 +11,6 @@ from PySide6.QtGui import QTextCursor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor.editor_highlighter import EditorHighlighter
-from humbug.gui.editor.editor_find import EditorFind
 from humbug.gui.editor.editor_widget import EditorWidget
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
@@ -105,9 +104,6 @@ class EditorTab(TabBase):
         self._editor.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor)
 
-        # Create find handler
-        self._find_handler = EditorFind(self._editor)
-
         self._install_activation_tracking(self._editor)
 
         # Set up syntax highlighter
@@ -131,7 +127,7 @@ class EditorTab(TabBase):
         """Update language-specific elements."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._find_handler.get_match_status()
+            current, total = self._editor.get_match_status()
             self._find_widget.set_match_status(current, total)
 
         # Update status bar with translated terms
@@ -689,11 +685,11 @@ class EditorTab(TabBase):
     def _close_find(self):
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._find_handler.clear()
+        self._editor.clear_find()
 
     def _find_next(self, forward: bool = True):
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        self._find_handler.find_text(text, forward)
-        current, total = self._find_handler.get_match_status()
+        self._editor.find_text(text, forward)
+        current, total = self._editor.get_match_status()
         self._find_widget.set_match_status(current, total)
