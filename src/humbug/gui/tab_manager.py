@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_error import ConversationError
 from humbug.gui.conversation.conversation_tab import ConversationTab
@@ -823,9 +823,9 @@ class TabManager(QWidget):
 
         # Set model based on mindspace settings
         settings = self._mindspace_manager.settings
-        conversation_settings = ConversationSettings(
+        conversation_settings = AIConversationSettings(
             model=settings.model,
-            temperature=settings.temperature if ConversationSettings.supports_temperature(settings.model) else None,
+            temperature=settings.temperature if AIConversationSettings.supports_temperature(settings.model) else None,
             reasoning=settings.reasoning
         )
         conversation_tab.update_conversation_settings(conversation_settings)

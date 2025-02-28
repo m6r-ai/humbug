@@ -2,8 +2,8 @@
 from typing import Dict, List
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings
-from humbug.ai.ollama_stream_response import OllamaStreamResponse # Import the stream response handler
+from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.ollama.ollama_stream_response import OllamaStreamResponse # Import the stream response handler
 
 
 class OllamaBackend(AIBackend):
@@ -17,12 +17,12 @@ class OllamaBackend(AIBackend):
         # Llama doesn't use normal SSE encoding!
         self._uses_data = False
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Ollama-specific request data."""
         messages = conversation_history.copy()
 
         data = {
-            "model": ConversationSettings.get_name(settings.model),
+            "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
             "stream": True,
             "options": {
@@ -36,7 +36,7 @@ class OllamaBackend(AIBackend):
         """Create an Ollama-specific stream response handler."""
         return OllamaStreamResponse()
 
-    def _get_api_url(self, settings: ConversationSettings) -> str:
+    def _get_api_url(self, settings: AIConversationSettings) -> str:
         """Get the Ollama API URL."""
         return self._api_url
 

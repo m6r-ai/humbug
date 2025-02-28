@@ -2,8 +2,8 @@
 from typing import Dict, List
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings, ReasoningCapability
-from humbug.ai.anthropic_stream_response import AnthropicStreamResponse
+from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
+from humbug.ai.anthropic.anthropic_stream_response import AnthropicStreamResponse
 
 
 class AnthropicBackend(AIBackend):
@@ -15,13 +15,13 @@ class AnthropicBackend(AIBackend):
         self._api_key = api_key
         self._api_url = "https://api.anthropic.com/v1/messages"
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Anthropic-specific request data."""
         # Take existing messages in correct format
         messages = conversation_history.copy()
 
         data = {
-            "model": ConversationSettings.get_name(settings.model),
+            "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
             "max_tokens": settings.max_output_tokens,
             "stream": True
@@ -37,7 +37,7 @@ class AnthropicBackend(AIBackend):
             }
 
         # Only include temperature if supported by model
-        if not thinking and ConversationSettings.supports_temperature(settings.model):
+        if not thinking and AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
         return data
@@ -46,7 +46,7 @@ class AnthropicBackend(AIBackend):
         """Create an Anthropic-specific stream response handler."""
         return AnthropicStreamResponse()
 
-    def _get_api_url(self, settings: ConversationSettings) -> str:
+    def _get_api_url(self, settings: AIConversationSettings) -> str:
         """Get the Anthropic API URL."""
         return self._api_url
 

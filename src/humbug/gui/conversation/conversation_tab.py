@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_error import ConversationError
@@ -240,7 +240,7 @@ class ConversationTab(TabBase):
         self._tab_id = new_id
         self._conversation_widget.update_path(new_id, new_path)
 
-    def update_conversation_settings(self, new_settings: ConversationSettings):
+    def update_conversation_settings(self, new_settings: AIConversationSettings):
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
 
@@ -251,7 +251,7 @@ class ConversationTab(TabBase):
         strings = self._language_manager.strings
 
         # Temperature display depends on whether it's available
-        if ConversationSettings.supports_temperature(settings.model):
+        if AIConversationSettings.supports_temperature(settings.model):
             temp_display = strings.conversation_status_temperature.format(
                 temperature=settings.temperature
             )

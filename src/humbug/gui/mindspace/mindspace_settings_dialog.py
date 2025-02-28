@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings, ReasoningCapability
+from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_code import LanguageCode
@@ -84,7 +84,7 @@ class MindspaceSettingsDialog(QDialog):
         self._model_combo.setMinimumWidth(300)
         self._model_combo.setMinimumHeight(40)
         models = []
-        for model in ConversationSettings.iter_models_by_backends(ai_backends):
+        for model in AIConversationSettings.iter_models_by_backends(ai_backends):
             models.append(model)
 
         self._model_combo.addItems(models)
@@ -369,7 +369,7 @@ class MindspaceSettingsDialog(QDialog):
         self._reasoning_combo.clear()
 
         # Get model's reasoning capabilities
-        capabilities = ConversationSettings.get_reasoning_capability(model)
+        capabilities = AIConversationSettings.get_reasoning_capability(model)
 
         # Add NO_REASONING if supported
         if capabilities & ReasoningCapability.NO_REASONING:
@@ -483,7 +483,7 @@ class MindspaceSettingsDialog(QDialog):
         current_reasoning = self._reasoning_combo.currentData()
 
         # Update reasoning capabilities when model changes
-        supports_temp = ConversationSettings.supports_temperature(current_model)
+        supports_temp = AIConversationSettings.supports_temperature(current_model)
         self._temp_spin.setEnabled(supports_temp)
 
         # Update reasoning combo as needed
@@ -558,7 +558,7 @@ class MindspaceSettingsDialog(QDialog):
             self._model_combo.setCurrentIndex(model_index)
 
         # Temperature setting
-        supports_temp = ConversationSettings.supports_temperature(settings.model)
+        supports_temp = AIConversationSettings.supports_temperature(settings.model)
         self._temp_spin.setEnabled(supports_temp)
         self._temp_spin.setValue(settings.temperature)
 

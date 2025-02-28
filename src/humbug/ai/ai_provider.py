@@ -3,12 +3,12 @@
 from typing import Dict, Optional
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.anthropic_backend import AnthropicBackend
-from humbug.ai.deepseek_backend import DeepseekBackend
-from humbug.ai.gemini_backend import GeminiBackend
-from humbug.ai.m6r_backend import M6RBackend
-from humbug.ai.ollama_backend import OllamaBackend
-from humbug.ai.openai_backend import OpenAIBackend
+from humbug.ai.anthropic.anthropic_backend import AnthropicBackend
+from humbug.ai.deepseek.deepseek_backend import DeepseekBackend
+from humbug.ai.google.google_backend import GoogleBackend
+from humbug.ai.m6r.m6r_backend import M6RBackend
+from humbug.ai.ollama.ollama_backend import OllamaBackend
+from humbug.ai.openai.openai_backend import OpenAIBackend
 
 
 class AIProvider:
@@ -42,7 +42,7 @@ class AIProvider:
             backends["deepseek"] = DeepseekBackend(deepseek_key)
 
         if google_key:
-            backends["google"] = GeminiBackend(google_key)
+            backends["google"] = GoogleBackend(google_key)
 
         if m6r_key:
             backends["m6r"] = M6RBackend(m6r_key)

@@ -14,8 +14,8 @@ from aiohttp import ClientConnectorError, ClientError
 import certifi
 
 from humbug.ai.ai_response import AIResponse, AIError
-from humbug.ai.conversation_settings import ConversationSettings
-from humbug.ai.rate_limiter import RateLimiter
+from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.ai_rate_limiter import AIRateLimiter
 
 
 class AIBackend(ABC):
@@ -23,12 +23,12 @@ class AIBackend(ABC):
 
     def __init__(self):
         """Initialize common attributes."""
-        self._conversation_settings: Dict[str, ConversationSettings] = {}
-        self._default_settings = ConversationSettings()
+        self._conversation_settings: Dict[str, AIConversationSettings] = {}
+        self._default_settings = AIConversationSettings()
         self._uses_data = True  # Indicates that we default to normal SSE encoding
         self._max_retries = 3
         self._base_delay = 2
-        self._rate_limiter = RateLimiter()
+        self._rate_limiter = AIRateLimiter()
         self._logger = logging.getLogger(self.__class__.__name__) # Logger based on class name
 
         if getattr(sys, "frozen", False):  # Check if running as a bundled app
@@ -38,16 +38,16 @@ class AIBackend(ABC):
 
         self._ssl_context = ssl.create_default_context(cafile=cert_path)
 
-    def update_conversation_settings(self, conversation_id: str, settings: ConversationSettings):
+    def update_conversation_settings(self, conversation_id: str, settings: AIConversationSettings):
         """Update settings for a specific conversation."""
         self._conversation_settings[conversation_id] = settings
 
-    def get_conversation_settings(self, conversation_id: str) -> ConversationSettings:
+    def get_conversation_settings(self, conversation_id: str) -> AIConversationSettings:
         """Get settings for a specific conversation."""
         return self._conversation_settings.get(conversation_id, self._default_settings)
 
     @abstractmethod
-    def _build_request_data(self, conversation_history: List[str], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[str], settings: AIConversationSettings) -> dict:
         """Abstract method to build backend-specific request data."""
 
     @abstractmethod
@@ -55,7 +55,7 @@ class AIBackend(ABC):
         """Abstract method to create a backend-specific stream response handler."""
 
     @abstractmethod
-    def _get_api_url(self, settings: ConversationSettings) -> str:
+    def _get_api_url(self, settings: AIConversationSettings) -> str:
         """Abstract method to get the API URL."""
 
     @abstractmethod

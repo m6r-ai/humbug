@@ -5,7 +5,7 @@ from collections import deque
 import time
 
 
-class RateLimiter:
+class AIRateLimiter:
     """Implements a sliding window rate limiter."""
 
     def __init__(self, window_size: int = 60, max_requests: int = 50):

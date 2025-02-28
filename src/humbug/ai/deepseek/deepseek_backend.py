@@ -2,8 +2,8 @@
 from typing import Dict, List
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings
-from humbug.ai.deepseek_stream_response import DeepseekStreamResponse
+from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.deepseek.deepseek_stream_response import DeepseekStreamResponse
 
 
 class DeepseekBackend(AIBackend):
@@ -15,20 +15,20 @@ class DeepseekBackend(AIBackend):
         self._api_key = api_key
         self._api_url = "https://api.deepseek.com/chat/completions"
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Deepseek-specific request data."""
         # conversation_history already contains properly formatted messages
         messages = conversation_history.copy()
 
         data = {
-            "model": ConversationSettings.get_name(settings.model),
+            "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
             "stream": True,
             "stream_options": {"include_usage": True}
         }
 
         # Only include temperature if supported by model
-        if ConversationSettings.supports_temperature(settings.model):
+        if AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
         self._logger.debug("stream message %r", data)
@@ -38,7 +38,7 @@ class DeepseekBackend(AIBackend):
         """Create an Deepseek-specific stream response handler."""
         return DeepseekStreamResponse()
 
-    def _get_api_url(self, settings: ConversationSettings) -> str:
+    def _get_api_url(self, settings: AIConversationSettings) -> str:
         """Get the Deepseek API URL."""
         return self._api_url
 

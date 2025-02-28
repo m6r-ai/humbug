@@ -9,7 +9,7 @@ import time
 
 from qasync import QEventLoop, QApplication
 
-from humbug.ai.provider import AIProvider
+from humbug.ai.ai_provider import AIProvider
 from humbug.gui.main_window import MainWindow
 
 # Import parsers to ensure we register them

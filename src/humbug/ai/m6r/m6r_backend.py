@@ -2,8 +2,8 @@
 from typing import Dict, List
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings
-from humbug.ai.m6r_stream_response import M6RStreamResponse
+from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.m6r.m6r_stream_response import M6RStreamResponse
 
 
 class M6RBackend(AIBackend):
@@ -18,13 +18,13 @@ class M6RBackend(AIBackend):
         # M6R uses standard SSE encoding
         self._uses_data = True
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: ConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build M6R-specific request data."""
         # Take existing messages and include current message
         messages = conversation_history.copy()
 
         data = {
-            "model": ConversationSettings.get_name(settings.model),
+            "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
             "stream": True
         }
@@ -35,7 +35,7 @@ class M6RBackend(AIBackend):
         """Create a M6R-specific stream response handler."""
         return M6RStreamResponse()
 
-    def _get_api_url(self, settings: ConversationSettings) -> str:
+    def _get_api_url(self, settings: AIConversationSettings) -> str:
         """Get the M6R API URL."""
         return self._api_url
 

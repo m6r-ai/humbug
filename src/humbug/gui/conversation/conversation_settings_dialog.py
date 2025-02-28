@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.ai_backend import AIBackend
-from humbug.ai.conversation_settings import ConversationSettings, ReasoningCapability
+from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
@@ -18,7 +18,7 @@ from humbug.language.language_manager import LanguageManager
 class ConversationSettingsDialog(QDialog):
     """Dialog for editing conversation settings."""
 
-    settings_changed = Signal(ConversationSettings)
+    settings_changed = Signal(AIConversationSettings)
 
     def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
         """Initialize the conversation settings dialog."""
@@ -285,7 +285,7 @@ class ConversationSettingsDialog(QDialog):
         self._reasoning_combo.clear()
 
         # Get model's reasoning capabilities
-        capabilities = ConversationSettings.get_reasoning_capability(model)
+        capabilities = AIConversationSettings.get_reasoning_capability(model)
 
         # Add NO_REASONING if supported
         if capabilities & ReasoningCapability.NO_REASONING:
@@ -315,7 +315,7 @@ class ConversationSettingsDialog(QDialog):
     def _update_model_displays(self, model: str) -> None:
         """Update the model-specific displays with proper localization."""
         strings = self._language_manager.strings
-        limits = ConversationSettings.get_model_limits(model)
+        limits = AIConversationSettings.get_model_limits(model)
 
         # Update reasoning capabilities dropdown
         self._update_reasoning_combo(model)
@@ -345,7 +345,7 @@ class ConversationSettingsDialog(QDialog):
         current_temp = self._temp_spin.value()
         current_reasoning = self._reasoning_combo.currentData()
 
-        supports_temp = ConversationSettings.supports_temperature(current_model)
+        supports_temp = AIConversationSettings.supports_temperature(current_model)
         self._temp_spin.setEnabled(supports_temp)
         self._update_model_displays(current_model)
 
@@ -362,33 +362,33 @@ class ConversationSettingsDialog(QDialog):
 
         self.apply_button.setEnabled(model_changed or temp_changed or reasoning_changed)
 
-    def get_settings(self) -> ConversationSettings:
+    def get_settings(self) -> AIConversationSettings:
         """Get the current settings from the dialog."""
         model = self._model_combo.currentText()
         temperature = self._temp_spin.value()
         reasoning = self._reasoning_combo.currentData()
-        return ConversationSettings(
+        return AIConversationSettings(
             model=model,
             temperature=temperature,
             reasoning=reasoning
         )
 
-    def set_settings(self, settings: ConversationSettings) -> None:
+    def set_settings(self, settings: AIConversationSettings) -> None:
         """Set the current settings in the dialog."""
         models = []
-        for model in ConversationSettings.iter_models_by_backends(self._ai_backends):
+        for model in AIConversationSettings.iter_models_by_backends(self._ai_backends):
             models.append(model)
 
         self._available_models = models
         self._model_combo.clear()
         self._model_combo.addItems(models)
 
-        self._initial_settings = ConversationSettings(
+        self._initial_settings = AIConversationSettings(
             model=settings.model,
             temperature=settings.temperature,
             reasoning=settings.reasoning
         )
-        self._current_settings = ConversationSettings(
+        self._current_settings = AIConversationSettings(
             model=settings.model,
             temperature=settings.temperature,
             reasoning=settings.reasoning
@@ -402,7 +402,7 @@ class ConversationSettingsDialog(QDialog):
         self._update_model_displays(settings.model)
 
         # Temperature setting
-        supports_temp = ConversationSettings.supports_temperature(settings.model)
+        supports_temp = AIConversationSettings.supports_temperature(settings.model)
         self._temp_spin.setEnabled(supports_temp)
         self._temp_spin.setValue(settings.temperature)
 

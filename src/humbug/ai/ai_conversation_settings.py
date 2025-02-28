@@ -43,7 +43,7 @@ class AIModel:
         self.reasoning_capabilities = reasoning_capabilities
 
 
-class ConversationSettings:
+class AIConversationSettings:
     """Data class for conversation settings."""
 
     # Single dictionary of all available models
@@ -327,7 +327,6 @@ class ConversationSettings:
             KeyError: If the model is not found
         """
         model_config = cls.MODELS.get(model)
-        print(f"get reasoning for {model}: {model_config.reasoning_capabilities.value}")
         if model_config:
             return model_config.reasoning_capabilities
 

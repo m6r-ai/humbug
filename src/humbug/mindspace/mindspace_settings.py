@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import json
 
-from humbug.ai.conversation_settings import ConversationSettings, ReasoningCapability
+from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.language.language_code import LanguageCode
 
 
@@ -13,7 +13,7 @@ class MindspaceSettings:
     auto_backup: bool = False  # Default to off
     auto_backup_interval: int = 300  # Default 5 minutes in seconds
     language: LanguageCode = LanguageCode.EN
-    model: str = ConversationSettings.get_default_model({})  # Will be overridden with actual backends
+    model: str = AIConversationSettings.get_default_model({})  # Will be overridden with actual backends
     temperature: float = 0.7  # Default temperature
     reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
 
@@ -24,8 +24,8 @@ class MindspaceSettings:
             editor = data.get("editor", {})
             conversation = data.get("conversation", {})
             language_code = editor.get("language", "EN")
-            default_model = ConversationSettings.get_default_model({})
-            default_reasoning = ConversationSettings.get_reasoning_capability(default_model)
+            default_model = AIConversationSettings.get_default_model({})
+            default_reasoning = AIConversationSettings.get_reasoning_capability(default_model)
 
             # Handle reasoning bitflag from JSON
             reasoning_value = conversation.get("reasoning", default_reasoning.value)

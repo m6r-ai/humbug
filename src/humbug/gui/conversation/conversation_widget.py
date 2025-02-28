@@ -14,7 +14,7 @@ from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_response import AIError
-from humbug.ai.conversation_settings import ConversationSettings
+from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
@@ -98,7 +98,7 @@ class ConversationWidget(QWidget):
         self._mindspace_manager = MindspaceManager()
 
         self._conversation = ConversationHistory(conversation_id)
-        self._settings = ConversationSettings()
+        self._settings = AIConversationSettings()
         self._current_ai_message = None
         self._current_reasoning_message = None
         self._messages: List[MessageWidget] = []
@@ -256,14 +256,14 @@ class ConversationWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
-    def get_settings(self) -> ConversationSettings:
+    def get_settings(self) -> AIConversationSettings:
         """
         Get current conversation settings.
 
         Returns:
             Current conversation settings
         """
-        return ConversationSettings(
+        return AIConversationSettings(
             model=self._settings.model,
             temperature=self._settings.temperature,
             reasoning=self._settings.reasoning
@@ -630,7 +630,7 @@ class ConversationWidget(QWidget):
             messages: List of Message objects to load
         """
         # Establish a baseline for conversation settings
-        self.update_conversation_settings(ConversationSettings(
+        self.update_conversation_settings(AIConversationSettings(
             model=self._mindspace_manager.settings.model,
             temperature=self._mindspace_manager.settings.temperature
         ))
@@ -647,7 +647,7 @@ class ConversationWidget(QWidget):
                         message.usage.completion_tokens
                     )
                 if message.model:
-                    self.update_conversation_settings(ConversationSettings(
+                    self.update_conversation_settings(AIConversationSettings(
                         model=message.model,
                         temperature=message.temperature
                     ))
@@ -693,7 +693,7 @@ class ConversationWidget(QWidget):
 
             # Get appropriate backend for conversation
             settings = self.get_settings()
-            provider = ConversationSettings.get_provider(settings.model)
+            provider = AIConversationSettings.get_provider(settings.model)
             backend = self._ai_backends.get(provider)
 
             if not backend:
@@ -806,11 +806,11 @@ class ConversationWidget(QWidget):
             if not task.done():
                 task.cancel()
 
-    def update_conversation_settings(self, new_settings: ConversationSettings):
+    def update_conversation_settings(self, new_settings: AIConversationSettings):
         """Update conversation settings and associated backend."""
         self._settings = new_settings
         self.status_updated.emit()
-        provider = ConversationSettings.get_provider(new_settings.model)
+        provider = AIConversationSettings.get_provider(new_settings.model)
         backend = self._ai_backends.get(provider)
         if backend:
             backend.update_conversation_settings(self._conversation_id, new_settings)
@@ -1103,7 +1103,7 @@ class ConversationWidget(QWidget):
 
         # Restore settings if specified
         if "settings" in metadata:
-            settings = ConversationSettings(
+            settings = AIConversationSettings(
                 model=metadata["settings"].get("model"),
                 temperature=metadata["settings"].get("temperature"),
                 reasoning=metadata["settings"].get("reasoning", None)

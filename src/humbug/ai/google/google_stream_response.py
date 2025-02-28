@@ -7,8 +7,8 @@ from humbug.ai.ai_usage import AIUsage
 from humbug.ai.ai_response import AIError
 
 
-class GeminiStreamResponse:
-    """Handles streaming response from Gemini API."""
+class GoogleStreamResponse:
+    """Handles streaming response from Google Gemini API."""
 
     def __init__(self):
         """Initialize stream response handler."""
@@ -16,14 +16,14 @@ class GeminiStreamResponse:
         self.content = ""
         self.usage: Optional[AIUsage] = None
         self.error: Optional[AIError] = None
-        self._logger = logging.getLogger("GeminiStreamResponse")
+        self._logger = logging.getLogger("GoogleStreamResponse")
 
     def update_from_chunk(self, chunk: dict) -> None:
         """
         Update from a response chunk and return new content if any.
 
         Args:
-            chunk: Response chunk from Gemini API
+            chunk: Response chunk from Google API
         """
         if "error" in chunk:
             self._logger.debug("Got error message: %s", chunk["error"])
