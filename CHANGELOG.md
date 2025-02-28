@@ -8,6 +8,9 @@ Internal structure changes:
 
 - Reworked AI backends to have a cleaner code structure and follow more systematic naming
   conventions.
+- Reworked the conversation, editor, and terminal find functionality to place it within the
+  matching widget classes.  This avoids creating complex logic to hide the internals of
+  these widget classes and sets a future template.
 
 Bug fixes:
 
