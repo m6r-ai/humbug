@@ -1,9 +1,10 @@
 """Input widget that matches history message styling."""
 
 import sys
+from typing import Dict
 
 from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtGui import QKeyEvent, QTextCursor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_text_edit import ConversationTextEdit
@@ -113,15 +114,15 @@ class ConversationInputWidget(MessageWidget):
         """Clear the input area."""
         self._text_area.clear()
 
-    def toPlainText(self) -> str:
+    def to_plain_text(self) -> str:
         """Get the current input text."""
         return self._text_area.toPlainText()
 
-    def setPlainText(self, text: str):
+    def set_plain_text(self, text: str):
         """Set the input text."""
         self._text_area.setPlainText(text)
 
-    def cursorRect(self):
+    def cursor_rect(self):
         """Get the cursor rectangle from the input area."""
         text_cursor = self._text_area.cursorRect()
         offset = self._header.height()
@@ -140,7 +141,7 @@ class ConversationInputWidget(MessageWidget):
         """Get the document from the input area."""
         return self._text_area.document()
 
-    def textCursor(self):
+    def text_cursor(self):
         """Get the text cursor from the input area."""
         return self._text_area.textCursor()
 
@@ -163,3 +164,38 @@ class ConversationInputWidget(MessageWidget):
     def paste(self):
         """Paste text from clipboard."""
         self._text_area.paste()
+
+    def set_cursor_position(self, position: Dict[str, int]) -> None:
+        """
+        Set cursor position.
+
+        Args:
+            position: Dictionary with 'line' and 'column' keys
+        """
+        cursor = self._text_area.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+
+        # Move cursor to specified position
+        for _ in range(position.get("line", 0)):
+            cursor.movePosition(QTextCursor.NextBlock)
+
+        cursor.movePosition(
+            QTextCursor.Right,
+            QTextCursor.MoveAnchor,
+            position.get("column", 0)
+        )
+
+        self._text_area.setTextCursor(cursor)
+
+    def get_cursor_position(self) -> Dict[str, int]:
+        """
+        Get current cursor position.
+
+        Returns:
+            Dictionary with 'line' and 'column' keys
+        """
+        cursor = self._text_area.textCursor()
+        return {
+            "line": cursor.blockNumber(),
+            "column": cursor.columnNumber()
+        }

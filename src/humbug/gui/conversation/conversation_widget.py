@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal
-from PySide6.QtGui import QCursor, QResizeEvent, QTextCursor
+from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_response import AIError
@@ -427,7 +427,7 @@ class ConversationWidget(QWidget):
     def _ensure_cursor_visible(self):
         """Ensure the cursor remains visible when it moves."""
         total_height = sum(msg.sizeHint().height() + self._messages_layout.spacing() for msg in self._messages)
-        input_cursor = self._input.cursorRect()
+        input_cursor = self._input.cursor_rect()
 
         # Use scroll area's ensureVisible method which handles visibility calculations for us
         self._scroll_area.ensureVisible(
@@ -437,7 +437,7 @@ class ConversationWidget(QWidget):
             50
         )
 
-    def _handle_find_scroll(self, widget: QWidget, position: int) -> None:
+    def handle_find_scroll(self, widget: QWidget, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
@@ -458,7 +458,7 @@ class ConversationWidget(QWidget):
 
     def set_input_text(self, text: str):
         """Set the input text."""
-        self._input.setPlainText(text)
+        self._input.set_plain_text(text)
         self._input.setFocus()
 
     def _set_initial_focus(self):
@@ -790,7 +790,7 @@ class ConversationWidget(QWidget):
     def _restore_last_message(self):
         """Restore the last submitted message to the input box."""
         if self._last_submitted_message is not None:
-            self._input.setPlainText(self._last_submitted_message)
+            self._input.set_plain_text(self._last_submitted_message)
             self._last_submitted_message = None
 
     def cancel_current_tasks(self):
@@ -982,7 +982,7 @@ class ConversationWidget(QWidget):
 
     def can_cut(self) -> bool:
         """Check if cut operation is available."""
-        return self._input.hasFocus() and self._input.textCursor().hasSelection()
+        return self._input.hasFocus() and self._input.text_cursor().hasSelection()
 
     def cut(self) -> None:
         """Cut selected text to clipboard."""
@@ -991,7 +991,7 @@ class ConversationWidget(QWidget):
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
-        return (self._input.hasFocus() and self._input.textCursor().hasSelection()) or self._has_selection()
+        return (self._input.hasFocus() and self._input.text_cursor().hasSelection()) or self._has_selection()
 
     def copy(self) -> None:
         """Copy selected text to clipboard."""
@@ -1010,12 +1010,12 @@ class ConversationWidget(QWidget):
 
     def can_submit(self) -> bool:
         """Check if the current input can be submitted."""
-        has_text = bool(self._input.toPlainText())
+        has_text = bool(self._input.to_plain_text())
         return has_text and not self._is_streaming
 
     def submit(self):
         """Submit current input text."""
-        content = self._sanitize_input(self._input.toPlainText().strip())
+        content = self._sanitize_input(self._input.to_plain_text().strip())
         if not content:
             return
 
@@ -1064,7 +1064,7 @@ class ConversationWidget(QWidget):
         metadata['bookmarks'] = bookmark_data
 
         # Store current input content
-        metadata["content"] = self._input.toPlainText()
+        metadata["content"] = self._input.to_plain_text()
         metadata['cursor'] = self._get_cursor_position()
 
         # Store current settings
@@ -1128,20 +1128,7 @@ class ConversationWidget(QWidget):
         if not position:
             return
 
-        cursor = self._input.textCursor()
-        cursor.movePosition(QTextCursor.Start)
-
-        # Move cursor to specified position
-        for _ in range(position.get("line", 0)):
-            cursor.movePosition(QTextCursor.NextBlock)
-
-        cursor.movePosition(
-            QTextCursor.Right,
-            QTextCursor.MoveAnchor,
-            position.get("column", 0)
-        )
-
-        self._input._text_area.setTextCursor(cursor)
+        self._input.set_cursor_position(position)
 
     def _get_cursor_position(self) -> Dict[str, int]:
         """Get current cursor position from input area.
@@ -1149,11 +1136,7 @@ class ConversationWidget(QWidget):
         Returns:
             Dictionary with 'line' and 'column' keys
         """
-        cursor = self._input.textCursor()
-        return {
-            "line": cursor.blockNumber(),
-            "column": cursor.columnNumber()
-        }
+        return self._input.get_cursor_position()
 
     def get_token_counts(self) -> dict:
         """
@@ -1173,8 +1156,9 @@ class ConversationWidget(QWidget):
         """
         if self._message_with_selection:
             return self._message_with_selection.get_selected_text()
-        elif self._input.hasFocus():
-            cursor = self._input.textCursor()
+
+        if self._input.hasFocus():
+            cursor = self._input.text_cursor()
             if cursor.hasSelection():
                 text = cursor.selectedText()
                 if '\u2029' not in text:

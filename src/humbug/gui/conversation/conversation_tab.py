@@ -84,7 +84,7 @@ class ConversationTab(TabBase):
 
         # Create find handler
         self._find_handler = ConversationFind()
-        self._find_handler.scrollRequested.connect(self._conversation_widget._handle_find_scroll)
+        self._find_handler.scrollRequested.connect(self._conversation_widget.handle_find_scroll)
 
         # Install activation tracking
         self._install_activation_tracking(self._conversation_widget)
@@ -342,11 +342,12 @@ class ConversationTab(TabBase):
     def show_find(self):
         """Show the find widget."""
         # Get selected text if any
-        selected_text = self._conversation_widget.get_selected_text()
-        if selected_text:
-            self._find_widget.set_search_text(selected_text)
-        else:
-            self._find_widget.set_search_text("")
+        if self._conversation_widget._has_selection():
+            selected_text = self._conversation_widget.get_selected_text()
+            if selected_text:
+                self._find_widget.set_search_text(selected_text)
+            else:
+                self._find_widget.set_search_text("")
 
         self._find_widget.show()
         self._find_widget.setFocus()

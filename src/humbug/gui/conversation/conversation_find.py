@@ -1,5 +1,5 @@
 from typing import List, Tuple, Set
-from PySide6.QtWidgets import QTextEdit, QWidget
+from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QObject, Signal
 
 from humbug.gui.color_role import ColorRole
