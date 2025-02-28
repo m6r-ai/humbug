@@ -4,7 +4,13 @@
 
 New features:
 
+Internal structure changes:
+
+- Reworked AI backends to have a cleaner code structure and follow more systematic naming
+  conventions.
+
 Bug fixes:
+
 - Added elipsis to the Python syntax highlighting engine.
 
 ## v0.6 (2025-02-27)
