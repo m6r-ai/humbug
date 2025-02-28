@@ -15,7 +15,6 @@ from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_backend import AIBackend
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_error import ConversationError
-from humbug.gui.conversation.conversation_find import ConversationFind
 from humbug.gui.conversation.conversation_settings_dialog import ConversationSettingsDialog
 from humbug.gui.conversation.conversation_widget import ConversationWidget
 from humbug.gui.find_widget import FindWidget
@@ -82,10 +81,6 @@ class ConversationTab(TabBase):
         self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
         layout.addWidget(self._conversation_widget)
 
-        # Create find handler
-        self._find_handler = ConversationFind()
-        self._find_handler.scrollRequested.connect(self._conversation_widget.handle_find_scroll)
-
         # Install activation tracking
         self._install_activation_tracking(self._conversation_widget)
 
@@ -100,7 +95,7 @@ class ConversationTab(TabBase):
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._find_handler.get_match_status()
+            current, total = self._conversation_widget.get_match_status()
             self._find_widget.set_match_status(current, total)
 
         # Update status bar
@@ -355,16 +350,12 @@ class ConversationTab(TabBase):
     def _close_find(self):
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._find_handler.clear()
-        # Use the existing method to clear search highlights
-        self._conversation_widget.clear_search_highlights()
+        self._conversation_widget.clear_find()
 
     def _find_next(self, forward: bool = True):
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        widgets = self._conversation_widget.get_searchable_widgets()
-        self._find_handler.find_text(text, widgets, forward)
-        current, total = self._find_handler.get_match_status()
+        current, total = self._conversation_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
 
     def _handle_style_changed(self):

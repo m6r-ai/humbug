@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 import logging
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
@@ -58,6 +58,9 @@ class ConversationWidget(QWidget):
 
     # Signal for bookmark navigation
     bookmarkNavigationRequested = Signal(bool)  # True for next, False for previous
+
+    # Signal to request scrolling to a specific widget and position
+    scrollRequested = Signal(QWidget, int)  # Widget to scroll to, position within widget
 
     def __init__(
         self,
@@ -181,6 +184,13 @@ class ConversationWidget(QWidget):
 
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
+
+        # Find functionality (integrated from ConversationFind)
+        self._matches: List[Tuple[MessageWidget, List[Tuple[int, int]]]] = []  # List of (widget, [(start, end)])
+        self._current_widget_index = -1
+        self._current_match_index = -1
+        self._last_search = ""
+        self._highlighted_widgets: Set[MessageWidget] = set()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
@@ -581,7 +591,7 @@ class ConversationWidget(QWidget):
             return
 
         if reasoning:
-            # We're handling reasoning from our AI.  Is it the first time we're seeting this?
+            # We're handling reasoning from our AI.  Is it the first time we're seeing this?
             if not self._current_reasoning_message:
                 # Create and add initial message
                 settings = self.get_settings()
@@ -840,40 +850,6 @@ class ConversationWidget(QWidget):
                 height: 0px;
             }}
         """)
-
-    def set_search_highlights(self, row: int, highlights: List[Tuple[int, int, bool]]) -> None:
-        """Set search highlights for a given row.
-
-        Args:
-            row: Row to set highlights for
-            highlights: List of (start_col, end_col, is_current) highlight ranges
-        """
-        if highlights:
-            self._search_highlights[row] = highlights
-        else:
-            self._search_highlights.pop(row, None)
-
-        self.viewport().update()
-
-    def clear_search_highlights(self) -> None:
-        """Clear all search highlights."""
-        self._search_highlights.clear()
-
-    def scroll_to_match(self, widget: MessageWidget) -> None:
-        """Scroll to ensure a specific message widget is visible."""
-        if widget not in self._messages:
-            return
-
-        # Find widget position in the container
-        pos = widget.mapTo(self._messages_container, widget.rect().topLeft())
-
-        # Use ensureVisible for consistent scrolling
-        self._scroll_area.ensureVisible(
-            pos.x(),
-            pos.y(),
-            0,
-            50  # Provide context above the widget
-        )
 
     def _show_conversation_context_menu(self, pos) -> None:
         """
@@ -1176,3 +1152,142 @@ class ConversationWidget(QWidget):
             List of MessageWidget instances including input widget
         """
         return self._messages + [self._input]
+
+    # Integrated find functionality from ConversationFind
+
+    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
+        """
+        Find all instances of text and highlight them.
+
+        Args:
+            text: Text to search for
+            forward: Whether to search forward from current position
+
+        Returns:
+            Tuple of (current_match, total_matches)
+        """
+        # Get searchable widgets
+        widgets = self.get_searchable_widgets()
+
+        # Clear existing highlights if search text changed
+        if text != self._last_search:
+            self._clear_highlights()
+            self._matches = []
+            self._current_widget_index = -1
+            self._current_match_index = -1
+            self._last_search = text
+
+        # Find all matches if this is a new search
+        if not self._matches and text:
+            for widget in widgets:
+                widget_matches = widget.find_text(text)
+
+                if widget_matches:
+                    self._matches.append((widget, widget_matches))
+
+        if not self._matches:
+            return 0, 0
+
+        # Move to next/previous match
+        if self._current_widget_index == -1:
+            # First search - start at beginning or end depending on direction
+            if forward:
+                self._current_widget_index = 0
+                self._current_match_index = 0
+            else:
+                self._current_widget_index = len(self._matches) - 1
+                self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
+        else:
+            # Move to next/previous match
+            if forward:
+                self._current_match_index += 1
+                # If we've reached the end of matches in current widget
+                if self._current_match_index >= len(self._matches[self._current_widget_index][1]):
+                    self._current_widget_index += 1
+                    # If we've reached the end of widgets, wrap around
+                    if self._current_widget_index >= len(self._matches):
+                        self._current_widget_index = 0
+                    self._current_match_index = 0
+            else:
+                self._current_match_index -= 1
+                # If we've reached the start of matches in current widget
+                if self._current_match_index < 0:
+                    self._current_widget_index -= 1
+                    # If we've reached the start of widgets, wrap around
+                    if self._current_widget_index < 0:
+                        self._current_widget_index = len(self._matches) - 1
+                    self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
+
+        # Highlight all matches
+        self._highlight_matches()
+
+        # Scroll to current match
+        self._scroll_to_current_match()
+
+        # Return current match status
+        return self.get_match_status()
+
+    def _highlight_matches(self) -> None:
+        """Update the highlighting of all matches."""
+        self._clear_highlights()
+
+        # Get colors from style manager
+        highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND)
+        dim_highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
+
+        # Highlight matches in each widget
+        for widget_idx, (widget, matches) in enumerate(self._matches):
+            # Set current_match_index to highlight the current match
+            current_match_index = self._current_match_index if widget_idx == self._current_widget_index else -1
+
+            # Highlight matches in this widget
+            widget.highlight_matches(matches, current_match_index, highlight_color, dim_highlight_color)
+
+            # Track highlighted widgets
+            self._highlighted_widgets.add(widget)
+
+    def _scroll_to_current_match(self) -> None:
+        """Request scroll to ensure the current match is visible."""
+        if not self._matches:
+            return
+
+        widget, matches = self._matches[self._current_widget_index]
+        start, _ = matches[self._current_match_index]
+
+        # Trigger scrolling to this position
+        self.handle_find_scroll(widget, start)
+
+    def _clear_highlights(self) -> None:
+        """Clear all search highlights."""
+        # Clear highlights from all tracked widgets
+        for widget in self._highlighted_widgets:
+            widget.clear_highlights()
+
+        self._highlighted_widgets.clear()
+
+    def get_match_status(self) -> Tuple[int, int]:
+        """
+        Get the current match status.
+
+        Returns:
+            Tuple of (current_match, total_matches)
+        """
+        if not self._matches:
+            return 0, 0
+
+        total_matches = sum(len(matches) for _, matches in self._matches)
+        if self._current_widget_index == -1:
+            return 0, total_matches
+
+        current_match = sum(len(matches) for _, matches in self._matches[:self._current_widget_index])
+        current_match += self._current_match_index + 1
+
+        return current_match, total_matches
+
+    def clear_find(self) -> None:
+        """Clear all find state."""
+        self._clear_highlights()
+        self._matches = []
+        self._current_widget_index = -1
+        self._current_match_index = -1
+        self._last_search = ""
