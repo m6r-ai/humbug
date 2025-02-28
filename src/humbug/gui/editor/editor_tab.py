@@ -99,15 +99,15 @@ class EditorTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create editor
-        self._editor = EditorWidget()
-        self._editor.textChanged.connect(self._handle_text_changed)
-        self._editor.cursorPositionChanged.connect(self.update_status)
-        layout.addWidget(self._editor)
+        self._editor_widget = EditorWidget()
+        self._editor_widget.textChanged.connect(self._handle_text_changed)
+        self._editor_widget.cursorPositionChanged.connect(self.update_status)
+        layout.addWidget(self._editor_widget)
 
-        self._install_activation_tracking(self._editor)
+        self._install_activation_tracking(self._editor_widget)
 
         # Set up syntax highlighter
-        self._highlighter = EditorHighlighter(self._editor.document())
+        self._highlighter = EditorHighlighter(self._editor_widget.document())
 
         # Connect to style changes
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -127,7 +127,7 @@ class EditorTab(TabBase):
         """Update language-specific elements."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._editor.get_match_status()
+            current, total = self._editor_widget.get_match_status()
             self._find_widget.set_match_status(current, total)
 
         # Update status bar with translated terms
@@ -162,15 +162,15 @@ class EditorTab(TabBase):
         }
 
         if temp_state:
-            metadata_state["content"] = self._editor.toPlainText()
+            metadata_state["content"] = self._editor_widget.toPlainText()
 
         return TabState(
             type=TabType.EDITOR,
             tab_id=self.tab_id,
             path=self._path if self._path else f"untitled-{self._untitled_number}",
             cursor_position=self._get_cursor_position(),
-            horizontal_scroll=self._editor.horizontalScrollBar().value(),
-            vertical_scroll=self._editor.verticalScrollBar().value(),
+            horizontal_scroll=self._editor_widget.horizontalScrollBar().value(),
+            vertical_scroll=self._editor_widget.verticalScrollBar().value(),
             metadata=metadata_state
         )
 
@@ -223,7 +223,7 @@ class EditorTab(TabBase):
         if not position:
             return
 
-        cursor = self._editor.textCursor()
+        cursor = self._editor_widget.textCursor()
         cursor.movePosition(QTextCursor.Start)
 
         # Move cursor to specified position
@@ -236,8 +236,8 @@ class EditorTab(TabBase):
             position.get("column", 0)
         )
 
-        self._editor.setTextCursor(cursor)
-        self._editor.ensureCursorVisible()
+        self._editor_widget.setTextCursor(cursor)
+        self._editor_widget.ensureCursorVisible()
 
     def _get_cursor_position(self) -> Dict[str, int]:
         """
@@ -246,7 +246,7 @@ class EditorTab(TabBase):
         Returns:
             Dictionary with 'line' and 'column' keys
         """
-        cursor = self._editor.textCursor()
+        cursor = self._editor_widget.textCursor()
         return {
             "line": cursor.blockNumber(),
             "column": cursor.columnNumber()
@@ -258,14 +258,14 @@ class EditorTab(TabBase):
         """
         # Update font size
         zoom_factor = self._style_manager.zoom_factor
-        font = self._editor.font()
+        font = self._editor_widget.font()
         base_size = self._style_manager.base_font_size
         font.setPointSizeF(base_size * zoom_factor)
-        self._editor.setFont(font)
+        self._editor_widget.setFont(font)
 
         # Update tab stops - scale with zoom
         space_width = self._style_manager.get_space_width()
-        self._editor.setTabStopDistance(space_width * 8)
+        self._editor_widget.setTabStopDistance(space_width * 8)
 
         self.setStyleSheet(f"""
             QWidget {{
@@ -299,7 +299,7 @@ class EditorTab(TabBase):
         """)
 
         # Scale line number area
-        self._editor.update_line_number_area_width()
+        self._editor_widget.update_line_number_area_width()
 
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode != self._init_colour_mode:
@@ -358,7 +358,7 @@ class EditorTab(TabBase):
             try:
                 with open(filename, 'r', encoding='utf-8') as f:
                     content = f.read()
-                self._editor.setPlainText(content)
+                self._editor_widget.setPlainText(content)
                 self._last_save_content = content
                 self._set_modified(False)
             except Exception as e:
@@ -385,7 +385,7 @@ class EditorTab(TabBase):
 
     def _handle_text_changed(self) -> None:
         """Handle changes to editor content."""
-        current_content = self._editor.toPlainText()
+        current_content = self._editor_widget.toPlainText()
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
 
@@ -397,7 +397,7 @@ class EditorTab(TabBase):
 
     def update_status(self) -> None:
         """Update status bar with current cursor position."""
-        cursor = self._editor.textCursor()
+        cursor = self._editor_widget.textCursor()
         line = cursor.blockNumber() + 1
         column = cursor.columnNumber() + 1
 
@@ -487,7 +487,7 @@ class EditorTab(TabBase):
 
         try:
             with open(backup_file, 'w', encoding='utf-8') as f:
-                f.write(self._editor.toPlainText())
+                f.write(self._editor_widget.toPlainText())
         except Exception as e:
             self._logger.error("Failed to create backup file '%s': %s", backup_file, str(e))
 
@@ -562,7 +562,7 @@ class EditorTab(TabBase):
             return self.save_as()
 
         try:
-            content = self._editor.toPlainText()
+            content = self._editor_widget.toPlainText()
             with open(self._path, 'w', encoding='utf-8') as f:
                 f.write(content)
 
@@ -625,35 +625,35 @@ class EditorTab(TabBase):
 
     def can_undo(self) -> bool:
         """Check if undo is available."""
-        return self._editor.document().isUndoAvailable()
+        return self._editor_widget.document().isUndoAvailable()
 
     def undo(self) -> None:
         """Undo the last edit operation."""
-        self._editor.undo()
+        self._editor_widget.undo()
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
-        return self._editor.document().isRedoAvailable()
+        return self._editor_widget.document().isRedoAvailable()
 
     def redo(self) -> None:
         """Redo the last undone edit operation."""
-        self._editor.redo()
+        self._editor_widget.redo()
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
-        return self._editor.textCursor().hasSelection()
+        return self._editor_widget.textCursor().hasSelection()
 
     def cut(self) -> None:
         """Cut selected text to clipboard."""
-        self._editor.cut()
+        self._editor_widget.cut()
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
-        return self._editor.textCursor().hasSelection()
+        return self._editor_widget.textCursor().hasSelection()
 
     def copy(self) -> None:
         """Copy selected text to clipboard."""
-        self._editor.copy()
+        self._editor_widget.copy()
 
     def can_paste(self) -> bool:
         """Check if paste is available."""
@@ -661,14 +661,14 @@ class EditorTab(TabBase):
 
     def paste(self) -> None:
         """Paste text from clipboard."""
-        self._editor.paste()
+        self._editor_widget.paste()
 
     def can_submit(self) -> bool:
         return False
 
     def show_find(self):
         """Show the find widget."""
-        cursor = self._editor.textCursor()
+        cursor = self._editor_widget.textCursor()
         if cursor.hasSelection():
             # Get the selected text
             text = cursor.selectedText()
@@ -685,11 +685,11 @@ class EditorTab(TabBase):
     def _close_find(self):
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._editor.clear_find()
+        self._editor_widget.clear_find()
 
     def _find_next(self, forward: bool = True):
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        self._editor.find_text(text, forward)
-        current, total = self._editor.get_match_status()
+        self._editor_widget.find_text(text, forward)
+        current, total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(current, total)

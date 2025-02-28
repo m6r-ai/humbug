@@ -91,11 +91,11 @@ class TerminalTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create terminal widget
-        self._terminal = TerminalWidget(self)
-        layout.addWidget(self._terminal)
+        self._terminal_widget = TerminalWidget(self)
+        layout.addWidget(self._terminal_widget)
 
         # Connect signals
-        self._terminal.data_ready.connect(self._handle_data_ready)
+        self._terminal_widget.data_ready.connect(self._handle_data_ready)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -105,7 +105,7 @@ class TerminalTab(TabBase):
         self._handle_style_changed()
 
         # Install activation tracking for the terminal
-        self._install_activation_tracking(self._terminal)
+        self._install_activation_tracking(self._terminal_widget)
 
         # Initialize process and task tracking
         self._terminal_process = create_terminal()
@@ -114,7 +114,7 @@ class TerminalTab(TabBase):
         self._transferring = False
 
         # Initialize window size handling
-        self._terminal.size_changed.connect(self._handle_terminal_resize)
+        self._terminal_widget.size_changed.connect(self._handle_terminal_resize)
 
         # Start local shell process
         if start_process:
@@ -124,7 +124,7 @@ class TerminalTab(TabBase):
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._terminal.get_match_status()
+            current, total = self._terminal_widget.get_match_status()
             self._find_widget.set_match_status(current, total)
 
         # Update status bar
@@ -132,7 +132,7 @@ class TerminalTab(TabBase):
 
     def _handle_terminal_resize(self):
         """Handle terminal window resize events."""
-        rows, cols = self._terminal.get_terminal_size()
+        rows, cols = self._terminal_widget.get_terminal_size()
         self._terminal_process.update_window_size(rows, cols)
         self.update_status()
 
@@ -161,7 +161,7 @@ class TerminalTab(TabBase):
             self._logger.debug("Process started with pid %d", pid)
 
             # Update initial terminal size
-            rows, cols = self._terminal.get_terminal_size()
+            rows, cols = self._terminal_widget.get_terminal_size()
             self._terminal_process.update_window_size(rows, cols)
             self.update_status()
 
@@ -170,7 +170,7 @@ class TerminalTab(TabBase):
 
         except Exception as e:
             self._logger.exception("Failed to start terminal process: %s", str(e))
-            self._terminal.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
+            self._terminal_widget.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
     async def _read_loop(self):
         """Read data from the terminal."""
@@ -192,7 +192,7 @@ class TerminalTab(TabBase):
                         if data:
                             complete_data = utf8_buffer.add_data(data)
                             if complete_data:
-                                self._terminal.put_data(complete_data)
+                                self._terminal_widget.put_data(complete_data)
 
                     except EOFError:
                         # Terminal pipe closed/EOF reached
@@ -221,7 +221,7 @@ class TerminalTab(TabBase):
         finally:
             if self._running and not self._transferring:
                 try:
-                    self._terminal.put_data(b"\r\n[Process completed]\r\n")
+                    self._terminal_widget.put_data(b"\r\n[Process completed]\r\n")
                 except Exception as e:
                     self._logger.debug("Could not write completion message: %s", e)
 
@@ -271,7 +271,7 @@ class TerminalTab(TabBase):
             }}
         """)
 
-        self._terminal.update_dimensions()
+        self._terminal_widget.update_dimensions()
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """
@@ -300,7 +300,7 @@ class TerminalTab(TabBase):
 
         # Only store process/display state for temporary moves
         if temp_state:
-            metadata.update(self._terminal.create_state_metadata())
+            metadata.update(self._terminal_widget.create_state_metadata())
             # Store reference to this tab for process transfer
             metadata['source_tab'] = self
             metadata['is_ephemeral'] = True
@@ -464,11 +464,11 @@ class TerminalTab(TabBase):
 
     def can_copy(self) -> bool:
         """Check if terminal can copy."""
-        return self._terminal.has_selection()
+        return self._terminal_widget.has_selection()
 
     def copy(self) -> None:
         """Copy terminal selection."""
-        self._terminal.copy()
+        self._terminal_widget.copy()
 
     def can_paste(self) -> bool:
         """Check if terminal can paste."""
@@ -476,13 +476,13 @@ class TerminalTab(TabBase):
 
     def paste(self) -> None:
         """Paste into terminal."""
-        self._terminal.paste()
+        self._terminal_widget.paste()
 
     def show_find(self):
         """Show the find widget."""
         # Get the selected text if any
-        if self._terminal.has_selection():
-            text = self._terminal.get_selected_text()
+        if self._terminal_widget.has_selection():
+            text = self._terminal_widget.get_selected_text()
             # Only use selection if it's on a single line
             if '\n' not in text:
                 self._find_widget.set_search_text(text)
@@ -499,7 +499,7 @@ class TerminalTab(TabBase):
     def update_status(self) -> None:
         """Update status bar."""
         name = self._terminal_process.get_process_name()
-        rows, columns = self._terminal.get_terminal_size()
+        rows, columns = self._terminal_widget.get_terminal_size()
         message = StatusMessage(
             self._language_manager.strings.terminal_status.format(
                 name=name,
@@ -512,11 +512,11 @@ class TerminalTab(TabBase):
     def _close_find(self):
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._terminal.clear_find()
+        self._terminal_widget.clear_find()
 
     def _find_next(self, forward: bool = True):
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        self._terminal.find_text(text, forward)
-        current, total = self._terminal.get_match_status()
+        self._terminal_widget.find_text(text, forward)
+        current, total = self._terminal_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
