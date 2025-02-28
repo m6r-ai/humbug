@@ -1,9 +1,11 @@
 """Widget for displaying individual conversation messages."""
 
 from datetime import datetime
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
+from typing import List, Tuple
+
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QTextEdit
 from PySide6.QtCore import Signal, Qt, QPoint
-from PySide6.QtGui import QCursor, QMouseEvent
+from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat
 
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
@@ -186,6 +188,21 @@ class MessageWidget(QFrame):
         """Check if text is selected in the text area."""
         return self._text_area.textCursor().hasSelection()
 
+    def get_selected_text(self) -> str:
+        """
+        Get any selected text in this message.
+
+        Returns:
+            Currently selected text or empty string
+        """
+        cursor = self._text_area.textCursor()
+        if cursor.hasSelection():
+            text = cursor.selectedText()
+            # Convert Qt's special line break character
+            return text.replace('\u2029', '\n')
+
+        return ""
+
     def copy_selection(self):
         """Copy selected text to clipboard."""
         self._text_area.copy()
@@ -205,17 +222,6 @@ class MessageWidget(QFrame):
             self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         else:
             self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-    def find_text(self, text: str) -> bool:
-        """Find text in the message.
-
-        Args:
-            text: Text to search for
-
-        Returns:
-            True if text was found
-        """
-        return self._text_area.find_text(text)
 
     def clear_selection(self):
         """Clear any text selection in this message."""
@@ -320,3 +326,97 @@ class MessageWidget(QFrame):
         if self._style_manager.color_mode != self._init_colour_mode:
             self._init_colour_mode = self._style_manager.color_mode
             self._highlighter.rehighlight()
+
+    def find_text(self, text: str) -> List[Tuple[int, int]]:
+        """
+        Find all instances of text in this message.
+
+        Args:
+            text: Text to search for
+
+        Returns:
+            List of (start_position, end_position) tuples for each match
+        """
+        # Implementation uses _text_area internally but doesn't expose it
+        document = self._text_area.document()
+        matches = []
+        cursor = QTextCursor(document)
+
+        while True:
+            cursor = document.find(text, cursor)
+            if cursor.isNull():
+                break
+
+            matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+
+        return matches
+
+    def highlight_matches(
+        self,
+        matches: List[Tuple[int, int]],
+        current_match_index: int = -1,
+        highlight_color=None,
+        dim_highlight_color=None
+    ):
+        """
+        Highlight matches in this message.
+
+        Args:
+            matches: List of (start, end) tuples to highlight
+            current_match_index: Index of current match to highlight differently, or -1 for none
+            highlight_color: QColor for current match, defaults to system highlight color
+            dim_highlight_color: QColor for other matches, defaults to dimmer highlight color
+        """
+        # Default colors if not provided
+        style_manager = StyleManager()
+        if not highlight_color:
+            highlight_color = style_manager.get_color(ColorRole.TEXT_FOUND)
+
+        if not dim_highlight_color:
+            dim_highlight_color = style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
+
+        # Create format for current match
+        current_format = QTextCharFormat()
+        current_format.setBackground(highlight_color)
+
+        # Create format for other matches
+        other_format = QTextCharFormat()
+        other_format.setBackground(dim_highlight_color)
+
+        # Create selections
+        selections = []
+        for i, (start, end) in enumerate(matches):
+            cursor = QTextCursor(self._text_area.document())
+            cursor.setPosition(start)
+            cursor.setPosition(end, QTextCursor.KeepAnchor)
+
+            extra_selection = QTextEdit.ExtraSelection()
+            extra_selection.cursor = cursor
+            extra_selection.format = current_format if i == current_match_index else other_format
+
+            selections.append(extra_selection)
+
+        self._text_area.setExtraSelections(selections)
+
+    def clear_highlights(self):
+        """Clear all highlights from the message."""
+        self._text_area.setExtraSelections([])
+
+    def select_and_scroll_to_position(self, position: int):
+        """
+        Select text and scroll to a specific position.
+
+        Args:
+            position: Text position to scroll to
+
+        Returns:
+            QPoint: The global position of the visible cursor (for scrolling in parent)
+        """
+        cursor = QTextCursor(self._text_area.document())
+        cursor.setPosition(position)
+        self._text_area.setTextCursor(cursor)
+
+        # Get cursor rectangle and convert to global position for parent scrolling
+        cursor_rect = self._text_area.cursorRect(cursor)
+        local_pos = cursor_rect.topLeft()
+        return self._text_area.mapTo(self.parentWidget(), local_pos)

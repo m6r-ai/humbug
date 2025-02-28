@@ -445,15 +445,8 @@ class ConversationWidget(QWidget):
             widget: Widget to scroll to
             position: Text position within the widget
         """
-        # Get text edit cursor rect for the position
-        text_edit = widget._text_area
-        cursor = text_edit.textCursor()
-        cursor.setPosition(position)
-        text_edit.setTextCursor(cursor)
-        cursor_rect = text_edit.cursorRect(cursor)
-
-        # Convert cursor position to global coordinates
-        global_pos = text_edit.mapTo(self._messages_container, cursor_rect.topLeft())
+        # Ask the widget to select and get the position to scroll to
+        global_pos = widget.select_and_scroll_to_position(position)
 
         # Use ensureVisible for consistent scrolling behavior
         self._scroll_area.ensureVisible(
@@ -1179,17 +1172,15 @@ class ConversationWidget(QWidget):
             The selected text or empty string
         """
         if self._message_with_selection:
-            cursor = self._message_with_selection._text_area.textCursor()
-            if cursor.hasSelection():
-                text = cursor.selectedText()
-                if '\u2029' not in text:  # Qt uses this for line breaks
-                    return text
+            return self._message_with_selection.get_selected_text()
         elif self._input.hasFocus():
             cursor = self._input.textCursor()
             if cursor.hasSelection():
                 text = cursor.selectedText()
                 if '\u2029' not in text:
                     return text
+
+                return text.replace('\u2029', '\n')
 
         return ""
 

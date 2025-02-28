@@ -1,5 +1,4 @@
-from typing import List, Tuple, Dict, Set
-from PySide6.QtGui import QTextCursor, QTextCharFormat
+from typing import List, Tuple, Set
 from PySide6.QtWidgets import QTextEdit, QWidget
 from PySide6.QtCore import QObject, Signal
 
@@ -22,7 +21,7 @@ class ConversationFind(QObject):
         self._last_search = ""
 
         # Track text edits with highlights
-        self._highlighted_editors: Set[QTextEdit] = set()
+        self._highlighted_widgets: Set[MessageWidget] = set()
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -47,16 +46,7 @@ class ConversationFind(QObject):
         # Find all matches if this is a new search
         if not self._matches and text:
             for widget in widgets:
-                text_edit = widget._text_area
-                document = text_edit.document()
-                widget_matches = []
-
-                cursor = QTextCursor(document)
-                while True:
-                    cursor = document.find(text, cursor)
-                    if cursor.isNull():
-                        break
-                    widget_matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+                widget_matches = widget.find_text(text)
 
                 if widget_matches:
                     self._matches.append((widget, widget_matches))
@@ -108,41 +98,20 @@ class ConversationFind(QObject):
         """Update the highlighting of all matches."""
         self._clear_highlights()
 
-        found_format = QTextCharFormat()
-        found_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND))
-        dim_found_format = QTextCharFormat()
-        dim_found_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM))
+        # Get colors from style manager
+        highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND)
+        dim_highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
 
-        # Create selections for each text edit
-        selections_by_editor: Dict[QTextEdit, List[QTextEdit.ExtraSelection]] = {}
-
-        # Highlight all matches
+        # Highlight matches in each widget
         for widget_idx, (widget, matches) in enumerate(self._matches):
-            text_edit = widget._text_area
-            if text_edit not in selections_by_editor:
-                selections_by_editor[text_edit] = []
+            # Set current_match_index to highlight the current match
+            current_match_index = self._current_match_index if widget_idx == self._current_widget_index else -1
 
-            for match_idx, (start, end) in enumerate(matches):
-                cursor = QTextCursor(text_edit.document())
-                cursor.setPosition(start)
-                cursor.setPosition(end, QTextCursor.KeepAnchor)
+            # Highlight matches in this widget
+            widget.highlight_matches(matches, current_match_index, highlight_color, dim_highlight_color)
 
-                # Create extra selection
-                extra_selection = QTextEdit.ExtraSelection()
-                extra_selection.cursor = cursor
-
-                # Use different format for current match
-                if widget_idx == self._current_widget_index and match_idx == self._current_match_index:
-                    extra_selection.format = found_format
-                else:
-                    extra_selection.format = dim_found_format
-
-                selections_by_editor[text_edit].append(extra_selection)
-
-        # Apply selections and track highlighted editors
-        for text_edit, selections in selections_by_editor.items():
-            text_edit.setExtraSelections(selections)
-            self._highlighted_editors.add(text_edit)
+            # Track highlighted widgets
+            self._highlighted_widgets.add(widget)
 
     def _scroll_to_match(self) -> None:
         """Request scroll to ensure the current match is visible."""
@@ -152,21 +121,19 @@ class ConversationFind(QObject):
         widget, matches = self._matches[self._current_widget_index]
         start, _ = matches[self._current_match_index]
 
-        text_edit = widget._text_area
-        cursor = QTextCursor(text_edit.document())
-        cursor.setPosition(start)
-        text_edit.setTextCursor(cursor)
+        # Use the widget's method to select and get position for scrolling
+        global_pos = widget.select_and_scroll_to_position(start)
 
         # Emit signal for parent to handle scrolling
         self.scrollRequested.emit(widget, start)
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
-        # Clear highlights from all tracked editors
-        for text_edit in self._highlighted_editors:
-            text_edit.setExtraSelections([])
+        # Clear highlights from all tracked widgets
+        for widget in self._highlighted_widgets:
+            widget.clear_highlights()
 
-        self._highlighted_editors.clear()
+        self._highlighted_widgets.clear()
 
     def get_match_status(self) -> Tuple[int, int]:
         """
