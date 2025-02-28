@@ -4,6 +4,9 @@
 
 New features:
 
+Bug fixes:
+- Added elipsis to the Python syntax highlighting engine.
+
 ## v0.6 (2025-02-27)
 
 New features:
