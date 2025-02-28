@@ -12,7 +12,7 @@ from PySide6.QtGui import QTextCursor
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor.editor_highlighter import EditorHighlighter
 from humbug.gui.editor.editor_find import EditorFind
-from humbug.gui.editor.editor_text_edit import EditorTextEdit
+from humbug.gui.editor.editor_widget import EditorWidget
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.gui.status_message import StatusMessage
@@ -100,7 +100,7 @@ class EditorTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create editor
-        self._editor = EditorTextEdit()
+        self._editor = EditorWidget()
         self._editor.textChanged.connect(self._handle_text_changed)
         self._editor.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor)

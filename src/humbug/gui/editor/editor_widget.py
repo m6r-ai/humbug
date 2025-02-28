@@ -9,7 +9,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
-class EditorTextEdit(QPlainTextEdit):
+class EditorWidget(QPlainTextEdit):
     """Text editor widget with line numbers and syntax highlighting."""
 
     def __init__(self, parent: QWidget = None):
