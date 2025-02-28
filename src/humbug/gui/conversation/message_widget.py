@@ -1,15 +1,13 @@
-"""Widget for displaying individual conversation messages."""
-
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Optional
 
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QTextEdit
+from PySide6.QtWidgets import (
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
+)
 from PySide6.QtCore import Signal, Qt, QPoint
-from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat
 
 from humbug.conversation.message_source import MessageSource
-from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
-from humbug.gui.conversation.conversation_text_edit import ConversationTextEdit
+from humbug.gui.conversation.message_section_widget import MessageSectionWidget
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
@@ -23,7 +21,8 @@ class MessageWidget(QFrame):
     mouseReleased = Signal()
 
     def __init__(self, parent=None, is_input=False):
-        """Initialize the message widget.
+        """
+        Initialize the message widget.
 
         Args:
             parent: Optional parent widget
@@ -37,8 +36,6 @@ class MessageWidget(QFrame):
         self._language_manager.language_changed.connect(self._handle_language_changed)
         self._message_source = None
         self._message_timestamp = None
-
-        self._mouse_left_button_pressed = False
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -62,27 +59,21 @@ class MessageWidget(QFrame):
         # Add header widget to main layout
         self._layout.addWidget(self._header)
 
-        # Create content area using custom ConversationTextEdit
-        self._text_area = self._create_text_area()
-        self._text_area.setReadOnly(not self._is_input)
+        # Container for message sections
+        self._sections_container = QWidget(self)
+        self._sections_layout = QVBoxLayout(self._sections_container)
+        self._sections_layout.setContentsMargins(0, 0, 0, 0)
+        self._sections_layout.setSpacing(8)
+        self._layout.addWidget(self._sections_container)
 
-        # Add text area to main layout
-        self._layout.addWidget(self._text_area)
+        # Track sections
+        self._sections: List[MessageSectionWidget] = []
+        self._section_with_selection: Optional[MessageSectionWidget] = None
+        self._has_code_block = False
 
-        # Connect selection change signal
-        self._text_area.selectionChanged.connect(self._on_selection_changed)
-        self._text_area.mousePressed.connect(self._on_mouse_pressed)
-        self._text_area.mouseReleased.connect(self._on_mouse_released)
-
-        # Add conversation highlighter
-        self._highlighter = ConversationHighlighter(self._text_area.document())
-        self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
-
-        self._language_manager = LanguageManager()
-
-        # Get style manager
-        self._style_manager = StyleManager()
-        self._init_colour_mode = self._style_manager.color_mode
+        section = self._create_section_widget()
+        self._sections.append(section)
+        self._sections_layout.addWidget(section)
 
         # Add bookmark status
         self._is_bookmarked = False
@@ -90,23 +81,11 @@ class MessageWidget(QFrame):
         # Track current message style
         self._current_style: MessageSource = None
 
+        self._style_manager = StyleManager()
+        self._init_colour_mode = self._style_manager.color_mode
+
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
-
-    def _create_text_area(self) -> ConversationTextEdit:
-        """Create and configure the text area.
-
-        Returns:
-            Configured ConversationTextEdit instance
-        """
-        text_area = ConversationTextEdit()
-        text_area.setAcceptRichText(False)
-        text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        # Disable the standard context menu as our parent widget will handle that
-        text_area.setContextMenuPolicy(Qt.NoContextMenu)
-        return text_area
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
@@ -143,8 +122,80 @@ class MessageWidget(QFrame):
         else:
             self._role_label.setText(role_text)
 
+    def _parse_content_sections(self, text: str) -> List[str]:
+        """
+        Parse content into sections.
+
+        This is a simple implementation that treats the entire content as one section.
+        Subclasses can override this to implement more complex section parsing.
+
+        Args:
+            text: The message text content
+
+        Returns:
+            List of section text strings
+        """
+        return [text]
+
+    def _create_section_widget(self) -> MessageSectionWidget:
+        """
+        Create a new section widget.
+
+        Returns:
+            A new MessageSectionWidget instance
+        """
+        section = MessageSectionWidget(self._sections_container)
+        section.selectionChanged.connect(
+            lambda has_selection: self._handle_section_selection_changed(section, has_selection)
+        )
+        section.scrollRequested.connect(self.scrollRequested)
+        section.mouseReleased.connect(self.mouseReleased)
+        section.codeBlockStateChanged.connect(self._handle_code_block_state_changed)
+        return section
+
+    def _handle_section_selection_changed(self, section: MessageSectionWidget, has_selection: bool):
+        """
+        Handle selection changes in a section widget.
+
+        Args:
+            section: The section widget where selection changed
+            has_selection: Whether there is a selection
+        """
+        if not has_selection:
+            if self._section_with_selection == section:
+                self._section_with_selection = None
+            return
+
+        # Clear selection in other sections
+        if self._section_with_selection and self._section_with_selection != section:
+            self._section_with_selection.clear_selection()
+
+        self._section_with_selection = section
+        self.selectionChanged.emit(has_selection)
+
+    def _handle_code_block_state_changed(self, has_code_block: bool):
+        """
+        Handle changes in code block state.
+
+        Args:
+            has_code_block: Whether any section has a code block
+        """
+        if has_code_block:
+            self._has_code_block = True
+        else:
+            # Check if any section still has a code block
+            self._has_code_block = any(section.has_code_block() for section in self._sections)
+
+        # Update horizontal scroll policy for sections with code blocks
+        for section in self._sections:
+            if section.has_code_block():
+                section._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            else:
+                section._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
     def set_content(self, text: str, style: MessageSource, timestamp: datetime):
-        """Set content with style, handling incremental updates for AI responses.
+        """
+        Set content with style, handling incremental updates for AI responses.
 
         Args:
             text: The message text content
@@ -154,39 +205,48 @@ class MessageWidget(QFrame):
         self._message_source = style
         self._message_timestamp = timestamp
 
-        if style != self._current_style:
+        # Check if style changed - if so, we need to recreate all sections
+        style_changed = style != self._current_style
+        if style_changed:
             # Update header text with proper role
             self._update_role_text()
             self._current_style = style
-            self._handle_style_changed()
-            self._text_area.clear()
 
-        self._text_area.set_incremental_text(text)
+            # Clear existing sections
+            for section in self._sections:
+                self._sections_layout.removeWidget(section)
+                section.deleteLater()
 
-    def _on_mouse_pressed(self, event: QMouseEvent):
-        """Handle mouse press from text area."""
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            self._mouse_left_button_pressed = True
+            self._sections = []
+            self._section_with_selection = None
+            self._has_code_block = False
 
-    def _on_mouse_released(self, _event: QMouseEvent):
-        """Handle mouse release from text area."""
-        self._mouse_left_button_pressed = False
-        self.mouseReleased.emit()
+        # Parse content into sections
+        section_texts = self._parse_content_sections(text)
 
-    def _on_selection_changed(self):
-        """Handle selection changes in the text area."""
-        cursor = self._text_area.textCursor()
-        has_selection = cursor.hasSelection()
+        # Create or update sections
+        for i, section_text in enumerate(section_texts):
+            # Create new section if needed
+            if i >= len(self._sections):
+                section = self._create_section_widget()
+                self._sections.append(section)
+                self._sections_layout.addWidget(section)
 
-        if has_selection and self._mouse_left_button_pressed:
-            # Emit global mouse position for accurate scroll calculations
-            self.scrollRequested.emit(QCursor.pos())
+            # Update section content
+            self._sections[i].set_content(section_text)
 
-        self.selectionChanged.emit(has_selection)
+        # Remove any extra sections
+        while len(self._sections) > len(section_texts):
+            section = self._sections.pop()
+            self._sections_layout.removeWidget(section)
+            section.deleteLater()
+
+        # Apply styling
+        self._handle_style_changed()
 
     def has_selection(self) -> bool:
-        """Check if text is selected in the text area."""
-        return self._text_area.textCursor().hasSelection()
+        """Check if any section has selected text."""
+        return self._section_with_selection is not None and self._section_with_selection.has_selection()
 
     def get_selected_text(self) -> str:
         """
@@ -195,39 +255,25 @@ class MessageWidget(QFrame):
         Returns:
             Currently selected text or empty string
         """
-        cursor = self._text_area.textCursor()
-        if cursor.hasSelection():
-            text = cursor.selectedText()
-            # Convert Qt's special line break character
-            return text.replace('\u2029', '\n')
+        if self._section_with_selection:
+            return self._section_with_selection.get_selected_text()
 
         return ""
 
     def copy_selection(self):
         """Copy selected text to clipboard."""
-        self._text_area.copy()
+        if self._section_with_selection:
+            self._section_with_selection.copy_selection()
 
-    def _on_code_block_state_changed(self, has_code_block: bool):
-        """Handle changes in code block state."""
-        self._text_area.set_has_code_block(has_code_block)
-        # Ensure proper scroll behavior
-        self.updateGeometry()
+    def clear_selection(self):
+        """Clear any text selection in this message."""
+        if self._section_with_selection:
+            self._section_with_selection.clear_selection()
+            self._section_with_selection = None
 
     def resizeEvent(self, event):
         """Handle resize events."""
         super().resizeEvent(event)
-
-        # If we have code blocks, allow horizontal scrolling
-        if self._text_area.has_code_block():
-            self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        else:
-            self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-    def clear_selection(self):
-        """Clear any text selection in this message."""
-        cursor = self._text_area.textCursor()
-        cursor.clearSelection()
-        self._text_area.setTextCursor(cursor)
 
     def _handle_style_changed(self):
         """Handle the style changing"""
@@ -247,6 +293,8 @@ class MessageWidget(QFrame):
 
         role = role_colours.get(self._current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
+        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
 
         # Role label styling (bold)
         self._role_label.setFont(font)
@@ -256,7 +304,7 @@ class MessageWidget(QFrame):
                 color: {label_color};
                 margin: 0;
                 padding: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                background-color: {background_color};
             }}
         """)
 
@@ -268,7 +316,7 @@ class MessageWidget(QFrame):
                 color: {label_color};
                 padding: 0;
                 margin: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                background-color: {background_color};
             }}
         """)
 
@@ -279,43 +327,19 @@ class MessageWidget(QFrame):
                 border-radius: 0;
                 padding: 1px;
                 margin: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                background-color: {background_color};
             }}
         """)
 
-        # Content area styling
-        self._text_area.setFont(font)
-        self._text_area.setStyleSheet(f"""
-            QTextEdit {{
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                border: none;
-                border-radius: 0;
-                padding: 1px;
-                margin: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-            QScrollBar:horizontal {{
-                height: 12px;
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            QScrollBar::handle:horizontal {{
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
-        """)
+        # Apply styling to all sections
+        for section in self._sections:
+            section.apply_style(text_color, background_color, font)
 
         # Main frame styling
         border = ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else ColorRole.MESSAGE_BACKGROUND
         self.setStyleSheet(f"""
             QFrame {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                background-color: {background_color};
                 margin: 0;
                 border-radius: 8px;
                 border: 2px solid {self._style_manager.get_color_str(border)}
@@ -325,7 +349,7 @@ class MessageWidget(QFrame):
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode != self._init_colour_mode:
             self._init_colour_mode = self._style_manager.color_mode
-            self._highlighter.rehighlight()
+            # No need to call rehighlight directly, as it's handled by each section
 
     def find_text(self, text: str) -> List[Tuple[int, int]]:
         """
@@ -337,19 +361,12 @@ class MessageWidget(QFrame):
         Returns:
             List of (start_position, end_position) tuples for each match
         """
-        # Implementation uses _text_area internally but doesn't expose it
-        document = self._text_area.document()
-        matches = []
-        cursor = QTextCursor(document)
-
-        while True:
-            cursor = document.find(text, cursor)
-            if cursor.isNull():
-                break
-
-            matches.append((cursor.selectionStart(), cursor.selectionEnd()))
-
-        return matches
+        all_matches = []
+        for section in self._sections:
+            section_matches = section.find_text(text)
+            if section_matches:
+                all_matches.extend(section_matches)
+        return all_matches
 
     def highlight_matches(
         self,
@@ -367,42 +384,51 @@ class MessageWidget(QFrame):
             highlight_color: QColor for current match, defaults to system highlight color
             dim_highlight_color: QColor for other matches, defaults to dimmer highlight color
         """
-        # Default colors if not provided
-        style_manager = StyleManager()
-        if not highlight_color:
-            highlight_color = style_manager.get_color(ColorRole.TEXT_FOUND)
+        # First clear all highlights
+        self.clear_highlights()
 
-        if not dim_highlight_color:
-            dim_highlight_color = style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
+        # Group matches by section
+        section_matches: Dict[MessageSectionWidget, List[Tuple[int, int, int]]] = {}
+        match_index = 0
 
-        # Create format for current match
-        current_format = QTextCharFormat()
-        current_format.setBackground(highlight_color)
+        for _section_idx, section in enumerate(self._sections):
+            section_matches[section] = []
 
-        # Create format for other matches
-        other_format = QTextCharFormat()
-        other_format.setBackground(dim_highlight_color)
+            # Find matches in this section
+            for match in section.find_text(matches[0][0] if matches else ""):
+                # Store match with global index
+                section_matches[section].append((match[0], match[1], match_index))
+                match_index += 1
 
-        # Create selections
-        selections = []
-        for i, (start, end) in enumerate(matches):
-            cursor = QTextCursor(self._text_area.document())
-            cursor.setPosition(start)
-            cursor.setPosition(end, QTextCursor.KeepAnchor)
+        # Highlight matches in each section
+        for section, matches_with_index in section_matches.items():
+            if not matches_with_index:
+                continue
 
-            extra_selection = QTextEdit.ExtraSelection()
-            extra_selection.cursor = cursor
-            extra_selection.format = current_format if i == current_match_index else other_format
+            # Extract just the position info
+            positions = [(start, end) for start, end, _ in matches_with_index]
 
-            selections.append(extra_selection)
+            # Find if current match is in this section
+            section_current_idx = -1
+            for i, (_, _, idx) in enumerate(matches_with_index):
+                if idx == current_match_index:
+                    section_current_idx = i
+                    break
 
-        self._text_area.setExtraSelections(selections)
+            # Highlight this section's matches
+            section.highlight_matches(
+                positions,
+                section_current_idx,
+                highlight_color,
+                dim_highlight_color
+            )
 
     def clear_highlights(self):
         """Clear all highlights from the message."""
-        self._text_area.setExtraSelections([])
+        for section in self._sections:
+            section.clear_highlights()
 
-    def select_and_scroll_to_position(self, position: int):
+    def select_and_scroll_to_position(self, position: int) -> QPoint:
         """
         Select text and scroll to a specific position.
 
@@ -412,11 +438,12 @@ class MessageWidget(QFrame):
         Returns:
             QPoint: The global position of the visible cursor (for scrolling in parent)
         """
-        cursor = QTextCursor(self._text_area.document())
-        cursor.setPosition(position)
-        self._text_area.setTextCursor(cursor)
+        # Find which section contains this position
+        for section in self._sections:
+            # Try to select in this section
+            result = section.select_and_scroll_to_position(position)
+            if result:
+                return result
 
-        # Get cursor rectangle and convert to global position for parent scrolling
-        cursor_rect = self._text_area.cursorRect(cursor)
-        local_pos = cursor_rect.topLeft()
-        return self._text_area.mapTo(self.parentWidget(), local_pos)
+        # If we get here, position wasn't found
+        return QPoint(0, 0)

@@ -25,8 +25,8 @@ class ConversationInputWidget(MessageWidget):
         super().__init__(parent, is_input=True)
 
         # Connect text cursor signals
-        self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
-        self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
+        self._sections[0]._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
+        self._sections[0]._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -87,13 +87,13 @@ class ConversationInputWidget(MessageWidget):
     def _insert_from_mime_data(self, source: QMimeData) -> None:
         """Override default paste behavior to insert only plain text."""
         if source.hasText():
-            cursor = self._text_area.textCursor()
+            cursor = self._sections[0]._text_area.textCursor()
             cursor.insertText(source.text())
 
     def eventFilter(self, obj, event) -> bool:
         """Handle window activation and mouse events to redirect focus to our input box."""
         if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
-            self._text_area.setFocus()
+            self._sections[0]._text_area.setFocus()
             return False  # Don't consume the event
 
         return super().eventFilter(obj, event)
@@ -102,7 +102,7 @@ class ConversationInputWidget(MessageWidget):
         """Handle special key events."""
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
             if not self._is_streaming:
-                text = self._text_area.toPlainText().strip()
+                text = self._sections[0]._text_area.toPlainText().strip()
                 if text:
                     self.clear()
 
@@ -112,58 +112,58 @@ class ConversationInputWidget(MessageWidget):
 
     def clear(self):
         """Clear the input area."""
-        self._text_area.clear()
+        self._sections[0]._text_area.clear()
 
     def to_plain_text(self) -> str:
         """Get the current input text."""
-        return self._text_area.toPlainText()
+        return self._sections[0]._text_area.toPlainText()
 
     def set_plain_text(self, text: str):
         """Set the input text."""
-        self._text_area.setPlainText(text)
+        self._sections[0]._text_area.setPlainText(text)
 
     def cursor_rect(self):
         """Get the cursor rectangle from the input area."""
-        text_cursor = self._text_area.cursorRect()
+        text_cursor = self._sections[0]._text_area.cursorRect()
         offset = self._header.height()
         cursor = QRect(text_cursor.x(), offset + text_cursor.y(), text_cursor.width(), text_cursor.height())
         return cursor
 
     def setFocus(self):
         """Set focus to the input area."""
-        self._text_area.setFocus()
+        self._sections[0]._text_area.setFocus()
 
     def hasFocus(self) -> bool:
         """Check if the input area has focus."""
-        return self._text_area.hasFocus()
+        return self._sections[0]._text_area.hasFocus()
 
     def document(self):
         """Get the document from the input area."""
-        return self._text_area.document()
+        return self._sections[0]._text_area.document()
 
     def text_cursor(self):
         """Get the text cursor from the input area."""
-        return self._text_area.textCursor()
+        return self._sections[0]._text_area.textCursor()
 
     def undo(self):
         """Undo the last edit operation."""
-        self._text_area.undo()
+        self._sections[0]._text_area.undo()
 
     def redo(self):
         """Redo the last undone edit operation."""
-        self._text_area.redo()
+        self._sections[0]._text_area.redo()
 
     def cut(self):
         """Cut selected text to clipboard."""
-        self._text_area.cut()
+        self._sections[0]._text_area.cut()
 
     def copy(self):
         """Copy selected text to clipboard."""
-        self._text_area.copy()
+        self._sections[0]._text_area.copy()
 
     def paste(self):
         """Paste text from clipboard."""
-        self._text_area.paste()
+        self._sections[0]._text_area.paste()
 
     def set_cursor_position(self, position: Dict[str, int]) -> None:
         """
@@ -172,7 +172,7 @@ class ConversationInputWidget(MessageWidget):
         Args:
             position: Dictionary with 'line' and 'column' keys
         """
-        cursor = self._text_area.textCursor()
+        cursor = self._sections[0]._text_area.textCursor()
         cursor.movePosition(QTextCursor.Start)
 
         # Move cursor to specified position
@@ -185,7 +185,7 @@ class ConversationInputWidget(MessageWidget):
             position.get("column", 0)
         )
 
-        self._text_area.setTextCursor(cursor)
+        self._sections[0]._text_area.setTextCursor(cursor)
 
     def get_cursor_position(self) -> Dict[str, int]:
         """
@@ -194,7 +194,7 @@ class ConversationInputWidget(MessageWidget):
         Returns:
             Dictionary with 'line' and 'column' keys
         """
-        cursor = self._text_area.textCursor()
+        cursor = self._sections[0]._text_area.textCursor()
         return {
             "line": cursor.blockNumber(),
             "column": cursor.columnNumber()
