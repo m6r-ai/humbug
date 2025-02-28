@@ -402,7 +402,7 @@ class ConversationWidget(QWidget):
         else:
             self._message_with_selection = message_widget
 
-    def _has_selection(self) -> bool:
+    def has_selection(self) -> bool:
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
@@ -886,7 +886,7 @@ class ConversationWidget(QWidget):
 
         # Copy action
         copy_action = menu.addAction(self._language_manager.strings.copy)
-        copy_action.setEnabled(self._has_selection())
+        copy_action.setEnabled(self.has_selection())
         copy_action.triggered.connect(self.copy)
 
         # Paste action
@@ -991,7 +991,7 @@ class ConversationWidget(QWidget):
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
-        return (self._input.hasFocus() and self._input.text_cursor().hasSelection()) or self._has_selection()
+        return (self._input.hasFocus() and self._input.text_cursor().hasSelection()) or self.has_selection()
 
     def copy(self) -> None:
         """Copy selected text to clipboard."""

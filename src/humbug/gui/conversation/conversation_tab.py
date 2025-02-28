@@ -342,7 +342,7 @@ class ConversationTab(TabBase):
     def show_find(self):
         """Show the find widget."""
         # Get selected text if any
-        if self._conversation_widget._has_selection():
+        if self._conversation_widget.has_selection():
             selected_text = self._conversation_widget.get_selected_text()
             if selected_text:
                 self._find_widget.set_search_text(selected_text)
