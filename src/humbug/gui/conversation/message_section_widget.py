@@ -16,7 +16,6 @@ class MessageSectionWidget(QWidget):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
-    codeBlockStateChanged = Signal(bool)
 
     def __init__(self, is_input: bool, parent=None):
         """
@@ -79,7 +78,7 @@ class MessageSectionWidget(QWidget):
     def _on_code_block_state_changed(self, has_code_block: bool):
         """Handle changes in code block state."""
         self._text_area.set_has_code_block(has_code_block)
-#        self.codeBlockStateChanged.emit(has_code_block)
+
         # Ensure proper scroll behavior
         self.updateGeometry()
 

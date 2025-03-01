@@ -64,13 +64,12 @@ class MessageWidget(QFrame):
         self._sections_container = QWidget(self)
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
-        self._sections_layout.setSpacing(8)
+        self._sections_layout.setSpacing(0)
         self._layout.addWidget(self._sections_container)
 
         # Track sections
         self._sections: List[MessageSectionWidget] = []
         self._section_with_selection: Optional[MessageSectionWidget] = None
-        self._has_code_block = False
 
         section = self._create_section_widget()
         self._sections.append(section)
@@ -199,7 +198,6 @@ class MessageWidget(QFrame):
         )
         section.scrollRequested.connect(self.scrollRequested)
         section.mouseReleased.connect(self.mouseReleased)
-        section.codeBlockStateChanged.connect(self._handle_code_block_state_changed)
         return section
 
     def _handle_section_selection_changed(self, section: MessageSectionWidget, has_selection: bool):
@@ -221,26 +219,6 @@ class MessageWidget(QFrame):
 
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
-
-    def _handle_code_block_state_changed(self, has_code_block: bool):
-        """
-        Handle changes in code block state.
-
-        Args:
-            has_code_block: Whether any section has a code block
-        """
-        if has_code_block:
-            self._has_code_block = True
-        else:
-            # Check if any section still has a code block
-            self._has_code_block = any(section.has_code_block() for section in self._sections)
-
-        # Update horizontal scroll policy for sections with code blocks
-        for section in self._sections:
-            if section.has_code_block():
-                section._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-            else:
-                section._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def set_content(self, text: str, style: MessageSource, timestamp: datetime):
         """
@@ -268,7 +246,6 @@ class MessageWidget(QFrame):
 
             self._sections = []
             self._section_with_selection = None
-            self._has_code_block = False
 
         # Parse content into sections
         orig_num_sections = len(self._sections)
