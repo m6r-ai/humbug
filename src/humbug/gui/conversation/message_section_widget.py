@@ -18,7 +18,7 @@ class MessageSectionWidget(QWidget):
     mouseReleased = Signal()
     codeBlockStateChanged = Signal(bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, is_input: bool, parent=None):
         """
         Initialize a message section widget.
 
@@ -32,7 +32,15 @@ class MessageSectionWidget(QWidget):
         self.setLayout(self._layout)
 
         # Create text area
-        self._text_area = self._create_text_area()
+        self._text_area = ConversationTextEdit()
+        self._text_area.setAcceptRichText(False)
+        self._text_area.setReadOnly(not is_input)
+        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        # Disable the standard context menu as our parent widget will handle that
+        self._text_area.setContextMenuPolicy(Qt.NoContextMenu)
+
         self._layout.addWidget(self._text_area)
 
         # Connect signals
@@ -46,23 +54,6 @@ class MessageSectionWidget(QWidget):
 
         self._mouse_left_button_pressed = False
         self._style_manager = StyleManager()
-
-    def _create_text_area(self) -> ConversationTextEdit:
-        """
-        Create and configure the text area.
-
-        Returns:
-            Configured ConversationTextEdit instance
-        """
-        text_area = ConversationTextEdit()
-        text_area.setAcceptRichText(False)
-        text_area.setReadOnly(True)
-        text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        # Disable the standard context menu as our parent widget will handle that
-        text_area.setContextMenuPolicy(Qt.NoContextMenu)
-        return text_area
 
     def _on_mouse_pressed(self, event: QMouseEvent):
         """Handle mouse press from text area."""
@@ -88,7 +79,7 @@ class MessageSectionWidget(QWidget):
     def _on_code_block_state_changed(self, has_code_block: bool):
         """Handle changes in code block state."""
         self._text_area.set_has_code_block(has_code_block)
-        self.codeBlockStateChanged.emit(has_code_block)
+#        self.codeBlockStateChanged.emit(has_code_block)
         # Ensure proper scroll behavior
         self.updateGeometry()
 

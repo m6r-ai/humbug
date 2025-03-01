@@ -152,11 +152,12 @@ class ConversationParser(Parser):
                     if next_token and (next_token.type == 'TEXT'):
                         next_token = lexer.get_next_token('WHITESPACE')
                         self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
-
+                        self._tokens.append(Token(type='NEWLINE', value='\n', start=(next_token.start + len(next_token.value))))
                         input_normalized = next_token.value.strip().lower()
                         language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
                         continue
 
+                    self._tokens.append(Token(type='NEWLINE', value='\n', start=(lex_token.start + 3)))
                     language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
                     continue
 

@@ -11,6 +11,7 @@ from humbug.gui.conversation.message_section_widget import MessageSectionWidget
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.syntax.conversation_parser import ConversationParser, ConversationParserState
 
 
 class MessageWidget(QFrame):
@@ -87,6 +88,11 @@ class MessageWidget(QFrame):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+        self._parser_state: ConversationParserState = None
+        self._fence_depth = 0
+        self._next_str: str = ""
+        self._text_list = []
+
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
         return self._is_bookmarked
@@ -122,6 +128,37 @@ class MessageWidget(QFrame):
         else:
             self._role_label.setText(role_text)
 
+    def _parse_line(self, text: str) -> None:
+        """Apply highlighting to the given block of text."""
+        try:
+            prev_parser_state = self._parser_state
+            parser = ConversationParser()
+            self._parser_state = parser.parse(prev_parser_state, text)
+
+            while True:
+                token = parser.get_next_token()
+                if token is None:
+                    break
+
+                match token.type:
+                    case 'FENCE_START':
+                        self._fence_depth += 1
+                        self._text_list.append(self._next_str)
+                        self._next_str = token.value
+                        continue
+
+                    case 'FENCE_END':
+                        self._fence_depth -= 1
+                        self._next_str += token.value
+                        self._text_list.append(self._next_str)
+                        self._next_str = ""
+                        continue
+
+                self._next_str += token.value
+
+        except Exception:
+            self._logger.exception("highlighting exception")
+
     def _parse_content_sections(self, text: str) -> List[str]:
         """
         Parse content into sections.
@@ -135,7 +172,19 @@ class MessageWidget(QFrame):
         Returns:
             List of section text strings
         """
-        return [text]
+        lines = text.splitlines(keepends=True)
+        self._next_str = ""
+        self._text_list = []
+        self._parser_state = None
+
+        for line in lines:
+            self._parse_line(line)
+
+        if self._next_str:
+            self._text_list.append(self._next_str)
+
+        print(f"list:\n{self._text_list}")
+        return self._text_list
 
     def _create_section_widget(self) -> MessageSectionWidget:
         """
@@ -144,7 +193,7 @@ class MessageWidget(QFrame):
         Returns:
             A new MessageSectionWidget instance
         """
-        section = MessageSectionWidget(self._sections_container)
+        section = MessageSectionWidget(self._is_input, self._sections_container)
         section.selectionChanged.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
@@ -222,6 +271,7 @@ class MessageWidget(QFrame):
             self._has_code_block = False
 
         # Parse content into sections
+        orig_num_sections = len(self._sections)
         section_texts = self._parse_content_sections(text)
 
         # Create or update sections
@@ -232,8 +282,9 @@ class MessageWidget(QFrame):
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
 
-            # Update section content
-            self._sections[i].set_content(section_text)
+            # Update section content if we've not previously seen this
+            if i >= orig_num_sections - 1:
+                self._sections[i].set_content(section_text)
 
         # Remove any extra sections
         while len(self._sections) > len(section_texts):
