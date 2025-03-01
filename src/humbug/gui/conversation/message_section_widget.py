@@ -1,13 +1,15 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QTextEdit
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QLabel
 from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat
 
 from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
+from humbug.gui.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
 from humbug.gui.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 class MessageSectionWidget(QWidget):
@@ -17,11 +19,13 @@ class MessageSectionWidget(QWidget):
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
 
-    def __init__(self, is_input: bool, parent=None):
+    def __init__(self, is_input: bool, language: Optional[ProgrammingLanguage] = None, parent=None):
         """
         Initialize a message section widget.
 
         Args:
+            is_input: Whether this section is for user input
+            language: Optional programming language for this section
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -29,6 +33,15 @@ class MessageSectionWidget(QWidget):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(0)
         self.setLayout(self._layout)
+
+        # Create language header if needed
+        self._language = language
+        self._language_header = None
+        if language is not None and language != ProgrammingLanguage.UNKNOWN:
+            self._language_header = QLabel(self._get_language_display_name(language))
+            self._language_header.setAlignment(Qt.AlignLeft)
+            self._layout.addWidget(self._language_header)
+            self._layout.setContentsMargins(8, 8, 8, 8)
 
         # Create text area
         self._text_area = ConversationTextEdit()
@@ -48,11 +61,49 @@ class MessageSectionWidget(QWidget):
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add conversation highlighter
-        self._highlighter = ConversationHighlighter(self._text_area.document())
-        self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
+        print(f"language {language}")
+        if language is None:
+            self._highlighter = ConversationHighlighter(self._text_area.document())
+            self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
+        else:
+            self._highlighter = ConversationLanguageHighlighter(self._text_area.document())
+            self._highlighter.set_language(language)
+            print("has code block")
+            self._text_area.set_has_code_block(True)
 
         self._mouse_left_button_pressed = False
         self._style_manager = StyleManager()
+
+    def _get_language_display_name(self, language: ProgrammingLanguage) -> str:
+        """
+        Convert a ProgrammingLanguage enum to a display name.
+
+        Args:
+            language: ProgrammingLanguage enum value
+
+        Returns:
+            Human-readable language name
+        """
+        language_display_names = {
+            ProgrammingLanguage.C: "C",
+            ProgrammingLanguage.CPP: "C++",
+            ProgrammingLanguage.CSS: "CSS",
+            ProgrammingLanguage.GO: "Go",
+            ProgrammingLanguage.HTML: "HTML",
+            ProgrammingLanguage.JAVA: "Java",
+            ProgrammingLanguage.JAVASCRIPT: "JavaScript",
+            ProgrammingLanguage.JSON: "JSON",
+            ProgrammingLanguage.KOTLIN: "Kotlin",
+            ProgrammingLanguage.METAPHOR: "Metaphor",
+            ProgrammingLanguage.MOVE: "Move",
+            ProgrammingLanguage.PYTHON: "Python",
+            ProgrammingLanguage.RUST: "Rust",
+            ProgrammingLanguage.SCHEME: "Scheme",
+            ProgrammingLanguage.SWIFT: "Swift",
+            ProgrammingLanguage.TYPESCRIPT: "TypeScript",
+            ProgrammingLanguage.TEXT: "Plain Text"
+        }
+        return language_display_names.get(language, "Code")
 
     def _on_mouse_pressed(self, event: QMouseEvent):
         """Handle mouse press from text area."""
@@ -252,3 +303,18 @@ class MessageSectionWidget(QWidget):
                 width: 0px;
             }}
         """)
+
+        # Style the language header if present
+        if self._language_header:
+            label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM)  # Use system color for language label
+            self._language_header.setFont(font)
+            self._language_header.setStyleSheet(f"""
+                QLabel {{
+                    font-weight: bold;
+                    color: {label_color};
+                    background-color: {background_color};
+                    padding: 2px 4px;
+                    margin: 0;
+                    border-bottom: 1px solid {label_color};
+                }}
+            """)

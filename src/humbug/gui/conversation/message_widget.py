@@ -14,6 +14,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.conversation_parser import ConversationParser, ConversationParserState
+from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 class MessageWidget(QFrame):
@@ -94,6 +95,9 @@ class MessageWidget(QFrame):
         self._parser_state: ConversationParserState = None
         self._next_str: str = ""
         self._text_list = []
+        self._language_list = []
+        self._in_fence_region = False
+        self._current_language = None
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
@@ -144,14 +148,28 @@ class MessageWidget(QFrame):
 
                 match token.type:
                     case 'FENCE_START':
+                        self._in_fence_region = True
                         self._text_list.append(self._next_str)
-                        self._next_str = token.value
+                        self._language_list.append(None)
+                        self._next_str = ""
+
+                        # Update the current language based on the parser state
+                        if self._parser_state and self._parser_state.language != ProgrammingLanguage.UNKNOWN:
+                            self._current_language = self._parser_state.language
                         continue
 
                     case 'FENCE_END':
-                        self._next_str += token.value
+                        self._in_fence_region = False
                         self._text_list.append(self._next_str)
+                        self._language_list.append(self._current_language)
                         self._next_str = ""
+                        self._current_language = None
+                        continue
+
+                    case 'LANGUAGE':
+                        if self._parser_state and self._parser_state.language != ProgrammingLanguage.UNKNOWN:
+                            self._current_language = self._parser_state.language
+
                         continue
 
                 self._next_str += token.value
@@ -159,26 +177,31 @@ class MessageWidget(QFrame):
         except Exception:
             self._logger.exception("highlighting exception")
 
-    def _parse_content_sections(self, text: str) -> List[str]:
+    def _parse_content_sections(self, text: str) -> List[tuple]:
         """
-        Parse content into sections.
+        Parse content into sections with associated languages.
 
         Args:
             text: The message text content
 
         Returns:
-            List of section text strings
+            List of (section_text, language) tuples
         """
         lines = text.splitlines(keepends=True)
         self._next_str = ""
         self._text_list = []
+        self._language_list = []
         self._parser_state = None
+        self._in_fence_region = False
+        self._current_language = None
 
         for line in lines:
             self._parse_line(line)
 
+        # Handle any remaining text
         if self._next_str:
             self._text_list.append(self._next_str)
+            self._language_list.append(self._current_language)
 
         # Strip any leading and trailing blank lines from each block
         for i, text_block in enumerate(self._text_list):
@@ -186,16 +209,20 @@ class MessageWidget(QFrame):
             text_block = re.sub(r'(\n\s*)+$', '', text_block)
             self._text_list[i] = text_block
 
-        return self._text_list
+        # Create a list of section tuples with (text, language)
+        return list(zip(self._text_list, self._language_list))
 
-    def _create_section_widget(self) -> MessageSectionWidget:
+    def _create_section_widget(self, language: Optional[ProgrammingLanguage] = None) -> MessageSectionWidget:
         """
         Create a new section widget.
+
+        Args:
+            language: Optional programming language for the section
 
         Returns:
             A new MessageSectionWidget instance
         """
-        section = MessageSectionWidget(self._is_input, self._sections_container)
+        section = MessageSectionWidget(self._is_input, language, self._sections_container)
         section.selectionChanged.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
@@ -250,15 +277,15 @@ class MessageWidget(QFrame):
             self._sections = []
             self._section_with_selection = None
 
-        # Parse content into sections
+        # Parse content into sections with language information
         orig_num_sections = len(self._sections)
-        section_texts = self._parse_content_sections(text)
+        section_data = self._parse_content_sections(text)
 
         # Create or update sections
-        for i, section_text in enumerate(section_texts):
+        for i, (section_text, language) in enumerate(section_data):
             # Create new section if needed
             if i >= len(self._sections):
-                section = self._create_section_widget()
+                section = self._create_section_widget(language)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
 
@@ -267,7 +294,7 @@ class MessageWidget(QFrame):
                 self._sections[i].set_content(section_text)
 
         # Remove any extra sections
-        while len(self._sections) > len(section_texts):
+        while len(self._sections) > len(section_data):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
