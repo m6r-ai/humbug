@@ -1,10 +1,12 @@
 from datetime import datetime
+import logging
+import re
 from typing import List, Tuple, Dict, Optional
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
 )
-from PySide6.QtCore import Signal, Qt, QPoint
+from PySide6.QtCore import Signal, QPoint
 
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.conversation.message_section_widget import MessageSectionWidget
@@ -32,6 +34,8 @@ class MessageWidget(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
         self._is_input = is_input
+
+        self._logger = logging.getLogger("MessageWidget")
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -88,7 +92,6 @@ class MessageWidget(QFrame):
         self._handle_style_changed()
 
         self._parser_state: ConversationParserState = None
-        self._fence_depth = 0
         self._next_str: str = ""
         self._text_list = []
 
@@ -141,13 +144,11 @@ class MessageWidget(QFrame):
 
                 match token.type:
                     case 'FENCE_START':
-                        self._fence_depth += 1
                         self._text_list.append(self._next_str)
                         self._next_str = token.value
                         continue
 
                     case 'FENCE_END':
-                        self._fence_depth -= 1
                         self._next_str += token.value
                         self._text_list.append(self._next_str)
                         self._next_str = ""
@@ -161,9 +162,6 @@ class MessageWidget(QFrame):
     def _parse_content_sections(self, text: str) -> List[str]:
         """
         Parse content into sections.
-
-        This is a simple implementation that treats the entire content as one section.
-        Subclasses can override this to implement more complex section parsing.
 
         Args:
             text: The message text content
@@ -182,7 +180,12 @@ class MessageWidget(QFrame):
         if self._next_str:
             self._text_list.append(self._next_str)
 
-        print(f"list:\n{self._text_list}")
+        # Strip any leading and trailing blank lines from each block
+        for i, text_block in enumerate(self._text_list):
+            text_block = re.sub(r'^(\s*\n)+', '', text_block)
+            text_block = re.sub(r'(\n\s*)+$', '', text_block)
+            self._text_list[i] = text_block
+
         return self._text_list
 
     def _create_section_widget(self) -> MessageSectionWidget:
