@@ -138,7 +138,7 @@ class ConversationParser(Parser):
 
                 if lex_token.type == 'WHITESPACE':
                     peek_token = lexer.peek_next_token()
-                    if peek_token.type != 'FENCE' and parse_embedded:
+                    if (peek_token is None or peek_token.type != 'FENCE') and parse_embedded:
                         break
 
                     self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
