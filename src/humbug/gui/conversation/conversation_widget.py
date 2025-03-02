@@ -828,6 +828,7 @@ class ConversationWidget(QWidget):
         self._messages_container.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
             }}
         """)
         self._scroll_area.setStyleSheet(f"""

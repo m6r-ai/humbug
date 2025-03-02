@@ -24,7 +24,7 @@ class ConversationTextEdit(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
-        self.document().setDocumentMargin(1)
+        self.document().setDocumentMargin(0)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setFrameStyle(QFrame.NoFrame)

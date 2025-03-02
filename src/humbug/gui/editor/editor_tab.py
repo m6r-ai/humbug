@@ -198,7 +198,7 @@ class EditorTab(TabBase):
 
             # Restore content if specified
             if "content" in state.metadata:
-                tab._editor.setPlainText(state.metadata["content"])
+                tab._editor_widget.setPlainText(state.metadata["content"])
 
         # Restore cursor position if present
         if state.cursor_position:
@@ -206,10 +206,10 @@ class EditorTab(TabBase):
 
         # Restore scroll poisitions if present
         if state.horizontal_scroll:
-            tab._editor.horizontalScrollBar().setValue(state.horizontal_scroll)
+            tab._editor_widget.horizontalScrollBar().setValue(state.horizontal_scroll)
 
         if state.vertical_scroll:
-            tab._editor.verticalScrollBar().setValue(state.vertical_scroll)
+            tab._editor_widget.verticalScrollBar().setValue(state.vertical_scroll)
 
         return tab
 

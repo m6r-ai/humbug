@@ -1,6 +1,6 @@
 from typing import List, Tuple, Optional
 
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QTextEdit, QLabel
+from PySide6.QtWidgets import QVBoxLayout, QFrame, QTextEdit, QLabel
 from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat
 
@@ -12,7 +12,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
-class MessageSectionWidget(QWidget):
+class MessageSectionWidget(QFrame):
     """Widget for displaying a section of a message."""
 
     selectionChanged = Signal(bool)
@@ -29,19 +29,21 @@ class MessageSectionWidget(QWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
+        self.setFrameStyle(QFrame.Box | QFrame.Plain)
+
         self._layout = QVBoxLayout(self)
-        self._layout.setContentsMargins(0, 0, 0, 0)
-        self._layout.setSpacing(0)
         self.setLayout(self._layout)
+        self._layout.setSpacing(10)
+        self._layout.setContentsMargins(0, 0, 0, 0)
 
         # Create language header if needed
         self._language = language
         self._language_header = None
-        if language is not None and language != ProgrammingLanguage.UNKNOWN:
+        if language is not None:
+            self._layout.setContentsMargins(10, 10, 10, 10)
             self._language_header = QLabel(self._get_language_display_name(language))
             self._language_header.setAlignment(Qt.AlignLeft)
             self._layout.addWidget(self._language_header)
-            self._layout.setContentsMargins(8, 8, 8, 8)
 
         # Create text area
         self._text_area = ConversationTextEdit()
@@ -61,18 +63,18 @@ class MessageSectionWidget(QWidget):
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add conversation highlighter
-        print(f"language {language}")
         if language is None:
             self._highlighter = ConversationHighlighter(self._text_area.document())
             self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
         else:
             self._highlighter = ConversationLanguageHighlighter(self._text_area.document())
             self._highlighter.set_language(language)
-            print("has code block")
             self._text_area.set_has_code_block(True)
 
         self._mouse_left_button_pressed = False
+
         self._style_manager = StyleManager()
+        self._init_colour_mode = self._style_manager.color_mode
 
     def _get_language_display_name(self, language: ProgrammingLanguage) -> str:
         """
@@ -284,7 +286,7 @@ class MessageSectionWidget(QWidget):
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
                 border-radius: 0;
-                padding: 1px;
+                padding: 0;
                 margin: 0;
                 background-color: {background_color};
             }}
@@ -304,17 +306,31 @@ class MessageSectionWidget(QWidget):
             }}
         """)
 
+        # Style the frame
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: 8px;
+                border: 0;
+            }}
+        """)
+
         # Style the language header if present
         if self._language_header:
-            label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM)  # Use system color for language label
+            label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
             self._language_header.setFont(font)
             self._language_header.setStyleSheet(f"""
                 QLabel {{
                     font-weight: bold;
                     color: {label_color};
                     background-color: {background_color};
-                    padding: 2px 4px;
                     margin: 0;
-                    border-bottom: 1px solid {label_color};
+                    padding: 0;
                 }}
             """)
+
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode
+            self._highlighter.rehighlight()

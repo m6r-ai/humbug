@@ -46,13 +46,13 @@ class MessageWidget(QFrame):
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        self._layout.setSpacing(8)
-        self._layout.setContentsMargins(8, 8, 8, 8)
+        self._layout.setSpacing(10)
+        self._layout.setContentsMargins(10, 10, 10, 10)
 
         # Create header area with horizontal layout
         self._header = QWidget(self)
         self._header_layout = QHBoxLayout(self._header)
-        self._header_layout.setContentsMargins(1, 1, 1, 1)
+        self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(0)
 
         # Create role and timestamp labels
@@ -69,7 +69,7 @@ class MessageWidget(QFrame):
         self._sections_container = QWidget(self)
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
-        self._sections_layout.setSpacing(0)
+        self._sections_layout.setSpacing(15)
         self._layout.addWidget(self._sections_container)
 
         # Track sections
@@ -83,21 +83,19 @@ class MessageWidget(QFrame):
         # Add bookmark status
         self._is_bookmarked = False
 
+        self._parser_state: ConversationParserState = None
+        self._next_str: str = ""
+        self._text_list = []
+        self._language_list = [None]
+        self._in_fence_region = False
+        self._current_language = None
+
         # Track current message style
         self._current_style: MessageSource = None
 
         self._style_manager = StyleManager()
-        self._init_colour_mode = self._style_manager.color_mode
-
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
-
-        self._parser_state: ConversationParserState = None
-        self._next_str: str = ""
-        self._text_list = []
-        self._language_list = []
-        self._in_fence_region = False
-        self._current_language = None
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
@@ -383,19 +381,26 @@ class MessageWidget(QFrame):
             QWidget {{
                 border: none;
                 border-radius: 0;
-                padding: 1px;
+                padding: 0;
                 margin: 0;
                 background-color: {background_color};
             }}
         """)
 
         # Apply styling to all sections
-        for section in self._sections:
-            section.apply_style(text_color, background_color, font)
+        print(f"sections: {len(self._sections)}: {self._sections}")
+        print(f"sections: {len(self._language_list)}: {self._language_list}")
+        for i, section in enumerate(self._sections):
+            language = self._language_list[i]
+            color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language else background_color
+            section.apply_style(text_color, color, font)
 
         # Main frame styling
         border = ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else ColorRole.MESSAGE_BACKGROUND
         self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {background_color};
+            }}
             QFrame {{
                 background-color: {background_color};
                 margin: 0;
@@ -403,11 +408,6 @@ class MessageWidget(QFrame):
                 border: 2px solid {self._style_manager.get_color_str(border)}
             }}
         """)
-
-        # If we changed colour mode then re-highlight
-        if self._style_manager.color_mode != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode
-            # No need to call rehighlight directly, as it's handled by each section
 
     def find_text(self, text: str) -> List[Tuple[int, int]]:
         """

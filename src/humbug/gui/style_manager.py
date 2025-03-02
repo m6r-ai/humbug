@@ -103,7 +103,7 @@ class StyleManager(QObject):
 
             # Tab colours
             ColorRole.TAB_BACKGROUND_ACTIVE: {
-                ColorMode.DARK: "#242424",
+                ColorMode.DARK: "#1f1f1f",
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TAB_INACTIVE: {
@@ -111,12 +111,12 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#707070"
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
-                ColorMode.DARK: "#1c1c1c",
+                ColorMode.DARK: "#141414",
                 ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#242424",
-                ColorMode.LIGHT: "#f8f8f8"
+                ColorMode.DARK: "#242454",
+                ColorMode.LIGHT: "#c8c8f8"
             },
             ColorRole.TAB_BORDER_ACTIVE: {
                 ColorMode.DARK: "#8080ff",
@@ -169,7 +169,7 @@ class StyleManager(QObject):
 
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
-                ColorMode.DARK: "#1c1c1c",
+                ColorMode.DARK: "#101010",
                 ColorMode.LIGHT: "#e8e8e8"
             },
             ColorRole.MESSAGE_USER: {
@@ -187,6 +187,10 @@ class StyleManager(QObject):
             ColorRole.MESSAGE_SYSTEM: {
                 ColorMode.DARK: "#c08080",
                 ColorMode.LIGHT: "#a04040"
+            },
+            ColorRole.MESSAGE_LANGUAGE: {
+                ColorMode.DARK: "#d0a020",
+                ColorMode.LIGHT: "#a06010"
             },
             ColorRole.MESSAGE_BOOKMARK: {
                 ColorMode.DARK: "#ffdf00",

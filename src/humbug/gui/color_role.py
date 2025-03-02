@@ -48,6 +48,7 @@ class ColorRole(Enum):
     MESSAGE_AI = auto()                 # AI response background
     MESSAGE_REASONING = auto()          # AI reasoning background
     MESSAGE_SYSTEM = auto()             # System message background
+    MESSAGE_LANGUAGE = auto()           # Language heading background
     MESSAGE_BOOKMARK = auto()           # Bookmark highlight
 
     # Status bar elements
