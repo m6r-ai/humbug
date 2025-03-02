@@ -199,8 +199,8 @@ Context: Capabilities
                         - A header section containing the sender name ("You", "Assitant Reasoning", "Assistant Response",
                         or "System Message"), colour coded to show these in different colours based on the role.
                         - A content section.
-                        - 8px spacing between cards
-                        - 8px padding within the content area
+                        - 10px spacing between cards
+                        - 10px padding within the content area
                         - 8px rounded border around each card
 
                         The cards dynamically resize with the window:
@@ -241,6 +241,9 @@ Context: Capabilities
                             |  across multiple lines as needed.        |
                             +------------------------------------------+
                             ```
+
+                        Within the assistant response, or assistant reasoning, any code blocks will be shown
+                        as sub-blocks within the larger block to make it easy to extract them.
 
                     Context: History box navigation
                         In the history view, the user should be able to scroll vertically with the up and down

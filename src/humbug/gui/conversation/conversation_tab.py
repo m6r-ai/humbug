@@ -362,7 +362,7 @@ class ConversationTab(TabBase):
         """Handle style changes."""
         self.setStyleSheet(f"""
             QFrame {{
-                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border-top: 2px solid {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
         """)
 
