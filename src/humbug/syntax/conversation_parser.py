@@ -130,12 +130,23 @@ class ConversationParser(Parser):
                 if not lex_token:
                     break
 
-                if lex_token.type == 'WHITESPACE':
+                # If we've already processed something interesting on this line then run to the
+                # end of the line.
+                if seen_text:
                     self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
                     continue
 
-                if (not seen_text) and (lex_token.type == 'FENCE'):
-                    seen_text = True
+                if lex_token.type == 'WHITESPACE':
+                    peek_token = lexer.peek_next_token()
+                    if peek_token.type != 'FENCE' and parse_embedded:
+                        break
+
+                    self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                    continue
+
+                seen_text = True
+
+                if lex_token.type == 'FENCE':
                     if in_fence_block:
                         self._tokens.append(Token(type='FENCE_END', value='```', start=lex_token.start))
                         in_fence_block = False
@@ -155,18 +166,14 @@ class ConversationParser(Parser):
                         self._tokens.append(Token(type='NEWLINE', value='\n', start=(next_token.start + len(next_token.value))))
                         input_normalized = next_token.value.strip().lower()
                         language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
-                        continue
+                        break
 
                     self._tokens.append(Token(type='NEWLINE', value='\n', start=(lex_token.start + 3)))
                     language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
-                    continue
-
-                seen_text = True
-
-                if language != ProgrammingLanguage.UNKNOWN:
                     break
 
-                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                if parse_embedded:
+                    break
 
         parser_state = ConversationParserState()
         parser_state.in_fence_block = in_fence_block
