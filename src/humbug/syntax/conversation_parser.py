@@ -175,6 +175,8 @@ class ConversationParser(Parser):
                 if parse_embedded:
                     break
 
+                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+
         parser_state = ConversationParserState()
         parser_state.in_fence_block = in_fence_block
         parser_state.language = language
