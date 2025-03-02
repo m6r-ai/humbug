@@ -201,11 +201,18 @@ class MessageWidget(QFrame):
             self._text_list.append(self._next_str)
             self._language_list.append(self._current_language)
 
-        # Strip any leading and trailing blank lines from each block
+        # Strip any leading and trailing blank lines from each block.  Also strip blank blocks.
+        new_text_list = []
+        new_langugage_list = []
         for i, text_block in enumerate(self._text_list):
             text_block = re.sub(r'^(\s*\n)+', '', text_block)
             text_block = re.sub(r'(\n\s*)+$', '', text_block)
-            self._text_list[i] = text_block
+            if text_block:
+                new_text_list.append(text_block)
+                new_langugage_list.append(self._language_list[i])
+
+        self._text_list = new_text_list
+        self._language_list = new_langugage_list
 
         # Create a list of section tuples with (text, language)
         return list(zip(self._text_list, self._language_list))
@@ -388,8 +395,6 @@ class MessageWidget(QFrame):
         """)
 
         # Apply styling to all sections
-        print(f"sections: {len(self._sections)}: {self._sections}")
-        print(f"sections: {len(self._language_list)}: {self._language_list}")
         for i, section in enumerate(self._sections):
             language = self._language_list[i]
             color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language else background_color
