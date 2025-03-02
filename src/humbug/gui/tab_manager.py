@@ -949,6 +949,8 @@ class TabManager(QWidget):
         for column_index, tab_state in enumerate(saved_columns):
             self._restore_column_state(column_index, tab_state)
 
+        self.show_all_columns()
+
     def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
         """Restore state for a single column of tabs."""
         for state_dict in tab_states:
