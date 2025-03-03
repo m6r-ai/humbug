@@ -6,6 +6,7 @@ New features:
 
 - Messages containing embedded source files are now broken into sub-message components and
   they are displayed more cleanly.  This makes it much easier to work with the embedded code.
+- Added the ability to "copy" or "save-as" any embedded code in a conversation view.
 
 Internal structure changes:
 
