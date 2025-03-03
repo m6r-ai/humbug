@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 import re
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Optional
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
