@@ -361,8 +361,9 @@ class ConversationTab(TabBase):
     def _handle_style_changed(self):
         """Handle style changes."""
         self.setStyleSheet(f"""
-            QFrame {{
-                border-top: 2px solid {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
             }}
         """)
 
