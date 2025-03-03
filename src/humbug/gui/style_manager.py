@@ -623,19 +623,21 @@ class StyleManager(QObject):
             ''')
 
             write_icon(f'save-{suffix}.svg', f'''
-                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{color}" stroke-width="4" fill="none"
-                        d="M12,12 L12,52 L52,52 L52,20 L44,12 L12,12 Z"/>
-                    <rect x="20" y="12" width="24" height="16" stroke="{color}" stroke-width="4" fill="none"/>
-                    <rect x="20" y="36" width="24" height="12" stroke="{color}" stroke-width="4" fill="none"/>
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M8,40, L8,56 L56,56 L56,40"/>
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M32,8, L32,40"/>
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M20,28, L32,40, L44,28"/>
                 </svg>
             ''')
 
             write_icon(f'copy-{suffix}.svg', f'''
-                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="22" y="10" width="32" height="32" stroke="{color}" stroke-width="4" fill="none"/>
-                    <path stroke="{color}" stroke-width="4" fill="none"
-                        d="M10,22 L10,54 L42,54 L42,42"/>
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="22" y="10" width="32" height="32" stroke="{color}" stroke-width="6" fill="none"/>
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M22,22, L10,22 L10,54 L42,54 L42,42"/>
                 </svg>
             ''')
 
