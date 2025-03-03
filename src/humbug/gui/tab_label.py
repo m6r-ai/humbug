@@ -201,7 +201,7 @@ class TabLabel(QWidget):
 
         style_manager = StyleManager()
         if visible:
-            base_color = (ColorRole.TAB_BACKGROUND_ACTIVE if self._is_current
+            base_color = (ColorRole.TAB_BACKGROUND_ACTIVE if self._is_current and not self._is_hovered
                         else ColorRole.TAB_BACKGROUND_HOVER)
             style = f"""
                 QToolButton {{
