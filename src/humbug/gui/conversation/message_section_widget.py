@@ -3,11 +3,11 @@ from typing import List, Tuple, Optional
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
-    QPushButton, QFileDialog, QWidget
+    QToolButton, QFileDialog, QWidget
 )
-from PySide6.QtCore import Signal, Qt, QPoint
+from PySide6.QtCore import Signal, Qt, QPoint, QSize
 from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon
 )
 
 from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
@@ -71,14 +71,14 @@ class MessageSectionWidget(QFrame):
             # Add stretch to push buttons to the right
             self._header_layout.addStretch()
 
-            # Add Copy button
-            self._copy_button = QPushButton("Copy")
+            # Add Copy button with icon
+            self._copy_button = QToolButton()
             self._copy_button.setToolTip("Copy all content")
             self._copy_button.clicked.connect(self._copy_all_content)
             self._header_layout.addWidget(self._copy_button)
 
-            # Add Save As button
-            self._save_as_button = QPushButton("Save As")
+            # Add Save As button with icon
+            self._save_as_button = QToolButton()
             self._save_as_button.setToolTip("Save content to a file")
             self._save_as_button.clicked.connect(self._save_as)
             self._header_layout.addWidget(self._save_as_button)
@@ -468,28 +468,35 @@ class MessageSectionWidget(QFrame):
                 }}
             """)
 
-        # Style the buttons if present
         button_style = f"""
-            QPushButton {{
+            QToolButton {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                padding: 2px 8px;
+                padding: 4px;
             }}
-            QPushButton:hover {{
+            QToolButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
-            QPushButton:pressed {{
+            QToolButton:pressed {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
         """
 
         if self._copy_button:
-            self._copy_button.setFont(font)
+            icon_size = QSize(16 * self._style_manager.zoom_factor, 16 * self._style_manager.zoom_factor)
+            self._copy_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("copy"), 16
+            )))
+            self._copy_button.setIconSize(icon_size)
             self._copy_button.setStyleSheet(button_style)
 
         if self._save_as_button:
-            self._save_as_button.setFont(font)
+            icon_size = QSize(16 * self._style_manager.zoom_factor, 16 * self._style_manager.zoom_factor)
+            self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("save"), 16
+            )))
+            self._save_as_button.setIconSize(icon_size)
             self._save_as_button.setStyleSheet(button_style)
 
         # If we changed colour mode then re-highlight
