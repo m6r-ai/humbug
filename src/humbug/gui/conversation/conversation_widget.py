@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple, Any, Set
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal
+from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal, QEvent, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.ai.ai_backend import AIBackend
@@ -47,6 +47,24 @@ class BookmarkData:
         self.scroll_position = scroll_position
 
 
+class ConversationWidgetEventFilter(QObject):
+    """Event filter to track activation events from child widgets."""
+
+    widget_activated = Signal()
+
+    def __init__(self, parent=None):
+        """Initialize the event filter."""
+        super().__init__(parent)
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        """Filter events to detect widget activation."""
+        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
+            self.widget_activated.emit()
+            return False  # Don't consume the event
+
+        return super().eventFilter(obj, event)
+
+
 class ConversationWidget(QWidget):
     """Widget for displaying conversation with message history and input."""
 
@@ -61,6 +79,8 @@ class ConversationWidget(QWidget):
 
     # Signal to request scrolling to a specific widget and position
     scrollRequested = Signal(QWidget, int)  # Widget to scroll to, position within widget
+
+    activated = Signal()  # Emits when parent should be activated by user interaction
 
     def __init__(
         self,
@@ -191,6 +211,10 @@ class ConversationWidget(QWidget):
         self._current_match_index = -1
         self._last_search = ""
         self._highlighted_widgets: Set[MessageWidget] = set()
+
+        # Set up activation tracking
+        self._event_filter = ConversationWidgetEventFilter(self)
+        self._event_filter.widget_activated.connect(self.activated)
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
@@ -325,6 +349,19 @@ class ConversationWidget(QWidget):
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
+    def _install_activation_tracking(self, widget: QWidget) -> None:
+        """
+        Install event filter on widget and all its children recursively.
+
+        Call this for any new widgets added to the conversation widget.
+
+        Args:
+            widget: Widget to track for activation events
+        """
+        widget.installEventFilter(self._event_filter)
+        for child in widget.findChildren(QWidget):
+            child.installEventFilter(self._event_filter)
+
     def _add_message(self, message: Message) -> None:
         """
         Add a message to history with appropriate styling.
@@ -344,6 +381,8 @@ class ConversationWidget(QWidget):
         # Add widget before input
         self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
         self._messages.append(msg_widget)
+
+        self._install_activation_tracking(msg_widget)
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True

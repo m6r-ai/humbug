@@ -83,6 +83,7 @@ class ConversationTab(TabBase):
 
         # Install activation tracking
         self._install_activation_tracking(self._conversation_widget)
+        self._conversation_widget.activated.connect(self.activated)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
