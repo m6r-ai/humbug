@@ -37,10 +37,12 @@ class ConversationParserState(ParserState):
 
     Attributes:
         in_fence_block: Indicates if we're currently in a code fence block
+        fence_depth: Indentation of the current fence block (if we are in one)
         language: The current programming language being parsed
         embedded_parser_state: State of the embedded language parser
     """
     in_fence_block: bool = False
+    fence_depth: int = 0
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState = None
 
@@ -108,11 +110,13 @@ class ConversationParser(Parser):
             delegating code blocks to appropriate language parsers.
         """
         in_fence_block = False
+        fence_depth = 0
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
         parsing_continuation = False
         if prev_parser_state:
             in_fence_block = prev_parser_state.in_fence_block
+            fence_depth = prev_parser_state.fence_depth
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
             parsing_continuation = prev_parser_state.parsing_continuation
@@ -150,12 +154,14 @@ class ConversationParser(Parser):
                     if in_fence_block:
                         self._tokens.append(Token(type='FENCE_END', value='```', start=lex_token.start))
                         in_fence_block = False
+                        fence_depth = 0
                         language = ProgrammingLanguage.UNKNOWN
                         embedded_parser_state = None
                         parse_embedded = False
                         continue
 
                     in_fence_block = True
+                    fence_depth = lex_token.start
                     embedded_parser_state = None
                     self._tokens.append(Token(type='FENCE_START', value='```', start=lex_token.start))
 
@@ -179,8 +185,17 @@ class ConversationParser(Parser):
 
         parser_state = ConversationParserState()
         parser_state.in_fence_block = in_fence_block
+        parser_state.fence_depth = fence_depth
         parser_state.language = language
         if parse_embedded:
+            if input_str.startswith(' ' * fence_depth):
+                input_str = input_str[fence_depth:]
+            else:
+                if input_str.strip():
+                    input_str = ""
+                else:
+                    self._tokens.append(Token(type='ERROR', value='[Invalid indent]', start=0))
+
             new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
             parser_state.embedded_parser_state = new_embedded_parser_state
             if new_embedded_parser_state:
