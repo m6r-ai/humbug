@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Optional
 
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal, QObject, QEvent
