@@ -342,7 +342,7 @@ class TerminalTab(TabBase):
 
         # Only restore process/display state if this is ephemeral (temp) state
         if state.metadata and state.metadata.get('is_ephemeral'):
-            tab._terminal.restore_from_metadata(state.metadata)
+            tab._terminal_widget.restore_from_metadata(state.metadata)
 
             # If we have a source tab, transfer the process
             if 'source_tab' in state.metadata:
