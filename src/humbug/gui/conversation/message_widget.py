@@ -414,7 +414,7 @@ class MessageWidget(QFrame):
             }}
         """)
 
-    def find_text(self, text: str) -> List[Tuple[int, int]]:
+    def find_text(self, text: str) -> List[Tuple[int, int, MessageSectionWidget]]:
         """
         Find all instances of text in this message.
 
@@ -422,18 +422,21 @@ class MessageWidget(QFrame):
             text: Text to search for
 
         Returns:
-            List of (start_position, end_position) tuples for each match
+            List of (start_position, end_position, section) tuples for each match
         """
         all_matches = []
-        for section in self._sections:
+        for i, section in enumerate(self._sections):
             section_matches = section.find_text(text)
             if section_matches:
-                all_matches.extend(section_matches)
+                # Include the section with each match
+                for match in section_matches:
+                    all_matches.append((i, match[0], match[1]))
+
         return all_matches
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int]],
+        matches: List[Tuple[int, int, int]],
         current_match_index: int = -1,
         highlight_color=None,
         dim_highlight_color=None
@@ -442,7 +445,7 @@ class MessageWidget(QFrame):
         Highlight matches in this message.
 
         Args:
-            matches: List of (start, end) tuples to highlight
+            matches: List of (section, start_position, end_position) tuples to highlight
             current_match_index: Index of current match to highlight differently, or -1 for none
             highlight_color: QColor for current match, defaults to system highlight color
             dim_highlight_color: QColor for other matches, defaults to dimmer highlight color
@@ -450,30 +453,32 @@ class MessageWidget(QFrame):
         # First clear all highlights
         self.clear_highlights()
 
-        # Group matches by section
-        section_matches: Dict[MessageSectionWidget, List[Tuple[int, int, int]]] = {}
-        match_index = 0
+        if not matches:
+            return
 
-        for _section_idx, section in enumerate(self._sections):
+        # Group matches by section
+        section_matches = {}
+        for section in self._sections:
             section_matches[section] = []
 
-            # Find matches in this section
-            for match in section.find_text(matches[0][0] if matches else ""):
-                # Store match with global index
-                section_matches[section].append((match[0], match[1], match_index))
-                match_index += 1
+        # Distribute matches to their respective sections
+        for i, match in enumerate(matches):
+            section_num, start, end = match
+            section = self._sections[section_num]
+            if section in section_matches:
+                section_matches[section].append((start, end, i))
 
         # Highlight matches in each section
-        for section, matches_with_index in section_matches.items():
-            if not matches_with_index:
+        for section, section_matches_list in section_matches.items():
+            if not section_matches_list:
                 continue
 
-            # Extract just the position info
-            positions = [(start, end) for start, end, _ in matches_with_index]
+            # Extract position tuples (without the index)
+            positions = [(start, end) for start, end, _ in section_matches_list]
 
             # Find if current match is in this section
             section_current_idx = -1
-            for i, (_, _, idx) in enumerate(matches_with_index):
+            for i, (_, _, idx) in enumerate(section_matches_list):
                 if idx == current_match_index:
                     section_current_idx = i
                     break
@@ -491,22 +496,21 @@ class MessageWidget(QFrame):
         for section in self._sections:
             section.clear_highlights()
 
-    def select_and_scroll_to_position(self, position: int) -> QPoint:
+    def select_and_scroll_to_position(self, section_num: int, position: int) -> QPoint:
         """
         Select text and scroll to a specific position.
 
         Args:
+            section_num: Section number to scroll to
             position: Text position to scroll to
 
         Returns:
             QPoint: The global position of the visible cursor (for scrolling in parent)
         """
-        # Find which section contains this position
-        for section in self._sections:
-            # Try to select in this section
-            result = section.select_and_scroll_to_position(position)
-            if result:
-                return result
+        section = self._sections[section_num]
+        result = section.select_and_scroll_to_position(position)
+        if result:
+            return result
 
         # If we get here, position wasn't found
         return QPoint(0, 0)

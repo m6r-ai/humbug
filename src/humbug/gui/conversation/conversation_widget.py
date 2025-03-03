@@ -186,7 +186,7 @@ class ConversationWidget(QWidget):
         self._handle_style_changed()
 
         # Find functionality (integrated from ConversationFind)
-        self._matches: List[Tuple[MessageWidget, List[Tuple[int, int]]]] = []  # List of (widget, [(start, end)])
+        self._matches: List[Tuple[MessageWidget, List[Tuple[int, int, int]]]] = []  # List of (widget, [(section, start, end)])
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
@@ -447,16 +447,17 @@ class ConversationWidget(QWidget):
             50
         )
 
-    def handle_find_scroll(self, widget: QWidget, position: int) -> None:
+    def handle_find_scroll(self, widget: QWidget, section_num: int, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
         Args:
             widget: Widget to scroll to
-            position: Text position within the widget
+            section_num: Section number within the widget
+            position: Text position within the section
         """
         # Ask the widget to select and get the position to scroll to
-        global_pos = widget.select_and_scroll_to_position(position)
+        global_pos = widget.select_and_scroll_to_position(section_num, position)
 
         # Use ensureVisible for consistent scrolling behavior
         self._scroll_area.ensureVisible(
@@ -1232,6 +1233,9 @@ class ConversationWidget(QWidget):
         """Update the highlighting of all matches."""
         self._clear_highlights()
 
+        if not self._matches:
+            return
+
         # Get colors from style manager
         highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND)
         dim_highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
@@ -1239,10 +1243,15 @@ class ConversationWidget(QWidget):
         # Highlight matches in each widget
         for widget_idx, (widget, matches) in enumerate(self._matches):
             # Set current_match_index to highlight the current match
-            current_match_index = self._current_match_index if widget_idx == self._current_widget_index else -1
+            current_match_idx = self._current_match_index if widget_idx == self._current_widget_index else -1
 
             # Highlight matches in this widget
-            widget.highlight_matches(matches, current_match_index, highlight_color, dim_highlight_color)
+            widget.highlight_matches(
+                matches,
+                current_match_idx,
+                highlight_color,
+                dim_highlight_color
+            )
 
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
@@ -1253,10 +1262,10 @@ class ConversationWidget(QWidget):
             return
 
         widget, matches = self._matches[self._current_widget_index]
-        start, _ = matches[self._current_match_index]
+        section_num, start, _ = matches[self._current_match_index]
 
         # Trigger scrolling to this position
-        self.handle_find_scroll(widget, start)
+        self.handle_find_scroll(widget, section_num, start)
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
