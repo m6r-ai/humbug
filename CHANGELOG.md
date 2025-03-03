@@ -4,6 +4,9 @@
 
 New features:
 
+- Messages containing embedded source files are now broken into sub-message components and
+  they are displayed more cleanly.  This makes it much easier to work with the embedded code.
+
 Internal structure changes:
 
 - Reworked AI backends to have a cleaner code structure and follow more systematic naming

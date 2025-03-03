@@ -1,8 +1,14 @@
+import logging
 from typing import List, Tuple, Optional
 
-from PySide6.QtWidgets import QVBoxLayout, QFrame, QTextEdit, QLabel
+from PySide6.QtWidgets import (
+    QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
+    QPushButton, QFileDialog, QWidget
+)
 from PySide6.QtCore import Signal, Qt, QPoint
-from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat
+from PySide6.QtGui import (
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat
+)
 
 from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.gui.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
@@ -10,6 +16,8 @@ from humbug.gui.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.gui.message_box import MessageBox, MessageBoxType
+from humbug.language.language_manager import LanguageManager
 
 
 class MessageSectionWidget(QFrame):
@@ -31,6 +39,9 @@ class MessageSectionWidget(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
 
+        self._logger = logging.getLogger("MessageSectionWidget")
+        self._language_manager = LanguageManager()
+
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
         self._layout.setSpacing(10)
@@ -39,11 +50,41 @@ class MessageSectionWidget(QFrame):
         # Create language header if needed
         self._language = language
         self._language_header = None
+        self._header_container = None
+        self._copy_button = None
+        self._save_as_button = None
+
         if language is not None:
             self._layout.setContentsMargins(10, 10, 10, 10)
+
+            # Create a container for header (language label + buttons)
+            self._header_container = QWidget()
+            self._header_layout = QHBoxLayout(self._header_container)
+            self._header_layout.setContentsMargins(0, 0, 0, 0)
+            self._header_layout.setSpacing(5)
+
+            # Add language label on the left
             self._language_header = QLabel(self._get_language_display_name(language))
             self._language_header.setAlignment(Qt.AlignLeft)
-            self._layout.addWidget(self._language_header)
+            self._header_layout.addWidget(self._language_header)
+
+            # Add stretch to push buttons to the right
+            self._header_layout.addStretch()
+
+            # Add Copy button
+            self._copy_button = QPushButton("Copy")
+            self._copy_button.setToolTip("Copy all content")
+            self._copy_button.clicked.connect(self._copy_all_content)
+            self._header_layout.addWidget(self._copy_button)
+
+            # Add Save As button
+            self._save_as_button = QPushButton("Save As")
+            self._save_as_button.setToolTip("Save content to a file")
+            self._save_as_button.clicked.connect(self._save_as)
+            self._header_layout.addWidget(self._save_as_button)
+
+            # Add header container to main layout
+            self._layout.addWidget(self._header_container)
 
         # Create text area
         self._text_area = ConversationTextEdit()
@@ -134,6 +175,93 @@ class MessageSectionWidget(QFrame):
 
         # Ensure proper scroll behavior
         self.updateGeometry()
+
+    def _copy_all_content(self):
+        """Copy all content in the text area to clipboard."""
+        # Store current selection
+        old_cursor = self._text_area.textCursor()
+
+        # Select all text
+        cursor = QTextCursor(self._text_area.document())
+        cursor.select(QTextCursor.Document)
+        self._text_area.setTextCursor(cursor)
+
+        # Copy to clipboard
+        self._text_area.copy()
+
+        # Restore previous selection
+        self._text_area.setTextCursor(old_cursor)
+
+    def _save_as(self):
+        """Show save as dialog and save file."""
+        strings = self._language_manager.strings
+
+        # Determine the suggested file extension based on language
+        extension = self._get_file_extension(self._language)
+        default_filename = f"code{extension}" if extension else "code.txt"
+
+        # Show file dialog
+        export_dialog = QFileDialog()
+        export_dialog.setWindowTitle(strings.file_dialog_save_file)
+        export_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        export_dialog.selectFile(default_filename)
+
+        if export_dialog.exec_() != QFileDialog.Accepted:
+            return False
+
+        filename = export_dialog.selectedFiles()[0]
+
+        # Save the file
+        try:
+            content = self._text_area.toPlainText()
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            return True
+        except Exception as e:
+            self._logger.error("Failed to save file: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                strings.could_not_save.format(filename, str(e))
+            )
+            return False
+
+    def _get_file_extension(self, language: Optional[ProgrammingLanguage]) -> str:
+        """
+        Get the file extension for a programming language.
+
+        Args:
+            language: The programming language
+
+        Returns:
+            The file extension with leading dot, or empty string if unknown
+        """
+        if language is None:
+            return ""
+
+        language_extensions = {
+            ProgrammingLanguage.C: ".c",
+            ProgrammingLanguage.CPP: ".cpp",
+            ProgrammingLanguage.CSS: ".css",
+            ProgrammingLanguage.GO: ".go",
+            ProgrammingLanguage.HTML: ".html",
+            ProgrammingLanguage.JAVA: ".java",
+            ProgrammingLanguage.JAVASCRIPT: ".js",
+            ProgrammingLanguage.JSON: ".json",
+            ProgrammingLanguage.KOTLIN: ".kt",
+            ProgrammingLanguage.METAPHOR: ".m6r",
+            ProgrammingLanguage.MOVE: ".move",
+            ProgrammingLanguage.PYTHON: ".py",
+            ProgrammingLanguage.RUST: ".rs",
+            ProgrammingLanguage.SCHEME: ".scm",
+            ProgrammingLanguage.SWIFT: ".swift",
+            ProgrammingLanguage.TYPESCRIPT: ".ts",
+            ProgrammingLanguage.TEXT: ".txt"
+        }
+
+        return language_extensions.get(language, ".txt")
 
     def set_content(self, text: str):
         """
@@ -316,6 +444,16 @@ class MessageSectionWidget(QFrame):
             }}
         """)
 
+        # Style the language header container if present
+        if self._header_container:
+            self._header_container.setStyleSheet(f"""
+                QWidget {{
+                    background-color: {background_color};
+                    margin: 0;
+                    padding: 0;
+                }}
+            """)
+
         # Style the language header if present
         if self._language_header:
             label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
@@ -329,6 +467,30 @@ class MessageSectionWidget(QFrame):
                     padding: 0;
                 }}
             """)
+
+        # Style the buttons if present
+        button_style = f"""
+            QPushButton {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 2px 8px;
+            }}
+            QPushButton:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QPushButton:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+        """
+
+        if self._copy_button:
+            self._copy_button.setFont(font)
+            self._copy_button.setStyleSheet(button_style)
+
+        if self._save_as_button:
+            self._save_as_button.setFont(font)
+            self._save_as_button.setStyleSheet(button_style)
 
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode != self._init_colour_mode:
