@@ -76,6 +76,12 @@ class MessageWidget(QFrame):
         self._sections: List[MessageSectionWidget] = []
         self._section_with_selection: Optional[MessageSectionWidget] = None
 
+        # If this is an input widget then create the input section
+        if is_input:
+            section = self._create_section_widget()
+            self._sections.append(section)
+            self._sections_layout.addWidget(section)
+
         # Add bookmark status
         self._is_bookmarked = False
 
@@ -390,6 +396,7 @@ class MessageWidget(QFrame):
         """)
 
         # Apply styling to all sections
+        print(f"message widget {self}, {len(self._sections)}")
         for i, section in enumerate(self._sections):
             language = self._language_list[i]
             color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
