@@ -189,5 +189,9 @@ def get_arabic_strings() -> LanguageStrings:
         rename_error_exists="يوجد ملف بهذا الاسم بالفعل.",
         rename_error_generic="تعذر إعادة تسمية الملف: ",
         file_creation_error_title="خطأ في إنشاء الملف",
-        file_creation_error="تعذر إنشاء الملف: "
+        file_creation_error="تعذر إنشاء الملف: ",
+
+        # Tool tips
+        tooltip_copy_contents="نسخ جميع المحتويات",
+        tooltip_save_contents="حفظ المحتويات إلى ملف"
     )

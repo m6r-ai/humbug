@@ -76,10 +76,6 @@ class MessageWidget(QFrame):
         self._sections: List[MessageSectionWidget] = []
         self._section_with_selection: Optional[MessageSectionWidget] = None
 
-        section = self._create_section_widget()
-        self._sections.append(section)
-        self._sections_layout.addWidget(section)
-
         # Add bookmark status
         self._is_bookmarked = False
 
@@ -268,8 +264,7 @@ class MessageWidget(QFrame):
         self._message_timestamp = timestamp
 
         # Check if style changed - if so, we need to recreate all sections
-        style_changed = style != self._current_style
-        if style_changed:
+        if style != self._current_style:
             # Update header text with proper role
             self._update_role_text()
             self._current_style = style

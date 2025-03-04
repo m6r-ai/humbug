@@ -24,9 +24,14 @@ class ConversationInputWidget(MessageWidget):
         self._is_streaming = False
         super().__init__(parent, is_input=True)
 
+        # Create our input section
+        section = self._create_section_widget()
+        self._sections.append(section)
+        self._sections_layout.addWidget(section)
+
         # Connect text cursor signals
-        self._sections[0]._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
-        self._sections[0]._text_area.pageScrollRequested.connect(self.pageScrollRequested)
+        section._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
+        section._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)

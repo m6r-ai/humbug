@@ -185,3 +185,7 @@ class LanguageStrings:
     rename_error_generic: str
     file_creation_error_title: str
     file_creation_error: str
+
+    # Tool tips
+    tooltip_copy_contents: str
+    tooltip_save_contents: str

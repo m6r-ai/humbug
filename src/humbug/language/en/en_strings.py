@@ -189,5 +189,9 @@ def get_english_strings() -> LanguageStrings:
         rename_error_exists="A file with this name already exists.",
         rename_error_generic="Could not rename file: ",
         file_creation_error_title="File Creation Error",
-        file_creation_error="Could not create file: "
+        file_creation_error="Could not create file: ",
+
+        # Tool tips
+        tooltip_copy_contents="Copy all contents",
+        tooltip_save_contents="Save contents to a file"
     )

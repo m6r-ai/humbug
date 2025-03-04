@@ -41,6 +41,7 @@ class MessageSectionWidget(QFrame):
 
         self._logger = logging.getLogger("MessageSectionWidget")
         self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
 
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
@@ -73,13 +74,11 @@ class MessageSectionWidget(QFrame):
 
             # Add Copy button with icon
             self._copy_button = QToolButton()
-            self._copy_button.setToolTip("Copy all content")
             self._copy_button.clicked.connect(self._copy_all_content)
             self._header_layout.addWidget(self._copy_button)
 
             # Add Save As button with icon
             self._save_as_button = QToolButton()
-            self._save_as_button.setToolTip("Save content to a file")
             self._save_as_button.clicked.connect(self._save_as)
             self._header_layout.addWidget(self._save_as_button)
 
@@ -116,6 +115,18 @@ class MessageSectionWidget(QFrame):
 
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode
+
+        self._handle_language_changed()
+
+    def _handle_language_changed(self) -> None:
+        """Update text when language changes."""
+        strings = self._language_manager.strings
+
+        if self._copy_button:
+            self._copy_button.setToolTip(strings.tooltip_copy_contents)
+
+        if self._save_as_button:
+            self._save_as_button.setToolTip(strings.tooltip_save_contents)
 
     def _get_language_display_name(self, language: ProgrammingLanguage) -> str:
         """
