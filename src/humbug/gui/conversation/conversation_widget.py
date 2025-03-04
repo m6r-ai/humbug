@@ -113,10 +113,7 @@ class ConversationWidget(QWidget):
         self._current_bookmark_index: Optional[int] = None
 
         # Create transcript handler with provided filename
-        self._transcript_handler = TranscriptHandler(
-            path,
-            timestamp
-        )
+        self._transcript_handler = TranscriptHandler(path, timestamp)
 
         self._mindspace_manager = MindspaceManager()
 
