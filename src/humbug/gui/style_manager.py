@@ -411,7 +411,8 @@ class StyleManager(QObject):
             "STRING": ColorRole.SYNTAX_STRING,
             "TEXT": ColorRole.SYNTAX_TEXT,
             "TYPE": ColorRole.SYNTAX_TYPE,
-            "WHITESPACE": ColorRole.SYNTAX_TEXT
+            "WHITESPACE": ColorRole.SYNTAX_TEXT,
+            "XML_DOC": ColorRole.SYNTAX_COMMENT
         }
 
         for token_type, role in colour_mapping.items():

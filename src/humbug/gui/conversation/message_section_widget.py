@@ -141,6 +141,7 @@ class MessageSectionWidget(QFrame):
         language_display_names = {
             ProgrammingLanguage.C: "C",
             ProgrammingLanguage.CPP: "C++",
+            ProgrammingLanguage.CSHARP: "CS",
             ProgrammingLanguage.CSS: "CSS",
             ProgrammingLanguage.GO: "Go",
             ProgrammingLanguage.HTML: "HTML",
@@ -256,6 +257,7 @@ class MessageSectionWidget(QFrame):
             ProgrammingLanguage.C: ".c",
             ProgrammingLanguage.CPP: ".cpp",
             ProgrammingLanguage.CSS: ".css",
+            ProgrammingLanguage.CSHARP: ".cs",
             ProgrammingLanguage.GO: ".go",
             ProgrammingLanguage.HTML: ".html",
             ProgrammingLanguage.JAVA: ".java",

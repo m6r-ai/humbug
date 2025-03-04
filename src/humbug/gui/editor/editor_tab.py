@@ -30,6 +30,7 @@ LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
     '.cc': ProgrammingLanguage.CPP,
     '.conv': ProgrammingLanguage.JSON,
     '.cpp': ProgrammingLanguage.CPP,
+    '.cs': ProgrammingLanguage.CSHARP,
     '.css': ProgrammingLanguage.CSS,
     '.cxx': ProgrammingLanguage.CPP,
     '.go': ProgrammingLanguage.GO,
@@ -407,10 +408,11 @@ class EditorTab(TabBase):
 
         # Get language name from enum
         language_names = {
-            ProgrammingLanguage.TEXT: "Text",
             ProgrammingLanguage.C: "C",
             ProgrammingLanguage.CPP: "C++",
+            ProgrammingLanguage.CSHARP: "C#",
             ProgrammingLanguage.CSS: "CSS",
+            ProgrammingLanguage.GO: "Go",
             ProgrammingLanguage.HTML: "HTML",
             ProgrammingLanguage.JAVA: "Java",
             ProgrammingLanguage.JAVASCRIPT: "JavaScript",
@@ -419,7 +421,10 @@ class EditorTab(TabBase):
             ProgrammingLanguage.METAPHOR: "Metaphor",
             ProgrammingLanguage.MOVE: "Move",
             ProgrammingLanguage.PYTHON: "Python",
+            ProgrammingLanguage.RUST: "Rust",
             ProgrammingLanguage.SCHEME: "Scheme",
+            ProgrammingLanguage.SWIFT: "Swift",
+            ProgrammingLanguage.TEXT: "Text",
             ProgrammingLanguage.TYPESCRIPT: "TypeScript"
         }
         file_type = language_names.get(self._current_programming_language, "Text")

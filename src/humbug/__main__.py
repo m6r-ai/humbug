@@ -15,6 +15,7 @@ from humbug.gui.main_window import MainWindow
 # Import parsers to ensure we register them
 from humbug.syntax.c.c_parser import CParser  # noqa: F401
 from humbug.syntax.cpp.cpp_parser import CppParser  # noqa: F401
+from humbug.syntax.csharp.csharp_parser import CSharpParser  # noqa: F401
 from humbug.syntax.css.css_parser import CSSParser  # noqa: F401
 from humbug.syntax.go.go_parser import GoParser  # noqa: F401
 from humbug.syntax.html.html_parser import HTMLParser  # noqa: F401

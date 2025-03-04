@@ -13,6 +13,8 @@ LANGUAGE_MAPPING = {
     "c": ProgrammingLanguage.C,
     "c++": ProgrammingLanguage.CPP,
     "cpp": ProgrammingLanguage.CPP,
+    "cs": ProgrammingLanguage.CSHARP,
+    "csharp": ProgrammingLanguage.CSHARP,
     "css": ProgrammingLanguage.CSS,
     "go": ProgrammingLanguage.GO,
     "html": ProgrammingLanguage.HTML,
