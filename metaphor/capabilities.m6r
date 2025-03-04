@@ -246,16 +246,16 @@ Context: Capabilities
                             +------------------------------------------+
                             ```
 
-                        Within the assistant response, or assistant reasoning, any code blocks will be shown
-                        as sub-blocks within the larger block to make it easy to extract them.
+                            Within the assistant response, or assistant reasoning, any code blocks will be shown
+                            as sub-blocks within the larger block to make it easy to extract them.
 
-                        Context: Code blocks
-                            Embedded within the messages can be code blocks.  These have a distinct visual
-                            style that differentiates them from other parts of the AI response.  Where the
-                            language is known then their sub-header shows this.  They also have icons, marked
-                            here as "c" and "s" that implement "copy" and "save-as".  These capture the
-                            contents of the code block and either copy them to the clipboard, or else invoked
-                            as save-as dialog to allow the contents to be saved as a file.
+                            Context: Code blocks
+                                Embedded within the messages can be code blocks.  These have a distinct visual
+                                style that differentiates them from other parts of the AI response.  Where the
+                                language is known then their sub-header shows this.  They also have icons, marked
+                                here as "c" and "s" that implement "copy" and "save-as".  These capture the
+                                contents of the code block and either copy them to the clipboard, or else invoked
+                                as save-as dialog to allow the contents to be saved as a file.
 
                     Context: History box navigation
                         In the history view, the user should be able to scroll vertically with the up and down
