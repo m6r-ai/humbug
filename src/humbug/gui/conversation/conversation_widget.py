@@ -128,7 +128,6 @@ class ConversationWidget(QWidget):
         # Initialize tracking variables
         self._auto_scroll = True
         self._last_scroll_maximum = 0
-        self._last_insertion_point = 0
 
         # Create layout
         conversation_layout = QVBoxLayout(self)
@@ -326,15 +325,18 @@ class ConversationWidget(QWidget):
     def _on_scroll_range_changed(self, _minimum, _maximum):
         """Handle the scroll range changing."""
         # If we're set to auto-scroll then do so now
-        if self._auto_scroll:
-            self._scroll_to_bottom()
+        total_height = self._messages_container.height()
+        input_height = self._input.height()
+        last_insertion_point = total_height - input_height - 2 * self._messages_layout.spacing()
 
         current_pos = self._scroll_area.verticalScrollBar().value()
 
         # Work out what we're supposed to do about scrolling.
         vbar_maximum = self._scroll_area.verticalScrollBar().maximum()
 
-        if current_pos > self._last_insertion_point:
+        if self._auto_scroll:
+            self._scroll_to_bottom()
+        elif current_pos > last_insertion_point:
             if self._last_scroll_maximum != vbar_maximum:
                 max_diff = vbar_maximum - self._last_scroll_maximum
                 self._scroll_area.verticalScrollBar().setValue(current_pos + max_diff)
@@ -597,13 +599,6 @@ class ConversationWidget(QWidget):
                 self._add_message(message)
                 self._current_ai_message = message
             else:
-                # Store current scroll position before appending.  If this insertion triggers a change
-                # in scrolling state then we'll get a signal and will adjust the scrollbar state based
-                # on this.
-                total_height = self._messages_container.height()
-                input_height = self._input.height()
-                self._last_insertion_point = total_height - input_height - 2 * self._messages_layout.spacing()
-
                 # Update our message
                 self._messages[-1].set_content(content, MessageSource.AI, self._current_ai_message.timestamp)
 
@@ -642,13 +637,6 @@ class ConversationWidget(QWidget):
                 self._add_message(message)
                 self._current_reasoning_message = message
             else:
-                # Store current scroll position before appending.  If this insertion triggers a change
-                # in scrolling state then we'll get a signal and will adjust the scrollbar state based
-                # on this.
-                total_height = self._messages_container.height()
-                input_height = self._input.height()
-                self._last_insertion_point = total_height - input_height - 2 * self._messages_layout.spacing()
-
                 # Update our message
                 self._messages[-1].set_content(reasoning, MessageSource.REASONING, self._current_reasoning_message.timestamp)
 
