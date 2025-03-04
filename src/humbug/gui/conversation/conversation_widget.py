@@ -485,7 +485,7 @@ class ConversationWidget(QWidget):
             50
         )
 
-    def handle_find_scroll(self, widget: QWidget, section_num: int, position: int) -> None:
+    def handle_find_scroll(self, widget: MessageWidget, section_num: int, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
@@ -494,15 +494,22 @@ class ConversationWidget(QWidget):
             section_num: Section number within the widget
             position: Text position within the section
         """
-        # Ask the widget to select and get the position to scroll to
-        global_pos = widget.select_and_scroll_to_position(section_num, position)
+        # Get position relative to the message widget
+        pos_in_message = widget.select_and_scroll_to_position(section_num, position)
+        if pos_in_message == QPoint(0, 0) and section_num > 0:
+            # Handle case where position wasn't found
+            return
 
-        # Use ensureVisible for consistent scrolling behavior
+        # Map position from message widget to the scroll area's coordinate system
+        # This is safe because we know the relationship between these widgets
+        pos_in_scroll_area = widget.mapTo(self._scroll_area.widget(), pos_in_message)
+
+        # Ensure the point is visible in the scroll area
         self._scroll_area.ensureVisible(
-            global_pos.x(),  # x
-            global_pos.y(),  # y
-            0,  # xmargin
-            50  # ymargin - provide some context around the match
+            pos_in_scroll_area.x(),  # x
+            pos_in_scroll_area.y(),  # y
+            10,  # xmargin
+            50   # ymargin - provide some context around the match
         )
 
     def set_input_text(self, text: str):

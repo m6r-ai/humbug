@@ -499,19 +499,21 @@ class MessageWidget(QFrame):
 
     def select_and_scroll_to_position(self, section_num: int, position: int) -> QPoint:
         """
-        Select text and scroll to a specific position.
+        Select text and get position for scrolling.
 
         Args:
             section_num: Section number to scroll to
             position: Text position to scroll to
 
         Returns:
-            QPoint: The global position of the visible cursor (for scrolling in parent)
+            QPoint: Position to scroll to, relative to this widget
         """
-        section = self._sections[section_num]
-        result = section.select_and_scroll_to_position(position)
-        if result:
-            return result
+        if 0 <= section_num < len(self._sections):
+            section = self._sections[section_num]
+            # Get position relative to the section
+            pos_in_section = section.select_and_scroll_to_position(position)
 
-        # If we get here, position wasn't found
+            # Map from section to this widget's coordinates
+            return section.mapTo(self, pos_in_section)
+
         return QPoint(0, 0)

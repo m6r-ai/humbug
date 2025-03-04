@@ -394,23 +394,25 @@ class MessageSectionWidget(QFrame):
 
     def select_and_scroll_to_position(self, position: int) -> QPoint:
         """
-        Select text and scroll to a specific position.
+        Select text at a specific position and return the cursor position relative to this widget.
 
         Args:
             position: Text position to scroll to
 
         Returns:
-            QPoint: The global position of the visible cursor (for scrolling in parent)
+            QPoint: Position of the cursor relative to this widget
         """
         cursor = QTextCursor(self._text_area.document())
         cursor.setPosition(position)
         self._text_area.setTextCursor(cursor)
 
-        # Get cursor rectangle and convert to global position for parent scrolling
+        # Get cursor rectangle in text area coordinates
         cursor_rect = self._text_area.cursorRect(cursor)
-        local_pos = cursor_rect.topLeft()
-        # TODO: This next part is very brittle and should be revised!
-        return self._text_area.mapTo(self.parentWidget().parentWidget().parentWidget(), local_pos)
+
+        # Convert to position relative to this widget
+        local_pos = self._text_area.mapTo(self, cursor_rect.topLeft())
+
+        return local_pos
 
     def apply_style(self, text_color: str, background_color: str, font):
         """
