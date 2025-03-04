@@ -7,6 +7,7 @@ New features:
 - Messages containing embedded source files are now broken into sub-message components and
   they are displayed more cleanly.  This makes it much easier to work with the embedded code.
 - Added the ability to "copy" or "save-as" any embedded code in a conversation view.
+- Added C# syntax highlighting.
 
 Internal structure changes:
 
@@ -19,6 +20,7 @@ Internal structure changes:
 Bug fixes:
 
 - Added elipsis to the Python syntax highlighting engine.
+- Go, Rust, and Swift were not correctly identified in editor tab status bars.
 
 ## v0.6 (2025-02-27)
 
