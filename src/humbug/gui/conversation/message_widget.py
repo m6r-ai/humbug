@@ -396,7 +396,6 @@ class MessageWidget(QFrame):
         """)
 
         # Apply styling to all sections
-        print(f"message widget {self}, {len(self._sections)}")
         for i, section in enumerate(self._sections):
             language = self._language_list[i]
             color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
