@@ -1170,17 +1170,6 @@ class ConversationWidget(QWidget):
 
         return ""
 
-    def get_searchable_widgets(self):
-        """
-        Get list of widgets that can be searched.
-
-        Returns:
-            List of MessageWidget instances including input widget
-        """
-        return self._messages + [self._input]
-
-    # Integrated find functionality from ConversationFind
-
     def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
         """
         Find all instances of text and highlight them.
@@ -1193,7 +1182,7 @@ class ConversationWidget(QWidget):
             Tuple of (current_match, total_matches)
         """
         # Get searchable widgets
-        widgets = self.get_searchable_widgets()
+        widgets = self._messages + [self._input]
 
         # Clear existing highlights if search text changed
         if text != self._last_search:
