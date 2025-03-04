@@ -46,7 +46,7 @@ In 0.7 we've:
     - Handles reasoning outputs for models that support them.
     - Error handling and retry mechanisms for API requests.
 - **File Editing:**
-    - Syntax highlighting for various languages and file formats.  Currently supported: C, C++, CSS, Go, HTML, Java,
+    - Syntax highlighting for various languages and file formats.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
       JavaScript, JSON, Kotlin, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
     - Auto-backup functionality for unsaved changes.
 - **Command Line Shell:**

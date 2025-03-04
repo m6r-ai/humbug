@@ -451,6 +451,7 @@ Context: Capabilities
 
                     - C
                     - C++
+                    - C#
                     - CSS
                     - Go
                     - HTML
