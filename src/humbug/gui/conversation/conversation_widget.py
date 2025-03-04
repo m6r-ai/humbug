@@ -499,7 +499,7 @@ class ConversationWidget(QWidget):
 
         # Use ensureVisible for consistent scrolling behavior
         self._scroll_area.ensureVisible(
-            0,  # x
+            global_pos.x(),  # x
             global_pos.y(),  # y
             0,  # xmargin
             50  # ymargin - provide some context around the match
@@ -1196,7 +1196,6 @@ class ConversationWidget(QWidget):
         if not self._matches and text:
             for widget in widgets:
                 widget_matches = widget.find_text(text)
-
                 if widget_matches:
                     self._matches.append((widget, widget_matches))
 

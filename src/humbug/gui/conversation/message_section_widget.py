@@ -141,7 +141,7 @@ class MessageSectionWidget(QFrame):
         language_display_names = {
             ProgrammingLanguage.C: "C",
             ProgrammingLanguage.CPP: "C++",
-            ProgrammingLanguage.CSHARP: "CS",
+            ProgrammingLanguage.CSHARP: "C#",
             ProgrammingLanguage.CSS: "CSS",
             ProgrammingLanguage.GO: "Go",
             ProgrammingLanguage.HTML: "HTML",
@@ -409,7 +409,8 @@ class MessageSectionWidget(QFrame):
         # Get cursor rectangle and convert to global position for parent scrolling
         cursor_rect = self._text_area.cursorRect(cursor)
         local_pos = cursor_rect.topLeft()
-        return self._text_area.mapTo(self.parentWidget().parentWidget(), local_pos)
+        # TODO: This next part is very brittle and should be revised!
+        return self._text_area.mapTo(self.parentWidget().parentWidget().parentWidget(), local_pos)
 
     def apply_style(self, text_color: str, background_color: str, font):
         """
