@@ -23,8 +23,7 @@ class MistralBackend(AIBackend):
         data = {
             "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
-            "stream": True,
-            "stream_options": {"include_usage": True}
+            "stream": True
         }
 
         # Only include temperature if supported by model
