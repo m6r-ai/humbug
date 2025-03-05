@@ -7,6 +7,7 @@ from humbug.ai.anthropic.anthropic_backend import AnthropicBackend
 from humbug.ai.deepseek.deepseek_backend import DeepseekBackend
 from humbug.ai.google.google_backend import GoogleBackend
 from humbug.ai.m6r.m6r_backend import M6RBackend
+from humbug.ai.mistral.mistral_backend import MistralBackend
 from humbug.ai.ollama.ollama_backend import OllamaBackend
 from humbug.ai.openai.openai_backend import OpenAIBackend
 
@@ -20,6 +21,7 @@ class AIProvider:
         deepseek_key: Optional[str] = None,
         google_key: Optional[str] = None,
         m6r_key: Optional[str] = None,
+        mistral_key: Optional[str] = None,
         openai_key: Optional[str] = None
     ) -> Dict[str, AIBackend]:
         """Create AI backends based on available API keys.
@@ -46,6 +48,9 @@ class AIProvider:
 
         if m6r_key:
             backends["m6r"] = M6RBackend(m6r_key)
+
+        if mistral_key:
+            backends["mistral"] = MistralBackend(mistral_key)
 
         if openai_key:
             backends["openai"] = OpenAIBackend(openai_key)

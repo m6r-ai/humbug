@@ -55,6 +55,7 @@ def get_api_keys() -> dict[str, str | None]:
         "DEEPSEEK_API_KEY": os.environ.get("DEEPSEEK_API_KEY"),
         "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
         "M6R_API_KEY": os.environ.get("M6R_API_KEY"),
+        "MISTRAL_API_KEY": os.environ.get("MISTRAL_API_KEY"),
         "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY")
     }
 
@@ -78,6 +79,7 @@ def get_api_keys() -> dict[str, str | None]:
                     "DEEPSEEK_API_KEY": "",
                     "GOOGLE_API_KEY": "",
                     "M6R_API_KEY": "",
+                    "MISTRAL_API_KEY": "",
                     "OPENAI_API_KEY": ""
                 }, f, indent=4)
             os.chmod(config_file, 0o600)
@@ -150,10 +152,11 @@ def main():
     deepseek_key = api_keys["DEEPSEEK_API_KEY"]
     google_key = api_keys["GOOGLE_API_KEY"]
     m6r_key = api_keys["M6R_API_KEY"]
+    mistral_key = api_keys["MISTRAL_API_KEY"]
     openai_key = api_keys["OPENAI_API_KEY"]
 
     # Initialize components
-    ai_backends = AIProvider.create_backends(anthropic_key, deepseek_key, google_key, m6r_key, openai_key)
+    ai_backends = AIProvider.create_backends(anthropic_key, deepseek_key, google_key, m6r_key, mistral_key, openai_key)
     if not ai_backends:
         print("Error: No AI backends could be initialized")
         return 1

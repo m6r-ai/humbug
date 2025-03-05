@@ -210,6 +210,82 @@ Context: Implementation
             }
             ```
 
+        Context: Mistral REST endpoint
+            Messages are sent via a POST message.
+
+            The API to use is the "continuations" API.  The endpoint is "https://api.mistral.ai/v1/chat/completions".
+
+            This needs two headers to be provided:
+
+            "Content-Type": "application/json"
+            "Authorization": {key}"
+
+            {key} must be replaced with the API key found in the environment variable `MISTRAL_API_KEY`.
+
+            The data for the POST is of this form:
+
+            ```json
+            {
+                "model": "selected-model",
+                "messages": [{"role": "user", "content": "Say this is a test!"}],
+                "temperature": temp-setting,
+                "stream": true,
+                "stream_options": {"include_usage": true}
+            }
+            ```
+
+            In this, "selected-model" is name of the selected AI model, and "temp-setting" is the numeric temperature
+            setting defined by the user.
+
+            The "content" section of a message should be replaced with the user's message to the AI.
+            With streaming enabled, responses will arrive as chunks. Each chunk begins with "data: " followed
+            by a JSON object. This repeats until a chunk containing "data: [DONE]" arrives.  Each JSON chunk
+            takes this form:
+
+            ```json
+            {
+                "id": "chatcmpl-abc123",
+                "object": "chat.completion.chunk",
+                "created": 1677858242,
+                "model": "gpt-4o-mini",
+                "choices": [
+                    {
+                        "delta": {
+                            "content": "chunk of text"
+                        },
+                        "finish_reason": null,
+                        "index": 0
+                    }
+                ]
+            }
+            ```
+
+            The final chunk includes usage information:
+
+            ```json
+            {
+                "id": "chatcmpl-abc123",
+                "object": "chat.completion.chunk",
+                "created": 1677858242,
+                "model": "gpt-4o-mini",
+                "usage": {
+                    "prompt_tokens": 13,
+                    "completion_tokens": 7,
+                    "total_tokens": 20
+                },
+                "choices": [
+                    {
+                        "delta": {},
+                        "finish_reason": "stop",
+                        "index": 0
+                    }
+                ]
+            }
+            ```
+
+            In this message, the content is what should be captured as the AI response, but capture the usage information
+            in the JSON transcript.
+
         Context: Ollama REST endpoint
             Messages are sent via a POST message.
 

@@ -98,6 +98,16 @@ class AIConversationSettings:
             reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
 
+        # Mistral models
+        "codestral-latest": AIModel(
+            name="codestral-latest",
+            provider="mistral",
+            context_window=262144,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+
         # Ollama models
         "llama3.2": AIModel(
             name="llama3.2",
