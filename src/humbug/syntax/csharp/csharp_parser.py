@@ -18,11 +18,13 @@ class CSharpParserState(ParserState):
         in_generic: Indicates if we're currently parsing generic type parameters
         generic_depth: Tracks nested depth of generic type parameters
         in_linq: Indicates if we're currently parsing a LINQ expression
+        in_using: Indicates if we're currently parsing a using directive
     """
     in_element: bool = False
     in_generic: bool = False
     generic_depth: int = 0
     in_linq: bool = False
+    in_using: bool = False
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.CSHARP)
@@ -57,6 +59,7 @@ class CSharpParser(Parser):
         generic_depth = 0
         in_linq = False
         in_attribute = False
+        in_using = False
         prev_lexer_state = None
 
         if prev_parser_state:
@@ -64,6 +67,7 @@ class CSharpParser(Parser):
             in_generic = prev_parser_state.in_generic
             generic_depth = prev_parser_state.generic_depth
             in_linq = prev_parser_state.in_linq
+            in_using = prev_parser_state.in_using
             prev_lexer_state = prev_parser_state.lexer_state
 
         lexer = CSharpLexer()
@@ -73,6 +77,12 @@ class CSharpParser(Parser):
             token = lexer.get_next_token()
             if not token:
                 break
+
+            # Check for using directive
+            if token.type == 'KEYWORD' and token.value == 'using':
+                in_using = True
+                self._tokens.append(token)
+                continue
 
             # Check for LINQ query expression keywords
             if token.type == 'KEYWORD' and token.value in self._get_linq_keywords():
@@ -135,20 +145,26 @@ class CSharpParser(Parser):
                     continue
 
                 elif operator_value == '.':
-                    # Property or field access
-                    in_element = True
+                    # Property or field access (but not in using directives)
+                    if not in_using:
+                        in_element = True
                     self._tokens.append(token)
                     continue
 
                 elif operator_value == '?.':
                     # Null-conditional operator for property/field access
-                    in_element = True
+                    if not in_using:
+                        in_element = True
                     self._tokens.append(token)
                     continue
 
                 # Reset element access flag for most operators
                 if operator_value not in ('.', '?.'):
                     in_element = False
+
+                # Check for semicolon which ends using directive
+                if operator_value == ';':
+                    in_using = False
 
                 self._tokens.append(token)
                 continue
@@ -201,8 +217,8 @@ class CSharpParser(Parser):
                         ))
                         continue
 
-                # Check if this is a property or field access
-                if in_element:
+                # Check if this is a property or field access, but not in a using directive
+                if in_element and not in_using:
                     self._tokens.append(Token(
                         type='ELEMENT',
                         value=token.value,
@@ -234,6 +250,7 @@ class CSharpParser(Parser):
         parser_state.in_generic = in_generic
         parser_state.generic_depth = generic_depth
         parser_state.in_linq = in_linq
+        parser_state.in_using = in_using
         return parser_state
 
     def _get_last_non_whitespace_token(self) -> Optional[Token]:
