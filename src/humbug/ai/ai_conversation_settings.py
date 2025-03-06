@@ -151,8 +151,16 @@ class AIConversationSettings:
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         ),
-        "o1-preview": AIModel(
-            name="o1-preview",
+        "o1": AIModel(
+            name="o1",
+            provider="openai",
+            context_window=200000,
+            max_output_tokens=100000,
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
+        ),
+        "o3-mini": AIModel(
+            name="o3-mini",
             provider="openai",
             context_window=200000,
             max_output_tokens=100000,
