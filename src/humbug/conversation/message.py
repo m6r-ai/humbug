@@ -5,8 +5,8 @@ from datetime import datetime
 from typing import Dict, Optional
 import uuid
 
+from humbug.ai.ai_usage import AIUsage
 from humbug.conversation.message_source import MessageSource
-from humbug.conversation.usage import Usage
 
 
 @dataclass
@@ -16,7 +16,7 @@ class Message:
     source: MessageSource
     content: str
     timestamp: datetime
-    usage: Optional[Usage] = None
+    usage: Optional[AIUsage] = None
     error: Optional[Dict] = None
     model: Optional[str] = None
     temperature: Optional[float] = None
@@ -36,7 +36,7 @@ class Message:
         cls,
         source: MessageSource,
         content: str,
-        usage: Optional[Usage] = None,
+        usage: Optional[AIUsage] = None,
         error: Optional[Dict] = None,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
@@ -115,7 +115,7 @@ class Message:
         if data.get("usage"):
             try:
                 usage_data = data["usage"]
-                usage = Usage(
+                usage = AIUsage(
                     prompt_tokens=usage_data["prompt_tokens"],
                     completion_tokens=usage_data["completion_tokens"],
                     total_tokens=usage_data["total_tokens"]

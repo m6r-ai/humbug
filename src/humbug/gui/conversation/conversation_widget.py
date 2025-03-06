@@ -15,10 +15,10 @@ from PySide6.QtGui import QCursor, QResizeEvent
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_response import AIError
 from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.ai_usage import AIUsage
 from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
-from humbug.conversation.usage import Usage
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_input_widget import ConversationInputWidget
 from humbug.gui.conversation.message_widget import MessageWidget
@@ -525,7 +525,7 @@ class ConversationWidget(QWidget):
         self,
         reasoning: str,
         content: str,
-        usage: Optional[Usage] = None,
+        usage: Optional[AIUsage] = None,
         error: Optional[AIError] = None
     ):
         """Update the current AI response in the conversation."""

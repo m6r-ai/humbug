@@ -2,9 +2,9 @@
 
 from typing import Dict, List, Optional
 
+from humbug.ai.ai_usage import AIUsage
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
-from humbug.conversation.usage import Usage
 
 class ConversationHistory:
     """Manages the conversation history and state."""
@@ -23,7 +23,7 @@ class ConversationHistory:
         self,
         message_id: str,
         content: str,
-        usage: Optional[Usage] = None,
+        usage: Optional[AIUsage] = None,
         completed: bool = None
     ) -> Optional[Message]:
         """Update an existing message and return the updated message."""
