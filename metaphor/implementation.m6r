@@ -229,8 +229,7 @@ Context: Implementation
                 "model": "selected-model",
                 "messages": [{"role": "user", "content": "Say this is a test!"}],
                 "temperature": temp-setting,
-                "stream": true,
-                "stream_options": {"include_usage": true}
+                "stream": true
             }
             ```
 
@@ -243,11 +242,11 @@ Context: Implementation
             takes this form:
 
             ```json
-            {
+            {ß
                 "id": "chatcmpl-abc123",
                 "object": "chat.completion.chunk",
                 "created": 1677858242,
-                "model": "gpt-4o-mini",
+                "model": "codestral-latest",
                 "choices": [
                     {
                         "delta": {
@@ -267,7 +266,7 @@ Context: Implementation
                 "id": "chatcmpl-abc123",
                 "object": "chat.completion.chunk",
                 "created": 1677858242,
-                "model": "gpt-4o-mini",
+                "model": "codestral-latest",
                 "usage": {
                     "prompt_tokens": 13,
                     "completion_tokens": 7,
