@@ -23,6 +23,7 @@ class MistralBackend(AIBackend):
         data = {
             "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
+            "max_tokens": settings.max_output_tokens,
             "stream": True
         }
 

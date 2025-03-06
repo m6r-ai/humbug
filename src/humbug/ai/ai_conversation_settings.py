@@ -103,7 +103,7 @@ class AIConversationSettings:
             name="codestral-latest",
             provider="mistral",
             context_window=262144,
-            max_output_tokens=8192,
+            max_output_tokens=65536,  # This is an arbitrary number - Mistral don't publish this
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
