@@ -1448,6 +1448,7 @@ Context: Capabilities
             - Deepseek models: "deepseek-chat", "deepseek-reasoner"
             - Google models: "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"
             - M6R models: "tessa"
+            - Mistral models: "codestral-latest", "mistral-large-latest", "mistral-small-latest"
             - Ollama models: "llama3.2", "phi4"
             - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1", "o3-mini"
 
@@ -1473,6 +1474,9 @@ Context: Capabilities
         - gemini-1.5-pro: Supports temperature 0.0-1.0
         - gemini-2.0-flash-exp: Supports temperature 0.0-1.0
         - tessa: No temperature setting
+        - codestral-latest: Supports temperature 0.0-1.0
+        - mistral-large-latest: Supports temperature 0.0-1.0
+        - mistral-small-latest: Supports temperature 0.0-1.0
         - llama3.2: Supports temperature 0.0-1.0
         - phi4: Supports temperature 0.0-1.0
         - gpt-4o-mini: Supports temperature 0.0-1.0
