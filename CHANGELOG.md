@@ -18,6 +18,7 @@ Internal structure changes:
 - Reworked the conversation, editor, and terminal find functionality to place it within the
   matching widget classes.  This avoids creating complex logic to hide the internals of
   these widget classes and sets a future template.
+- Optimized core lexing for syntax highlighting, making Python highlighting about 20% faster.
 
 Bug fixes:
 
