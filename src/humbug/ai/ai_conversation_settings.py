@@ -182,6 +182,14 @@ class AIConversationSettings:
             max_output_tokens=100000,
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
+        ),
+        "gpt-4.5-preview": AIModel(
+            name="gpt-4.5-preview",
+            provider="openai",
+            context_window=128000,
+            max_output_tokens=16384,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
         )
     }
 
