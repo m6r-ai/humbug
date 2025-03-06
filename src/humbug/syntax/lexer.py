@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Callable, Optional
+from typing import List, Callable, Optional, Set, ClassVar
 
 
 @dataclass
@@ -18,8 +18,31 @@ class LexerState:
 
 
 class Lexer(ABC):
+    """
+    Base lexer class with optimized implementation.
+
+    Key optimizations:
+    - Character lookup via sets instead of range comparisons
+    - Common character classification pre-computation
+    - Static lookup tables shared across instances
+    - Optimized token handling
+    """
+
+    # Character lookup tables - shared by all subclasses
+    _WHITESPACE_CHARS: ClassVar[Set[str]] = set(" \t\r\v\f\n\u00A0\u1680\u2028\u2029\u202F\u205F\u3000")
+    _LETTER_CHARS: ClassVar[Set[str]] = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    _LETTER_DIGIT_CHARS: ClassVar[Set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    _DIGIT_CHARS: ClassVar[Set[str]] = set("0123456789")
+    _HEX_CHARS: ClassVar[Set[str]] = set("0123456789abcdefABCDEF")
+    _BINARY_CHARS: ClassVar[Set[str]] = set("01")
+    _OCTAL_CHARS: ClassVar[Set[str]] = set("01234567")
+
+    # Add the Unicode whitespace range \u2000-\u200A
+    for i in range(0x2000, 0x200B):
+        _WHITESPACE_CHARS.add(chr(i))
+
     def __init__(self):
-        self._input: str = None
+        self._input: str = ""
         self._position: int = 0
         self._tokens: List[Token] = []
         self._next_token: int = 0
@@ -29,41 +52,66 @@ class Lexer(ABC):
         """
         Get the lexing function that matches a given start character.
 
-        :param ch: The start character
-        :return: The lexing function
+        Args:
+            ch: The start character
+
+        Returns:
+            The appropriate lexing function for the character
         """
 
     @abstractmethod
     def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
         """
         Parse the input string
+
+        Args:
+            prev_lexer_state: The previous lexer state, if any
+            input_str: The input string to lex
+
+        Returns:
+            The updated lexer state
         """
 
     def _inner_lex(self) -> None:
         """
         Lex all the tokens in the input.
         """
-        while self._position < len(self._input):
+        input_len = len(self._input)
+        while self._position < input_len:
             ch = self._input[self._position]
             fn = self._get_lexing_function(ch)
             fn()
 
-    def get_next_token(self, filter_list: List=None) -> Optional[Token]:
+    def get_next_token(self, filter_list: List = None) -> Optional[Token]:
         """
         Gets the next token from the input that does not have a type found in the filter list.
 
-        :return: The next Token available or None if there are no tokens left.
+        Args:
+            filter_list: Optional list of token types to skip
+
+        Returns:
+            The next Token available or None if there are no tokens left.
         """
-        while True:
+        # Fast path when no filtering needed
+        if not filter_list:
             if self._next_token >= len(self._tokens):
                 return None
 
             token = self._tokens[self._next_token]
             self._next_token += 1
-            if (not filter_list) or (token.type not in filter_list):
+            return token
+
+        # Path with filtering
+        tokens_len = len(self._tokens)
+        while self._next_token < tokens_len:
+            token = self._tokens[self._next_token]
+            self._next_token += 1
+            if token.type not in filter_list:
                 return token
 
-    def peek_next_token(self, filter_list: List=None, offset: int=0) -> Optional[Token]:
+        return None
+
+    def peek_next_token(self, filter_list: List = None, offset: int = 0) -> Optional[Token]:
         """
         Get the token that is 'offset' positions ahead, skipping filtered tokens.
 
@@ -91,17 +139,20 @@ class Lexer(ABC):
         """
         Reads a string token.
         """
-        quote: str = self._input[self._position]
+        quote = self._input[self._position]
         start = self._position
         self._position += 1
+        input_len = len(self._input)
 
-        while self._position < len(self._input) and self._input[self._position] != quote:
-            if self._input[self._position] == '\\' and (self._position + 1) < len(self._input):
+        while self._position < input_len and self._input[self._position] != quote:
+            if self._input[self._position] == '\\' and (self._position + 1) < input_len:
                 self._position += 1  # Skip the escape character
 
             self._position += 1
 
-        self._position += 1  # Skip the closing quote
+        if self._position < input_len:  # Skip the closing quote if found
+            self._position += 1
+
         string_value = self._input[start:self._position]
         self._tokens.append(Token(type='STRING', value=string_value, start=start))
 
@@ -119,80 +170,54 @@ class Lexer(ABC):
         """
         start = self._position
         self._position += 1
-        while self._position < len(self._input) and self._is_whitespace(self._input[self._position]):
+        input_len = len(self._input)
+
+        # Fast path using set-based character classification
+        while self._position < input_len and self._input[self._position] in self._WHITESPACE_CHARS and self._input[self._position] != '\n':
             self._position += 1
 
         whitespace_value = self._input[start:self._position]
         self._tokens.append(Token(type='WHITESPACE', value=whitespace_value, start=start))
 
-    # Helper Methods
-
     def _is_letter(self, ch: str) -> bool:
         """
         Determines if a character is a letter.
-
-        :param ch: The character to check.
-        :return: True if the character is a letter, False otherwise.
         """
-        return ('a' <= ch <= 'z') or ('A' <= ch <= 'Z')
-
+        return ch in self._LETTER_CHARS
     def _is_octal_digit(self, ch: str) -> bool:
         """
         Determines if a character is an octal digit.
-
-        :param ch: The character to check.
-        :return: True if the character is an octal digit, False otherwise.
         """
-        return '0' <= ch <= '7'
+        return ch in self._OCTAL_CHARS
+
 
     def _is_binary_digit(self, ch: str) -> bool:
         """
         Determines if a character is a binary digit.
-
-        :param ch: The character to check.
-        :return: True if the character is a binary digit, False otherwise.
         """
-        return ch in ('0', '1')
+        return ch in self._BINARY_CHARS
 
     def _is_digit(self, ch: str) -> bool:
         """
         Determines if a character is a digit.
-
-        :param ch: The character to check.
-        :return: True if the character is a digit, False otherwise.
         """
-        return '0' <= ch <= '9'
+        return ch in self._DIGIT_CHARS
 
     def _is_hex_digit(self, ch: str) -> bool:
         """
         Determines if a character is a hexadecimal digit.
-
-        :param ch: The character to check.
-        :return: True if the character is a hexadecimal digit, False otherwise.
         """
-        return self._is_digit(ch) or ('a' <= ch <= 'f') or ('A' <= ch <= 'F')
+        return ch in self._HEX_CHARS
 
     def _is_letter_or_digit(self, ch: str) -> bool:
         """
         Determines if a character is a letter or digit.
-
-        :param ch: The character to check.
-        :return: True if the character is a letter or digit, False otherwise.
         """
-        return self._is_letter(ch) or self._is_digit(ch)
+        return ch in self._LETTER_DIGIT_CHARS
 
     def _is_whitespace(self, ch: str) -> bool:
         """
         Determines if a character is a non-newline whitespace.
-
-        :param ch: The character to check.
-        :return: True if the character is a non-newline whitespace character, False otherwise.
         """
-        whitespace_chars = {
-            ' ', '\t', '\n', '\r', '\v', '\f',
-            '\u00A0', '\u1680',
-            # Range \u2000 to \u200A
-            *(chr(c) for c in range(0x2000, 0x200B)),
-            '\u2028', '\u2029', '\u202F', '\u205F', '\u3000'
-        }
-        return ch in whitespace_chars
+        return ch in self._WHITESPACE_CHARS and ch != '\n'
+
