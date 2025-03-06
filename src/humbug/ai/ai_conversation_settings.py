@@ -107,6 +107,22 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
+        "mistral-large-latest": AIModel(
+            name="mistral-large-latest",
+            provider="mistral",
+            context_window=131072,
+            max_output_tokens=65536,  # This is an arbitrary number - Mistral don't publish this
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "mistral-small-latest": AIModel(
+            name="mistral-small-latest",
+            provider="mistral",
+            context_window=32768,
+            max_output_tokens=32768,  # This is an arbitrary number - Mistral don't publish this
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
 
         # Ollama models
         "llama3.2": AIModel(
