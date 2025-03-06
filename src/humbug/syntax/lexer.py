@@ -220,4 +220,3 @@ class Lexer(ABC):
         Determines if a character is a non-newline whitespace.
         """
         return ch in self._WHITESPACE_CHARS and ch != '\n'
-
