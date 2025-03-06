@@ -41,7 +41,7 @@ In 0.7 we've:
 - **AI Interaction:**
     - Real-time streaming of AI responses.
     - Configurable AI model settings per conversation.
-    - Supports Anthropic, DeepSeek, Google, Ollama, and OpenAI models (Ollama currently assumes local installs only).
+    - Supports Anthropic, DeepSeek, Google, Mistral, Ollama, and OpenAI models (Ollama currently assumes local installs only).
     - Configurable temperature settings for supported models.
     - Handles reasoning outputs for models that support them.
     - Error handling and retry mechanisms for API requests.

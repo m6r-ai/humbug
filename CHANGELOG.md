@@ -8,6 +8,8 @@ New features:
   they are displayed more cleanly.  This makes it much easier to work with the embedded code.
 - Added the ability to "copy" or "save-as" any embedded code in a conversation view.
 - Added C# syntax highlighting.
+- Added support for Mistral AIs: codestral-latest, mistral-large-latest, and mistral-small-latest.
+- Remove OpenAI o1-preview but added o1, o3-mini, and gpt-4.5-preview.
 
 Internal structure changes:
 
