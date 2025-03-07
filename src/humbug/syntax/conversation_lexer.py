@@ -19,9 +19,6 @@ class ConversationLexer(Lexer):
         :param ch: The start character
         :return: The lexing function
         """
-        if ch == '\n':
-            return self._read_newline
-
         if self._is_whitespace(ch):
             return self._read_whitespace
 
@@ -30,6 +27,9 @@ class ConversationLexer(Lexer):
 
         if self._is_letter_or_digit(ch):
             return self._read_text
+
+        if ch == '\n':
+            return self._read_newline
 
         return self._read_symbol
 

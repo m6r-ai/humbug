@@ -59,26 +59,26 @@ class PythonLexer(Lexer):
         Returns:
             The appropriate lexing function for the character
         """
-        if ch == '\n':
-            return self._read_newline
+        if self._is_letter(ch) or ch == '_':
+            return self._read_identifier_or_keyword
 
         if self._is_whitespace(ch):
             return self._read_whitespace
 
-        if self._is_letter(ch) or ch == '_':
-            return self._read_identifier_or_keyword
-
         if self._is_digit(ch):
             return self._read_number
-
-        if ch in ('"', "'"):
-            return self._read_quote
 
         if ch == '.':
             return self._read_dot
 
+        if ch in ('"', "'"):
+            return self._read_quote
+
         if ch == '#':
             return self._read_comment
+
+        if ch == '\n':
+            return self._read_newline
 
         return self._read_operator
 
