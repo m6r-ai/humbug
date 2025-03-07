@@ -92,7 +92,7 @@ class ConversationParser(Parser):
             if token is None:
                 break
 
-            self._tokens.append(Token(type=token.type, value=token.value, start=token.start))
+            self._tokens.append(token)
 
         return embedded_parser_state
 
@@ -139,7 +139,7 @@ class ConversationParser(Parser):
                 # If we've already processed something interesting on this line then run to the
                 # end of the line.
                 if seen_text:
-                    self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                    self._tokens.append(lex_token)
                     continue
 
                 if lex_token.type == TokenType.WHITESPACE:
@@ -147,7 +147,7 @@ class ConversationParser(Parser):
                     if (peek_token is None or peek_token.type != TokenType.FENCE) and parse_embedded:
                         break
 
-                    self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                    self._tokens.append(lex_token)
                     continue
 
                 seen_text = True
@@ -183,7 +183,7 @@ class ConversationParser(Parser):
                 if parse_embedded:
                     break
 
-                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                self._tokens.append(lex_token)
 
         parser_state = ConversationParserState()
         parser_state.in_fence_block = in_fence_block
