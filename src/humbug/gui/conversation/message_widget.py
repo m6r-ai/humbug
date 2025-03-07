@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import re
+import time
 from typing import List, Tuple, Optional
 
 from PySide6.QtWidgets import (
@@ -153,6 +154,7 @@ class MessageWidget(QFrame):
                         self._text_list.append(self._next_str)
                         self._language_list.append(None)
                         self._next_str = ""
+                        text = ""
 
                         # Update the current language based on the parser state
                         if self._parser_state and self._parser_state.language != ProgrammingLanguage.UNKNOWN:
@@ -163,8 +165,9 @@ class MessageWidget(QFrame):
                         self._in_fence_region = False
                         self._text_list.append(self._next_str)
                         self._language_list.append(self._current_language)
-                        self._next_str = ""
                         self._current_language = None
+                        self._next_str = ""
+                        text = ""
                         continue
 
                     case TokenType.LANGUAGE:
@@ -173,7 +176,7 @@ class MessageWidget(QFrame):
 
                         continue
 
-                self._next_str += token.value
+            self._next_str += text
 
         except Exception:
             self._logger.exception("highlighting exception")
@@ -196,6 +199,7 @@ class MessageWidget(QFrame):
         self._in_fence_region = False
         self._current_language = None
 
+        start = time.monotonic()
         for line in lines:
             self._parse_line(line)
 
@@ -203,6 +207,9 @@ class MessageWidget(QFrame):
         if self._next_str:
             self._text_list.append(self._next_str)
             self._language_list.append(self._current_language)
+        end = time.monotonic()
+        elapsed_time = (end - start) * 1000
+        print(f"parse lines: {elapsed_time} ({len(lines)})")
 
         # Strip any leading and trailing blank lines from each block.  Also strip blank blocks.
         new_text_list = []
@@ -285,20 +292,20 @@ class MessageWidget(QFrame):
             self._section_with_selection = None
 
         # Parse content into sections with language information
-        orig_num_sections = len(self._sections)
+        start = time.monotonic()
         section_data = self._parse_content_sections(text)
+        end = time.monotonic()
+        elapsed_time = (end - start) * 1000
+        print(f"parse: {elapsed_time}")
 
         # Create or update sections
         for i, (section_text, language) in enumerate(section_data):
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(language)
+                section.set_content(section_text)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
-
-            # Update section content if we've not previously seen this
-            if i >= orig_num_sections - 1:
-                self._sections[i].set_content(section_text)
 
         # Remove any extra sections
         while len(self._sections) > len(section_data):
