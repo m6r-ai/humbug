@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -77,14 +77,14 @@ class SwiftParser(Parser):
             if not token:
                 break
 
-            if token.type == 'IDENTIFIER':
+            if token.type == TokenType.IDENTIFIER:
                 # Look ahead for function calls, property access, or generic parameters
-                next_token = lexer.peek_next_token(['WHITESPACE'])
-                if next_token and next_token.type == 'OPERATOR':
+                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                if next_token and next_token.type == TokenType.OPERATOR:
                     if next_token.value == '(':
                         # Function or method call
                         self._tokens.append(Token(
-                            type='FUNCTION_OR_METHOD',
+                            type=TokenType.FUNCTION_OR_METHOD,
                             value=token.value,
                             start=token.start
                         ))
@@ -92,7 +92,7 @@ class SwiftParser(Parser):
                     elif next_token.value == '.':
                         # Property access
                         self._tokens.append(Token(
-                            type='ELEMENT',
+                            type=TokenType.ELEMENT,
                             value=token.value,
                             start=token.start
                         ))
@@ -104,13 +104,13 @@ class SwiftParser(Parser):
                         self._tokens.append(token)
                         continue
 
-            elif token.type == 'OPERATOR':
+            elif token.type == TokenType.OPERATOR:
                 if token.value == '{':
                     # Check for closure context
-                    next_token = lexer.peek_next_token(['WHITESPACE'])
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                     if next_token and (
-                        next_token.type == 'OPERATOR' and next_token.value == '(' or
-                        next_token.type == 'IDENTIFIER'
+                        next_token.type == TokenType.OPERATOR and next_token.value == '(' or
+                        next_token.type == TokenType.IDENTIFIER
                     ):
                         in_closure = True
                         closure_brace_count += 1
@@ -120,10 +120,10 @@ class SwiftParser(Parser):
                         in_closure = False
                 elif token.value == '<' and not in_closure:
                     # Could be start of generic parameters or less-than operator
-                    next_token = lexer.peek_next_token(['WHITESPACE'])
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                     if next_token and (
-                        next_token.type == 'IDENTIFIER' or
-                        (next_token.type == 'OPERATOR' and next_token.value in ('@', '_'))
+                        next_token.type == TokenType.IDENTIFIER or
+                        (next_token.type == TokenType.OPERATOR and next_token.value in ('@', '_'))
                     ):
                         in_generic = True
                         generic_angle_count += 1

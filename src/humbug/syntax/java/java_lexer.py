@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional, Set
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -148,7 +148,7 @@ class JavaLexer(Lexer):
             self._position += 1  # Include closing quote
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -182,7 +182,7 @@ class JavaLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -202,7 +202,7 @@ class JavaLexer(Lexer):
             start = self._position
             self._position += 3
             self._tokens.append(Token(
-                type='OPERATOR',
+                type=TokenType.OPERATOR,
                 value='...',
                 start=start
             ))
@@ -252,7 +252,7 @@ class JavaLexer(Lexer):
                 self._position += 1
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -323,9 +323,9 @@ class JavaLexer(Lexer):
 
         value = self._input[start:self._position]
         if self._is_keyword(value):
-            self._tokens.append(Token(type='KEYWORD', value=value, start=start))
+            self._tokens.append(Token(type=TokenType.KEYWORD, value=value, start=start))
         else:
-            self._tokens.append(Token(type='IDENTIFIER', value=value, start=start))
+            self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
     def _read_annotation(self) -> None:
         """
@@ -342,7 +342,7 @@ class JavaLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='ANNOTATION',
+            type=TokenType.ANNOTATION,
             value=self._input[start:self._position],
             start=start
         ))
@@ -381,7 +381,7 @@ class JavaLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -410,7 +410,7 @@ class JavaLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -442,7 +442,7 @@ class JavaLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -452,7 +452,7 @@ class JavaLexer(Lexer):
         start = self._position
         self._position += 1
         self._tokens.append(Token(
-            type='ERROR',
+            type=TokenType.ERROR,
             value=self._input[start:self._position],
             start=start
         ))

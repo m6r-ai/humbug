@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional, Set
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -99,7 +99,7 @@ class MoveLexer(Lexer):
                 self._position += 1
 
         self._tokens.append(Token(
-            type='ADDRESS',
+            type=TokenType.ADDRESS,
             value=self._input[start:self._position],
             start=start
         ))
@@ -128,14 +128,14 @@ class MoveLexer(Lexer):
             if (self._position + 1 < len(self._input) and
                     self._input[self._position:self._position + 2] == '::'):
                 self._tokens.append(Token(
-                    type='ADDRESS',
+                    type=TokenType.ADDRESS,
                     value=self._input[start:self._position],
                     start=start
                 ))
                 return
 
             self._tokens.append(Token(
-                type='NUMBER',
+                type=TokenType.NUMBER,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -161,7 +161,7 @@ class MoveLexer(Lexer):
                     self._position += 3
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -192,7 +192,7 @@ class MoveLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -218,7 +218,7 @@ class MoveLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -237,10 +237,10 @@ class MoveLexer(Lexer):
 
         value = self._input[start:self._position]
         if self._is_keyword(value):
-            self._tokens.append(Token(type='KEYWORD', value=value, start=start))
+            self._tokens.append(Token(type=TokenType.KEYWORD, value=value, start=start))
             return
 
-        self._tokens.append(Token(type='IDENTIFIER', value=value, start=start))
+        self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
     def _read_operator(self) -> None:
         """
@@ -257,7 +257,7 @@ class MoveLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -266,7 +266,7 @@ class MoveLexer(Lexer):
         start = self._position
         ch = self._input[self._position]
         self._position += 1
-        self._tokens.append(Token(type='ERROR', value=ch, start=start))
+        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
 
     def _is_keyword(self, value: str) -> bool:
         """

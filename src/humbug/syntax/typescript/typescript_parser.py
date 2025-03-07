@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.javascript.javascript_parser import JavaScriptParser, JavaScriptParserState
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.typescript.typescript_lexer import TypeScriptLexer
@@ -53,14 +53,14 @@ class TypeScriptParser(JavaScriptParser):
             if not token:
                 break
 
-            if token.type != 'IDENTIFIER':
-                if (token.type == 'OPERATOR' and
+            if token.type != TokenType.IDENTIFIER:
+                if (token.type == TokenType.OPERATOR and
                         token.value not in ('.', '?.')):
                     in_element = False
                     self._tokens.append(token)
                     continue
 
-                if token.type != 'KEYWORD':
+                if token.type != TokenType.KEYWORD:
                     self._tokens.append(token)
                     continue
 
@@ -71,15 +71,15 @@ class TypeScriptParser(JavaScriptParser):
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
             cur_in_element = in_element
-            next_token = lexer.peek_next_token(['WHITESPACE'])
+            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
             in_element = cur_in_element
 
             next_in_element = False
-            if next_token and next_token.type == 'OPERATOR':
+            if next_token and next_token.type == TokenType.OPERATOR:
                 if next_token.value == '(':
                     in_element = False
                     self._tokens.append(Token(
-                        type='FUNCTION_OR_METHOD',
+                        type=TokenType.FUNCTION_OR_METHOD,
                         value=token.value,
                         start=token.start
                     ))
@@ -93,7 +93,7 @@ class TypeScriptParser(JavaScriptParser):
 
             if cur_in_element:
                 self._tokens.append(Token(
-                    type='ELEMENT',
+                    type=TokenType.ELEMENT,
                     value=token.value,
                     start=token.start
                 ))

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -65,12 +65,12 @@ class RustParser(Parser):
             if not token:
                 break
 
-            if token.type == 'OPERATOR':
+            if token.type == TokenType.OPERATOR:
                 if token.value == '<':
                     # Check if this is the start of generic parameters
-                    next_token = lexer.peek_next_token(['WHITESPACE'])
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                     if (next_token and
-                            (next_token.type in ('IDENTIFIER', 'KEYWORD') or
+                            (next_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD) or
                              next_token.value in ('\'', '>'))):
                         in_generic_params = True
                         generic_depth += 1
@@ -94,7 +94,7 @@ class RustParser(Parser):
                     self._tokens.append(token)
                     continue
 
-            if token.type == 'IDENTIFIER':
+            if token.type == TokenType.IDENTIFIER:
                 self._handle_identifier(token, lexer, in_element)
                 continue
 
@@ -126,9 +126,9 @@ class RustParser(Parser):
             return False
 
         # Must start with an identifier followed by <
-        if token.type != 'IDENTIFIER':
+        if token.type != TokenType.IDENTIFIER:
             return False
-        if next_token.type != 'OPERATOR' or next_token.value != '<':
+        if next_token.type != TokenType.OPERATOR or next_token.value != '<':
             return False
 
         return True
@@ -149,14 +149,14 @@ class RustParser(Parser):
             in_element: Whether we're in a path/element chain
         """
         # Look ahead for type parameters or function calls
-        next_token = lexer.peek_next_token(['WHITESPACE'])
-        if next_token and next_token.type == 'OPERATOR':
+        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+        if next_token and next_token.type == TokenType.OPERATOR:
             if next_token.value == '<':
                 # Possible generic type
-                peek_ahead = lexer.peek_next_token(['WHITESPACE'], offset=1)
-                if peek_ahead and (peek_ahead.type in ('IDENTIFIER', 'LIFETIME', 'KEYWORD')):
+                peek_ahead = lexer.peek_next_token([TokenType.WHITESPACE], offset=1)
+                if peek_ahead and (peek_ahead.type in (TokenType.IDENTIFIER, TokenType.LIFETIME, TokenType.KEYWORD)):
                     self._tokens.append(Token(
-                        type='TYPE',
+                        type=TokenType.TYPE,
                         value=token.value,
                         start=token.start
                     ))
@@ -165,7 +165,7 @@ class RustParser(Parser):
             if next_token.value == '(':
                 # Function or method call
                 self._tokens.append(Token(
-                    type='FUNCTION_OR_METHOD',
+                    type=TokenType.FUNCTION_OR_METHOD,
                     value=token.value,
                     start=token.start
                 ))
@@ -174,7 +174,7 @@ class RustParser(Parser):
             if next_token.value in ('::', '.'):
                 # Path or field access
                 self._tokens.append(Token(
-                    type='ELEMENT',
+                    type=TokenType.ELEMENT,
                     value=token.value,
                     start=token.start
                 ))

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -136,7 +136,7 @@ class CSSLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='IDENTIFIER',
+            type=TokenType.IDENTIFIER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -162,7 +162,7 @@ class CSSLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -178,7 +178,7 @@ class CSSLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='CSS_AT_RULE',
+            type=TokenType.CSS_AT_RULE,
             value=self._input[start:self._position],
             start=start
         ))
@@ -201,7 +201,7 @@ class CSSLexer(Lexer):
             return
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -218,7 +218,7 @@ class CSSLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='DIMENSION',
+            type=TokenType.DIMENSION,
             value=self._input[start:self._position],
             start=start
         ))
@@ -240,7 +240,7 @@ class CSSLexer(Lexer):
 
         if is_hex and (self._position - start == 4 or self._position - start == 7):
             self._tokens.append(Token(
-                type='HEX',
+                type=TokenType.HEX,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -252,7 +252,7 @@ class CSSLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='HASH',
+            type=TokenType.HASH,
             value=self._input[start:self._position],
             start=start
         ))
@@ -271,7 +271,7 @@ class CSSLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -280,4 +280,4 @@ class CSSLexer(Lexer):
         start = self._position
         ch = self._input[self._position]
         self._position += 1
-        self._tokens.append(Token(type='ERROR', value=ch, start=start))
+        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))

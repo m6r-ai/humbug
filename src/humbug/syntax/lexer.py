@@ -1,11 +1,69 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import IntEnum, auto
 from typing import List, Callable, Optional, Set, ClassVar
+
+
+class TokenType(IntEnum):
+    """Type of lexical token."""
+    ADDRESS = auto()
+    ANNOTATION = auto()
+    ATTRIBUTE = auto()
+    BACKTICK = auto()
+    BACKTICK_CODE = auto()
+    BOOLEAN = auto()
+    CHARACTER = auto()
+    CODE = auto()
+    COMMENT = auto()
+    CSS_AT_RULE = auto()
+    DIMENSION = auto()
+    DIRECTIVE = auto()
+    DOC_COMMENT = auto()
+    DOCTYPE = auto()
+    DOT = auto()
+    ELEMENT = auto()
+    ERROR = auto()
+    FENCE = auto()
+    FENCE_END = auto()
+    FENCE_START = auto()
+    FUNCTION_OR_METHOD = auto()
+    GENERIC_END = auto()
+    GENERIC_METHOD = auto()
+    GENERIC_START = auto()
+    GENERIC_TYPE = auto()
+    HASH = auto()
+    HEADING = auto()
+    HEX = auto()
+    HTML_ATTRIBUTE = auto()
+    HTML_TAG = auto()
+    IDENTIFIER = auto()
+    KEYWORD = auto()
+    LANGUAGE = auto()
+    LIFETIME = auto()
+    LINQ_KEYWORD = auto()
+    LPAREN = auto()
+    METHOD_REFERENCE_OPERATOR = auto()
+    NEWLINE = auto()
+    NUMBER = auto()
+    OPERATOR = auto()
+    PREPROCESSOR = auto()
+    REGEXP = auto()
+    RPAREN = auto()
+    RUNE = auto()
+    STRING = auto()
+    STYLE = auto()
+    SYMBOL = auto()
+    TEXT = auto()
+    TYPE = auto()
+    TYPE_PARAMETER = auto()
+    VECTOR_START = auto()
+    WHITESPACE = auto()
+    XML_DOC = auto()
 
 
 @dataclass
 class Token:
-    type: str
+    type: TokenType
     value: str
     start: int
 
@@ -154,7 +212,7 @@ class Lexer(ABC):
             self._position += 1
 
         string_value = self._input[start:self._position]
-        self._tokens.append(Token(type='STRING', value=string_value, start=start))
+        self._tokens.append(Token(type=TokenType.STRING, value=string_value, start=start))
 
     def _read_newline(self) -> None:
         """
@@ -162,7 +220,7 @@ class Lexer(ABC):
         """
         start = self._position
         self._position += 1
-        self._tokens.append(Token(type='NEWLINE', value='\n', start=start))
+        self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=start))
 
     def _read_whitespace(self) -> None:
         """
@@ -177,7 +235,7 @@ class Lexer(ABC):
             self._position += 1
 
         whitespace_value = self._input[start:self._position]
-        self._tokens.append(Token(type='WHITESPACE', value=whitespace_value, start=start))
+        self._tokens.append(Token(type=TokenType.WHITESPACE, value=whitespace_value, start=start))
 
     def _is_letter(self, ch: str) -> bool:
         """

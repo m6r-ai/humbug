@@ -15,6 +15,7 @@ from PySide6.QtGui import (
 )
 
 from humbug.gui.color_role import ColorRole
+from humbug.syntax.lexer import TokenType
 
 
 class ColorMode(Enum):
@@ -56,7 +57,7 @@ class StyleManager(QObject):
             self._initialized = True
             self._color_mode = ColorMode.DARK  # Default to dark mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
-            self._highlights: Dict[str, QTextCharFormat] = {}
+            self._highlights: Dict[TokenType, QTextCharFormat] = {}
 
             self._code_font_families = ["Cascadia Mono", "Consolas", "Menlo", "Monaco", "monospace"]
             self._initialize_highlights()
@@ -377,42 +378,42 @@ class StyleManager(QObject):
     def _initialize_highlights(self):
         # Mapping from token type to colour
         colour_mapping = {
-            "ADDRESS": ColorRole.SYNTAX_ADDRESS,
-            "ANNOTATION": ColorRole.SYNTAX_HEADING,
-            "ATTRIBUTE": ColorRole.SYNTAX_HEADING,
-            "BACKTICK_CODE": ColorRole.SYNTAX_BACKTICK_CODE,
-            "BOOLEAN": ColorRole.SYNTAX_NUMBER,
-            "CHARACTER": ColorRole.SYNTAX_STRING,
-            "CODE": ColorRole. SYNTAX_CODE,
-            "COMMENT": ColorRole.SYNTAX_COMMENT,
-            "CSS_AT_RULE": ColorRole.SYNTAX_CSS_AT_RULE,
-            "DOC_COMMENT": ColorRole.SYNTAX_COMMENT,
-            "DOCTYPE": ColorRole.SYNTAX_DOCTYPE,
-            "ELEMENT": ColorRole.SYNTAX_ELEMENT,
-            "ERROR": ColorRole.SYNTAX_ERROR,
-            "FUNCTION_OR_METHOD": ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            "GENERIC_END": ColorRole.SYNTAX_OPERATOR,
-            "GENERIC_START": ColorRole.SYNTAX_OPERATOR,
-            "GENERIC_TYPE": ColorRole.SYNTAX_TYPE,
-            "HEADING": ColorRole.SYNTAX_HEADING,
-            "HTML_ATTRIBUTE": ColorRole.SYNTAX_HTML_ATTRIBUTE,
-            "HTML_TAG": ColorRole.SYNTAX_HTML_TAG,
-            "IDENTIFIER": ColorRole.SYNTAX_IDENTIFIER,
-            "KEYWORD": ColorRole.SYNTAX_KEYWORD,
-            "LANGUAGE": ColorRole.SYNTAX_LANGUAGE,
-            "LIFETIME": ColorRole.SYNTAX_OPERATOR,
-            "LPAREN": ColorRole.SYNTAX_OPERATOR,
-            "NUMBER": ColorRole.SYNTAX_NUMBER,
-            "OPERATOR": ColorRole.SYNTAX_OPERATOR,
-            "PREPROCESSOR": ColorRole.SYNTAX_PREPROCESSOR,
-            "REGEXP": ColorRole.SYNTAX_REGEXP,
-            "RPAREN": ColorRole.SYNTAX_OPERATOR,
-            "RUNE": ColorRole.SYNTAX_STRING,
-            "STRING": ColorRole.SYNTAX_STRING,
-            "TEXT": ColorRole.SYNTAX_TEXT,
-            "TYPE": ColorRole.SYNTAX_TYPE,
-            "WHITESPACE": ColorRole.SYNTAX_TEXT,
-            "XML_DOC": ColorRole.SYNTAX_COMMENT
+            TokenType.ADDRESS: ColorRole.SYNTAX_ADDRESS,
+            TokenType.ANNOTATION: ColorRole.SYNTAX_HEADING,
+            TokenType.ATTRIBUTE: ColorRole.SYNTAX_HEADING,
+            TokenType.BACKTICK_CODE: ColorRole.SYNTAX_BACKTICK_CODE,
+            TokenType.BOOLEAN: ColorRole.SYNTAX_NUMBER,
+            TokenType.CHARACTER: ColorRole.SYNTAX_STRING,
+            TokenType.CODE: ColorRole. SYNTAX_CODE,
+            TokenType.COMMENT: ColorRole.SYNTAX_COMMENT,
+            TokenType.CSS_AT_RULE: ColorRole.SYNTAX_CSS_AT_RULE,
+            TokenType.DOC_COMMENT: ColorRole.SYNTAX_COMMENT,
+            TokenType.DOCTYPE: ColorRole.SYNTAX_DOCTYPE,
+            TokenType.ELEMENT: ColorRole.SYNTAX_ELEMENT,
+            TokenType.ERROR: ColorRole.SYNTAX_ERROR,
+            TokenType.FUNCTION_OR_METHOD: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.GENERIC_END: ColorRole.SYNTAX_OPERATOR,
+            TokenType.GENERIC_START: ColorRole.SYNTAX_OPERATOR,
+            TokenType.GENERIC_TYPE: ColorRole.SYNTAX_TYPE,
+            TokenType.HEADING: ColorRole.SYNTAX_HEADING,
+            TokenType.HTML_ATTRIBUTE: ColorRole.SYNTAX_HTML_ATTRIBUTE,
+            TokenType.HTML_TAG: ColorRole.SYNTAX_HTML_TAG,
+            TokenType.IDENTIFIER: ColorRole.SYNTAX_IDENTIFIER,
+            TokenType.KEYWORD: ColorRole.SYNTAX_KEYWORD,
+            TokenType.LANGUAGE: ColorRole.SYNTAX_LANGUAGE,
+            TokenType.LIFETIME: ColorRole.SYNTAX_OPERATOR,
+            TokenType.LPAREN: ColorRole.SYNTAX_OPERATOR,
+            TokenType.NUMBER: ColorRole.SYNTAX_NUMBER,
+            TokenType.OPERATOR: ColorRole.SYNTAX_OPERATOR,
+            TokenType.PREPROCESSOR: ColorRole.SYNTAX_PREPROCESSOR,
+            TokenType.REGEXP: ColorRole.SYNTAX_REGEXP,
+            TokenType.RPAREN: ColorRole.SYNTAX_OPERATOR,
+            TokenType.RUNE: ColorRole.SYNTAX_STRING,
+            TokenType.STRING: ColorRole.SYNTAX_STRING,
+            TokenType.TEXT: ColorRole.SYNTAX_TEXT,
+            TokenType.TYPE: ColorRole.SYNTAX_TYPE,
+            TokenType.WHITESPACE: ColorRole.SYNTAX_TEXT,
+            TokenType.XML_DOC: ColorRole.SYNTAX_COMMENT
         }
 
         for token_type, role in colour_mapping.items():
@@ -712,7 +713,7 @@ class StyleManager(QObject):
         """
         return self._colors[role][self._color_mode]
 
-    def get_highlight(self, token_type: str) -> QTextCharFormat:
+    def get_highlight(self, token_type: TokenType) -> QTextCharFormat:
         if token_type not in self._highlights:
             print(f"token type {token_type} not mapped")
 

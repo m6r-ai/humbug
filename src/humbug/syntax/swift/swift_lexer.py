@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -110,7 +110,7 @@ class SwiftLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='ATTRIBUTE',
+            type=TokenType.ATTRIBUTE,
             value=self._input[start:self._position],
             start=start
         ))
@@ -134,7 +134,7 @@ class SwiftLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='DIRECTIVE',
+            type=TokenType.DIRECTIVE,
             value=self._input[start:self._position],
             start=start
         ))
@@ -153,7 +153,7 @@ class SwiftLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -184,7 +184,7 @@ class SwiftLexer(Lexer):
                 self._position += 1
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -213,7 +213,7 @@ class SwiftLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -260,7 +260,7 @@ class SwiftLexer(Lexer):
             self._read_decimal_number()
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -324,7 +324,7 @@ class SwiftLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -350,7 +350,7 @@ class SwiftLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -375,7 +375,7 @@ class SwiftLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -391,7 +391,7 @@ class SwiftLexer(Lexer):
 
         if self._position > start:
             self._tokens.append(Token(
-                type='OPERATOR',
+                type=TokenType.OPERATOR,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -401,7 +401,7 @@ class SwiftLexer(Lexer):
         ch = self._input[self._position]
         self._position += 1
         self._tokens.append(Token(
-            type='ERROR',
+            type=TokenType.ERROR,
             value=ch,
             start=start
         ))
@@ -452,7 +452,7 @@ class SwiftLexer(Lexer):
                 self._position += 1
 
             self._tokens.append(Token(
-                type='IDENTIFIER',
+                type=TokenType.IDENTIFIER,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -469,14 +469,14 @@ class SwiftLexer(Lexer):
         value = self._input[start:self._position]
         if self._is_keyword(value):
             self._tokens.append(Token(
-                type='KEYWORD',
+                type=TokenType.KEYWORD,
                 value=value,
                 start=start
             ))
             return
 
         self._tokens.append(Token(
-            type='IDENTIFIER',
+            type=TokenType.IDENTIFIER,
             value=value,
             start=start
         ))

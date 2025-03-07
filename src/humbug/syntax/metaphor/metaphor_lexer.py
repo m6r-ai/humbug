@@ -1,10 +1,6 @@
 from typing import Callable, Dict, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
-
-
-# Define styles as a module-level dictionary similar to the TypeScript implementation
-styles: Dict[str, str] = {'HEADING': 'heading'}
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 class MetaphorLexer(Lexer):
@@ -82,13 +78,13 @@ class MetaphorLexer(Lexer):
                 if self._is_keyword(potential_keyword):
                     self._seen_keyword = True
                     self._tokens.append(Token(
-                        type='KEYWORD',
+                        type=TokenType.KEYWORD,
                         value=potential_keyword,
                         start=start
                     ))
                     return
 
-        token_type = 'HEADING' if self._seen_keyword else 'TEXT'
+        token_type = TokenType.HEADING if self._seen_keyword else TokenType.TEXT
         self._tokens.append(Token(
             type=token_type,
             value=self._input[start:self._position],
@@ -103,7 +99,7 @@ class MetaphorLexer(Lexer):
         self._position += 1
         self._seen_keyword = False
         self._tokens.append(Token(
-            type='NEWLINE',
+            type=TokenType.NEWLINE,
             value='\n',
             start=start
         ))
@@ -115,7 +111,7 @@ class MetaphorLexer(Lexer):
         # is the (optional) name of the language
         if self._input[self._position:].startswith('```'):
             self._position += 3
-            self._tokens.append(Token(type='FENCE', value='```', start=start))
+            self._tokens.append(Token(type=TokenType.FENCE, value='```', start=start))
             return
 
         self._read_text_or_keyword()
@@ -131,7 +127,7 @@ class MetaphorLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))

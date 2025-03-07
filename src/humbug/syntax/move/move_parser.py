@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.move.move_lexer import MoveLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
@@ -68,15 +68,15 @@ class MoveParser(Parser):
             if not token:
                 break
 
-            if token.type == 'ADDRESS':
-                next_token = lexer.peek_next_token(['WHITESPACE'])
-                if next_token and next_token.type == 'OPERATOR' and next_token.value == '::':
+            if token.type == TokenType.ADDRESS:
+                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '::':
                     in_module_access = True
                 self._tokens.append(token)
                 continue
 
-            if token.type != 'IDENTIFIER':
-                if token.type == 'OPERATOR':
+            if token.type != TokenType.IDENTIFIER:
+                if token.type == TokenType.OPERATOR:
                     if token.value == '::':
                         in_module_access = True
                         self._tokens.append(token)
@@ -84,12 +84,12 @@ class MoveParser(Parser):
 
                     if token.value == ':':
                         # Next identifier might be a type
-                        next_token = lexer.peek_next_token(['WHITESPACE'])
-                        if next_token and next_token.type == 'IDENTIFIER':
+                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                        if next_token and next_token.type == TokenType.IDENTIFIER:
                             self._tokens.append(token)
-                            token = lexer.get_next_token(['WHITESPACE'])
+                            token = lexer.get_next_token([TokenType.WHITESPACE])
                             self._tokens.append(Token(
-                                type='TYPE',
+                                type=TokenType.TYPE,
                                 value=token.value,
                                 start=token.start
                             ))
@@ -97,12 +97,12 @@ class MoveParser(Parser):
 
                     if token.value == '<':
                         # Might be start of type parameters or vector literal
-                        next_token = lexer.peek_next_token(['WHITESPACE'])
-                        if next_token and next_token.type == 'IDENTIFIER':
+                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                        if next_token and next_token.type == TokenType.IDENTIFIER:
                             self._tokens.append(token)
-                            token = lexer.get_next_token(['WHITESPACE'])
+                            token = lexer.get_next_token([TokenType.WHITESPACE])
                             self._tokens.append(Token(
-                                type='TYPE',
+                                type=TokenType.TYPE,
                                 value=token.value,
                                 start=token.start
                             ))
@@ -119,19 +119,19 @@ class MoveParser(Parser):
             # function or method call!
             cur_in_element = in_element
             cur_in_module_access = in_module_access
-            next_token = lexer.peek_next_token(['WHITESPACE'])
+            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
             in_element = cur_in_element
             in_module_access = cur_in_module_access
 
             next_in_element = False
             next_in_module_access = False
 
-            if next_token and next_token.type == 'OPERATOR':
+            if next_token and next_token.type == TokenType.OPERATOR:
                 if next_token.value == '(':
                     in_element = False
                     in_module_access = False
                     self._tokens.append(Token(
-                        type='FUNCTION_OR_METHOD',
+                        type=TokenType.FUNCTION_OR_METHOD,
                         value=token.value,
                         start=token.start
                     ))
@@ -139,10 +139,10 @@ class MoveParser(Parser):
 
                 if next_token.value == '<':
                     # Check if this is a type instantiation
-                    next_next_token = lexer.peek_next_token(['WHITESPACE', 'IDENTIFIER', 'OPERATOR'])
+                    next_next_token = lexer.peek_next_token([TokenType.WHITESPACE, TokenType.IDENTIFIER, TokenType.OPERATOR])
                     if next_next_token and next_next_token.value == '>':
                         self._tokens.append(Token(
-                            type='TYPE',
+                            type=TokenType.TYPE,
                             value=token.value,
                             start=token.start
                         ))
@@ -158,7 +158,7 @@ class MoveParser(Parser):
 
             if cur_in_element or cur_in_module_access:
                 self._tokens.append(Token(
-                    type='ELEMENT',
+                    type=TokenType.ELEMENT,
                     value=token.value,
                     start=token.start
                 ))

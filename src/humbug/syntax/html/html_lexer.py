@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -122,7 +122,7 @@ class HTMLLexer(Lexer):
         self._in_tag = True
         self._tag_name = ''
         self._tokens.append(Token(
-            type='OPERATOR',
+            type=TokenType.OPERATOR,
             value='<',
             start=self._position - 1
         ))
@@ -134,7 +134,7 @@ class HTMLLexer(Lexer):
         self._position += 1
         self._in_tag = False
         self._tokens.append(Token(
-            type='OPERATOR',
+            type=TokenType.OPERATOR,
             value='>',
             start=self._position - 1
         ))
@@ -172,7 +172,7 @@ class HTMLLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='DOCTYPE',
+            type=TokenType.DOCTYPE,
             value=self._input[start:self._position],
             start=start
         ))
@@ -196,7 +196,7 @@ class HTMLLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -214,7 +214,7 @@ class HTMLLexer(Lexer):
 
         self._position = script_close
         self._tokens.append(Token(
-            type='SCRIPT',
+            type=TokenType.SCRIPT,
             value=self._input[start:script_close],
             start=start
         ))
@@ -232,7 +232,7 @@ class HTMLLexer(Lexer):
 
         self._position = style_close
         self._tokens.append(Token(
-            type='STYLE',
+            type=TokenType.STYLE,
             value=self._input[start:style_close],
             start=start
         ))
@@ -275,7 +275,7 @@ class HTMLLexer(Lexer):
             self._position += 1
             self._seen_equals = True
             self._tokens.append(Token(
-                type='OPERATOR',
+                type=TokenType.OPERATOR,
                 value='=',
                 start=self._position - 1
             ))
@@ -289,7 +289,7 @@ class HTMLLexer(Lexer):
             return
 
         self._tokens.append(
-            self._read_tag_or_attribute('STRING' if seen_equals else 'HTML_ATTRIBUTE')
+            self._read_tag_or_attribute(TokenType.STRING if seen_equals else TokenType.HTML_ATTRIBUTE)
         )
 
     def _read_text(self) -> None:
@@ -302,7 +302,7 @@ class HTMLLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='TEXT',
+            type=TokenType.TEXT,
             value=self._input[start:self._position],
             start=start
         ))

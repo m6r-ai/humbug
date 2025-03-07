@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional, Set
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -135,7 +135,7 @@ class CSharpLexer(Lexer):
             next_char = self._input[self._position]
             if next_char == '"':
                 self._tokens.append(Token(
-                    type='STRING',
+                    type=TokenType.STRING,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -143,7 +143,7 @@ class CSharpLexer(Lexer):
                 return
 
         self._tokens.append(Token(
-            type='ERROR',
+            type=TokenType.ERROR,
             value=self._input[start:self._position],
             start=start
         ))
@@ -173,7 +173,7 @@ class CSharpLexer(Lexer):
                     self._position += 1
 
                 self._tokens.append(Token(
-                    type='IDENTIFIER',
+                    type=TokenType.IDENTIFIER,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -181,7 +181,7 @@ class CSharpLexer(Lexer):
 
         # Just @ by itself (unlikely but handle it as an error)
         self._tokens.append(Token(
-            type='ERROR',
+            type=TokenType.ERROR,
             value=self._input[start:self._position],
             start=start
         ))
@@ -203,7 +203,7 @@ class CSharpLexer(Lexer):
             self._position += 1  # Include closing quote
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -241,7 +241,7 @@ class CSharpLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -263,7 +263,7 @@ class CSharpLexer(Lexer):
             self._position += 1  # Include closing quote
 
         self._tokens.append(Token(
-            type='CHARACTER',
+            type=TokenType.CHARACTER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -322,14 +322,14 @@ class CSharpLexer(Lexer):
                     bracket_depth -= 1
 
             self._tokens.append(Token(
-                type='ATTRIBUTE',
+                type=TokenType.ATTRIBUTE,
                 value=self._input[start:self._position],
                 start=start
             ))
         else:
             # Just a bracket operator
             self._tokens.append(Token(
-                type='OPERATOR',
+                type=TokenType.OPERATOR,
                 value='[',
                 start=start
             ))
@@ -363,7 +363,7 @@ class CSharpLexer(Lexer):
                 self._read_number_suffix()
 
                 self._tokens.append(Token(
-                    type='NUMBER',
+                    type=TokenType.NUMBER,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -380,7 +380,7 @@ class CSharpLexer(Lexer):
                 self._read_number_suffix()
 
                 self._tokens.append(Token(
-                    type='NUMBER',
+                    type=TokenType.NUMBER,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -393,7 +393,7 @@ class CSharpLexer(Lexer):
         self._read_number_suffix()
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -484,7 +484,7 @@ class CSharpLexer(Lexer):
             start = self._position
             self._position += 2  # Skip both dots
             self._tokens.append(Token(
-                type='OPERATOR',
+                type=TokenType.OPERATOR,
                 value='..',
                 start=start
             ))
@@ -538,7 +538,7 @@ class CSharpLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -554,7 +554,7 @@ class CSharpLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='XML_DOC',
+            type=TokenType.XML_DOC,
             value=self._input[start:self._position],
             start=start
         ))
@@ -584,7 +584,7 @@ class CSharpLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -606,7 +606,7 @@ class CSharpLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='PREPROCESSOR',
+            type=TokenType.PREPROCESSOR,
             value=self._input[start:self._position],
             start=start
         ))
@@ -635,13 +635,13 @@ class CSharpLexer(Lexer):
 
         if self._is_keyword(value):
             self._tokens.append(Token(
-                type='KEYWORD',
+                type=TokenType.KEYWORD,
                 value=value,
                 start=start
             ))
         else:
             self._tokens.append(Token(
-                type='IDENTIFIER',
+                type=TokenType.IDENTIFIER,
                 value=value,
                 start=start
             ))
@@ -673,7 +673,7 @@ class CSharpLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -683,7 +683,7 @@ class CSharpLexer(Lexer):
         start = self._position
         self._position += 1
         self._tokens.append(Token(
-            type='ERROR',
+            type=TokenType.ERROR,
             value=self._input[start:self._position],
             start=start
         ))

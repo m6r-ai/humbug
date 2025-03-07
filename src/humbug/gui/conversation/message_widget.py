@@ -14,6 +14,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.conversation_parser import ConversationParser, ConversationParserState
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
@@ -147,7 +148,7 @@ class MessageWidget(QFrame):
                     break
 
                 match token.type:
-                    case 'FENCE_START':
+                    case TokenType.FENCE_START:
                         self._in_fence_region = True
                         self._text_list.append(self._next_str)
                         self._language_list.append(None)
@@ -158,7 +159,7 @@ class MessageWidget(QFrame):
                             self._current_language = self._parser_state.language
                         continue
 
-                    case 'FENCE_END':
+                    case TokenType.FENCE_END:
                         self._in_fence_region = False
                         self._text_list.append(self._next_str)
                         self._language_list.append(self._current_language)
@@ -166,7 +167,7 @@ class MessageWidget(QFrame):
                         self._current_language = None
                         continue
 
-                    case 'LANGUAGE':
+                    case TokenType.LANGUAGE:
                         if self._parser_state and self._parser_state.language != ProgrammingLanguage.UNKNOWN:
                             self._current_language = self._parser_state.language
 

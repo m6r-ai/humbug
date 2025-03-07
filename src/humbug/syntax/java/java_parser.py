@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.java.java_lexer import JavaLexer
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -69,17 +69,17 @@ class JavaParser(Parser):
             if not token:
                 break
 
-            if token.type == 'KEYWORD' and token.value in ('import', 'package'):
+            if token.type == TokenType.KEYWORD and token.value in ('import', 'package'):
                 in_import = True
 
-            if token.type == 'OPERATOR':
+            if token.type == TokenType.OPERATOR:
                 token_value = token.value
 
                 # Handle potential generic type parameters or less-than operator
                 if token_value == '<':
                     # Look back at previous token and forward to help determine context
                     prev_token = self._get_last_non_whitespace_token()
-                    next_token = lexer.peek_next_token(['WHITESPACE'])
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
 
                     is_generic = False
                     if prev_token and next_token:
@@ -88,32 +88,32 @@ class JavaParser(Parser):
                         # 2. Method names in generic method declarations
                         # 3. After a comma in a generic parameter list
                         # 4. After another generic parameter list (nested generics)
-                        if prev_token.type in ('IDENTIFIER', 'FUNCTION_OR_METHOD') and (
-                            next_token.type in ('IDENTIFIER', 'KEYWORD') or
-                            (next_token.type == 'OPERATOR' and next_token.value == '?')
+                        if prev_token.type in (TokenType.IDENTIFIER, TokenType.FUNCTION_OR_METHOD) and (
+                            next_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD) or
+                            (next_token.type == TokenType.OPERATOR and next_token.value == '?')
                         ):
                             is_generic = True
-                        elif (prev_token.type == 'OPERATOR' and
+                        elif (prev_token.type == TokenType.OPERATOR and
                               prev_token.value == ',' and
-                              next_token.type in ('IDENTIFIER', 'OPERATOR')):
+                              next_token.type in (TokenType.IDENTIFIER, TokenType.OPERATOR)):
                             is_generic = True
-                        elif (prev_token.type == 'OPERATOR' and
+                        elif (prev_token.type == TokenType.OPERATOR and
                               prev_token.value == '>' and
-                              next_token.type == 'IDENTIFIER'):
+                              next_token.type == TokenType.IDENTIFIER):
                             is_generic = True
 
                     if is_generic:
                         in_generic = True
                         generic_depth += 1
                         self._tokens.append(Token(
-                            type='GENERIC_START',
+                            type=TokenType.GENERIC_START,
                             value=token_value,
                             start=token.start
                         ))
                     else:
                         # This is a less-than operator
                         self._tokens.append(Token(
-                            type='OPERATOR',
+                            type=TokenType.OPERATOR,
                             value=token_value,
                             start=token.start
                         ))
@@ -125,7 +125,7 @@ class JavaParser(Parser):
                         in_generic = False
                     # Emit a specialized token for the generic operator
                     self._tokens.append(Token(
-                        type='GENERIC_END',
+                        type=TokenType.GENERIC_END,
                         value=token_value,
                         start=token.start
                     ))
@@ -135,7 +135,7 @@ class JavaParser(Parser):
                 elif token_value == '::':
                     # Change the token type for the operator itself
                     self._tokens.append(Token(
-                        type='METHOD_REFERENCE_OPERATOR',
+                        type=TokenType.METHOD_REFERENCE_OPERATOR,
                         value=token_value,
                         start=token.start
                     ))
@@ -151,25 +151,25 @@ class JavaParser(Parser):
                 self._tokens.append(token)
                 continue
 
-            if token.type != 'IDENTIFIER' or in_import:
+            if token.type != TokenType.IDENTIFIER or in_import:
                 self._tokens.append(token)
                 continue
 
             # Handle identifier tokens based on context
             if in_generic and generic_depth > 0:
                 # Inside generic parameters, create specialized tokens
-                next_token = lexer.peek_next_token(['WHITESPACE'])
-                if next_token and next_token.type == 'OPERATOR' and next_token.value == 'extends':
+                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                if next_token and next_token.type == TokenType.OPERATOR and next_token.value == 'extends':
                     # This is a bounded type parameter
                     self._tokens.append(Token(
-                        type='TYPE_PARAMETER',
+                        type=TokenType.TYPE_PARAMETER,
                         value=token.value,
                         start=token.start
                     ))
                 else:
                     # This is a generic type
                     self._tokens.append(Token(
-                        type='GENERIC_TYPE',
+                        type=TokenType.GENERIC_TYPE,
                         value=token.value,
                         start=token.start
                     ))
@@ -199,17 +199,17 @@ class JavaParser(Parser):
             lexer: The lexer instance for lookahead
             in_element: Whether we're in a property access chain
         """
-        next_token = lexer.peek_next_token(['WHITESPACE'])
+        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
 
         if not next_token:
             self._tokens.append(token)
             return
 
-        if next_token.type == 'OPERATOR':
+        if next_token.type == TokenType.OPERATOR:
             # Method call
             if next_token.value == '(':
                 self._tokens.append(Token(
-                    type='FUNCTION_OR_METHOD',
+                    type=TokenType.FUNCTION_OR_METHOD,
                     value=token.value,
                     start=token.start
                 ))
@@ -219,11 +219,11 @@ class JavaParser(Parser):
             if next_token.value == '<':
                 # This might be a generic type instantiation
                 after_generic = self._peek_after_generic_close(lexer)
-                if (after_generic and after_generic.type == 'OPERATOR' and
+                if (after_generic and after_generic.type == TokenType.OPERATOR and
                         after_generic.value == '('):
                     # Generic method call
                     self._tokens.append(Token(
-                        type='GENERIC_METHOD',
+                        type=TokenType.GENERIC_METHOD,
                         value=token.value,
                         start=token.start
                     ))
@@ -232,7 +232,7 @@ class JavaParser(Parser):
         # Property or element access
         if in_element:
             self._tokens.append(Token(
-                type='ELEMENT',
+                type=TokenType.ELEMENT,
                 value=token.value,
                 start=token.start
             ))
@@ -249,7 +249,7 @@ class JavaParser(Parser):
             The last non-whitespace token, or None if no such token exists
         """
         for token in reversed(self._tokens):
-            if token.type != 'WHITESPACE':
+            if token.type != TokenType.WHITESPACE:
                 return token
 
         return None
@@ -270,19 +270,19 @@ class JavaParser(Parser):
 
         # First look ahead to find the matching '>'
         while True:
-            peeked_token = lexer.peek_next_token(['WHITESPACE'], offset=token_count)
+            peeked_token = lexer.peek_next_token([TokenType.WHITESPACE], offset=token_count)
             if not peeked_token:
                 break
 
             token_count += 1
-            if peeked_token.type == 'OPERATOR':
+            if peeked_token.type == TokenType.OPERATOR:
                 if peeked_token.value == '<':
                     peek_depth += 1
                 elif peeked_token.value == '>':
                     peek_depth -= 1
                     if peek_depth == 0:
                         # Found the closing '>', peek at next token
-                        token = lexer.peek_next_token(['WHITESPACE'], offset=token_count)
+                        token = lexer.peek_next_token([TokenType.WHITESPACE], offset=token_count)
                         break
 
         return token

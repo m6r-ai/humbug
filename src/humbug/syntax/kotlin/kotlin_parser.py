@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.kotlin.kotlin_lexer import KotlinLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
@@ -74,15 +74,15 @@ class KotlinParser(Parser):
             if not token:
                 break
 
-            if token.type == 'KEYWORD' and token.value in ('import', 'package'):
+            if token.type == TokenType.KEYWORD and token.value in ('import', 'package'):
                 in_import = True
 
             # Handle special token sequences
-            if token.type == 'IDENTIFIER' and not in_import:
+            if token.type == TokenType.IDENTIFIER and not in_import:
                 self._handle_identifier(token, lexer, in_element)
                 continue
 
-            if token.type == 'OPERATOR':
+            if token.type == TokenType.OPERATOR:
                 token_value = token.value
 
                 # Track lambda braces
@@ -91,10 +91,10 @@ class KotlinParser(Parser):
                         lambda_brace_count += 1
                     # Check if this starts a lambda by looking ahead
                     else:
-                        next_token = lexer.peek_next_token(['WHITESPACE'])
+                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                         if next_token and (
-                            next_token.type == 'IDENTIFIER' or
-                            (next_token.type == 'OPERATOR' and next_token.value == '->')
+                            next_token.type == TokenType.IDENTIFIER or
+                            (next_token.type == TokenType.OPERATOR and next_token.value == '->')
                         ):
                             in_lambda = True
                             lambda_brace_count = 1
@@ -149,13 +149,13 @@ class KotlinParser(Parser):
             in_element: Whether we're in a property access chain
         """
         # Look at the next token to determine context
-        next_token = lexer.peek_next_token(['WHITESPACE'])
+        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
 
-        if next_token and next_token.type == 'OPERATOR':
+        if next_token and next_token.type == TokenType.OPERATOR:
             if next_token.value == '(':
                 # Function or method call
                 self._tokens.append(Token(
-                    type='FUNCTION_OR_METHOD',
+                    type=TokenType.FUNCTION_OR_METHOD,
                     value=token.value,
                     start=token.start
                 ))
@@ -164,7 +164,7 @@ class KotlinParser(Parser):
         if in_element:
             # Property or element access
             self._tokens.append(Token(
-                type='ELEMENT',
+                type=TokenType.ELEMENT,
                 value=token.value,
                 start=token.start
             ))

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.html.html_lexer import HTMLLexer
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -105,14 +105,14 @@ class HTMLParser(Parser):
             if not token:
                 break
 
-            if token.type == 'SCRIPT':
+            if token.type == TokenType.SCRIPT:
                 embedded_parser_state = self._embedded_parse(ProgrammingLanguage.JAVASCRIPT, embedded_parser_state, token.value)
                 if embedded_parser_state:
                     continuation_state = embedded_parser_state.continuation_state
 
                 continue
 
-            if token.type == 'STYLE':
+            if token.type == TokenType.STYLE:
                 embedded_parser_state = self._embedded_parse(ProgrammingLanguage.CSS, embedded_parser_state, token.value)
                 if embedded_parser_state:
                     continuation_state = embedded_parser_state.continuation_state

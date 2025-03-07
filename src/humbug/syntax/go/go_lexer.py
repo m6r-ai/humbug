@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 # Add Go to the ProgrammingLanguage enum if not already present
@@ -122,7 +122,7 @@ class GoLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -145,7 +145,7 @@ class GoLexer(Lexer):
             self._position += 1  # Skip closing quote
 
         value = self._input[start:self._position]
-        token_type = 'RUNE' if quote == "'" else 'STRING'
+        token_type = TokenType.RUNE if quote == "'" else TokenType.STRING
         self._tokens.append(Token(type=token_type, value=value, start=start))
 
     def _read_number(self) -> None:
@@ -189,7 +189,7 @@ class GoLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -253,7 +253,7 @@ class GoLexer(Lexer):
                     self._position += 1
 
             self._tokens.append(Token(
-                type='NUMBER',
+                type=TokenType.NUMBER,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -262,7 +262,7 @@ class GoLexer(Lexer):
         # It's a regular dot operator (for package member access)
         self._position += 1
         self._tokens.append(Token(
-            type='OPERATOR',
+            type=TokenType.OPERATOR,
             value='.',
             start=start
         ))
@@ -276,7 +276,7 @@ class GoLexer(Lexer):
                 self._input[self._position + 1] == '-'):  # Channel operation
             self._position += 2
             self._tokens.append(Token(
-                type='OPERATOR',
+                type=TokenType.OPERATOR,
                 value='<-',
                 start=start
             ))
@@ -310,7 +310,7 @@ class GoLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -335,7 +335,7 @@ class GoLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -353,10 +353,10 @@ class GoLexer(Lexer):
 
         value = self._input[start:self._position]
         if self._is_keyword(value):
-            self._tokens.append(Token(type='KEYWORD', value=value, start=start))
+            self._tokens.append(Token(type=TokenType.KEYWORD, value=value, start=start))
             return
 
-        self._tokens.append(Token(type='IDENTIFIER', value=value, start=start))
+        self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
     def _read_operator(self) -> None:
         """
@@ -374,7 +374,7 @@ class GoLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -383,7 +383,7 @@ class GoLexer(Lexer):
         start = self._position
         ch = self._input[self._position]
         self._position += 1
-        self._tokens.append(Token(type='ERROR', value=ch, start=start))
+        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
 
     def _is_keyword(self, value: str) -> bool:
         """

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -52,27 +52,27 @@ class SchemeParser(Parser):
         lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = lexer.get_next_token(['WHITESPACE'])
+            token = lexer.get_next_token([TokenType.WHITESPACE])
             if not token:
                 break
 
             # Handle vector start
-            if token.type == 'VECTOR_START':
+            if token.type == TokenType.VECTOR_START:
                 in_vector = True
                 continuation_state += 1
                 self._tokens.append(token)
                 continue
 
             # Handle opening parentheses
-            if token.type == 'LPAREN':
+            if token.type == TokenType.LPAREN:
                 continuation_state += 1
                 self._tokens.append(token)
 
-                next_token = lexer.peek_next_token(['WHITESPACE'])
-                if next_token and next_token.type == 'IDENTIFIER':
-                    next_token = lexer.get_next_token(['WHITESPACE'])
+                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                if next_token and next_token.type == TokenType.IDENTIFIER:
+                    next_token = lexer.get_next_token([TokenType.WHITESPACE])
                     self._tokens.append(Token(
-                        type='FUNCTION_OR_METHOD',
+                        type=TokenType.FUNCTION_OR_METHOD,
                         value=next_token.value,
                         start=next_token.start
                     ))
@@ -91,7 +91,7 @@ class SchemeParser(Parser):
 
             if token.type == 'DOT':
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=token.value,
                     start=token.start
                 ))

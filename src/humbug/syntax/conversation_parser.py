@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.conversation_lexer import ConversationLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -142,9 +142,9 @@ class ConversationParser(Parser):
                     self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
                     continue
 
-                if lex_token.type == 'WHITESPACE':
+                if lex_token.type == TokenType.WHITESPACE:
                     peek_token = lexer.peek_next_token()
-                    if (peek_token is None or peek_token.type != 'FENCE') and parse_embedded:
+                    if (peek_token is None or peek_token.type != TokenType.FENCE) and parse_embedded:
                         break
 
                     self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
@@ -152,9 +152,9 @@ class ConversationParser(Parser):
 
                 seen_text = True
 
-                if lex_token.type == 'FENCE':
+                if lex_token.type == TokenType.FENCE:
                     if in_fence_block:
-                        self._tokens.append(Token(type='FENCE_END', value='```', start=lex_token.start))
+                        self._tokens.append(Token(type=TokenType.FENCE_END, value='```', start=lex_token.start))
                         in_fence_block = False
                         fence_depth = 0
                         language = ProgrammingLanguage.UNKNOWN
@@ -165,18 +165,18 @@ class ConversationParser(Parser):
                     in_fence_block = True
                     fence_depth = lex_token.start
                     embedded_parser_state = None
-                    self._tokens.append(Token(type='FENCE_START', value='```', start=lex_token.start))
+                    self._tokens.append(Token(type=TokenType.FENCE_START, value='```', start=lex_token.start))
 
-                    next_token = lexer.peek_next_token('WHITESPACE')
-                    if next_token and (next_token.type == 'TEXT'):
-                        next_token = lexer.get_next_token('WHITESPACE')
-                        self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
-                        self._tokens.append(Token(type='NEWLINE', value='\n', start=(next_token.start + len(next_token.value))))
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    if next_token and (next_token.type == TokenType.TEXT):
+                        next_token = lexer.get_next_token([TokenType.WHITESPACE])
+                        self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
+                        self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=(next_token.start + len(next_token.value))))
                         input_normalized = next_token.value.strip().lower()
                         language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
                         break
 
-                    self._tokens.append(Token(type='NEWLINE', value='\n', start=(lex_token.start + 3)))
+                    self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=(lex_token.start + 3)))
                     language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
                     break
 
@@ -196,7 +196,7 @@ class ConversationParser(Parser):
                 if input_str.strip():
                     input_str = ""
                 else:
-                    self._tokens.append(Token(type='ERROR', value='[Invalid indent]', start=0))
+                    self._tokens.append(Token(type=TokenType.ERROR, value='[Invalid indent]', start=0))
 
             new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
             parser_state.embedded_parser_state = new_embedded_parser_state

@@ -7,6 +7,7 @@ from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 from PySide6.QtCore import Signal
 
 from humbug.gui.style_manager import StyleManager
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.conversation_parser import ConversationParser, ConversationParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
 
@@ -70,17 +71,17 @@ class ConversationHighlighter(QSyntaxHighlighter):
                     break
 
                 match token.type:
-                    case 'FENCE_START':
-                        self.setFormat(0, len(text), self._style_manager.get_highlight("LANGUAGE"))
+                    case TokenType.FENCE_START:
+                        self.setFormat(0, len(text), self._style_manager.get_highlight(TokenType.LANGUAGE))
                         fence_depth += 1
                         continue
 
-                    case 'FENCE_END':
-                        self.setFormat(0, len(text), self._style_manager.get_highlight("LANGUAGE"))
+                    case TokenType.FENCE_END:
+                        self.setFormat(0, len(text), self._style_manager.get_highlight(TokenType.LANGUAGE))
                         fence_depth -= 1
                         continue
 
-                    case 'BACKTICK':
+                    case TokenType.BACKTICK:
                         if fence_depth == 0:
                             in_code_block = not in_code_block
                             continue
@@ -90,7 +91,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
                     continue
 
                 if in_code_block:
-                    self.setFormat(token.start, len(token.value), self._style_manager.get_highlight("BACKTICK_CODE"))
+                    self.setFormat(token.start, len(token.value), self._style_manager.get_highlight(TokenType.BACKTICK_CODE))
                     continue
 
             # Check if we need to rehighlight everything from this block onwards.

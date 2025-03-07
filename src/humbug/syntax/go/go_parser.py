@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.go.go_lexer import GoLexer
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -69,30 +69,30 @@ class GoParser(Parser):
             if not token:
                 break
 
-            if token.type == 'KEYWORD':
+            if token.type == TokenType.KEYWORD:
                 if token.value == 'struct':
-                    next_token = lexer.peek_next_token(['WHITESPACE'])
-                    if next_token and next_token.type == 'OPERATOR' and next_token.value == '{':
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '{':
                         in_struct_literal = True
                 self._tokens.append(token)
                 continue
 
-            if token.type == 'OPERATOR':
+            if token.type == TokenType.OPERATOR:
                 if token.value == '}':
                     in_struct_literal = False
                 self._tokens.append(token)
                 continue
 
-            if token.type != 'IDENTIFIER':
+            if token.type != TokenType.IDENTIFIER:
                 self._tokens.append(token)
                 continue
 
             # Handle struct literal field names
             if in_struct_literal:
-                next_token = lexer.peek_next_token(['WHITESPACE'])
-                if next_token and next_token.type == 'OPERATOR' and next_token.value == ':':
+                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                if next_token and next_token.type == TokenType.OPERATOR and next_token.value == ':':
                     self._tokens.append(Token(
-                        type='ELEMENT',
+                        type=TokenType.ELEMENT,
                         value=token.value,
                         start=token.start
                     ))
@@ -100,15 +100,15 @@ class GoParser(Parser):
 
             # Look at the next token to determine context
             cur_in_element = in_element
-            next_token = lexer.peek_next_token(['WHITESPACE'])
+            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
             in_element = cur_in_element
 
             next_in_element = False
-            if next_token and next_token.type == 'OPERATOR':
+            if next_token and next_token.type == TokenType.OPERATOR:
                 if next_token.value == '(':
                     in_element = False
                     self._tokens.append(Token(
-                        type='FUNCTION_OR_METHOD',
+                        type=TokenType.FUNCTION_OR_METHOD,
                         value=token.value,
                         start=token.start
                     ))
@@ -122,7 +122,7 @@ class GoParser(Parser):
 
             if cur_in_element:
                 self._tokens.append(Token(
-                    type='ELEMENT',
+                    type=TokenType.ELEMENT,
                     value=token.value,
                     start=token.start
                 ))

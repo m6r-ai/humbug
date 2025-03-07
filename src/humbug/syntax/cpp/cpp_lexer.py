@@ -1,5 +1,5 @@
 from humbug.syntax.c.c_lexer import CLexer
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 
 
 class CppLexer(CLexer):
@@ -29,7 +29,7 @@ class CppLexer(CLexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -38,7 +38,7 @@ class CppLexer(CLexer):
         start = self._position
         ch = self._input[self._position]
         self._position += 1
-        self._tokens.append(Token(type='ERROR', value=ch, start=start))
+        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
 
     def _is_keyword(self, value: str) -> bool:
         """

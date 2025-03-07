@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -119,7 +119,7 @@ class JavaScriptLexer(Lexer):
 
         start = self._position
         self._position += 1
-        self._tokens.append(Token(type='ERROR', value='#', start=start))
+        self._tokens.append(Token(type=TokenType.ERROR, value='#', start=start))
 
     def _read_hashbang(self) -> None:
         """
@@ -132,7 +132,7 @@ class JavaScriptLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='PREPROCESSOR',
+            type=TokenType.PREPROCESSOR,
             value=self._input[start:self._position],
             start=start
         ))
@@ -174,7 +174,7 @@ class JavaScriptLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -217,10 +217,10 @@ class JavaScriptLexer(Lexer):
 
         value = self._input[start:self._position]
         if self._is_keyword(value):
-            self._tokens.append(Token(type='KEYWORD', value=value, start=start))
+            self._tokens.append(Token(type=TokenType.KEYWORD, value=value, start=start))
             return
 
-        self._tokens.append(Token(type='IDENTIFIER', value=value, start=start))
+        self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
     def _read_comment(self) -> None:
         """
@@ -233,7 +233,7 @@ class JavaScriptLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -259,7 +259,7 @@ class JavaScriptLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -281,7 +281,7 @@ class JavaScriptLexer(Lexer):
             if ch == '\n':
                 start = self._position - 1
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value='/',
                     start=start
                 ))
@@ -305,7 +305,7 @@ class JavaScriptLexer(Lexer):
         start = self._position - 1
         regexp = self._input[start:index]
         self._position = index
-        self._tokens.append(Token(type='REGEXP', value=regexp, start=start))
+        self._tokens.append(Token(type=TokenType.REGEXP, value=regexp, start=start))
 
     def _read_operator(self) -> None:
         """
@@ -326,7 +326,7 @@ class JavaScriptLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -335,7 +335,7 @@ class JavaScriptLexer(Lexer):
         start = self._position
         ch = self._input[self._position]
         self._position += 1
-        self._tokens.append(Token(type='ERROR', value=ch, start=start))
+        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
 
     def _is_keyword(self, value: str) -> bool:
         """

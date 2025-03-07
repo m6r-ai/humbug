@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.css.css_lexer import CSSLexer
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -54,33 +54,33 @@ class CSSParser(Parser):
             if not token:
                 break
 
-            if token.type == 'HEX' or token.type == 'DIMENSION':
+            if token.type == TokenType.HEX or token.type == TokenType.DIMENSION:
                 self._tokens.append(Token(
-                    type='NUMBER',
+                    type=TokenType.NUMBER,
                     value=token.value,
                     start=token.start
                 ))
                 continue
 
-            if token.type == 'HASH':
+            if token.type == TokenType.HASH:
                 self._tokens.append(Token(
-                    type='IDENTIFIER',
+                    type=TokenType.IDENTIFIER,
                     value=token.value,
                     start=token.start
                 ))
                 continue
 
-            if token.type != 'IDENTIFIER':
+            if token.type != TokenType.IDENTIFIER:
                 self._tokens.append(token)
                 continue
 
             # Look at the next token. If it's a '(' operator then we're making a
             # function call!
-            next_token = lexer.peek_next_token(['WHITESPACE'])
-            if next_token and next_token.type == 'OPERATOR':
+            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+            if next_token and next_token.type == TokenType.OPERATOR:
                 if next_token.value == '(':
                     self._tokens.append(Token(
-                        type='FUNCTION_OR_METHOD',
+                        type=TokenType.FUNCTION_OR_METHOD,
                         value=token.value,
                         start=token.start
                     ))

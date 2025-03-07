@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -95,7 +95,7 @@ class SchemeLexer(Lexer):
         """
         start = self._position
         if self._position >= len(self._input):
-            self._tokens.append(Token(type='ERROR', value='#', start=start))
+            self._tokens.append(Token(type=TokenType.ERROR, value='#', start=start))
             return
 
         ch = self._input[self._position + 1].lower()
@@ -104,7 +104,7 @@ class SchemeLexer(Lexer):
         if ch in ('t', 'f'):
             self._position += 2
             self._tokens.append(Token(
-                type='BOOLEAN',
+                type=TokenType.BOOLEAN,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -122,7 +122,7 @@ class SchemeLexer(Lexer):
                    not self._is_delimiter(self._input[self._position])):
                 self._position += 1
             self._tokens.append(Token(
-                type='CHARACTER',
+                type=TokenType.CHARACTER,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -131,7 +131,7 @@ class SchemeLexer(Lexer):
         # Handle vectors
         if ch == '(':
             self._position += 2
-            self._tokens.append(Token(type='VECTOR_START', value='#(', start=start))
+            self._tokens.append(Token(type=TokenType.VECTOR_START, value='#(', start=start))
             return
 
         # Handle number bases
@@ -139,7 +139,7 @@ class SchemeLexer(Lexer):
             self._read_based_number(ch)
             return
 
-        self._tokens.append(Token(type='ERROR', value=self._input[start:self._position + 1], start=start))
+        self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position + 1], start=start))
 
     def _read_based_number(self, base: str) -> None:
         """
@@ -171,7 +171,7 @@ class SchemeLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -198,7 +198,7 @@ class SchemeLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -222,14 +222,14 @@ class SchemeLexer(Lexer):
 
         if self._is_special_form(value):
             self._tokens.append(Token(
-                type='KEYWORD',
+                type=TokenType.KEYWORD,
                 value=value,
                 start=start
             ))
             return
 
         self._tokens.append(Token(
-            type='IDENTIFIER',
+            type=TokenType.IDENTIFIER,
             value=value,
             start=start
         ))
@@ -257,7 +257,7 @@ class SchemeLexer(Lexer):
         start = self._position
         self._position += 1
         self._tokens.append(Token(
-            type='DOT',
+            type=TokenType.DOT,
             value='.',
             start=start
         ))
@@ -317,7 +317,7 @@ class SchemeLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -330,7 +330,7 @@ class SchemeLexer(Lexer):
         ch = self._input[self._position]
         self._position += 1
 
-        token_type = 'LPAREN' if ch == '(' else 'RPAREN'
+        token_type = TokenType.LPAREN if ch == '(' else TokenType.RPAREN
 
         self._tokens.append(Token(type=token_type, value=ch, start=start))
 
@@ -345,7 +345,7 @@ class SchemeLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))

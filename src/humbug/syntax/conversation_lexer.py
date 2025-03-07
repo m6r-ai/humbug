@@ -1,6 +1,6 @@
 from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 class ConversationLexer(Lexer):
@@ -37,7 +37,7 @@ class ConversationLexer(Lexer):
         start: int = self._position
         self._position += 1
         text_value = self._input[start:self._position]
-        self._tokens.append(Token(type='SYMBOL', value=text_value, start=start))
+        self._tokens.append(Token(type=TokenType.SYMBOL, value=text_value, start=start))
 
     def _read_text(self) -> None:
         start: int = self._position
@@ -50,7 +50,7 @@ class ConversationLexer(Lexer):
             self._position += 1
 
         text_value = self._input[start:self._position]
-        self._tokens.append(Token(type='TEXT', value=text_value, start=start))
+        self._tokens.append(Token(type=TokenType.TEXT, value=text_value, start=start))
 
     def _read_backtick(self) -> None:
         start: int = self._position
@@ -59,8 +59,8 @@ class ConversationLexer(Lexer):
         # is the (optional) name of the language
         if self._input[self._position:].startswith('```'):
             self._position += 3
-            self._tokens.append(Token(type='FENCE', value='```', start=start))
+            self._tokens.append(Token(type=TokenType.FENCE, value='```', start=start))
             return
 
         self._position += 1
-        self._tokens.append(Token(type='BACKTICK', value='`', start=start))
+        self._tokens.append(Token(type=TokenType.BACKTICK, value='`', start=start))

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.metaphor.metaphor_lexer import MetaphorLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
@@ -131,13 +131,13 @@ class MetaphorParser(Parser):
                 if not lex_token:
                     break
 
-                if lex_token.type == 'WHITESPACE':
+                if lex_token.type == TokenType.WHITESPACE:
                     self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
                     continue
 
-                if lex_token.type == 'FENCE':
+                if lex_token.type == TokenType.FENCE:
                     if in_fence_block:
-                        self._tokens.append(Token(type='LANGUAGE', value='```', start=lex_token.start))
+                        self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
                         in_fence_block = False
                         language = ProgrammingLanguage.UNKNOWN
                         embedded_parser_state = None
@@ -146,12 +146,12 @@ class MetaphorParser(Parser):
 
                     in_fence_block = True
                     embedded_parser_state = None
-                    self._tokens.append(Token(type='LANGUAGE', value='```', start=lex_token.start))
+                    self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
 
-                    next_token = lexer.peek_next_token('WHITESPACE')
-                    if next_token and (next_token.type == 'TEXT'):
-                        next_token = lexer.get_next_token('WHITESPACE')
-                        self._tokens.append(Token(type='LANGUAGE', value=next_token.value, start=next_token.start))
+                    next_token = lexer.peek_next_token(TokenType.WHITESPACE)
+                    if next_token and (next_token.type == TokenType.TEXT):
+                        next_token = lexer.get_next_token(TokenType.WHITESPACE)
+                        self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
 
                         input_normalized = next_token.value.strip().lower()
                         language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)

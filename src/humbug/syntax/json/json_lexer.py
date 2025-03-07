@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -77,7 +77,7 @@ class JSONLexer(Lexer):
             if ch == '\n':
                 # Unescaped newline in string - this is an error in JSON
                 self._tokens.append(Token(
-                    type='ERROR',
+                    type=TokenType.ERROR,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -97,7 +97,7 @@ class JSONLexer(Lexer):
                             continue
                     # Invalid unicode escape sequence
                     self._tokens.append(Token(
-                        type='ERROR',
+                        type=TokenType.ERROR,
                         value=self._input[start:self._position + 2],
                         start=start
                     ))
@@ -106,7 +106,7 @@ class JSONLexer(Lexer):
             if ch == '"':
                 self._position += 1
                 self._tokens.append(Token(
-                    type='STRING',
+                    type=TokenType.STRING,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -116,7 +116,7 @@ class JSONLexer(Lexer):
 
         # Unterminated string
         self._tokens.append(Token(
-            type='ERROR',
+            type=TokenType.ERROR,
             value=self._input[start:self._position],
             start=start
         ))
@@ -139,7 +139,7 @@ class JSONLexer(Lexer):
                 self._position + 1 < len(self._input) and
                 self._is_digit(self._input[self._position + 1])):
             self._tokens.append(Token(
-                type='ERROR',
+                type=TokenType.ERROR,
                 value=self._input[start:self._position + 2],
                 start=start
             ))
@@ -148,7 +148,7 @@ class JSONLexer(Lexer):
         # Read integer part
         if not self._read_digits():
             self._tokens.append(Token(
-                type='ERROR',
+                type=TokenType.ERROR,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -160,7 +160,7 @@ class JSONLexer(Lexer):
             self._position += 1
             if not self._read_digits():
                 self._tokens.append(Token(
-                    type='ERROR',
+                    type=TokenType.ERROR,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -175,14 +175,14 @@ class JSONLexer(Lexer):
                 self._position += 1
             if not self._read_digits():
                 self._tokens.append(Token(
-                    type='ERROR',
+                    type=TokenType.ERROR,
                     value=self._input[start:self._position],
                     start=start
                 ))
                 return
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -215,14 +215,14 @@ class JSONLexer(Lexer):
         value = self._input[start:self._position]
         if value in ('true', 'false', 'null'):
             self._tokens.append(Token(
-                type='KEYWORD',
+                type=TokenType.KEYWORD,
                 value=value,
                 start=start
             ))
             return
 
         self._tokens.append(Token(
-            type='ERROR',
+            type=TokenType.ERROR,
             value=value,
             start=start
         ))
@@ -234,7 +234,7 @@ class JSONLexer(Lexer):
         start = self._position
         self._position += 1
         self._tokens.append(Token(
-            type='OPERATOR',
+            type=TokenType.OPERATOR,
             value=self._input[start:self._position],
             start=start
         ))

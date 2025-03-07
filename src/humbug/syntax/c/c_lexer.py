@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional, Callable
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -148,7 +148,7 @@ class CLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -196,7 +196,7 @@ class CLexer(Lexer):
                 self._position = suffix_start
 
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -237,7 +237,7 @@ class CLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -263,7 +263,7 @@ class CLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='COMMENT',
+            type=TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -281,10 +281,10 @@ class CLexer(Lexer):
 
         value = self._input[start:self._position]
         if self._is_keyword(value):
-            self._tokens.append(Token(type='KEYWORD', value=value, start=start))
+            self._tokens.append(Token(type=TokenType.KEYWORD, value=value, start=start))
             return
 
-        self._tokens.append(Token(type='IDENTIFIER', value=value, start=start))
+        self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
     def _read_preprocessor_directive(self) -> None:
         """
@@ -297,7 +297,7 @@ class CLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='PREPROCESSOR',
+            type=TokenType.PREPROCESSOR,
             value=self._input[start:self._position],
             start=start
         ))
@@ -319,7 +319,7 @@ class CLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -328,7 +328,7 @@ class CLexer(Lexer):
         start = self._position
         ch = self._input[self._position]
         self._position += 1
-        self._tokens.append(Token(type='ERROR', value=ch, start=start))
+        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
 
     def _is_keyword(self, value: str) -> bool:
         """

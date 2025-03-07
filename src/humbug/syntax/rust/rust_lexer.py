@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional, Set
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -149,7 +149,7 @@ class RustLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='STRING',
+            type=TokenType.STRING,
             value=self._input[start:self._position],
             start=start
         ))
@@ -176,7 +176,7 @@ class RustLexer(Lexer):
         if closing_hashes != hash_count:
             # Invalid raw identifier, treat as error
             self._tokens.append(Token(
-                type='ERROR',
+                type=TokenType.ERROR,
                 value=self._input[start:self._position + closing_hashes],
                 start=start
             ))
@@ -188,10 +188,10 @@ class RustLexer(Lexer):
         # Check if the raw identifier is actually a keyword
         inner_value = value[2:-hash_count]  # Strip r# and trailing #
         if self._is_keyword(inner_value):
-            self._tokens.append(Token(type='KEYWORD', value=value, start=start))
+            self._tokens.append(Token(type=TokenType.KEYWORD, value=value, start=start))
             return
 
-        self._tokens.append(Token(type='IDENTIFIER', value=value, start=start))
+        self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
     def _read_angle_bracket(self) -> None:
         """
@@ -209,7 +209,7 @@ class RustLexer(Lexer):
             if ch == '=':
                 self._position += 1
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value='<=',
                     start=start
                 ))
@@ -221,13 +221,13 @@ class RustLexer(Lexer):
                         self._input[self._position] == '='):
                     self._position += 1
                     self._tokens.append(Token(
-                        type='OPERATOR',
+                        type=TokenType.OPERATOR,
                         value='<<=',
                         start=start
                     ))
                     return
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value='<<',
                     start=start
                 ))
@@ -235,7 +235,7 @@ class RustLexer(Lexer):
 
         # Single < for generic parameter or comparison
         self._tokens.append(Token(
-            type='OPERATOR',
+            type=TokenType.OPERATOR,
             value='<',
             start=start
         ))
@@ -253,10 +253,10 @@ class RustLexer(Lexer):
 
         value = self._input[start:self._position]
         if self._is_keyword(value):
-            self._tokens.append(Token(type='KEYWORD', value=value, start=start))
+            self._tokens.append(Token(type=TokenType.KEYWORD, value=value, start=start))
             return
 
-        self._tokens.append(Token(type='IDENTIFIER', value=value, start=start))
+        self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
     def _is_keyword(self, value: str) -> bool:
         """
@@ -440,7 +440,7 @@ class RustLexer(Lexer):
             start: Starting position of the number in the input
         """
         self._tokens.append(Token(
-            type='NUMBER',
+            type=TokenType.NUMBER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -462,7 +462,7 @@ class RustLexer(Lexer):
                 self._input[self._position] == '_')):
 
             self._tokens.append(Token(
-                type='LIFETIME',
+                type=TokenType.LIFETIME,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -472,13 +472,13 @@ class RustLexer(Lexer):
 
         # Character literal
         if self._position >= len(self._input):
-            self._tokens.append(Token(type='ERROR', value="'", start=start))
+            self._tokens.append(Token(type=TokenType.ERROR, value="'", start=start))
             return
 
         if self._input[self._position] == '\\':
             self._position += 1
             if self._position >= len(self._input):
-                self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
                 return
 
             # Handle escape sequences
@@ -490,7 +490,7 @@ class RustLexer(Lexer):
                 for _ in range(2):
                     if (self._position >= len(self._input) or
                             not self._is_hex_digit(self._input[self._position])):
-                        self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                        self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
                         return
 
                     self._position += 1
@@ -498,7 +498,7 @@ class RustLexer(Lexer):
                 self._position += 1
                 if (self._position >= len(self._input) or
                         self._input[self._position] != '{'):
-                    self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                    self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
                     return
 
                 self._position += 1
@@ -514,11 +514,11 @@ class RustLexer(Lexer):
                 if (self._position >= len(self._input) or
                         self._input[self._position] != '}' or
                         hex_digits == 0):
-                    self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                    self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
                     return
                 self._position += 1
             else:
-                self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+                self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
                 return
         else:
             # Single character
@@ -527,12 +527,12 @@ class RustLexer(Lexer):
         # Expect closing quote
         if (self._position >= len(self._input) or
                 self._input[self._position] != '\''):
-            self._tokens.append(Token(type='ERROR', value=self._input[start:self._position], start=start))
+            self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
             return
 
         self._position += 1
         self._tokens.append(Token(
-            type='CHARACTER',
+            type=TokenType.CHARACTER,
             value=self._input[start:self._position],
             start=start
         ))
@@ -557,7 +557,7 @@ class RustLexer(Lexer):
                 start = self._position
                 self._position += 2
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value='/=',
                     start=start
                 ))
@@ -567,7 +567,7 @@ class RustLexer(Lexer):
         start = self._position
         self._position += 1
         self._tokens.append(Token(
-            type='OPERATOR',
+            type=TokenType.OPERATOR,
             value='/',
             start=start
         ))
@@ -590,7 +590,7 @@ class RustLexer(Lexer):
             self._position += 1
 
         self._tokens.append(Token(
-            type='DOC_COMMENT' if is_doc else 'COMMENT',
+            type=TokenType.DOC_COMMENT if is_doc else TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -637,7 +637,7 @@ class RustLexer(Lexer):
             self._position = len(self._input)
 
         self._tokens.append(Token(
-            type='DOC_COMMENT' if is_doc else 'COMMENT',
+            type=TokenType.DOC_COMMENT if is_doc else TokenType.COMMENT,
             value=self._input[start:self._position],
             start=start
         ))
@@ -662,7 +662,7 @@ class RustLexer(Lexer):
                 start = self._position
                 self._position += len(operator)
                 self._tokens.append(Token(
-                    type='OPERATOR',
+                    type=TokenType.OPERATOR,
                     value=operator,
                     start=start
                 ))
@@ -673,7 +673,7 @@ class RustLexer(Lexer):
         ch = self._input[self._position]
         self._position += 1
         self._tokens.append(Token(
-            type='ERROR',
+            type=TokenType.ERROR,
             value=ch,
             start=start
         ))
