@@ -67,11 +67,20 @@ class SwiftLexer(Lexer):
         Returns:
             The appropriate lexing function for the character
         """
-        if ch == '\n':
-            return self._read_newline
+        if self._is_letter(ch) or ch == '_' or ch == '$':
+            return self._read_identifier_or_keyword
+
+        if self._is_digit(ch):
+            return self._read_number
 
         if self._is_whitespace(ch):
             return self._read_whitespace
+
+        if ch == '.':
+            return self._read_dot
+
+        if ch == '"':
+            return self._read_string
 
         if ch == '@':
             return self._read_attribute
@@ -79,20 +88,11 @@ class SwiftLexer(Lexer):
         if ch == '#':
             return self._read_directive_or_string
 
-        if self._is_letter(ch) or ch == '_' or ch == '$':
-            return self._read_identifier_or_keyword
-
-        if self._is_digit(ch):
-            return self._read_number
-
-        if ch == '"':
-            return self._read_string
-
         if ch == '/':
             return self._read_forward_slash
 
-        if ch == '.':
-            return self._read_dot
+        if ch == '\n':
+            return self._read_newline
 
         return self._read_operator
 
