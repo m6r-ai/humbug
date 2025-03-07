@@ -19,6 +19,7 @@ Internal structure changes:
   matching widget classes.  This avoids creating complex logic to hide the internals of
   these widget classes and sets a future template.
 - Optimized core lexing for syntax highlighting, making Python highlighting about 20% faster.
+- Optimized message highlighting.
 
 Bug fixes:
 
