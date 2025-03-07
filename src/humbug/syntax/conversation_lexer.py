@@ -19,14 +19,14 @@ class ConversationLexer(Lexer):
         :param ch: The start character
         :return: The lexing function
         """
+        if self._is_letter_or_digit(ch):
+            return self._read_text
+
         if self._is_whitespace(ch):
             return self._read_whitespace
 
         if ch == '`':
             return self._read_backtick
-
-        if self._is_letter_or_digit(ch):
-            return self._read_text
 
         if ch == '\n':
             return self._read_newline
