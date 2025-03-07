@@ -137,8 +137,8 @@ class HumbugApplication(QApplication):
         end = time.monotonic()
         elapsed_time = (end - start) * 1000
         if elapsed_time > 20:
-            rel_start = start - self._start_time
-            print(f"{rel_start:.3f}: processing event type {event_type} for object {receiver_name} took {elapsed_time:.3f} msec")
+            rel_end = end - self._start_time
+            print(f"{rel_end:.3f}: processing event {event} type {event_type} for object {receiver_name} took {elapsed_time:.3f} msec")
 
         return ret
 
