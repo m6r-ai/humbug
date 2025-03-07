@@ -15,6 +15,7 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 class ConversationHighlighterBlockData(QTextBlockUserData):
     def __init__(self):
         super().__init__()
+        self.seen_fence = False
         self.fence_depth = 0
         self.parser_state = None
 
@@ -43,11 +44,13 @@ class ConversationHighlighter(QSyntaxHighlighter):
             prev_block_data: ConversationHighlighterBlockData = None
             prev_parser_state = None
             fence_depth = 0
+            seen_fence = False
             if prev_block:
                 prev_block_data = prev_block.userData()
                 if prev_block_data:
                     prev_parser_state = prev_block_data.parser_state
                     fence_depth = prev_block_data.fence_depth
+                    seen_fence = prev_block_data.seen_fence
 
             language = ProgrammingLanguage.UNKNOWN
             contination_state = -1
@@ -76,6 +79,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
                     case TokenType.FENCE_START:
                         self.setFormat(0, len(text), style_manager.get_highlight(TokenType.LANGUAGE))
                         fence_depth += 1
+                        seen_fence = True
                         continue
 
                     case TokenType.FENCE_END:
@@ -104,23 +108,12 @@ class ConversationHighlighter(QSyntaxHighlighter):
             block_data = ConversationHighlighterBlockData()
             block_data.parser_state = parser_state
             block_data.fence_depth = fence_depth
+            block_data.seen_fence = seen_fence
             current_block.setUserData(block_data)
 
-            # Check if document contains any code blocks
-            has_code = False
-            block = self.document().firstBlock()
-            while block.isValid():
-                data = block.userData()
-                if data and data.fence_depth > 0:
-                    has_code = True
-                    break
-
-                block = block.next()
-
-            # Emit signal if state changed
-            if has_code != self._has_code_block:
-                self._has_code_block = has_code
-                self.codeBlockStateChanged.emit(has_code)
+            # Have we got to the end of the doc?  If yes, then emit the code block state.
+            if not current_block.next().isValid():
+                self.codeBlockStateChanged.emit(seen_fence)
 
         except Exception:
             self._logger.exception("highlighting exception")
