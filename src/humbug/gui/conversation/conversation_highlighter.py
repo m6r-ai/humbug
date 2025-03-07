@@ -65,6 +65,8 @@ class ConversationHighlighter(QSyntaxHighlighter):
 
             in_code_block = False
 
+            style_manager = self._style_manager
+
             while True:
                 token = parser.get_next_token()
                 if token is None:
@@ -72,12 +74,12 @@ class ConversationHighlighter(QSyntaxHighlighter):
 
                 match token.type:
                     case TokenType.FENCE_START:
-                        self.setFormat(0, len(text), self._style_manager.get_highlight(TokenType.LANGUAGE))
+                        self.setFormat(0, len(text), style_manager.get_highlight(TokenType.LANGUAGE))
                         fence_depth += 1
                         continue
 
                     case TokenType.FENCE_END:
-                        self.setFormat(0, len(text), self._style_manager.get_highlight(TokenType.LANGUAGE))
+                        self.setFormat(0, len(text), style_manager.get_highlight(TokenType.LANGUAGE))
                         fence_depth -= 1
                         continue
 
@@ -87,11 +89,11 @@ class ConversationHighlighter(QSyntaxHighlighter):
                             continue
 
                 if fence_depth > 0:
-                    self.setFormat(token.start, len(token.value), self._style_manager.get_highlight(token.type))
+                    self.setFormat(token.start, len(token.value), style_manager.get_highlight(token.type))
                     continue
 
                 if in_code_block:
-                    self.setFormat(token.start, len(token.value), self._style_manager.get_highlight(TokenType.BACKTICK_CODE))
+                    self.setFormat(token.start, len(token.value), style_manager.get_highlight(TokenType.BACKTICK_CODE))
                     continue
 
             # Check if we need to rehighlight everything from this block onwards.
