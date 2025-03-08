@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Set
+from typing import Callable, Optional
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -27,6 +27,21 @@ class RustLexer(Lexer):
     - Generic type parameters
     - Standard language tokens (keywords, operators, etc.)
     """
+
+    # Operators list
+    _OPERATORS = [
+        '<<=', '>>=', '...', '..=',
+        '&&', '||', '<<', '>>', '+=', '-=', '*=', '/=',
+        '%=', '^=', '&=', '|=', '==', '!=', '>=', '<=',
+        '..', '::', '->', '=>',
+        '+', '-', '*', '/', '%', '^', '!', '&', '|',
+        '=', '>', '<', '@', '_', '.', ',', ';', ':',
+        '#', '$', '?',
+        '(', ')', '[', ']', '{', '}'
+    ]
+
+    # Build the operator map
+    _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
 
     def __init__(self):
         super().__init__()
@@ -270,16 +285,7 @@ class RustLexer(Lexer):
         Returns:
             True if the value is a Rust keyword, False otherwise
         """
-        return value in self._get_keywords()
-
-    def _get_keywords(self) -> Set[str]:
-        """
-        Get the set of Rust keywords.
-
-        Returns:
-            Set of Rust keywords
-        """
-        return {
+        keywords = {
             # Reserved keywords
             'as', 'async', 'await', 'break', 'const', 'continue', 'crate', 'dyn',
             'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let',
@@ -292,6 +298,7 @@ class RustLexer(Lexer):
             'override', 'priv', 'try', 'typeof', 'unsized', 'virtual',
             'yield'
         }
+        return value in keywords
 
     def _read_number(self) -> None:
         """
@@ -641,41 +648,5 @@ class RustLexer(Lexer):
         self._tokens.append(Token(
             type=TokenType.DOC_COMMENT if is_doc else TokenType.COMMENT,
             value=self._input[start:self._position],
-            start=start
-        ))
-
-    def _read_operator(self) -> None:
-        """
-        Read an operator or punctuation token.
-        """
-        operators = [
-            '<<=', '>>=', '...', '..=',
-            '&&', '||', '<<', '>>', '+=', '-=', '*=', '/=',
-            '%=', '^=', '&=', '|=', '==', '!=', '>=', '<=',
-            '..', '::', '->', '=>',
-            '+', '-', '*', '/', '%', '^', '!', '&', '|',
-            '=', '>', '<', '@', '_', '.', ',', ';', ':',
-            '#', '$', '?',
-            '(', ')', '[', ']', '{', '}'
-        ]
-
-        for operator in operators:
-            if self._input[self._position:].startswith(operator):
-                start = self._position
-                self._position += len(operator)
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=operator,
-                    start=start
-                ))
-                return
-
-        # If no operator matches, treat as error
-        start = self._position
-        ch = self._input[self._position]
-        self._position += 1
-        self._tokens.append(Token(
-            type=TokenType.ERROR,
-            value=ch,
             start=start
         ))

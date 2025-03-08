@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Set
+from typing import Callable, Optional
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -30,6 +30,17 @@ class KotlinLexer(Lexer):
     - Operators and property accessors
     - Numbers with underscores and type suffixes
     """
+
+    # Operators list
+    _OPERATORS = [
+        '..<', '===', '!==', '..', '::', '?.', '?:', '!!', '++', '--',
+        '&&', '||', '+=', '-=', '*=', '/=', '%=', '==', '!=', '<=',
+        '>=', '->', '=>', '+', '-', '*', '/', '%', '=', '<', '>', '_'
+        '@', '$', '!', '?', ':', '.', '(', ')', '{', '}', '[', ']', ',', ';'
+    ]
+
+    # Build the operator map
+    _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
 
     def __init__(self):
         super().__init__()
@@ -383,33 +394,6 @@ class KotlinLexer(Lexer):
                     break
                 self._position += 1
 
-    def _read_operator(self) -> None:
-        """
-        Read an operator or punctuation token.
-        """
-        operators = [
-            '..<', '===', '!==', '..', '::', '?.', '?:', '!!', '++', '--',
-            '&&', '||', '+=', '-=', '*=', '/=', '%=', '==', '!=', '<=',
-            '>=', '->', '=>', '+', '-', '*', '/', '%', '=', '<', '>', '_'
-            '@', '$', '!', '?', ':', '.', '(', ')', '{', '}', '[', ']', ',', ';'
-        ]
-
-        for operator in operators:
-            if self._input[self._position:].startswith(operator):
-                start = self._position
-                self._position += len(operator)
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=operator,
-                    start=start
-                ))
-                return
-
-        start = self._position
-        ch = self._input[self._position]
-        self._position += 1
-        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
-
     def _read_comment(self) -> None:
         """
         Read a single-line comment token.
@@ -502,16 +486,7 @@ class KotlinLexer(Lexer):
         Returns:
             True if the value is a Kotlin keyword, False otherwise
         """
-        return value in self._get_keywords()
-
-    def _get_keywords(self) -> Set[str]:
-        """
-        Get the set of Kotlin keywords.
-
-        Returns:
-            Set of Kotlin keywords
-        """
-        return {
+        keywords = {
             # Hard keywords
             'as', 'as?', 'break', 'class', 'continue', 'do', 'else', 'false',
             'for', 'fun', 'if', 'in', '!in', 'interface', '!is', 'is', 'null', 'object',
@@ -530,3 +505,4 @@ class KotlinLexer(Lexer):
             'open', 'operator', 'out', 'override', 'private', 'protected',
             'public', 'reified', 'sealed', 'suspend', 'tailrec', 'vararg'
         }
+        return value in keywords

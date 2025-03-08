@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Set
+from typing import Callable, Optional
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -37,6 +37,19 @@ class JavaLexer(Lexer):
     - Lambda expressions
     - Module declarations
     """
+
+    # Operators list
+    _OPERATORS = [
+        '>>>=', '>>=', '<<=', '...', '->', '::', '++', '--',
+        '&&', '||', '>=', '<=', '==', '!=', '+=', '-=', '*=',
+        '/=', '&=', '|=', '^=', '%=', '>>', '<<', '>>>', '>',
+        '<', '!', '~', '?', ':', '.', '&', '|', '^', '+', '-',
+        '*', '/', '%', '=', '(', ')', '{', '}', '[', ']', ';',
+        ',', '@'
+    ]
+
+    # Build the operator map
+    _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
 
     def __init__(self):
         super().__init__()
@@ -415,48 +428,6 @@ class JavaLexer(Lexer):
             start=start
         ))
 
-    def _read_operator(self) -> None:
-        """
-        Read an operator token.
-
-        Handles all Java operators including:
-        - Arithmetic operators
-        - Comparison operators
-        - Logical operators
-        - Bitwise operators
-        - Assignment operators
-        - Lambda arrow
-        - Method reference
-        """
-        operators = [
-            '>>>=', '>>=', '<<=', '...', '->', '::', '++', '--',
-            '&&', '||', '>=', '<=', '==', '!=', '+=', '-=', '*=',
-            '/=', '&=', '|=', '^=', '%=', '>>', '<<', '>>>', '>',
-            '<', '!', '~', '?', ':', '.', '&', '|', '^', '+', '-',
-            '*', '/', '%', '=', '(', ')', '{', '}', '[', ']', ';',
-            ',', '@'
-        ]
-
-        for operator in operators:
-            if self._input[self._position:].startswith(operator):
-                start = self._position
-                self._position += len(operator)
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=operator,
-                    start=start
-                ))
-                return
-
-        # If we get here, we have an invalid operator
-        start = self._position
-        self._position += 1
-        self._tokens.append(Token(
-            type=TokenType.ERROR,
-            value=self._input[start:self._position],
-            start=start
-        ))
-
     def _is_keyword(self, value: str) -> bool:
         """
         Check if a given value is a Java keyword.
@@ -467,16 +438,7 @@ class JavaLexer(Lexer):
         Returns:
             True if the value is a Java keyword, False otherwise
         """
-        return value in self._get_keywords()
-
-    def _get_keywords(self) -> Set[str]:
-        """
-        Get the set of Java keywords.
-
-        Returns:
-            Set of Java keywords
-        """
-        return {
+        keywords = {
             # Regular keywords
             'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch',
             'char', 'class', 'const', 'continue', 'default', 'do', 'double',
@@ -501,3 +463,4 @@ class JavaLexer(Lexer):
             'sealed', 'permits', # Sealed classes (Java 15+)
             'non-sealed'  # Sealed classes (Java 15+)
         }
+        return value in keywords

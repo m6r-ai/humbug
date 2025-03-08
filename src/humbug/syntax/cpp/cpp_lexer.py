@@ -1,5 +1,5 @@
 from humbug.syntax.c.c_lexer import CLexer
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import Lexer
 
 
 class CppLexer(CLexer):
@@ -10,35 +10,17 @@ class CppLexer(CLexer):
     additional keywords and operators.
     """
 
-    def _read_operator(self) -> None:
-        """
-        Read an operator or punctuation token.
+    # Operators list
+    _OPERATORS = [
+        '>>=', '<<=', '&&=', '||=', '!=', '==', '+=', '-=', '*=',
+        '/=', '%=', '&=', '|=', '^=', '<=', '>=', '&&', '||', '<<',
+        '>>', '++', '--', '->', '::', '+', '-', '*', '/', '%', '&',
+        '~', '!', '|', '^', '=', '<', '>', '(', ')', '{', '}', '[',
+        ']', ';', ':', '?', '.', ','
+    ]
 
-        Extends the C lexer's operator handling to include C++-specific operators.
-        """
-        operators = [
-            '>>=', '<<=', '&&=', '||=', '!=', '==', '+=', '-=', '*=',
-            '/=', '%=', '&=', '|=', '^=', '<=', '>=', '&&', '||', '<<',
-            '>>', '++', '--', '->', '::', '+', '-', '*', '/', '%', '&',
-            '~', '!', '|', '^', '=', '<', '>', '(', ')', '{', '}', '[',
-            ']', ';', ':', '?', '.', ','
-        ]
-
-        for operator in operators:
-            if self._input[self._position:].startswith(operator):
-                start = self._position
-                self._position += len(operator)
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=operator,
-                    start=start
-                ))
-                return
-
-        start = self._position
-        ch = self._input[self._position]
-        self._position += 1
-        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
+    # Build the operator map
+    _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
 
     def _is_keyword(self, value: str) -> bool:
         """

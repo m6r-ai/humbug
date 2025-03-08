@@ -101,6 +101,10 @@ class Lexer(ABC):
     for i in range(0x2000, 0x200B):
         _WHITESPACE_CHARS.add(chr(i))
 
+    # Default empty operator map - to be overridden by subclasses
+    _OPERATORS: ClassVar[List[str]] = []
+    _OPERATORS_MAP: ClassVar[dict] = {}
+
     def __init__(self):
         self._input: str = ""
         self._input_len: int = 0
@@ -239,6 +243,68 @@ class Lexer(ABC):
 
         whitespace_value = self._input[start:self._position]
         self._tokens.append(Token(type=TokenType.WHITESPACE, value=whitespace_value, start=start))
+
+    def _read_operator(self) -> None:
+        """
+        Generic implementation of operator reading using the operator map.
+
+        The operator map should be a dictionary where:
+        - Keys are the first characters of operators
+        - Values are lists of operators starting with that character,
+          ordered from longest to shortest to ensure greedy matching
+        """
+        if self._position >= self._input_len:
+            return
+
+        first_char = self._input[self._position]
+        potential_operators = self._OPERATORS_MAP.get(first_char, [])
+
+        # Try to match the longest operator first
+        for op in potential_operators:
+            if self._input[self._position:].startswith(op):
+                start = self._position
+                self._position += len(op)
+                self._tokens.append(Token(
+                    type=TokenType.OPERATOR,
+                    value=op,
+                    start=start
+                ))
+                return
+
+        # If no operator matched, it's an error or a single character
+        start = self._position
+        ch = self._input[self._position]
+        self._position += 1
+        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
+
+    @staticmethod
+    def build_operator_map(operators: List[str]) -> dict:
+        """
+        Build an operator map from a list of operators.
+
+        Args:
+            operators: List of operator strings
+
+        Returns:
+            A dictionary mapping first characters to lists of operators
+            starting with that character, sorted by length (longest first)
+        """
+        operator_map = {}
+        for op in operators:
+            if not op:
+                continue
+
+            first_char = op[0]
+            if first_char not in operator_map:
+                operator_map[first_char] = []
+
+            operator_map[first_char].append(op)
+
+        # Sort each list by length, longest first to ensure greedy matching
+        for first_char in operator_map:
+            operator_map[first_char].sort(key=len, reverse=True)
+
+        return operator_map
 
     def _is_letter(self, ch: str) -> bool:
         """

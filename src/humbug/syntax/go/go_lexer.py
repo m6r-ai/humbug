@@ -35,6 +35,17 @@ class GoLexer(Lexer):
     - Special identifiers like the blank identifier (_)
     """
 
+    # Operators list
+    _OPERATORS = [
+        '<<=', '>>=', '...', '&^=', ':=', '<-', '++', '--', '&&', '||', '<=',
+        '>=', '==', '!=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=',
+        '<<', '>>', '&^', '+', '-', '*', '/', '%', '&', '|', '^', '<', '>',
+        '!', '=', ':', '.', ',', ';', '(', ')', '{', '}', '[', ']', '~'
+    ]
+
+    # Build the operator map
+    _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
+
     def __init__(self):
         super().__init__()
         self._in_block_comment = False
@@ -357,33 +368,6 @@ class GoLexer(Lexer):
             return
 
         self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
-
-    def _read_operator(self) -> None:
-        """
-        Read an operator or punctuation token.
-        """
-        operators = [
-            '<<=', '>>=', '...', '&^=', ':=', '<-', '++', '--', '&&', '||', '<=',
-            '>=', '==', '!=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=',
-            '<<', '>>', '&^', '+', '-', '*', '/', '%', '&', '|', '^', '<', '>',
-            '!', '=', ':', '.', ',', ';', '(', ')', '{', '}', '[', ']', '~'
-        ]
-
-        for operator in operators:
-            if self._input[self._position:].startswith(operator):
-                start = self._position
-                self._position += len(operator)
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=operator,
-                    start=start
-                ))
-                return
-
-        start = self._position
-        ch = self._input[self._position]
-        self._position += 1
-        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
 
     def _is_keyword(self, value: str) -> bool:
         """

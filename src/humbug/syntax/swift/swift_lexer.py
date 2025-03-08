@@ -29,6 +29,18 @@ class SwiftLexer(Lexer):
     - Multi-line strings with triple double quotes
     """
 
+    # Operators list
+    _OPERATORS = [
+        '===', '!==', '...', '..<', '<<=', '>>=',
+        '+=', '-=', '*=', '/=', '%=', '==', '!=', '>=', '<=', '??', '&&',
+        '||', '<<', '>>', '&+', '&-', '&*', '&=', '|=', '^=', '->',
+        '=', '+', '-', '*', '/', '%', '>', '<', '?', ':', '!', '~',
+        '&', '|', '^', ',', '(', ')', '{', '}', '[', ']', ';', '.'
+    ]
+
+    # Build the operator map
+    _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
+
     def __init__(self):
         super().__init__()
         self._in_block_comment = False
@@ -162,7 +174,7 @@ class SwiftLexer(Lexer):
         Read a string literal token, which could be a single-line or multi-line string.
         """
         # Check for multi-line string (triple double quotes)
-        if (self._position + 2 < self._input_len and 
+        if (self._position + 2 < self._input_len and
                 self._input[self._position:self._position + 3] == '"""'):
             self._read_multiline_string(3)
             return
@@ -353,67 +365,6 @@ class SwiftLexer(Lexer):
             value=self._input[start:self._position],
             start=start
         ))
-
-    def _read_operator(self) -> None:
-        """
-        Read an operator token.
-
-        Handles both standard operators and custom operators.
-        """
-        operators = [
-            '===', '!==', '...', '..<', '<<=', '>>=',
-            '+=', '-=', '*=', '/=', '%=', '==', '!=', '>=', '<=', '??', '&&',
-            '||', '<<', '>>', '&+', '&-', '&*', '&=', '|=', '^=', '->',
-            '=', '+', '-', '*', '/', '%', '>', '<', '?', ':', '!', '~',
-            '&', '|', '^', ',', '(', ')', '{', '}', '[', ']', ';', '.'
-        ]
-
-        # Try to match standard operators first
-        for operator in operators:
-            if self._input[self._position:].startswith(operator):
-                start = self._position
-                self._position += len(operator)
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=operator,
-                    start=start
-                ))
-                return
-
-        # Handle custom operators
-        start = self._position
-        while self._position < self._input_len:
-            ch = self._input[self._position]
-            if not self._is_operator_char(ch):
-                break
-            self._position += 1
-
-        if self._position > start:
-            self._tokens.append(Token(
-                type=TokenType.OPERATOR,
-                value=self._input[start:self._position],
-                start=start
-            ))
-            return
-
-        # Single character that's not a valid operator
-        ch = self._input[self._position]
-        self._position += 1
-        self._tokens.append(Token(
-            type=TokenType.ERROR,
-            value=ch,
-            start=start
-        ))
-
-    def _is_operator_char(self, ch: str) -> bool:
-        """
-        Check if a character is valid in an operator.
-        """
-        operator_chars = {
-            '/', '=', '-', '+', '!', '*', '%', '<', '>', '&',
-            '|', '^', '~', '?', ':'
-        }
-        return ch in operator_chars
 
     def _read_dot(self) -> None:
         """

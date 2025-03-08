@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Set
+from typing import Callable, Optional
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -27,6 +27,16 @@ class MoveLexer(Lexer):
     - Numeric literals with type suffixes
     - Comments (// and /* */ style)
     """
+
+    # Operators list
+    _OPERATORS = [
+        '#[', '::', '==', '!=', '<=', '>=', '=', '<', '>', '+', '-',
+        '*', '/', '%', '&', '|', '^', '!', '(', ')', '{', '}',
+        '[', ']', ';', ':', ',', '.'
+    ]
+
+    # Build the operator map
+    _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
 
     def __init__(self):
         super().__init__()
@@ -242,32 +252,6 @@ class MoveLexer(Lexer):
 
         self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
-    def _read_operator(self) -> None:
-        """
-        Read an operator or punctuation token.
-        """
-        operators = [
-            '#[', '::', '==', '!=', '<=', '>=', '=', '<', '>', '+', '-',
-            '*', '/', '%', '&', '|', '^', '!', '(', ')', '{', '}',
-            '[', ']', ';', ':', ',', '.'
-        ]
-
-        for operator in operators:
-            if self._input[self._position:].startswith(operator):
-                start = self._position
-                self._position += len(operator)
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=operator,
-                    start=start
-                ))
-                return
-
-        start = self._position
-        ch = self._input[self._position]
-        self._position += 1
-        self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
-
     def _is_keyword(self, value: str) -> bool:
         """
         Check if a given value is a Move keyword.
@@ -278,16 +262,7 @@ class MoveLexer(Lexer):
         Returns:
             True if the value is a Move keyword, False otherwise
         """
-        return value in self._get_keywords()
-
-    def _get_keywords(self) -> Set[str]:
-        """
-        Get the set of Move keywords.
-
-        Returns:
-            Set of Move keywords
-        """
-        return {
+        keywords = {
             'abort', 'acquires', 'as', 'break', 'const', 'continue',
             'copy', 'else', 'false', 'fun', 'if', 'invariant',
             'let', 'loop', 'module', 'move', 'native', 'public',
@@ -297,3 +272,4 @@ class MoveLexer(Lexer):
             'u8', 'u64', 'u128', 'vector', 'address', 'signer',
             'bool'
         }
+        return value in keywords
