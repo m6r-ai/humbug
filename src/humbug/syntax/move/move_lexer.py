@@ -37,6 +37,7 @@ class MoveLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
 
@@ -91,10 +92,10 @@ class MoveLexer(Lexer):
         self._position += 1  # Skip @
 
         # Check for hex literal
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._input[self._position:self._position + 2].lower() == '0x'):
             self._position += 2
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._is_hex_digit(self._input[self._position])):
                 self._position += 1
 
@@ -117,15 +118,15 @@ class MoveLexer(Lexer):
 
         # Check for hex literal
         if (self._input[self._position] == '0' and
-                self._position + 1 < len(self._input) and
+                self._position + 1 < self._input_len and
                 self._input[self._position + 1].lower() == 'x'):
             self._position += 2
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._is_hex_digit(self._input[self._position])):
                 self._position += 1
 
             # If followed by ::, this is an address
-            if (self._position + 1 < len(self._input) and
+            if (self._position + 1 < self._input_len and
                     self._input[self._position:self._position + 2] == '::'):
                 self._tokens.append(Token(
                     type=TokenType.ADDRESS,
@@ -142,21 +143,21 @@ class MoveLexer(Lexer):
             return
 
         # Decimal number
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_digit(self._input[self._position])):
             self._position += 1
 
         # Handle type suffixes
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == 'u'):
             self._position += 1
-            if self._position < len(self._input):
+            if self._position < self._input_len:
                 if self._input[self._position] == '8':
                     self._position += 1
-                elif (self._position + 1 < len(self._input) and
+                elif (self._position + 1 < self._input_len and
                       self._input[self._position:self._position + 2] == '64'):
                     self._position += 2
-                elif (self._position + 2 < len(self._input) and
+                elif (self._position + 2 < self._input_len and
                       self._input[self._position:self._position + 3] == '128'):
                     self._position += 3
 
@@ -170,7 +171,7 @@ class MoveLexer(Lexer):
         """
         Read a forward slash token, which could be a comment or operator.
         """
-        if self._position + 1 < len(self._input):
+        if self._position + 1 < self._input_len:
             if self._input[self._position + 1] == '/':
                 self._read_comment()
                 return
@@ -187,7 +188,7 @@ class MoveLexer(Lexer):
         """
         start = self._position
         self._position += 2  # Skip //
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '\n'):
             self._position += 1
 
@@ -205,7 +206,7 @@ class MoveLexer(Lexer):
         start = self._position
         self._position += skip_chars  # Skip /*
 
-        while (self._position + 1) < len(self._input):
+        while (self._position + 1) < self._input_len:
             if (self._input[self._position] == '*' and
                     self._input[self._position + 1] == '/'):
                 self._in_block_comment = False
@@ -215,7 +216,7 @@ class MoveLexer(Lexer):
             self._position += 1
 
         if self._in_block_comment:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.COMMENT,
@@ -230,7 +231,7 @@ class MoveLexer(Lexer):
         start = self._position
         self._position += 1
 
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                (self._is_letter_or_digit(self._input[self._position]) or
                 self._input[self._position] == '_')):
             self._position += 1

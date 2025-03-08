@@ -32,6 +32,7 @@ class CSSLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_comment = prev_lexer_state.in_comment
 
@@ -91,7 +92,7 @@ class CSSLexer(Lexer):
         """
         Read a dot operator or start of a class selector.
         """
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
@@ -102,7 +103,7 @@ class CSSLexer(Lexer):
         """
         Read a forward slash operator or start of a comment.
         """
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._input[self._position + 1] == '*'):
             self._read_comment(2)
             return
@@ -113,12 +114,12 @@ class CSSLexer(Lexer):
         """
         Read a minus operator, negative number, or identifier starting with a dash.
         """
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
 
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 (self._is_letter(self._input[self._position + 1]) or
                  self._input[self._position + 1] == '-')):
             self._read_identifier()
@@ -131,7 +132,7 @@ class CSSLexer(Lexer):
         Read a CSS identifier token.
         """
         start = self._position
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.#[]=- '):
             self._position += 1
 
@@ -148,7 +149,7 @@ class CSSLexer(Lexer):
         self._in_comment = True
         start = self._position
         self._position += skip_chars  # Skip /*
-        while (self._position + 1) < len(self._input):
+        while (self._position + 1) < self._input_len:
             if self._input[self._position] == '*' and self._input[self._position + 1] == '/':
                 self._in_comment = False
                 self._position += 2
@@ -159,7 +160,7 @@ class CSSLexer(Lexer):
         # If we're still in a block comment we've got one character left on this line and
         # we need to include it in the comment too.
         if self._in_comment:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.COMMENT,
@@ -173,7 +174,7 @@ class CSSLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-'):
             self._position += 1
 
@@ -191,11 +192,11 @@ class CSSLexer(Lexer):
         if self._input[self._position] == '-':
             self._position += 1
 
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] in '0123456789.'):
             self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ%'):
             self._read_dimension(start)
             return
@@ -213,7 +214,7 @@ class CSSLexer(Lexer):
         Args:
             start: The starting position of the dimension value
         """
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ%'):
             self._position += 1
 
@@ -231,10 +232,10 @@ class CSSLexer(Lexer):
         self._position += 1
 
         # Peek ahead to determine if this is a hex value or an ID
-        is_hex = (self._position < len(self._input) and
+        is_hex = (self._position < self._input_len and
                  self._is_hex_digit(self._input[self._position]))
 
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_hex_digit(self._input[self._position])):
             self._position += 1
 
@@ -247,7 +248,7 @@ class CSSLexer(Lexer):
             return
 
         # If not a valid hex, treat as ID selector
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-'):
             self._position += 1
 

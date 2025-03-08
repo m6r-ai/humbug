@@ -45,6 +45,7 @@ class RustLexer(Lexer):
             The updated lexer state after processing
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._block_comment_depth = prev_lexer_state.block_comment_depth
@@ -110,18 +111,18 @@ class RustLexer(Lexer):
         hash_count = 0
 
         # Check if this is a raw token
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._input[self._position + 1] == '#'):
             self._position += 2
             hash_count = 1
 
             # Count additional # symbols
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._input[self._position] == '#'):
                 hash_count += 1
                 self._position += 1
 
-            if self._position < len(self._input):
+            if self._position < self._input_len:
                 if self._input[self._position] == '"':
                     self._read_raw_string(hash_count, start)
                     return
@@ -141,8 +142,8 @@ class RustLexer(Lexer):
         self._position += 1  # Skip the quote
         end_sequence = '"' + '#' * hash_count
 
-        while self._position < len(self._input):
-            if (self._position + len(end_sequence) <= len(self._input) and
+        while self._position < self._input_len:
+            if (self._position + len(end_sequence) <= self._input_len and
                     self._input[self._position:self._position + len(end_sequence)] == end_sequence):
                 self._position += len(end_sequence)
                 break
@@ -158,7 +159,7 @@ class RustLexer(Lexer):
         """
         Read a raw identifier token.
         """
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
             if (not self._is_letter_or_digit(ch) and
                     ch != '_' and ch != '#'):
@@ -168,7 +169,7 @@ class RustLexer(Lexer):
         # Ensure proper closing with matching number of #
         closing_hashes = 0
         while (self._position > 0 and
-               self._position - 1 < len(self._input) and
+               self._position - 1 < self._input_len and
                self._input[self._position - 1] == '#'):
             closing_hashes += 1
             self._position -= 1
@@ -204,7 +205,7 @@ class RustLexer(Lexer):
         self._position += 1
 
         # Check for <= or <<
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             ch = self._input[self._position]
             if ch == '=':
                 self._position += 1
@@ -217,7 +218,7 @@ class RustLexer(Lexer):
             if ch == '<':
                 self._position += 1
                 # Check for <<=
-                if (self._position < len(self._input) and
+                if (self._position < self._input_len and
                         self._input[self._position] == '='):
                     self._position += 1
                     self._tokens.append(Token(
@@ -246,7 +247,7 @@ class RustLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                (self._is_letter_or_digit(self._input[self._position]) or
                 self._input[self._position] == '_')):
             self._position += 1
@@ -307,7 +308,7 @@ class RustLexer(Lexer):
 
         # Check for hex, octal, or binary prefix
         if (self._input[self._position] == '0' and
-                self._position + 1 < len(self._input)):
+                self._position + 1 < self._input_len):
             prefix = self._input[self._position + 1].lower()
             if prefix == 'x':  # Hexadecimal
                 self._position += 2
@@ -332,21 +333,21 @@ class RustLexer(Lexer):
         self._read_digits(self._is_digit, '_')
 
         # Check for decimal point
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == '.'):
             next_pos = self._position + 1
             # Ensure it's not the range operator (..)
-            if (next_pos < len(self._input) and
+            if (next_pos < self._input_len and
                     self._input[next_pos] != '.'):
                 self._position += 1
                 self._read_digits(self._is_digit, '_')
 
         # Check for exponent
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             exp = self._input[self._position].lower()
             if exp == 'e':
                 self._position += 1
-                if (self._position < len(self._input) and
+                if (self._position < self._input_len and
                         self._input[self._position] in '+-'):
                     self._position += 1
                 self._read_digits(self._is_digit, '_')
@@ -364,7 +365,7 @@ class RustLexer(Lexer):
             separator: Optional separator character allowed between digits
         """
         has_digit = False
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
             if is_valid_digit(ch):
                 has_digit = True
@@ -380,17 +381,17 @@ class RustLexer(Lexer):
         Read a numeric type suffix.
         Handles integer suffixes (u8, i32, etc.) and float suffixes (f32, f64).
         """
-        if self._position >= len(self._input):
+        if self._position >= self._input_len:
             return
 
         # Check for float suffix
         if self._input[self._position].lower() == 'f':
             suffix_start = self._position
             self._position += 1
-            if (self._position < len(self._input) and
+            if (self._position < self._input_len and
                     self._is_digit(self._input[self._position])):
                 self._position += 1
-                if (self._position < len(self._input) and
+                if (self._position < self._input_len and
                         self._is_digit(self._input[self._position])):
                     self._position += 1
             else:
@@ -407,14 +408,14 @@ class RustLexer(Lexer):
         self._position += 1
 
         # Read optional size (8, 16, 32, 64, 128, size)
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             if self._input[self._position:].startswith('size'):
                 self._position += 4
-            elif (self._position + 1 < len(self._input) and
+            elif (self._position + 1 < self._input_len and
                     self._is_digit(self._input[self._position]) and
                     self._is_digit(self._input[self._position + 1])):
                 self._position += 2
-                if (self._position < len(self._input) and
+                if (self._position < self._input_len and
                         self._is_digit(self._input[self._position])):
                     self._position += 1
             else:
@@ -457,7 +458,7 @@ class RustLexer(Lexer):
         self._position += 1  # Skip the quote
 
         # Check if this is potentially a lifetime
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 (self._is_letter(self._input[self._position]) or
                 self._input[self._position] == '_')):
 
@@ -471,13 +472,13 @@ class RustLexer(Lexer):
             return
 
         # Character literal
-        if self._position >= len(self._input):
+        if self._position >= self._input_len:
             self._tokens.append(Token(type=TokenType.ERROR, value="'", start=start))
             return
 
         if self._input[self._position] == '\\':
             self._position += 1
-            if self._position >= len(self._input):
+            if self._position >= self._input_len:
                 self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
                 return
 
@@ -488,7 +489,7 @@ class RustLexer(Lexer):
             elif ch == 'x':  # \xHH
                 self._position += 1
                 for _ in range(2):
-                    if (self._position >= len(self._input) or
+                    if (self._position >= self._input_len or
                             not self._is_hex_digit(self._input[self._position])):
                         self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
                         return
@@ -496,7 +497,7 @@ class RustLexer(Lexer):
                     self._position += 1
             elif ch == 'u':  # \u{HHHHHH}
                 self._position += 1
-                if (self._position >= len(self._input) or
+                if (self._position >= self._input_len or
                         self._input[self._position] != '{'):
                     self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
                     return
@@ -506,12 +507,12 @@ class RustLexer(Lexer):
                 # Read 1-6 hex digits
                 hex_digits = 0
                 while (hex_digits < 6 and
-                    self._position < len(self._input) and
+                    self._position < self._input_len and
                     self._is_hex_digit(self._input[self._position])):
                     hex_digits += 1
                     self._position += 1
 
-                if (self._position >= len(self._input) or
+                if (self._position >= self._input_len or
                         self._input[self._position] != '}' or
                         hex_digits == 0):
                     self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
@@ -525,7 +526,7 @@ class RustLexer(Lexer):
             self._position += 1
 
         # Expect closing quote
-        if (self._position >= len(self._input) or
+        if (self._position >= self._input_len or
                 self._input[self._position] != '\''):
             self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position], start=start))
             return
@@ -545,7 +546,7 @@ class RustLexer(Lexer):
         - A division operator (/)
         - A division-assignment operator (/=)
         """
-        if self._position + 1 < len(self._input):
+        if self._position + 1 < self._input_len:
             next_char = self._input[self._position + 1]
             if next_char == '/':
                 self._read_line_comment()
@@ -582,11 +583,11 @@ class RustLexer(Lexer):
 
         # Check for doc comment
         is_doc = False
-        if self._position < len(self._input) and self._input[self._position] == '/':
+        if self._position < self._input_len and self._input[self._position] == '/':
             is_doc = True
             self._position += 1
 
-        while self._position < len(self._input) and self._input[self._position] != '\n':
+        while self._position < self._input_len and self._input[self._position] != '\n':
             self._position += 1
 
         self._tokens.append(Token(
@@ -610,11 +611,11 @@ class RustLexer(Lexer):
 
         # Check for doc comment
         is_doc = False
-        if self._position < len(self._input) and self._input[self._position] == '*':
+        if self._position < self._input_len and self._input[self._position] == '*':
             is_doc = True
             self._position += 1
 
-        while self._position + 1 < len(self._input):
+        while self._position + 1 < self._input_len:
             if (self._input[self._position] == '/' and
                     self._input[self._position + 1] == '*'):
                 self._block_comment_depth += 1
@@ -634,7 +635,7 @@ class RustLexer(Lexer):
             self._position += 1
 
         if self._in_block_comment:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.DOC_COMMENT if is_doc else TokenType.COMMENT,

@@ -56,6 +56,7 @@ class CSharpLexer(Lexer):
             None
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_xml_doc = prev_lexer_state.in_xml_doc
@@ -131,7 +132,7 @@ class CSharpLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             next_char = self._input[self._position]
             if next_char == '"':
                 self._tokens.append(Token(
@@ -154,20 +155,20 @@ class CSharpLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             next_char = self._input[self._position]
             if next_char == '"':
                 # @"string" - verbatim string
                 self._read_verbatim_string(2)
                 return
-            elif next_char == '$' and self._position + 1 < len(self._input) and self._input[self._position + 1] == '"':
+            elif next_char == '$' and self._position + 1 < self._input_len and self._input[self._position + 1] == '"':
                 # @$"string" - verbatim interpolated string
                 self._read_verbatim_string(3)
                 return
             elif self._is_letter(next_char) or next_char == '_':
                 # @identifier - verbatim identifier (allows using reserved keywords as identifiers)
                 self._position += 1
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                       (self._is_letter_or_digit(self._input[self._position]) or
                        self._input[self._position] == '_')):
                     self._position += 1
@@ -193,13 +194,13 @@ class CSharpLexer(Lexer):
         start = self._position
         self._position += 1  # Skip opening quote
 
-        while self._position < len(self._input) and self._input[self._position] != '"':
+        while self._position < self._input_len and self._input[self._position] != '"':
             if self._input[self._position] == '\\':
                 self._position += 2  # Skip escape sequence
                 continue
             self._position += 1
 
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             self._position += 1  # Include closing quote
 
         self._tokens.append(Token(
@@ -222,10 +223,10 @@ class CSharpLexer(Lexer):
         start = self._position
         self._position += skip_chars
 
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             if self._input[self._position] == '"':
                 # Check if it's a doubled quote (escaped)
-                if (self._position + 1 < len(self._input) and
+                if (self._position + 1 < self._input_len and
                     self._input[self._position + 1] == '"'):
                     self._position += 2  # Skip both quotes
                     continue
@@ -238,7 +239,7 @@ class CSharpLexer(Lexer):
 
         if self._in_verbatim_string:
             # Reached end of input without closing the string
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.STRING,
@@ -253,13 +254,13 @@ class CSharpLexer(Lexer):
         start = self._position
         self._position += 1  # Skip opening quote
 
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             if self._input[self._position] == '\\':
                 self._position += 2  # Skip escape sequence
             else:
                 self._position += 1  # Regular character
 
-        if self._position < len(self._input) and self._input[self._position] == '\'':
+        if self._position < self._input_len and self._input[self._position] == '\'':
             self._position += 1  # Include closing quote
 
         self._tokens.append(Token(
@@ -280,30 +281,30 @@ class CSharpLexer(Lexer):
         saved_position = self._position
 
         # Skip whitespace
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_whitespace(self._input[self._position])):
             self._position += 1
 
         # Check if next token could be an identifier (attribute name)
         is_attribute = False
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             ch = self._input[self._position]
             if self._is_letter(ch) or ch == '_':
                 is_attribute = True
 
                 # Skip the identifier
                 self._position += 1
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                       (self._is_letter_or_digit(self._input[self._position]) or
                        self._input[self._position] == '_')):
                     self._position += 1
 
                 # Look for closing bracket or parameters
-                while self._position < len(self._input) and self._input[self._position] != ']':
+                while self._position < self._input_len and self._input[self._position] != ']':
                     self._position += 1
 
                 # If we didn't find a closing bracket, it's not an attribute
-                if self._position >= len(self._input) or self._input[self._position] != ']':
+                if self._position >= self._input_len or self._input[self._position] != ']':
                     is_attribute = False
 
         # Reset position
@@ -312,7 +313,7 @@ class CSharpLexer(Lexer):
         if is_attribute:
             # Find the closing bracket
             bracket_depth = 1
-            while self._position < len(self._input) and bracket_depth > 0:
+            while self._position < self._input_len and bracket_depth > 0:
                 ch = self._input[self._position]
                 self._position += 1
 
@@ -349,12 +350,12 @@ class CSharpLexer(Lexer):
 
         # Check for hex or binary prefix
         if (self._input[self._position] == '0' and
-            self._position + 1 < len(self._input)):
+            self._position + 1 < self._input_len):
             next_char = self._input[self._position + 1].lower()
 
             if next_char == 'x':  # Hexadecimal
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                       (self._is_hex_digit(self._input[self._position]) or
                        self._input[self._position] == '_')):
                     self._position += 1
@@ -371,7 +372,7 @@ class CSharpLexer(Lexer):
 
             elif next_char == 'b':  # Binary
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                       (self._is_binary_digit(self._input[self._position]) or
                        self._input[self._position] == '_')):
                     self._position += 1
@@ -403,34 +404,34 @@ class CSharpLexer(Lexer):
         Read a decimal number (integer or floating-point).
         """
         # Read integer part
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
               (self._is_digit(self._input[self._position]) or
                self._input[self._position] == '_')):
             self._position += 1
 
         # Check for decimal point
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
             self._input[self._position] == '.'):
             self._position += 1
 
             # Read fractional part
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                   (self._is_digit(self._input[self._position]) or
                    self._input[self._position] == '_')):
                 self._position += 1
 
         # Check for exponent
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
             self._input[self._position].lower() == 'e'):
             self._position += 1
 
             # Optional sign
-            if (self._position < len(self._input) and
+            if (self._position < self._input_len and
                 self._input[self._position] in ('+', '-')):
                 self._position += 1
 
             # Exponent digits
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                   (self._is_digit(self._input[self._position]) or
                    self._input[self._position] == '_')):
                 self._position += 1
@@ -445,7 +446,7 @@ class CSharpLexer(Lexer):
 
         All suffixes are case-insensitive.
         """
-        if self._position >= len(self._input):
+        if self._position >= self._input_len:
             return
 
         suffix_char = self._input[self._position].lower()
@@ -455,7 +456,7 @@ class CSharpLexer(Lexer):
             self._position += 1
 
             # For ul/lu combinations
-            if (self._position < len(self._input) and
+            if (self._position < self._input_len and
                 suffix_char in ('u', 'l')):
                 next_char = self._input[self._position].lower()
 
@@ -479,7 +480,7 @@ class CSharpLexer(Lexer):
         - Range operator (..)
         """
         # Check for range operator
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
             self._input[self._position + 1] == '.'):
             start = self._position
             self._position += 2  # Skip both dots
@@ -491,7 +492,7 @@ class CSharpLexer(Lexer):
             return
 
         # Check if this is the start of a float literal
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
             self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
@@ -507,7 +508,7 @@ class CSharpLexer(Lexer):
         - Start of an XML documentation comment (///)
         - Division operator (/)
         """
-        if self._position + 1 >= len(self._input):
+        if self._position + 1 >= self._input_len:
             self._read_operator()
             return
 
@@ -515,7 +516,7 @@ class CSharpLexer(Lexer):
 
         if next_char == '/':
             # Could be a line comment (//) or XML doc comment (///)
-            if (self._position + 2 < len(self._input) and
+            if (self._position + 2 < self._input_len and
                 self._input[self._position + 2] == '/'):
                 self._read_xml_doc_comment()
             else:
@@ -534,7 +535,7 @@ class CSharpLexer(Lexer):
         start = self._position
         self._position += 2  # Skip //
 
-        while self._position < len(self._input) and self._input[self._position] != '\n':
+        while self._position < self._input_len and self._input[self._position] != '\n':
             self._position += 1
 
         self._tokens.append(Token(
@@ -550,7 +551,7 @@ class CSharpLexer(Lexer):
         start = self._position
         self._position += 3  # Skip ///
 
-        while self._position < len(self._input) and self._input[self._position] != '\n':
+        while self._position < self._input_len and self._input[self._position] != '\n':
             self._position += 1
 
         self._tokens.append(Token(
@@ -570,7 +571,7 @@ class CSharpLexer(Lexer):
         start = self._position
         self._position += skip_chars
 
-        while self._position + 1 < len(self._input):
+        while self._position + 1 < self._input_len:
             if (self._input[self._position] == '*' and
                 self._input[self._position + 1] == '/'):
                 self._in_block_comment = False
@@ -581,7 +582,7 @@ class CSharpLexer(Lexer):
 
         if self._in_block_comment:
             # Reached end of input without closing the comment
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.COMMENT,
@@ -597,12 +598,12 @@ class CSharpLexer(Lexer):
         self._position += 1  # Skip #
 
         # Read the directive name
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_letter(self._input[self._position])):
             self._position += 1
 
         # Read the rest of the line
-        while self._position < len(self._input) and self._input[self._position] != '\n':
+        while self._position < self._input_len and self._input[self._position] != '\n':
             self._position += 1
 
         self._tokens.append(Token(
@@ -618,7 +619,7 @@ class CSharpLexer(Lexer):
         start = self._position
         self._position += 1
 
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
               (self._is_letter_or_digit(self._input[self._position]) or
                self._input[self._position] == '_')):
             self._position += 1
@@ -627,7 +628,7 @@ class CSharpLexer(Lexer):
         value = self._input[start:self._position]
 
         # Handle generics and nullable types
-        if (value and self._position < len(self._input) and
+        if (value and self._position < self._input_len and
             self._input[self._position] == '?'):
             # This is a nullable type (e.g., int?)
             self._position += 1

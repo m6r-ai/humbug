@@ -34,6 +34,7 @@ class PythonLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_docstring = prev_lexer_state.in_docstring
             self._docstring_quote = prev_lexer_state.docstring_quote
@@ -89,7 +90,7 @@ class PythonLexer(Lexer):
         Handles both single/double quoted strings and triple-quoted docstrings.
         """
         ch: str = self._input[self._position]
-        if (self._position + 2 < len(self._input) and
+        if (self._position + 2 < self._input_len and
                 self._input[self._position + 1] == ch and
                 self._input[self._position + 2] == ch):
             self._docstring_quote = ch
@@ -102,7 +103,7 @@ class PythonLexer(Lexer):
         """
         Read a dot operator or decimal point in a number.
         """
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
@@ -118,21 +119,21 @@ class PythonLexer(Lexer):
         start = self._position
 
         if (self._input[self._position] == '0' and
-                self._position + 1 < len(self._input)):
+                self._position + 1 < self._input_len):
             next_char = self._input[self._position + 1].lower()
             if next_char == 'x':  # Hexadecimal
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_hex_digit(self._input[self._position])):
                     self._position += 1
             elif next_char == 'b':  # Binary
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_binary_digit(self._input[self._position])):
                     self._position += 1
             elif next_char == 'o':  # Octal
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_octal_digit(self._input[self._position])):
                     self._position += 1
             else:  # Decimal or floating-point
@@ -141,7 +142,7 @@ class PythonLexer(Lexer):
             self._read_decimal_number()
 
         # Check for complex number 'j' suffix
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == 'j'):
             self._position += 1
 
@@ -155,24 +156,24 @@ class PythonLexer(Lexer):
         """
         Read a decimal or floating-point number.
         """
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_digit(self._input[self._position])):
             self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == '.'):
             self._position += 1
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._is_digit(self._input[self._position])):
                 self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position].lower() == 'e'):
             self._position += 1
             if self._input[self._position] in ('+', '-'):
                 self._position += 1
 
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._is_digit(self._input[self._position])):
                 self._position += 1
 
@@ -182,7 +183,7 @@ class PythonLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                (self._is_letter_or_digit(self._input[self._position]) or
                 self._input[self._position] == '_')):
             self._position += 1
@@ -200,7 +201,7 @@ class PythonLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '\n'):
             self._position += 1
 
@@ -220,7 +221,7 @@ class PythonLexer(Lexer):
         self._in_docstring = True
         start = self._position
         self._position += skip_chars  # Skip /*
-        while (self._position + 2) < len(self._input):
+        while (self._position + 2) < self._input_len:
             if (self._input[self._position] == quote_char and
                     self._input[self._position + 1] == quote_char and
                     self._input[self._position + 2] == quote_char):
@@ -232,7 +233,7 @@ class PythonLexer(Lexer):
 
         # If we're still in a docstring we need to consume the whole line
         if self._in_docstring:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.STRING,

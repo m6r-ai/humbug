@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional, Set
 
-from humbug.syntax.lexer import Lexer, LexerState, Token
+from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
@@ -50,6 +50,7 @@ class KotlinLexer(Lexer):
             The updated lexer state after processing
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_string_template = prev_lexer_state.in_string_template
@@ -122,7 +123,7 @@ class KotlinLexer(Lexer):
         """
         start = self._position
 
-        if self._position + 2 < len(self._input):
+        if self._position + 2 < self._input_len:
             if (self._input[self._position + 1] == 'i' and
                     self._input[self._position + 2] == 's'):
                 self._position += 3
@@ -165,13 +166,13 @@ class KotlinLexer(Lexer):
         Read a dot operator or decimal point in a number.
         Also handles range operator (..).
         """
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
 
         # Check for range operator
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._input[self._position + 1] == '.'):
             start = self._position
             self._position += 2
@@ -188,7 +189,7 @@ class KotlinLexer(Lexer):
         """
         Read a forward slash token, which could be a comment or operator.
         """
-        if self._position + 1 < len(self._input):
+        if self._position + 1 < self._input_len:
             if self._input[self._position + 1] == '/':
                 self._read_comment()
                 return
@@ -209,20 +210,20 @@ class KotlinLexer(Lexer):
         self._position += 1
 
         # Check for triple quote
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._input[self._position] == '"' and
                 self._input[self._position + 1] == '"'):
             is_triple_quoted = True
             self._position += 2
 
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
 
             if ch == '\\':
                 self._position += 2
                 continue
 
-            if ch == '$' and self._position + 1 < len(self._input):
+            if ch == '$' and self._position + 1 < self._input_len:
                 next_ch = self._input[self._position + 1]
                 if next_ch == '{':
                     self._in_string_template = True
@@ -240,7 +241,7 @@ class KotlinLexer(Lexer):
 
             if ch == quote:
                 if is_triple_quoted:
-                    if (self._position + 2 < len(self._input) and
+                    if (self._position + 2 < self._input_len and
                             self._input[self._position + 1] == '"' and
                             self._input[self._position + 2] == '"'):
                         self._position += 3
@@ -264,7 +265,7 @@ class KotlinLexer(Lexer):
         start = self._position
         self._position += 1
 
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             if self._input[self._position] == '`':
                 self._position += 1
                 break
@@ -284,15 +285,15 @@ class KotlinLexer(Lexer):
         self._position += 1
 
         # Handle use-site target if present
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             ch = self._input[self._position]
             if ch in ('f', 'g', 'p', 's', 'r', 'v', 'd', 'i'):
                 self._position += 1
-                if self._position < len(self._input) and self._input[self._position] == ':':
+                if self._position < self._input_len and self._input[self._position] == ':':
                     self._position += 1
 
         # Read the annotation name
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                (self._is_letter_or_digit(self._input[self._position]) or
                 self._input[self._position] == '_' or
                 self._input[self._position] == '.')):
@@ -316,18 +317,18 @@ class KotlinLexer(Lexer):
         start = self._position
 
         if (self._input[self._position] == '0' and
-                self._position + 1 < len(self._input)):
+                self._position + 1 < self._input_len):
             next_char = self._input[self._position + 1].lower()
             if next_char == 'x':  # Hexadecimal
                 self._position += 2
-                while self._position < len(self._input):
+                while self._position < self._input_len:
                     ch = self._input[self._position]
                     if not (self._is_hex_digit(ch) or ch == '_'):
                         break
                     self._position += 1
             elif next_char == 'b':  # Binary
                 self._position += 2
-                while self._position < len(self._input):
+                while self._position < self._input_len:
                     ch = self._input[self._position]
                     if not (self._is_binary_digit(ch) or ch == '_'):
                         break
@@ -338,11 +339,11 @@ class KotlinLexer(Lexer):
             self._read_decimal_number()
 
         # Handle type suffixes
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             ch = self._input[self._position].lower()
             if ch in ('u', 'l', 'f'):
                 self._position += 1
-                if ch == 'u' and self._position < len(self._input):
+                if ch == 'u' and self._position < self._input_len:
                     if self._input[self._position].lower() == 'l':
                         self._position += 1
 
@@ -356,28 +357,28 @@ class KotlinLexer(Lexer):
         """
         Read a decimal or floating-point number.
         """
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
             if not (self._is_digit(ch) or ch == '_'):
                 break
             self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == '.'):
             self._position += 1
-            while self._position < len(self._input):
+            while self._position < self._input_len:
                 ch = self._input[self._position]
                 if not (self._is_digit(ch) or ch == '_'):
                     break
                 self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position].lower() == 'e'):
             self._position += 1
             if self._input[self._position] in ('+', '-'):
                 self._position += 1
 
-            while self._position < len(self._input):
+            while self._position < self._input_len:
                 ch = self._input[self._position]
                 if not (self._is_digit(ch) or ch == '_'):
                     break
@@ -418,7 +419,7 @@ class KotlinLexer(Lexer):
         start = self._position
         self._position += 2  # Skip past //
 
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '\n'):
             self._position += 1
 
@@ -436,7 +437,7 @@ class KotlinLexer(Lexer):
         start = self._position
         self._position += skip_chars
 
-        while (self._position + 1) < len(self._input):
+        while (self._position + 1) < self._input_len:
             if (self._input[self._position] == '*' and
                     self._input[self._position + 1] == '/'):
                 self._in_block_comment = False
@@ -446,7 +447,7 @@ class KotlinLexer(Lexer):
             self._position += 1
 
         if self._in_block_comment:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.COMMENT,
@@ -459,7 +460,7 @@ class KotlinLexer(Lexer):
         Read a token starting with 'a', handling the special case of 'as?'.
         """
         # Special case: check for 'as?' operator
-        if (self._position + 2 < len(self._input) and
+        if (self._position + 2 < self._input_len and
                 self._input[self._position:self._position+2] == 'as' and
                 self._input[self._position+2] == '?'):
             start = self._position
@@ -481,7 +482,7 @@ class KotlinLexer(Lexer):
         start = self._position
         self._position += 1
 
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                (self._is_letter_or_digit(self._input[self._position]) or
                 self._input[self._position] == '_')):
             self._position += 1

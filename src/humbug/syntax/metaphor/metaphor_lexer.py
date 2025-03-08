@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Optional
+from typing import Callable, Optional
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -23,6 +23,7 @@ class MetaphorLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
+        self._input_len = len(input_str)
         self._inner_lex()
         return None
 
@@ -59,7 +60,7 @@ class MetaphorLexer(Lexer):
         """
         start = self._position
 
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
 
             if ch == '\n':
@@ -122,7 +123,7 @@ class MetaphorLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '\n'):
             self._position += 1
 

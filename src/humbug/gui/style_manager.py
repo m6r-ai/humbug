@@ -389,6 +389,7 @@ class StyleManager(QObject):
             TokenType.CSS_AT_RULE: ColorRole.SYNTAX_CSS_AT_RULE,
             TokenType.DOC_COMMENT: ColorRole.SYNTAX_COMMENT,
             TokenType.DOCTYPE: ColorRole.SYNTAX_DOCTYPE,
+            TokenType.DIRECTIVE: ColorRole.SYNTAX_PREPROCESSOR,
             TokenType.ELEMENT: ColorRole.SYNTAX_ELEMENT,
             TokenType.ERROR: ColorRole.SYNTAX_ERROR,
             TokenType.FUNCTION_OR_METHOD: ColorRole.SYNTAX_FUNCTION_OR_METHOD,

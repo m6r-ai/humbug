@@ -50,6 +50,7 @@ class TokenType(IntEnum):
     REGEXP = auto()
     RPAREN = auto()
     RUNE = auto()
+    SCRIPT = auto()
     STRING = auto()
     STYLE = auto()
     SYMBOL = auto()
@@ -101,6 +102,7 @@ class Lexer(ABC):
 
     def __init__(self):
         self._input: str = ""
+        self._input_len: int = 0
         self._position: int = 0
         self._tokens: List[Token] = []
         self._next_token: int = 0

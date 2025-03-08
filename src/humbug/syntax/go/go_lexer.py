@@ -52,6 +52,7 @@ class GoLexer(Lexer):
             The updated lexer state after processing
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_raw_string = prev_lexer_state.in_raw_string
@@ -114,7 +115,7 @@ class GoLexer(Lexer):
         start = self._position
         self._position += 1  # Skip opening backtick
 
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             if self._input[self._position] == '`':
                 self._in_raw_string = False
                 self._position += 1
@@ -135,13 +136,13 @@ class GoLexer(Lexer):
         quote = self._input[self._position]
         self._position += 1
 
-        while self._position < len(self._input) and self._input[self._position] != quote:
+        while self._position < self._input_len and self._input[self._position] != quote:
             if self._input[self._position] == '\\':
                 self._position += 2  # Skip escape sequence
                 continue
             self._position += 1
 
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             self._position += 1  # Skip closing quote
 
         value = self._input[start:self._position]
@@ -161,21 +162,21 @@ class GoLexer(Lexer):
         """
         start = self._position
 
-        if self._input[self._position] == '0' and self._position + 1 < len(self._input):
+        if self._input[self._position] == '0' and self._position + 1 < self._input_len:
             next_char = self._input[self._position + 1].lower()
             if next_char == 'x':  # Hexadecimal
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_hex_digit(self._input[self._position])):
                     self._position += 1
             elif next_char == 'o':  # Octal
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_octal_digit(self._input[self._position])):
                     self._position += 1
             elif next_char == 'b':  # Binary
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_binary_digit(self._input[self._position])):
                     self._position += 1
             else:
@@ -184,7 +185,7 @@ class GoLexer(Lexer):
             self._read_decimal_number()
 
         # Check for imaginary number suffix
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position].lower() == 'i'):
             self._position += 1
 
@@ -198,23 +199,23 @@ class GoLexer(Lexer):
         """
         Read a decimal integer or floating-point number.
         """
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_digit(self._input[self._position])):
             self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == '.'):
             self._position += 1
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._is_digit(self._input[self._position])):
                 self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position].lower() == 'e'):
             self._position += 1
             if self._input[self._position] in ('+', '-'):
                 self._position += 1
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._is_digit(self._input[self._position])):
                 self._position += 1
 
@@ -235,20 +236,20 @@ class GoLexer(Lexer):
         start = self._position
 
         # Check if it's the start of a number
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
             self._position += 1  # Move past the dot
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                 self._is_digit(self._input[self._position])):
                 self._position += 1
 
             # Handle scientific notation if present
-            if (self._position < len(self._input) and
+            if (self._position < self._input_len and
                     self._input[self._position].lower() == 'e'):
                 self._position += 1
-                if self._position < len(self._input) and self._input[self._position] in ('+', '-'):
+                if self._position < self._input_len and self._input[self._position] in ('+', '-'):
                     self._position += 1
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                     self._is_digit(self._input[self._position])):
                     self._position += 1
 
@@ -272,7 +273,7 @@ class GoLexer(Lexer):
         Read a less than operator, which could be part of a channel operation.
         """
         start = self._position
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._input[self._position + 1] == '-'):  # Channel operation
             self._position += 2
             self._tokens.append(Token(
@@ -288,7 +289,7 @@ class GoLexer(Lexer):
         """
         Read a forward slash, which could be a comment or operator.
         """
-        if self._position + 1 < len(self._input):
+        if self._position + 1 < self._input_len:
             if self._input[self._position + 1] == '/':
                 self._read_comment()
                 return
@@ -305,7 +306,7 @@ class GoLexer(Lexer):
         """
         start = self._position
         self._position += 2  # Skip //
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '\n'):
             self._position += 1
 
@@ -323,7 +324,7 @@ class GoLexer(Lexer):
         start = self._position
         self._position += skip_chars  # Skip /*
 
-        while (self._position + 1) < len(self._input):
+        while (self._position + 1) < self._input_len:
             if (self._input[self._position] == '*' and
                     self._input[self._position + 1] == '/'):
                 self._in_block_comment = False
@@ -332,7 +333,7 @@ class GoLexer(Lexer):
             self._position += 1
 
         if self._in_block_comment:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.COMMENT,
@@ -346,7 +347,7 @@ class GoLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                (self._is_letter_or_digit(self._input[self._position]) or
                 self._input[self._position] == '_')):
             self._position += 1

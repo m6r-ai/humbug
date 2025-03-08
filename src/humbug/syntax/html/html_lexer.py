@@ -53,6 +53,7 @@ class HTMLLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_tag = prev_lexer_state.in_tag
             self._tag_name = prev_lexer_state.tag_name
@@ -108,7 +109,7 @@ class HTMLLexer(Lexer):
         """
         Read an opening angle bracket and handle DOCTYPE declarations and comments.
         """
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._input[self._position + 1] == '!'):
             if self._input[self._position + 2:].startswith('DOCTYPE'):
                 self._read_doctype()
@@ -164,11 +165,11 @@ class HTMLLexer(Lexer):
         """
         start = self._position
         self._position += 9  # Skip past '<!DOCTYPE'
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '>'):
             self._position += 1
 
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             self._position += 1
 
         self._tokens.append(Token(
@@ -183,7 +184,7 @@ class HTMLLexer(Lexer):
         """
         start = self._position
         self._position += skip_chars  # Skip past '<!--'
-        while (self._position + 2) < len(self._input):
+        while (self._position + 2) < self._input_len:
             if self._input[self._position:self._position + 3] == '-->':
                 self._in_comment = False
                 self._position += 3
@@ -193,7 +194,7 @@ class HTMLLexer(Lexer):
         # If we're still in a block comment we've got two characters left on this line and
         # we need to include them in the comment too.
         if self._in_comment:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.COMMENT,
@@ -210,7 +211,7 @@ class HTMLLexer(Lexer):
         if script_close != -1:
             self._in_script = False
         else:
-            script_close = len(self._input)
+            script_close = self._input_len
 
         self._position = script_close
         self._tokens.append(Token(
@@ -228,7 +229,7 @@ class HTMLLexer(Lexer):
         if style_close != -1:
             self._in_style = False
         else:
-            style_close = len(self._input)
+            style_close = self._input_len
 
         self._position = style_close
         self._tokens.append(Token(
@@ -249,7 +250,7 @@ class HTMLLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                (self._is_letter_or_digit(self._input[self._position]) or
                 self._input[self._position] in ('_', '-', '/'))):
             self._position += 1
@@ -297,7 +298,7 @@ class HTMLLexer(Lexer):
         Read text content between HTML tags.
         """
         start = self._position
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '<'):
             self._position += 1
 

@@ -58,6 +58,7 @@ class JavaLexer(Lexer):
             The updated lexer state after processing
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_javadoc = prev_lexer_state.in_javadoc
@@ -130,7 +131,7 @@ class JavaLexer(Lexer):
 
         # Check for text block (triple-quoted string)
         if (quote == '"' and
-            self._position + 2 < len(self._input) and
+            self._position + 2 < self._input_len and
             self._input[self._position + 1] == '"' and
             self._input[self._position + 2] == '"'):
             self._read_text_block(3)
@@ -138,13 +139,13 @@ class JavaLexer(Lexer):
 
         # Regular string literal
         self._position += 1
-        while self._position < len(self._input) and self._input[self._position] != quote:
+        while self._position < self._input_len and self._input[self._position] != quote:
             if self._input[self._position] == '\\':
                 self._position += 2  # Skip escape sequence
                 continue
             self._position += 1
 
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             self._position += 1  # Include closing quote
 
         self._tokens.append(Token(
@@ -164,7 +165,7 @@ class JavaLexer(Lexer):
         start = self._position
         self._position += skip_chars
 
-        while self._position + 2 < len(self._input):
+        while self._position + 2 < self._input_len:
             if (self._input[self._position] == '"' and
                 self._input[self._position + 1] == '"' and
                 self._input[self._position + 2] == '"'):
@@ -179,7 +180,7 @@ class JavaLexer(Lexer):
             self._position += 1
 
         if self._in_text_block:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.STRING,
@@ -196,7 +197,7 @@ class JavaLexer(Lexer):
         - Varargs ellipsis (...)
         """
         # Check for varargs ellipsis
-        if (self._position + 2 < len(self._input) and
+        if (self._position + 2 < self._input_len and
             self._input[self._position + 1] == '.' and
             self._input[self._position + 2] == '.'):
             start = self._position
@@ -209,7 +210,7 @@ class JavaLexer(Lexer):
             return
 
         # Check if this is the start of a float literal
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
@@ -232,7 +233,7 @@ class JavaLexer(Lexer):
         start = self._position
 
         # Check for hex, binary, or octal prefix
-        if self._input[self._position] == '0' and self._position + 1 < len(self._input):
+        if self._input[self._position] == '0' and self._position + 1 < self._input_len:
             next_char = self._input[self._position + 1].lower()
             if next_char == 'x':  # Hexadecimal
                 self._position += 2
@@ -246,7 +247,7 @@ class JavaLexer(Lexer):
             self._read_decimal_number()
 
         # Handle suffixes
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             suffix = self._input[self._position].lower()
             if suffix in ('l', 'f', 'd'):
                 self._position += 1
@@ -259,7 +260,7 @@ class JavaLexer(Lexer):
 
     def _read_hex_digits(self) -> None:
         """Read hexadecimal digits, allowing underscores between digits."""
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
             if not (self._is_hex_digit(ch) or ch == '_'):
                 break
@@ -267,7 +268,7 @@ class JavaLexer(Lexer):
 
     def _read_binary_digits(self) -> None:
         """Read binary digits, allowing underscores between digits."""
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
             if not (self._is_binary_digit(ch) or ch == '_'):
                 break
@@ -279,30 +280,30 @@ class JavaLexer(Lexer):
         Handles underscores between digits and scientific notation.
         """
         # Read integral part
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
             if not (self._is_digit(ch) or ch == '_'):
                 break
             self._position += 1
 
         # Check for decimal point
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
             self._input[self._position] == '.'):
             self._position += 1
-            while self._position < len(self._input):
+            while self._position < self._input_len:
                 ch = self._input[self._position]
                 if not (self._is_digit(ch) or ch == '_'):
                     break
                 self._position += 1
 
         # Check for exponent
-        if self._position < len(self._input):
+        if self._position < self._input_len:
             ch = self._input[self._position].lower()
             if ch == 'e':
                 self._position += 1
-                if self._position < len(self._input) and self._input[self._position] in ('+', '-'):
+                if self._position < self._input_len and self._input[self._position] in ('+', '-'):
                     self._position += 1
-                while self._position < len(self._input):
+                while self._position < self._input_len:
                     ch = self._input[self._position]
                     if not (self._is_digit(ch) or ch == '_'):
                         break
@@ -315,7 +316,7 @@ class JavaLexer(Lexer):
         start = self._position
         self._position += 1
 
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
             if not (self._is_letter_or_digit(ch) or ch == '_'):
                 break
@@ -335,7 +336,7 @@ class JavaLexer(Lexer):
         self._position += 1  # Skip @
 
         # Read annotation name
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
             if not (self._is_letter_or_digit(ch) or ch in ('_', '.')):
                 break
@@ -355,7 +356,7 @@ class JavaLexer(Lexer):
         - Start of a JavaDoc comment (/**)
         - Division operator (/)
         """
-        if self._position + 1 >= len(self._input):
+        if self._position + 1 >= self._input_len:
             self._read_operator()
             return
 
@@ -363,7 +364,7 @@ class JavaLexer(Lexer):
         if next_char == '/':
             self._read_line_comment()
         elif next_char == '*':
-            if (self._position + 2 < len(self._input) and
+            if (self._position + 2 < self._input_len and
                 self._input[self._position + 2] == '*'):
                 self._in_javadoc = True
                 self._read_block_comment(3)
@@ -377,7 +378,7 @@ class JavaLexer(Lexer):
         start = self._position
         self._position += 2  # Skip //
 
-        while self._position < len(self._input) and self._input[self._position] != '\n':
+        while self._position < self._input_len and self._input[self._position] != '\n':
             self._position += 1
 
         self._tokens.append(Token(
@@ -397,7 +398,7 @@ class JavaLexer(Lexer):
         start = self._position
         self._position += skip_chars
 
-        while self._position + 1 < len(self._input):
+        while self._position + 1 < self._input_len:
             if (self._input[self._position] == '*' and
                 self._input[self._position + 1] == '/'):
                 self._in_block_comment = False
@@ -407,7 +408,7 @@ class JavaLexer(Lexer):
             self._position += 1
 
         if self._in_block_comment:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.COMMENT,

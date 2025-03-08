@@ -31,6 +31,7 @@ class JSONLexer(Lexer):
             Updated lexer state
         """
         self._input = input_str
+        self._input_len = len(input_str)
         self._inner_lex()
         return JSONLexerState()
 
@@ -71,7 +72,7 @@ class JSONLexer(Lexer):
         start = self._position
         self._position += 1
 
-        while self._position < len(self._input):
+        while self._position < self._input_len:
             ch = self._input[self._position]
 
             if ch == '\n':
@@ -83,14 +84,14 @@ class JSONLexer(Lexer):
                 ))
                 return
 
-            if ch == '\\' and self._position + 1 < len(self._input):
+            if ch == '\\' and self._position + 1 < self._input_len:
                 # Handle escape sequences
                 next_ch = self._input[self._position + 1]
                 if next_ch in '"\\bfnrt/':  # Valid JSON escape sequences
                     self._position += 2
                     continue
                 elif next_ch == 'u':  # Unicode escape
-                    if self._position + 5 < len(self._input):
+                    if self._position + 5 < self._input_len:
                         hex_digits = self._input[self._position + 2:self._position + 6]
                         if all(self._is_hex_digit(d) for d in hex_digits):
                             self._position += 6
@@ -134,9 +135,9 @@ class JSONLexer(Lexer):
             self._position += 1
 
         # Leading zero must not be followed by another digit
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == '0' and
-                self._position + 1 < len(self._input) and
+                self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
             self._tokens.append(Token(
                 type=TokenType.ERROR,
@@ -155,7 +156,7 @@ class JSONLexer(Lexer):
             return
 
         # Handle decimal point
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == '.'):
             self._position += 1
             if not self._read_digits():
@@ -167,10 +168,10 @@ class JSONLexer(Lexer):
                 return
 
         # Handle exponent
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position].lower() == 'e'):
             self._position += 1
-            if (self._position < len(self._input) and
+            if (self._position < self._input_len and
                     self._input[self._position] in '+-'):
                 self._position += 1
             if not self._read_digits():
@@ -194,10 +195,10 @@ class JSONLexer(Lexer):
         Returns:
             bool: True if at least one digit was read, False otherwise
         """
-        if self._position >= len(self._input) or not self._is_digit(self._input[self._position]):
+        if self._position >= self._input_len or not self._is_digit(self._input[self._position]):
             return False
 
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_digit(self._input[self._position])):
             self._position += 1
         return True
@@ -208,7 +209,7 @@ class JSONLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_letter(self._input[self._position])):
             self._position += 1
 

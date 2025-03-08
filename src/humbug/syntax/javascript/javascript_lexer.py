@@ -32,6 +32,7 @@ class JavaScriptLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
+        self._input_len = len(input_str)
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
 
@@ -86,7 +87,7 @@ class JavaScriptLexer(Lexer):
         Read a forward slash token, which could be a comment, block comment,
         or regular expression.
         """
-        if self._position + 1 < len(self._input):
+        if self._position + 1 < self._input_len:
             if self._input[self._position + 1] == '/':
                 self._read_comment()
                 return
@@ -101,7 +102,7 @@ class JavaScriptLexer(Lexer):
         """
         Read a dot operator or decimal point in a number.
         """
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
@@ -112,7 +113,7 @@ class JavaScriptLexer(Lexer):
         """
         Read a hash token, which could be a hashbang or an error.
         """
-        if (self._position + 1 < len(self._input) and
+        if (self._position + 1 < self._input_len and
                 self._input[self._position + 1] == '!'):
             self._read_hashbang()
             return
@@ -127,7 +128,7 @@ class JavaScriptLexer(Lexer):
         """
         start = self._position
         self._position += 2
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '\n'):
             self._position += 1
 
@@ -146,21 +147,21 @@ class JavaScriptLexer(Lexer):
         start = self._position
 
         if (self._input[self._position] == '0' and
-                self._position + 1 < len(self._input)):
+                self._position + 1 < self._input_len):
             next_char = self._input[self._position + 1].lower()
             if next_char == 'x':  # Hexadecimal
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_hex_digit(self._input[self._position])):
                     self._position += 1
             elif next_char == 'b':  # Binary
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_binary_digit(self._input[self._position])):
                     self._position += 1
             elif next_char == 'o':  # Octal
                 self._position += 2
-                while (self._position < len(self._input) and
+                while (self._position < self._input_len and
                        self._is_octal_digit(self._input[self._position])):
                     self._position += 1
             else:  # Decimal or floating-point
@@ -169,7 +170,7 @@ class JavaScriptLexer(Lexer):
             self._read_decimal_number()
 
         # Check for BigInt 'n' suffix
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == 'n'):
             self._position += 1
 
@@ -183,24 +184,24 @@ class JavaScriptLexer(Lexer):
         """
         Read a decimal or floating-point number.
         """
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._is_digit(self._input[self._position])):
             self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position] == '.'):
             self._position += 1
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._is_digit(self._input[self._position])):
                 self._position += 1
 
-        if (self._position < len(self._input) and
+        if (self._position < self._input_len and
                 self._input[self._position].lower() == 'e'):
             self._position += 1
             if self._input[self._position] in ('+', '-'):
                 self._position += 1
 
-            while (self._position < len(self._input) and
+            while (self._position < self._input_len and
                    self._is_digit(self._input[self._position])):
                 self._position += 1
 
@@ -210,7 +211,7 @@ class JavaScriptLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                (self._is_letter_or_digit(self._input[self._position]) or
                 self._input[self._position] in ('_', '$'))):
             self._position += 1
@@ -228,7 +229,7 @@ class JavaScriptLexer(Lexer):
         """
         start = self._position
         self._position += 2
-        while (self._position < len(self._input) and
+        while (self._position < self._input_len and
                self._input[self._position] != '\n'):
             self._position += 1
 
@@ -245,7 +246,7 @@ class JavaScriptLexer(Lexer):
         self._in_block_comment = True
         start = self._position
         self._position += skip_chars  # Skip /*
-        while (self._position + 1) < len(self._input):
+        while (self._position + 1) < self._input_len:
             if self._input[self._position] == '*' and self._input[self._position + 1] == '/':
                 self._in_block_comment = False
                 self._position += 2
@@ -256,7 +257,7 @@ class JavaScriptLexer(Lexer):
         # If we're still in a block comment we've got one character left on this line and
         # we need to include it in the comment too.
         if self._in_block_comment:
-            self._position = len(self._input)
+            self._position = self._input_len
 
         self._tokens.append(Token(
             type=TokenType.COMMENT,
@@ -274,7 +275,7 @@ class JavaScriptLexer(Lexer):
         # Look for a potential end of line. If we find one then this isn't a regexp literal
         index = self._position
         escaped = False
-        while index < len(self._input):
+        while index < self._input_len:
             ch = self._input[index]
             index += 1
 
@@ -299,7 +300,7 @@ class JavaScriptLexer(Lexer):
                 break
 
         # Check if the next characters seem to be valid regexp flags
-        while index < len(self._input) and self._input[index] in 'dgimsuy':
+        while index < self._input_len and self._input[index] in 'dgimsuy':
             index += 1
 
         start = self._position - 1
