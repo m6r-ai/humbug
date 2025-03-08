@@ -35,10 +35,6 @@ class MoveParser(Parser):
     - Vector operations
     """
 
-    def __init__(self):
-        super().__init__()
-        self._lexer = MoveLexer()
-
     def parse(self, prev_parser_state: Optional[MoveParserState], input_str: str) -> MoveParserState:
         """
         Parse the input string using the provided parser state.
@@ -56,9 +52,6 @@ class MoveParser(Parser):
             - ELEMENT tokens when part of a dotted or :: access chain
             - TYPE tokens when used in type contexts (after ':' or '<')
         """
-        self._tokens = []
-        self._next_token = 0
-
         in_element = False
         in_module_access = False
         prev_lexer_state = None
@@ -67,15 +60,16 @@ class MoveParser(Parser):
             in_module_access = prev_parser_state.in_module_access
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
+        lexer = MoveLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = self._lexer.get_next_token()
+            token = lexer.get_next_token()
             if not token:
                 break
 
             if token.type == TokenType.ADDRESS:
-                next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '::':
                     in_module_access = True
                 self._tokens.append(token)
@@ -90,10 +84,10 @@ class MoveParser(Parser):
 
                     if token.value == ':':
                         # Next identifier might be a type
-                        next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                         if next_token and next_token.type == TokenType.IDENTIFIER:
                             self._tokens.append(token)
-                            token = self._lexer.get_next_token([TokenType.WHITESPACE])
+                            token = lexer.get_next_token([TokenType.WHITESPACE])
                             self._tokens.append(Token(
                                 type=TokenType.TYPE,
                                 value=token.value,
@@ -103,10 +97,10 @@ class MoveParser(Parser):
 
                     if token.value == '<':
                         # Might be start of type parameters or vector literal
-                        next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                         if next_token and next_token.type == TokenType.IDENTIFIER:
                             self._tokens.append(token)
-                            token = self._lexer.get_next_token([TokenType.WHITESPACE])
+                            token = lexer.get_next_token([TokenType.WHITESPACE])
                             self._tokens.append(Token(
                                 type=TokenType.TYPE,
                                 value=token.value,
@@ -125,7 +119,7 @@ class MoveParser(Parser):
             # function or method call!
             cur_in_element = in_element
             cur_in_module_access = in_module_access
-            next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
             in_element = cur_in_element
             in_module_access = cur_in_module_access
 
@@ -145,7 +139,7 @@ class MoveParser(Parser):
 
                 if next_token.value == '<':
                     # Check if this is a type instantiation
-                    next_next_token = self._lexer.peek_next_token([TokenType.WHITESPACE, TokenType.IDENTIFIER, TokenType.OPERATOR])
+                    next_next_token = lexer.peek_next_token([TokenType.WHITESPACE, TokenType.IDENTIFIER, TokenType.OPERATOR])
                     if next_next_token and next_next_token.value == '>':
                         self._tokens.append(Token(
                             type=TokenType.TYPE,

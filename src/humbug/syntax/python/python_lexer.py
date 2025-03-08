@@ -48,12 +48,6 @@ class PythonLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
-        self._position = 0
-        self._tokens = []
-        self._next_token = 0
-        self._in_docstring = False
-        self._docstring_quote = ""
-
         if prev_lexer_state:
             self._in_docstring = prev_lexer_state.in_docstring
             self._docstring_quote = prev_lexer_state.docstring_quote

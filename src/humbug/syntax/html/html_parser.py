@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.html.html_lexer import HTMLLexer
-from humbug.syntax.lexer import TokenType
+from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -29,10 +29,6 @@ class HTMLParser(Parser):
     like embedded JavaScript and CSS content.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._lexer = HTMLLexer()
-
     def _embedded_parse(
             self,
             language: ProgrammingLanguage,
@@ -58,24 +54,19 @@ class HTMLParser(Parser):
         if not embedded_parser:
             return None
 
-        try:
-            # We apply a per-parser offset to any continuation value in case we switched language!
-            continuation_offset = int(language) * 0x1000
-            embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
-            embedded_parser_state.continuation_state += continuation_offset
+        # We apply a per-parser offset to any continuation value in case we switched language!
+        continuation_offset = int(language) * 0x1000
+        embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
+        embedded_parser_state.continuation_state += continuation_offset
 
-            while True:
-                token = embedded_parser.get_next_token()
-                if token is None:
-                    break
+        while True:
+            token = embedded_parser.get_next_token()
+            if token is None:
+                break
 
-                self._tokens.append(token)
+            self._tokens.append(Token(type=token.type, value=token.value, start=token.start))
 
-            return embedded_parser_state
-
-        finally:
-            # Return the parser to the cache when done
-            ParserRegistry.release_parser(language, embedded_parser)
+        return embedded_parser_state
 
     def parse(self, prev_parser_state: Optional[HTMLParserState], input_str: str) -> HTMLParserState:
         """
@@ -92,16 +83,14 @@ class HTMLParser(Parser):
             The parser handles embedded JavaScript and CSS content by delegating to
             specialized parsers for those languages.
         """
-        self._tokens = []
-        self._next_token = 0
-
         prev_lexer_state = None
         embedded_parser_state = None
         if prev_parser_state:
             prev_lexer_state = prev_parser_state.lexer_state
             embedded_parser_state = prev_parser_state.embedded_parser_state
 
-        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
+        lexer = HTMLLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         continuation_state = 0
         if lexer_state.in_comment:
@@ -112,7 +101,7 @@ class HTMLParser(Parser):
             continuation_state = 3
 
         while True:
-            token = self._lexer.get_next_token()
+            token = lexer.get_next_token()
             if not token:
                 break
 

@@ -36,10 +36,6 @@ class SwiftParser(Parser):
     like function calls, property access, closure expressions, and generic types.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._lexer = SwiftLexer()
-
     def parse(self, prev_parser_state: Optional[SwiftParserState], input_str: str) -> SwiftParserState:
         """
         Parse the input string using the provided parser state.
@@ -58,9 +54,6 @@ class SwiftParser(Parser):
             - Tracking closure expressions and their brace depth
             - Tracking generic parameter lists and their angle bracket depth
         """
-        self._tokens = []
-        self._next_token = 0
-
         in_element = False
         in_closure = False
         closure_brace_count = 0
@@ -76,16 +69,17 @@ class SwiftParser(Parser):
             generic_angle_count = prev_parser_state.generic_angle_count
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
+        lexer = SwiftLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = self._lexer.get_next_token()
+            token = lexer.get_next_token()
             if not token:
                 break
 
             if token.type == TokenType.IDENTIFIER:
                 # Look ahead for function calls, property access, or generic parameters
-                next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                 if next_token and next_token.type == TokenType.OPERATOR:
                     if next_token.value == '(':
                         # Function or method call
@@ -113,7 +107,7 @@ class SwiftParser(Parser):
             elif token.type == TokenType.OPERATOR:
                 if token.value == '{':
                     # Check for closure context
-                    next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                     if next_token and (
                         next_token.type == TokenType.OPERATOR and next_token.value == '(' or
                         next_token.type == TokenType.IDENTIFIER
@@ -126,7 +120,7 @@ class SwiftParser(Parser):
                         in_closure = False
                 elif token.value == '<' and not in_closure:
                     # Could be start of generic parameters or less-than operator
-                    next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                     if next_token and (
                         next_token.type == TokenType.IDENTIFIER or
                         (next_token.type == TokenType.OPERATOR and next_token.value in ('@', '_'))

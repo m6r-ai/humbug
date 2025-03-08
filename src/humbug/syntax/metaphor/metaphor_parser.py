@@ -33,10 +33,6 @@ class MetaphorParser(Parser):
     document tree structure of Role, Context, and Action blocks.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._lexer = MetaphorLexer()
-
     def _embedded_parse(
             self,
             language: ProgrammingLanguage,
@@ -62,24 +58,19 @@ class MetaphorParser(Parser):
         if not embedded_parser:
             return None
 
-        try:
-            # We apply a per-parser offset to any continuation value in case we switched language!
-            continuation_offset = int(language) * 0x1000
-            embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
-            embedded_parser_state.continuation_state += continuation_offset
+        # We apply a per-parser offset to any continuation value in case we switched language!
+        continuation_offset = int(language) * 0x1000
+        embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
+        embedded_parser_state.continuation_state += continuation_offset
 
-            while True:
-                token = embedded_parser.get_next_token()
-                if token is None:
-                    break
+        while True:
+            token = embedded_parser.get_next_token()
+            if token is None:
+                break
 
-                self._tokens.append(Token(type=token.type, value=token.value, start=token.start))
+            self._tokens.append(Token(type=token.type, value=token.value, start=token.start))
 
-            return embedded_parser_state
-
-        finally:
-            # Return the parser to the cache when done
-            ParserRegistry.release_parser(language, embedded_parser)
+        return embedded_parser_state
 
     def parse(self, prev_parser_state: Optional[MetaphorParserState], input_str: str) -> MetaphorParserState:
         """
@@ -96,9 +87,6 @@ class MetaphorParser(Parser):
             Handles transitions between regular conversation content and code fence blocks,
             delegating code blocks to appropriate language parsers.
         """
-        self._tokens = []
-        self._next_token = 0
-
         in_fence_block = False
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
@@ -113,10 +101,11 @@ class MetaphorParser(Parser):
         continuation_state = 0
 
         if not parsing_continuation:
-            self._lexer.lex(None, input_str)
+            lexer = MetaphorLexer()
+            lexer.lex(None, input_str)
 
             while True:
-                lex_token = self._lexer.get_next_token()
+                lex_token = lexer.get_next_token()
                 if not lex_token:
                     break
 
@@ -137,9 +126,9 @@ class MetaphorParser(Parser):
                     embedded_parser_state = None
                     self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
 
-                    next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                     if next_token and (next_token.type == TokenType.TEXT):
-                        next_token = self._lexer.get_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.get_next_token([TokenType.WHITESPACE])
                         self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
 
                         language = ProgrammingLanguageUtils.from_name(next_token.value)

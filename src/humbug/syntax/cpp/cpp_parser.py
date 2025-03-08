@@ -25,10 +25,6 @@ class CppParser(CParser):
     element access.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._lexer = CppLexer()
-
     def parse(self, prev_parser_state: Optional[CppParserState], input_str: str) -> CppParserState:
         """
         Parse the input string using the provided parser state.
@@ -46,19 +42,17 @@ class CppParser(CParser):
             they're part of a dotted or arrow access chain. It also handles
             C++-specific cases like the 'this' keyword.
         """
-        self._tokens = []
-        self._next_token = 0
-
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
+        lexer = CppLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = self._lexer.get_next_token()
+            token = lexer.get_next_token()
             if not token:
                 break
 
@@ -75,7 +69,7 @@ class CppParser(CParser):
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
             cur_in_element = in_element
-            next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
             in_element = cur_in_element
 
             next_in_element = False

@@ -54,16 +54,6 @@ class HTMLLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
-        self._position = 0
-        self._tokens = []
-        self._next_token = 0
-        self._in_tag = False
-        self._tag_name = ''
-        self._seen_equals = False
-        self._in_comment = False
-        self._in_script = False
-        self._in_style = False
-
         if prev_lexer_state:
             self._in_tag = prev_lexer_state.in_tag
             self._tag_name = prev_lexer_state.tag_name

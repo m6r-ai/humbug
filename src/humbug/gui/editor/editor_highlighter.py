@@ -63,36 +63,32 @@ class EditorHighlighter(QSyntaxHighlighter):
             if not parser:
                 return
 
-            try:
-                parser_state = parser.parse(prev_parser_state, text)
+            parser_state = parser.parse(prev_parser_state, text)
 
-                # Apply syntax highlighting based on token types
-                while True:
-                    token = parser.get_next_token()
-                    if token is None:
-                        break
+            # Apply syntax highlighting based on token types
+            while True:
+                token = parser.get_next_token()
+                if token is None:
+                    break
 
-                    self.setFormat(
-                        token.start,
-                        len(token.value),
-                        self._style_manager.get_highlight(token.type)
-                    )
+                self.setFormat(
+                    token.start,
+                    len(token.value),
+                    self._style_manager.get_highlight(token.type)
+                )
 
-                # Check if we need to rehighlight everything from this block onwards
-                if current_block_data:
-                    current_parser_state = current_block_data.parser_state
-                    if current_parser_state:
-                        continuation_state = current_parser_state.continuation_state
+            # Check if we need to rehighlight everything from this block onwards
+            if current_block_data:
+                current_parser_state = current_block_data.parser_state
+                if current_parser_state:
+                    continuation_state = current_parser_state.continuation_state
 
-                if continuation_state != parser_state.continuation_state:
-                    self.setCurrentBlockState(self.currentBlockState() + 1)
+            if continuation_state != parser_state.continuation_state:
+                self.setCurrentBlockState(self.currentBlockState() + 1)
 
-                block_data = EditorHighlighterBlockData()
-                block_data.parser_state = parser_state
-                current_block.setUserData(block_data)
-            finally:
-                # Return the parser to the cache when done
-                ParserRegistry.release_parser(self._language, parser)
+            block_data = EditorHighlighterBlockData()
+            block_data.parser_state = parser_state
+            current_block.setUserData(block_data)
 
         except Exception:
             self._logger.exception("highlighting exception")

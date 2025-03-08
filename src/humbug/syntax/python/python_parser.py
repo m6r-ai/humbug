@@ -28,10 +28,6 @@ class PythonParser(Parser):
     like function calls and element access.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._lexer = PythonLexer()
-
     def parse(self, prev_parser_state: Optional[PythonParserState], input_str: str) -> PythonParserState:
         """
         Parse the input string using the provided parser state.
@@ -48,9 +44,6 @@ class PythonParser(Parser):
             when they're followed by parentheses, and to ELEMENT tokens when
             they're part of a dotted access chain.
         """
-        self._tokens = []
-        self._next_token = 0
-
         in_element = False
         in_import = False
         prev_lexer_state = None
@@ -58,10 +51,11 @@ class PythonParser(Parser):
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
+        lexer = PythonLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = self._lexer.get_next_token()
+            token = lexer.get_next_token()
             if not token:
                 break
 
@@ -75,7 +69,7 @@ class PythonParser(Parser):
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
             cur_in_element = in_element
-            next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
             in_element = cur_in_element
 
             next_in_element = False

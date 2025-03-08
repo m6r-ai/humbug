@@ -72,15 +72,6 @@ class JavaLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
-        self._position = 0
-        self._tokens = []
-        self._next_token = 0
-        self._in_block_comment = False
-        self._in_javadoc = False
-        self._in_text_block = False
-        self._in_annotation = False
-        self._text_block_quotes = 0
-
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_javadoc = prev_lexer_state.in_javadoc

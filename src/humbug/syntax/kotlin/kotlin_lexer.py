@@ -62,14 +62,6 @@ class KotlinLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
-        self._position = 0
-        self._tokens = []
-        self._next_token = 0
-        self._in_block_comment = False
-        self._in_string_template = False
-        self._string_template_braces = 0
-        self._raw_string_quotes = 0
-
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_string_template = prev_lexer_state.in_string_template

@@ -23,10 +23,6 @@ class JSONParser(Parser):
     JSON syntax.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._lexer = JSONLexer()
-
     def parse(self, prev_parser_state: Optional[JSONParserState], input_str: str) -> JSONParserState:
         """
         Parse the input string using the provided parser state.
@@ -38,13 +34,11 @@ class JSONParser(Parser):
         Returns:
             The updated parser state after parsing
         """
-        self._tokens = []
-        self._next_token = 0
-
-        self._lexer.lex(None, input_str)
+        lexer = JSONLexer()
+        lexer.lex(None, input_str)
 
         while True:
-            token = self._lexer.get_next_token()
+            token = lexer.get_next_token()
             if not token:
                 break
 

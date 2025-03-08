@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import IntEnum, auto
-from typing import List, Dict, Callable, Optional, Set, ClassVar
+from typing import List, Callable, Optional, Set, ClassVar
 
 
 class TokenType(IntEnum):
@@ -112,8 +112,6 @@ class Lexer(ABC):
         self._tokens: List[Token] = []
         self._next_token: int = 0
 
-        self._lexing_function_table: List[Callable[[], None]] = self._build_lexing_function_table()
-
     @abstractmethod
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -125,24 +123,6 @@ class Lexer(ABC):
         Returns:
             The appropriate lexing function for the character
         """
-
-    def _build_lexing_function_table(self) -> Dict[str, Callable[[], None]]:
-        """
-        Build a lookup table mapping characters to their corresponding lexing functions.
-
-        Only ASCII characters (ordinal < 128) are pre-computed and stored in the table.
-        Characters with ordinal values >= 128 will be handled dynamically during lexing.
-
-        Returns:
-            Dictionary mapping each ASCII character to its lexing function
-        """
-        table = []
-
-        # Add all ASCII characters to the table (ordinal values 0-127)
-        for i in range(128):
-            table.append(self._get_lexing_function(chr(i)))
-
-        return table
 
     @abstractmethod
     def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
@@ -159,18 +139,10 @@ class Lexer(ABC):
 
     def _inner_lex(self) -> None:
         """
-        Lex all the tokens in the input
+        Lex all the tokens in the input.
         """
         while self._position < self._input_len:
             ch = self._input[self._position]
-
-            # For ASCII characters, use the pre-computed lookup table
-            ord_ch = ord(ch)
-            if ord_ch < 128:
-                self._lexing_function_table[ord_ch]()
-                continue
-
-            # For Unicode characters, get the lexing function dynamically
             self._get_lexing_function(ch)()
 
     def get_next_token(self, filter_list: List = None) -> Optional[Token]:
@@ -221,7 +193,6 @@ class Lexer(ABC):
             token = self.get_next_token(filter_list)
             if not token:
                 break
-
             skipped += 1
 
         self._next_token = current_token_index
@@ -236,7 +207,7 @@ class Lexer(ABC):
         self._position += 1
 
         while self._position < self._input_len and self._input[self._position] != quote:
-            if self._input[self._position] == '\\' and (self._position + 1) < self._input_len:
+            if self._input[self._position] == '\\' and (self._position + 1) < input_len:
                 self._position += 1  # Skip the escape character
 
             self._position += 1

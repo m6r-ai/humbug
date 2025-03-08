@@ -34,10 +34,6 @@ class KotlinParser(Parser):
     like property/function access, string templates, and lambda expressions.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._lexer = KotlinLexer()
-
     def parse(self, prev_parser_state: Optional[KotlinParserState], input_str: str) -> KotlinParserState:
         """
         Parse the input string using the provided parser state.
@@ -56,9 +52,6 @@ class KotlinParser(Parser):
             - Tracking lambda expressions and their brace depth
             - String template expressions
         """
-        self._tokens = []
-        self._next_token = 0
-
         in_element = False
         in_import = False
         in_lambda = False
@@ -73,10 +66,11 @@ class KotlinParser(Parser):
             template_expression_count = prev_parser_state.template_expression_count
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
+        lexer = KotlinLexer()
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = self._lexer.get_next_token()
+            token = lexer.get_next_token()
             if not token:
                 break
 
@@ -85,7 +79,7 @@ class KotlinParser(Parser):
 
             # Handle special token sequences
             if token.type == TokenType.IDENTIFIER and not in_import:
-                self._handle_identifier(token, self._lexer, in_element)
+                self._handle_identifier(token, lexer, in_element)
                 continue
 
             if token.type == TokenType.OPERATOR:
@@ -97,7 +91,7 @@ class KotlinParser(Parser):
                         lambda_brace_count += 1
                     # Check if this starts a lambda by looking ahead
                     else:
-                        next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                         if next_token and (
                             next_token.type == TokenType.IDENTIFIER or
                             (next_token.type == TokenType.OPERATOR and next_token.value == '->')
