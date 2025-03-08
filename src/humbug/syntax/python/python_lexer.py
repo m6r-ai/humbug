@@ -244,26 +244,51 @@ class PythonLexer(Lexer):
         """
         Read an operator or punctuation token.
         """
-        operators = [
-            '...', '>>=', '<<=', '**=', '//=', '@=', ':=', '!=', '==',
-            '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=',
-            '<=', '>=', '<<', '>>', '++', '--', '**', '//',
-            '->', '@', '+', '-', '*', '/', '%', '&', '~', '|',
-            '^', '=', '<', '>', '(', ')', '{', '}', '[', ']',
-            ':', '.', ','
-        ]
+        # Group operators by first character for efficient lookup
+        operator_map = {
+            '.': ['...', '.'],
+            '>': ['>>=', '>>', '>=', '>'],
+            '<': ['<<=', '<<', '<=', '<'],
+            '*': ['**=', '**', '*=', '*'],
+            '/': ['//=', '//', '/=', '/'],
+            '@': ['@=', '@'],
+            ':': [':=', ':'],
+            '!': ['!='],
+            '=': ['==', '='],
+            '+': ['+=', '+', '++'],
+            '-': ['-=', '-', '--', '->'],
+            '%': ['%=', '%'],
+            '&': ['&=', '&'],
+            '|': ['|=', '|'],
+            '^': ['^=', '^'],
+            '(': ['('],
+            ')': [')'],
+            '{': ['{'],
+            '}': ['}'],
+            '[': ['['],
+            ']': [']'],
+            ',': [','],
+            '~': ['~']
+        }
 
-        for operator in operators:
-            if self._input[self._position:].startswith(operator):
-                start = self._position
-                self._position += len(operator)
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=operator,
-                    start=start
-                ))
-                return
+        # Get the current character and potential operators
+        if self._position < len(self._input):
+            first_char = self._input[self._position]
+            potential_operators = operator_map.get(first_char, [])
 
+            # Try to match the longest operator first
+            for op in potential_operators:
+                if self._input[self._position:].startswith(op):
+                    start = self._position
+                    self._position += len(op)
+                    self._tokens.append(Token(
+                        type=TokenType.OPERATOR,
+                        value=op,
+                        start=start
+                    ))
+                    return
+
+        # If no operator matched, it's an error
         start = self._position
         ch = self._input[self._position]
         self._position += 1
