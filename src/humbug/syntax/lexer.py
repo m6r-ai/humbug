@@ -142,8 +142,7 @@ class Lexer(ABC):
         Lex all the tokens in the input.
         """
         while self._position < self._input_len:
-            ch = self._input[self._position]
-            self._get_lexing_function(ch)()
+            self._get_lexing_function(self._input[self._position])()
 
     def get_next_token(self, filter_list: List = None) -> Optional[Token]:
         """
@@ -207,7 +206,7 @@ class Lexer(ABC):
         self._position += 1
 
         while self._position < self._input_len and self._input[self._position] != quote:
-            if self._input[self._position] == '\\' and (self._position + 1) < input_len:
+            if self._input[self._position] == '\\' and (self._position + 1) < self._input_len:
                 self._position += 1  # Skip the escape character
 
             self._position += 1
