@@ -56,6 +56,9 @@ class GoParser(Parser):
             - Processing struct literal field names
             - Tracking import statements
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         in_struct_literal = False
         prev_lexer_state = None

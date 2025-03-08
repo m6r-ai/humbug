@@ -58,6 +58,9 @@ class CSharpParser(Parser):
         Raises:
             None
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         in_generic = False
         generic_depth = 0

@@ -48,6 +48,9 @@ class CParser(Parser):
             when they're followed by parentheses, and to ELEMENT tokens when
             they're part of a dotted or arrow access chain.
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:

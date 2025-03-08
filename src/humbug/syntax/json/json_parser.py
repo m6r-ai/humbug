@@ -38,6 +38,9 @@ class JSONParser(Parser):
         Returns:
             The updated parser state after parsing
         """
+        self._tokens = []
+        self._next_token = 0
+
         self._lexer.lex(None, input_str)
 
         while True:

@@ -92,6 +92,9 @@ class HTMLParser(Parser):
             The parser handles embedded JavaScript and CSS content by delegating to
             specialized parsers for those languages.
         """
+        self._tokens = []
+        self._next_token = 0
+
         prev_lexer_state = None
         embedded_parser_state = None
         if prev_parser_state:

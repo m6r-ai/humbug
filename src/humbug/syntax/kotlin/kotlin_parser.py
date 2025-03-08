@@ -56,6 +56,9 @@ class KotlinParser(Parser):
             - Tracking lambda expressions and their brace depth
             - String template expressions
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         in_import = False
         in_lambda = False

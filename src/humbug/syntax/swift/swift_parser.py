@@ -58,6 +58,9 @@ class SwiftParser(Parser):
             - Tracking closure expressions and their brace depth
             - Tracking generic parameter lists and their angle bracket depth
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         in_closure = False
         closure_brace_count = 0

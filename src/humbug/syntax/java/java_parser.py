@@ -53,6 +53,9 @@ class JavaParser(Parser):
         - generic_depth > 0: Identifiers become GENERIC_TYPE or TYPE_PARAMETER tokens
         - After '::': Identifiers become METHOD_REFERENCE tokens
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         in_generic = False
         generic_depth = 0

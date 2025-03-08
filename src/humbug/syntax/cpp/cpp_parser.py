@@ -46,6 +46,9 @@ class CppParser(CParser):
             they're part of a dotted or arrow access chain. It also handles
             C++-specific cases like the 'this' keyword.
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:

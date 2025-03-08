@@ -46,6 +46,9 @@ class CSSParser(Parser):
             The parser converts identifier tokens to FUNCTION_OR_METHOD tokens
             when they're followed by parentheses.
         """
+        self._tokens = []
+        self._next_token = 0
+
         prev_lexer_state = None
         if prev_parser_state:
             prev_lexer_state = prev_parser_state.lexer_state

@@ -31,6 +31,9 @@ class TextParser(Parser):
         Returns:
             The updated parser state after parsing
         """
+        self._tokens = []
+        self._next_token = 0
+
         self._tokens.append(Token(
             type=TokenType.CODE,
             value=input_str,

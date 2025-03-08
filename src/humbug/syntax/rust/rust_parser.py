@@ -50,6 +50,9 @@ class RustParser(Parser):
         Returns:
             The updated parser state after parsing
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         in_generic_params = False
         generic_depth = 0

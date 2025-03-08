@@ -96,6 +96,9 @@ class MetaphorParser(Parser):
             Handles transitions between regular conversation content and code fence blocks,
             delegating code blocks to appropriate language parsers.
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_fence_block = False
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None

@@ -43,6 +43,9 @@ class TypeScriptParser(JavaScriptParser):
             Uses the TypeScript lexer for token generation while maintaining the
             JavaScript parsing logic.
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:

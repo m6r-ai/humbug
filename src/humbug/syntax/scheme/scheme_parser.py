@@ -43,6 +43,9 @@ class SchemeParser(Parser):
         Returns:
             The updated parser state after parsing
         """
+        self._tokens = []
+        self._next_token = 0
+
         in_vector = False
         prev_lexer_state = None
         continuation_state = 0
