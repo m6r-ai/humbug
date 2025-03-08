@@ -14,8 +14,6 @@ from humbug.gui.conversation.message_section_widget import MessageSectionWidget
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
-from humbug.syntax.conversation_parser import ConversationParser, ConversationParserState
-from humbug.syntax.lexer import TokenType
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
@@ -87,7 +85,6 @@ class MessageWidget(QFrame):
         # Add bookmark status
         self._is_bookmarked = False
 
-        self._parser_state: ConversationParserState = None
         self._next_str: str = ""
         self._text_list = []
         self._language_list = [None]
@@ -137,49 +134,61 @@ class MessageWidget(QFrame):
             self._role_label.setText(role_text)
 
     def _parse_line(self, text: str) -> None:
-        """Apply highlighting to the given block of text."""
-        try:
-            prev_parser_state = self._parser_state
-            parser = ConversationParser()
-            self._parser_state = parser.parse(prev_parser_state, text)
+        """
+        Process a line of text, detecting fence blocks (triple backticks) and handling language specifications.
 
-            while True:
-                token = parser.get_next_token()
-                if token is None:
-                    break
-
-                match token.type:
-                    case TokenType.FENCE_START:
-                        self._in_fence_region = True
-                        self._text_list.append(self._next_str)
-                        self._language_list.append(None)
-                        self._next_str = ""
-                        text = ""
-
-                        # Update the current language based on the parser state
-                        if self._parser_state and self._parser_state.language != ProgrammingLanguage.UNKNOWN:
-                            self._current_language = self._parser_state.language
-                        continue
-
-                    case TokenType.FENCE_END:
-                        self._in_fence_region = False
-                        self._text_list.append(self._next_str)
-                        self._language_list.append(self._current_language)
-                        self._current_language = None
-                        self._next_str = ""
-                        text = ""
-                        continue
-
-                    case TokenType.LANGUAGE:
-                        if self._parser_state and self._parser_state.language != ProgrammingLanguage.UNKNOWN:
-                            self._current_language = self._parser_state.language
-
-                        continue
-
+        Args:
+            text: A line of text to be processed
+        """
+        stripped_text = text.lstrip()
+        if not stripped_text.startswith("```"):
             self._next_str += text
+            return
 
-        except Exception:
-            self._logger.exception("highlighting exception")
+        if not self._in_fence_region:
+            # This is the start of a fence block
+            self._in_fence_region = True
+            # Save any text accumulated so far
+            self._text_list.append(self._next_str)
+            self._language_list.append(None)
+            self._next_str = ""
+
+            # Try to extract language information
+            # The language would be specified after the backticks
+            language_part = stripped_text[3:].strip().lower()
+            if language_part:
+                # Map language string to programming language enum
+                language_normalized = language_part.lower()
+                language_mapping = {
+                    "c": ProgrammingLanguage.C,
+                    "c++": ProgrammingLanguage.CPP,
+                    "cpp": ProgrammingLanguage.CPP,
+                    "cs": ProgrammingLanguage.CSHARP,
+                    "csharp": ProgrammingLanguage.CSHARP,
+                    "css": ProgrammingLanguage.CSS,
+                    "go": ProgrammingLanguage.GO,
+                    "html": ProgrammingLanguage.HTML,
+                    "java": ProgrammingLanguage.JAVA,
+                    "javascript": ProgrammingLanguage.JAVASCRIPT,
+                    "json": ProgrammingLanguage.JSON,
+                    "kotlin": ProgrammingLanguage.KOTLIN,
+                    "metaphor": ProgrammingLanguage.METAPHOR,
+                    "move": ProgrammingLanguage.MOVE,
+                    "python": ProgrammingLanguage.PYTHON,
+                    "rust": ProgrammingLanguage.RUST,
+                    "scheme": ProgrammingLanguage.SCHEME,
+                    "swift": ProgrammingLanguage.SWIFT,
+                    "typescript": ProgrammingLanguage.TYPESCRIPT
+                }
+                self._current_language = language_mapping.get(language_normalized, ProgrammingLanguage.TEXT)
+        else:
+            # This is the end of a fence block
+            self._in_fence_region = False
+            # Save accumulated text with the current language
+            self._text_list.append(self._next_str)
+            self._language_list.append(self._current_language)
+            self._current_language = None
+            self._next_str = ""
 
     def _parse_content_sections(self, text: str) -> List[tuple]:
         """
@@ -195,11 +204,9 @@ class MessageWidget(QFrame):
         self._next_str = ""
         self._text_list = []
         self._language_list = []
-        self._parser_state = None
         self._in_fence_region = False
         self._current_language = None
 
-        start = time.monotonic()
         for line in lines:
             self._parse_line(line)
 
@@ -207,9 +214,6 @@ class MessageWidget(QFrame):
         if self._next_str:
             self._text_list.append(self._next_str)
             self._language_list.append(self._current_language)
-        end = time.monotonic()
-        elapsed_time = (end - start) * 1000
-        print(f"parse lines: {elapsed_time} ({len(lines)})")
 
         # Strip any leading and trailing blank lines from each block.  Also strip blank blocks.
         new_text_list = []
