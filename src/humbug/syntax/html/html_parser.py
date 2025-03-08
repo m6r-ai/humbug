@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.html.html_lexer import HTMLLexer
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -28,6 +28,10 @@ class HTMLParser(Parser):
     This parser processes tokens from the HTML lexer and handles special cases
     like embedded JavaScript and CSS content.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._lexer = HTMLLexer()
 
     def _embedded_parse(
             self,
@@ -94,8 +98,7 @@ class HTMLParser(Parser):
             prev_lexer_state = prev_parser_state.lexer_state
             embedded_parser_state = prev_parser_state.embedded_parser_state
 
-        lexer = HTMLLexer()
-        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
 
         continuation_state = 0
         if lexer_state.in_comment:
@@ -106,7 +109,7 @@ class HTMLParser(Parser):
             continuation_state = 3
 
         while True:
-            token = lexer.get_next_token()
+            token = self._lexer.get_next_token()
             if not token:
                 break
 

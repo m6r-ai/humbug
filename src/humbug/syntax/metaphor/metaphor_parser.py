@@ -33,6 +33,10 @@ class MetaphorParser(Parser):
     document tree structure of Role, Context, and Action blocks.
     """
 
+    def __init__(self):
+        super().__init__()
+        self._lexer = MetaphorLexer()
+
     def _embedded_parse(
             self,
             language: ProgrammingLanguage,
@@ -106,11 +110,10 @@ class MetaphorParser(Parser):
         continuation_state = 0
 
         if not parsing_continuation:
-            lexer = MetaphorLexer()
-            lexer.lex(None, input_str)
+            self._lexer.lex(None, input_str)
 
             while True:
-                lex_token = lexer.get_next_token()
+                lex_token = self._lexer.get_next_token()
                 if not lex_token:
                     break
 
@@ -131,9 +134,9 @@ class MetaphorParser(Parser):
                     embedded_parser_state = None
                     self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
 
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
                     if next_token and (next_token.type == TokenType.TEXT):
-                        next_token = lexer.get_next_token([TokenType.WHITESPACE])
+                        next_token = self._lexer.get_next_token([TokenType.WHITESPACE])
                         self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
 
                         language = ProgrammingLanguageUtils.from_name(next_token.value)

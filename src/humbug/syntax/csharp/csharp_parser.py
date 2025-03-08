@@ -40,6 +40,10 @@ class CSharpParser(Parser):
     - LINQ_KEYWORD: Keywords used in LINQ expressions
     """
 
+    def __init__(self):
+        super().__init__()
+        self._lexer = CSharpLexer()
+
     def parse(self, prev_parser_state: Optional[CSharpParserState], input_str: str) -> CSharpParserState:
         """
         Parse the input string using the provided parser state.
@@ -70,11 +74,10 @@ class CSharpParser(Parser):
             in_using = prev_parser_state.in_using
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = CSharpLexer()
-        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = lexer.get_next_token()
+            token = self._lexer.get_next_token()
             if not token:
                 break
 
@@ -113,7 +116,7 @@ class CSharpParser(Parser):
                     prev_token = self._get_last_non_whitespace_token()
 
                     # Check if this is a generic type or a less-than operator
-                    is_generic = self._is_generic_start(prev_token, lexer)
+                    is_generic = self._is_generic_start(prev_token, self._lexer)
 
                     if is_generic:
                         in_generic = True
@@ -178,7 +181,7 @@ class CSharpParser(Parser):
 
                 # Check context to determine what kind of identifier this is
                 if in_generic and generic_depth > 0:
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
                     if next_token and next_token.type == TokenType.OPERATOR and next_token.value in ('where', 'extends'):
                         # Type parameter with constraints
                         self._tokens.append(Token(
@@ -196,7 +199,7 @@ class CSharpParser(Parser):
                     continue
 
                 # Check if this is a method call
-                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '(':
                     self._tokens.append(Token(
                         type=TokenType.FUNCTION_OR_METHOD,
@@ -208,7 +211,7 @@ class CSharpParser(Parser):
                 # Check if this is a generic method call
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '<':
                     # Look ahead to determine if this is a generic method
-                    is_generic_method = self._is_generic_method(token, lexer)
+                    is_generic_method = self._is_generic_method(token, self._lexer)
                     if is_generic_method:
                         self._tokens.append(Token(
                             type=TokenType.GENERIC_METHOD,

@@ -35,6 +35,10 @@ class RustParser(Parser):
     - Raw identifiers
     """
 
+    def __init__(self):
+        super().__init__()
+        self._lexer = RustLexer()
+
     def parse(self, prev_parser_state: Optional[RustParserState], input_str: str) -> RustParserState:
         """
         Parse the input string using the provided parser state.
@@ -57,18 +61,17 @@ class RustParser(Parser):
             generic_depth = prev_parser_state.generic_depth
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = RustLexer()
-        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = lexer.get_next_token()
+            token = self._lexer.get_next_token()
             if not token:
                 break
 
             if token.type == TokenType.OPERATOR:
                 if token.value == '<':
                     # Check if this is the start of generic parameters
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
                     if (next_token and
                             (next_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD) or
                              next_token.value in ('\'', '>'))):
@@ -95,7 +98,7 @@ class RustParser(Parser):
                     continue
 
             if token.type == TokenType.IDENTIFIER:
-                self._handle_identifier(token, lexer, in_element)
+                self._handle_identifier(token, self._lexer, in_element)
                 continue
 
             # Reset element context for other token types

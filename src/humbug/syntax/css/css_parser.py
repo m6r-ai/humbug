@@ -27,6 +27,10 @@ class CSSParser(Parser):
     like function calls and property values.
     """
 
+    def __init__(self):
+        super().__init__()
+        self._lexer = CSSLexer()
+
     def parse(self, prev_parser_state: Optional[CSSParserState], input_str: str) -> CSSParserState:
         """
         Parse the input string using the provided parser state.
@@ -46,11 +50,10 @@ class CSSParser(Parser):
         if prev_parser_state:
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = CSSLexer()
-        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = lexer.get_next_token()
+            token = self._lexer.get_next_token()
             if not token:
                 break
 
@@ -76,7 +79,7 @@ class CSSParser(Parser):
 
             # Look at the next token. If it's a '(' operator then we're making a
             # function call!
-            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+            next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
             if next_token and next_token.type == TokenType.OPERATOR:
                 if next_token.value == '(':
                     self._tokens.append(Token(

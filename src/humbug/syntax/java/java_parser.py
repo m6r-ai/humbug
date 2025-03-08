@@ -34,6 +34,10 @@ class JavaParser(Parser):
     - TYPE_PARAMETER: Type parameters in generic declarations
     """
 
+    def __init__(self):
+        super().__init__()
+        self._lexer = JavaLexer()
+
     def parse(self, prev_parser_state: Optional[JavaParserState], input_str: str) -> JavaParserState:
         """
         Parse the input string using the provided parser state.
@@ -61,11 +65,10 @@ class JavaParser(Parser):
             generic_depth = prev_parser_state.generic_depth
             prev_lexer_state = prev_parser_state.lexer_state
 
-        lexer = JavaLexer()
-        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = lexer.get_next_token()
+            token = self._lexer.get_next_token()
             if not token:
                 break
 
@@ -79,7 +82,7 @@ class JavaParser(Parser):
                 if token_value == '<':
                     # Look back at previous token and forward to help determine context
                     prev_token = self._get_last_non_whitespace_token()
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
 
                     is_generic = False
                     if prev_token and next_token:
@@ -158,7 +161,7 @@ class JavaParser(Parser):
             # Handle identifier tokens based on context
             if in_generic and generic_depth > 0:
                 # Inside generic parameters, create specialized tokens
-                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == 'extends':
                     # This is a bounded type parameter
                     self._tokens.append(Token(
@@ -175,7 +178,7 @@ class JavaParser(Parser):
                     ))
                 continue
 
-            self._handle_identifier(token, lexer, in_element)
+            self._handle_identifier(token, self._lexer, in_element)
 
         parser_state = JavaParserState()
         parser_state.continuation_state = (

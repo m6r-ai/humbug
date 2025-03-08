@@ -64,6 +64,12 @@ class GoLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
+        self._position = 0
+        self._tokens = []
+        self._next_token = 0
+        self._in_block_comment = False
+        self._in_raw_string = False
+
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_raw_string = prev_lexer_state.in_raw_string

@@ -28,6 +28,10 @@ class SchemeParser(Parser):
     like nested expressions and vectors.
     """
 
+    def __init__(self):
+        super().__init__()
+        self._lexer = SchemeLexer()
+
     def parse(self, prev_parser_state: Optional[SchemeParserState], input_str: str) -> SchemeParserState:
         """
         Parse the input string using the provided parser state.
@@ -48,11 +52,10 @@ class SchemeParser(Parser):
             prev_lexer_state = prev_parser_state.lexer_state
             continuation_state = prev_parser_state.continuation_state
 
-        lexer = SchemeLexer()
-        lexer_state = lexer.lex(prev_lexer_state, input_str)
+        lexer_state = self._lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = lexer.get_next_token([TokenType.WHITESPACE])
+            token = self._lexer.get_next_token([TokenType.WHITESPACE])
             if not token:
                 break
 
@@ -68,9 +71,9 @@ class SchemeParser(Parser):
                 continuation_state += 1
                 self._tokens.append(token)
 
-                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = self._lexer.peek_next_token([TokenType.WHITESPACE])
                 if next_token and next_token.type == TokenType.IDENTIFIER:
-                    next_token = lexer.get_next_token([TokenType.WHITESPACE])
+                    next_token = self._lexer.get_next_token([TokenType.WHITESPACE])
                     self._tokens.append(Token(
                         type=TokenType.FUNCTION_OR_METHOD,
                         value=next_token.value,

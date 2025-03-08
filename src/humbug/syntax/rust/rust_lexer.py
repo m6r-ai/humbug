@@ -61,6 +61,12 @@ class RustLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
+        self._position = 0
+        self._tokens = []
+        self._next_token = 0
+        self._in_block_comment = False
+        self._block_comment_depth = 0
+
         if prev_lexer_state:
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._block_comment_depth = prev_lexer_state.block_comment_depth
