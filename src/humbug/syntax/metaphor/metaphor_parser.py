@@ -6,30 +6,7 @@ from humbug.syntax.metaphor.metaphor_lexer import MetaphorLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
-
-
-# Mapping from lowercase language names to enum members
-LANGUAGE_MAPPING = {
-    "c": ProgrammingLanguage.C,
-    "c++": ProgrammingLanguage.CPP,
-    "cpp": ProgrammingLanguage.CPP,
-    "cs": ProgrammingLanguage.CSHARP,
-    "csharp": ProgrammingLanguage.CSHARP,
-    "css": ProgrammingLanguage.CSS,
-    "go": ProgrammingLanguage.GO,
-    "html": ProgrammingLanguage.HTML,
-    "java": ProgrammingLanguage.JAVA,
-    "javascript": ProgrammingLanguage.JAVASCRIPT,
-    "json": ProgrammingLanguage.JSON,
-    "kotlin": ProgrammingLanguage.KOTLIN,
-    "metaphor": ProgrammingLanguage.METAPHOR,
-    "move": ProgrammingLanguage.MOVE,
-    "python": ProgrammingLanguage.PYTHON,
-    "rust": ProgrammingLanguage.RUST,
-    "scheme": ProgrammingLanguage.SCHEME,
-    "swift": ProgrammingLanguage.SWIFT,
-    "typescript": ProgrammingLanguage.TYPESCRIPT
-}
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 @dataclass
@@ -100,6 +77,7 @@ class MetaphorParser(Parser):
         Parse the input string.
 
         Args:
+            prev_parser_state: Optional previous parser state
             input_str: The input string to parse
 
         Returns:
@@ -132,7 +110,7 @@ class MetaphorParser(Parser):
                     break
 
                 if lex_token.type == TokenType.WHITESPACE:
-                    self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                    self._tokens.append(lex_token)
                     continue
 
                 if lex_token.type == TokenType.FENCE:
@@ -148,24 +126,23 @@ class MetaphorParser(Parser):
                     embedded_parser_state = None
                     self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
 
-                    next_token = lexer.peek_next_token(TokenType.WHITESPACE)
+                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
                     if next_token and (next_token.type == TokenType.TEXT):
-                        next_token = lexer.get_next_token(TokenType.WHITESPACE)
+                        next_token = lexer.get_next_token([TokenType.WHITESPACE])
                         self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
 
-                        input_normalized = next_token.value.strip().lower()
-                        language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
+                        language = ProgrammingLanguageUtils.from_name(next_token.value)
                         continuation_state = int(language)
                         continue
 
-                    language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
+                    language = ProgrammingLanguage.TEXT
                     continuation_state = int(language)
                     continue
 
                 if language != ProgrammingLanguage.UNKNOWN:
                     break
 
-                self._tokens.append(Token(type=lex_token.type, value=lex_token.value, start=lex_token.start))
+                self._tokens.append(lex_token)
 
         parser_state = MetaphorParserState()
         parser_state.continuation_state = continuation_state

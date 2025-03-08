@@ -20,45 +20,9 @@ from humbug.gui.tab_base import TabBase
 from humbug.gui.tab_state import TabState
 from humbug.gui.tab_type import TabType
 from humbug.language.language_manager import LanguageManager
-from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.mindspace.mindspace_manager import MindspaceManager
-
-
-# Map file extensions to programming languages
-LANGUAGE_MAP: Dict[str, ProgrammingLanguage] = {
-    '.c': ProgrammingLanguage.C,
-    '.cc': ProgrammingLanguage.CPP,
-    '.conv': ProgrammingLanguage.JSON,
-    '.cpp': ProgrammingLanguage.CPP,
-    '.cs': ProgrammingLanguage.CSHARP,
-    '.css': ProgrammingLanguage.CSS,
-    '.cxx': ProgrammingLanguage.CPP,
-    '.go': ProgrammingLanguage.GO,
-    '.h': ProgrammingLanguage.C,
-    '.hh': ProgrammingLanguage.CPP,
-    '.hpp': ProgrammingLanguage.CPP,
-    '.html': ProgrammingLanguage.HTML,
-    '.htm': ProgrammingLanguage.HTML,
-    '.hxx': ProgrammingLanguage.CPP,
-    '.java': ProgrammingLanguage.JAVA,
-    '.js': ProgrammingLanguage.JAVASCRIPT,
-    '.json': ProgrammingLanguage.JSON,
-    '.jsx': ProgrammingLanguage.JAVASCRIPT,
-    '.kt': ProgrammingLanguage.KOTLIN,
-    '.kts': ProgrammingLanguage.KOTLIN,
-    '.m6r': ProgrammingLanguage.METAPHOR,
-    '.md': ProgrammingLanguage.TEXT,
-    '.move': ProgrammingLanguage.MOVE,
-    '.py': ProgrammingLanguage.PYTHON,
-    '.pyw': ProgrammingLanguage.PYTHON,
-    '.pyi': ProgrammingLanguage.PYTHON,
-    ".rs": ProgrammingLanguage.RUST,
-    '.scm': ProgrammingLanguage.SCHEME,
-    ".swift": ProgrammingLanguage.SWIFT,
-    '.ts': ProgrammingLanguage.TYPESCRIPT,
-    '.tsx': ProgrammingLanguage.TYPESCRIPT,
-    '.txt': ProgrammingLanguage.TEXT,
-}
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class EditorTab(TabBase):
@@ -307,22 +271,6 @@ class EditorTab(TabBase):
             self._init_colour_mode = self._style_manager.color_mode
             self._highlighter.rehighlight()
 
-    def _detect_programming_language(self, filename: Optional[str]) -> ProgrammingLanguage:
-        """
-        Detect the programming language based on file extension.
-
-        Args:
-            filename: The filename to analyze
-
-        Returns:
-            The detected programming language
-        """
-        if not filename:
-            return ProgrammingLanguage.TEXT
-
-        ext = os.path.splitext(filename)[1].lower()
-        return LANGUAGE_MAP.get(ext, ProgrammingLanguage.TEXT)
-
     def _update_programming_language(self, new_language: ProgrammingLanguage) -> None:
         """
         Update the syntax highlighting language.
@@ -352,7 +300,7 @@ class EditorTab(TabBase):
         self._untitled_number = untitled_number
 
         # Update syntax highlighting based on file extension
-        new_language = self._detect_programming_language(filename)
+        new_language = ProgrammingLanguageUtils.from_file_extension(filename)
         self._update_programming_language(new_language)
 
         if filename and os.path.exists(filename):
@@ -406,28 +354,8 @@ class EditorTab(TabBase):
         encoding = "UTF-8"
         line_ending = "LF"  # We could detect this from file content
 
-        # Get language name from enum
-        language_names = {
-            ProgrammingLanguage.C: "C",
-            ProgrammingLanguage.CPP: "C++",
-            ProgrammingLanguage.CSHARP: "C#",
-            ProgrammingLanguage.CSS: "CSS",
-            ProgrammingLanguage.GO: "Go",
-            ProgrammingLanguage.HTML: "HTML",
-            ProgrammingLanguage.JAVA: "Java",
-            ProgrammingLanguage.JAVASCRIPT: "JavaScript",
-            ProgrammingLanguage.JSON: "JSON",
-            ProgrammingLanguage.KOTLIN: "Kotlin",
-            ProgrammingLanguage.METAPHOR: "Metaphor",
-            ProgrammingLanguage.MOVE: "Move",
-            ProgrammingLanguage.PYTHON: "Python",
-            ProgrammingLanguage.RUST: "Rust",
-            ProgrammingLanguage.SCHEME: "Scheme",
-            ProgrammingLanguage.SWIFT: "Swift",
-            ProgrammingLanguage.TEXT: "Text",
-            ProgrammingLanguage.TYPESCRIPT: "TypeScript"
-        }
-        file_type = language_names.get(self._current_programming_language, "Text")
+        # Get language name for display
+        file_type = ProgrammingLanguageUtils.get_display_name(self._current_programming_language)
 
         strings = self._language_manager.strings
         message = StatusMessage(
@@ -623,7 +551,7 @@ class EditorTab(TabBase):
         self._untitled_number = None
         self._update_title()
 
-        new_language = self._detect_programming_language(filename)
+        new_language = ProgrammingLanguageUtils.from_file_extension(filename)
         self._update_programming_language(new_language)
 
         return self.save()

@@ -4,32 +4,9 @@ from typing import Optional
 from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.conversation_lexer import ConversationLexer
 from humbug.syntax.parser import Parser, ParserState
-from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_registry import ParserRegistry
-
-
-# Mapping from lowercase language names to enum members
-LANGUAGE_MAPPING = {
-    "c": ProgrammingLanguage.C,
-    "c++": ProgrammingLanguage.CPP,
-    "cpp": ProgrammingLanguage.CPP,
-    "cs": ProgrammingLanguage.CSHARP,
-    "csharp": ProgrammingLanguage.CSHARP,
-    "css": ProgrammingLanguage.CSS,
-    "go": ProgrammingLanguage.GO,
-    "html": ProgrammingLanguage.HTML,
-    "java": ProgrammingLanguage.JAVA,
-    "javascript": ProgrammingLanguage.JAVASCRIPT,
-    "json": ProgrammingLanguage.JSON,
-    "kotlin": ProgrammingLanguage.KOTLIN,
-    "metaphor": ProgrammingLanguage.METAPHOR,
-    "move": ProgrammingLanguage.MOVE,
-    "python": ProgrammingLanguage.PYTHON,
-    "rust": ProgrammingLanguage.RUST,
-    "scheme": ProgrammingLanguage.SCHEME,
-    "swift": ProgrammingLanguage.SWIFT,
-    "typescript": ProgrammingLanguage.TYPESCRIPT
-}
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 @dataclass
@@ -172,12 +149,11 @@ class ConversationParser(Parser):
                         next_token = lexer.get_next_token([TokenType.WHITESPACE])
                         self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
                         self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=(next_token.start + len(next_token.value))))
-                        input_normalized = next_token.value.strip().lower()
-                        language = LANGUAGE_MAPPING.get(input_normalized, ProgrammingLanguage.TEXT)
+                        language = ProgrammingLanguageUtils.from_name(next_token.value)
                         break
 
                     self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=(lex_token.start + 3)))
-                    language = LANGUAGE_MAPPING.get('', ProgrammingLanguage.TEXT)
+                    language = ProgrammingLanguage.TEXT
                     break
 
                 if parse_embedded:

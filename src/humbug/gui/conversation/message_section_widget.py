@@ -15,9 +15,10 @@ from humbug.gui.conversation.conversation_language_highlighter import Conversati
 from humbug.gui.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class MessageSectionWidget(QFrame):
@@ -65,7 +66,7 @@ class MessageSectionWidget(QFrame):
             self._header_layout.setSpacing(5)
 
             # Add language label on the left
-            self._language_header = QLabel(self._get_language_display_name(language))
+            self._language_header = QLabel(ProgrammingLanguageUtils.get_display_name(language))
             self._language_header.setAlignment(Qt.AlignLeft)
             self._header_layout.addWidget(self._language_header)
 
@@ -128,38 +129,6 @@ class MessageSectionWidget(QFrame):
         if self._save_as_button:
             self._save_as_button.setToolTip(strings.tooltip_save_contents)
 
-    def _get_language_display_name(self, language: ProgrammingLanguage) -> str:
-        """
-        Convert a ProgrammingLanguage enum to a display name.
-
-        Args:
-            language: ProgrammingLanguage enum value
-
-        Returns:
-            Human-readable language name
-        """
-        language_display_names = {
-            ProgrammingLanguage.C: "C",
-            ProgrammingLanguage.CPP: "C++",
-            ProgrammingLanguage.CSHARP: "C#",
-            ProgrammingLanguage.CSS: "CSS",
-            ProgrammingLanguage.GO: "Go",
-            ProgrammingLanguage.HTML: "HTML",
-            ProgrammingLanguage.JAVA: "Java",
-            ProgrammingLanguage.JAVASCRIPT: "JavaScript",
-            ProgrammingLanguage.JSON: "JSON",
-            ProgrammingLanguage.KOTLIN: "Kotlin",
-            ProgrammingLanguage.METAPHOR: "Metaphor",
-            ProgrammingLanguage.MOVE: "Move",
-            ProgrammingLanguage.PYTHON: "Python",
-            ProgrammingLanguage.RUST: "Rust",
-            ProgrammingLanguage.SCHEME: "Scheme",
-            ProgrammingLanguage.SWIFT: "Swift",
-            ProgrammingLanguage.TYPESCRIPT: "TypeScript",
-            ProgrammingLanguage.TEXT: "Plain Text"
-        }
-        return language_display_names.get(language, "Code")
-
     def _on_mouse_pressed(self, event: QMouseEvent):
         """Handle mouse press from text area."""
         if event.buttons() == Qt.MouseButton.LeftButton:
@@ -209,7 +178,7 @@ class MessageSectionWidget(QFrame):
         strings = self._language_manager.strings
 
         # Determine the suggested file extension based on language
-        extension = self._get_file_extension(self._language)
+        extension = ProgrammingLanguageUtils.get_file_extension(self._language)
         default_filename = f"code{extension}" if extension else "code.txt"
 
         # Show file dialog
@@ -239,42 +208,6 @@ class MessageSectionWidget(QFrame):
                 strings.could_not_save.format(filename, str(e))
             )
             return False
-
-    def _get_file_extension(self, language: Optional[ProgrammingLanguage]) -> str:
-        """
-        Get the file extension for a programming language.
-
-        Args:
-            language: The programming language
-
-        Returns:
-            The file extension with leading dot, or empty string if unknown
-        """
-        if language is None:
-            return ""
-
-        language_extensions = {
-            ProgrammingLanguage.C: ".c",
-            ProgrammingLanguage.CPP: ".cpp",
-            ProgrammingLanguage.CSS: ".css",
-            ProgrammingLanguage.CSHARP: ".cs",
-            ProgrammingLanguage.GO: ".go",
-            ProgrammingLanguage.HTML: ".html",
-            ProgrammingLanguage.JAVA: ".java",
-            ProgrammingLanguage.JAVASCRIPT: ".js",
-            ProgrammingLanguage.JSON: ".json",
-            ProgrammingLanguage.KOTLIN: ".kt",
-            ProgrammingLanguage.METAPHOR: ".m6r",
-            ProgrammingLanguage.MOVE: ".move",
-            ProgrammingLanguage.PYTHON: ".py",
-            ProgrammingLanguage.RUST: ".rs",
-            ProgrammingLanguage.SCHEME: ".scm",
-            ProgrammingLanguage.SWIFT: ".swift",
-            ProgrammingLanguage.TYPESCRIPT: ".ts",
-            ProgrammingLanguage.TEXT: ".txt"
-        }
-
-        return language_extensions.get(language, ".txt")
 
     def set_content(self, text: str):
         """

@@ -15,6 +15,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class MessageWidget(QFrame):
@@ -145,43 +146,7 @@ class MessageWidget(QFrame):
             self._next_str += text
             return
 
-        if not self._in_fence_region:
-            # This is the start of a fence block
-            self._in_fence_region = True
-            # Save any text accumulated so far
-            self._text_list.append(self._next_str)
-            self._language_list.append(None)
-            self._next_str = ""
-
-            # Try to extract language information
-            # The language would be specified after the backticks
-            language_part = stripped_text[3:].strip().lower()
-            if language_part:
-                # Map language string to programming language enum
-                language_normalized = language_part.lower()
-                language_mapping = {
-                    "c": ProgrammingLanguage.C,
-                    "c++": ProgrammingLanguage.CPP,
-                    "cpp": ProgrammingLanguage.CPP,
-                    "cs": ProgrammingLanguage.CSHARP,
-                    "csharp": ProgrammingLanguage.CSHARP,
-                    "css": ProgrammingLanguage.CSS,
-                    "go": ProgrammingLanguage.GO,
-                    "html": ProgrammingLanguage.HTML,
-                    "java": ProgrammingLanguage.JAVA,
-                    "javascript": ProgrammingLanguage.JAVASCRIPT,
-                    "json": ProgrammingLanguage.JSON,
-                    "kotlin": ProgrammingLanguage.KOTLIN,
-                    "metaphor": ProgrammingLanguage.METAPHOR,
-                    "move": ProgrammingLanguage.MOVE,
-                    "python": ProgrammingLanguage.PYTHON,
-                    "rust": ProgrammingLanguage.RUST,
-                    "scheme": ProgrammingLanguage.SCHEME,
-                    "swift": ProgrammingLanguage.SWIFT,
-                    "typescript": ProgrammingLanguage.TYPESCRIPT
-                }
-                self._current_language = language_mapping.get(language_normalized, ProgrammingLanguage.TEXT)
-        else:
+        if self._in_fence_region:
             # This is the end of a fence block
             self._in_fence_region = False
             # Save accumulated text with the current language
@@ -189,6 +154,23 @@ class MessageWidget(QFrame):
             self._language_list.append(self._current_language)
             self._current_language = None
             self._next_str = ""
+            return
+
+        # This is the start of a fence block
+        self._in_fence_region = True
+        # Save any text accumulated so far
+        self._text_list.append(self._next_str)
+        self._language_list.append(None)
+        self._next_str = ""
+
+        # Try to extract language information
+        # The language would be specified after the backticks
+        language_part = stripped_text[3:].strip().lower()
+        if language_part:
+            # Map language string to programming language enum
+            self._current_language = ProgrammingLanguageUtils.from_name(language_part)
+        else:
+            self._current_language = ProgrammingLanguage.TEXT
 
     def _parse_content_sections(self, text: str) -> List[tuple]:
         """
