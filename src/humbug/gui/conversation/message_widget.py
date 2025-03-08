@@ -1,7 +1,6 @@
 from datetime import datetime
 import logging
 import re
-import time
 from typing import List, Tuple, Optional
 
 from PySide6.QtWidgets import (
@@ -278,11 +277,7 @@ class MessageWidget(QFrame):
             self._section_with_selection = None
 
         # Parse content into sections with language information
-        start = time.monotonic()
         section_data = self._parse_content_sections(text)
-        end = time.monotonic()
-        elapsed_time = (end - start) * 1000
-        print(f"parse: {elapsed_time}")
 
         # Create or update sections
         for i, (section_text, language) in enumerate(section_data):
