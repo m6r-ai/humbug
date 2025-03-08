@@ -141,11 +141,9 @@ class Lexer(ABC):
         """
         Lex all the tokens in the input.
         """
-        input_len = len(self._input)
-        while self._position < input_len:
+        while self._position < self._input_len:
             ch = self._input[self._position]
-            fn = self._get_lexing_function(ch)
-            fn()
+            self._get_lexing_function(ch)()
 
     def get_next_token(self, filter_list: List = None) -> Optional[Token]:
         """
@@ -207,15 +205,14 @@ class Lexer(ABC):
         quote = self._input[self._position]
         start = self._position
         self._position += 1
-        input_len = len(self._input)
 
-        while self._position < input_len and self._input[self._position] != quote:
+        while self._position < self._input_len and self._input[self._position] != quote:
             if self._input[self._position] == '\\' and (self._position + 1) < input_len:
                 self._position += 1  # Skip the escape character
 
             self._position += 1
 
-        if self._position < input_len:  # Skip the closing quote if found
+        if self._position < self._input_len:  # Skip the closing quote if found
             self._position += 1
 
         string_value = self._input[start:self._position]
@@ -235,10 +232,9 @@ class Lexer(ABC):
         """
         start = self._position
         self._position += 1
-        input_len = len(self._input)
 
         # Fast path using set-based character classification
-        while self._position < input_len and self._input[self._position] in self._WHITESPACE_CHARS and self._input[self._position] != '\n':
+        while self._position < self._input_len and self._input[self._position] in self._WHITESPACE_CHARS and self._input[self._position] != '\n':
             self._position += 1
 
         whitespace_value = self._input[start:self._position]
@@ -253,9 +249,6 @@ class Lexer(ABC):
         - Values are lists of operators starting with that character,
           ordered from longest to shortest to ensure greedy matching
         """
-        if self._position >= self._input_len:
-            return
-
         first_char = self._input[self._position]
         potential_operators = self._OPERATORS_MAP.get(first_char, [])
 
@@ -311,12 +304,12 @@ class Lexer(ABC):
         Determines if a character is a letter.
         """
         return ch in self._LETTER_CHARS
+
     def _is_octal_digit(self, ch: str) -> bool:
         """
         Determines if a character is an octal digit.
         """
         return ch in self._OCTAL_CHARS
-
 
     def _is_binary_digit(self, ch: str) -> bool:
         """
