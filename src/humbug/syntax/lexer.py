@@ -91,6 +91,7 @@ class Lexer(ABC):
     _WHITESPACE_CHARS: ClassVar[Set[str]] = set(" \t\r\v\f\n\u00A0\u1680\u2028\u2029\u202F\u205F\u3000")
     _LETTER_CHARS: ClassVar[Set[str]] = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
     _LETTER_DIGIT_CHARS: ClassVar[Set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    _LETTER_DIGIT_UNDERSCORE_CHARS: ClassVar[Set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_")
     _DIGIT_CHARS: ClassVar[Set[str]] = set("0123456789")
     _HEX_CHARS: ClassVar[Set[str]] = set("0123456789abcdefABCDEF")
     _BINARY_CHARS: ClassVar[Set[str]] = set("01")
@@ -274,6 +275,12 @@ class Lexer(ABC):
         Determines if a character is a letter or digit.
         """
         return ch in self._LETTER_DIGIT_CHARS
+
+    def _is_letter_or_digit_or_underscore(self, ch: str) -> bool:
+        """
+        Determines if a character is a letter, digit, or underscore.
+        """
+        return ch in self._LETTER_DIGIT_UNDERSCORE_CHARS
 
     def _is_whitespace(self, ch: str) -> bool:
         """

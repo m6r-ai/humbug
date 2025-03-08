@@ -316,10 +316,8 @@ class JavaLexer(Lexer):
         start = self._position
         self._position += 1
 
-        while self._position < self._input_len:
-            ch = self._input[self._position]
-            if not (self._is_letter_or_digit(ch) or ch == '_'):
-                break
+        while (self._position < self._input_len and
+                self._is_letter_or_digit_or_underscore(self._input[self._position])):
             self._position += 1
 
         value = self._input[start:self._position]
@@ -338,8 +336,9 @@ class JavaLexer(Lexer):
         # Read annotation name
         while self._position < self._input_len:
             ch = self._input[self._position]
-            if not (self._is_letter_or_digit(ch) or ch in ('_', '.')):
+            if not (self._is_letter_or_digit_or_underscore(ch) or ch == '.'):
                 break
+
             self._position += 1
 
         self._tokens.append(Token(

@@ -294,8 +294,7 @@ class KotlinLexer(Lexer):
 
         # Read the annotation name
         while (self._position < self._input_len and
-               (self._is_letter_or_digit(self._input[self._position]) or
-                self._input[self._position] == '_' or
+               (self._is_letter_or_digit_or_underscore(self._input[self._position]) or
                 self._input[self._position] == '.')):
             self._position += 1
 
@@ -483,8 +482,7 @@ class KotlinLexer(Lexer):
         self._position += 1
 
         while (self._position < self._input_len and
-               (self._is_letter_or_digit(self._input[self._position]) or
-                self._input[self._position] == '_')):
+               self._is_letter_or_digit_or_underscore(self._input[self._position])):
             self._position += 1
 
         value = self._input[start:self._position]
