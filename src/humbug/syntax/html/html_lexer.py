@@ -266,7 +266,7 @@ class HTMLLexer(Lexer):
         Read tag content including tag names and attributes.
         """
         if not self._tag_name:
-            token = self._read_tag_or_attribute('HTML_TAG')
+            token = self._read_tag_or_attribute(TokenType.HTML_TAG)
             self._tag_name = token.value
             self._tokens.append(token)
             return
