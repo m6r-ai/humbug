@@ -413,7 +413,6 @@ class StyleManager(QObject):
             TokenType.STRING: ColorRole.SYNTAX_STRING,
             TokenType.TEXT: ColorRole.SYNTAX_TEXT,
             TokenType.TYPE: ColorRole.SYNTAX_TYPE,
-            TokenType.WHITESPACE: ColorRole.SYNTAX_TEXT,
             TokenType.XML_DOC: ColorRole.SYNTAX_COMMENT
         }
 

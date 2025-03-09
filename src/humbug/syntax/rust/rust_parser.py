@@ -68,7 +68,7 @@ class RustParser(Parser):
             if token.type == TokenType.OPERATOR:
                 if token.value == '<':
                     # Check if this is the start of generic parameters
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token()
                     if (next_token and
                             (next_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD) or
                              next_token.value in ('\'', '>'))):
@@ -149,11 +149,11 @@ class RustParser(Parser):
             in_element: Whether we're in a path/element chain
         """
         # Look ahead for type parameters or function calls
-        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+        next_token = lexer.peek_next_token()
         if next_token and next_token.type == TokenType.OPERATOR:
             if next_token.value == '<':
                 # Possible generic type
-                peek_ahead = lexer.peek_next_token([TokenType.WHITESPACE], offset=1)
+                peek_ahead = lexer.peek_next_token(offset=1)
                 if peek_ahead and (peek_ahead.type in (TokenType.IDENTIFIER, TokenType.LIFETIME, TokenType.KEYWORD)):
                     self._tokens.append(Token(
                         type=TokenType.TYPE,

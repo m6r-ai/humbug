@@ -65,7 +65,7 @@ class CParser(Parser):
             # Look at the next token. If it's a '(' operator then we're making a
             # function or method call!
             cur_in_element = in_element
-            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+            next_token = lexer.peek_next_token()
             in_element = cur_in_element
 
             next_in_element = False

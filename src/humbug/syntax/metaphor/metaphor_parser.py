@@ -109,10 +109,6 @@ class MetaphorParser(Parser):
                 if not lex_token:
                     break
 
-                if lex_token.type == TokenType.WHITESPACE:
-                    self._tokens.append(lex_token)
-                    continue
-
                 if lex_token.type == TokenType.FENCE:
                     if in_fence_block:
                         self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
@@ -126,9 +122,9 @@ class MetaphorParser(Parser):
                     embedded_parser_state = None
                     self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
 
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token()
                     if next_token and (next_token.type == TokenType.TEXT):
-                        next_token = lexer.get_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.get_next_token()
                         self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
 
                         language = ProgrammingLanguageUtils.from_name(next_token.value)

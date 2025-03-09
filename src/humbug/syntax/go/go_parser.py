@@ -71,7 +71,7 @@ class GoParser(Parser):
 
             if token.type == TokenType.KEYWORD:
                 if token.value == 'struct':
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token()
                     if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '{':
                         in_struct_literal = True
                 self._tokens.append(token)
@@ -89,7 +89,7 @@ class GoParser(Parser):
 
             # Handle struct literal field names
             if in_struct_literal:
-                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == ':':
                     self._tokens.append(Token(
                         type=TokenType.ELEMENT,
@@ -100,7 +100,7 @@ class GoParser(Parser):
 
             # Look at the next token to determine context
             cur_in_element = in_element
-            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+            next_token = lexer.peek_next_token()
             in_element = cur_in_element
 
             next_in_element = False

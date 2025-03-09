@@ -52,7 +52,7 @@ class SchemeParser(Parser):
         lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
-            token = lexer.get_next_token([TokenType.WHITESPACE])
+            token = lexer.get_next_token()
             if not token:
                 break
 
@@ -68,9 +68,9 @@ class SchemeParser(Parser):
                 continuation_state += 1
                 self._tokens.append(token)
 
-                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.IDENTIFIER:
-                    next_token = lexer.get_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.get_next_token()
                     self._tokens.append(Token(
                         type=TokenType.FUNCTION_OR_METHOD,
                         value=next_token.value,

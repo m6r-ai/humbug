@@ -58,7 +58,6 @@ class TokenType(IntEnum):
     TYPE = auto()
     TYPE_PARAMETER = auto()
     VECTOR_START = auto()
-    WHITESPACE = auto()
     XML_DOC = auto()
 
 
@@ -207,7 +206,7 @@ class Lexer(ABC):
         self._position += 1
 
         while self._position < self._input_len and self._input[self._position] != quote:
-            if self._input[self._position] == '\\' and (self._position + 1) < input_len:
+            if self._input[self._position] == '\\' and (self._position + 1) < self._input_len:
                 self._position += 1  # Skip the escape character
 
             self._position += 1
@@ -230,15 +229,11 @@ class Lexer(ABC):
         """
         Reads whitespace in the input.
         """
-        start = self._position
         self._position += 1
 
         # Fast path using set-based character classification
-        while self._position < self._input_len and self._input[self._position] in self._WHITESPACE_CHARS and self._input[self._position] != '\n':
+        while self._position < self._input_len and self._input[self._position] in self._WHITESPACE_CHARS:
             self._position += 1
-
-        whitespace_value = self._input[start:self._position]
-        self._tokens.append(Token(type=TokenType.WHITESPACE, value=whitespace_value, start=start))
 
     def _read_operator(self) -> None:
         """

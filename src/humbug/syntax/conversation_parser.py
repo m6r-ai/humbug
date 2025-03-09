@@ -119,14 +119,6 @@ class ConversationParser(Parser):
                     self._tokens.append(lex_token)
                     continue
 
-                if lex_token.type == TokenType.WHITESPACE:
-                    peek_token = lexer.peek_next_token()
-                    if (peek_token is None or peek_token.type != TokenType.FENCE) and parse_embedded:
-                        break
-
-                    self._tokens.append(lex_token)
-                    continue
-
                 seen_text = True
 
                 if lex_token.type == TokenType.FENCE:
@@ -144,9 +136,9 @@ class ConversationParser(Parser):
                     embedded_parser_state = None
                     self._tokens.append(Token(type=TokenType.FENCE_START, value='```', start=lex_token.start))
 
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token()
                     if next_token and (next_token.type == TokenType.TEXT):
-                        next_token = lexer.get_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.get_next_token()
                         self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
                         self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=(next_token.start + len(next_token.value))))
                         language = ProgrammingLanguageUtils.from_name(next_token.value)

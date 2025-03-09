@@ -79,7 +79,7 @@ class JavaParser(Parser):
                 if token_value == '<':
                     # Look back at previous token and forward to help determine context
                     prev_token = self._get_last_non_whitespace_token()
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token()
 
                     is_generic = False
                     if prev_token and next_token:
@@ -158,7 +158,7 @@ class JavaParser(Parser):
             # Handle identifier tokens based on context
             if in_generic and generic_depth > 0:
                 # Inside generic parameters, create specialized tokens
-                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == 'extends':
                     # This is a bounded type parameter
                     self._tokens.append(Token(
@@ -199,7 +199,7 @@ class JavaParser(Parser):
             lexer: The lexer instance for lookahead
             in_element: Whether we're in a property access chain
         """
-        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+        next_token = lexer.peek_next_token()
 
         if not next_token:
             self._tokens.append(token)
@@ -249,8 +249,7 @@ class JavaParser(Parser):
             The last non-whitespace token, or None if no such token exists
         """
         for token in reversed(self._tokens):
-            if token.type != TokenType.WHITESPACE:
-                return token
+            return token
 
         return None
 
@@ -270,7 +269,7 @@ class JavaParser(Parser):
 
         # First look ahead to find the matching '>'
         while True:
-            peeked_token = lexer.peek_next_token([TokenType.WHITESPACE], offset=token_count)
+            peeked_token = lexer.peek_next_token(offset=token_count)
             if not peeked_token:
                 break
 
@@ -282,7 +281,7 @@ class JavaParser(Parser):
                     peek_depth -= 1
                     if peek_depth == 0:
                         # Found the closing '>', peek at next token
-                        token = lexer.peek_next_token([TokenType.WHITESPACE], offset=token_count)
+                        token = lexer.peek_next_token(offset=token_count)
                         break
 
         return token

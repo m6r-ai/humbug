@@ -69,7 +69,7 @@ class MoveParser(Parser):
                 break
 
             if token.type == TokenType.ADDRESS:
-                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '::':
                     in_module_access = True
                 self._tokens.append(token)
@@ -84,10 +84,10 @@ class MoveParser(Parser):
 
                     if token.value == ':':
                         # Next identifier might be a type
-                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.peek_next_token()
                         if next_token and next_token.type == TokenType.IDENTIFIER:
                             self._tokens.append(token)
-                            token = lexer.get_next_token([TokenType.WHITESPACE])
+                            token = lexer.get_next_token()
                             self._tokens.append(Token(
                                 type=TokenType.TYPE,
                                 value=token.value,
@@ -97,10 +97,10 @@ class MoveParser(Parser):
 
                     if token.value == '<':
                         # Might be start of type parameters or vector literal
-                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.peek_next_token()
                         if next_token and next_token.type == TokenType.IDENTIFIER:
                             self._tokens.append(token)
-                            token = lexer.get_next_token([TokenType.WHITESPACE])
+                            token = lexer.get_next_token()
                             self._tokens.append(Token(
                                 type=TokenType.TYPE,
                                 value=token.value,
@@ -119,7 +119,7 @@ class MoveParser(Parser):
             # function or method call!
             cur_in_element = in_element
             cur_in_module_access = in_module_access
-            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+            next_token = lexer.peek_next_token()
             in_element = cur_in_element
             in_module_access = cur_in_module_access
 
@@ -139,7 +139,7 @@ class MoveParser(Parser):
 
                 if next_token.value == '<':
                     # Check if this is a type instantiation
-                    next_next_token = lexer.peek_next_token([TokenType.WHITESPACE, TokenType.IDENTIFIER, TokenType.OPERATOR])
+                    next_next_token = lexer.peek_next_token([TokenType.IDENTIFIER, TokenType.OPERATOR])
                     if next_next_token and next_next_token.value == '>':
                         self._tokens.append(Token(
                             type=TokenType.TYPE,

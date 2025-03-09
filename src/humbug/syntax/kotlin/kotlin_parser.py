@@ -91,7 +91,7 @@ class KotlinParser(Parser):
                         lambda_brace_count += 1
                     # Check if this starts a lambda by looking ahead
                     else:
-                        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                        next_token = lexer.peek_next_token()
                         if next_token and (
                             next_token.type == TokenType.IDENTIFIER or
                             (next_token.type == TokenType.OPERATOR and next_token.value == '->')
@@ -149,7 +149,7 @@ class KotlinParser(Parser):
             in_element: Whether we're in a property access chain
         """
         # Look at the next token to determine context
-        next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+        next_token = lexer.peek_next_token()
 
         if next_token and next_token.type == TokenType.OPERATOR:
             if next_token.value == '(':

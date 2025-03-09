@@ -178,7 +178,7 @@ class CSharpParser(Parser):
 
                 # Check context to determine what kind of identifier this is
                 if in_generic and generic_depth > 0:
-                    next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                    next_token = lexer.peek_next_token()
                     if next_token and next_token.type == TokenType.OPERATOR and next_token.value in ('where', 'extends'):
                         # Type parameter with constraints
                         self._tokens.append(Token(
@@ -196,7 +196,7 @@ class CSharpParser(Parser):
                     continue
 
                 # Check if this is a method call
-                next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+                next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '(':
                     self._tokens.append(Token(
                         type=TokenType.FUNCTION_OR_METHOD,
@@ -261,8 +261,8 @@ class CSharpParser(Parser):
             The last non-whitespace token, or None if no such token exists
         """
         for token in reversed(self._tokens):
-            if token.type != TokenType.WHITESPACE:
-                return token
+            return token
+
         return None
 
     def _is_generic_start(self, prev_token: Optional[Token], lexer: CSharpLexer) -> bool:
@@ -282,7 +282,7 @@ class CSharpParser(Parser):
         # '<' can start generics if preceded by an identifier and followed by
         # another identifier, keyword, or '?'
         if prev_token.type in (TokenType.IDENTIFIER, TokenType.FUNCTION_OR_METHOD):
-            next_token = lexer.peek_next_token([TokenType.WHITESPACE])
+            next_token = lexer.peek_next_token()
             if next_token:
                 if next_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD):
                     return True
@@ -305,7 +305,7 @@ class CSharpParser(Parser):
         """
         # Skip over the whitespace and '<'
         token_pos = 1
-        current_token = lexer.peek_next_token([TokenType.WHITESPACE], token_pos)
+        current_token = lexer.peek_next_token(offset=token_pos)
         if not current_token or current_token.type != TokenType.OPERATOR or current_token.value != '<':
             return False
 
@@ -314,7 +314,7 @@ class CSharpParser(Parser):
         # Look for the matching '>'
         generic_depth = 1
         while True:
-            current_token = lexer.peek_next_token([TokenType.WHITESPACE], token_pos)
+            current_token = lexer.peek_next_token(offset=token_pos)
             if not current_token:
                 return False
 
@@ -329,7 +329,7 @@ class CSharpParser(Parser):
                         break
 
         # After the '>', we should see a '(' for a method call
-        current_token = lexer.peek_next_token([TokenType.WHITESPACE], token_pos)
+        current_token = lexer.peek_next_token(offset=token_pos)
         return current_token and current_token.type == TokenType.OPERATOR and current_token.value == '('
 
     def _get_linq_keywords(self) -> List[str]:
