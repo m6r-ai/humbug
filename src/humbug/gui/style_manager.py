@@ -127,7 +127,7 @@ class StyleManager(QObject):
             # Button colours
             ColorRole.BUTTON_BACKGROUND: {
                 ColorMode.DARK: "#0c0c0c",
-                ColorMode.LIGHT: "#ffffff"
+                ColorMode.LIGHT: "#e8e8e8"
             },
             ColorRole.BUTTON_BACKGROUND_DISABLED: {
                 ColorMode.DARK: "#2c2c2c",
@@ -294,8 +294,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a04020"
             },
             ColorRole.SYNTAX_STRING: {
-                ColorMode.DARK: "#c07040",
-                ColorMode.LIGHT: "#803018"
+                ColorMode.DARK: "#c05040",
+                ColorMode.LIGHT: "#803828"
              },
             ColorRole.SYNTAX_TEXT: {
                 ColorMode.DARK: "#c8c8c8",
