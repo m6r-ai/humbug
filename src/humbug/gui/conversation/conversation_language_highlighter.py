@@ -66,16 +66,15 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
             parser_state = parser.parse(prev_parser_state, text)
 
             # Apply syntax highlighting based on token types
+            last_token_pos = 0
             while True:
                 token = parser.get_next_token()
                 if token is None:
                     break
 
-                self.setFormat(
-                    token.start,
-                    len(token.value),
-                    self._style_manager.get_highlight(token.type)
-                )
+                highlight_len = len(token.value) + token.start - last_token_pos
+                self.setFormat(last_token_pos, highlight_len, self._style_manager.get_highlight(token.type))
+                last_token_pos += highlight_len
 
             # Check if we need to rehighlight everything from this block onwards
             if current_block_data:

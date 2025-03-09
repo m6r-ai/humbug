@@ -69,6 +69,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
             in_code_block = False
 
             style_manager = self._style_manager
+            last_token_pos = 0
 
             while True:
                 token = parser.get_next_token()
@@ -93,7 +94,9 @@ class ConversationHighlighter(QSyntaxHighlighter):
                             continue
 
                 if fence_depth > 0:
-                    self.setFormat(token.start, len(token.value), style_manager.get_highlight(token.type))
+                    highlight_len = len(token.value) + token.start - last_token_pos
+                    self.setFormat(last_token_pos, highlight_len, style_manager.get_highlight(token.type))
+                    last_token_pos += highlight_len
                     continue
 
                 if in_code_block:
