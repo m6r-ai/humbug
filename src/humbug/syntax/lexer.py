@@ -43,7 +43,6 @@ class TokenType(IntEnum):
     LINQ_KEYWORD = auto()
     LPAREN = auto()
     METHOD_REFERENCE_OPERATOR = auto()
-    NEWLINE = auto()
     NUMBER = auto()
     OPERATOR = auto()
     PREPROCESSOR = auto()
@@ -87,7 +86,7 @@ class Lexer(ABC):
     """
 
     # Character lookup tables - shared by all subclasses
-    _WHITESPACE_CHARS: ClassVar[Set[str]] = set(" \t\r\v\f\n\u00A0\u1680\u2028\u2029\u202F\u205F\u3000")
+    _WHITESPACE_CHARS: ClassVar[Set[str]] = set(" \t\r\v\f\u00A0\u1680\u2028\u2029\u202F\u205F\u3000")
     _LETTER_CHARS: ClassVar[Set[str]] = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
     _LETTER_DIGIT_CHARS: ClassVar[Set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
     _LETTER_DIGIT_UNDERSCORE_CHARS: ClassVar[Set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_")
@@ -217,14 +216,6 @@ class Lexer(ABC):
         string_value = self._input[start:self._position]
         self._tokens.append(Token(type=TokenType.STRING, value=string_value, start=start))
 
-    def _read_newline(self) -> None:
-        """
-        Reads a newline in the input.
-        """
-        start = self._position
-        self._position += 1
-        self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=start))
-
     def _read_whitespace(self) -> None:
         """
         Reads whitespace in the input.
@@ -340,4 +331,4 @@ class Lexer(ABC):
         """
         Determines if a character is a non-newline whitespace.
         """
-        return ch in self._WHITESPACE_CHARS and ch != '\n'
+        return ch in self._WHITESPACE_CHARS

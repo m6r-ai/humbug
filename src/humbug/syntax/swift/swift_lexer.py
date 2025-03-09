@@ -104,9 +104,6 @@ class SwiftLexer(Lexer):
         if ch == '/':
             return self._read_forward_slash
 
-        if ch == '\n':
-            return self._read_newline
-
         return self._read_operator
 
     def _read_attribute(self) -> None:
@@ -328,17 +325,12 @@ class SwiftLexer(Lexer):
         """
         Read a single-line comment token.
         """
-        start = self._position
-        self._position += 2  # Skip //
-        while (self._position < self._input_len and
-               self._input[self._position] != '\n'):
-            self._position += 1
-
         self._tokens.append(Token(
             type=TokenType.COMMENT,
-            value=self._input[start:self._position],
-            start=start
+            value=self._input[self._position:],
+            start=self._position
         ))
+        self._position = self._input_len
 
     def _read_block_comment(self, skip_chars: int) -> None:
         """

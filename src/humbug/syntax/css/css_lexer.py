@@ -65,9 +65,6 @@ class CSSLexer(Lexer):
         Returns:
             The appropriate lexing function for the character
         """
-        if ch == '\n':
-            return self._read_newline
-
         if self._is_whitespace(ch):
             return self._read_whitespace
 

@@ -100,9 +100,6 @@ class CSharpLexer(Lexer):
         Returns:
             The appropriate lexing function for the character
         """
-        if ch == '\n':
-            return self._read_newline
-
         if self._is_whitespace(ch):
             return self._read_whitespace
 
@@ -544,33 +541,23 @@ class CSharpLexer(Lexer):
         """
         Read a single-line comment token (//).
         """
-        start = self._position
-        self._position += 2  # Skip //
-
-        while self._position < self._input_len and self._input[self._position] != '\n':
-            self._position += 1
-
         self._tokens.append(Token(
             type=TokenType.COMMENT,
-            value=self._input[start:self._position],
-            start=start
+            value=self._input[self._position:],
+            start=self._position
         ))
+        self._position = self._input_len
 
     def _read_xml_doc_comment(self) -> None:
         """
         Read an XML documentation comment token (///).
         """
-        start = self._position
-        self._position += 3  # Skip ///
-
-        while self._position < self._input_len and self._input[self._position] != '\n':
-            self._position += 1
-
         self._tokens.append(Token(
             type=TokenType.XML_DOC,
-            value=self._input[start:self._position],
-            start=start
+            value=self._input[self._position:],
+            start=self._position
         ))
+        self._position = self._input_len
 
     def _read_block_comment(self, skip_chars: int) -> None:
         """
@@ -606,23 +593,12 @@ class CSharpLexer(Lexer):
         """
         Read a preprocessor directive token (#if, #region, etc.).
         """
-        start = self._position
-        self._position += 1  # Skip #
-
-        # Read the directive name
-        while (self._position < self._input_len and
-                self._is_letter(self._input[self._position])):
-            self._position += 1
-
-        # Read the rest of the line
-        while self._position < self._input_len and self._input[self._position] != '\n':
-            self._position += 1
-
         self._tokens.append(Token(
             type=TokenType.PREPROCESSOR,
-            value=self._input[start:self._position],
-            start=start
+            value=self._input[self._position:],
+            start=self._position
         ))
+        self._position = self._input_len
 
     def _read_identifier_or_keyword(self) -> None:
         """

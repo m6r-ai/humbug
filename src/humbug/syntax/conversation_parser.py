@@ -140,11 +140,9 @@ class ConversationParser(Parser):
                     if next_token and (next_token.type == TokenType.TEXT):
                         next_token = lexer.get_next_token()
                         self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
-                        self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=(next_token.start + len(next_token.value))))
                         language = ProgrammingLanguageUtils.from_name(next_token.value)
                         break
 
-                    self._tokens.append(Token(type=TokenType.NEWLINE, value='\n', start=(lex_token.start + 3)))
                     language = ProgrammingLanguage.TEXT
                     break
 

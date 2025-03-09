@@ -28,9 +28,6 @@ class ConversationLexer(Lexer):
         if ch == '`':
             return self._read_backtick
 
-        if ch == '\n':
-            return self._read_newline
-
         return self._read_symbol
 
     def _read_symbol(self) -> None:

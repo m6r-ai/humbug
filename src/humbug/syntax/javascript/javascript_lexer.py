@@ -70,9 +70,6 @@ class JavaScriptLexer(Lexer):
         Returns:
             The appropriate lexing function for the character
         """
-        if ch == '\n':
-            return self._read_newline
-
         if self._is_whitespace(ch):
             return self._read_whitespace
 
@@ -140,17 +137,12 @@ class JavaScriptLexer(Lexer):
         """
         Read a hashbang token.
         """
-        start = self._position
-        self._position += 2
-        while (self._position < self._input_len and
-               self._input[self._position] != '\n'):
-            self._position += 1
-
         self._tokens.append(Token(
             type=TokenType.PREPROCESSOR,
-            value=self._input[start:self._position],
-            start=start
+            value=self._input[self._position:],
+            start=self._position
         ))
+        self._position = self._input_len
 
     def _read_number(self) -> None:
         """
@@ -241,17 +233,12 @@ class JavaScriptLexer(Lexer):
         """
         Read a single-line comment token.
         """
-        start = self._position
-        self._position += 2
-        while (self._position < self._input_len and
-               self._input[self._position] != '\n'):
-            self._position += 1
-
         self._tokens.append(Token(
             type=TokenType.COMMENT,
-            value=self._input[start:self._position],
-            start=start
+            value=self._input[self._position:],
+            start=self._position
         ))
+        self._position = self._input_len
 
     def _read_block_comment(self, skip_chars: int) -> None:
         """
@@ -293,7 +280,7 @@ class JavaScriptLexer(Lexer):
             ch = self._input[index]
             index += 1
 
-            if ch == '\n':
+            if index >= self._input_len:
                 start = self._position - 1
                 self._tokens.append(Token(
                     type=TokenType.OPERATOR,

@@ -37,9 +37,6 @@ class MetaphorLexer(Lexer):
         Returns:
             The appropriate lexing function for the character
         """
-        if ch == '\n':
-            return self._read_newline
-
         if self._is_whitespace(ch):
             return self._read_whitespace
 
@@ -62,10 +59,6 @@ class MetaphorLexer(Lexer):
 
         while self._position < self._input_len:
             ch = self._input[self._position]
-
-            if ch == '\n':
-                break
-
             self._position += 1
 
             # If we've already seen a keyword on this line then we don't need to
@@ -92,19 +85,6 @@ class MetaphorLexer(Lexer):
             start=start
         ))
 
-    def _read_newline(self) -> None:
-        """
-        Read a newline token and reset the keyword flag.
-        """
-        start = self._position
-        self._position += 1
-        self._seen_keyword = False
-        self._tokens.append(Token(
-            type=TokenType.NEWLINE,
-            value='\n',
-            start=start
-        ))
-
     def _read_backtick(self) -> None:
         start: int = self._position
 
@@ -121,17 +101,12 @@ class MetaphorLexer(Lexer):
         """
         Read a single-line comment token.
         """
-        start = self._position
-        self._position += 1
-        while (self._position < self._input_len and
-               self._input[self._position] != '\n'):
-            self._position += 1
-
         self._tokens.append(Token(
             type=TokenType.COMMENT,
-            value=self._input[start:self._position],
-            start=start
+            value=self._input[self._position:],
+            start=self._position
         ))
+        self._position = self._input_len
 
     def _is_keyword(self, value: str) -> bool:
         """

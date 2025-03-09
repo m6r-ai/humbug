@@ -45,9 +45,6 @@ class JSONLexer(Lexer):
         Returns:
             The appropriate lexing function for the character
         """
-        if ch == '\n':
-            return self._read_newline
-
         if self._is_whitespace(ch):
             return self._read_whitespace
 
@@ -66,23 +63,13 @@ class JSONLexer(Lexer):
         """
         Read a JSON string token.
 
-        Handles escape sequences within strings. JSON strings must be single-line
-        with escaped newlines using \n.
+        Handles escape sequences within strings.  JSON strings must be single-line.
         """
         start = self._position
         self._position += 1
 
         while self._position < self._input_len:
             ch = self._input[self._position]
-
-            if ch == '\n':
-                # Unescaped newline in string - this is an error in JSON
-                self._tokens.append(Token(
-                    type=TokenType.ERROR,
-                    value=self._input[start:self._position],
-                    start=start
-                ))
-                return
 
             if ch == '\\' and self._position + 1 < self._input_len:
                 # Handle escape sequences
@@ -114,6 +101,15 @@ class JSONLexer(Lexer):
                 return
 
             self._position += 1
+            if self._position >= self._input_len:
+                # Unterminated string - this is an error in JSON
+                self._tokens.append(Token(
+                    type=TokenType.ERROR,
+                    value=self._input[start:self._position],
+                    start=start
+                ))
+                return
+
 
         # Unterminated string
         self._tokens.append(Token(
