@@ -18,7 +18,7 @@ Internal structure changes:
 - Reworked the conversation, editor, and terminal find functionality to place it within the
   matching widget classes.  This avoids creating complex logic to hide the internals of
   these widget classes and sets a future template.
-- Optimized core lexing for syntax highlighting, making Python highlighting about 20% faster.
+- Optimized core lexing for syntax highlighting, making Python highlighting about 30% faster.
 - Optimized message highlighting, making that an extra 20% faster too.
 - Added a new ProgrammingLanguageUtils class to centralize all programming language lookups.
 
@@ -26,6 +26,7 @@ Bug fixes:
 
 - Added elipsis to the Python syntax highlighting engine.
 - Go, Rust, and Swift were not correctly identified in editor tab status bars.
+- Fixed a problem with the Scheme lexer not handling some error condititions correctly.
 
 ## v0.6 (2025-02-27)
 
