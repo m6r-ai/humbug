@@ -64,7 +64,7 @@ class HTMLParser(Parser):
             if token is None:
                 break
 
-            self._tokens.append(Token(type=token.type, value=token.value, start=token.start))
+            self._tokens.append(token)
 
         return embedded_parser_state
 
