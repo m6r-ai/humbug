@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.css.css_lexer import CSSLexer
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -54,22 +54,6 @@ class CSSParser(Parser):
             if not token:
                 break
 
-            if token.type == TokenType.HEX or token.type == TokenType.DIMENSION:
-                self._tokens.append(Token(
-                    type=TokenType.NUMBER,
-                    value=token.value,
-                    start=token.start
-                ))
-                continue
-
-            if token.type == TokenType.HASH:
-                self._tokens.append(Token(
-                    type=TokenType.IDENTIFIER,
-                    value=token.value,
-                    start=token.start
-                ))
-                continue
-
             if token.type != TokenType.IDENTIFIER:
                 self._tokens.append(token)
                 continue
@@ -79,11 +63,8 @@ class CSSParser(Parser):
             next_token = lexer.peek_next_token()
             if next_token and next_token.type == TokenType.OPERATOR:
                 if next_token.value == '(':
-                    self._tokens.append(Token(
-                        type=TokenType.FUNCTION_OR_METHOD,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.FUNCTION_OR_METHOD
+                    self._tokens.append(token)
                     continue
 
             self._tokens.append(token)

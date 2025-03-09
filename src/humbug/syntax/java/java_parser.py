@@ -78,7 +78,7 @@ class JavaParser(Parser):
                 # Handle potential generic type parameters or less-than operator
                 if token_value == '<':
                     # Look back at previous token and forward to help determine context
-                    prev_token = self._get_last_non_whitespace_token()
+                    prev_token = self._get_last_token()
                     next_token = lexer.peek_next_token()
 
                     is_generic = False
@@ -105,44 +105,32 @@ class JavaParser(Parser):
                     if is_generic:
                         in_generic = True
                         generic_depth += 1
-                        self._tokens.append(Token(
-                            type=TokenType.GENERIC_START,
-                            value=token_value,
-                            start=token.start
-                        ))
-                    else:
-                        # This is a less-than operator
-                        self._tokens.append(Token(
-                            type=TokenType.OPERATOR,
-                            value=token_value,
-                            start=token.start
-                        ))
+                        token.type = TokenType.GENERIC_START
+
+                    self._tokens.append(token)
                     continue
 
-                elif token_value == '>':
-                    generic_depth -= 1
-                    if generic_depth == 0:
-                        in_generic = False
-                    # Emit a specialized token for the generic operator
-                    self._tokens.append(Token(
-                        type=TokenType.GENERIC_END,
-                        value=token_value,
-                        start=token.start
-                    ))
+                if token_value == '>':
+                    if in_generic:
+                        generic_depth -= 1
+                        if generic_depth == 0:
+                            in_generic = False
+
+                        # Emit a specialized token for the generic operator
+                        token.type = TokenType.GENERIC_END
+
+                    self._tokens.append(token)
                     continue
 
                 # Handle method references
-                elif token_value == '::':
+                if token_value == '::':
                     # Change the token type for the operator itself
-                    self._tokens.append(Token(
-                        type=TokenType.METHOD_REFERENCE_OPERATOR,
-                        value=token_value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.METHOD_REFERENCE_OPERATOR
+                    self._tokens.append(token)
                     continue
 
                 # Handle property access chains
-                elif token_value == '.':
+                if token_value == '.':
                     in_element = True
                     self._tokens.append(token)
                     continue
@@ -159,20 +147,15 @@ class JavaParser(Parser):
             if in_generic and generic_depth > 0:
                 # Inside generic parameters, create specialized tokens
                 next_token = lexer.peek_next_token()
-                if next_token and next_token.type == TokenType.OPERATOR and next_token.value == 'extends':
+                if next_token and next_token.type == TokenType.KEYWORD and next_token.value == 'extends':
                     # This is a bounded type parameter
-                    self._tokens.append(Token(
-                        type=TokenType.TYPE_PARAMETER,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.TYPE_PARAMETER
+                    self._tokens.append(token)
                 else:
                     # This is a generic type
-                    self._tokens.append(Token(
-                        type=TokenType.GENERIC_TYPE,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.GENERIC_TYPE
+                    self._tokens.append(token)
+
                 continue
 
             self._handle_identifier(token, lexer, in_element)
@@ -208,11 +191,8 @@ class JavaParser(Parser):
         if next_token.type == TokenType.OPERATOR:
             # Method call
             if next_token.value == '(':
-                self._tokens.append(Token(
-                    type=TokenType.FUNCTION_OR_METHOD,
-                    value=token.value,
-                    start=token.start
-                ))
+                token.type = TokenType.FUNCTION_OR_METHOD
+                self._tokens.append(token)
                 return
 
             # Generic type parameters
@@ -222,34 +202,28 @@ class JavaParser(Parser):
                 if (after_generic and after_generic.type == TokenType.OPERATOR and
                         after_generic.value == '('):
                     # Generic method call
-                    self._tokens.append(Token(
-                        type=TokenType.GENERIC_METHOD,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.GENERIC_METHOD
+                    self._tokens.append(token)
                     return
 
         # Property or element access
         if in_element:
-            self._tokens.append(Token(
-                type=TokenType.ELEMENT,
-                value=token.value,
-                start=token.start
-            ))
+            token.type = TokenType.ELEMENT
+            self._tokens.append(token)
             return
 
         # Regular identifier
         self._tokens.append(token)
 
-    def _get_last_non_whitespace_token(self) -> Optional[Token]:
+    def _get_last_token(self) -> Optional[Token]:
         """
-        Get the last token that isn't whitespace.
+        Get the last token.
         
         Returns:
-            The last non-whitespace token, or None if no such token exists
+            The last token, or None if no such token exists
         """
-        for token in reversed(self._tokens):
-            return token
+        if self._tokens:
+            return self._tokens[-1]
 
         return None
 

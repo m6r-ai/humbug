@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.metaphor.metaphor_lexer import MetaphorLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
@@ -111,7 +111,8 @@ class MetaphorParser(Parser):
 
                 if lex_token.type == TokenType.FENCE:
                     if in_fence_block:
-                        self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
+                        lex_token.type = TokenType.FENCE_END
+                        self._tokens.append(lex_token)
                         in_fence_block = False
                         language = ProgrammingLanguage.UNKNOWN
                         embedded_parser_state = None
@@ -120,12 +121,14 @@ class MetaphorParser(Parser):
 
                     in_fence_block = True
                     embedded_parser_state = None
-                    self._tokens.append(Token(type=TokenType.LANGUAGE, value='```', start=lex_token.start))
+                    lex_token.type = TokenType.FENCE_START
+                    self._tokens.append(lex_token)
 
                     next_token = lexer.peek_next_token()
                     if next_token and (next_token.type == TokenType.TEXT):
                         next_token = lexer.get_next_token()
-                        self._tokens.append(Token(type=TokenType.LANGUAGE, value=next_token.value, start=next_token.start))
+                        next_token.type = TokenType.LANGUAGE
+                        self._tokens.append(next_token)
 
                         language = ProgrammingLanguageUtils.from_name(next_token.value)
                         continuation_state = int(language)

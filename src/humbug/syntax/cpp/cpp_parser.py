@@ -3,7 +3,7 @@ from typing import Optional
 
 from humbug.syntax.c.c_parser import CParser, CParserState
 from humbug.syntax.cpp.cpp_lexer import CppLexer
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
 
@@ -76,11 +76,8 @@ class CppParser(CParser):
             if next_token and next_token.type == TokenType.OPERATOR:
                 if next_token.value == '(':
                     in_element = False
-                    self._tokens.append(Token(
-                        type=TokenType.FUNCTION_OR_METHOD,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.FUNCTION_OR_METHOD
+                    self._tokens.append(token)
                     continue
 
                 # Is the next token going to be an element?
@@ -90,11 +87,8 @@ class CppParser(CParser):
             in_element = next_in_element
 
             if cur_in_element:
-                self._tokens.append(Token(
-                    type=TokenType.ELEMENT,
-                    value=token.value,
-                    start=token.start
-                ))
+                token.type = TokenType.ELEMENT
+                self._tokens.append(token)
                 continue
 
             self._tokens.append(token)

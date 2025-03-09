@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -71,11 +71,8 @@ class SchemeParser(Parser):
                 next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.IDENTIFIER:
                     next_token = lexer.get_next_token()
-                    self._tokens.append(Token(
-                        type=TokenType.FUNCTION_OR_METHOD,
-                        value=next_token.value,
-                        start=next_token.start
-                    ))
+                    next_token.type = TokenType.FUNCTION_OR_METHOD
+                    self._tokens.append(next_token)
                     continue
 
                 continue
@@ -86,15 +83,13 @@ class SchemeParser(Parser):
                     continuation_state -= 1
                     if continuation_state == 0:
                         in_vector = False
+
                 self._tokens.append(token)
                 continue
 
             if token.type == 'DOT':
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value=token.value,
-                    start=token.start
-                ))
+                token.type = TokenType.OPERATOR
+                self._tokens.append(token)
                 continue
 
             self._tokens.append(token)

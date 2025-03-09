@@ -143,41 +143,25 @@ class Lexer(ABC):
             ch = self._input[self._position]
             self._get_lexing_function(ch)()
 
-    def get_next_token(self, filter_list: List = None) -> Optional[Token]:
+    def get_next_token(self) -> Optional[Token]:
         """
-        Gets the next token from the input that does not have a type found in the filter list.
-
-        Args:
-            filter_list: Optional list of token types to skip
+        Gets the next token from the input.
 
         Returns:
             The next Token available or None if there are no tokens left.
         """
-        # Fast path when no filtering needed
-        if not filter_list:
-            if self._next_token >= len(self._tokens):
-                return None
+        if self._next_token >= len(self._tokens):
+            return None
 
-            token = self._tokens[self._next_token]
-            self._next_token += 1
-            return token
+        token = self._tokens[self._next_token]
+        self._next_token += 1
+        return token
 
-        # Path with filtering
-        tokens_len = len(self._tokens)
-        while self._next_token < tokens_len:
-            token = self._tokens[self._next_token]
-            self._next_token += 1
-            if token.type not in filter_list:
-                return token
-
-        return None
-
-    def peek_next_token(self, filter_list: List = None, offset: int = 0) -> Optional[Token]:
+    def peek_next_token(self, offset: int = 0) -> Optional[Token]:
         """
-        Get the token that is 'offset' positions ahead, skipping filtered tokens.
+        Get the token that is 'offset' positions ahead.
 
         Args:
-            filter_list: Optional list of token types to skip
             offset: How many non-filtered tokens to look ahead (default 0)
 
         Returns:
@@ -188,9 +172,10 @@ class Lexer(ABC):
         token = None
 
         while skipped <= offset:
-            token = self.get_next_token(filter_list)
+            token = self.get_next_token()
             if not token:
                 break
+
             skipped += 1
 
         self._next_token = current_token_index

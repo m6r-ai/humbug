@@ -91,11 +91,8 @@ class CSharpParser(Parser):
                     in_linq = True
 
                 if in_linq:
-                    self._tokens.append(Token(
-                        type=TokenType.LINQ_KEYWORD,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.LINQ_KEYWORD
+                    self._tokens.append(token)
                     continue
 
             # Handle attributes
@@ -118,11 +115,8 @@ class CSharpParser(Parser):
                     if is_generic:
                         in_generic = True
                         generic_depth += 1
-                        self._tokens.append(Token(
-                            type=TokenType.GENERIC_START,
-                            value=operator_value,
-                            start=token.start
-                        ))
+                        token.type = TokenType.GENERIC_START
+                        self._tokens.append(token)
                     else:
                         # This is a less-than operator
                         self._tokens.append(token)
@@ -134,11 +128,9 @@ class CSharpParser(Parser):
                         generic_depth -= 1
                         if generic_depth == 0:
                             in_generic = False
-                        self._tokens.append(Token(
-                            type=TokenType.GENERIC_END,
-                            value=operator_value,
-                            start=token.start
-                        ))
+
+                        token.type = TokenType.GENERIC_END
+                        self._tokens.append(token)
                     else:
                         # This is a greater-than operator
                         self._tokens.append(token)
@@ -148,6 +140,7 @@ class CSharpParser(Parser):
                     # Property or field access (but not in using directives)
                     if not in_using:
                         in_element = True
+
                     self._tokens.append(token)
                     continue
 
@@ -155,6 +148,7 @@ class CSharpParser(Parser):
                     # Null-conditional operator for property/field access
                     if not in_using:
                         in_element = True
+
                     self._tokens.append(token)
                     continue
 
@@ -181,28 +175,19 @@ class CSharpParser(Parser):
                     next_token = lexer.peek_next_token()
                     if next_token and next_token.type == TokenType.OPERATOR and next_token.value in ('where', 'extends'):
                         # Type parameter with constraints
-                        self._tokens.append(Token(
-                            type=TokenType.TYPE_PARAMETER,
-                            value=token.value,
-                            start=token.start
-                        ))
+                        token.type = TokenType.TYPE_PARAMETER
+                        self._tokens.append(token)
                     else:
                         # Generic type parameter
-                        self._tokens.append(Token(
-                            type=TokenType.GENERIC_TYPE,
-                            value=token.value,
-                            start=token.start
-                        ))
+                        token.type = TokenType.GENERIC_TYPE
+                        self._tokens.append(token)
                     continue
 
                 # Check if this is a method call
                 next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '(':
-                    self._tokens.append(Token(
-                        type=TokenType.FUNCTION_OR_METHOD,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.FUNCTION_OR_METHOD
+                    self._tokens.append(token)
                     continue
 
                 # Check if this is a generic method call
@@ -210,20 +195,14 @@ class CSharpParser(Parser):
                     # Look ahead to determine if this is a generic method
                     is_generic_method = self._is_generic_method(token, lexer)
                     if is_generic_method:
-                        self._tokens.append(Token(
-                            type=TokenType.GENERIC_METHOD,
-                            value=token.value,
-                            start=token.start
-                        ))
+                        token.type = TokenType.GENERIC_METHOD
+                        self._tokens.append(token)
                         continue
 
                 # Check if this is a property or field access, but not in a using directive
                 if in_element and not in_using:
-                    self._tokens.append(Token(
-                        type=TokenType.ELEMENT,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.ELEMENT
+                    self._tokens.append(token)
                     continue
 
                 # Regular identifier

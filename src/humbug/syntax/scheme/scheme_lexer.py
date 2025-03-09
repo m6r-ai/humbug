@@ -92,7 +92,7 @@ class SchemeLexer(Lexer):
         - Block comment (#| ... |#)
         """
         start = self._position
-        if self._position >= self._input_len:
+        if self._position + 1 >= self._input_len:
             self._tokens.append(Token(type=TokenType.ERROR, value='#', start=start))
             return
 
@@ -137,7 +137,8 @@ class SchemeLexer(Lexer):
             self._read_based_number(ch)
             return
 
-        self._tokens.append(Token(type=TokenType.ERROR, value=self._input[start:self._position + 1], start=start))
+        self._position += 1
+        self._tokens.append(Token(type=TokenType.ERROR, value='#', start=start))
 
     def _read_based_number(self, base: str) -> None:
         """

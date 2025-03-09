@@ -128,6 +128,7 @@ class RustParser(Parser):
         # Must start with an identifier followed by <
         if token.type != TokenType.IDENTIFIER:
             return False
+
         if next_token.type != TokenType.OPERATOR or next_token.value != '<':
             return False
 
@@ -146,7 +147,6 @@ class RustParser(Parser):
         Args:
             token: The identifier token to process
             lexer: The lexer instance for lookahead
-            in_element: Whether we're in a path/element chain
         """
         # Look ahead for type parameters or function calls
         next_token = lexer.peek_next_token()
@@ -155,29 +155,20 @@ class RustParser(Parser):
                 # Possible generic type
                 peek_ahead = lexer.peek_next_token(offset=1)
                 if peek_ahead and (peek_ahead.type in (TokenType.IDENTIFIER, TokenType.LIFETIME, TokenType.KEYWORD)):
-                    self._tokens.append(Token(
-                        type=TokenType.TYPE,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.TYPE
+                    self._tokens.append(token)
                     return
 
             if next_token.value == '(':
                 # Function or method call
-                self._tokens.append(Token(
-                    type=TokenType.FUNCTION_OR_METHOD,
-                    value=token.value,
-                    start=token.start
-                ))
+                token.type = TokenType.FUNCTION_OR_METHOD
+                self._tokens.append(token)
                 return
 
             if next_token.value in ('::', '.'):
                 # Path or field access
-                self._tokens.append(Token(
-                    type=TokenType.ELEMENT,
-                    value=token.value,
-                    start=token.start
-                ))
+                token.type = TokenType.ELEMENT
+                self._tokens.append(token)
                 return
 
         # Regular identifier

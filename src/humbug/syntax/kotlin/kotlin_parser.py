@@ -154,20 +154,14 @@ class KotlinParser(Parser):
         if next_token and next_token.type == TokenType.OPERATOR:
             if next_token.value == '(':
                 # Function or method call
-                self._tokens.append(Token(
-                    type=TokenType.FUNCTION_OR_METHOD,
-                    value=token.value,
-                    start=token.start
-                ))
+                token.type = TokenType.FUNCTION_OR_METHOD
+                self._tokens.append(token)
                 return
 
         if in_element:
             # Property or element access
-            self._tokens.append(Token(
-                type=TokenType.ELEMENT,
-                value=token.value,
-                start=token.start
-            ))
+            token.type = TokenType.ELEMENT
+            self._tokens.append(token)
             return
 
         # Regular identifier

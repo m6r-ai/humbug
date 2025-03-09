@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -83,21 +83,17 @@ class SwiftParser(Parser):
                 if next_token and next_token.type == TokenType.OPERATOR:
                     if next_token.value == '(':
                         # Function or method call
-                        self._tokens.append(Token(
-                            type=TokenType.FUNCTION_OR_METHOD,
-                            value=token.value,
-                            start=token.start
-                        ))
+                        token.type = TokenType.FUNCTION_OR_METHOD
+                        self._tokens.append(token)
                         continue
-                    elif next_token.value == '.':
+
+                    if next_token.value == '.':
                         # Property access
-                        self._tokens.append(Token(
-                            type=TokenType.ELEMENT,
-                            value=token.value,
-                            start=token.start
-                        ))
+                        token.type = TokenType.ELEMENT
+                        self._tokens.append(token)
                         continue
-                    elif next_token.value == '<' and not in_generic:
+
+                    if next_token.value == '<' and not in_generic:
                         # Start of generic parameters
                         in_generic = True
                         generic_angle_count = 1

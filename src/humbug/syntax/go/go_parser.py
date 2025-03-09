@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.go.go_lexer import GoLexer
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -74,12 +74,14 @@ class GoParser(Parser):
                     next_token = lexer.peek_next_token()
                     if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '{':
                         in_struct_literal = True
+
                 self._tokens.append(token)
                 continue
 
             if token.type == TokenType.OPERATOR:
                 if token.value == '}':
                     in_struct_literal = False
+
                 self._tokens.append(token)
                 continue
 
@@ -91,11 +93,8 @@ class GoParser(Parser):
             if in_struct_literal:
                 next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == ':':
-                    self._tokens.append(Token(
-                        type=TokenType.ELEMENT,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.ELEMENT
+                    self._tokens.append(token)
                     continue
 
             # Look at the next token to determine context
@@ -107,11 +106,8 @@ class GoParser(Parser):
             if next_token and next_token.type == TokenType.OPERATOR:
                 if next_token.value == '(':
                     in_element = False
-                    self._tokens.append(Token(
-                        type=TokenType.FUNCTION_OR_METHOD,
-                        value=token.value,
-                        start=token.start
-                    ))
+                    token.type = TokenType.FUNCTION_OR_METHOD
+                    self._tokens.append(token)
                     continue
 
                 # Check for method calls or element access
@@ -121,11 +117,8 @@ class GoParser(Parser):
             in_element = next_in_element
 
             if cur_in_element:
-                self._tokens.append(Token(
-                    type=TokenType.ELEMENT,
-                    value=token.value,
-                    start=token.start
-                ))
+                token.type = TokenType.ELEMENT
+                self._tokens.append(token)
                 continue
 
             self._tokens.append(token)

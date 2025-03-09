@@ -1,7 +1,8 @@
+from typing import List, Tuple
+
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit
 from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat
-from typing import List, Tuple
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.editor.line_number_area import LineNumberArea
