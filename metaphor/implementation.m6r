@@ -242,7 +242,7 @@ Context: Implementation
             takes this form:
 
             ```json
-            {ß
+            {
                 "id": "chatcmpl-abc123",
                 "object": "chat.completion.chunk",
                 "created": 1677858242,
