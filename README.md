@@ -1,4 +1,4 @@
-# Humbug v0.7
+# Humbug v0.8
 
 Humbug is a versatile, GUI-based application designed to help you build and maintain software using AI.  It
 has a familiar IDE-like feel but its main purpose is to let you discuss your software with AI backends
@@ -53,13 +53,9 @@ free API keys for low volume testing, so you can get started with either, or bot
 
 ## What's new
 
-v0.7 adds several new features:
+v0.8 adds several new features:
 
-- Reworked the conversation view - code blocks are now broken into separate sections so they're easier to work with.  This
-  includes copy and save-as buttons.
-- C# syntax highlighting is now available.
-- Mistral support - now supports 3 LLM models from Mistral.
-- Updated OpenAI support - now supports O3-mini, O1, and GPT-4.5 preview.
+- TBD
 
 ## Features
 
