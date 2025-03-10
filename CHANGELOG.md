@@ -37,6 +37,7 @@ New features:
 - For AI models that expose reasoning steps, the conversation tabs now capture the
   reasoning in a separate message box, after the user's message and before the AI's
   full response.
+- Added support for C# syntax highlighting.
 - Small improvements to the status messages for conversations and terminals.
 
 Internal structure changes:
