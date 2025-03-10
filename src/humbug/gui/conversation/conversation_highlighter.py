@@ -74,6 +74,15 @@ class ConversationHighlighter(QSyntaxHighlighter):
             while True:
                 token = parser.get_next_token()
                 if token is None:
+                    # If we've reached the end of the line check if we had whitespace at the end.  If we
+                    # did then we need to highlight that too.
+                    if fence_depth > 0 and last_token_pos < len(text):
+                        self.setFormat(
+                            last_token_pos,
+                            len(text) - last_token_pos,
+                            style_manager.get_highlight(TokenType.TEXT)
+                        )
+
                     break
 
                 match token.type:

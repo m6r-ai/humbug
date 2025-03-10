@@ -7,6 +7,7 @@ from PySide6.QtGui import (
     QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 )
 from humbug.gui.style_manager import StyleManager
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.parser_registry import ParserRegistry
 
@@ -70,6 +71,14 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
             while True:
                 token = parser.get_next_token()
                 if token is None:
+                    # If we've reached the end of the line check if we had whitespace at the end.  If we
+                    # did then we need to highlight that too.
+                    if last_token_pos < len(text):
+                        self.setFormat(
+                            last_token_pos,
+                            len(text) - last_token_pos,
+                            self._style_manager.get_highlight(TokenType.TEXT)
+                        )
                     break
 
                 highlight_len = len(token.value) + token.start - last_token_pos
