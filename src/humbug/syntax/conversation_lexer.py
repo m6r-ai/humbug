@@ -9,6 +9,7 @@ class ConversationLexer(Lexer):
         Lex all the tokens in the input.
         """
         self._input = input_str
+        self._input_len = len(input_str)
         self._inner_lex()
         return None
 
