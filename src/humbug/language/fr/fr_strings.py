@@ -66,6 +66,9 @@ def get_french_strings() -> LanguageStrings:
         role_reasoning="Raisonnement de l'assistant",
         role_system="Message système",
 
+        # Message labels
+        highlighting="Mise en évidence : {language}",
+
         # Find widget
         find_placeholder="Rechercher",
         find_no_matches="Aucun résultat",

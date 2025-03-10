@@ -66,7 +66,7 @@ class MessageSectionWidget(QFrame):
             self._header_layout.setSpacing(5)
 
             # Add language label on the left
-            self._language_header = QLabel(ProgrammingLanguageUtils.get_display_name(language))
+            self._language_header = QLabel()
             self._language_header.setAlignment(Qt.AlignLeft)
             self._header_layout.addWidget(self._language_header)
 
@@ -122,6 +122,12 @@ class MessageSectionWidget(QFrame):
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
         strings = self._language_manager.strings
+
+        if self._language_header:
+            language_header = strings.highlighting.format(
+                language=ProgrammingLanguageUtils.get_display_name(self._language)
+            )
+            self._language_header.setText(language_header)
 
         if self._copy_button:
             self._copy_button.setToolTip(strings.tooltip_copy_contents)

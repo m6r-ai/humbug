@@ -287,6 +287,8 @@ class MessageWidget(QFrame):
                 section.set_content(section_text)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
+            elif i == len(self._sections) - 1:
+                self._sections[-1].set_content(section_text)
 
         # Remove any extra sections
         while len(self._sections) > len(section_data):

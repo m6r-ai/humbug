@@ -61,6 +61,9 @@ class LanguageStrings:
     role_reasoning: str
     role_system: str
 
+    # Conversation labels
+    highlighting: str
+
     # Find widget
     find_placeholder: str
     find_no_matches: str

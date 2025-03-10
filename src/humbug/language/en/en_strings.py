@@ -66,6 +66,9 @@ def get_english_strings() -> LanguageStrings:
         role_reasoning="Assistant Reasoning",
         role_system="System Message",
 
+        # Message labels
+        highlighting="Highlighting: {language}",
+
         # Find widget
         find_placeholder="Find",
         find_no_matches="No matches",

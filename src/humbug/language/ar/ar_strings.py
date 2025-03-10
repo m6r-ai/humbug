@@ -66,6 +66,9 @@ def get_arabic_strings() -> LanguageStrings:
         role_reasoning="تفكير المساعد",
         role_system="رسالة النظام",
 
+        # Message labels
+        highlighting="تمييز: {language}",
+
         # Find widget
         find_placeholder="بحث",
         find_no_matches="لا توجد نتائج",
