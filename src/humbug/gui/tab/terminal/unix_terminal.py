@@ -78,7 +78,7 @@ class UnixTerminal(TerminalBase):
                 os.execvp(shell.split()[0], shell.split())
 
             except Exception as e:
-                self._logger.exception(f"Child process failed: %s", str(e))
+                self._logger.exception("Child process failed: %s", str(e))
 
         # Parent process
         os.close(secondary_fd)
@@ -156,7 +156,7 @@ class UnixTerminal(TerminalBase):
                 if self._process_id:
                     os.killpg(os.getpgid(self._process_id), signal.SIGWINCH)
             except OSError as e:
-                self._logger.warning(f"Failed to update window size: {e}")
+                self._logger.exception("Failed to update window size: %s", str(e))
 
     async def read_data(self, size: int) -> bytes:
         """
