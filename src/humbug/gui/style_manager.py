@@ -393,6 +393,8 @@ class StyleManager(QObject):
             TokenType.DIRECTIVE: ColorRole.SYNTAX_PREPROCESSOR,
             TokenType.ELEMENT: ColorRole.SYNTAX_ELEMENT,
             TokenType.ERROR: ColorRole.SYNTAX_ERROR,
+            TokenType.FENCE_START: ColorRole.SYNTAX_LANGUAGE,
+            TokenType.FENCE_END: ColorRole.SYNTAX_LANGUAGE,
             TokenType.FUNCTION_OR_METHOD: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
             TokenType.GENERIC_END: ColorRole.SYNTAX_OPERATOR,
             TokenType.GENERIC_START: ColorRole.SYNTAX_OPERATOR,
