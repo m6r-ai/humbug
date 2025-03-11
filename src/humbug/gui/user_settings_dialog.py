@@ -12,7 +12,7 @@ from typing import Dict, Optional
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QLineEdit, QListView
+    QPushButton, QLineEdit
 )
 from PySide6.QtCore import Signal
 
@@ -65,7 +65,7 @@ class UserSettingsDialog(QDialog):
         ]
 
         for key, label_text in api_keys:
-            key_layout, label, line_edit = self._create_api_key_field(key, label_text)
+            key_layout, label, line_edit = self._create_api_key_field(label_text)
             self._api_key_labels[key] = label
             self._api_key_entries[key] = line_edit
             layout.addLayout(key_layout)
@@ -137,11 +137,10 @@ class UserSettingsDialog(QDialog):
             }}
         """)
 
-    def _create_api_key_field(self, key: str, label_text: str) -> tuple[QHBoxLayout, QLabel, QLineEdit]:
+    def _create_api_key_field(self, label_text: str) -> tuple[QHBoxLayout, QLabel, QLineEdit]:
         """Create an API key field with label and text input.
 
         Args:
-            key: The API key identifier
             label_text: The label text to display
 
         Returns:

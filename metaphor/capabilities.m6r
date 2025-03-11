@@ -614,49 +614,38 @@ Context: Capabilities
 
         User level settings are store the a ".humbug" directory in the user's home directory.
 
-        This contains "mindspace.json" tracking the last open mindspace:
+        Some settings can also be set by environment variables that will be used if the matching entry
+        in the user settings file is empty.
 
-        ```json
-        {
-            "lastMindspace": "/path/to/project/.humbug"
-        }
-        ```
+        Context: User settings configuration
+            The application supports loading settings from a configuration file, "user-settings.json" that is
+            stored in the ".humbug" directory in the user's home directory.
 
-        This mindspace is restored on application startup if:
-
-        - The mindspace path exists
-        - The mindspace is accessible
-        - The mindspace contains valid settings.json
-
-        Context: API key configuration
-            The application supports loading API keys from both environment variables and a configuration file.
-
-            The configuration file "api-keys.json" is stored in the ".humbug" directory in the user's home directory.
-
-            Context: API keys file
-                The api-keys.json file contains API keys for different providers:
+            Context: user-settings.json file
+                The "user-settings.json" file contains API keys for different providers:
 
                 ```json
                 {
-                    "ANTHROPIC_API_KEY": "",
-                    "DEEPSEEK_API_KEY": "",
-                    "GOOGLE_API_KEY": "",
-                    "M6R_API_KEY": "",
-                    "MISTRAL_API_KEY": "",
-                    "OPENAI_API_KEY": ""
+                    "api_keys": {
+                        "ANTHROPIC_API_KEY": "",
+                        "DEEPSEEK_API_KEY": "",
+                        "GOOGLE_API_KEY": "",
+                        "M6R_API_KEY": "",
+                        "MISTRAL_API_KEY": "",
+                        "OPENAI_API_KEY": ""
+                    }
                 }
                 ```
 
                 The file is:
 
                 - Created automatically if it doesn't exist
-                - Set to mode 0o600 (user read/write only) for security
                 - Read during application startup
 
                 Context: Key precedence
                     API keys are loaded with the following precedence:
 
-                    1. Non-empty values from api-keys.json
+                    1. Non-empty values from user-settings.json
                     2. Environment variables if corresponding file value is empty
 
                     The environment variables checked are:
@@ -672,14 +661,7 @@ Context: Capabilities
                     For security:
 
                     - The .humbug directory is created with mode 0o700 (user access only)
-                    - The api-keys.json file is created with mode 0o600 (user read/write only)
-
-                Context: Error handling
-                    If the api-keys.json file:
-
-                    - Cannot be created: Log error and fall back to environment variables
-                    - Contains invalid JSON: Log error and raise exception
-                    - Has permission issues: Log error and fall back to environment variables
+                    - The user-settings.json file is created with mode 0o600 (user read/write only)
 
         Context: User Settings Dialog
             The user settings dialog allows the user to specify user-specifc settings.
