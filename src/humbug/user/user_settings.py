@@ -10,7 +10,7 @@ from typing import Dict
 class UserSettings:
     """
     Store user-specific application settings.
-    
+
     Currently focused on API keys for AI providers, but can be extended
     for other user-specific settings in the future.
     """
@@ -35,13 +35,13 @@ class UserSettings:
     def load(cls, path: str) -> "UserSettings":
         """
         Load user settings from file.
-        
+
         Args:
             path: Path to the settings file
-            
+
         Returns:
             UserSettings object with loaded values
-            
+
         Raises:
             json.JSONDecodeError: If file contains invalid JSON
         """
@@ -56,15 +56,15 @@ class UserSettings:
                     if file_content.strip():
                         data = json.loads(file_content)
 
-                        # Update API keys from file
-                        if "api_keys" in data:
-                            for key, value in data["api_keys"].items():
-                                settings.api_keys[key] = value
-                        else:
-                            # Legacy format - direct key/value pairs
+                        # Handle legacy format (direct key/value pairs)
+                        if isinstance(data, dict) and not "api_keys" in data:
                             for key in settings.api_keys:
                                 if key in data:
                                     settings.api_keys[key] = data[key]
+                        # Handle new format (structured with api_keys field)
+                        elif "api_keys" in data:
+                            for key, value in data["api_keys"].items():
+                                settings.api_keys[key] = value
 
         except (FileNotFoundError, json.JSONDecodeError) as e:
             # Re-raise JSON decode errors, but ignore file not found
@@ -76,10 +76,10 @@ class UserSettings:
     def save(self, path: str) -> None:
         """
         Save user settings to file.
-        
+
         Args:
             path: Path to save the settings file
-            
+
         Raises:
             OSError: If there's an issue creating the directory or writing the file
         """

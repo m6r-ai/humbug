@@ -5,9 +5,7 @@ This dialog allows users to configure settings that apply across all mindspaces,
 such as API keys for different AI backends.
 """
 
-import json
 import logging
-import os
 from typing import Dict, Optional
 
 from PySide6.QtWidgets import (
@@ -19,12 +17,13 @@ from PySide6.QtCore import Signal
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.user.user_settings import UserSettings
 
 
 class UserSettingsDialog(QDialog):
     """Dialog for editing user-specific settings."""
 
-    settings_changed = Signal(dict)
+    settings_changed = Signal(UserSettings)
 
     def __init__(self, parent=None):
         """Initialize the user settings dialog.
@@ -40,8 +39,8 @@ class UserSettingsDialog(QDialog):
         self.setMinimumWidth(750)
         self.setModal(True)
 
-        self._initial_settings: Optional[Dict[str, str]] = None
-        self._current_settings: Optional[Dict[str, str]] = None
+        self._initial_settings: Optional[UserSettings] = None
+        self._current_settings: Optional[UserSettings] = None
         self._api_key_entries: Dict[str, QLineEdit] = {}
         self._api_key_labels: Dict[str, QLabel] = {}
         self._logger = logging.getLogger(__name__)
@@ -167,30 +166,34 @@ class UserSettingsDialog(QDialog):
         # Check if any value has changed from current settings
         changed = False
         for key, line_edit in self._api_key_entries.items():
-            if line_edit.text() != self._current_settings.get(key, ""):
+            if line_edit.text() != self._current_settings.api_keys.get(key, ""):
                 changed = True
                 break
 
         self.apply_button.setEnabled(changed)
 
-    def get_settings(self) -> Dict[str, str]:
+    def get_settings(self) -> UserSettings:
         """Get current API key settings from dialog."""
-        return {
+        api_keys = {
             key: line_edit.text()
             for key, line_edit in self._api_key_entries.items()
         }
 
-    def set_settings(self, settings: Dict[str, str]) -> None:
+        # Create a new UserSettings object with the updated API keys
+        settings = UserSettings(api_keys=api_keys)
+        return settings
+
+    def set_settings(self, settings: UserSettings) -> None:
         """Update dialog with current API key settings.
 
         Args:
-            settings: Dictionary of API key settings
+            settings: UserSettings object with current settings
         """
-        self._initial_settings = settings.copy()
-        self._current_settings = settings.copy()
+        self._initial_settings = UserSettings(api_keys=settings.api_keys.copy())
+        self._current_settings = UserSettings(api_keys=settings.api_keys.copy())
 
         # Set values in UI elements
-        for key, value in settings.items():
+        for key, value in settings.api_keys.items():
             if key in self._api_key_entries:
                 self._api_key_entries[key].setText(value)
 
@@ -200,7 +203,7 @@ class UserSettingsDialog(QDialog):
     def _handle_apply(self) -> None:
         """Handle Apply button click."""
         settings = self.get_settings()
-        self._current_settings = settings.copy()
+        self._current_settings = settings
         self.settings_changed.emit(settings)
         self.apply_button.setEnabled(False)
 
@@ -215,63 +218,3 @@ class UserSettingsDialog(QDialog):
             self.settings_changed.emit(self._initial_settings)
 
         super().reject()
-
-    @staticmethod
-    def save_settings(settings: Dict[str, str]) -> None:
-        """Save API key settings to configuration file.
-
-        Args:
-            settings: Dictionary of API key settings to save
-
-        Raises:
-            OSError: If there's an issue creating the directory or writing the file
-            PermissionError: If the user doesn't have permission to create or write the file
-        """
-        config_dir = os.path.expanduser("~/.humbug")
-        config_file = os.path.join(config_dir, "api-keys.json")
-
-        # Create directory if it doesn't exist
-        os.makedirs(config_dir, mode=0o700, exist_ok=True)
-
-        # Write the settings to the file
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(settings, f, indent=4)
-
-        # Set secure permissions
-        os.chmod(config_file, 0o600)
-
-    @staticmethod
-    def load_settings() -> Dict[str, str]:
-        """Load API key settings from configuration file.
-
-        Returns:
-            Dictionary containing API key settings
-
-        Raises:
-            json.JSONDecodeError: If the file contains invalid JSON
-        """
-        config_dir = os.path.expanduser("~/.humbug")
-        config_file = os.path.join(config_dir, "api-keys.json")
-
-        # Initialize with empty values
-        settings = {
-            "ANTHROPIC_API_KEY": "",
-            "DEEPSEEK_API_KEY": "",
-            "GOOGLE_API_KEY": "",
-            "M6R_API_KEY": "",
-            "MISTRAL_API_KEY": "",
-            "OPENAI_API_KEY": ""
-        }
-
-        # Read from file if it exists and is not empty
-        if os.path.exists(config_file):
-            with open(config_file, 'r', encoding='utf-8') as f:
-                file_content = f.read()
-                if file_content.strip():  # Only parse if file is not empty
-                    file_settings = json.loads(file_content)
-                    # Update settings with values from file
-                    for key in settings:
-                        if key in file_settings and file_settings[key]:
-                            settings[key] = file_settings[key]
-
-        return settings

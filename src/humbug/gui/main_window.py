@@ -32,6 +32,7 @@ from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
+from humbug.user.user_manager import UserManager, UserError
 
 
 class MainWindow(QMainWindow):
@@ -333,6 +334,7 @@ class MainWindow(QMainWindow):
 
         self._handle_language_changed()
 
+        self._user_manager = UserManager()
         self._mindspace_manager = MindspaceManager()
 
         QTimer.singleShot(0, self._restore_last_mindspace)
@@ -944,39 +946,24 @@ class MainWindow(QMainWindow):
     def _show_user_settings_dialog(self):
         """Show the user settings dialog."""
         dialog = UserSettingsDialog(self)
+        dialog.set_settings(self._user_manager.settings)
 
-        try:
-            # Load current settings
-            settings = UserSettingsDialog.load_settings()
-            dialog.set_settings(settings)
+        def handle_settings_changed(new_settings):
+            try:
+                self._user_manager.update_settings(new_settings)
+                self._logger.info("User settings saved successfully")
+            except UserError as e:
+                self._logger.error("Failed to save user settings: %s", str(e))
+                strings = self._language_manager.strings
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.settings_error_title,
+                    strings.error_saving_user_settings.format(str(e))
+                )
 
-            # Handle settings changes
-            def handle_settings_changed(new_settings):
-                try:
-                    UserSettingsDialog.save_settings(new_settings)
-                    self._logger.info("User settings saved successfully")
-                except (OSError, PermissionError) as e:
-                    self._logger.error("Failed to save user settings: %s", str(e))
-                    strings = self._language_manager.strings
-                    MessageBox.show_message(
-                        self,
-                        MessageBoxType.CRITICAL,
-                        strings.settings_error_title,
-                        strings.error_saving_user_settings.format(str(e))
-                    )
-
-            dialog.settings_changed.connect(handle_settings_changed)
-            dialog.exec()
-
-        except json.JSONDecodeError as e:
-            self._logger.error("Failed to load user settings: %s", str(e))
-            strings = self._language_manager.strings
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.settings_error_title,
-                strings.error_saving_user_settings.format(str(e))
-            )
+        dialog.settings_changed.connect(handle_settings_changed)
+        dialog.exec()
 
     def _show_mindspace_settings_dialog(self):
         """Show the mindspace settings dialog."""

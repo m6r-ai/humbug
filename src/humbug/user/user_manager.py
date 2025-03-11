@@ -2,12 +2,11 @@
 Manages Humbug application user settings, primarily API keys.
 """
 
-import json
 import logging
 import os
 from typing import Dict, Optional
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Signal
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_provider import AIProvider
@@ -28,6 +27,9 @@ class UserManager(QObject):
     USER_DIR = ".humbug"
     SETTINGS_FILE = "user-settings.json"
     API_KEYS_FILE = "api-keys.json"  # Legacy file, maintained for backward compatibility
+
+    # Signal emitted when user settings change
+    settings_changed = Signal()
 
     _instance = None
     _logger = logging.getLogger("UserManager")
@@ -106,7 +108,11 @@ class UserManager(QObject):
             # Also update the legacy file for backward compatibility
             legacy_path = self._get_legacy_api_keys_path()
             with open(legacy_path, 'w', encoding='utf-8') as f:
-                json.dump(self._settings.api_keys, f, indent=4)
+                # For legacy format, save just the API keys directly
+                # without the nested structure
+                legacy_json = self._settings.api_keys.copy()
+                from json import dump
+                dump(legacy_json, f, indent=4)
             os.chmod(legacy_path, 0o600)
 
         except OSError as e:
@@ -127,28 +133,43 @@ class UserManager(QObject):
 
         self._logger.info("Initialized AI backends with available API keys")
 
-    def update_api_keys(self, api_keys: Dict[str, str]) -> None:
+    def update_settings(self, new_settings: UserSettings) -> None:
         """
-        Update API keys, save to file, and refresh AI backends.
+        Update user settings, save to file, and refresh AI backends.
 
         Args:
-            api_keys: Dictionary of API key name to value
+            new_settings: UserSettings object with updated settings
 
         Raises:
-            UserError: If API keys cannot be saved
+            UserError: If settings cannot be saved
         """
         if not self._settings:
             self._load_settings()
 
         try:
-            self._settings.api_keys = api_keys
+            self._settings = new_settings
             self._save_settings()
 
             # Re-initialize backends with new API keys
             self._initialize_ai_backends()
 
+            # Emit signal to notify listeners
+            self.settings_changed.emit()
+
         except OSError as e:
-            raise UserError(f"Failed to save API keys: {str(e)}") from e
+            raise UserError(f"Failed to save user settings: {str(e)}") from e
+
+    @property
+    def settings(self) -> UserSettings:
+        """
+        Get the current user settings.
+
+        Returns:
+            The current UserSettings object
+        """
+        if not self._settings:
+            self._load_settings()
+        return self._settings
 
     def get_api_keys(self, include_env_vars: bool = True) -> Dict[str, str]:
         """
