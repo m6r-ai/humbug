@@ -1,6 +1,6 @@
 """Dialog for configuring conversation-specific settings."""
 
-from typing import Dict, List
+from typing import List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -8,11 +8,11 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Qt
 
-from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.user.user_manager import UserManager
 
 
 class ConversationSettingsDialog(QDialog):
@@ -20,18 +20,18 @@ class ConversationSettingsDialog(QDialog):
 
     settings_changed = Signal(AIConversationSettings)
 
-    def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
+    def __init__(self, parent=None):
         """Initialize the conversation settings dialog."""
         super().__init__(parent)
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings
 
         self.setWindowTitle(strings.conversation_settings)
         self.setMinimumWidth(500)
         self.setModal(True)
 
-        self._ai_backends = ai_backends
+        self._user_manager = UserManager()
+        self._ai_backends = self._user_manager.get_ai_backends()
         self._available_models: List[str] = []
         self._initial_settings = None
         self._current_settings = None
@@ -245,29 +245,6 @@ class ConversationSettingsDialog(QDialog):
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
         """)
-
-    def _handle_language_changed(self) -> None:
-        """Update dialog texts when language changes."""
-        strings = self._language_manager.strings
-
-        # Update window title
-        self.setWindowTitle(strings.conversation_settings)
-
-        # Update labels
-        self._model_label.setText(strings.settings_model_label)
-        self._temp_label.setText(strings.settings_temp_label)
-        self._reasoning_label.setText("Reasoning Capabilities")  # TODO: Add to language strings
-        self._context_label.setText(strings.settings_context_label)
-        self._output_label.setText(strings.settings_max_output_label)
-
-        # Update button texts
-        self.ok_button.setText(strings.ok)
-        self.cancel_button.setText(strings.cancel)
-        self.apply_button.setText(strings.apply)
-
-        # Update displays with current model
-        if self._model_combo.currentText():
-            self._update_model_displays(self._model_combo.currentText())
 
     def _update_reasoning_combo(self, model: str) -> None:
         """Update the reasoning combo box based on the current model's capabilities.

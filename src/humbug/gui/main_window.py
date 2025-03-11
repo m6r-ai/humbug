@@ -18,7 +18,6 @@ from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
 from PySide6.QtWidgets import QStatusBar
 
-from humbug.ai.ai_provider import AIProvider
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_error import ConversationError
@@ -33,7 +32,6 @@ from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
-from humbug.user.user_manager import UserManager
 
 
 class MainWindow(QMainWindow):
@@ -45,24 +43,6 @@ class MainWindow(QMainWindow):
 
         self._logger = logging.getLogger("MainWindow")
         self._dark_mode = True
-
-        # Get API keys from UserManager
-        user_manager = UserManager()
-        api_keys = user_manager.get_api_keys()
-        anthropic_key = api_keys.get("ANTHROPIC_API_KEY")
-        deepseek_key = api_keys.get("DEEPSEEK_API_KEY")
-        google_key = api_keys.get("GOOGLE_API_KEY")
-        m6r_key = api_keys.get("M6R_API_KEY")
-        mistral_key = api_keys.get("MISTRAL_API_KEY")
-        openai_key = api_keys.get("OPENAI_API_KEY")
-
-        # Initialize AI backends
-        self._ai_backends = AIProvider.create_backends(anthropic_key, deepseek_key, google_key, m6r_key, mistral_key, openai_key)
-        if not self._ai_backends:
-            self._logger.error("No AI backends could be initialized")
-
-        # Connect to user manager to handle API key changes
-        user_manager.settings_changed.connect(self._handle_api_keys_changed)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -314,7 +294,7 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._file_tree)
 
         # Create tab manager in splitter
-        self._tab_manager = TabManager(self._ai_backends, self)
+        self._tab_manager = TabManager(self)
         self._splitter.addWidget(self._tab_manager)
 
         # Set initial file tree width
@@ -356,28 +336,6 @@ class MainWindow(QMainWindow):
         self._mindspace_manager = MindspaceManager()
 
         QTimer.singleShot(0, self._restore_last_mindspace)
-
-    def _handle_api_keys_changed(self):
-        """Handle API key changes from UserManager."""
-        user_manager = UserManager()
-        api_keys = user_manager.get_api_keys()
-
-        # Rebuild AI backends with new keys
-        anthropic_key = api_keys.get("ANTHROPIC_API_KEY")
-        deepseek_key = api_keys.get("DEEPSEEK_API_KEY")
-        google_key = api_keys.get("GOOGLE_API_KEY")
-        m6r_key = api_keys.get("M6R_API_KEY")
-        mistral_key = api_keys.get("MISTRAL_API_KEY")
-        openai_key = api_keys.get("OPENAI_API_KEY")
-
-        self._ai_backends = AIProvider.create_backends(anthropic_key, deepseek_key, google_key, m6r_key, mistral_key, openai_key)
-
-        # Update any components that need the new backends
-#        if hasattr(self, '_tab_manager'):
-#            self._tab_manager.update_ai_backends(self._ai_backends)
-
-        # Log the change
-        self._logger.info("AI backends updated due to API key changes")
 
     def _handle_language_changed(self) -> None:
         """Update UI text when language changes."""
@@ -1025,7 +983,7 @@ class MainWindow(QMainWindow):
         if not self._mindspace_manager.has_mindspace:
             return
 
-        dialog = MindspaceSettingsDialog(self._ai_backends, self)
+        dialog = MindspaceSettingsDialog(self)
         dialog.set_settings(self._mindspace_manager.settings)
 
         def handle_settings_changed(new_settings):

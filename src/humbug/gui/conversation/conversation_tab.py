@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QWidget
@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
-from humbug.ai.ai_backend import AIBackend
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_error import ConversationError
 from humbug.gui.conversation.conversation_settings_dialog import ConversationSettingsDialog
@@ -39,7 +38,6 @@ class ConversationTab(TabBase):
         tab_id: str,
         path: str,
         timestamp: datetime,
-        ai_backends: Dict[str, AIBackend],
         parent: Optional[QWidget] = None
     ) -> None:
         """
@@ -49,14 +47,12 @@ class ConversationTab(TabBase):
             tab_id: Unique identifier for this tab
             path: Full path to transcript file
             timestamp: ISO format timestamp for the conversation
-            ai_backends: AI backend map
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
         self._path = path
         self._timestamp = timestamp
-        self._ai_backends = ai_backends
         self._current_tasks: List[asyncio.Task] = []
 
         # Create layout
@@ -74,7 +70,7 @@ class ConversationTab(TabBase):
 
         # Create conversation widget
         self._conversation_widget = ConversationWidget(
-            tab_id, path, timestamp, ai_backends, self
+            tab_id, path, timestamp, self
         )
         self._conversation_widget.forkRequested.connect(self.forkRequested)
         self._conversation_widget.status_updated.connect(self.update_status)
@@ -113,7 +109,7 @@ class ConversationTab(TabBase):
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
-        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, self._ai_backends, self.parent())
+        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, self.parent())
 
         # Get all messages and write to new transcript
         messages = self._conversation_widget.get_conversation_history().get_messages()
@@ -154,13 +150,12 @@ class ConversationTab(TabBase):
         )
 
     @classmethod
-    def load_from_file(cls, path: str, ai_backends: Dict[str, AIBackend], parent=None) -> 'ConversationTab':
+    def load_from_file(cls, path: str, parent=None) -> 'ConversationTab':
         """
         Load a conversation tab from a transcript file.
 
         Args:
             path: Path to transcript file
-            ai_backends: Dictionary mapping provider names to AI backend instances
             parent: Optional parent widget
 
         Returns:
@@ -178,7 +173,7 @@ class ConversationTab(TabBase):
             timestamp = transcript_data.timestamp
 
             # Create conversation tab
-            conversation_tab = cls(conversation_id, path, timestamp, ai_backends, parent)
+            conversation_tab = cls(conversation_id, path, timestamp, parent)
             conversation_tab._conversation_widget.load_message_history(transcript_data.messages)
 
             return conversation_tab
@@ -191,7 +186,7 @@ class ConversationTab(TabBase):
             raise ConversationError(f"Failed to create conversation tab: {str(e)}") from e
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent=None, ai_backends: Dict[str, AIBackend] = None) -> 'ConversationTab':
+    def restore_from_state(cls, state: TabState, parent=None) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
         if state.type != TabType.CONVERSATION:
             raise ConversationError(f"Invalid tab type for ConversationTab: {state.type}")
@@ -200,7 +195,7 @@ class ConversationTab(TabBase):
             raise ConversationError("Conversation tab requires timestamp")
 
         # Create new tab instance
-        tab = cls(state.tab_id, state.path, state.timestamp, ai_backends, parent)
+        tab = cls(state.tab_id, state.path, state.timestamp, parent)
 
         # Load conversation from transcript
         try:
@@ -374,7 +369,7 @@ class ConversationTab(TabBase):
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
-        dialog = ConversationSettingsDialog(self._ai_backends, self)
+        dialog = ConversationSettingsDialog(self)
         dialog.set_settings(self._conversation_widget.get_settings())
 
         if dialog.exec() == QDialog.Accepted:

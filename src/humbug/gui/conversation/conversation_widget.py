@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal, QEvent, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
 
-from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_response import AIError
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_usage import AIUsage
@@ -27,6 +26,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.transcript.transcript_error import TranscriptError
 from humbug.transcript.transcript_handler import TranscriptHandler
+from humbug.user.user_manager import UserManager
 
 
 @dataclass
@@ -87,7 +87,6 @@ class ConversationWidget(QWidget):
         conversation_id: str,
         path: str,
         timestamp: datetime,
-        ai_backends: Dict[str, AIBackend],
         parent: Optional[QWidget] = None
     ) -> None:
         """
@@ -97,7 +96,6 @@ class ConversationWidget(QWidget):
             conversation_id: Unique identifier for this conversation
             path: Full path to transcript file
             timestamp: ISO format timestamp for the conversation
-            ai_backends: AI backend map
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -105,9 +103,10 @@ class ConversationWidget(QWidget):
         self._conversation_id = conversation_id
         self._path = path
         self._timestamp = timestamp
-        self._ai_backends = ai_backends
         self._current_tasks: List[asyncio.Task] = []
         self._last_submitted_message = None
+
+        self._user_manager = UserManager()
 
         self._bookmarked_messages: Dict[MessageWidget, BookmarkData] = {}
         self._current_bookmark_index: Optional[int] = None
@@ -729,7 +728,7 @@ class ConversationWidget(QWidget):
             # Get appropriate backend for conversation
             settings = self.get_settings()
             provider = AIConversationSettings.get_provider(settings.model)
-            backend = self._ai_backends.get(provider)
+            backend = self._user_manager.get_ai_backends().get(provider)
 
             if not backend:
                 error_msg = f"No backend available for provider: {provider}"
@@ -846,7 +845,7 @@ class ConversationWidget(QWidget):
         self._settings = new_settings
         self.status_updated.emit()
         provider = AIConversationSettings.get_provider(new_settings.model)
-        backend = self._ai_backends.get(provider)
+        backend = self._user_manager.get_ai_backends().get(provider)
         if backend:
             backend.update_conversation_settings(self._conversation_id, new_settings)
 

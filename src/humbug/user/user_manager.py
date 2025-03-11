@@ -7,8 +7,10 @@ import logging
 import os
 from typing import Dict, Optional
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject
 
+from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_provider import AIProvider
 from humbug.user.user_settings import UserSettings
 
 
@@ -19,13 +21,10 @@ class UserError(Exception):
 class UserManager(QObject):
     """
     Manages Humbug application user settings.
-    
+
     Implements singleton pattern for global access to user settings.
     Handles loading/saving settings and merging with environment variables.
     """
-    # Signal emitted when settings change
-    settings_changed = Signal()
-
     USER_DIR = ".humbug"
     SETTINGS_FILE = "user-settings.json"
     API_KEYS_FILE = "api-keys.json"  # Legacy file, maintained for backward compatibility
@@ -45,7 +44,9 @@ class UserManager(QObject):
             super().__init__()
             self._user_path = os.path.expanduser(f"~/{self.USER_DIR}")
             self._settings: Optional[UserSettings] = None
+            self._ai_backends: Dict[str, AIBackend] = {}
             self._load_settings()
+            self._initialize_ai_backends()
             self._initialized = True
 
     def _get_settings_path(self) -> str:
@@ -59,7 +60,7 @@ class UserManager(QObject):
     def _load_settings(self) -> None:
         """
         Load user settings from config files.
-        
+
         First tries to load from the new settings file format.
         Falls back to legacy api-keys.json if needed.
         Creates default settings if files don't exist.
@@ -111,13 +112,28 @@ class UserManager(QObject):
         except OSError as e:
             self._logger.error("Failed to save user settings: %s", str(e))
 
+    def _initialize_ai_backends(self) -> None:
+        """Initialize AI backends using current API keys."""
+        api_keys = self.get_api_keys()
+
+        self._ai_backends = AIProvider.create_backends(
+            anthropic_key=api_keys.get("ANTHROPIC_API_KEY"),
+            deepseek_key=api_keys.get("DEEPSEEK_API_KEY"),
+            google_key=api_keys.get("GOOGLE_API_KEY"),
+            m6r_key=api_keys.get("M6R_API_KEY"),
+            mistral_key=api_keys.get("MISTRAL_API_KEY"),
+            openai_key=api_keys.get("OPENAI_API_KEY")
+        )
+
+        self._logger.info("Initialized AI backends with available API keys")
+
     def update_api_keys(self, api_keys: Dict[str, str]) -> None:
         """
-        Update API keys and save to file.
-        
+        Update API keys, save to file, and refresh AI backends.
+
         Args:
             api_keys: Dictionary of API key name to value
-            
+
         Raises:
             UserError: If API keys cannot be saved
         """
@@ -127,19 +143,22 @@ class UserManager(QObject):
         try:
             self._settings.api_keys = api_keys
             self._save_settings()
-            self.settings_changed.emit()
+
+            # Re-initialize backends with new API keys
+            self._initialize_ai_backends()
+
         except OSError as e:
             raise UserError(f"Failed to save API keys: {str(e)}") from e
 
     def get_api_keys(self, include_env_vars: bool = True) -> Dict[str, str]:
         """
         Get current API keys, optionally including environment variables.
-        
+
         Environment variables take precedence over stored keys when included.
-        
+
         Args:
             include_env_vars: Whether to include environment variables
-        
+
         Returns:
             Dictionary of API keys
         """
@@ -165,3 +184,15 @@ class UserManager(QObject):
                     api_keys[key] = value
 
         return api_keys
+
+    def get_ai_backends(self) -> Dict[str, AIBackend]:
+        """
+        Get the current AI backends.
+
+        Returns:
+            Dictionary mapping provider names to backend instances
+        """
+        if not self._ai_backends:
+            self._initialize_ai_backends()
+
+        return self._ai_backends

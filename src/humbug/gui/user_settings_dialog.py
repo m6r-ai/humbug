@@ -34,7 +34,6 @@ class UserSettingsDialog(QDialog):
         """
         super().__init__(parent)
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings
 
         self.setWindowTitle(strings.user_settings_dialog_title)
@@ -159,36 +158,6 @@ class UserSettingsDialog(QDialog):
         layout.addWidget(line_edit)
 
         return layout, label, line_edit
-
-    def _handle_language_changed(self) -> None:
-        """Update all dialog texts with current language strings."""
-        strings = self._language_manager.strings
-        self.setWindowTitle(strings.user_settings_dialog_title)
-
-        # Update API key labels
-        api_key_texts = {
-            "ANTHROPIC_API_KEY": strings.anthropic_api_key,
-            "DEEPSEEK_API_KEY": strings.deepseek_api_key,
-            "GOOGLE_API_KEY": strings.google_api_key,
-            "M6R_API_KEY": strings.m6r_api_key,
-            "MISTRAL_API_KEY": strings.mistral_api_key,
-            "OPENAI_API_KEY": strings.openai_api_key
-        }
-
-        for key, text in api_key_texts.items():
-            if key in self._api_key_labels:
-                self._api_key_labels[key].setText(text)
-
-        # Update buttons
-        self.ok_button.setText(strings.ok)
-        self.cancel_button.setText(strings.cancel)
-        self.apply_button.setText(strings.apply)
-
-        # Adjust dialog size to fit new content
-        self.adjustSize()
-        size_hint = self.sizeHint()
-        new_width = max(750, size_hint.width())
-        self.resize(new_width, size_hint.height())
 
     def _handle_value_change(self) -> None:
         """Handle changes to any API key value."""

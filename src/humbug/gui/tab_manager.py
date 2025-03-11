@@ -8,7 +8,6 @@ import uuid
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Signal
 
-from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.color_role import ColorRole
 from humbug.gui.conversation.conversation_error import ConversationError
@@ -49,12 +48,11 @@ class TabManager(QWidget):
 
     status_message = Signal(StatusMessage)
 
-    def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
+    def __init__(self, parent=None):
         """Initialize the tab manager."""
         super().__init__(parent)
 
         self._untitled_count = 0
-        self._ai_backends = ai_backends
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("TabManager")
 
@@ -816,7 +814,6 @@ class TabManager(QWidget):
             conversation_id,
             full_path,
             timestamp,
-            self._ai_backends,
             self
         )
         conversation_tab.forkRequested.connect(self._fork_conversation)
@@ -846,7 +843,6 @@ class TabManager(QWidget):
         try:
             conversation_tab = ConversationTab.load_from_file(
                 path,
-                self._ai_backends,
                 self
             )
             conversation_tab.forkRequested.connect(self._fork_conversation)
@@ -975,9 +971,7 @@ class TabManager(QWidget):
     def _restore_tab_from_state(self, state: TabState) -> Optional[TabBase]:
         """Create appropriate tab type from state."""
         if state.type == TabType.CONVERSATION:
-            tab = ConversationTab.restore_from_state(
-                state, self, ai_backends=self._ai_backends
-            )
+            tab = ConversationTab.restore_from_state(state, self)
             tab.forkRequested.connect(self._fork_conversation)
             return tab
 

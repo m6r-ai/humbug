@@ -5,7 +5,7 @@ This dialog allows users to configure mindspace settings such as tab behavior an
 Settings are persisted to the mindspace's settings.json file.
 """
 
-from typing import Optional, Dict
+from typing import Optional
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
@@ -13,13 +13,13 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
+from humbug.user.user_manager import UserManager
 
 
 class MindspaceSettingsDialog(QDialog):
@@ -27,7 +27,7 @@ class MindspaceSettingsDialog(QDialog):
 
     settings_changed = Signal(MindspaceSettings)
 
-    def __init__(self, ai_backends: Dict[str, AIBackend], parent=None):
+    def __init__(self, parent=None):
         """Initialize the mindspace settings dialog.
 
         Args:
@@ -83,6 +83,10 @@ class MindspaceSettingsDialog(QDialog):
         self._model_combo.setView(QListView())
         self._model_combo.setMinimumWidth(300)
         self._model_combo.setMinimumHeight(40)
+
+        self._user_manager = UserManager()
+        ai_backends = self._user_manager.get_ai_backends()
+
         models = []
         for model in AIConversationSettings.iter_models_by_backends(ai_backends):
             models.append(model)

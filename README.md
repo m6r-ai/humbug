@@ -56,7 +56,8 @@ free API keys for low volume testing, so you can get started with either, or bot
 v0.8 adds several new features:
 
 - Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes over the
-  "Ctrl+," shortcut, and "Conversation Settings" now moves to the "Ctrl+Shift+," shortcut.
+  "Ctrl+," shortcut, and "Conversation Settings" now moves to the "Ctrl+Shift+," shortcut.  Any API keys
+  configured for earlier versions of Humbug will be carried forwards.
 
 ## Features
 
@@ -139,57 +140,12 @@ v0.8 adds several new features:
    pip install -e .
    ```
 
-## Configuration
+## Initial configuration
 
-1. **API keys:**
+The main configuration you require is to set up your API keys for whichever AI services you wish to use.
+As of v0.8 you can do this by opening the "User Settings" dialog on the Humbug menu.
 
-   - Create a file named `api-keys.json` in the `~/.humbug` directory (this is your home directory, not your
-     mindspace directory, as we don't want to risk pushing key credentials to source repositories).
-   - If you run Humbug without any API keys configured then it will automatically generate an the API key
-     file for you.
-   - Add your API keys in the following format:
-
-     ```json
-     {
-       "ANTHROPIC_API_KEY": "your-anthropic-api-key",
-       "DEEPSEEK_API_KEY": "your-deepseek-api-key",
-       "GOOGLE_API_KEY": "your-google-api-key",
-       "MISTRAL_API_KEY": "your-mistral-api-key",
-       "OPENAI_API_KEY": "your-openai-api-key"
-     }
-     ```
-
-   - Alternatively, you can set the API keys as environment variables:
-
-     ```bash
-     # Linux/MacOS
-     export ANTHROPIC_API_KEY='your-anthropic-api-key'
-     export DEEPSEEK_API_KEY='your-deepseek-api-key'
-     export GOOGLE_API_KEY='your-google-api-key'
-     export MISTRAL_API_KEY='your-mistral-api-key'
-     export OPENAI_API_KEY='your-openai-api-key'
-     # Windows
-     set ANTHROPIC_API_KEY=your-anthropic-api-key
-     set DEEPSEEK_API_KEY=your-deepseek-api-key
-     set GOOGLE_API_KEY=your-google-api-key
-     set MISTRAL_API_KEY=your-mistral-api-key
-     set OPENAI_API_KEY=your-openai-api-key
-     ```
-
-   - The application will prioritize API keys from `api-keys.json` over environment variables.
-   - Ensure the `api-keys.json` file has permissions set to `0o600` for security.
-   - Ensure the `~/.humbug` directory has permissions set to `0o700` for security.
-   - Ollama does not need API keys as Humbug assumes it's running locally on your computer.
-
-2. **Mindspace settings:**
-
-   - Mindspace settings are stored in `settings.json` within the mindspace's `.humbug` directory.
-   - Settings include:
-     - `useSoftTabs`: boolean, whether to use soft tabs (spaces) or hard tabs.
-     - `tabSize`: integer, number of spaces for a tab.
-     - `fontSize`: float, base font size for text editors.
-     - `autoBackup`: boolean, whether to enable automatic backups.
-     - `autoBackupInterval`: integer, interval in seconds between automatic backups.
+Ollama does not need API keys as Humbug assumes it's running locally on your computer.
 
 ## Usage
 

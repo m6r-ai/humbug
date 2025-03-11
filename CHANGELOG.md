@@ -5,7 +5,8 @@
 New features:
 
 - Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes
-  over the "Ctrl+," shortcut, and "Conversation Settings" now use "Ctrl+Shift+,".
+  over the "Ctrl+," shortcut, and "Conversation Settings" now use "Ctrl+Shift+,".  Any API keys
+  configured for earlier versions of Humbug will be carried forwards.
 
 ## v0.7 (2025-03-10)
 
