@@ -4,6 +4,9 @@
 
 New features:
 
+- Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes
+  over the "Ctrl+," shortcut, and "Conversation Settings" now use "Ctrl+Shift+,".
+
 ## v0.7 (2025-03-10)
 
 New features:

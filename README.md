@@ -55,7 +55,8 @@ free API keys for low volume testing, so you can get started with either, or bot
 
 v0.8 adds several new features:
 
-- TBD
+- Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes over the
+  "Ctrl+," shortcut, and "Conversation Settings" now moves to the "Ctrl+Shift+," shortcut.
 
 ## Features
 

@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
         self._about_action.triggered.connect(self._show_about_dialog)
 
         self._user_settings_action = QAction(strings.user_settings, self)
-        self._user_settings_action.setShortcut(QKeySequence("Ctrl+Shift+,"))
+        self._user_settings_action.setShortcut(QKeySequence("Ctrl+,"))
         self._user_settings_action.triggered.connect(self._show_user_settings_dialog)
 
         self._quit_action = QAction("Quit Humbug", self)
@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         self._mindspace_settings_action.triggered.connect(self._show_mindspace_settings_dialog)
 
         self._conv_settings_action = QAction(strings.conversation_settings, self)
-        self._conv_settings_action.setShortcut(QKeySequence("Ctrl+,"))
+        self._conv_settings_action.setShortcut(QKeySequence("Ctrl+Shift+,"))
         self._conv_settings_action.triggered.connect(self._show_conversation_settings_dialog)
 
         # View menu actions

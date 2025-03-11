@@ -820,7 +820,7 @@ Context: Capabilities
             Context: User Settings
                 The "User Settings" menu item will support setting the user's settings.
 
-                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Shift+," for Windows).
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+," for Windows).
 
             Context: Separator
                 There will be a horizontal Separator
@@ -1051,7 +1051,7 @@ Context: Capabilities
                 The "Conversation Settings" menu item will support setting the conversation settings of
                 the currently focused conversation tab (if there is one).
 
-                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+," for Windows).
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Shift+," for Windows).
 
         Context: View
             The "View" menu handles view settings.  When clicked it contains the following:
