@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QTabWidget
 from PySide6.QtCore import Signal, QEvent
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
+from humbug.gui.tab.tab_bar import TabBar
+
 
 class TabColumn(QTabWidget):
     """Enhanced QTabWidget for use in columns with drag and drop support."""
@@ -20,6 +22,7 @@ class TabColumn(QTabWidget):
         self.setAcceptDrops(True)
 
         # Configure tab bar
+        self.setTabBar(TabBar())
         tab_bar = self.tabBar()
         tab_bar.setDrawBase(False)
         tab_bar.setUsesScrollButtons(True)

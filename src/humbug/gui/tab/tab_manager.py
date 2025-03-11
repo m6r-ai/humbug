@@ -1014,7 +1014,8 @@ class TabManager(QWidget):
                 QTabBar::tab {{
                     background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
                     border: none;
-                    margin-right: 2px;
+                    margin: 0px;
+                    border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                     border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 }}
                 QTabBar::tab:selected {{

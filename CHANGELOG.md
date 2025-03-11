@@ -12,6 +12,11 @@ Internal structure changes:
 
 - AI models are now handled by new UserManager and UserSettings classes.  This lets API keys be
   updated at runtime and avoids passing AI backend lists around in APIs.
+- GUI elements related to the tab displays have been moved into a new gui/tab sub-directory.
+
+Bug fixes:
+
+- Resolved a problem where tab close buttons did not render correctly when hovering between tabs.
 
 ## v0.7 (2025-03-10)
 

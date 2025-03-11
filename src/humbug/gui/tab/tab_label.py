@@ -183,16 +183,9 @@ class TabLabel(QWidget):
         self._drag_start_pos = None
         super().mouseReleaseEvent(event)
 
-    def enterEvent(self, event):
-        """Handle mouse entering the tab label."""
-        super().enterEvent(event)
-        self._is_hovered = True
-        self._update_close_button()
-
-    def leaveEvent(self, event):
-        """Handle mouse leaving the tab label."""
-        super().leaveEvent(event)
-        self._is_hovered = False
+    def update_hover_state(self, is_hovered: bool):
+        """Handle updates to the hover state for the label."""
+        self._is_hovered = is_hovered
         self._update_close_button()
 
     def _update_close_button(self):
@@ -263,12 +256,12 @@ class TabLabel(QWidget):
         self._label.setText(text)
         self.adjustSize()
 
-    def update_id(self, id: str, text: str) -> None:
+    def update_id(self, tab_id: str, text: str) -> None:
         """
         Update the ID and the text displayed in the tab label.
 
         Args:
             text: New text to display
         """
-        self._tab_id = id
+        self._tab_id = tab_id
         self.update_text(text)
