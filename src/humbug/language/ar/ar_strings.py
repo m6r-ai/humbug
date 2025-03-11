@@ -14,6 +14,7 @@ def get_arabic_strings() -> LanguageStrings:
         # Window titles
         about_title="حول هامبج",
         settings_dialog_title="الإعدادات",
+        user_settings_dialog_title="إعدادات المستخدم",
 
         # Menu names
         humbug_menu="هامبج",
@@ -35,6 +36,7 @@ def get_arabic_strings() -> LanguageStrings:
         save_as="حفظ باسم...",
         close_mindspace="إغلاق المساحة الذهنية",
         close_tab="إغلاق التبويب",
+        user_settings="إعدادات المستخدم",
 
         # Edit menu items
         submit_message="إرسال الرسالة",
@@ -90,6 +92,14 @@ def get_arabic_strings() -> LanguageStrings:
         discard="تجاهل",
         yes="نعم",
         no="لا",
+
+        # API key labels for User Settings dialog
+        anthropic_api_key="مفتاح واجهة برمجة تطبيقات أنثروبيك",
+        deepseek_api_key="مفتاح واجهة برمجة تطبيقات ديبسيك",
+        google_api_key="مفتاح واجهة برمجة تطبيقات جوجل",
+        m6r_api_key="مفتاح واجهة برمجة تطبيقات M6R",
+        mistral_api_key="مفتاح واجهة برمجة تطبيقات ميسترال",
+        openai_api_key="مفتاح واجهة برمجة تطبيقات أوبن إيه آي",
 
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
@@ -168,6 +178,7 @@ def get_arabic_strings() -> LanguageStrings:
         error_forking_conversation="لا يمكن نسخ المحادثة: {}",
         error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
         error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}",
+        error_saving_user_settings="فشل في حفظ إعدادات المستخدم: {}",
 
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",

@@ -14,6 +14,7 @@ def get_french_strings() -> LanguageStrings:
         # Window titles
         about_title="À propos de Humbug",
         settings_dialog_title="Paramètres",
+        user_settings_dialog_title="Paramètres utilisateur",
 
         # Menu names
         humbug_menu="Humbug",
@@ -35,6 +36,7 @@ def get_french_strings() -> LanguageStrings:
         save_as="Enregistrer sous...",
         close_mindspace="Fermer l'espace mental",
         close_tab="Fermer l'onglet",
+        user_settings="Paramètres utilisateur",
 
         # Edit menu items
         submit_message="Envoyer le message",
@@ -90,6 +92,14 @@ def get_french_strings() -> LanguageStrings:
         discard="Abandonner",
         yes="Oui",
         no="Non",
+
+        # API key labels for User Settings dialog
+        anthropic_api_key="Clé API Anthropic",
+        deepseek_api_key="Clé API DeepSeek",
+        google_api_key="Clé API Google",
+        m6r_api_key="Clé API M6R",
+        mistral_api_key="Clé API Mistral",
+        openai_api_key="Clé API OpenAI",
 
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
@@ -168,6 +178,7 @@ def get_french_strings() -> LanguageStrings:
         error_forking_conversation="Impossible de dupliquer la conversation : {}",
         error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
         error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}",
+        error_saving_user_settings="Échec de l'enregistrement des paramètres utilisateur : {}",
 
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",

@@ -14,6 +14,7 @@ def get_english_strings() -> LanguageStrings:
         # Window titles
         about_title="About Humbug",
         settings_dialog_title="Settings",
+        user_settings_dialog_title="User Settings",
 
         # Menu names
         humbug_menu="Humbug",
@@ -35,6 +36,7 @@ def get_english_strings() -> LanguageStrings:
         save_as="Save As...",
         close_mindspace="Close Mindspace",
         close_tab="Close Tab",
+        user_settings="User Settings",
 
         # Edit menu items
         submit_message="Submit Message",
@@ -90,6 +92,14 @@ def get_english_strings() -> LanguageStrings:
         discard="Discard",
         yes="Yes",
         no="No",
+
+        # API key labels for User Settings dialog
+        anthropic_api_key="Anthropic API Key",
+        deepseek_api_key="DeepSeek API Key",
+        google_api_key="Google API Key",
+        m6r_api_key="M6R API Key",
+        mistral_api_key="Mistral API Key",
+        openai_api_key="OpenAI API Key",
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",
@@ -168,6 +178,7 @@ def get_english_strings() -> LanguageStrings:
         error_forking_conversation="Could not fork conversation: {}",
         error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
+        error_saving_user_settings="Failed to save user settings: {}",
 
         # Status bar
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",

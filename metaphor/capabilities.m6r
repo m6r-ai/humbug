@@ -506,7 +506,7 @@ Context: Capabilities
             As an engineer maintaining the application, I want to ensure settings are documented so I can understand
             all configuration options.
 
-            Context: Settings Dialog
+            Context: Mindspace Settings Dialog
                 Context: Language
                     The language to be used by messages in the application can be selected from a drop-down list.
 
@@ -578,7 +578,7 @@ Context: Capabilities
 
                             Backups do not replace the original file and are preserved until the file is saved.
 
-        Context: Settings file
+        Context: Mindspace settings file
             The settings.json file contains mindspace-specific configuration.  The application validates this file
             on mindspace load.
 
@@ -609,8 +609,10 @@ Context: Capabilities
             conversations.  This ensures the user gets the best experience when they want to
             interact with multiple files in the same place.
 
-    Context: Home directory configuration
-        The application maintains a ".humbug" directory in the user's home directory.
+    Context: User settings
+        Humbug supports user settings.  These are the settings for the user as opposed to any specific mindspace.
+
+        User level settings are store the a ".humbug" directory in the user's home directory.
 
         This contains "mindspace.json" tracking the last open mindspace:
 
@@ -640,6 +642,7 @@ Context: Capabilities
                     "DEEPSEEK_API_KEY": "",
                     "GOOGLE_API_KEY": "",
                     "M6R_API_KEY": "",
+                    "MISTRAL_API_KEY": "",
                     "OPENAI_API_KEY": ""
                 }
                 ```
@@ -662,6 +665,7 @@ Context: Capabilities
                     - DEEPSEEK_API_KEY for Deepseek models
                     - GOOGLE_API_KEY for Google models
                     - M6R_API_KEY for M6R models
+                    - MISTRAL_API_KEY for M6R models
                     - OPENAI_API_KEY for OpenAI models
 
                 Context: File permissions
@@ -676,6 +680,13 @@ Context: Capabilities
                     - Cannot be created: Log error and fall back to environment variables
                     - Contains invalid JSON: Log error and raise exception
                     - Has permission issues: Log error and fall back to environment variables
+
+        Context: User Settings Dialog
+            The user settings dialog allows the user to specify user-specifc settings.
+
+            Context: API Keys
+                The dialog supports editing the API keys used for any of the backend AI models for which there is
+                an API key.
 
     Context: Mindspace operations
         Context: File tree interaction
@@ -802,6 +813,14 @@ Context: Capabilities
             Context: About Humbug
                 The "About Humbug" menu item will deliver a modal pop-up dialog box that gives details of the
                 application and version information.
+
+            Context: Separator
+                There will be a horizontal Separator
+
+            Context: User Settings
+                The "User Settings" menu item will support setting the user's settings.
+
+                This will be matched with a standard keyboard shortcut (e.g. "Ctrl+Shift+," for Windows).
 
             Context: Separator
                 There will be a horizontal Separator
@@ -1249,7 +1268,7 @@ Context: Capabilities
         Context: Conversation Settings
             Each conversation can have its own AI model and temperature settings that affect how the AI responds.
 
-            Context: Settings Dialog
+            Context: Conversation Settings Dialog
                 A "Settings" dialog can be accessed for each conversation via a menu or keyboard shortcut (see
                 "Conversation Settings" menu item)
 

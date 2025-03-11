@@ -9,6 +9,7 @@ class LanguageStrings:
     # Window titles
     about_title: str
     settings_dialog_title: str
+    user_settings_dialog_title: str
 
     # Menu names
     humbug_menu: str
@@ -30,6 +31,7 @@ class LanguageStrings:
     save_as: str
     close_mindspace: str
     close_tab: str
+    user_settings: str
 
     # Edit menu items
     submit_message: str
@@ -85,6 +87,14 @@ class LanguageStrings:
     discard: str
     yes: str
     no: str
+
+    # API key labels for User Settings dialog
+    anthropic_api_key: str
+    deepseek_api_key: str
+    google_api_key: str
+    m6r_api_key: str
+    mistral_api_key: str
+    openai_api_key: str
 
     # Mindspace tree
     mindspace_label_none: str
@@ -163,6 +173,7 @@ class LanguageStrings:
     error_forking_conversation: str
     error_processing_metaphor: str
     error_saving_mindspace_settings: str
+    error_saving_user_settings: str
 
     # Status bar
     editor_status: str

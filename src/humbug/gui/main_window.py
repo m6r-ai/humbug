@@ -29,6 +29,7 @@ from humbug.gui.mindspace.mindspace_file_tree import MindspaceFileTree
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab_manager import TabManager
+from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -50,6 +51,10 @@ class MainWindow(QMainWindow):
         # Humbug menu actions
         self._about_action = QAction("About Humbug", self)
         self._about_action.triggered.connect(self._show_about_dialog)
+
+        self._user_settings_action = QAction(strings.user_settings, self)
+        self._user_settings_action.setShortcut(QKeySequence("Ctrl+Shift+,"))
+        self._user_settings_action.triggered.connect(self._show_user_settings_dialog)
 
         self._quit_action = QAction("Quit Humbug", self)
         self._quit_action.setShortcut(QKeySequence("Ctrl+Q"))
@@ -207,6 +212,8 @@ class MainWindow(QMainWindow):
         self._humbug_menu = self._menu_bar.addMenu(strings.humbug_menu)
         self._humbug_menu.addAction(self._about_action)
         self._humbug_menu.addSeparator()
+        self._humbug_menu.addAction(self._user_settings_action)
+        self._humbug_menu.addSeparator()
         self._humbug_menu.addAction(self._quit_action)
 
         # File menu
@@ -349,6 +356,7 @@ class MainWindow(QMainWindow):
 
         # Update action texts
         self._about_action.setText(strings.about_title)
+        self._user_settings_action.setText(strings.user_settings)
         self._new_mindspace_action.setText(strings.new_mindspace)
         self._new_conv_action.setText(strings.new_conversation)
         self._new_metaphor_conv_action.setText(strings.new_metaphor_conversation)
@@ -932,6 +940,43 @@ class MainWindow(QMainWindow):
     def _previous_bookmark(self):
         """Move to the previous bookmark."""
         self._tab_manager.previous_bookmark()
+
+    def _show_user_settings_dialog(self):
+        """Show the user settings dialog."""
+        dialog = UserSettingsDialog(self)
+
+        try:
+            # Load current settings
+            settings = UserSettingsDialog.load_settings()
+            dialog.set_settings(settings)
+
+            # Handle settings changes
+            def handle_settings_changed(new_settings):
+                try:
+                    UserSettingsDialog.save_settings(new_settings)
+                    self._logger.info("User settings saved successfully")
+                except (OSError, PermissionError) as e:
+                    self._logger.error("Failed to save user settings: %s", str(e))
+                    strings = self._language_manager.strings
+                    MessageBox.show_message(
+                        self,
+                        MessageBoxType.CRITICAL,
+                        strings.settings_error_title,
+                        strings.error_saving_user_settings.format(str(e))
+                    )
+
+            dialog.settings_changed.connect(handle_settings_changed)
+            dialog.exec()
+
+        except json.JSONDecodeError as e:
+            self._logger.error("Failed to load user settings: %s", str(e))
+            strings = self._language_manager.strings
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.settings_error_title,
+                strings.error_saving_user_settings.format(str(e))
+            )
 
     def _show_mindspace_settings_dialog(self):
         """Show the mindspace settings dialog."""
