@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, QPoint
 
 from humbug.conversation.message_source import MessageSource
-from humbug.gui.conversation.message_section_widget import MessageSectionWidget
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.conversation.message_section_widget import MessageSectionWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils

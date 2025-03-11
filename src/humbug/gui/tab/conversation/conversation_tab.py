@@ -13,15 +13,15 @@ from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.color_role import ColorRole
-from humbug.gui.conversation.conversation_error import ConversationError
-from humbug.gui.conversation.conversation_settings_dialog import ConversationSettingsDialog
-from humbug.gui.conversation.conversation_widget import ConversationWidget
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab_base import TabBase
-from humbug.gui.tab_state import TabState
-from humbug.gui.tab_type import TabType
+from humbug.gui.tab.conversation.conversation_error import ConversationError
+from humbug.gui.tab.conversation.conversation_settings_dialog import ConversationSettingsDialog
+from humbug.gui.tab.conversation.conversation_widget import ConversationWidget
+from humbug.gui.tab.tab_base import TabBase
+from humbug.gui.tab.tab_state import TabState
+from humbug.gui.tab.tab_type import TabType
 from humbug.language.language_manager import LanguageManager
 from humbug.transcript.transcript_error import TranscriptFormatError, TranscriptIOError
 from humbug.transcript.transcript_handler import TranscriptHandler

@@ -12,7 +12,7 @@ import tty
 import fcntl
 from typing import Optional, Tuple
 
-from humbug.gui.terminal.terminal_base import TerminalBase
+from humbug.gui.tab.terminal.terminal_base import TerminalBase
 
 
 class UnixTerminal(TerminalBase):

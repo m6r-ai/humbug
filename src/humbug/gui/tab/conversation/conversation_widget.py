@@ -19,9 +19,9 @@ from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.color_role import ColorRole
-from humbug.gui.conversation.conversation_input_widget import ConversationInputWidget
-from humbug.gui.conversation.message_widget import MessageWidget
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.conversation.conversation_input_widget import ConversationInputWidget
+from humbug.gui.tab.conversation.message_widget import MessageWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.transcript.transcript_error import TranscriptError

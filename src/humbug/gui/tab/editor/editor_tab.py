@@ -10,15 +10,15 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QTextCursor
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.editor.editor_highlighter import EditorHighlighter
-from humbug.gui.editor.editor_widget import EditorWidget
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab_base import TabBase
-from humbug.gui.tab_state import TabState
-from humbug.gui.tab_type import TabType
+from humbug.gui.tab.editor.editor_highlighter import EditorHighlighter
+from humbug.gui.tab.editor.editor_widget import EditorWidget
+from humbug.gui.tab.tab_base import TabBase
+from humbug.gui.tab.tab_state import TabState
+from humbug.gui.tab.tab_type import TabType
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.syntax.programming_language import ProgrammingLanguage

@@ -2,7 +2,7 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from humbug.gui.tab_type import TabType
+from humbug.gui.tab.tab_type import TabType
 
 
 @dataclass

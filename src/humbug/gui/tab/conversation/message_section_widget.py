@@ -10,12 +10,12 @@ from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon
 )
 
-from humbug.gui.conversation.conversation_highlighter import ConversationHighlighter
-from humbug.gui.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
-from humbug.gui.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.message_box import MessageBox, MessageBoxType
+from humbug.gui.tab.conversation.conversation_highlighter import ConversationHighlighter
+from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
+from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils

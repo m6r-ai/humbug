@@ -20,14 +20,14 @@ from PySide6.QtWidgets import QStatusBar
 
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
-from humbug.gui.conversation.conversation_error import ConversationError
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.gui.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.gui.mindspace.mindspace_file_tree import MindspaceFileTree
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
-from humbug.gui.tab_manager import TabManager
+from humbug.gui.tab.tab_manager import TabManager
+from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager

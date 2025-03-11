@@ -10,20 +10,20 @@ from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.color_role import ColorRole
-from humbug.gui.conversation.conversation_error import ConversationError
-from humbug.gui.conversation.conversation_tab import ConversationTab
-from humbug.gui.editor.editor_tab import EditorTab
-from humbug.gui.terminal.terminal_tab import TerminalTab
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab_base import TabBase
-from humbug.gui.tab_column import TabColumn
-from humbug.gui.tab_column_splitter import TabColumnSplitter
-from humbug.gui.tab_label import TabLabel
-from humbug.gui.tab_state import TabState
-from humbug.gui.tab_type import TabType
-from humbug.gui.welcome_widget import WelcomeWidget
+from humbug.gui.tab.conversation.conversation_error import ConversationError
+from humbug.gui.tab.conversation.conversation_tab import ConversationTab
+from humbug.gui.tab.editor.editor_tab import EditorTab
+from humbug.gui.tab.tab_base import TabBase
+from humbug.gui.tab.tab_column import TabColumn
+from humbug.gui.tab.tab_column_splitter import TabColumnSplitter
+from humbug.gui.tab.tab_label import TabLabel
+from humbug.gui.tab.tab_state import TabState
+from humbug.gui.tab.tab_type import TabType
+from humbug.gui.tab.terminal.terminal_tab import TerminalTab
+from humbug.gui.tab.welcome_widget import WelcomeWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 

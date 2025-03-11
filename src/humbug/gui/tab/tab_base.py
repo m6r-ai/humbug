@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal, QObject, QEvent
 
 from humbug.gui.status_message import StatusMessage
-from humbug.gui.tab_state import TabState
+from humbug.gui.tab.tab_state import TabState
 
 
 class TabEventFilter(QObject):

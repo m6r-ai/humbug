@@ -6,15 +6,15 @@ from typing import Optional, Set
 
 from PySide6.QtWidgets import QVBoxLayout
 
-from humbug.gui.tab_base import TabBase
-from humbug.gui.tab_state import TabState
-from humbug.gui.tab_type import TabType
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
-from humbug.gui.style_manager import StyleManager
-from humbug.gui.terminal.terminal_widget import TerminalWidget
-from humbug.gui.terminal.terminal_factory import create_terminal
 from humbug.gui.status_message import StatusMessage
+from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.tab_base import TabBase
+from humbug.gui.tab.tab_state import TabState
+from humbug.gui.tab.tab_type import TabType
+from humbug.gui.tab.terminal.terminal_widget import TerminalWidget
+from humbug.gui.tab.terminal.terminal_factory import create_terminal
 from humbug.language.language_manager import LanguageManager
 
 

@@ -5,8 +5,8 @@ from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.editor.line_number_area import LineNumberArea
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.editor.line_number_area import LineNumberArea
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
