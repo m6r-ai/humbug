@@ -8,6 +8,11 @@ New features:
   over the "Ctrl+," shortcut, and "Conversation Settings" now use "Ctrl+Shift+,".  Any API keys
   configured for earlier versions of Humbug will be carried forwards.
 
+Internal structure changes:
+
+- AI models are now handled by new UserManager and UserSettings classes.  This lets API keys be
+  updated at runtime and avoids passing AI backend lists around in APIs.
+
 ## v0.7 (2025-03-10)
 
 New features:
