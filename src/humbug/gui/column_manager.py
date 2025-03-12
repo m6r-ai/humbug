@@ -10,6 +10,8 @@ from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.color_role import ColorRole
+from humbug.gui.column_splitter import ColumnSplitter
+from humbug.gui.column_widget import ColumnWidget
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
@@ -17,13 +19,11 @@ from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.gui.tab.tab_base import TabBase
-from humbug.gui.tab.tab_column import TabColumn
-from humbug.gui.tab.tab_column_splitter import TabColumnSplitter
 from humbug.gui.tab.tab_label import TabLabel
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
 from humbug.gui.tab.terminal.terminal_tab import TerminalTab
-from humbug.gui.tab.welcome_widget import WelcomeWidget
+from humbug.gui.welcome_widget import WelcomeWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
@@ -43,8 +43,8 @@ class TabData:
         self.label = TabLabel(title, self.tab_id)
 
 
-class TabManager(QWidget):
-    """Manages multiple tabs across one or two columns."""
+class ColumnManager(QWidget):
+    """Manages multiple tabs across multiple columns."""
 
     status_message = Signal(StatusMessage)
 
@@ -54,7 +54,7 @@ class TabManager(QWidget):
 
         self._untitled_count = 0
         self._mindspace_manager = MindspaceManager()
-        self._logger = logging.getLogger("TabManager")
+        self._logger = logging.getLogger("ColumnManager")
 
         self._language_manager = LanguageManager()
 
@@ -80,7 +80,7 @@ class TabManager(QWidget):
         self._stack.addWidget(self._columns_widget)
 
         # Create splitter for columns
-        self._column_splitter = TabColumnSplitter()
+        self._column_splitter = ColumnSplitter()
         self._column_splitter.setHandleWidth(1)
         self._columns_layout.addWidget(self._column_splitter)
 
@@ -88,7 +88,7 @@ class TabManager(QWidget):
         self._column_splitter.splitterMoved.connect(self._handle_splitter_moved)
 
         # Create initial column
-        self._tab_columns: List[TabColumn] = []
+        self._tab_columns: List[ColumnWidget] = []
         self._create_column(0)
 
         # Track active column
@@ -122,7 +122,7 @@ class TabManager(QWidget):
         tab.activated.connect(lambda: self._handle_tab_activated(tab))
         return data
 
-    def _remove_tab_from_column(self, tab: TabBase, column: TabColumn) -> None:
+    def _remove_tab_from_column(self, tab: TabBase, column: ColumnWidget) -> None:
         """
         Remove a tab from a column and clean up associated data.
 
@@ -138,7 +138,7 @@ class TabManager(QWidget):
         tab_label.deleteLater()
         tab.deleteLater()
 
-    def _add_tab_to_column(self, tab_data: TabData, column: TabColumn) -> None:
+    def _add_tab_to_column(self, tab_data: TabData, column: ColumnWidget) -> None:
         """
         Add a tab to a column and set up associated data.
 
@@ -156,8 +156,8 @@ class TabManager(QWidget):
     def _move_tab_between_columns(
         self,
         tab: TabBase,
-        source_column: TabColumn,
-        target_column: TabColumn
+        source_column: ColumnWidget,
+        target_column: ColumnWidget
     ) -> None:
         """
         Move a tab from one column to another.
@@ -233,7 +233,7 @@ class TabManager(QWidget):
                     self._update_tabs()
                     break
 
-    def _handle_tab_drop(self, tab_id: str, target_column: TabColumn, target_index: int) -> None:
+    def _handle_tab_drop(self, tab_id: str, target_column: ColumnWidget, target_index: int) -> None:
         """
         Handle a tab being dropped into a new position.
 
@@ -268,7 +268,7 @@ class TabManager(QWidget):
         # Update active states
         self._update_tabs()
 
-    def _handle_file_drop(self, file_path: str, target_column: TabColumn, target_index: int) -> None:
+    def _handle_file_drop(self, file_path: str, target_column: ColumnWidget, target_index: int) -> None:
         """
         Handle a file being dropped into a column.
 
@@ -336,9 +336,9 @@ class TabManager(QWidget):
                 # Update conversation internals without signaling
                 conversation.update_path(new_id, new_path)
 
-    def _create_column(self, index: int) -> TabColumn:
+    def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
-        tab_widget = TabColumn()
+        tab_widget = ColumnWidget()
         tab_widget.setMinimumWidth(200)  # Set minimum width
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
@@ -381,7 +381,7 @@ class TabManager(QWidget):
         self._active_column = target_column
         self._update_tabs()
 
-    def _remove_column_and_resize(self, column_number: int, column: TabColumn) -> None:
+    def _remove_column_and_resize(self, column_number: int, column: ColumnWidget) -> None:
         """
         Remove a column and resize the remaining columns.
 
@@ -455,7 +455,7 @@ class TabManager(QWidget):
         self._active_column = column
         self._update_tabs()
 
-    def _handle_column_activated(self, column: TabColumn) -> None:
+    def _handle_column_activated(self, column: ColumnWidget) -> None:
         """Handle column activation."""
         if column not in self._tab_columns:
             return
@@ -523,7 +523,7 @@ class TabManager(QWidget):
             self.status_message.emit(StatusMessage(""))
             self._stack.setCurrentWidget(self._welcome_widget)
 
-    def _find_column_for_tab(self, tab: TabBase) -> Optional[TabColumn]:
+    def _find_column_for_tab(self, tab: TabBase) -> Optional[ColumnWidget]:
         """Find which column contains the given tab."""
         for column in self._tab_columns:
             if column.indexOf(tab) != -1:

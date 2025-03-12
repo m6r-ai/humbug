@@ -210,9 +210,12 @@ src/humbug/
 ├── ai/            # AI backend implementations
 ├── conversation/  # Conversation management
 ├── gui/           # GUI components
-├── syntax/        # Syntax highlighting and parsing
-├── transcript/    # Transcript handling
+├── language/      # I18n management and strings
 ├── mindspace/     # Mindspace management
+├── syntax/        # Syntax highlighting and parsing
+├── terminal/      # Terminal emulation
+├── transcript/    # Transcript handling
+├── user/          # User settings management
 └── __main__.py    # Main entry point
 ```
 

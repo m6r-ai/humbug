@@ -5,7 +5,7 @@ from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from humbug.gui.tab.tab_bar import TabBar
 
 
-class TabColumn(QTabWidget):
+class ColumnWidget(QTabWidget):
     """Enhanced QTabWidget for use in columns with drag and drop support."""
 
     column_activated = Signal(QTabWidget)
