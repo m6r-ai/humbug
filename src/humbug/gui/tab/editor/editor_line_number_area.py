@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QSize
 
 
-class LineNumberArea(QWidget):
+class EditorLineNumberArea(QWidget):
     """Widget that displays line numbers for the editor."""
 
     def __init__(self, editor):

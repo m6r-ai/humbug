@@ -11,13 +11,13 @@ from PySide6.QtCore import Signal, QPoint
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.conversation.message_section_widget import MessageSectionWidget
+from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
-class MessageWidget(QFrame):
+class ConversationMessage(QFrame):
     """Widget for displaying a single message in the conversation history with header."""
 
     selectionChanged = Signal(bool)
@@ -36,7 +36,7 @@ class MessageWidget(QFrame):
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
         self._is_input = is_input
 
-        self._logger = logging.getLogger("MessageWidget")
+        self._logger = logging.getLogger("ConversationMessage")
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -73,8 +73,8 @@ class MessageWidget(QFrame):
         self._layout.addWidget(self._sections_container)
 
         # Track sections
-        self._sections: List[MessageSectionWidget] = []
-        self._section_with_selection: Optional[MessageSectionWidget] = None
+        self._sections: List[ConversationMessageSection] = []
+        self._section_with_selection: Optional[ConversationMessageSection] = None
 
         # If this is an input widget then create the input section
         if is_input:
@@ -212,7 +212,7 @@ class MessageWidget(QFrame):
         # Create a list of section tuples with (text, language)
         return list(zip(self._text_list, self._language_list))
 
-    def _create_section_widget(self, language: Optional[ProgrammingLanguage] = None) -> MessageSectionWidget:
+    def _create_section_widget(self, language: Optional[ProgrammingLanguage] = None) -> ConversationMessageSection:
         """
         Create a new section widget.
 
@@ -220,9 +220,9 @@ class MessageWidget(QFrame):
             language: Optional programming language for the section
 
         Returns:
-            A new MessageSectionWidget instance
+            A new ConversationMessageSection instance
         """
-        section = MessageSectionWidget(self._is_input, language, self._sections_container)
+        section = ConversationMessageSection(self._is_input, language, self._sections_container)
         section.selectionChanged.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
@@ -230,7 +230,7 @@ class MessageWidget(QFrame):
         section.mouseReleased.connect(self.mouseReleased)
         return section
 
-    def _handle_section_selection_changed(self, section: MessageSectionWidget, has_selection: bool):
+    def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool):
         """
         Handle selection changes in a section widget.
 
@@ -406,7 +406,7 @@ class MessageWidget(QFrame):
             }}
         """)
 
-    def find_text(self, text: str) -> List[Tuple[int, int, MessageSectionWidget]]:
+    def find_text(self, text: str) -> List[Tuple[int, int, ConversationMessageSection]]:
         """
         Find all instances of text in this message.
 

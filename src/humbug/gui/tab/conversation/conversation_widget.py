@@ -20,8 +20,8 @@ from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.conversation.conversation_input_widget import ConversationInputWidget
-from humbug.gui.tab.conversation.message_widget import MessageWidget
+from humbug.gui.tab.conversation.conversation_input import ConversationInput
+from humbug.gui.tab.conversation.conversation_message import ConversationMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.transcript.transcript_error import TranscriptError
@@ -32,10 +32,10 @@ from humbug.user.user_manager import UserManager
 @dataclass
 class BookmarkData:
     """Data associated with a bookmarked message."""
-    widget: 'MessageWidget'
+    widget: 'ConversationMessage'
     scroll_position: int
 
-    def __init__(self, widget: 'MessageWidget', scroll_position: int):
+    def __init__(self, widget: 'ConversationMessage', scroll_position: int):
         """
         Initialize bookmark data.
 
@@ -108,7 +108,7 @@ class ConversationWidget(QWidget):
 
         self._user_manager = UserManager()
 
-        self._bookmarked_messages: Dict[MessageWidget, BookmarkData] = {}
+        self._bookmarked_messages: Dict[ConversationMessage, BookmarkData] = {}
         self._current_bookmark_index: Optional[int] = None
 
         # Create transcript handler with provided filename
@@ -120,8 +120,8 @@ class ConversationWidget(QWidget):
         self._settings = AIConversationSettings()
         self._current_ai_message = None
         self._current_reasoning_message = None
-        self._messages: List[MessageWidget] = []
-        self._message_with_selection: Optional[MessageWidget] = None
+        self._messages: List[ConversationMessage] = []
+        self._message_with_selection: Optional[ConversationMessage] = None
         self._is_streaming = False
 
         # Initialize tracking variables
@@ -148,7 +148,7 @@ class ConversationWidget(QWidget):
         self._messages_container.setLayout(self._messages_layout)
 
         # Set up the input box
-        self._input = ConversationInputWidget(self._messages_container)
+        self._input = ConversationInput(self._messages_container)
         self._input.cursorPositionChanged.connect(self._ensure_cursor_visible)
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
@@ -201,11 +201,11 @@ class ConversationWidget(QWidget):
         self._handle_style_changed()
 
         # Find functionality (integrated from ConversationFind)
-        self._matches: List[Tuple[MessageWidget, List[Tuple[int, int, int]]]] = []  # List of (widget, [(section, start, end)])
+        self._matches: List[Tuple[ConversationMessage, List[Tuple[int, int, int]]]] = []  # List of (widget, [(section, start, end)])
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
-        self._highlighted_widgets: Set[MessageWidget] = set()
+        self._highlighted_widgets: Set[ConversationMessage] = set()
 
         # Set up activation tracking
         self._event_filter = ConversationWidgetEventFilter(self)
@@ -367,7 +367,7 @@ class ConversationWidget(QWidget):
         Args:
             message: The message text
         """
-        msg_widget = MessageWidget(self)
+        msg_widget = ConversationMessage(self)
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
@@ -388,7 +388,7 @@ class ConversationWidget(QWidget):
 
         self._conversation.add_message(message)
 
-    def _toggle_message_bookmark(self, message_widget: MessageWidget):
+    def _toggle_message_bookmark(self, message_widget: ConversationMessage):
         """Toggle bookmark status for a message."""
         if message_widget in self._bookmarked_messages:
             # Remove bookmark
@@ -431,7 +431,7 @@ class ConversationWidget(QWidget):
         # Restore the scroll position
         self._scroll_area.verticalScrollBar().setValue(bookmark_data.scroll_position)
 
-    def _handle_selection_changed(self, message_widget: MessageWidget, has_selection: bool):
+    def _handle_selection_changed(self, message_widget: ConversationMessage, has_selection: bool):
         """Handle selection changes in message widgets."""
         if not has_selection:
             if self._message_with_selection:
@@ -484,7 +484,7 @@ class ConversationWidget(QWidget):
             50
         )
 
-    def handle_find_scroll(self, widget: MessageWidget, section_num: int, position: int) -> None:
+    def handle_find_scroll(self, widget: ConversationMessage, section_num: int, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
@@ -930,12 +930,12 @@ class ConversationWidget(QWidget):
         if not focus_widget:
             return False
 
-        while focus_widget and not isinstance(focus_widget, MessageWidget):
+        while focus_widget and not isinstance(focus_widget, ConversationMessage):
             focus_widget = focus_widget.parentWidget()
             if isinstance(focus_widget, ConversationWidget):
                 return False
 
-        if isinstance(focus_widget, ConversationInputWidget):
+        if isinstance(focus_widget, ConversationInput):
             return False
 
         return True
@@ -946,12 +946,12 @@ class ConversationWidget(QWidget):
         if not focus_widget:
             return False
 
-        while focus_widget and not isinstance(focus_widget, MessageWidget):
+        while focus_widget and not isinstance(focus_widget, ConversationMessage):
             focus_widget = focus_widget.parentWidget()
             if isinstance(focus_widget, ConversationWidget):
                 return False
 
-        if isinstance(focus_widget, ConversationInputWidget):
+        if isinstance(focus_widget, ConversationInput):
             return False
 
         return focus_widget.is_bookmarked()
@@ -962,12 +962,12 @@ class ConversationWidget(QWidget):
         if not focus_widget:
             return
 
-        while focus_widget and not isinstance(focus_widget, MessageWidget):
+        while focus_widget and not isinstance(focus_widget, ConversationMessage):
             focus_widget = focus_widget.parentWidget()
             if isinstance(focus_widget, ConversationWidget):
                 return
 
-        if isinstance(focus_widget, ConversationInputWidget):
+        if isinstance(focus_widget, ConversationInput):
             return
 
         self._toggle_message_bookmark(focus_widget)

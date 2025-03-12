@@ -8,11 +8,11 @@ from PySide6.QtGui import QKeyEvent, QTextCursor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
-from humbug.gui.tab.conversation.message_widget import MessageWidget
+from humbug.gui.tab.conversation.conversation_message import ConversationMessage
 from humbug.language.language_manager import LanguageManager
 
 
-class ConversationInputWidget(MessageWidget):
+class ConversationInput(ConversationMessage):
     """Widget for conversation message input that matches history message styling."""
 
     # Forward text cursor signals from the input area
@@ -66,7 +66,7 @@ class ConversationInputWidget(MessageWidget):
         """Set the role label color."""
         colour = ColorRole.TEXT_DISABLED if self._is_streaming else ColorRole.MESSAGE_USER
 
-        # WARNING: This needs to stay in sync with MessageWidget
+        # WARNING: This needs to stay in sync with ConversationMessage
         self._role_label.setStyleSheet(f"""
             QLabel {{
                 font-weight: bold;

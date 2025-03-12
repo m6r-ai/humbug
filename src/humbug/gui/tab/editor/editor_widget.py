@@ -6,7 +6,7 @@ from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QT
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.editor.line_number_area import LineNumberArea
+from humbug.gui.tab.editor.editor_line_number_area import EditorLineNumberArea
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
@@ -29,7 +29,7 @@ class EditorWidget(QPlainTextEdit):
         self._style_manager = StyleManager()
 
         # Setup line number area
-        self._line_number_area = LineNumberArea(self)
+        self._line_number_area = EditorLineNumberArea(self)
         font = self._line_number_area.font()
         font.setFamilies(self._style_manager.monospace_font_families)
         self.setFont(font)

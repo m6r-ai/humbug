@@ -21,7 +21,7 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
-class MessageSectionWidget(QFrame):
+class ConversationMessageSection(QFrame):
     """Widget for displaying a section of a message."""
 
     selectionChanged = Signal(bool)
@@ -40,7 +40,7 @@ class MessageSectionWidget(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
 
-        self._logger = logging.getLogger("MessageSectionWidget")
+        self._logger = logging.getLogger("ConversationMessageSection")
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 

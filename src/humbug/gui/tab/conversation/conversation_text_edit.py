@@ -458,7 +458,7 @@ class ConversationTextEdit(QTextEdit):
         self._pending_update = False
         self.updateGeometry()
 
-        # Ensure parent MessageWidget updates as well
+        # Ensure parent ConversationMessage updates as well
         if self.parent():
             self.parent().updateGeometry()
 
