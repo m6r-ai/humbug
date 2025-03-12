@@ -13,6 +13,8 @@ Internal structure changes:
 - AI models are now handled by new UserManager and UserSettings classes.  This lets API keys be
   updated at runtime and avoids passing AI backend lists around in APIs.
 - GUI elements related to the tab displays have been moved into a new gui/tab sub-directory.
+- Non-GUI terminal functionality has been moved into a new directory at the top level of the
+  source tree so it's easier to use outside of the GUI.
 
 Bug fixes:
 
