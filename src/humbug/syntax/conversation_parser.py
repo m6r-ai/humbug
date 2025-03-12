@@ -123,6 +123,14 @@ class ConversationParser(Parser):
 
                 if lex_token.type == TokenType.FENCE:
                     if in_fence_block:
+                        # Only close the fence if indentation is less than or equal to opening fence
+                        if lex_token.start > fence_depth:
+                            # This fence is indented more than the opening fence
+                            # Treat it as regular text within the current fence block
+                            lex_token.type = TokenType.TEXT
+                            self._tokens.append(lex_token)
+                            continue
+
                         lex_token.type = TokenType.FENCE_END
                         self._tokens.append(lex_token)
                         in_fence_block = False
