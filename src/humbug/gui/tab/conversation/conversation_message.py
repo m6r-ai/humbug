@@ -89,6 +89,7 @@ class ConversationMessage(QFrame):
         self._text_list = []
         self._language_list = [None]
         self._in_fence_region = False
+        self._fence_indent = 0
         self._current_language = None
 
         # Track current message style
@@ -141,13 +142,23 @@ class ConversationMessage(QFrame):
             text: A line of text to be processed
         """
         stripped_text = text.lstrip()
+        indentation = len(text) - len(text.lstrip())
+
         if not stripped_text.startswith("```"):
             self._next_str += text
             return
 
         if self._in_fence_region:
+            # Only close the fence if indentation is less than or equal to the opening fence
+            if indentation > self._fence_indent:
+                # This is a nested fence within a code block
+                # Treat it as regular text within the current fence
+                self._next_str += text
+                return
+
             # This is the end of a fence block
             self._in_fence_region = False
+
             # Save accumulated text with the current language
             self._text_list.append(self._next_str)
             self._language_list.append(self._current_language)
@@ -157,6 +168,8 @@ class ConversationMessage(QFrame):
 
         # This is the start of a fence block
         self._in_fence_region = True
+        self._fence_indent = indentation
+
         # Save any text accumulated so far
         self._text_list.append(self._next_str)
         self._language_list.append(None)
@@ -187,6 +200,7 @@ class ConversationMessage(QFrame):
         self._language_list = []
         self._in_fence_region = False
         self._current_language = None
+        self._fence_indent = 0
 
         for line in lines:
             self._parse_line(line)
@@ -196,18 +210,18 @@ class ConversationMessage(QFrame):
             self._text_list.append(self._next_str)
             self._language_list.append(self._current_language)
 
-        # Strip any leading and trailing blank lines from each block.  Also strip blank blocks.
+        # Strip any leading and trailing blank lines from each block. Also strip blank blocks.
         new_text_list = []
-        new_langugage_list = []
+        new_language_list = []
         for i, text_block in enumerate(self._text_list):
             text_block = re.sub(r'^(\s*\n)+', '', text_block)
             text_block = re.sub(r'(\n\s*)+$', '', text_block)
             if text_block:
                 new_text_list.append(text_block)
-                new_langugage_list.append(self._language_list[i])
+                new_language_list.append(self._language_list[i])
 
         self._text_list = new_text_list
-        self._language_list = new_langugage_list
+        self._language_list = new_language_list
 
         # Create a list of section tuples with (text, language)
         return list(zip(self._text_list, self._language_list))
@@ -388,7 +402,7 @@ class ConversationMessage(QFrame):
 
         # Apply styling to all sections
         for i, section in enumerate(self._sections):
-            language = self._language_list[i]
+            language = self._language_list[i] if i < len(self._language_list) else None
             color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
             section.apply_style(text_color, color, font)
 
