@@ -30,9 +30,9 @@ weird things, it's usually because those approaches don't really understand the 
 
 ## What does that mean in practice?
 
-By providing an AI everything it needs, Metaphor can stretch an AI model to its limits.  In v0.7 there are
-several examples of 100+ line changes to the code across multiple files that were all generated from a
-single Metaphor prompt.  The 2 biggest changes were over 1000 lines of code each (both done with Claude
+By providing an AI everything it needs, Metaphor can stretch an AI model to its limits.  In most versions
+there have been examples of 100+ line changes to the code across multiple files that were all generated from a
+single Metaphor prompt.  The biggest changes have been well over 1000 lines of code each (both done with Claude
 Sonnet 3.7).
 
 The ability to use AI for large refactoring and redesign tasks also means Humbug is a codebase with very
@@ -90,9 +90,8 @@ v0.8 adds several new features:
       and Arabic.
 - **User interface:**
     - Keyboard navigation and mouse support.
-    - Resizable splitter between file tree and tab view.
+    - Resizable splitters between file tree and tab columns.
     - Consistent styling with light/dark mode themes.
-    - Modal dialogs with visual consistency.
     - Status bar for application information.
 - **Conversation features:**
     - Markdown-style code formatting in input and history.

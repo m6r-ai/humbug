@@ -17,6 +17,7 @@ Internal structure changes:
 Bug fixes:
 
 - Resolved a problem where tab close buttons did not render correctly when hovering between tabs.
+- Column swapping did not work correctly with right-to-left layouts.
 
 ## v0.7 (2025-03-10)
 
