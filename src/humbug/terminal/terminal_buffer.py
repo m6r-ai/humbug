@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Set
 
-from humbug.gui.tab.terminal.terminal_line import CharacterAttributes, TerminalLine
+from humbug.terminal.terminal_line import CharacterAttributes, TerminalLine
 
 
 @dataclass

@@ -5,9 +5,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, Tuple, Any
 
-from humbug.gui.tab.terminal.terminal_buffer import (
-    TerminalBuffer, CharacterAttributes
-)
+from humbug.terminal.terminal_buffer import TerminalBuffer, CharacterAttributes
 
 
 @dataclass

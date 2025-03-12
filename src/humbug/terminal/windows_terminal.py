@@ -10,7 +10,7 @@ from ctypes import c_size_t, POINTER
 from ctypes.wintypes import HANDLE, DWORD, WORD, LPWSTR, BOOL, LPVOID, BYTE
 import msvcrt
 
-from humbug.gui.tab.terminal.terminal_base import TerminalBase
+from humbug.terminal.terminal_base import TerminalBase
 
 
 # Define DWORD_PTR for 64-bit compatibility
