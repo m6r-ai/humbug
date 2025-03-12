@@ -301,7 +301,7 @@ class MainWindow(QMainWindow):
         # Set initial file tree width
         self._splitter.setSizes([240, self.width() - 240])
 
-        # Set the stretch factors: 0 for file tree (no stretch) and 1 for tab manager (stretch to fill)
+        # Set the stretch factors: 0 for file tree (no stretch) and 1 for column manager (stretch to fill)
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
 
@@ -338,6 +338,51 @@ class MainWindow(QMainWindow):
         self._mindspace_manager = MindspaceManager()
 
         QTimer.singleShot(0, self._restore_last_mindspace)
+
+    @Slot()
+    def _update_menu_state(self):
+        """Update enabled/disabled state of menu items."""
+        # Update mindspace-specific actions
+        has_mindspace = self._mindspace_manager.has_mindspace
+        self._close_mindspace_action.setEnabled(has_mindspace)
+        self._new_conv_action.setEnabled(has_mindspace)
+        self._new_metaphor_conv_action.setEnabled(has_mindspace)
+        self._new_file_action.setEnabled(has_mindspace)
+        self._open_conv_action.setEnabled(has_mindspace)
+        self._open_file_action.setEnabled(has_mindspace)
+        self._new_terminal_action.setEnabled(has_mindspace)
+        self._mindspace_settings_action.setEnabled(has_mindspace)
+
+        # Update tab-specific actions
+        column_manager = self._column_manager
+        self._fork_conv_action.setEnabled(column_manager.can_fork_conversation())
+        self._save_action.setEnabled(column_manager.can_save_file())
+        self._save_as_action.setEnabled(column_manager.can_save_file_as())
+        self._close_tab_action.setEnabled(column_manager.can_close_tab())
+        self._undo_action.setEnabled(column_manager.can_undo())
+        self._redo_action.setEnabled(column_manager.can_redo())
+        self._cut_action.setEnabled(column_manager.can_cut())
+        self._copy_action.setEnabled(column_manager.can_copy())
+        self._paste_action.setEnabled(column_manager.can_paste())
+        self._find_action.setEnabled(column_manager.can_find())
+        self._submit_message_action.setEnabled(column_manager.can_submit_message())
+        self._conv_settings_action.setEnabled(column_manager.can_show_conversation_settings_dialog())
+
+        # Update view actions
+        current_zoom = self._style_manager.zoom_factor
+        left_to_right = self._language_manager.left_to_right
+        self._zoom_in_action.setEnabled(current_zoom < 2.0)
+        self._zoom_out_action.setEnabled(current_zoom > 0.5)
+        self._show_all_columns_action.setEnabled(column_manager.can_show_all_columns())
+        self._split_column_left_action.setEnabled(column_manager.can_split_column())
+        self._split_column_right_action.setEnabled(column_manager.can_split_column())
+        self._merge_column_left_action.setEnabled(column_manager.can_merge_column(left_to_right))
+        self._merge_column_right_action.setEnabled(column_manager.can_merge_column(not left_to_right))
+        self._swap_column_left_action.setEnabled(column_manager.can_swap_column(left_to_right))
+        self._swap_column_right_action.setEnabled(column_manager.can_swap_column(not left_to_right))
+        self._toggle_bookmark_action.setEnabled(column_manager.can_toggle_bookmark())
+        self._next_bookmark_action.setEnabled(column_manager.can_next_bookmark())
+        self._previous_bookmark_action.setEnabled(column_manager.can_previous_bookmark())
 
     def _handle_language_changed(self) -> None:
         """Update UI text when language changes."""
@@ -389,12 +434,11 @@ class MainWindow(QMainWindow):
         self._split_column_right_action.setText(strings.split_column_right)
         self._merge_column_left_action.setText(strings.merge_column_left)
         self._merge_column_right_action.setText(strings.merge_column_right)
-        # Swap column actions
-        # Get the language direction
-        left_to_right = self._language_manager.left_to_right
-
+        self._swap_column_left_action.setText(strings.swap_column_left)
+        self._swap_column_right_action.setText(strings.swap_column_right)
 
         # Our logic for left and right reverses for right-to-left languages
+        left_to_right = self._language_manager.left_to_right
         self._split_column_left_action.triggered.disconnect()
         self._split_column_left_action.triggered.connect(lambda: self._split_column(left_to_right))
         self._split_column_right_action.triggered.disconnect()
@@ -409,10 +453,6 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.triggered.connect(lambda: self._swap_column(not left_to_right))
 
         self._handle_style_changed()
-
-    def _swap_column(self, swap_left: bool) -> None:
-        """Swap the current column."""
-        self._column_manager.swap_column(swap_left)
 
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
@@ -599,7 +639,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _new_terminal(self):
-        """Show new terminal dialog and create terminal tab."""
+        """Create a new terminal tab."""
         if not self._mindspace_manager.has_mindspace:
             return
 
@@ -689,54 +729,9 @@ class MainWindow(QMainWindow):
         """Merge the current column."""
         self._column_manager.merge_column(merge_left)
 
-    @Slot()
-    def _update_menu_state(self):
-        """Update enabled/disabled state of menu items."""
-        # Update mindspace-specific actions
-        has_mindspace = self._mindspace_manager.has_mindspace
-        self._close_mindspace_action.setEnabled(has_mindspace)
-        self._new_conv_action.setEnabled(has_mindspace)
-        self._new_metaphor_conv_action.setEnabled(has_mindspace)
-        self._new_file_action.setEnabled(has_mindspace)
-        self._open_conv_action.setEnabled(has_mindspace)
-        self._open_file_action.setEnabled(has_mindspace)
-        self._new_terminal_action.setEnabled(has_mindspace)
-        self._mindspace_settings_action.setEnabled(has_mindspace)
-
-        # Update tab-specific actions
-        tab_manager = self._column_manager
-        self._fork_conv_action.setEnabled(tab_manager.can_fork_conversation())
-        self._save_action.setEnabled(tab_manager.can_save_file())
-        self._save_as_action.setEnabled(tab_manager.can_save_file_as())
-        self._close_tab_action.setEnabled(tab_manager.can_close_tab())
-        self._undo_action.setEnabled(tab_manager.can_undo())
-        self._redo_action.setEnabled(tab_manager.can_redo())
-        self._cut_action.setEnabled(tab_manager.can_cut())
-        self._copy_action.setEnabled(tab_manager.can_copy())
-        self._paste_action.setEnabled(tab_manager.can_paste())
-        self._find_action.setEnabled(tab_manager.can_find())
-        self._submit_message_action.setEnabled(tab_manager.can_submit_message())
-        self._conv_settings_action.setEnabled(tab_manager.can_show_conversation_settings_dialog())
-
-        # Update view actions
-        current_zoom = self._style_manager.zoom_factor
-        left_to_right = self._language_manager.left_to_right
-        self._zoom_in_action.setEnabled(current_zoom < 2.0)
-        self._zoom_out_action.setEnabled(current_zoom > 0.5)
-        self._show_all_columns_action.setEnabled(tab_manager.can_show_all_columns())
-        self._split_column_left_action.setEnabled(tab_manager.can_split_column())
-        self._split_column_right_action.setEnabled(tab_manager.can_split_column())
-        self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(left_to_right))
-        self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(not left_to_right))
-        self._toggle_bookmark_action.setEnabled(tab_manager.can_toggle_bookmark())
-        self._next_bookmark_action.setEnabled(tab_manager.can_next_bookmark())
-        self._previous_bookmark_action.setEnabled(tab_manager.can_previous_bookmark())
-
-        # Swap column actions
-        left_to_right = self._language_manager.left_to_right
-        self._swap_column_left_action.setEnabled(tab_manager.can_swap_column(True))
-        self._swap_column_right_action.setEnabled(tab_manager.can_swap_column(False))
-
+    def _swap_column(self, swap_left: bool) -> None:
+        """Swap the current column."""
+        self._column_manager.swap_column(swap_left)
 
     def _handle_style_changed(self) -> None:
         style_manager = self._style_manager
