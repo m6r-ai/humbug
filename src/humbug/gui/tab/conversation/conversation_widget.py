@@ -13,11 +13,11 @@ from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal, QEvent, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.ai.ai_conversation import AIConversation, AIConversationEvent
+from humbug.ai.ai_conversation_history import AIConversationHistory
+from humbug.ai.ai_message import AIMessage
+from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_response import AIError
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
-from humbug.conversation.conversation_history import ConversationHistory
-from humbug.conversation.message import Message
-from humbug.conversation.message_source import MessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_input import ConversationInput
@@ -254,7 +254,7 @@ class ConversationWidget(QWidget):
             AIConversationEvent.REQUEST_CANCELLED, self._on_request_cancelled
         )
 
-    def _on_message_added(self, message: Message) -> None:
+    def _on_message_added(self, message: AIMessage) -> None:
         """
         Handle a new message being added to the conversation.
 
@@ -280,7 +280,7 @@ class ConversationWidget(QWidget):
         self._auto_scroll = True
         self._scroll_to_bottom()
 
-    def _on_message_updated(self, message: Message) -> None:
+    def _on_message_updated(self, message: AIMessage) -> None:
         """
         Handle a message being updated.
 
@@ -291,8 +291,8 @@ class ConversationWidget(QWidget):
         # This is a simple approach - in practice you'd want to associate message IDs with widgets
         for i, widget in enumerate(self._messages):
             if (i == len(self._messages) - 1 and
-                (message.source == MessageSource.AI or
-                 message.source == MessageSource.REASONING)):
+                (message.source == AIMessageSource.AI or
+                 message.source == AIMessageSource.REASONING)):
                 widget.set_content(message.content, message.source, message.timestamp)
                 break
 
@@ -308,7 +308,7 @@ class ConversationWidget(QWidget):
         self._input.set_streaming(False)
         self.status_updated.emit()
 
-    def _on_content_updated(self, message: Message) -> None:
+    def _on_content_updated(self, message: AIMessage) -> None:
         """
         Handle content updates from the AI.
 
@@ -318,7 +318,7 @@ class ConversationWidget(QWidget):
         # Find and update the corresponding message widget
         # Simplified approach - in practice, match by message ID
         for i, widget in enumerate(self._messages):
-            if (i == len(self._messages) - 1 and message.source == MessageSource.AI):
+            if (i == len(self._messages) - 1 and message.source == AIMessageSource.AI):
                 widget.set_content(message.content, message.source, message.timestamp)
                 break
 
@@ -326,7 +326,7 @@ class ConversationWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-    def _on_reasoning_updated(self, message: Message) -> None:
+    def _on_reasoning_updated(self, message: AIMessage) -> None:
         """
         Handle reasoning updates from the AI.
 
@@ -336,7 +336,7 @@ class ConversationWidget(QWidget):
         # Find and update the corresponding message widget
         # Simplified approach - in practice, match by message ID
         for i, widget in enumerate(self._messages):
-            if (i == len(self._messages) - 1 and message.source == MessageSource.REASONING):
+            if (i == len(self._messages) - 1 and message.source == AIMessageSource.REASONING):
                 widget.set_content(message.content, message.source, message.timestamp)
                 break
 
@@ -353,7 +353,7 @@ class ConversationWidget(QWidget):
         """
         # Error messages are already added through MESSAGE_ADDED event
 
-    def _on_response_completed(self, _message: Message) -> None:
+    def _on_response_completed(self, _message: AIMessage) -> None:
         """
         Handle completed AI responses.
 
@@ -651,12 +651,12 @@ class ConversationWidget(QWidget):
         """Set initial focus to input area."""
         self._input.setFocus()
 
-    def load_message_history(self, messages: List[Message]):
+    def load_message_history(self, messages: List[AIMessage]):
         """
         Load existing message history from transcript.
 
         Args:
-            messages: List of Message objects to load
+            messages: List of AIMessage objects to load
         """
         # Establish a baseline for conversation settings
         default_settings = AIConversationSettings(
@@ -876,7 +876,7 @@ class ConversationWidget(QWidget):
         # Submit the message to the AIConversation instance
         asyncio.create_task(self._ai_conversation.submit_message(content))
 
-    def get_conversation_history(self) -> ConversationHistory:
+    def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""
         return self._ai_conversation.get_conversation_history()
 

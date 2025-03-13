@@ -5,12 +5,12 @@ import logging
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, Set
 
+from humbug.ai.ai_conversation_history import AIConversationHistory
+from humbug.ai.ai_message import AIMessage
+from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_response import AIError
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_usage import AIUsage
-from humbug.conversation.conversation_history import ConversationHistory
-from humbug.conversation.message import Message
-from humbug.conversation.message_source import MessageSource
 from humbug.transcript.transcript_error import TranscriptError
 from humbug.transcript.transcript_handler import TranscriptHandler
 
@@ -63,7 +63,7 @@ class AIConversation:
         self._ai_backends = ai_backends
 
         self._settings = AIConversationSettings()
-        self._conversation = ConversationHistory(conversation_id)
+        self._conversation = AIConversationHistory(conversation_id)
         self._current_tasks: List[asyncio.Task] = []
         self._current_ai_message = None
         self._current_reasoning_message = None
@@ -142,7 +142,7 @@ class AIConversation:
             reasoning=self._settings.reasoning
         )
 
-    def get_conversation_history(self) -> ConversationHistory:
+    def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object.
 
         Returns:
@@ -158,11 +158,11 @@ class AIConversation:
         """
         return self._conversation.get_token_counts()
 
-    async def _write_transcript(self, message: Message) -> None:
+    async def _write_transcript(self, message: AIMessage) -> None:
         """Write messages to transcript file.
 
         Args:
-            message: Message to write to transcript
+            message: AIMessage to write to transcript
         """
         try:
             await self._transcript_handler.write([message.to_transcript_dict()])
@@ -170,11 +170,11 @@ class AIConversation:
             self._logger.error(f"Failed to write to transcript: {e}")
             self._trigger_event(AIConversationEvent.TRANSCRIPT_ERROR, str(e))
 
-    def load_message_history(self, messages: List[Message]) -> None:
+    def load_message_history(self, messages: List[AIMessage]) -> None:
         """Load existing message history from transcript.
 
         Args:
-            messages: List of Message objects to load
+            messages: List of AIMessage objects to load
         """
         # Iterate over the messages
         for message in messages:
@@ -182,7 +182,7 @@ class AIConversation:
             self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
 
             # Update settings if AI message
-            if message.source == MessageSource.AI:
+            if message.source == AIMessageSource.AI:
                 if message.usage:
                     self._conversation.update_last_tokens(
                         message.usage.prompt_tokens,
@@ -218,7 +218,7 @@ class AIConversation:
         self._last_submitted_message = content
 
         # Add the user message to the conversation
-        message = Message.create(MessageSource.USER, content)
+        message = AIMessage.create(AIMessageSource.USER, content)
         self._conversation.add_message(message)
         self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
         await self._write_transcript(message)
@@ -249,8 +249,8 @@ class AIConversation:
             if not backend:
                 error_msg = f"No backend available for provider: {provider}"
                 self._logger.error(error_msg)
-                error_message = Message.create(
-                    MessageSource.SYSTEM,
+                error_message = AIMessage.create(
+                    AIMessageSource.SYSTEM,
                     error_msg,
                     {"code": "backend_error", "message": error_msg}
                 )
@@ -401,8 +401,8 @@ class AIConversation:
                     self._current_ai_message = None
 
             error_msg = error.message
-            error_message = Message.create(
-                MessageSource.SYSTEM,
+            error_message = AIMessage.create(
+                AIMessageSource.SYSTEM,
                 error_msg,
                 error={"code": error.code, "message": error.message, "details": error.details}
             )
@@ -441,8 +441,8 @@ class AIConversation:
 
                 # Create and add initial AI response message
                 settings = self.get_settings()
-                message = Message.create(
-                    MessageSource.AI,
+                message = AIMessage.create(
+                    AIMessageSource.AI,
                     content,
                     model=settings.model,
                     temperature=settings.temperature,
@@ -478,8 +478,8 @@ class AIConversation:
             if not self._current_reasoning_message:
                 # Create and add initial message
                 settings = self.get_settings()
-                message = Message.create(
-                    MessageSource.REASONING,
+                message = AIMessage.create(
+                    AIMessageSource.REASONING,
                     reasoning,
                     model=settings.model,
                     temperature=settings.temperature,

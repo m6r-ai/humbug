@@ -3,7 +3,7 @@
 from enum import Enum
 
 
-class MessageSource(Enum):
+class AIMessageSource(Enum):
     """Enumeration of possible message sources."""
     USER = "user"
     AI = "ai"

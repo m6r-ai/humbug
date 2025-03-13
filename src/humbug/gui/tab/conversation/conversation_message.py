@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, QPoint
 
-from humbug.conversation.message_source import MessageSource
+from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
@@ -93,7 +93,7 @@ class ConversationMessage(QFrame):
         self._current_language = None
 
         # Track current message style
-        self._current_style: MessageSource = None
+        self._current_style: AIMessageSource = None
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -121,10 +121,10 @@ class ConversationMessage(QFrame):
 
         strings = self._language_manager.strings
         role_text = {
-            MessageSource.USER: strings.role_you,
-            MessageSource.AI: strings.role_assistant,
-            MessageSource.REASONING: strings.role_reasoning,
-            MessageSource.SYSTEM: strings.role_system
+            AIMessageSource.USER: strings.role_you,
+            AIMessageSource.AI: strings.role_assistant,
+            AIMessageSource.REASONING: strings.role_reasoning,
+            AIMessageSource.SYSTEM: strings.role_system
         }.get(self._message_source, "Unknown")
 
         # Format with timestamp
@@ -264,7 +264,7 @@ class ConversationMessage(QFrame):
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, style: MessageSource, timestamp: datetime):
+    def set_content(self, text: str, style: AIMessageSource, timestamp: datetime):
         """
         Set content with style, handling incremental updates for AI responses.
 
@@ -354,10 +354,10 @@ class ConversationMessage(QFrame):
 
         # Map message types to role colors
         role_colours = {
-            MessageSource.USER: ColorRole.MESSAGE_USER,
-            MessageSource.AI: ColorRole.MESSAGE_AI,
-            MessageSource.REASONING: ColorRole.MESSAGE_REASONING,
-            MessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM
+            AIMessageSource.USER: ColorRole.MESSAGE_USER,
+            AIMessageSource.AI: ColorRole.MESSAGE_AI,
+            AIMessageSource.REASONING: ColorRole.MESSAGE_REASONING,
+            AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM
         }
 
         role = role_colours.get(self._current_style, ColorRole.MESSAGE_USER)

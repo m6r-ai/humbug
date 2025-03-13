@@ -5,15 +5,15 @@ from datetime import datetime
 from typing import Dict, Optional
 import uuid
 
+from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_usage import AIUsage
-from humbug.conversation.message_source import MessageSource
 
 
 @dataclass
-class Message:
+class AIMessage:
     """Represents a single message in the conversation."""
     id: str
-    source: MessageSource
+    source: AIMessageSource
     content: str
     timestamp: datetime
     usage: Optional[AIUsage] = None
@@ -22,19 +22,19 @@ class Message:
     temperature: Optional[float] = None
     completed: bool = True
 
-    # Map between MessageSource enum and transcript type strings
+    # Map between AIMessageSource enum and transcript type strings
     _SOURCE_TYPE_MAP = {
-        MessageSource.USER: "user_message",
-        MessageSource.AI: "ai_response",
-        MessageSource.REASONING: "ai_reasoning",
-        MessageSource.SYSTEM: "system_message"
+        AIMessageSource.USER: "user_message",
+        AIMessageSource.AI: "ai_response",
+        AIMessageSource.REASONING: "ai_reasoning",
+        AIMessageSource.SYSTEM: "system_message"
     }
     _TYPE_SOURCE_MAP = {v: k for k, v in _SOURCE_TYPE_MAP.items()}
 
     @classmethod
     def create(
         cls,
-        source: MessageSource,
+        source: AIMessageSource,
         content: str,
         usage: Optional[AIUsage] = None,
         error: Optional[Dict] = None,

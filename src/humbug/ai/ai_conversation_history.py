@@ -1,21 +1,21 @@
-"""Conversation state management for the Humbug application."""
+"""AI conversation state management."""
 
 from typing import Dict, List, Optional
 
+from humbug.ai.ai_message import AIMessage
+from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_usage import AIUsage
-from humbug.conversation.message import Message
-from humbug.conversation.message_source import MessageSource
 
-class ConversationHistory:
+class AIConversationHistory:
     """Manages the conversation history and state."""
 
     def __init__(self, conversation_id: str):
         """Initialize empty conversation history."""
         self._conversation_id = conversation_id
-        self._messages: List[Message] = []
+        self._messages: List[AIMessage] = []
         self._last_response_tokens = {"input": 0, "output": 0}
 
-    def add_message(self, message: Message) -> None:
+    def add_message(self, message: AIMessage) -> None:
         """Add a message to the history."""
         self._messages.append(message)
 
@@ -25,7 +25,7 @@ class ConversationHistory:
         content: str,
         usage: Optional[AIUsage] = None,
         completed: bool = None
-    ) -> Optional[Message]:
+    ) -> Optional[AIMessage]:
         """Update an existing message and return the updated message."""
         for message in self._messages:
             if message.id == message_id:
@@ -46,11 +46,11 @@ class ConversationHistory:
 
         return None
 
-    def get_messages(self) -> List[Message]:
+    def get_messages(self) -> List[AIMessage]:
         """Get a copy of all messages in the conversation history.
 
         Returns:
-            List[Message]: Copy of all messages
+            List[AIMessage]: Copy of all messages
         """
         return self._messages.copy()
 
@@ -72,19 +72,19 @@ class ConversationHistory:
             user_msg = self._messages[i]
             i += 1
 
-            if user_msg.source != MessageSource.USER:
+            if user_msg.source != AIMessageSource.USER:
                 continue
 
             # Found a user message, look for corresponding AI response
             ai_msg = self._messages[i]
-            if ai_msg.source == MessageSource.REASONING:
+            if ai_msg.source == AIMessageSource.REASONING:
                 # We're always safe to pick up this message because we always have one left
                 # after we complete this loop, so the worst that will happen is we'll pick
                 # up that user message.
                 i += 1
                 ai_msg = self._messages[i]
 
-            if ai_msg.source != MessageSource.AI:
+            if ai_msg.source != AIMessageSource.AI:
                 continue
 
             # If we didn't complete or there were errors then we skip this

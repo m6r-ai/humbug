@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from humbug.conversation.message import Message
+from humbug.ai.ai_message import AIMessage
 from humbug.transcript.transcript_error import (
     TranscriptFormatError, TranscriptIOError
 )
@@ -17,7 +17,7 @@ from humbug.transcript.float_one_decimal_encoder import FloatOneDecimalEncoder
 @dataclass
 class TranscriptData:
     """Container for transcript data and metadata."""
-    messages: List[Message]
+    messages: List[AIMessage]
     timestamp: datetime
     version: str
 
@@ -126,11 +126,11 @@ class TranscriptHandler:
 
         self._validate_transcript_data(data)
 
-        # Convert transcript messages to Message objects
+        # Convert transcript messages to AIMessage objects
         messages = []
         for msg in data["conversation"]:
             try:
-                message = Message.from_transcript_dict(msg)
+                message = AIMessage.from_transcript_dict(msg)
                 messages.append(message)
             except ValueError as e:
                 raise TranscriptFormatError(f"Invalid message format: {str(e)}") from e
