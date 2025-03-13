@@ -206,14 +206,12 @@ Project structure:
 
 ```
 src/humbug/
-├── ai/            # AI backend implementations
-├── conversation/  # Conversation management
+├── ai/            # AI backend and conversation implementations
 ├── gui/           # GUI components
 ├── language/      # I18n management and strings
 ├── mindspace/     # Mindspace management
 ├── syntax/        # Syntax highlighting and parsing
 ├── terminal/      # Terminal emulation
-├── transcript/    # Transcript handling
 ├── user/          # User settings management
 └── __main__.py    # Main entry point
 ```

@@ -1,4 +1,4 @@
-"""Transcript writer implementation for Humbug application."""
+"""One decimal place floating point encoder."""
 
 import json
 

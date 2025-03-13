@@ -14,17 +14,17 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.ai.ai_conversation import AIConversation, AIConversationEvent
 from humbug.ai.ai_conversation_history import AIConversationHistory
+from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_response import AIError
-from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
+from humbug.ai.ai_transcript_handler import AITranscriptHandler
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_input import ConversationInput
 from humbug.gui.tab.conversation.conversation_message import ConversationMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.transcript.transcript_handler import TranscriptHandler
 from humbug.user.user_manager import UserManager
 
 
@@ -109,7 +109,7 @@ class ConversationWidget(QWidget):
         self._current_bookmark_index: Optional[int] = None
 
         # Create transcript handler with provided filename
-        self._transcript_handler = TranscriptHandler(path, timestamp)
+        self._transcript_handler = AITranscriptHandler(path, timestamp)
 
         self._mindspace_manager = MindspaceManager()
 

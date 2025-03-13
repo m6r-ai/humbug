@@ -6,13 +6,13 @@ from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from humbug.ai.ai_conversation_history import AIConversationHistory
+from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_response import AIError
-from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.ai_transcript_error import AITranscriptError
+from humbug.ai.ai_transcript_handler import AITranscriptHandler
 from humbug.ai.ai_usage import AIUsage
-from humbug.transcript.transcript_error import TranscriptError
-from humbug.transcript.transcript_handler import TranscriptHandler
 
 
 class AIConversationEvent(Enum):
@@ -47,7 +47,7 @@ class AIConversation:
     def __init__(
         self,
         conversation_id: str,
-        transcript_handler: TranscriptHandler,
+        transcript_handler: AITranscriptHandler,
         ai_backends: Dict[str, Any]
     ):
         """Initialize the AIConversation.
@@ -166,7 +166,7 @@ class AIConversation:
         """
         try:
             await self._transcript_handler.write([message.to_transcript_dict()])
-        except TranscriptError as e:
+        except AITranscriptError as e:
             self._logger.error(f"Failed to write to transcript: {e}")
             self._trigger_event(AIConversationEvent.TRANSCRIPT_ERROR, str(e))
 
