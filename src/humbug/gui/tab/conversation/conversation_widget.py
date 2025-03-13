@@ -12,9 +12,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal, QEvent, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
 
+from humbug.ai.ai_conversation import AIConversation, AIConversationEvent
 from humbug.ai.ai_response import AIError
-from humbug.ai.ai_conversation_settings import AIConversationSettings
-from humbug.ai.ai_usage import AIUsage
+from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.conversation.conversation_history import ConversationHistory
 from humbug.conversation.message import Message
 from humbug.conversation.message_source import MessageSource
@@ -24,7 +24,6 @@ from humbug.gui.tab.conversation.conversation_input import ConversationInput
 from humbug.gui.tab.conversation.conversation_message import ConversationMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.transcript.transcript_error import TranscriptError
 from humbug.transcript.transcript_handler import TranscriptHandler
 from humbug.user.user_manager import UserManager
 
@@ -103,8 +102,6 @@ class ConversationWidget(QWidget):
         self._conversation_id = conversation_id
         self._path = path
         self._timestamp = timestamp
-        self._current_tasks: List[asyncio.Task] = []
-        self._last_submitted_message = None
 
         self._user_manager = UserManager()
 
@@ -116,10 +113,17 @@ class ConversationWidget(QWidget):
 
         self._mindspace_manager = MindspaceManager()
 
-        self._conversation = ConversationHistory(conversation_id)
-        self._settings = AIConversationSettings()
-        self._current_ai_message = None
-        self._current_reasoning_message = None
+        # Create AIConversation instance for handling backend communication
+        self._ai_conversation = AIConversation(
+            conversation_id,
+            self._transcript_handler,
+            self._user_manager.get_ai_backends()
+        )
+
+        # Register callbacks for AIConversation events
+        self._register_ai_conversation_callbacks()
+
+        # Widget tracking
         self._messages: List[ConversationMessage] = []
         self._message_with_selection: Optional[ConversationMessage] = None
         self._is_streaming = False
@@ -211,6 +215,165 @@ class ConversationWidget(QWidget):
         self._event_filter = ConversationWidgetEventFilter(self)
         self._event_filter.widget_activated.connect(self.activated)
 
+    def _register_ai_conversation_callbacks(self) -> None:
+        """Register callbacks for AIConversation events."""
+        # Message events
+        self._ai_conversation.register_callback(
+            AIConversationEvent.MESSAGE_ADDED, self._on_message_added
+        )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.MESSAGE_UPDATED, self._on_message_updated
+        )
+
+        # Streaming state events
+        self._ai_conversation.register_callback(
+            AIConversationEvent.STREAMING_STARTED, self._on_streaming_started
+        )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.STREAMING_STOPPED, self._on_streaming_stopped
+        )
+
+        # Content update events
+        self._ai_conversation.register_callback(
+            AIConversationEvent.CONTENT_UPDATED, self._on_content_updated
+        )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.REASONING_UPDATED, self._on_reasoning_updated
+        )
+
+        # Error and completion events
+        self._ai_conversation.register_callback(
+            AIConversationEvent.RESPONSE_ERROR, self._on_response_error
+        )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.RESPONSE_COMPLETED, self._on_response_completed
+        )
+
+        # Cancellation events
+        self._ai_conversation.register_callback(
+            AIConversationEvent.REQUEST_CANCELLED, self._on_request_cancelled
+        )
+
+    def _on_message_added(self, message: Message) -> None:
+        """
+        Handle a new message being added to the conversation.
+
+        Args:
+            message: The message that was added
+        """
+        msg_widget = ConversationMessage(self)
+        msg_widget.selectionChanged.connect(
+            lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
+        )
+        # Add bookmark-specific signal
+        msg_widget.scrollRequested.connect(self._handle_selection_scroll)
+        msg_widget.mouseReleased.connect(self._stop_scroll)
+        msg_widget.set_content(message.content, message.source, message.timestamp)
+
+        # Add widget before input
+        self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
+        self._messages.append(msg_widget)
+
+        self._install_activation_tracking(msg_widget)
+
+        # When we call this we should always scroll to the bottom and restore auto-scrolling
+        self._auto_scroll = True
+        self._scroll_to_bottom()
+
+    def _on_message_updated(self, message: Message) -> None:
+        """
+        Handle a message being updated.
+
+        Args:
+            message: The message that was updated
+        """
+        # Find the message widget that corresponds to the updated message
+        # This is a simple approach - in practice you'd want to associate message IDs with widgets
+        for i, widget in enumerate(self._messages):
+            if (i == len(self._messages) - 1 and
+                (message.source == MessageSource.AI or
+                 message.source == MessageSource.REASONING)):
+                widget.set_content(message.content, message.source, message.timestamp)
+                break
+
+    def _on_streaming_started(self) -> None:
+        """Handle the start of streaming."""
+        self._is_streaming = True
+        self._input.set_streaming(True)
+        self.status_updated.emit()
+
+    def _on_streaming_stopped(self) -> None:
+        """Handle the end of streaming."""
+        self._is_streaming = False
+        self._input.set_streaming(False)
+        self.status_updated.emit()
+
+    def _on_content_updated(self, message: Message) -> None:
+        """
+        Handle content updates from the AI.
+
+        Args:
+            message: The message with updated content
+        """
+        # Find and update the corresponding message widget
+        # Simplified approach - in practice, match by message ID
+        for i, widget in enumerate(self._messages):
+            if (i == len(self._messages) - 1 and message.source == MessageSource.AI):
+                widget.set_content(message.content, message.source, message.timestamp)
+                break
+
+        # Scroll to bottom if auto-scrolling is enabled
+        if self._auto_scroll:
+            self._scroll_to_bottom()
+
+    def _on_reasoning_updated(self, message: Message) -> None:
+        """
+        Handle reasoning updates from the AI.
+
+        Args:
+            message: The message with updated reasoning content
+        """
+        # Find and update the corresponding message widget
+        # Simplified approach - in practice, match by message ID
+        for i, widget in enumerate(self._messages):
+            if (i == len(self._messages) - 1 and message.source == MessageSource.REASONING):
+                widget.set_content(message.content, message.source, message.timestamp)
+                break
+
+        # Scroll to bottom if auto-scrolling is enabled
+        if self._auto_scroll:
+            self._scroll_to_bottom()
+
+    def _on_response_error(self, error: AIError) -> None:
+        """
+        Handle errors in AI responses.
+
+        Args:
+            error: The error that occurred
+        """
+        # Error messages are already added through MESSAGE_ADDED event
+
+    def _on_response_completed(self, _message: Message) -> None:
+        """
+        Handle completed AI responses.
+
+        Args:
+            message: The completed message
+        """
+        # Update status bar with token counts
+        self.status_updated.emit()
+
+    def _on_request_cancelled(self, last_message: str) -> None:
+        """Handle cancelled requests.
+
+        Args:
+            last_message: The last submitted message that was cancelled
+        """
+        # Restore the cancelled message to the input box
+        if last_message:
+            self._input.set_plain_text(last_message)
+            self._input.setFocus()
+
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update input widget streaming state text
@@ -292,11 +455,7 @@ class ConversationWidget(QWidget):
         Returns:
             Current conversation settings
         """
-        return AIConversationSettings(
-            model=self._settings.model,
-            temperature=self._settings.temperature,
-            reasoning=self._settings.reasoning
-        )
+        return self._ai_conversation.get_settings()
 
     @Slot(int)
     def _on_scroll_value_changed(self, value: int):
@@ -359,34 +518,6 @@ class ConversationWidget(QWidget):
         widget.installEventFilter(self._event_filter)
         for child in widget.findChildren(QWidget):
             child.installEventFilter(self._event_filter)
-
-    def _add_message(self, message: Message) -> None:
-        """
-        Add a message to history with appropriate styling.
-
-        Args:
-            message: The message text
-        """
-        msg_widget = ConversationMessage(self)
-        msg_widget.selectionChanged.connect(
-            lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
-        )
-        # Add bookmark-specific signal
-        msg_widget.scrollRequested.connect(self._handle_selection_scroll)
-        msg_widget.mouseReleased.connect(self._stop_scroll)
-        msg_widget.set_content(message.content, message.source, message.timestamp)
-
-        # Add widget before input
-        self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
-        self._messages.append(msg_widget)
-
-        self._install_activation_tracking(msg_widget)
-
-        # When we call this we should always scroll to the bottom and restore auto-scrolling
-        self._auto_scroll = True
-        self._scroll_to_bottom()
-
-        self._conversation.add_message(message)
 
     def _toggle_message_bookmark(self, message_widget: ConversationMessage):
         """Toggle bookmark status for a message."""
@@ -520,142 +651,6 @@ class ConversationWidget(QWidget):
         """Set initial focus to input area."""
         self._input.setFocus()
 
-    async def update_streaming_response(
-        self,
-        reasoning: str,
-        content: str,
-        usage: Optional[AIUsage] = None,
-        error: Optional[AIError] = None
-    ):
-        """Update the current AI response in the conversation."""
-        if error:
-            # Only stop streaming if retries are exhausted
-            if error.retries_exhausted:
-                self._is_streaming = False
-                self._input.set_streaming(False)
-
-                # For cancellation, preserve the partial response first
-                if self._current_reasoning_message:
-                    message = self._conversation.update_message(
-                        self._current_reasoning_message.id,
-                        content=self._current_reasoning_message.content,
-                        completed=False
-                    )
-                    if message:
-                        await self._write_transcript(message)
-
-                    self._current_reasoning_message = None
-
-                if self._current_ai_message:
-                    message = self._conversation.update_message(
-                        self._current_ai_message.id,
-                        content=self._current_ai_message.content,
-                        completed=False
-                    )
-                    if message:
-                        await self._write_transcript(message)
-
-                    self._current_ai_message = None
-
-            error_msg = error.message
-            error_message = Message.create(
-                MessageSource.SYSTEM,
-                error_msg,
-                error={"code": error.code, "message": error.message, "details": error.details}
-            )
-            self._add_message(error_message)
-            asyncio.create_task(self._write_transcript(error_message))
-
-            # For cancellation, don't log as warning since it's user-initiated
-            if error.code == "cancelled":
-                self._logger.debug("AI response cancelled by user")
-            else:
-                self._logger.warning("AI response error: %s", error.message)
-            return
-
-        if not self._is_streaming:
-            self._is_streaming = True
-            self._input.set_streaming(True)
-
-        # Is our message an AI response or is it the AI reasoning?
-        if content:
-            # We're handling a response.  Is this the first time we're seeing it?
-            if not self._current_ai_message:
-                # If we previously had reasoning from the AI then close that out
-                if self._current_reasoning_message:
-                    message = self._conversation.update_message(
-                        self._current_reasoning_message.id,
-                        reasoning,
-                        usage=usage,
-                        completed=True
-                    )
-
-                    await self._write_transcript(message)
-                    self._current_reasoning_message = None
-
-                # Create and add initial AI response message
-                settings = self.get_settings()
-                message = Message.create(
-                    MessageSource.AI,
-                    content,
-                    model=settings.model,
-                    temperature=settings.temperature,
-                    completed=False
-                )
-                self._add_message(message)
-                self._current_ai_message = message
-            else:
-                # Update our message
-                self._messages[-1].set_content(content, MessageSource.AI, self._current_ai_message.timestamp)
-
-                # Update existing message
-                message = self._conversation.update_message(
-                    self._current_ai_message.id,
-                    content,
-                    usage=usage,
-                    completed=(usage is not None)
-                )
-                if not message:
-                    return
-            if usage:
-                self._is_streaming = False
-                self._input.set_streaming(False)
-                self.status_updated.emit()
-                self._current_reasoning_message = None
-                self._current_ai_message = None
-                await self._write_transcript(message)
-                return
-
-            return
-
-        if reasoning:
-            # We're handling reasoning from our AI.  Is it the first time we're seeing this?
-            if not self._current_reasoning_message:
-                # Create and add initial message
-                settings = self.get_settings()
-                message = Message.create(
-                    MessageSource.REASONING,
-                    reasoning,
-                    model=settings.model,
-                    temperature=settings.temperature,
-                    completed=False
-                )
-                self._add_message(message)
-                self._current_reasoning_message = message
-            else:
-                # Update our message
-                self._messages[-1].set_content(reasoning, MessageSource.REASONING, self._current_reasoning_message.timestamp)
-
-                # Update existing message
-                message = self._conversation.update_message(
-                    self._current_reasoning_message.id,
-                    reasoning,
-                    usage=usage,
-                    completed=False
-                )
-                if not message:
-                    return
-
     def load_message_history(self, messages: List[Message]):
         """
         Load existing message history from transcript.
@@ -664,27 +659,14 @@ class ConversationWidget(QWidget):
             messages: List of Message objects to load
         """
         # Establish a baseline for conversation settings
-        self.update_conversation_settings(AIConversationSettings(
+        default_settings = AIConversationSettings(
             model=self._mindspace_manager.settings.model,
             temperature=self._mindspace_manager.settings.temperature
-        ))
+        )
+        self._ai_conversation.update_conversation_settings(default_settings)
 
-        # Iterate over the messages
-        for message in messages:
-            self._add_message(message)
-
-            # Update settings and status if AI message
-            if message.source == MessageSource.AI:
-                if message.usage:
-                    self._conversation.update_last_tokens(
-                        message.usage.prompt_tokens,
-                        message.usage.completion_tokens
-                    )
-                if message.model:
-                    self.update_conversation_settings(AIConversationSettings(
-                        model=message.model,
-                        temperature=message.temperature
-                    ))
+        # Load messages into AIConversation
+        self._ai_conversation.load_message_history(messages)
 
         # Update display with final state
         self.status_updated.emit()
@@ -693,6 +675,7 @@ class ConversationWidget(QWidget):
         self._auto_scroll = True
         self._scroll_to_bottom()
 
+
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
         super().resizeEvent(event)
@@ -700,154 +683,14 @@ class ConversationWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-    def _sanitize_input(self, text: str) -> str:
-        """Strip control characters from input text, preserving newlines and tabs."""
-        return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
-
-    async def _write_transcript(self, message: Message) -> None:
-        """
-        Write messages to transcript file.
-
-        Args:
-            messages: List of message dictionaries to write
-
-        Raises:
-            IOError: If writing to transcript file fails
-        """
-        try:
-            await self._transcript_handler.write([message.to_transcript_dict()])
-        except TranscriptError as e:
-            self._logger.error("Failed to write to transcript: %s", e)
-
-    async def _start_ai(self):
-        """Submit the message to the AI and process the response."""
-        stream = None
-        try:
-            self._logger.debug("=== Starting new AI response ===")
-
-            # Get appropriate backend for conversation
-            settings = self.get_settings()
-            provider = AIConversationSettings.get_provider(settings.model)
-            backend = self._user_manager.get_ai_backends().get(provider)
-
-            if not backend:
-                error_msg = f"No backend available for provider: {provider}"
-                self._logger.error(error_msg)
-                error_message = Message.create(
-                    MessageSource.SYSTEM,
-                    error_msg,
-                    {"code": "backend_error", "message": error_msg}
-                )
-                self._add_message(error_message)
-                asyncio.create_task(self._write_transcript(error_message))
-
-                self._restore_last_message()
-                self._is_streaming = False
-                self._input.set_streaming(False)
-                return
-
-            stream = backend.stream_message(
-                self._conversation.get_messages_for_context(),
-                self._conversation_id
-            )
-
-            async for response in stream:
-                await self.update_streaming_response(
-                    reasoning=response.reasoning,
-                    content=response.content,
-                    usage=response.usage,
-                    error=response.error
-                )
-
-                if response.error:
-                    if response.error.retries_exhausted:
-                        self._restore_last_message()
-                        return
-
-                    # We're retrying - continue to the next attempt
-                    continue
-
-            # If we get here and are still marked as streaming then we failed to get a
-            # complete response before giving up.  This is a failure and should be handled as such.
-            if self._is_streaming:
-                self._logger.debug("AI response failed (likely timeout)")
-                await self.update_streaming_response(
-                    reasoning="",
-                    content="",
-                    error=AIError(
-                        code="cancelled",
-                        message="Server failed to complete response",
-                        retries_exhausted=True,
-                        details={"type": "CancelledError"}
-                    )
-                )
-                self._restore_last_message()
-                return
-
-        except asyncio.CancelledError:
-            self._logger.debug("AI response cancelled")
-            await self.update_streaming_response(
-                reasoning="",
-                content="",
-                error=AIError(
-                    code="cancelled",
-                    message="Request cancelled by user",
-                    retries_exhausted=True,
-                    details={"type": "CancelledError"}
-                )
-            )
-            self._restore_last_message()
-            return
-
-        except Exception as e:
-            self._logger.exception(
-                "Error processing AI response with model %s: %s",
-                settings.model,
-                str(e)
-            )
-            await self.update_streaming_response(
-                reasoning="",
-                content="",
-                error=AIError(
-                    code="process_error",
-                    message=str(e),
-                    retries_exhausted=True,
-                    details={"type": type(e).__name__}
-                )
-            )
-            self._restore_last_message()
-
-        finally:
-            self._logger.debug("=== Finished AI response ===")
-
-            # Properly close the async generator if it exists
-            if stream is not None:
-                try:
-                    await stream.aclose()
-                except Exception as e:
-                    # Log but don't propagate generator cleanup errors
-                    self._logger.debug("Error during generator cleanup: %s", str(e))
-
-    def _restore_last_message(self):
-        """Restore the last submitted message to the input box."""
-        if self._last_submitted_message is not None:
-            self._input.set_plain_text(self._last_submitted_message)
-            self._last_submitted_message = None
-
     def cancel_current_tasks(self):
         """Cancel any ongoing AI response tasks."""
-        for task in self._current_tasks:
-            if not task.done():
-                task.cancel()
+        self._ai_conversation.cancel_current_tasks()
 
     def update_conversation_settings(self, new_settings: AIConversationSettings):
         """Update conversation settings and associated backend."""
-        self._settings = new_settings
+        self._ai_conversation.update_conversation_settings(new_settings)
         self.status_updated.emit()
-        provider = AIConversationSettings.get_provider(new_settings.model)
-        backend = self._user_manager.get_ai_backends().get(provider)
-        if backend:
-            backend.update_conversation_settings(self._conversation_id, new_settings)
 
     def _handle_style_changed(self) -> None:
         factor = self._style_manager.zoom_factor
@@ -1023,34 +866,19 @@ class ConversationWidget(QWidget):
 
     def submit(self):
         """Submit current input text."""
-        content = self._sanitize_input(self._input.to_plain_text().strip())
+        content = self._input.to_plain_text().strip()
         if not content:
             return
 
-        self._last_submitted_message = content
         self._input.clear()
         self._input.set_streaming(True)
 
-        # Add the user message to the conversation
-        message = Message.create(MessageSource.USER, content)
-        self._add_message(message)
-        asyncio.create_task(self._write_transcript(message))
-
-        # Start AI response
-        task = asyncio.create_task(self._start_ai())
-        self._current_tasks.append(task)
-
-        def task_done_callback(task):
-            try:
-                self._current_tasks.remove(task)
-            except ValueError:
-                self._logger.debug("Task already removed")
-
-        task.add_done_callback(task_done_callback)
+        # Submit the message to the AIConversation instance
+        asyncio.create_task(self._ai_conversation.submit_message(content))
 
     def get_conversation_history(self) -> ConversationHistory:
         """Get the conversation history object."""
-        return self._conversation
+        return self._ai_conversation.get_conversation_history()
 
     def create_state_metadata(self) -> Dict[str, Any]:
         """
@@ -1076,7 +904,7 @@ class ConversationWidget(QWidget):
         metadata['cursor'] = self._get_cursor_position()
 
         # Store current settings
-        settings = self.get_settings()
+        settings = self._ai_conversation.get_settings()
         metadata["settings"] = {
             "model": settings.model,
             "temperature": settings.temperature,
@@ -1107,7 +935,7 @@ class ConversationWidget(QWidget):
             settings = AIConversationSettings(
                 model=metadata["settings"].get("model"),
                 temperature=metadata["settings"].get("temperature"),
-                reasoning=metadata["settings"].get("reasoning", None)
+                reasoning=metadata["settings"].get("reasoning", ReasoningCapability.NO_REASONING)
             )
             self.update_conversation_settings(settings)
 
@@ -1153,7 +981,7 @@ class ConversationWidget(QWidget):
         Returns:
             Dictionary with token count information
         """
-        return self._conversation.get_token_counts()
+        return self._ai_conversation.get_token_counts()
 
     def get_selected_text(self) -> str:
         """
