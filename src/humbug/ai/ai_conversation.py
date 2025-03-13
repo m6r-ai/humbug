@@ -116,7 +116,7 @@ class AIConversation:
             try:
                 callback(*args, **kwargs)
             except Exception as e:
-                self._logger.error(f"Error in callback for {event}: {e}")
+                self._logger.error("Error in callback for %s: %s", event, e)
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend.
@@ -167,7 +167,7 @@ class AIConversation:
         try:
             await self._transcript_handler.write([message.to_transcript_dict()])
         except AITranscriptError as e:
-            self._logger.error(f"Failed to write to transcript: {e}")
+            self._logger.exception("Failed to write to transcript")
             self._trigger_event(AIConversationEvent.TRANSCRIPT_ERROR, str(e))
 
     def load_message_history(self, messages: List[AIMessage]) -> None:
@@ -327,7 +327,7 @@ class AIConversation:
 
         except Exception as e:
             self._logger.exception(
-                f"Error processing AI response with model {settings.model}: {str(e)}"
+                "Error processing AI response with model %s", settings.model
             )
             await self._update_streaming_response(
                 reasoning="",
@@ -352,7 +352,7 @@ class AIConversation:
                     await stream.aclose()
                 except Exception as e:
                     # Log but don't propagate generator cleanup errors
-                    self._logger.debug(f"Error during generator cleanup: {str(e)}")
+                    self._logger.debug("Error during generator cleanup: %s", e)
 
     async def _update_streaming_response(
         self,
@@ -415,7 +415,7 @@ class AIConversation:
             if error.code == "cancelled":
                 self._logger.debug("AI response cancelled by user")
             else:
-                self._logger.warning(f"AI response error: {error.message}")
+                self._logger.warning("AI response error: %s", error.message)
             return
 
         if not self._is_streaming:
