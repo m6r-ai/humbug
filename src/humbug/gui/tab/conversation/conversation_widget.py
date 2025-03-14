@@ -86,7 +86,8 @@ class ConversationWidget(QWidget):
         conversation_id: str,
         path: str,
         timestamp: datetime,
-        parent: Optional[QWidget] = None
+        parent: Optional[QWidget] = None,
+        existing_ai_conversation: Optional[AIConversation] = None
     ) -> None:
         """
         Initialize the conversation widget.
@@ -96,6 +97,7 @@ class ConversationWidget(QWidget):
             path: Full path to transcript file
             timestamp: ISO format timestamp for the conversation
             parent: Optional parent widget
+            existing_ai_conversation: Optional existing AIConversation object to use
         """
         super().__init__(parent)
         self._logger = logging.getLogger("ConversationWidget")
@@ -113,11 +115,14 @@ class ConversationWidget(QWidget):
 
         self._mindspace_manager = MindspaceManager()
 
-        # Create AIConversation instance for handling backend communication
-        self._ai_conversation = AIConversation(
-            conversation_id,
-            self._user_manager.get_ai_backends()
-        )
+        # Create or reuse AIConversation instance for handling backend communication
+        if existing_ai_conversation:
+            self._ai_conversation = existing_ai_conversation
+        else:
+            self._ai_conversation = AIConversation(
+                conversation_id,
+                self._user_manager.get_ai_backends()
+            )
 
         self._last_submitted_message = None
 
@@ -216,6 +221,19 @@ class ConversationWidget(QWidget):
         self._event_filter = ConversationWidgetEventFilter(self)
         self._event_filter.widget_activated.connect(self.activated)
 
+        # Update streaming state if the AI conversation is already streaming
+        self._is_streaming = self._ai_conversation.is_streaming
+        self._input.set_streaming(self._is_streaming)
+
+    def get_ai_conversation(self) -> AIConversation:
+        """
+        Get the AIConversation object used by this widget.
+
+        Returns:
+            The AIConversation object
+        """
+        return self._ai_conversation
+
     async def _add_message(self, message: AIMessage) -> None:
         """
         Add a new message to the conversation view.
@@ -237,6 +255,24 @@ class ConversationWidget(QWidget):
         self._messages.append(msg_widget)
 
         self._install_activation_tracking(msg_widget)
+
+    def _unregister_ai_conversation_callbacks(self) -> None:
+        """Unregister all callbacks from the AIConversation object."""
+        self._ai_conversation.unregister_callback(
+            AIConversationEvent.ERROR, self._on_request_error
+        )
+        self._ai_conversation.unregister_callback(
+            AIConversationEvent.MESSAGE_ADDED, self._on_message_added
+        )
+        self._ai_conversation.unregister_callback(
+            AIConversationEvent.MESSAGE_UPDATED, self._on_message_updated
+        )
+        self._ai_conversation.unregister_callback(
+            AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
+        )
+        self._ai_conversation.unregister_callback(
+            AIConversationEvent.COMPLETED, self._on_request_completed
+        )
 
     def _register_ai_conversation_callbacks(self) -> None:
         """Register callbacks for AIConversation events."""
@@ -324,7 +360,6 @@ class ConversationWidget(QWidget):
             message: The message that was completed
         """
         await self._update_message(message)
-        print(f"message completed {message}")
         await self._write_transcript(message)
 
     async def _on_request_completed(self) -> None:
@@ -913,6 +948,10 @@ class ConversationWidget(QWidget):
             "reasoning": settings.reasoning
         }
 
+        # Flag that this metadata contains a reference to an AIConversation object
+        # This is just a marker - the actual object will be stored separately
+        metadata["has_ai_conversation_reference"] = True
+
         return metadata
 
     def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
@@ -932,8 +971,9 @@ class ConversationWidget(QWidget):
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])
 
-        # Restore settings if specified
-        if "settings" in metadata:
+        # Skip restoring settings if we're reusing an AIConversation
+        # since the settings are already in the AIConversation
+        if "settings" in metadata and not metadata.get("has_ai_conversation_reference", False):
             settings = AIConversationSettings(
                 model=metadata["settings"].get("model"),
                 temperature=metadata["settings"].get("temperature"),

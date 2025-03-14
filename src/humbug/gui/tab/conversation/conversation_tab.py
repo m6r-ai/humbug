@@ -140,6 +140,15 @@ class ConversationTab(TabBase):
 
         # Store command for both persistent and temporary state
         if temp_state:
+            # Extract AIConversation for temporary state
+            ai_conversation = self._conversation_widget.get_ai_conversation()
+
+            # Unregister callbacks from the current widget
+            self._conversation_widget._unregister_ai_conversation_callbacks()
+
+            # Store AIConversation reference in metadata
+            metadata_state["ai_conversation_ref"] = ai_conversation
+
             # Get widget-specific metadata
             metadata_state.update(self._conversation_widget.create_state_metadata())
 
@@ -196,7 +205,62 @@ class ConversationTab(TabBase):
         if not state.timestamp:
             raise ConversationError("Conversation tab requires timestamp")
 
-        # Create new tab instance
+        # Check if we have an AIConversation reference to reuse in metadata
+        existing_ai_conversation = state.metadata.get("ai_conversation_ref") if state.metadata else None
+
+        # Create new tab instance with or without the existing AIConversation
+        if existing_ai_conversation:
+            # We need to create a basic tab first
+            tab = cls(state.tab_id, state.path, state.timestamp, parent)
+
+            # Then replace its ConversationWidget with one that uses our existing AIConversation
+            old_widget = tab._conversation_widget
+
+            # Create new conversation widget with the existing AIConversation
+            new_widget = ConversationWidget(
+                state.tab_id,
+                state.path,
+                state.timestamp,
+                tab,
+                existing_ai_conversation=existing_ai_conversation
+            )
+
+            # Set up signals for the new widget
+            new_widget.forkRequested.connect(tab.forkRequested)
+            new_widget.status_updated.connect(tab.update_status)
+            new_widget.bookmarkNavigationRequested.connect(tab.bookmarkNavigationRequested)
+
+            # Install activation tracking
+            tab._install_activation_tracking(new_widget)
+            new_widget.activated.connect(tab.activated)
+
+            # Replace the widget in the layout
+            layout = tab.layout()
+            layout.replaceWidget(old_widget, new_widget)
+            old_widget.deleteLater()
+            tab._conversation_widget = new_widget
+
+            # Load messages from existing AIConversation history
+            messages = existing_ai_conversation.get_conversation_history().get_messages()
+            loop = asyncio.get_event_loop()
+            for message in messages:
+                loop.create_task(tab._conversation_widget._add_message(message))
+
+            # Create a copy of the metadata without the AIConversation reference
+            metadata_copy = state.metadata.copy()
+            if "ai_conversation_ref" in metadata_copy:
+                del metadata_copy["ai_conversation_ref"]
+
+            # Restore widget-specific state from the metadata copy
+            if metadata_copy:
+                tab._conversation_widget.restore_from_metadata(metadata_copy)
+
+            # Update display with final state
+            tab.update_status()
+
+            return tab
+
+        # Standard restoration without AIConversation reuse
         tab = cls(state.tab_id, state.path, state.timestamp, parent)
 
         # Load conversation from transcript
