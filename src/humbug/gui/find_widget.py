@@ -80,17 +80,17 @@ class FindWidget(QWidget):
 
         prev_icon = "arrow-left" if self.layoutDirection() == Qt.LeftToRight else "arrow-right"
         self._prev_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path(prev_icon), 16
+            self._style_manager.get_icon_path(prev_icon), 15
         )))
         next_icon = "arrow-right" if self.layoutDirection() == Qt.LeftToRight else "arrow-left"
         self._next_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path(next_icon), 16
+            self._style_manager.get_icon_path(next_icon), 15
         )))
         self._close_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path("close"), 16
+            self._style_manager.get_icon_path("close"), 15
         )))
 
-        icon_size = QSize(16 * factor, 16 * factor)
+        icon_size = QSize(15 * factor, 15 * factor)
         self._prev_button.setIconSize(icon_size)
         self._next_button.setIconSize(icon_size)
         self._close_button.setIconSize(icon_size)

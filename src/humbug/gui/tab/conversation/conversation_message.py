@@ -369,7 +369,6 @@ class ConversationMessage(QFrame):
         self._role_label.setFont(font)
         self._role_label.setStyleSheet(f"""
             QLabel {{
-                font-weight: bold;
                 color: {label_color};
                 margin: 0;
                 padding: 0;
@@ -381,7 +380,6 @@ class ConversationMessage(QFrame):
         self._timestamp_label.setFont(font)
         self._timestamp_label.setStyleSheet(f"""
             QLabel {{
-                font-weight: normal;
                 color: {label_color};
                 padding: 0;
                 margin: 0;

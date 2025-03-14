@@ -324,6 +324,7 @@ class ConversationWidget(QWidget):
             message: The message that was completed
         """
         await self._update_message(message)
+        print(f"message completed {message}")
         await self._write_transcript(message)
 
     async def _on_request_completed(self) -> None:

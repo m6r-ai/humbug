@@ -415,7 +415,6 @@ class ConversationMessageSection(QFrame):
             self._language_header.setFont(font)
             self._language_header.setStyleSheet(f"""
                 QLabel {{
-                    font-weight: bold;
                     color: {label_color};
                     background-color: {background_color};
                     margin: 0;
@@ -439,17 +438,17 @@ class ConversationMessageSection(QFrame):
         """
 
         if self._copy_button:
-            icon_size = QSize(16 * self._style_manager.zoom_factor, 16 * self._style_manager.zoom_factor)
+            icon_size = QSize(16 * self._style_manager.zoom_factor, 14 * self._style_manager.zoom_factor)
             self._copy_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("copy"), 16
+                self._style_manager.get_icon_path("copy"), 14
             )))
             self._copy_button.setIconSize(icon_size)
             self._copy_button.setStyleSheet(button_style)
 
         if self._save_as_button:
-            icon_size = QSize(16 * self._style_manager.zoom_factor, 16 * self._style_manager.zoom_factor)
+            icon_size = QSize(16 * self._style_manager.zoom_factor, 14 * self._style_manager.zoom_factor)
             self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("save"), 16
+                self._style_manager.get_icon_path("save"), 14
             )))
             self._save_as_button.setIconSize(icon_size)
             self._save_as_button.setStyleSheet(button_style)

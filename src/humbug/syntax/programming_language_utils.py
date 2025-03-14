@@ -116,7 +116,7 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.SCHEME: "Scheme",
         ProgrammingLanguage.SWIFT: "Swift",
         ProgrammingLanguage.TYPESCRIPT: "TypeScript",
-        ProgrammingLanguage.TEXT: "Plain Text",
+        ProgrammingLanguage.TEXT: "None",
         ProgrammingLanguage.UNKNOWN: "Unknown"
     }
 

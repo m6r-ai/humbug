@@ -69,7 +69,6 @@ class ConversationInput(ConversationMessage):
         # WARNING: This needs to stay in sync with ConversationMessage
         self._role_label.setStyleSheet(f"""
             QLabel {{
-                font-weight: bold;
                 color: {self._style_manager.get_color_str(colour)};
                 margin: 0;
                 padding: 0;
