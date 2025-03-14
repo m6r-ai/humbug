@@ -97,17 +97,12 @@ class AIConversation:
             *args: Arguments to pass to callbacks
             **kwargs: Keyword arguments to pass to callbacks
         """
-        tasks = []
         for callback in self._callbacks[event]:
             try:
-                result = callback(*args, **kwargs)
-                if asyncio.iscoroutine(result):
-                    tasks.append(result)
-            except Exception as e:
-                self._logger.error("Error in callback for %s: %s", event, e)
+                await callback(*args, **kwargs)
 
-        if tasks:
-            await asyncio.gather(*tasks)
+            except Exception:
+                self._logger.exception("Error in callback for %s", event)
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """

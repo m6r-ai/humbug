@@ -40,7 +40,8 @@ class ConversationTab(TabBase):
         tab_id: str,
         path: str,
         timestamp: datetime,
-        parent: Optional[QWidget] = None
+        parent: Optional[QWidget] = None,
+        use_existing_ai_conversation: bool = False
     ) -> None:
         """
         Initialize the unified conversation tab.
@@ -72,7 +73,7 @@ class ConversationTab(TabBase):
 
         # Create conversation widget
         self._conversation_widget = ConversationWidget(
-            tab_id, path, timestamp, self
+            tab_id, path, timestamp, self, use_existing_ai_conversation
         )
         self._conversation_widget.forkRequested.connect(self.forkRequested)
         self._conversation_widget.status_updated.connect(self.update_status)
@@ -125,7 +126,7 @@ class ConversationTab(TabBase):
             raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
         # Load messages into the new tab
-        forked_tab._conversation_widget.load_message_history(messages)
+        forked_tab._conversation_widget.load_message_history(messages, False)
 
         return forked_tab
 
@@ -136,17 +137,20 @@ class ConversationTab(TabBase):
 
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""
-        metadata_state = {}
+        metadata = {}
 
         # Get widget-specific metadata
-        metadata_state.update(self._conversation_widget.create_state_metadata(temp_state))
+        metadata.update(self._conversation_widget.create_state_metadata(temp_state))
+
+        if temp_state:
+            metadata['is_ephemeral'] = True
 
         return TabState(
             type=TabType.CONVERSATION,
             tab_id=self._tab_id,
             path=self._path,
             timestamp=self._timestamp,
-            metadata=metadata_state
+            metadata=metadata
         )
 
     @classmethod
@@ -174,7 +178,7 @@ class ConversationTab(TabBase):
 
             # Create conversation tab
             conversation_tab = cls(conversation_id, path, timestamp, parent)
-            conversation_tab._conversation_widget.load_message_history(transcript_data.messages)
+            conversation_tab._conversation_widget.load_message_history(transcript_data.messages, False)
 
             return conversation_tab
 
@@ -190,63 +194,11 @@ class ConversationTab(TabBase):
     @classmethod
     def restore_from_state(cls, state: TabState, parent=None) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
-        if state.type != TabType.CONVERSATION:
-            raise ConversationError(f"Invalid tab type for ConversationTab: {state.type}")
-
         if not state.timestamp:
             raise ConversationError("Conversation tab requires timestamp")
 
-        # Check if we have an AIConversation reference to reuse in metadata
-        existing_ai_conversation = state.metadata.get("ai_conversation_ref") if state.metadata else None
-
-        # Create new tab instance with or without the existing AIConversation
-        if existing_ai_conversation:
-            # We need to create a basic tab first
-            tab = cls(state.tab_id, state.path, state.timestamp, parent)
-
-            # Then replace its ConversationWidget with one that uses our existing AIConversation
-            old_widget = tab._conversation_widget
-
-            # Create new conversation widget with the existing AIConversation
-            new_widget = ConversationWidget(
-                state.tab_id,
-                state.path,
-                state.timestamp,
-                tab,
-                existing_ai_conversation=existing_ai_conversation
-            )
-
-            # Set up signals for the new widget
-            new_widget.forkRequested.connect(tab.forkRequested)
-            new_widget.status_updated.connect(tab.update_status)
-            new_widget.bookmarkNavigationRequested.connect(tab.bookmarkNavigationRequested)
-
-            # Install activation tracking
-            tab._install_activation_tracking(new_widget)
-            new_widget.activated.connect(tab.activated)
-
-            # Replace the widget in the layout
-            layout = tab.layout()
-            layout.replaceWidget(old_widget, new_widget)
-            old_widget.deleteLater()
-            tab._conversation_widget = new_widget
-
-            # Load messages from existing AIConversation history
-            messages = existing_ai_conversation.get_conversation_history().get_messages()
-            loop = asyncio.get_event_loop()
-            for message in messages:
-                loop.create_task(tab._conversation_widget._add_message(message))
-
-            if state.metadata:
-                tab._conversation_widget.restore_from_metadata(state.metadata)
-
-            # Update display with final state
-            tab.update_status()
-
-            return tab
-
-        # Standard restoration without AIConversation reuse
-        tab = cls(state.tab_id, state.path, state.timestamp, parent)
+        use_existing_ai_conversation = bool(state.metadata and state.metadata.get('is_ephemeral'))
+        tab = cls(state.tab_id, state.path, state.timestamp, parent, use_existing_ai_conversation)
 
         # Load conversation from transcript
         try:
@@ -258,7 +210,7 @@ class ConversationTab(TabBase):
                 raise ConversationError("Timestamp mismatch in transcript metadata")
 
             # Load the message history
-            tab._conversation_widget.load_message_history(transcript_data.messages)
+            tab._conversation_widget.load_message_history(transcript_data.messages, use_existing_ai_conversation)
 
             # Restore widget-specific state if metadata present
             if state.metadata:

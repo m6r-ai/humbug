@@ -87,7 +87,7 @@ class ConversationWidget(QWidget):
         path: str,
         timestamp: datetime,
         parent: Optional[QWidget] = None,
-        existing_ai_conversation: Optional[AIConversation] = None
+        use_existing_ai_conversation: bool = False
     ) -> None:
         """
         Initialize the conversation widget.
@@ -97,7 +97,7 @@ class ConversationWidget(QWidget):
             path: Full path to transcript file
             timestamp: ISO format timestamp for the conversation
             parent: Optional parent widget
-            existing_ai_conversation: Optional existing AIConversation object to use
+            use_existing_ai_conversation: Will we use an existing AI conversation?
         """
         super().__init__(parent)
         self._logger = logging.getLogger("ConversationWidget")
@@ -115,19 +115,17 @@ class ConversationWidget(QWidget):
 
         self._mindspace_manager = MindspaceManager()
 
-        # Create or reuse AIConversation instance for handling backend communication
-        if existing_ai_conversation:
-            self._ai_conversation = existing_ai_conversation
-        else:
+        self._ai_conversation = None
+        if not use_existing_ai_conversation:
             self._ai_conversation = AIConversation(
                 conversation_id,
                 self._user_manager.get_ai_backends()
             )
 
-        self._last_submitted_message = None
+            # Register callbacks for AIConversation events
+            self._register_ai_conversation_callbacks()
 
-        # Register callbacks for AIConversation events
-        self._register_ai_conversation_callbacks()
+        self._last_submitted_message = None
 
         # Widget tracking
         self._messages: List[ConversationMessage] = []
@@ -220,10 +218,6 @@ class ConversationWidget(QWidget):
         # Set up activation tracking
         self._event_filter = ConversationWidgetEventFilter(self)
         self._event_filter.widget_activated.connect(self.activated)
-
-        # Update streaming state if the AI conversation is already streaming
-        self._is_streaming = self._ai_conversation.is_streaming
-        self._input.set_streaming(self._is_streaming)
 
     async def _add_message(self, message: AIMessage) -> None:
         """
@@ -651,35 +645,37 @@ class ConversationWidget(QWidget):
         """Set initial focus to input area."""
         self._input.setFocus()
 
-    def load_message_history(self, messages: List[AIMessage]):
+    def load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool):
         """
         Load existing message history from transcript.
 
         Args:
             messages: List of AIMessage objects to load
+            reuse_ai_conversation: True if we are reusing an existing AI conversation
         """
         # Establish a baseline for conversation settings
-        default_settings = AIConversationSettings(
-            model=self._mindspace_manager.settings.model,
-            temperature=self._mindspace_manager.settings.temperature
-        )
-        self._ai_conversation.update_conversation_settings(default_settings)
+        if not reuse_ai_conversation:
+            default_settings = AIConversationSettings(
+                model=self._mindspace_manager.settings.model,
+                temperature=self._mindspace_manager.settings.temperature
+            )
+            self._ai_conversation.update_conversation_settings(default_settings)
 
-        # Load messages into AIConversation
-        self._ai_conversation.load_message_history(messages)
+            # Load messages into AIConversation
+            self._ai_conversation.load_message_history(messages)
 
         # Add messages to this widget.
         loop = asyncio.get_event_loop()
         for message in messages:
             loop.create_task(self._add_message(message))
 
-        # Update display with final state
-        self.status_updated.emit()
+        # If we have everything loaded we can update the display with final state
+        if not reuse_ai_conversation:
+            self.status_updated.emit()
 
         # Ensure we're scrolled to the end
         self._auto_scroll = True
         self._scroll_to_bottom()
-
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
@@ -984,15 +980,26 @@ class ConversationWidget(QWidget):
                     )
                     msg_widget.set_bookmarked(True)
 
-        # Skip restoring settings if we're reusing an AIConversation
-        # since the settings are already in the AIConversation
-        if "settings" in metadata and not metadata.get("has_ai_conversation_reference", False):
-            settings = AIConversationSettings(
-                model=metadata["settings"].get("model"),
-                temperature=metadata["settings"].get("temperature"),
-                reasoning=ReasoningCapability(metadata["settings"].get("reasoning", ReasoningCapability.NO_REASONING.value))
-            )
-            self.update_conversation_settings(settings)
+        # If we have a save conversation reference then we're going to take that over!
+        if "ai_conversation_ref" in metadata:
+            self._ai_conversation = metadata["ai_conversation_ref"]
+            self._register_ai_conversation_callbacks()
+
+            # Update streaming state if the AI conversation is already streaming
+            self._is_streaming = self._ai_conversation.is_streaming
+            self._input.set_streaming(self._is_streaming)
+        else:
+            # Restore settings
+            if "settings" in metadata:
+                settings = AIConversationSettings(
+                    model=metadata["settings"].get("model"),
+                    temperature=metadata["settings"].get("temperature"),
+                    reasoning=ReasoningCapability(metadata["settings"].get("reasoning", ReasoningCapability.NO_REASONING.value))
+                )
+                self.update_conversation_settings(settings)
+
+        # Update our status
+        self.status_updated.emit()
 
     def _set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position in input area.
