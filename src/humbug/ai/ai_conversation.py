@@ -365,6 +365,8 @@ class AIConversation:
 
         # Is our message an AI response or is it the AI reasoning?
         if content:
+            message = None
+
             # We're handling a response. Is this the first time we're seeing it?
             if not self._current_ai_message:
                 # If we previously had reasoning from the AI then close that out
@@ -403,6 +405,7 @@ class AIConversation:
 
             if usage:
                 self._is_streaming = False
+                await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
                 await self._trigger_event(AIConversationEvent.COMPLETED)
                 self._current_reasoning_message = None
                 self._current_ai_message = None
