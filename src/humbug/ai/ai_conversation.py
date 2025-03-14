@@ -10,31 +10,17 @@ from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_response import AIError
-from humbug.ai.ai_transcript_error import AITranscriptError
-from humbug.ai.ai_transcript_handler import AITranscriptHandler
 from humbug.ai.ai_usage import AIUsage
 
 
 class AIConversationEvent(Enum):
     """Events that can be emitted by the AIConversation class."""
+    ERROR = auto()              # When an error occurs during request processing
+    COMPLETED = auto()          # When a response is fully completed
 
-    # AI response events
-    REASONING_UPDATED = auto()  # When reasoning text is updated
-    CONTENT_UPDATED = auto()    # When content is updated
-    RESPONSE_ERROR = auto()     # When an error occurs during response
-    RESPONSE_COMPLETED = auto() # When a response is fully completed
-
-    # State change events
-    STREAMING_STARTED = auto()  # When streaming begins
-    STREAMING_STOPPED = auto()  # When streaming stops
-
-    # Message events
     MESSAGE_ADDED = auto()      # When a new message is added to history
     MESSAGE_UPDATED = auto()    # When an existing message is updated
-
-    # Cancellation and errors
-    REQUEST_CANCELLED = auto()  # When a request is cancelled
-    TRANSCRIPT_ERROR = auto()   # When there's an error writing to transcript
+    MESSAGE_COMPLETED = auto()  # When an existing message has been completed
 
 
 class AIConversation:
@@ -47,19 +33,16 @@ class AIConversation:
     def __init__(
         self,
         conversation_id: str,
-        transcript_handler: AITranscriptHandler,
         ai_backends: Dict[str, Any]
     ):
         """Initialize the AIConversation.
 
         Args:
             conversation_id: Unique identifier for this conversation
-            transcript_handler: Handler for writing conversation to files
             ai_backends: Dictionary of available AI backends
         """
         self._logger = logging.getLogger("AIConversation")
         self._conversation_id = conversation_id
-        self._transcript_handler = transcript_handler
         self._ai_backends = ai_backends
 
         self._settings = AIConversationSettings()
@@ -68,7 +51,6 @@ class AIConversation:
         self._current_ai_message = None
         self._current_reasoning_message = None
         self._is_streaming = False
-        self._last_submitted_message = None
 
         # Callbacks for events
         self._callbacks: Dict[AIConversationEvent, Set[Callable]] = {
@@ -86,7 +68,8 @@ class AIConversation:
         return self._is_streaming
 
     def register_callback(self, event: AIConversationEvent, callback: Callable) -> None:
-        """Register a callback for a specific event.
+        """
+        Register a callback for a specific event.
 
         Args:
             event: The event to register for
@@ -95,7 +78,8 @@ class AIConversation:
         self._callbacks[event].add(callback)
 
     def unregister_callback(self, event: AIConversationEvent, callback: Callable) -> None:
-        """Unregister a callback for a specific event.
+        """
+        Unregister a callback for a specific event.
 
         Args:
             event: The event to unregister from
@@ -104,22 +88,30 @@ class AIConversation:
         if callback in self._callbacks[event]:
             self._callbacks[event].remove(callback)
 
-    def _trigger_event(self, event: AIConversationEvent, *args, **kwargs) -> None:
-        """Trigger all callbacks registered for an event.
+    async def _trigger_event(self, event: AIConversationEvent, *args, **kwargs) -> None:
+        """
+        Trigger all callbacks registered for an event.
 
         Args:
             event: The event to trigger
             *args: Arguments to pass to callbacks
             **kwargs: Keyword arguments to pass to callbacks
         """
+        tasks = []
         for callback in self._callbacks[event]:
             try:
-                callback(*args, **kwargs)
+                result = callback(*args, **kwargs)
+                if asyncio.iscoroutine(result):
+                    tasks.append(result)
             except Exception as e:
                 self._logger.error("Error in callback for %s: %s", event, e)
 
+        if tasks:
+            await asyncio.gather(*tasks)
+
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
-        """Update conversation settings and associated backend.
+        """
+        Update conversation settings and associated backend.
 
         Args:
             new_settings: New settings to apply
@@ -131,7 +123,8 @@ class AIConversation:
             backend.update_conversation_settings(self._conversation_id, new_settings)
 
     def get_settings(self) -> AIConversationSettings:
-        """Get current conversation settings.
+        """
+        Get current conversation settings.
 
         Returns:
             Current conversation settings
@@ -143,7 +136,8 @@ class AIConversation:
         )
 
     def get_conversation_history(self) -> AIConversationHistory:
-        """Get the conversation history object.
+        """
+        Get the conversation history object.
 
         Returns:
             The conversation history object
@@ -151,27 +145,17 @@ class AIConversation:
         return self._conversation
 
     def get_token_counts(self) -> dict:
-        """Get the current token counts for status display.
+        """
+        Get the current token counts for status display.
 
         Returns:
             Dictionary with token count information
         """
         return self._conversation.get_token_counts()
 
-    async def _write_transcript(self, message: AIMessage) -> None:
-        """Write messages to transcript file.
-
-        Args:
-            message: AIMessage to write to transcript
-        """
-        try:
-            await self._transcript_handler.write([message.to_transcript_dict()])
-        except AITranscriptError as e:
-            self._logger.exception("Failed to write to transcript")
-            self._trigger_event(AIConversationEvent.TRANSCRIPT_ERROR, str(e))
-
     def load_message_history(self, messages: List[AIMessage]) -> None:
-        """Load existing message history from transcript.
+        """
+        Load existing message history.
 
         Args:
             messages: List of AIMessage objects to load
@@ -179,7 +163,6 @@ class AIConversation:
         # Iterate over the messages
         for message in messages:
             self._conversation.add_message(message)
-            self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
 
             # Update settings if AI message
             if message.source == AIMessageSource.AI:
@@ -194,34 +177,15 @@ class AIConversation:
                         temperature=message.temperature
                     ))
 
-    def _sanitize_input(self, text: str) -> str:
-        """Strip control characters from input text, preserving newlines and tabs.
+    async def submit_message(self, message: AIMessage) -> None:
+        """
+        Submit a new user message and start AI response.
 
         Args:
-            text: Text to sanitize
-
-        Returns:
-            Sanitized text
+            message: User message
         """
-        return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
-
-    async def submit_message(self, content: str) -> None:
-        """Submit a new user message and start AI response.
-
-        Args:
-            content: User message content
-        """
-        if not content.strip():
-            return
-
-        content = self._sanitize_input(content.strip())
-        self._last_submitted_message = content
-
         # Add the user message to the conversation
-        message = AIMessage.create(AIMessageSource.USER, content)
         self._conversation.add_message(message)
-        self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
-        await self._write_transcript(message)
 
         # Start AI response
         task = asyncio.create_task(self._start_ai())
@@ -255,15 +219,8 @@ class AIConversation:
                     {"code": "backend_error", "message": error_msg}
                 )
                 self._conversation.add_message(error_message)
-                self._trigger_event(AIConversationEvent.MESSAGE_ADDED, error_message)
-                await self._write_transcript(error_message)
-
-                if self._last_submitted_message:
-                    self._trigger_event(AIConversationEvent.REQUEST_CANCELLED, self._last_submitted_message)
-                    self._last_submitted_message = None
-
+                await self._trigger_event(AIConversationEvent.ERROR, True, error_message)
                 self._is_streaming = False
-                self._trigger_event(AIConversationEvent.STREAMING_STOPPED)
                 return
 
             stream = backend.stream_message(
@@ -278,12 +235,8 @@ class AIConversation:
                     usage=response.usage,
                     error=response.error
                 )
-
                 if response.error:
                     if response.error.retries_exhausted:
-                        if self._last_submitted_message:
-                            self._trigger_event(AIConversationEvent.REQUEST_CANCELLED, self._last_submitted_message)
-                            self._last_submitted_message = None
                         return
 
                     # We're retrying - continue to the next attempt
@@ -303,9 +256,6 @@ class AIConversation:
                         details={"type": "CancelledError"}
                     )
                 )
-                if self._last_submitted_message:
-                    self._trigger_event(AIConversationEvent.REQUEST_CANCELLED, self._last_submitted_message)
-                    self._last_submitted_message = None
                 return
 
         except asyncio.CancelledError:
@@ -320,9 +270,6 @@ class AIConversation:
                     details={"type": "CancelledError"}
                 )
             )
-            if self._last_submitted_message:
-                self._trigger_event(AIConversationEvent.REQUEST_CANCELLED, self._last_submitted_message)
-                self._last_submitted_message = None
             return
 
         except Exception as e:
@@ -339,9 +286,7 @@ class AIConversation:
                     details={"type": type(e).__name__}
                 )
             )
-            if self._last_submitted_message:
-                self._trigger_event(AIConversationEvent.REQUEST_CANCELLED, self._last_submitted_message)
-                self._last_submitted_message = None
+            return
 
         finally:
             self._logger.debug("=== Finished AI response ===")
@@ -361,7 +306,8 @@ class AIConversation:
         usage: Optional[AIUsage] = None,
         error: Optional[AIError] = None
     ) -> None:
-        """Update the current AI response in the conversation.
+        """
+        Update the current AI response in the conversation.
 
         Args:
             reasoning: AI reasoning text
@@ -373,7 +319,6 @@ class AIConversation:
             # Only stop streaming if retries are exhausted
             if error.retries_exhausted:
                 self._is_streaming = False
-                self._trigger_event(AIConversationEvent.STREAMING_STOPPED)
 
                 # For cancellation, preserve the partial response first
                 if self._current_reasoning_message:
@@ -383,8 +328,7 @@ class AIConversation:
                         completed=False
                     )
                     if message:
-                        await self._write_transcript(message)
-                        self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
+                        await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
 
                     self._current_reasoning_message = None
 
@@ -395,8 +339,7 @@ class AIConversation:
                         completed=False
                     )
                     if message:
-                        await self._write_transcript(message)
-                        self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
+                        await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
 
                     self._current_ai_message = None
 
@@ -407,20 +350,18 @@ class AIConversation:
                 error={"code": error.code, "message": error.message, "details": error.details}
             )
             self._conversation.add_message(error_message)
-            self._trigger_event(AIConversationEvent.MESSAGE_ADDED, error_message)
-            self._trigger_event(AIConversationEvent.RESPONSE_ERROR, error)
-            await self._write_transcript(error_message)
+            await self._trigger_event(AIConversationEvent.ERROR, error.retries_exhausted, error_message)
 
             # For cancellation, don't log as warning since it's user-initiated
             if error.code == "cancelled":
                 self._logger.debug("AI response cancelled by user")
             else:
                 self._logger.warning("AI response error: %s", error.message)
+
             return
 
         if not self._is_streaming:
             self._is_streaming = True
-            self._trigger_event(AIConversationEvent.STREAMING_STARTED)
 
         # Is our message an AI response or is it the AI reasoning?
         if content:
@@ -434,9 +375,7 @@ class AIConversation:
                         usage=usage,
                         completed=True
                     )
-
-                    await self._write_transcript(message)
-                    self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
+                    await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
                     self._current_reasoning_message = None
 
                 # Create and add initial AI response message
@@ -446,10 +385,10 @@ class AIConversation:
                     content,
                     model=settings.model,
                     temperature=settings.temperature,
-                    completed=False
+                    completed=(usage is not None)
                 )
                 self._conversation.add_message(message)
-                self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
+                await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
                 self._current_ai_message = message
             else:
                 # Update existing message
@@ -460,15 +399,13 @@ class AIConversation:
                     completed=(usage is not None)
                 )
                 if message:
-                    self._trigger_event(AIConversationEvent.CONTENT_UPDATED, message)
+                    await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
 
             if usage:
                 self._is_streaming = False
-                self._trigger_event(AIConversationEvent.STREAMING_STOPPED)
-                self._trigger_event(AIConversationEvent.RESPONSE_COMPLETED, self._current_ai_message)
+                await self._trigger_event(AIConversationEvent.COMPLETED)
                 self._current_reasoning_message = None
                 self._current_ai_message = None
-                await self._write_transcript(message)
                 return
 
             return
@@ -486,18 +423,19 @@ class AIConversation:
                     completed=False
                 )
                 self._conversation.add_message(message)
-                self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
+                await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
                 self._current_reasoning_message = message
-            else:
-                # Update existing message
-                message = self._conversation.update_message(
-                    self._current_reasoning_message.id,
-                    reasoning,
-                    usage=usage,
-                    completed=False
-                )
-                if message:
-                    self._trigger_event(AIConversationEvent.REASONING_UPDATED, message)
+                return
+
+            # Update existing message
+            message = self._conversation.update_message(
+                self._current_reasoning_message.id,
+                reasoning,
+                usage=usage,
+                completed=False
+            )
+            if message:
+                await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
 
     def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""
