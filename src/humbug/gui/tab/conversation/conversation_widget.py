@@ -225,15 +225,6 @@ class ConversationWidget(QWidget):
         self._is_streaming = self._ai_conversation.is_streaming
         self._input.set_streaming(self._is_streaming)
 
-    def get_ai_conversation(self) -> AIConversation:
-        """
-        Get the AIConversation object used by this widget.
-
-        Returns:
-            The AIConversation object
-        """
-        return self._ai_conversation
-
     async def _add_message(self, message: AIMessage) -> None:
         """
         Add a new message to the conversation view.
@@ -917,7 +908,7 @@ class ConversationWidget(QWidget):
         """Get the conversation history object."""
         return self._ai_conversation.get_conversation_history()
 
-    def create_state_metadata(self) -> Dict[str, Any]:
+    def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
         """
         Create metadata dictionary capturing current widget state.
 
@@ -925,6 +916,10 @@ class ConversationWidget(QWidget):
             Dictionary containing conversation state metadata
         """
         metadata = {}
+
+        # Store current input content
+        metadata["content"] = self._input.to_plain_text()
+        metadata['cursor'] = self._get_cursor_position()
 
         # Store bookmarks
         bookmark_data = []
@@ -934,11 +929,8 @@ class ConversationWidget(QWidget):
                     'index': self._messages.index(message_widget),
                     'scroll_position': data.scroll_position
                 })
-        metadata['bookmarks'] = bookmark_data
 
-        # Store current input content
-        metadata["content"] = self._input.to_plain_text()
-        metadata['cursor'] = self._get_cursor_position()
+        metadata['bookmarks'] = bookmark_data
 
         # Store current settings
         settings = self._ai_conversation.get_settings()
@@ -948,9 +940,14 @@ class ConversationWidget(QWidget):
             "reasoning": settings.reasoning
         }
 
-        # Flag that this metadata contains a reference to an AIConversation object
-        # This is just a marker - the actual object will be stored separately
-        metadata["has_ai_conversation_reference"] = True
+        # If we've been asked for temporary state it means we're going to move this
+        # widget so prep for moving our conversation state directly.
+        if temp_state:
+            # Unregister callbacks from the current widget
+            self._unregister_ai_conversation_callbacks()
+
+            # Store AIConversation reference in metadata
+            metadata["ai_conversation_ref"] = self._ai_conversation
 
         return metadata
 
@@ -971,16 +968,6 @@ class ConversationWidget(QWidget):
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])
 
-        # Skip restoring settings if we're reusing an AIConversation
-        # since the settings are already in the AIConversation
-        if "settings" in metadata and not metadata.get("has_ai_conversation_reference", False):
-            settings = AIConversationSettings(
-                model=metadata["settings"].get("model"),
-                temperature=metadata["settings"].get("temperature"),
-                reasoning=metadata["settings"].get("reasoning", ReasoningCapability.NO_REASONING)
-            )
-            self.update_conversation_settings(settings)
-
         # Restore bookmarks if specified
         if 'bookmarks' in metadata:
             bookmark_data = metadata['bookmarks']
@@ -996,6 +983,16 @@ class ConversationWidget(QWidget):
                         scroll_position=scroll_position
                     )
                     msg_widget.set_bookmarked(True)
+
+        # Skip restoring settings if we're reusing an AIConversation
+        # since the settings are already in the AIConversation
+        if "settings" in metadata and not metadata.get("has_ai_conversation_reference", False):
+            settings = AIConversationSettings(
+                model=metadata["settings"].get("model"),
+                temperature=metadata["settings"].get("temperature"),
+                reasoning=metadata["settings"].get("reasoning", ReasoningCapability.NO_REASONING)
+            )
+            self.update_conversation_settings(settings)
 
     def _set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position in input area.

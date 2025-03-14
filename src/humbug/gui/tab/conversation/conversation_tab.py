@@ -138,19 +138,8 @@ class ConversationTab(TabBase):
         """Get serializable state for mindspace persistence."""
         metadata_state = {}
 
-        # Store command for both persistent and temporary state
-        if temp_state:
-            # Extract AIConversation for temporary state
-            ai_conversation = self._conversation_widget.get_ai_conversation()
-
-            # Unregister callbacks from the current widget
-            self._conversation_widget._unregister_ai_conversation_callbacks()
-
-            # Store AIConversation reference in metadata
-            metadata_state["ai_conversation_ref"] = ai_conversation
-
-            # Get widget-specific metadata
-            metadata_state.update(self._conversation_widget.create_state_metadata())
+        # Get widget-specific metadata
+        metadata_state.update(self._conversation_widget.create_state_metadata(temp_state))
 
         return TabState(
             type=TabType.CONVERSATION,
@@ -191,8 +180,10 @@ class ConversationTab(TabBase):
 
         except ConversationTranscriptFormatError as e:
             raise ConversationError(f"Failed to load conversation transcript: {str(e)}") from e
+
         except ConversationTranscriptIOError as e:
             raise ConversationError(f"Failed to read conversation transcript: {str(e)}") from e
+
         except Exception as e:
             raise ConversationError(f"Failed to create conversation tab: {str(e)}") from e
 
@@ -283,6 +274,7 @@ class ConversationTab(TabBase):
 
         except ValueError as e:
             raise ConversationError(f"Failed to restore conversation tab: {str(e)}") from e
+
         except Exception as e:
             raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
 
