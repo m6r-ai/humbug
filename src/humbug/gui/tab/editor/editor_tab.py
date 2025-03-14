@@ -142,9 +142,6 @@ class EditorTab(TabBase):
     @classmethod
     def restore_from_state(cls, state: TabState, parent=None) -> 'EditorTab':
         """Create and restore an editor tab from serialized state."""
-        if state.type != TabType.EDITOR:
-            raise ValueError(f"Invalid tab type for EditorTab: {state.type}")
-
         # Create new tab instance
         tab = cls(state.tab_id, parent)
 

@@ -323,13 +323,7 @@ class TerminalTab(TabBase):
 
         Returns:
             New TerminalTab instance
-
-        Raises:
-            ValueError: If state has invalid tab type
         """
-        if state.type != TabType.TERMINAL:
-            raise ValueError(f"Invalid tab type for TerminalTab: {state.type}")
-
         command = None
         start_process = True
         if state.metadata:
