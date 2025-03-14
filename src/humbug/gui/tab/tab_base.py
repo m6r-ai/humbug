@@ -87,7 +87,8 @@ class TabBase(QFrame):
             self.modified_state_changed.emit(self._tab_id, modified)
 
     def get_state(self, temp_state: bool) -> TabState:
-        """Get serializable state for mindspace persistence.
+        """
+        Get serializable state for mindspace persistence.
 
         Must be implemented by subclasses to provide their specific state.
 
@@ -102,7 +103,8 @@ class TabBase(QFrame):
 
     @classmethod
     def restore_from_state(cls, state: TabState, parent=None) -> 'TabBase':
-        """Create and restore a tab from serialized state.
+        """
+        Create and restore a tab from serialized state.
 
         Must be implemented by subclasses to handle their specific state.
 
