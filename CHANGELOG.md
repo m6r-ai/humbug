@@ -22,6 +22,8 @@ Bug fixes:
 
 - Resolved a problem where tab close buttons did not render correctly when hovering between tabs.
 - Column swapping did not work correctly with right-to-left layouts.
+- When moving an actively streaming conversation between columns we used to cancel the
+  network activity and lost the AI responses.
 
 ## v0.7 (2025-03-10)
 
