@@ -937,7 +937,7 @@ class ConversationWidget(QWidget):
         metadata["settings"] = {
             "model": settings.model,
             "temperature": settings.temperature,
-            "reasoning": settings.reasoning
+            "reasoning": settings.reasoning.value
         }
 
         # If we've been asked for temporary state it means we're going to move this
@@ -990,7 +990,7 @@ class ConversationWidget(QWidget):
             settings = AIConversationSettings(
                 model=metadata["settings"].get("model"),
                 temperature=metadata["settings"].get("temperature"),
-                reasoning=metadata["settings"].get("reasoning", ReasoningCapability.NO_REASONING)
+                reasoning=ReasoningCapability(metadata["settings"].get("reasoning", ReasoningCapability.NO_REASONING.value))
             )
             self.update_conversation_settings(settings)
 
