@@ -12,14 +12,16 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
-from humbug.ai.ai_transcript_error import AITranscriptFormatError, AITranscriptIOError
-from humbug.ai.ai_transcript_handler import AITranscriptHandler
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_settings_dialog import ConversationSettingsDialog
+from humbug.gui.tab.conversation.conversation_transcript_error import (
+    ConversationTranscriptFormatError, ConversationTranscriptIOError
+)
+from humbug.gui.tab.conversation.conversation_transcript_handler import ConversationTranscriptHandler
 from humbug.gui.tab.conversation.conversation_widget import ConversationWidget
 from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
@@ -117,7 +119,7 @@ class ConversationTab(TabBase):
 
         try:
             # Write history to new transcript file
-            handler = AITranscriptHandler(new_path, timestamp)
+            handler = ConversationTranscriptHandler(new_path, timestamp)
             await handler.write(transcript_messages)
         except Exception as e:
             raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
@@ -166,7 +168,7 @@ class ConversationTab(TabBase):
         """
         try:
             # Read transcript
-            transcript = AITranscriptHandler(path)
+            transcript = ConversationTranscriptHandler(path)
             transcript_data = transcript.read()
 
             conversation_id = os.path.splitext(os.path.basename(path))[0]
@@ -178,9 +180,9 @@ class ConversationTab(TabBase):
 
             return conversation_tab
 
-        except AITranscriptFormatError as e:
+        except ConversationTranscriptFormatError as e:
             raise ConversationError(f"Failed to load conversation transcript: {str(e)}") from e
-        except AITranscriptIOError as e:
+        except ConversationTranscriptIOError as e:
             raise ConversationError(f"Failed to read conversation transcript: {str(e)}") from e
         except Exception as e:
             raise ConversationError(f"Failed to create conversation tab: {str(e)}") from e
@@ -199,7 +201,7 @@ class ConversationTab(TabBase):
 
         # Load conversation from transcript
         try:
-            transcript = AITranscriptHandler(state.path)
+            transcript = ConversationTranscriptHandler(state.path)
             transcript_data = transcript.read()
 
             # Validate timestamp matches state

@@ -17,12 +17,12 @@ from humbug.ai.ai_conversation_history import AIConversationHistory
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
-from humbug.ai.ai_transcript_error import AITranscriptError
-from humbug.ai.ai_transcript_handler import AITranscriptHandler
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_input import ConversationInput
 from humbug.gui.tab.conversation.conversation_message import ConversationMessage
+from humbug.gui.tab.conversation.conversation_transcript_error import ConversationTranscriptError
+from humbug.gui.tab.conversation.conversation_transcript_handler import ConversationTranscriptHandler
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.user.user_manager import UserManager
@@ -109,7 +109,7 @@ class ConversationWidget(QWidget):
         self._current_bookmark_index: Optional[int] = None
 
         # Create transcript handler with provided filename
-        self._transcript_handler = AITranscriptHandler(path, timestamp)
+        self._transcript_handler = ConversationTranscriptHandler(path, timestamp)
 
         self._mindspace_manager = MindspaceManager()
 
@@ -353,7 +353,7 @@ class ConversationWidget(QWidget):
         """
         try:
             await self._transcript_handler.write([message.to_transcript_dict()])
-        except AITranscriptError:
+        except ConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
 
     @property

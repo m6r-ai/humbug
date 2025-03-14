@@ -96,7 +96,6 @@ v0.8 adds several new features:
 - **Conversation features:**
     - Markdown-style code formatting in input and history.
     - Message history with distinct cards for user, AI reasoning, AI response, and system messages.
-    - Conversation transcript logging.
     - Code blocks are broken into sections and it's easy to copy a whole section or save it as a file.
     - Full text search across all parts of a conversation.
     - Bookmarks messages for rapid navigation.

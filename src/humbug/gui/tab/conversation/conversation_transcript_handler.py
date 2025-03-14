@@ -8,19 +8,38 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from humbug.ai.ai_message import AIMessage
-from humbug.ai.ai_transcript_error import AITranscriptFormatError, AITranscriptIOError
-from humbug.ai.float_one_decimal_encoder import FloatOneDecimalEncoder
+from humbug.gui.tab.conversation.conversation_transcript_error import (
+    ConversationTranscriptFormatError, ConversationTranscriptIOError
+)
+
+
+class FloatOneDecimalEncoder(json.JSONEncoder):
+    """JSON encoder that formats floats to one decimal place."""
+    def default(self, o):
+        """
+        Convert object to JSON serializable form.
+
+        Args:
+            o: Object to convert
+
+        Returns:
+            JSON serializable representation
+        """
+        if isinstance(o, float):
+            return round(o, 1)
+
+        return super().default(o)
 
 
 @dataclass
-class AITranscriptData:
+class ConversationTranscriptData:
     """Container for transcript data and metadata."""
     messages: List[AIMessage]
     timestamp: datetime
     version: str
 
 
-class AITranscriptHandler:
+class ConversationTranscriptHandler:
     """Handles reading and writing conversation transcripts."""
 
     def __init__(self, filename: str, timestamp: Optional[datetime] = None):
@@ -36,7 +55,7 @@ class AITranscriptHandler:
         """
         self._filename = filename
         self._timestamp = timestamp
-        self._logger = logging.getLogger("AITranscriptHandler")
+        self._logger = logging.getLogger("ConversationTranscriptHandler")
 
         if not os.path.exists(filename):
             if timestamp is None:
@@ -56,7 +75,7 @@ class AITranscriptHandler:
         Initialize a new transcript file with metadata.
 
         Raises:
-            AITranscriptIOError: If file creation fails
+            ConversationTranscriptIOError: If file creation fails
         """
         metadata = {
             "metadata": {
@@ -70,7 +89,7 @@ class AITranscriptHandler:
             with open(self._filename, 'w', encoding='utf-8') as f:
                 json.dump(metadata, f, indent=2, cls=FloatOneDecimalEncoder)
         except Exception as e:
-            raise AITranscriptIOError(
+            raise ConversationTranscriptIOError(
                 f"Failed to create transcript file: {str(e)}"
             ) from e
 
@@ -82,45 +101,45 @@ class AITranscriptHandler:
             data: Loaded transcript data
 
         Raises:
-            AITranscriptFormatError: If transcript format is invalid
+            ConversationTranscriptFormatError: If transcript format is invalid
         """
         if not isinstance(data, dict):
-            raise AITranscriptFormatError("Root element must be object")
+            raise ConversationTranscriptFormatError("Root element must be object")
 
         if "metadata" not in data or "conversation" not in data:
-            raise AITranscriptFormatError("Missing required fields")
+            raise ConversationTranscriptFormatError("Missing required fields")
 
         metadata = data["metadata"]
         if not isinstance(metadata, dict):
-            raise AITranscriptFormatError("Metadata must be object")
+            raise ConversationTranscriptFormatError("Metadata must be object")
 
         if "version" not in metadata:
-            raise AITranscriptFormatError("Missing version in metadata")
+            raise ConversationTranscriptFormatError("Missing version in metadata")
 
         if "timestamp" not in metadata:
-            raise AITranscriptFormatError("Missing timestamp in metadata")
+            raise ConversationTranscriptFormatError("Missing timestamp in metadata")
 
         if not isinstance(data["conversation"], list):
-            raise AITranscriptFormatError("Conversation must be array")
+            raise ConversationTranscriptFormatError("Conversation must be array")
 
-    def read(self) -> AITranscriptData:
+    def read(self) -> ConversationTranscriptData:
         """
         Read and validate transcript file.
 
         Returns:
-            AITranscriptData containing messages and metadata
+            ConversationTranscriptData containing messages and metadata
 
         Raises:
-            AITranscriptFormatError: If transcript format is invalid
-            AITranscriptIOError: If file operations fail
+            ConversationTranscriptFormatError: If transcript format is invalid
+            ConversationTranscriptIOError: If file operations fail
         """
         try:
             with open(self._filename, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except json.JSONDecodeError as e:
-            raise AITranscriptFormatError(f"Invalid JSON: {str(e)}") from e
+            raise ConversationTranscriptFormatError(f"Invalid JSON: {str(e)}") from e
         except Exception as e:
-            raise AITranscriptIOError(f"Failed to read transcript: {str(e)}") from e
+            raise ConversationTranscriptIOError(f"Failed to read transcript: {str(e)}") from e
 
         self._validate_transcript_data(data)
 
@@ -131,14 +150,14 @@ class AITranscriptHandler:
                 message = AIMessage.from_transcript_dict(msg)
                 messages.append(message)
             except ValueError as e:
-                raise AITranscriptFormatError(f"Invalid message format: {str(e)}") from e
+                raise ConversationTranscriptFormatError(f"Invalid message format: {str(e)}") from e
 
         try:
             timestamp = datetime.fromisoformat(data["metadata"]["timestamp"])
         except ValueError as e:
-            raise AITranscriptFormatError(f"Invalid timestamp format: {str(e)}") from e
+            raise ConversationTranscriptFormatError(f"Invalid timestamp format: {str(e)}") from e
 
-        return AITranscriptData(
+        return ConversationTranscriptData(
             messages=messages,
             timestamp=timestamp,
             version=data["metadata"]["version"]
@@ -152,7 +171,7 @@ class AITranscriptHandler:
             messages: List of message dictionaries to append
 
         Raises:
-            AITranscriptIOError: If file operations fail
+            ConversationTranscriptIOError: If file operations fail
         """
         try:
             # Read current content
@@ -183,7 +202,7 @@ class AITranscriptHandler:
                     str(backup_error)
                 )
 
-            raise AITranscriptIOError(
+            raise ConversationTranscriptIOError(
                 f"Failed to write transcript: {str(e)}",
                 details={"backup_created": os.path.exists(f"{self._filename}.backup")}
             ) from e
