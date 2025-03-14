@@ -237,14 +237,8 @@ class ConversationTab(TabBase):
             for message in messages:
                 loop.create_task(tab._conversation_widget._add_message(message))
 
-            # Create a copy of the metadata without the AIConversation reference
-            metadata_copy = state.metadata.copy()
-            if "ai_conversation_ref" in metadata_copy:
-                del metadata_copy["ai_conversation_ref"]
-
-            # Restore widget-specific state from the metadata copy
-            if metadata_copy:
-                tab._conversation_widget.restore_from_metadata(metadata_copy)
+            if state.metadata:
+                tab._conversation_widget.restore_from_metadata(state.metadata)
 
             # Update display with final state
             tab.update_status()
