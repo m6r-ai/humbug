@@ -584,7 +584,7 @@ class TerminalWidget(QAbstractScrollArea):
         special_map = {
             Qt.Key_Return: b'\r',
             Qt.Key_Enter: b'\r',
-            Qt.Key_Backspace: b'\x7f' if modifiers & Qt.ControlModifier else b'\b',
+            Qt.Key_Backspace: b'\b' if modifiers & Qt.ControlModifier else b'\x7f',
             Qt.Key_Delete: b'\x1b[3~',
             Qt.Key_Insert: b'\x1b[2~',
             Qt.Key_PageUp: b'\x1b[5~',
