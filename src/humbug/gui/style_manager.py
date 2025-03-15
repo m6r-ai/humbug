@@ -736,7 +736,7 @@ class StyleManager(QObject):
 
         # Get system default font
         system_font = QFontDatabase.systemFont(QFontDatabase.GeneralFont)
-        system_size = system_font.pointSize()
+        system_size = system_font.pointSizeF()
 
         # Apply OS-specific adjustments if system detection fails
         if system_size > 0:
@@ -747,9 +747,8 @@ class StyleManager(QObject):
             return 13
 
         if os_type.type() == QOperatingSystemVersion.Windows:
-            # Windows typically uses 9pt as default, but 10 makes things feel more
-            # consistent with the MacOS look.
-            return 10
+            # Windows typically uses 9pt as default
+            return 9
 
         # Linux typically uses 10pt as default
         return 10
@@ -820,42 +819,6 @@ class StyleManager(QObject):
         font_metrics = QFontMetricsF(font)
         space_width = font_metrics.horizontalAdvance('        ') / 8
         return space_width
-
-    def points_to_pixels(self, points: float) -> float:
-        """
-        Convert point size to pixels based on device pixel ratio.
-
-        Args:
-            points: Font size in points
-
-        Returns:
-            Font size in pixels
-        """
-        # Get the primary screen's logical DPI
-        screen = QGuiApplication.primaryScreen()
-        if not screen:
-            return points * 1.333333  # Fallback to standard 96 DPI (72 * 4/3)
-
-        # Convert points to pixels using the screen's logical DPI
-        logical_dpi = screen.logicalDotsPerInchY()
-        return (points * logical_dpi) / 72.0
-
-    def pixels_to_points(self, pixels: float) -> float:
-        """
-        Convert pixel size to points based on device pixel ratio.
-
-        Args:
-            pixels: Size in pixels
-
-        Returns:
-            Size in points
-        """
-        screen = QGuiApplication.primaryScreen()
-        if not screen:
-            return pixels * 0.75  # Fallback to standard 96 DPI (72/96)
-
-        logical_dpi = screen.logicalDotsPerInch()
-        return (pixels * 72.0) / logical_dpi
 
     @property
     def monospace_font_families(self) -> List[str]:
