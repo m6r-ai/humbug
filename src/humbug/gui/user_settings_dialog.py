@@ -6,7 +6,7 @@ such as API keys for different AI backends.
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
@@ -27,7 +27,8 @@ class UserSettingsDialog(QDialog):
     settings_changed = Signal(UserSettings)
 
     def __init__(self, parent=None):
-        """Initialize the user settings dialog.
+        """
+        Initialize the user settings dialog.
 
         Args:
             parent: Parent widget, typically the main window.
@@ -54,17 +55,11 @@ class UserSettingsDialog(QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # API key fields
-        api_keys = [
-            ("ANTHROPIC_API_KEY", strings.anthropic_api_key),
-            ("DEEPSEEK_API_KEY", strings.deepseek_api_key),
-            ("GOOGLE_API_KEY", strings.google_api_key),
-            ("M6R_API_KEY", strings.m6r_api_key),
-            ("MISTRAL_API_KEY", strings.mistral_api_key),
-            ("OPENAI_API_KEY", strings.openai_api_key)
-        ]
+        # Create API key fields using the current language
+        api_key_mapping = self._get_api_key_mapping()
 
-        for key, label_text in api_keys:
+        # API key fields
+        for key, label_text in api_key_mapping:
             key_layout, label, line_edit = self._create_api_key_field(label_text)
             self._api_key_labels[key] = label
             self._api_key_entries[key] = line_edit
@@ -239,7 +234,8 @@ class UserSettingsDialog(QDialog):
         """)
 
     def _create_api_key_field(self, label_text: str) -> tuple[QHBoxLayout, QLabel, QLineEdit]:
-        """Create an API key field with label and text input.
+        """
+        Create an API key field with label and text input.
 
         Args:
             label_text: The label text to display
@@ -262,7 +258,8 @@ class UserSettingsDialog(QDialog):
         return layout, label, line_edit
 
     def _create_language_selector(self, parent) -> tuple[QHBoxLayout, QComboBox]:
-        """Create language selection UI elements.
+        """
+        Create language selection UI elements.
 
         Args:
             parent: Parent widget for the selector
@@ -300,14 +297,39 @@ class UserSettingsDialog(QDialog):
 
         return layout, combo
 
+    def _get_api_key_mapping(self) -> List[Tuple[str, str]]:
+        """
+        Get the API key mapping with the current language strings.
+
+        Returns:
+            List of tuples with (key_name, localized_label_text)
+        """
+        strings = self._language_manager.strings
+        return [
+            ("ANTHROPIC_API_KEY", strings.anthropic_api_key),
+            ("DEEPSEEK_API_KEY", strings.deepseek_api_key),
+            ("GOOGLE_API_KEY", strings.google_api_key),
+            ("M6R_API_KEY", strings.m6r_api_key),
+            ("MISTRAL_API_KEY", strings.mistral_api_key),
+            ("OPENAI_API_KEY", strings.openai_api_key)
+        ]
+
     def _handle_language_changed(self) -> None:
         """Update all dialog texts with current language strings."""
         strings = self._language_manager.strings
-        self.setWindowTitle(strings.settings_dialog_title)
+        self.setWindowTitle(strings.user_settings_dialog_title)
 
         # Update labels
         self._language_label.setText(strings.select_language)
         self._font_size_label.setText(strings.font_size)
+
+        # Update API key labels with current language strings
+        api_key_mapping = self._get_api_key_mapping()
+
+        # Update the labels with new text
+        for key, label_text in api_key_mapping:
+            if key in self._api_key_labels:
+                self._api_key_labels[key].setText(label_text)
 
         # Update buttons
         self.ok_button.setText(strings.ok)
@@ -354,7 +376,8 @@ class UserSettingsDialog(QDialog):
         return settings
 
     def set_settings(self, settings: UserSettings) -> None:
-        """Update dialog with current API key settings.
+        """
+        Update dialog with current API key settings.
 
         Args:
             settings: UserSettings object with current settings
