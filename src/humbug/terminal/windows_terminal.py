@@ -132,7 +132,8 @@ class WindowsTerminal(TerminalBase):
         ]
 
     async def start(self, command: Optional[str] = None) -> Tuple[int, int]:
-        """Start Windows terminal process using ConPTY.
+        """
+        Start Windows terminal process using ConPTY.
 
         Args:
             command: Optional command to run. If None, uses default shell.
@@ -150,11 +151,10 @@ class WindowsTerminal(TerminalBase):
             pipe_out_read = HANDLE()
             pipe_out_write = HANDLE()
 
-            if not windll.kernel32.CreatePipe(byref(pipe_in_read),
-                                            byref(pipe_in_write), None, 0):
+            if not windll.kernel32.CreatePipe(byref(pipe_in_read), byref(pipe_in_write), None, 0):
                 raise OSError("Failed to create input pipe")
-            if not windll.kernel32.CreatePipe(byref(pipe_out_read),
-                                            byref(pipe_out_write), None, 0):
+
+            if not windll.kernel32.CreatePipe(byref(pipe_out_read), byref(pipe_out_write), None, 0):
                 raise OSError("Failed to create output pipe")
 
             # Create ConPTY
