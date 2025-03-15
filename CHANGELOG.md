@@ -24,6 +24,8 @@ Bug fixes:
 - Column swapping did not work correctly with right-to-left layouts.
 - When moving an actively streaming conversation between columns we used to cancel the
   network activity and lost the AI responses.
+- The backspace key was generating the wrong keyboard code which made it buggy on Windows.  It
+  should emit \x7f and not \x08.  Ctrl+Backspace now generates \x08 instead of \x7f.
 
 ## v0.7 (2025-03-10)
 
