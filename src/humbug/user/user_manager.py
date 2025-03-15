@@ -105,16 +105,6 @@ class UserManager(QObject):
             self._settings.save(settings_path)
             self._logger.info("Saved user settings to %s", settings_path)
 
-            # Also update the legacy file for backward compatibility
-            legacy_path = self._get_legacy_api_keys_path()
-            with open(legacy_path, 'w', encoding='utf-8') as f:
-                # For legacy format, save just the API keys directly
-                # without the nested structure
-                legacy_json = self._settings.api_keys.copy()
-                from json import dump
-                dump(legacy_json, f, indent=4)
-            os.chmod(legacy_path, 0o600)
-
         except OSError as e:
             self._logger.error("Failed to save user settings: %s", str(e))
 
