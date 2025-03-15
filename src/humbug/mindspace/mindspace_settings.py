@@ -7,15 +7,15 @@ from humbug.language.language_code import LanguageCode
 
 @dataclass
 class MindspaceSettings:
-    use_soft_tabs: bool = True
-    tab_size: int = 4
-    font_size: float = None  # None means use the default font size
-    auto_backup: bool = False  # Default to off
-    auto_backup_interval: int = 300  # Default 5 minutes in seconds
     language: LanguageCode = LanguageCode.EN
+    font_size: float = None  # None means use the default font size
     model: str = AIConversationSettings.get_default_model({})  # Will be overridden with actual backends
     temperature: float = 0.7  # Default temperature
     reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
+    use_soft_tabs: bool = True
+    tab_size: int = 4
+    auto_backup: bool = False  # Default to off
+    auto_backup_interval: int = 300  # Default 5 minutes in seconds
 
     @classmethod
     def load(cls, path: str) -> "MindspaceSettings":
@@ -23,7 +23,7 @@ class MindspaceSettings:
             data = json.load(f)
             editor = data.get("editor", {})
             conversation = data.get("conversation", {})
-            language_code = editor.get("language", "EN")
+            language_code = data.get("language", "EN")
             default_model = AIConversationSettings.get_default_model({})
             default_reasoning = AIConversationSettings.get_reasoning_capability(default_model)
 
@@ -32,15 +32,15 @@ class MindspaceSettings:
             reasoning = ReasoningCapability(reasoning_value)
 
             return cls(
-                use_soft_tabs=editor.get("useSoftTabs", True),
-                tab_size=editor.get("tabSize", 4),
-                font_size=editor.get("fontSize", None),
-                auto_backup=editor.get("autoBackup", False),
-                auto_backup_interval=editor.get("autoBackupInterval", 300),
                 language=LanguageCode[language_code],
+                font_size=data.get("fontSize", None),
                 model=conversation.get("model", default_model),
                 temperature=conversation.get("temperature", 0.7),
-                reasoning=reasoning
+                reasoning=reasoning,
+                use_soft_tabs=editor.get("useSoftTabs", True),
+                tab_size=editor.get("tabSize", 4),
+                auto_backup=editor.get("autoBackup", False),
+                auto_backup_interval=editor.get("autoBackupInterval", 300)
             )
 
     def save(self, path: str) -> None:
