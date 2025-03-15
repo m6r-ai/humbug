@@ -210,14 +210,19 @@ class MindspaceSettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
+        zoom_factor = self._style_manager.zoom_factor
+        base_font_size = self._style_manager.base_font_size
+
         # Apply consistent dialog styling
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QCheckBox {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -244,6 +249,7 @@ class MindspaceSettingsDialog(QDialog):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QComboBox:disabled {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
@@ -282,6 +288,7 @@ class MindspaceSettingsDialog(QDialog):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QDoubleSpinBox:disabled {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
@@ -313,6 +320,7 @@ class MindspaceSettingsDialog(QDialog):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QSpinBox:disabled {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
@@ -344,6 +352,7 @@ class MindspaceSettingsDialog(QDialog):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QPushButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};

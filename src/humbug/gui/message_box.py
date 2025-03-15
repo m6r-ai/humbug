@@ -227,6 +227,7 @@ class MessageBox(QDialog):
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QLabel {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -239,6 +240,7 @@ class MessageBox(QDialog):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QPushButton:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};

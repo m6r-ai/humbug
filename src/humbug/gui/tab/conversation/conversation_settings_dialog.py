@@ -141,15 +141,20 @@ class ConversationSettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
+        zoom_factor = style_manager.zoom_factor
+        base_font_size = style_manager.base_font_size
+
         # Apply consistent dialog styling
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QLabel {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 border: none;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QComboBox {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
@@ -157,6 +162,7 @@ class ConversationSettingsDialog(QDialog):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QComboBox:disabled {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
@@ -195,6 +201,7 @@ class ConversationSettingsDialog(QDialog):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QDoubleSpinBox:disabled {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
@@ -233,6 +240,7 @@ class ConversationSettingsDialog(QDialog):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QPushButton:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
