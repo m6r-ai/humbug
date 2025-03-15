@@ -59,7 +59,7 @@ class StyleManager(QObject):
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
 
-            self._code_font_families = ["Cascadia Mono", "Consolas", "Menlo", "Monaco", "monospace"]
+            self._code_font_families = ["Consolas", "Menlo", "Cascadia Mono", "Monaco", "monospace"]
             self._initialize_highlights()
             self._create_theme_icons()
 
@@ -747,8 +747,9 @@ class StyleManager(QObject):
             return 13
 
         if os_type.type() == QOperatingSystemVersion.Windows:
-            # Windows typically uses 9pt as default
-            return 9
+            # Windows typically uses 9pt as default, but 10 makes things feel more
+            # consistent with the MacOS look.
+            return 10
 
         # Linux typically uses 10pt as default
         return 10
