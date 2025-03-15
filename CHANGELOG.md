@@ -7,6 +7,7 @@ New features:
 - Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes
   over the "Ctrl+," shortcut, and "Conversation Settings" now use "Ctrl+Shift+,".  Any API keys
   configured for earlier versions of Humbug will be carried forwards.
+- The font size and language settings have moved from mindspace settings to user settings.
 
 Internal structure changes:
 

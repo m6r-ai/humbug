@@ -30,9 +30,11 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
+from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.user.user_manager import UserManager, UserError
+from humbug.user.user_settings import UserSettings
 
 
 class MainWindow(QMainWindow):
@@ -204,8 +206,6 @@ class MainWindow(QMainWindow):
         self._previous_bookmark_action.setShortcut(QKeySequence("Ctrl+Shift+P"))
         self._previous_bookmark_action.triggered.connect(self._previous_bookmark)
 
-        # Modify the _handle_language_changed method to set up these actions
-
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
 
@@ -335,6 +335,10 @@ class MainWindow(QMainWindow):
         self._handle_language_changed()
 
         self._user_manager = UserManager()
+        print(f"font size: {self._user_manager.settings}")
+        self._style_manager.set_user_font_size(self._user_manager.settings.font_size)
+        self._language_manager.set_language(self._user_manager.settings.language)
+
         self._mindspace_manager = MindspaceManager()
 
         QTimer.singleShot(0, self._restore_last_mindspace)
@@ -393,6 +397,7 @@ class MainWindow(QMainWindow):
         else:
             app.setLayoutDirection(Qt.RightToLeft)
 
+        print(f"lang: {self._language_manager._current_language}")
         strings = self._language_manager.strings
 
         # Update menu titles
@@ -470,8 +475,6 @@ class MainWindow(QMainWindow):
                     try:
                         self._mindspace_manager.open_mindspace(mindspace_path)
                         self._file_tree.set_mindspace(mindspace_path)
-                        self._style_manager.set_mindspace_font_size(self._mindspace_manager.settings.font_size)
-                        self._language_manager.set_language(self._mindspace_manager.settings.language)
                         self._restore_mindspace_state()
                     except MindspaceError as e:
                         self._logger.error("Failed to restore mindspace: %s", str(e))
@@ -542,14 +545,12 @@ class MainWindow(QMainWindow):
         if self._mindspace_manager.has_mindspace:
             self._save_mindspace_state()
             self._close_all_tabs()
-            self._style_manager.set_mindspace_font_size(None)
             self._mindspace_manager.close_mindspace()
 
         # Open the new mindspace
         try:
             self._mindspace_manager.open_mindspace(path)
             self._file_tree.set_mindspace(path)
-            self._style_manager.set_mindspace_font_size(self._mindspace_manager.settings.font_size)
         except MindspaceError as e:
             strings = self._language_manager.strings
             MessageBox.show_message(
@@ -571,7 +572,6 @@ class MainWindow(QMainWindow):
         self._save_mindspace_state()
         self._close_all_tabs()
         self._file_tree.set_mindspace(None)
-        self._style_manager.set_mindspace_font_size(None)
         self._mindspace_manager.close_mindspace()
 
     def _save_mindspace_state(self):
@@ -943,9 +943,11 @@ class MainWindow(QMainWindow):
         dialog = UserSettingsDialog(self)
         dialog.set_settings(self._user_manager.settings)
 
-        def handle_settings_changed(new_settings):
+        def handle_settings_changed(new_settings: UserSettings):
             try:
                 self._user_manager.update_settings(new_settings)
+                self._style_manager.set_user_font_size(new_settings.font_size)
+                self._language_manager.set_language(new_settings.language)
                 self._logger.info("User settings saved successfully")
             except UserError as e:
                 self._logger.error("Failed to save user settings: %s", str(e))
@@ -968,11 +970,9 @@ class MainWindow(QMainWindow):
         dialog = MindspaceSettingsDialog(self)
         dialog.set_settings(self._mindspace_manager.settings)
 
-        def handle_settings_changed(new_settings):
+        def handle_settings_changed(new_settings: MindspaceSettings):
             try:
                 self._mindspace_manager.update_settings(new_settings)
-                self._style_manager.set_mindspace_font_size(new_settings.font_size)
-                self._language_manager.set_language(new_settings.language)
             except OSError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
                 strings = self._language_manager.strings

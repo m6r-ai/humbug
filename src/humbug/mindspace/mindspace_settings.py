@@ -2,13 +2,10 @@ from dataclasses import dataclass
 import json
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
-from humbug.language.language_code import LanguageCode
 
 
 @dataclass
 class MindspaceSettings:
-    language: LanguageCode = LanguageCode.EN
-    font_size: float = None  # None means use the default font size
     model: str = AIConversationSettings.get_default_model({})  # Will be overridden with actual backends
     temperature: float = 0.7  # Default temperature
     reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
@@ -23,7 +20,6 @@ class MindspaceSettings:
             data = json.load(f)
             editor = data.get("editor", {})
             conversation = data.get("conversation", {})
-            language_code = data.get("language", "EN")
             default_model = AIConversationSettings.get_default_model({})
             default_reasoning = AIConversationSettings.get_reasoning_capability(default_model)
 
@@ -32,8 +28,6 @@ class MindspaceSettings:
             reasoning = ReasoningCapability(reasoning_value)
 
             return cls(
-                language=LanguageCode[language_code],
-                font_size=data.get("fontSize", None),
                 model=conversation.get("model", default_model),
                 temperature=conversation.get("temperature", 0.7),
                 reasoning=reasoning,
@@ -45,8 +39,6 @@ class MindspaceSettings:
 
     def save(self, path: str) -> None:
         data = {
-            "language": self.language.name,
-            "fontSize": self.font_size,
             "conversation": {
                 "model": self.model,
                 "temperature": self.temperature,

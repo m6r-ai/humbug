@@ -10,12 +10,13 @@ from typing import Dict, Optional
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QLineEdit
+    QPushButton, QLineEdit, QDoubleSpinBox, QComboBox, QListView
 )
 from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.user.user_settings import UserSettings
 
@@ -33,6 +34,7 @@ class UserSettingsDialog(QDialog):
         """
         super().__init__(parent)
         self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings
 
         self.setWindowTitle(strings.user_settings_dialog_title)
@@ -68,6 +70,29 @@ class UserSettingsDialog(QDialog):
             self._api_key_entries[key] = line_edit
             layout.addLayout(key_layout)
 
+        # Add language selector
+        language_layout, self._language_combo = self._create_language_selector(self)
+        layout.addLayout(language_layout)
+
+        # Connect language change handler
+        self._language_combo.currentIndexChanged.connect(self._handle_value_change)
+
+        font_size_layout = QHBoxLayout()
+        self._font_size_label = QLabel(strings.font_size)
+        self._font_size_label.setMinimumHeight(40)
+        self._font_size_spin = QDoubleSpinBox()
+        self._font_size_spin.setRange(8.0, 24.0)
+        self._font_size_spin.setSingleStep(0.5)
+        self._font_size_spin.setDecimals(1)
+        self._font_size_spin.setMinimumWidth(550)
+        self._font_size_spin.setMinimumHeight(40)
+        self._font_size_spin.setContentsMargins(8, 8, 8, 8)
+        self._font_size_spin.valueChanged.connect(self._handle_value_change)
+        font_size_layout.addWidget(self._font_size_label)
+        font_size_layout.addStretch()
+        font_size_layout.addWidget(self._font_size_spin)
+        layout.addLayout(font_size_layout)
+
         # Add spacing before buttons
         layout.addSpacing(24)
         layout.addStretch()
@@ -101,9 +126,80 @@ class UserSettingsDialog(QDialog):
 
         # Apply consistent dialog styling
         self.setStyleSheet(f"""
+            QComboBox {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QComboBox:disabled {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: url({self._style_manager.get_icon_path("arrow-down")});
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox::down-arrow:on {{
+                image: url({self._style_manager.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox::down-arrow:disabled {{
+                image: none;
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                border: none;
+                background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QComboBox QListView {{
+                border: none;
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
             QDialog {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QDoubleSpinBox {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QDoubleSpinBox:disabled {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
+                border: none;
+                width: 20px;
+            }}
+            QDoubleSpinBox::up-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
+                image: none;
+            }}
+            QDoubleSpinBox::down-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-down')});
+                width: 12px;
+                height: 12px;
+            }}
+            QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
+                image: none;
             }}
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -165,6 +261,65 @@ class UserSettingsDialog(QDialog):
 
         return layout, label, line_edit
 
+    def _create_language_selector(self, parent) -> tuple[QHBoxLayout, QComboBox]:
+        """Create language selection UI elements.
+
+        Args:
+            parent: Parent widget for the selector
+
+        Returns:
+            Tuple of (layout containing selector, combo box for language selection)
+        """
+        language_manager = LanguageManager()
+
+        layout = QHBoxLayout()
+        self._language_label = QLabel(language_manager.strings.select_language)
+        self._language_label.setMinimumHeight(40)
+        combo = QComboBox(parent)
+        combo.setView(QListView())  # Weird workaround to get styles to work!
+        combo.setMinimumWidth(550)
+        combo.setMinimumHeight(40)
+
+        # Add language options
+        language_names = {
+            LanguageCode.EN: "English",
+            LanguageCode.FR: "Français",
+            LanguageCode.AR: "العربية"
+        }
+
+        for code in LanguageCode:
+            combo.addItem(language_names[code], code)
+
+        # Set current language
+        current_index = combo.findData(language_manager.current_language)
+        combo.setCurrentIndex(current_index)
+
+        layout.addWidget(self._language_label)
+        layout.addStretch()
+        layout.addWidget(combo)
+
+        return layout, combo
+
+    def _handle_language_changed(self) -> None:
+        """Update all dialog texts with current language strings."""
+        strings = self._language_manager.strings
+        self.setWindowTitle(strings.settings_dialog_title)
+
+        # Update labels
+        self._language_label.setText(strings.select_language)
+        self._font_size_label.setText(strings.font_size)
+
+        # Update buttons
+        self.ok_button.setText(strings.ok)
+        self.cancel_button.setText(strings.cancel)
+        self.apply_button.setText(strings.apply)
+
+        # Adjust dialog size to fit new content
+        self.adjustSize()
+        size_hint = self.sizeHint()
+        new_width = max(750, size_hint.width())
+        self.resize(new_width, size_hint.height())
+
     def _handle_value_change(self) -> None:
         """Handle changes to any API key value."""
         if not self._current_settings:
@@ -177,7 +332,11 @@ class UserSettingsDialog(QDialog):
                 changed = True
                 break
 
-        self.apply_button.setEnabled(changed)
+        self.apply_button.setEnabled(
+            changed or
+            self._language_combo.currentData() != self._current_settings.language or
+            self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
+        )
 
     def get_settings(self) -> UserSettings:
         """Get current API key settings from dialog."""
@@ -187,7 +346,11 @@ class UserSettingsDialog(QDialog):
         }
 
         # Create a new UserSettings object with the updated API keys
-        settings = UserSettings(api_keys=api_keys)
+        settings = UserSettings(
+            api_keys=api_keys,
+            language=self._language_combo.currentData(),
+            font_size=self._font_size_spin.value()
+        )
         return settings
 
     def set_settings(self, settings: UserSettings) -> None:
@@ -196,13 +359,23 @@ class UserSettingsDialog(QDialog):
         Args:
             settings: UserSettings object with current settings
         """
-        self._initial_settings = UserSettings(api_keys=settings.api_keys.copy())
-        self._current_settings = UserSettings(api_keys=settings.api_keys.copy())
+        self._initial_settings = settings
+        self._current_settings = UserSettings(
+            api_keys=settings.api_keys.copy(),
+            language=settings.language,
+            font_size=settings.font_size
+        )
 
         # Set values in UI elements
         for key, value in settings.api_keys.items():
             if key in self._api_key_entries:
                 self._api_key_entries[key].setText(value)
+
+        # Set initial language selection
+        current_index = self._language_combo.findData(self._language_manager.current_language)
+        self._language_combo.setCurrentIndex(current_index)
+
+        self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
 
         # Reset the apply button state
         self.apply_button.setEnabled(False)

@@ -5,17 +5,17 @@ import json
 import os
 from typing import Dict
 
+from humbug.language.language_code import LanguageCode
+
 
 @dataclass
 class UserSettings:
     """
-    Store user-specific application settings.
-
-    Currently focused on API keys for AI providers, but can be extended
-    for other user-specific settings in the future.
+    User-specific application settings.
     """
-    # API keys for various services
     api_keys: Dict[str, str] = field(default_factory=dict)
+    language: LanguageCode = LanguageCode.EN
+    font_size: float = None  # None means use the default font size
 
     @classmethod
     def create_default(cls) -> "UserSettings":
@@ -28,7 +28,9 @@ class UserSettings:
                 "M6R_API_KEY": "",
                 "MISTRAL_API_KEY": "",
                 "OPENAI_API_KEY": ""
-            }
+            },
+            language=LanguageCode.EN,
+            font_size=None
         )
 
     @classmethod
@@ -49,27 +51,48 @@ class UserSettings:
         settings = cls.create_default()
 
         try:
-            # Only attempt to read if file exists and is not empty
-            if os.path.exists(path):
-                with open(path, 'r', encoding='utf-8') as f:
-                    file_content = f.read()
-                    if file_content.strip():
-                        data = json.loads(file_content)
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if "api_keys" in data:
+                    for key, value in data["api_keys"].items():
+                        settings.api_keys[key] = value
 
-                        # Handle legacy format (direct key/value pairs)
-                        if isinstance(data, dict) and not "api_keys" in data:
-                            for key in settings.api_keys:
-                                if key in data:
-                                    settings.api_keys[key] = data[key]
-                        # Handle new format (structured with api_keys field)
-                        elif "api_keys" in data:
-                            for key, value in data["api_keys"].items():
-                                settings.api_keys[key] = value
+                language_code = data.get("language", "EN")
+                print(f"lang code {language_code}")
+                settings.language = LanguageCode[language_code]
+                settings.font_size = data.get("fontSize", None)
 
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            # Re-raise JSON decode errors, but ignore file not found
-            if isinstance(e, json.JSONDecodeError):
-                raise
+        except json.JSONDecodeError:
+            raise
+
+        return settings
+
+    @classmethod
+    def load_legacy(cls, path: str) -> "UserSettings":
+        """
+        Load legacy user settings from file.
+
+        Args:
+            path: Path to the settings file
+
+        Returns:
+            UserSettings object with loaded values
+
+        Raises:
+            json.JSONDecodeError: If file contains invalid JSON
+        """
+        # Start with default settings
+        settings = cls.create_default()
+
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                for key in settings.api_keys:
+                    if key in data:
+                        settings.api_keys[key] = data[key]
+
+        except json.JSONDecodeError:
+            raise
 
         return settings
 
@@ -88,7 +111,9 @@ class UserSettings:
 
         # Save settings in a structured format for future extensibility
         data = {
-            "api_keys": self.api_keys
+            "api_keys": self.api_keys,
+            "language": self.language.name,
+            "fontSize": self.font_size,
         }
 
         with open(path, 'w', encoding='utf-8') as f:

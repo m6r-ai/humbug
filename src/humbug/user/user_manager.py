@@ -80,7 +80,7 @@ class UserManager(QObject):
                 self._logger.info("Loaded user settings from %s", settings_path)
             # Fall back to legacy format
             elif os.path.exists(legacy_path):
-                self._settings = UserSettings.load(legacy_path)
+                self._settings = UserSettings.load_legacy(legacy_path)
                 self._logger.info("Loaded user settings from legacy file %s", legacy_path)
                 # Save in new format for future use
                 self._save_settings()
@@ -90,8 +90,8 @@ class UserManager(QObject):
                 self._logger.info("Created default user settings")
                 self._save_settings()
 
-        except Exception as e:
-            self._logger.error("Failed to load user settings: %s", str(e))
+        except Exception:
+            self._logger.exception("Failed to load user settings")
             # Create default settings as fallback
             self._settings = UserSettings.create_default()
 
