@@ -739,22 +739,6 @@ class TerminalWidget(QAbstractScrollArea):
 
         return font
 
-    def _get_highlight_format(self, is_current: bool) -> QTextCharFormat:
-        """Get highlight format based on whether it's the current match.
-
-        Args:
-            is_current: Whether this is the current match
-
-        Returns:
-            QTextCharFormat configured for the match
-        """
-        fmt = QTextCharFormat()
-        if is_current:
-            fmt.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND))
-        else:
-            fmt.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM))
-        return fmt
-
     def _draw_character_run(
         self,
         painter: QPainter,
@@ -876,12 +860,9 @@ class TerminalWidget(QAbstractScrollArea):
 
             # Calculate colors for this character
             if is_highlighted:
-                fmt = self._get_highlight_format(is_current)
-                fg_brush = fmt.foreground()
-                bg_brush = fmt.background()
                 char_colors = (
-                    fg_brush.color() if fg_brush.style() != Qt.NoBrush else fg,
-                    bg_brush.color() if bg_brush.style() != Qt.NoBrush else bg
+                    fg,
+                    self._style_manager.get_color(ColorRole.TEXT_FOUND if is_current else ColorRole.TEXT_FOUND_DIM)
                 )
             else:
                 char_colors = (fg, bg)
