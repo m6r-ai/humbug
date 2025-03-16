@@ -91,13 +91,18 @@ def get_english_strings() -> LanguageStrings:
         yes="Yes",
         no="No",
 
-        # API key labels for User Settings dialog
+        # User Settings dialog
         anthropic_api_key="Anthropic API Key",
         deepseek_api_key="DeepSeek API Key",
         google_api_key="Google API Key",
         m6r_api_key="M6R API Key",
         mistral_api_key="Mistral API Key",
         openai_api_key="OpenAI API Key",
+        select_language="Language",
+        font_size="Font Size",
+        display_theme="Display Theme",
+        theme_dark="Dark",
+        theme_light="Light",
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",
@@ -110,8 +115,6 @@ def get_english_strings() -> LanguageStrings:
         src_folder='Create "src" Folder',
 
         # Mindspace settings
-        select_language="Language",
-        font_size="Font Size",
         use_soft_tabs="Use Soft Tabs",
         tab_size="Tab Size",
         auto_backup="Auto Backup",

@@ -335,9 +335,13 @@ class MainWindow(QMainWindow):
         self._handle_language_changed()
 
         self._user_manager = UserManager()
-        print(f"font size: {self._user_manager.settings}")
         self._style_manager.set_user_font_size(self._user_manager.settings.font_size)
         self._language_manager.set_language(self._user_manager.settings.language)
+
+        # Set theme from user settings
+        self._dark_mode = self._user_manager.settings.theme == ColorMode.DARK
+        self._dark_mode_action.setChecked(self._dark_mode)
+        self._style_manager.set_color_mode(self._user_manager.settings.theme)
 
         self._mindspace_manager = MindspaceManager()
 
@@ -948,6 +952,14 @@ class MainWindow(QMainWindow):
                 self._user_manager.update_settings(new_settings)
                 self._style_manager.set_user_font_size(new_settings.font_size)
                 self._language_manager.set_language(new_settings.language)
+
+                # Update theme from settings if it changed
+                new_theme = new_settings.theme
+                if (new_theme == ColorMode.DARK) != self._dark_mode:
+                    self._dark_mode = (new_theme == ColorMode.DARK)
+                    self._dark_mode_action.setChecked(self._dark_mode)
+                    self._style_manager.set_color_mode(new_theme)
+
                 self._logger.info("User settings saved successfully")
             except UserError as e:
                 self._logger.error("Failed to save user settings: %s", str(e))

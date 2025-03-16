@@ -86,13 +86,18 @@ class LanguageStrings:
     yes: str
     no: str
 
-    # API key labels for User Settings dialog
+    # User Settings dialog
     anthropic_api_key: str
     deepseek_api_key: str
     google_api_key: str
     m6r_api_key: str
     mistral_api_key: str
     openai_api_key: str
+    select_language: str
+    font_size: str
+    display_theme: str
+    theme_dark: str
+    theme_light: str
 
     # Mindspace tree
     mindspace_label_none: str
@@ -105,8 +110,6 @@ class LanguageStrings:
     src_folder: str
 
     # Mindspace settings
-    select_language: str
-    font_size: str
     use_soft_tabs: str
     tab_size: str
     auto_backup: str

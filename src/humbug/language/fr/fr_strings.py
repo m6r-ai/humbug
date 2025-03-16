@@ -91,13 +91,18 @@ def get_french_strings() -> LanguageStrings:
         yes="Oui",
         no="Non",
 
-        # API key labels for User Settings dialog
+        # User Settings dialog
         anthropic_api_key="Clé API Anthropic",
         deepseek_api_key="Clé API DeepSeek",
         google_api_key="Clé API Google",
         m6r_api_key="Clé API M6R",
         mistral_api_key="Clé API Mistral",
         openai_api_key="Clé API OpenAI",
+        select_language="Langue",
+        font_size="Taille de police",
+        display_theme="Thème d'affichage",
+        theme_dark="Sombre",
+        theme_light="Clair",
 
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
@@ -110,8 +115,6 @@ def get_french_strings() -> LanguageStrings:
         src_folder='Créer le dossier "src"',
 
         # Mindspace settings
-        select_language="Langue",
-        font_size="Taille de police",
         use_soft_tabs="Utiliser des tabulations douces",
         tab_size="Taille de tabulation",
         auto_backup="Sauvegarde automatique",

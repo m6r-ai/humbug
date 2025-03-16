@@ -91,13 +91,18 @@ def get_arabic_strings() -> LanguageStrings:
         yes="نعم",
         no="لا",
 
-        # API key labels for User Settings dialog
+        # User Settings dialog
         anthropic_api_key="مفتاح واجهة برمجة تطبيقات أنثروبيك",
         deepseek_api_key="مفتاح واجهة برمجة تطبيقات ديبسيك",
         google_api_key="مفتاح واجهة برمجة تطبيقات جوجل",
         m6r_api_key="مفتاح واجهة برمجة تطبيقات M6R",
         mistral_api_key="مفتاح واجهة برمجة تطبيقات ميسترال",
         openai_api_key="مفتاح واجهة برمجة تطبيقات أوبن إيه آي",
+        select_language="اللغة",
+        font_size="حجم الخط",
+        display_theme="مظهر العرض",
+        theme_dark="داكن",
+        theme_light="فاتح",
 
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
@@ -110,8 +115,6 @@ def get_arabic_strings() -> LanguageStrings:
         src_folder='إنشاء مجلد "src"',
 
         # Mindspace settings
-        select_language="اللغة",
-        font_size="حجم الخط",
         use_soft_tabs="استخدام المسافات البادئة",
         tab_size="حجم المسافة البادئة",
         auto_backup="نسخ احتياطي تلقائي",

@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import StyleManager
+from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.user.user_settings import UserSettings
@@ -49,6 +49,7 @@ class UserSettingsDialog(QDialog):
         self._logger = logging.getLogger(__name__)
 
         self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._handle_style_changed)
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
@@ -72,6 +73,7 @@ class UserSettingsDialog(QDialog):
         # Connect language change handler
         self._language_combo.currentIndexChanged.connect(self._handle_value_change)
 
+        # Add font size selector
         font_size_layout = QHBoxLayout()
         self._font_size_label = QLabel(strings.font_size)
         self._font_size_label.setMinimumHeight(40)
@@ -87,6 +89,27 @@ class UserSettingsDialog(QDialog):
         font_size_layout.addStretch()
         font_size_layout.addWidget(self._font_size_spin)
         layout.addLayout(font_size_layout)
+
+        # Add theme selector
+        theme_layout = QHBoxLayout()
+        self._theme_label = QLabel(strings.display_theme)
+        self._theme_label.setMinimumHeight(40)
+        self._theme_combo = QComboBox(self)
+        self._theme_combo.setView(QListView())  # Workaround to get styles to work
+        self._theme_combo.setMinimumWidth(550)
+        self._theme_combo.setMinimumHeight(40)
+
+        # Add theme options
+        self._theme_combo.addItem(strings.theme_dark, ColorMode.DARK)
+        self._theme_combo.addItem(strings.theme_light, ColorMode.LIGHT)
+
+        # Connect theme change handler
+        self._theme_combo.currentIndexChanged.connect(self._handle_value_change)
+
+        theme_layout.addWidget(self._theme_label)
+        theme_layout.addStretch()
+        theme_layout.addWidget(self._theme_combo)
+        layout.addLayout(theme_layout)
 
         # Add spacing before buttons
         layout.addSpacing(24)
@@ -115,7 +138,9 @@ class UserSettingsDialog(QDialog):
 
         layout.addLayout(button_layout)
         self.setLayout(layout)
+        self._handle_style_changed()
 
+    def _handle_style_changed(self) -> None:
         zoom_factor = self._style_manager.zoom_factor
         base_font_size = self._style_manager.base_font_size
 
@@ -322,6 +347,15 @@ class UserSettingsDialog(QDialog):
         # Update labels
         self._language_label.setText(strings.select_language)
         self._font_size_label.setText(strings.font_size)
+        self._theme_label.setText(strings.display_theme)
+
+        # Update theme combo box items
+        current_theme = self._theme_combo.currentData()
+        self._theme_combo.clear()
+        self._theme_combo.addItem(strings.theme_dark, ColorMode.DARK)
+        self._theme_combo.addItem(strings.theme_light, ColorMode.LIGHT)
+        theme_index = self._theme_combo.findData(current_theme)
+        self._theme_combo.setCurrentIndex(theme_index)
 
         # Update API key labels with current language strings
         api_key_mapping = self._get_api_key_mapping()
@@ -348,36 +382,39 @@ class UserSettingsDialog(QDialog):
             return
 
         # Check if any value has changed from current settings
-        changed = False
+        api_keys_changed = False
         for key, line_edit in self._api_key_entries.items():
             if line_edit.text() != self._current_settings.api_keys.get(key, ""):
-                changed = True
+                api_keys_changed = True
                 break
 
+        language_changed = self._language_combo.currentData() != self._current_settings.language
+        font_size_changed = self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
+        theme_changed = self._theme_combo.currentData() != self._current_settings.theme
+
         self.apply_button.setEnabled(
-            changed or
-            self._language_combo.currentData() != self._current_settings.language or
-            self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
+            api_keys_changed or language_changed or font_size_changed or theme_changed
         )
 
     def get_settings(self) -> UserSettings:
-        """Get current API key settings from dialog."""
+        """Get current settings from dialog."""
         api_keys = {
             key: line_edit.text()
             for key, line_edit in self._api_key_entries.items()
         }
 
-        # Create a new UserSettings object with the updated API keys
+        # Create a new UserSettings object with the updated settings
         settings = UserSettings(
             api_keys=api_keys,
             language=self._language_combo.currentData(),
-            font_size=self._font_size_spin.value()
+            font_size=self._font_size_spin.value(),
+            theme=self._theme_combo.currentData()
         )
         return settings
 
     def set_settings(self, settings: UserSettings) -> None:
         """
-        Update dialog with current API key settings.
+        Update dialog with current settings.
 
         Args:
             settings: UserSettings object with current settings
@@ -386,7 +423,8 @@ class UserSettingsDialog(QDialog):
         self._current_settings = UserSettings(
             api_keys=settings.api_keys.copy(),
             language=settings.language,
-            font_size=settings.font_size
+            font_size=settings.font_size,
+            theme=settings.theme
         )
 
         # Set values in UI elements
@@ -398,7 +436,12 @@ class UserSettingsDialog(QDialog):
         current_index = self._language_combo.findData(self._language_manager.current_language)
         self._language_combo.setCurrentIndex(current_index)
 
+        # Set font size
         self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
+
+        # Set theme
+        theme_index = self._theme_combo.findData(settings.theme)
+        self._theme_combo.setCurrentIndex(theme_index)
 
         # Reset the apply button state
         self.apply_button.setEnabled(False)

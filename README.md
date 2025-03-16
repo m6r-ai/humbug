@@ -59,6 +59,7 @@ v0.8 adds several new features:
   "Ctrl+," shortcut, and "Conversation Settings" now moves to the "Ctrl+Shift+," shortcut.  Any API keys
   configured for earlier versions of Humbug will be carried forwards.
 - The font size and language settings have moved from mindspace settings to user settings.
+- The default theme can now be set in the user settings.
 
 ## Features
 

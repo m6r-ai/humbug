@@ -3,9 +3,10 @@
 from dataclasses import dataclass, field
 import json
 import os
-from typing import Dict
+from typing import Dict, Optional
 
 from humbug.language.language_code import LanguageCode
+from humbug.gui.style_manager import ColorMode
 
 
 @dataclass
@@ -16,6 +17,7 @@ class UserSettings:
     api_keys: Dict[str, str] = field(default_factory=dict)
     language: LanguageCode = LanguageCode.EN
     font_size: float = None  # None means use the default font size
+    theme: ColorMode = ColorMode.DARK  # Default to dark mode
 
     @classmethod
     def create_default(cls) -> "UserSettings":
@@ -30,7 +32,8 @@ class UserSettings:
                 "OPENAI_API_KEY": ""
             },
             language=LanguageCode.EN,
-            font_size=None
+            font_size=None,
+            theme=ColorMode.DARK
         )
 
     @classmethod
@@ -61,6 +64,13 @@ class UserSettings:
                 print(f"lang code {language_code}")
                 settings.language = LanguageCode[language_code]
                 settings.font_size = data.get("fontSize", None)
+
+                # Load theme if available, otherwise use default (dark mode)
+                theme_str = data.get("theme", "DARK")
+                try:
+                    settings.theme = ColorMode[theme_str]
+                except (KeyError, ValueError):
+                    settings.theme = ColorMode.DARK
 
         except json.JSONDecodeError:
             raise
@@ -114,6 +124,7 @@ class UserSettings:
             "api_keys": self.api_keys,
             "language": self.language.name,
             "fontSize": self.font_size,
+            "theme": self.theme.name,
         }
 
         with open(path, 'w', encoding='utf-8') as f:
