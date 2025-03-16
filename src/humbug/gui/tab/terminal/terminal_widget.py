@@ -668,25 +668,6 @@ class TerminalWidget(QAbstractScrollArea):
                 x = col * self._char_width  # Floating point x-position
                 char, attrs, fg_color, bg_color = line.get_character(col)
 
-                # Skip processing if character can use default rendering
-                if (char == ' ' and attrs == CharacterAttributes.NONE and
-                    fg_color is None and bg_color is None and
-                    not self._state.screen_reverse_mode):
-                    if current_run:
-                        self._draw_character_run(
-                            painter, current_run, current_attrs,
-                            current_colors, default_fg, default_bg,
-                            font_variants
-                        )
-                        current_run = []
-
-                    # Draw default background using floating-point rect
-                    painter.fillRect(
-                        QRectF(x, y, self._char_width, self._char_height),
-                        default_bg
-                    )
-                    continue
-
                 # Check if this character can be batched with the current run
                 colors = (fg_color, bg_color)
                 if attrs == current_attrs and colors == current_colors:
