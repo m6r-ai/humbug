@@ -9,6 +9,8 @@ New features:
   configured for earlier versions of Humbug will be carried forwards.
 - The font size and language settings have moved from mindspace settings to user settings.
 - The default theme can now be set in the user settings.
+- Updated the Edit menu so the old "Dark Mode" option is now also replaced with "Display Theme" that
+  matches the user setting.
 
 Internal structure changes:
 
