@@ -48,7 +48,7 @@ def get_arabic_strings() -> LanguageStrings:
         conversation_settings="إعدادات المحادثة",
 
         # View menu items
-        dark_mode="الوضع الداكن",
+        display_theme="مظهر العرض",
         zoom_in="تكبير",
         zoom_out="تصغير",
         reset_zoom="إعادة تعيين التكبير",
@@ -100,7 +100,6 @@ def get_arabic_strings() -> LanguageStrings:
         openai_api_key="مفتاح واجهة برمجة تطبيقات أوبن إيه آي",
         select_language="اللغة",
         font_size="حجم الخط",
-        display_theme="مظهر العرض",
         theme_dark="داكن",
         theme_light="فاتح",
 

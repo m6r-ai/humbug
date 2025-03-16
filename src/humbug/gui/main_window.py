@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Optional
+from typing import Optional, Dict
 
 from m6rclib import (
     MetaphorParser, MetaphorParserError, format_ast, format_errors
@@ -12,10 +12,10 @@ from m6rclib import (
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
-    QSplitter, QLabel, QApplication, QDialog
+    QSplitter, QLabel, QApplication, QDialog, QMenu
 )
 from PySide6.QtCore import Qt, QTimer, Slot
-from PySide6.QtGui import QKeyEvent, QAction, QKeySequence
+from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 from PySide6.QtWidgets import QStatusBar
 
 from humbug.gui.about_dialog import AboutDialog
@@ -45,7 +45,6 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self._logger = logging.getLogger("MainWindow")
-        self._dark_mode = True
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -153,11 +152,9 @@ class MainWindow(QMainWindow):
         self._conv_settings_action.setShortcut(QKeySequence("Ctrl+Shift+,"))
         self._conv_settings_action.triggered.connect(self._show_conversation_settings_dialog)
 
-        # View menu actions
-        self._dark_mode_action = QAction(strings.dark_mode, self)
-        self._dark_mode_action.setCheckable(True)
-        self._dark_mode_action.setChecked(True)
-        self._dark_mode_action.triggered.connect(self._handle_dark_mode)
+        # View menu actions - Theme menu will be created in _handle_language_changed
+        self._theme_menu = None
+        self._theme_actions = {}
 
         self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
@@ -255,7 +252,8 @@ class MainWindow(QMainWindow):
 
         # View menu
         self._view_menu = self._menu_bar.addMenu(strings.view_menu)
-        self._view_menu.addAction(self._dark_mode_action)
+        # Theme menu will be added when language changes
+
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._zoom_in_action)
         self._view_menu.addAction(self._zoom_out_action)
@@ -339,9 +337,8 @@ class MainWindow(QMainWindow):
         self._language_manager.set_language(self._user_manager.settings.language)
 
         # Set theme from user settings
-        self._dark_mode = self._user_manager.settings.theme == ColorMode.DARK
-        self._dark_mode_action.setChecked(self._dark_mode)
         self._style_manager.set_color_mode(self._user_manager.settings.theme)
+        self._update_theme_menu()
 
         self._mindspace_manager = MindspaceManager()
 
@@ -434,7 +431,14 @@ class MainWindow(QMainWindow):
         self._find_action.setText(strings.find)
         self._mindspace_settings_action.setText(strings.mindspace_settings)
         self._conv_settings_action.setText(strings.conversation_settings)
-        self._dark_mode_action.setText(strings.dark_mode)
+
+        # Recreate the theme menu with updated language strings
+        if self._theme_menu is not None:
+            self._view_menu.removeAction(self._theme_menu.menuAction())
+
+        self._theme_menu = self._create_theme_menu()
+        self._view_menu.insertMenu(self._zoom_in_action, self._theme_menu)
+
         self._zoom_in_action.setText(strings.zoom_in)
         self._zoom_out_action.setText(strings.zoom_out)
         self._reset_zoom_action.setText(strings.reset_zoom)
@@ -462,6 +466,60 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.triggered.connect(lambda: self._swap_column(not left_to_right))
 
         self._handle_style_changed()
+
+    def _create_theme_menu(self) -> QMenu:
+        """
+        Create a display theme submenu with available themes.
+
+        Returns:
+            QMenu: The theme submenu
+        """
+        strings = self._language_manager.strings
+
+        # Create the theme menu
+        theme_menu = QMenu(strings.display_theme, self)
+
+        # Create an action group so only one theme can be selected at a time
+        theme_action_group = QActionGroup(self)
+        theme_action_group.setExclusive(True)
+
+        # Create the theme actions dictionary to store references
+        self._theme_actions = {}
+
+        # Add Light theme action
+        light_action = QAction(strings.theme_light, self)
+        light_action.setCheckable(True)
+        light_action.setChecked(self._style_manager.color_mode == ColorMode.LIGHT)
+        light_action.triggered.connect(lambda: self._handle_theme_change(ColorMode.LIGHT))
+        theme_action_group.addAction(light_action)
+        theme_menu.addAction(light_action)
+        self._theme_actions[ColorMode.LIGHT] = light_action
+
+        # Add Dark theme action
+        dark_action = QAction(strings.theme_dark, self)
+        dark_action.setCheckable(True)
+        dark_action.setChecked(self._style_manager.color_mode == ColorMode.DARK)
+        dark_action.triggered.connect(lambda: self._handle_theme_change(ColorMode.DARK))
+        theme_action_group.addAction(dark_action)
+        theme_menu.addAction(dark_action)
+        self._theme_actions[ColorMode.DARK] = dark_action
+
+        return theme_menu
+
+    def _update_theme_menu(self) -> None:
+        """Update the theme menu to reflect the current selected theme."""
+        # Set the checked state for the appropriate theme action
+        for theme, action in self._theme_actions.items():
+            action.setChecked(theme == self._style_manager.color_mode)
+
+    def _handle_theme_change(self, theme: ColorMode) -> None:
+        """
+        Handle theme change requests.
+
+        Args:
+            theme: The new theme to apply
+        """
+        self._style_manager.set_color_mode(theme)
 
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
@@ -955,10 +1013,9 @@ class MainWindow(QMainWindow):
 
                 # Update theme from settings if it changed
                 new_theme = new_settings.theme
-                if (new_theme == ColorMode.DARK) != self._dark_mode:
-                    self._dark_mode = (new_theme == ColorMode.DARK)
-                    self._dark_mode_action.setChecked(self._dark_mode)
+                if new_theme != self._style_manager.color_mode:
                     self._style_manager.set_color_mode(new_theme)
+                    self._update_theme_menu()
 
                 self._logger.info("User settings saved successfully")
             except UserError as e:
@@ -1009,12 +1066,6 @@ class MainWindow(QMainWindow):
                 return
 
         super().keyPressEvent(event)
-
-    def _handle_dark_mode(self, _):
-        """Handle dark mode enable/disable requests."""
-        self._dark_mode = not self._dark_mode
-        self._dark_mode_action.setChecked(self._dark_mode)
-        self._style_manager.set_color_mode(ColorMode.DARK if self._dark_mode else ColorMode.LIGHT)
 
     def _handle_zoom(self, factor: float):
         """Handle zoom in/out requests."""

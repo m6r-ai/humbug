@@ -507,15 +507,6 @@ Context: Capabilities
             all configuration options.
 
             Context: Mindspace Settings Dialog
-                Context: Language
-                    The language to be used by messages in the application can be selected from a drop-down list.
-
-                Context: Font size
-                    The fontSize setting controls the base font size used in editors and related text areas.
-                    When not specified, the system default font size will be used.
-
-                    The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
-
                 Context: Conversation settings
                     Context: AI Model
                         The AI model is selected via a dropdown menu.
@@ -669,6 +660,21 @@ Context: Capabilities
             Context: API Keys
                 The dialog supports editing the API keys used for any of the backend AI models for which there is
                 an API key.
+
+            Context: Language
+                The language to be used by messages in the application can be selected from a drop-down list.
+
+            Context: Font Size
+                The fontSize setting controls the base font size used in editors and related text areas.
+                When not specified, the system default font size will be used.
+
+                The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
+
+            Context: Display Theme
+                The theme setting controls the default display theme that will be used by the application.
+                This can be overriden via the "Display Theme" menu item, but changes there are not persisted.
+
+                Unless set otherwise, the display theme will be dark mode.
 
     Context: Mindspace operations
         Context: File tree interaction
@@ -1038,11 +1044,11 @@ Context: Capabilities
         Context: View
             The "View" menu handles view settings.  When clicked it contains the following:
 
-            Context: Dark Mode
-                The "Dark Mode" menu item will have a checkmark indicating if dark mode is enabled or not.
-                By default it will be enabled.
+            Context: Display Theme
+                The "Display Theme" menu item will have a pop-out menu that allows the user to specify
+                the current display theme.
 
-                The application will support a distinct set of light and dark mode colour styling.
+                This will allow the user to override the Display Theme setting in the user settings.
 
             Context: Separator
                 There will be a horizontal Separator

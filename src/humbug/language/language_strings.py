@@ -43,7 +43,7 @@ class LanguageStrings:
     conversation_settings: str
 
     # View menu items
-    dark_mode: str
+    display_theme: str
     zoom_in: str
     zoom_out: str
     reset_zoom: str
@@ -95,7 +95,6 @@ class LanguageStrings:
     openai_api_key: str
     select_language: str
     font_size: str
-    display_theme: str
     theme_dark: str
     theme_light: str
 

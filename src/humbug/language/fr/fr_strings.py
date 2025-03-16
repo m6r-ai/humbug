@@ -48,7 +48,7 @@ def get_french_strings() -> LanguageStrings:
         conversation_settings="Paramètres de conversation",
 
         # View menu items
-        dark_mode="Mode sombre",
+        display_theme="Thème d'affichage",
         zoom_in="Zoom avant",
         zoom_out="Zoom arrière",
         reset_zoom="Réinitialiser le zoom",
@@ -100,7 +100,6 @@ def get_french_strings() -> LanguageStrings:
         openai_api_key="Clé API OpenAI",
         select_language="Langue",
         font_size="Taille de police",
-        display_theme="Thème d'affichage",
         theme_dark="Sombre",
         theme_light="Clair",
 

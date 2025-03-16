@@ -48,7 +48,7 @@ def get_english_strings() -> LanguageStrings:
         conversation_settings="Conversation Settings",
 
         # View menu items
-        dark_mode="Dark Mode",
+        display_theme="Display Theme",
         zoom_in="Zoom In",
         zoom_out="Zoom Out",
         reset_zoom="Reset Zoom",
@@ -100,7 +100,6 @@ def get_english_strings() -> LanguageStrings:
         openai_api_key="OpenAI API Key",
         select_language="Language",
         font_size="Font Size",
-        display_theme="Display Theme",
         theme_dark="Dark",
         theme_light="Light",
 
