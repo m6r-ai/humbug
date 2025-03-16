@@ -38,7 +38,7 @@ class UserSettingsDialog(QDialog):
         self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings
 
-        self.setWindowTitle(strings.user_settings_dialog_title)
+        self.setWindowTitle(strings.user_settings)
         self.setMinimumWidth(750)
         self.setModal(True)
 
@@ -317,7 +317,7 @@ class UserSettingsDialog(QDialog):
     def _handle_language_changed(self) -> None:
         """Update all dialog texts with current language strings."""
         strings = self._language_manager.strings
-        self.setWindowTitle(strings.user_settings_dialog_title)
+        self.setWindowTitle(strings.user_settings)
 
         # Update labels
         self._language_label.setText(strings.select_language)

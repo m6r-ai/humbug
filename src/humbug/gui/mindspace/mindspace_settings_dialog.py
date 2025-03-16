@@ -36,7 +36,7 @@ class MindspaceSettingsDialog(QDialog):
         self._language_manager = LanguageManager()
         strings = self._language_manager.strings
 
-        self.setWindowTitle(strings.settings_dialog_title)
+        self.setWindowTitle(strings.mindspace_settings)
         self.setMinimumWidth(500)
         self.setModal(True)
 

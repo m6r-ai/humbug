@@ -13,8 +13,6 @@ def get_french_strings() -> LanguageStrings:
     return LanguageStrings(
         # Window titles
         about_title="À propos de Humbug",
-        settings_dialog_title="Paramètres",
-        user_settings_dialog_title="Paramètres utilisateur",
 
         # Menu names
         humbug_menu="Humbug",

@@ -8,8 +8,6 @@ class LanguageStrings:
     """Strings for UI elements in different languages."""
     # Window titles
     about_title: str
-    settings_dialog_title: str
-    user_settings_dialog_title: str
 
     # Menu names
     humbug_menu: str

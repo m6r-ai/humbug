@@ -13,8 +13,6 @@ def get_arabic_strings() -> LanguageStrings:
     return LanguageStrings(
         # Window titles
         about_title="حول هامبج",
-        settings_dialog_title="الإعدادات",
-        user_settings_dialog_title="إعدادات المستخدم",
 
         # Menu names
         humbug_menu="هامبج",
