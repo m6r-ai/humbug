@@ -21,6 +21,7 @@ Internal structure changes:
 - GUI elements related to the tab displays have been moved into a new gui/tab sub-directory.
 - Non-GUI terminal functionality has been moved into a new directory at the top level of the
   source tree so it's easier to use outside of the GUI.
+- Optimized the terminal emulator performance for large terminals.
 
 Bug fixes:
 
