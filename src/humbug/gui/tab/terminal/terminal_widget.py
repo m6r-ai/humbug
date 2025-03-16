@@ -660,39 +660,40 @@ class TerminalWidget(QAbstractScrollArea):
                 break
 
             line = buffer.lines[line_index]
-            current_run = []
+            current_run_start_col = start_col
+            current_text = ""
             current_attrs = None
             current_colors = None
 
             for col in range(start_col, end_col):
-                x = col * self._char_width  # Floating point x-position
                 char, attrs, fg_color, bg_color = line.get_character(col)
 
                 # Check if this character can be batched with the current run
                 colors = (fg_color, bg_color)
                 if attrs == current_attrs and colors == current_colors:
-                    current_run.append((char, x, y))
+                    current_text += char
                     continue
 
                 # Draw previous run if it exists
-                if current_run:
+                if current_text:
                     self._draw_character_run(
-                        painter, current_run, current_attrs,
+                        painter, current_run_start_col, y, current_text, current_attrs,
                         current_colors, default_fg, default_bg,
-                        font_variants
+                        font_variants, row, first_visible_line
                     )
 
                 # Start new run
-                current_run = [(char, x, y)]
+                current_text = char
+                current_run_start_col = col
                 current_attrs = attrs
                 current_colors = colors
 
             # Draw final run for this row
-            if current_run:
+            if current_text:
                 self._draw_character_run(
-                    painter, current_run, current_attrs,
+                    painter, current_run_start_col, y, current_text, current_attrs,
                     current_colors, default_fg, default_bg,
-                    font_variants
+                    font_variants, row, first_visible_line
                 )
 
         # Draw selection overlay if present
@@ -743,20 +744,23 @@ class TerminalWidget(QAbstractScrollArea):
     def _draw_character_run(
         self,
         painter: QPainter,
-        run: list,
+        start_col: int,
+        y: float,
+        text: str,
         attrs: CharacterAttributes,
         colors: tuple,
         default_fg: QColor,
         default_bg: QColor,
-        font_variants: dict
+        font_variants: dict,
+        row_index: int,
+        first_visible_line: int
     ) -> None:
         """Draw a run of characters with the same attributes efficiently."""
-        if not run:
+        if not text:
             return
 
         # Get row index for highlights
-        y = run[0][2]
-        row = int(y / self._char_height) + self.verticalScrollBar().value()
+        row = row_index + first_visible_line
         highlights = self.get_row_highlights(row)
 
         # Set up colors
@@ -797,13 +801,14 @@ class TerminalWidget(QAbstractScrollArea):
         if attrs & CharacterAttributes.DIM:
             fg.setAlpha(128)
 
-        # If no highlights or blinking chars, draw entire run at once
-        if not highlights and not attrs & CharacterAttributes.BLINK:
-            x_start = run[0][1]
-            y = run[0][2]
-            width = (run[-1][1] - x_start) + self._char_width
+        # Calculate start x position
+        x_start = start_col * self._char_width
 
-            # Draw background - use ceil for width to ensure complete coverage
+        # If no highlights or blinking chars, draw entire run at once
+        if not highlights and not (attrs & CharacterAttributes.BLINK):
+            width = len(text) * self._char_width
+
+            # Draw background - use precise width calculation
             painter.fillRect(
                 QRectF(x_start, y, width, self._char_height),
                 bg
@@ -812,7 +817,6 @@ class TerminalWidget(QAbstractScrollArea):
             # Draw text
             if not (attrs & CharacterAttributes.BLINK and self._blink_state):
                 painter.setPen(fg)
-                text = ''.join(char for char, _, _ in run)
                 painter.drawText(
                     QPointF(x_start, y + self._char_ascent),
                     text
@@ -820,64 +824,77 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Handle runs with highlights or blinking characters
-        current_batch = []
-        current_colors = (fg, bg)
+        current_batch_start = 0
+        current_batch_len = 0
+        current_highlight_bg = bg
 
-        def draw_batch():
-            if not current_batch:
-                return
-
-            x_start = current_batch[0][1]
-            y = current_batch[0][2]
-            width = (current_batch[-1][1] - x_start) + self._char_width
-
-            # Draw background
-            painter.fillRect(
-                QRectF(x_start, y, width, self._char_height),
-                current_colors[1]
-            )
-
-            # Draw text if not blinking or in visible state
-            if not (attrs & CharacterAttributes.BLINK and self._blink_state):
-                painter.setPen(current_colors[0])
-                text = ''.join(char for char, _, _ in current_batch)
-                painter.drawText(
-                    QPointF(x_start, y + self._char_ascent),
-                    text
-                )
-
-        for char, x, y in run:
-            # Calculate column index from float position
-            col = int(x / self._char_width)
+        for i, char in enumerate(text):
+            col = start_col + i
 
             # Find highlight at this position
             is_highlighted = False
             is_current = False
-            for start_col, end_col, current in highlights:
-                if start_col <= col < end_col:
+            for start_col_hl, end_col_hl, current in highlights:
+                if start_col_hl <= col < end_col_hl:
                     is_highlighted = True
                     is_current = current
                     break
 
-            # Calculate colors for this character
+            # Determine background color for this character
+            char_bg = bg
             if is_highlighted:
-                char_colors = (
-                    fg,
-                    self._style_manager.get_color(ColorRole.TEXT_FOUND if is_current else ColorRole.TEXT_FOUND_DIM)
+                char_bg = self._style_manager.get_color(
+                    ColorRole.TEXT_FOUND if is_current else ColorRole.TEXT_FOUND_DIM
                 )
+
+            # If background color changes or this is the last character, draw the current batch
+            if char_bg != current_highlight_bg or i == len(text) - 1:
+                # If this is the last character and it has the same background, include it in the batch
+                if i == len(text) - 1 and char_bg == current_highlight_bg:
+                    current_batch_len += 1
+
+                # Draw the current batch if it's not empty
+                if current_batch_len > 0:
+                    batch_x = x_start + (current_batch_start * self._char_width)
+                    batch_width = current_batch_len * self._char_width
+
+                    # Draw background
+                    painter.fillRect(
+                        QRectF(batch_x, y, batch_width, self._char_height),
+                        current_highlight_bg
+                    )
+
+                    # Draw text if not blinking or in visible state
+                    if not (attrs & CharacterAttributes.BLINK and self._blink_state):
+                        painter.setPen(fg)
+                        batch_text = text[current_batch_start:current_batch_start + current_batch_len]
+                        painter.drawText(
+                            QPointF(batch_x, y + self._char_ascent),
+                            batch_text
+                        )
+
+                # Start a new batch for the current character
+                if i == len(text) - 1 and char_bg != current_highlight_bg:
+                    # Draw the final character separately if it has a different background
+                    painter.fillRect(
+                        QRectF(x_start + (i * self._char_width), y, self._char_width, self._char_height),
+                        char_bg
+                    )
+
+                    if not (attrs & CharacterAttributes.BLINK and self._blink_state):
+                        painter.setPen(fg)
+                        painter.drawText(
+                            QPointF(x_start + (i * self._char_width), y + self._char_ascent),
+                            char
+                        )
+                else:
+                    # Start a new batch
+                    current_batch_start = i
+                    current_batch_len = 1
+                    current_highlight_bg = char_bg
             else:
-                char_colors = (fg, bg)
-
-            # If colors change, draw current batch and start new one
-            if char_colors != current_colors:
-                draw_batch()
-                current_batch = []
-                current_colors = char_colors
-
-            current_batch.append((char, x, y))
-
-        # Draw final batch
-        draw_batch()
+                # Continue the current batch
+                current_batch_len += 1
 
     def _draw_selection(
         self,
