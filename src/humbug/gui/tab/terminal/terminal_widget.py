@@ -672,19 +672,20 @@ class TerminalWidget(QAbstractScrollArea):
                 colors = (fg_color, bg_color)
                 if attrs == current_attrs and colors == current_colors:
                     current_run.append((char, x, y))
-                else:
-                    # Draw previous run if it exists
-                    if current_run:
-                        self._draw_character_run(
-                            painter, current_run, current_attrs,
-                            current_colors, default_fg, default_bg,
-                            font_variants
-                        )
+                    continue
 
-                    # Start new run
-                    current_run = [(char, x, y)]
-                    current_attrs = attrs
-                    current_colors = colors
+                # Draw previous run if it exists
+                if current_run:
+                    self._draw_character_run(
+                        painter, current_run, current_attrs,
+                        current_colors, default_fg, default_bg,
+                        font_variants
+                    )
+
+                # Start new run
+                current_run = [(char, x, y)]
+                current_attrs = attrs
+                current_colors = colors
 
             # Draw final run for this row
             if current_run:
