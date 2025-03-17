@@ -14,147 +14,30 @@ class ConversationMarkdownConverter:
     Converts simplified markdown to HTML.
 
     This class handles the incremental conversion of simplified markdown to HTML,
-    focusing on headings, unordered lists, bold, and italic formatting.
+    focusing on headings, unordered lists, bold, and italic formatting with proper
+    handling of block-level vs inline elements.
     """
 
     def __init__(self):
         """Initialize the markdown converter."""
-        # Track list state for proper list generation
-        self._in_list = False
-        self._list_depth = 0
-
         # Regular expressions for markdown elements
         self._heading_pattern = re.compile(r'^(#{1,6})\s+(.*?)(?:\s+#{1,6})?$', re.MULTILINE)
         self._bold_pattern = re.compile(r'\*\*(.*?)\*\*|\b__(.*?)__\b')
         self._italic_pattern = re.compile(r'\*([^*]+)\*|\b_([^_]+)_\b')
-        self._list_pattern = re.compile(r'^(\s*)[*+-]\s+(.*?)$', re.MULTILINE)
+
+        # List item pattern - captures leading spaces, list marker, and content
+        self._list_item_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
 
         # Track block state for incremental conversion
         self._current_blocks: List[str] = []
-
-        # For each block, track if it's been converted to HTML
         self._block_converted: List[bool] = []
-
-        # For each block, store its HTML version
         self._block_html: List[str] = []
+
+        # Track list state between block processing
+        self._list_states: List[Dict] = []
 
         # Track the part of the last block we've processed so far
         self._partial_last_block = ""
-
-    def _convert_headings(self, text: str) -> str:
-        """
-        Convert markdown headings to HTML.
-
-        Args:
-            text: The markdown text to convert
-
-        Returns:
-            Text with headings converted to HTML
-        """
-        def replace_heading(match):
-            level = len(match.group(1))
-            content = match.group(2).strip()
-            return f"<h{level}>{content}</h{level}>"
-
-        return self._heading_pattern.sub(replace_heading, text)
-
-    def _convert_bold(self, text: str) -> str:
-        """
-        Convert markdown bold to HTML.
-
-        Args:
-            text: The markdown text to convert
-
-        Returns:
-            Text with bold formatting converted to HTML
-        """
-        def replace_bold(match):
-            content = match.group(1) or match.group(2)
-            return f"<strong>{content}</strong>"
-
-        return self._bold_pattern.sub(replace_bold, text)
-
-    def _convert_italic(self, text: str) -> str:
-        """
-        Convert markdown italic to HTML.
-
-        Args:
-            text: The markdown text to convert
-
-        Returns:
-            Text with italic formatting converted to HTML
-        """
-        def replace_italic(match):
-            content = match.group(1) or match.group(2)
-            return f"<em>{content}</em>"
-
-        return self._italic_pattern.sub(replace_italic, text)
-
-    def _handle_list_blocks(self, blocks: List[str]) -> List[str]:
-        """
-        Process and convert list items to HTML, maintaining proper list nesting.
-
-        Args:
-            blocks: List of text blocks
-
-        Returns:
-            List of blocks with list items converted to HTML
-        """
-        result = []
-        in_list = False
-        list_stack = []
-        current_indent = 0
-
-        for block in blocks:
-            list_match = self._list_pattern.match(block)
-
-            if not list_match:
-                # Not a list item, close any open lists
-                if in_list:
-                    while list_stack:
-                        result.append(f"</ul>")
-                        list_stack.pop()
-                    in_list = False
-                    current_indent = 0
-
-                # Add the normal block
-                result.append(block)
-                continue
-
-            # Handle list item
-            indent = len(list_match.group(1))
-            content = list_match.group(2)
-
-            if not in_list:
-                # Start a new list
-                result.append(f"<ul>")
-                list_stack.append(indent)
-                in_list = True
-                current_indent = indent
-            elif indent > current_indent:
-                # Deeper nesting level
-                result.append(f"<ul>")
-                list_stack.append(indent)
-                current_indent = indent
-            elif indent < current_indent:
-                # Going back up the nesting levels
-                while list_stack and indent < current_indent:
-                    result.append(f"</ul>")
-                    list_stack.pop()
-                    if list_stack:
-                        current_indent = list_stack[-1]
-                    else:
-                        current_indent = 0
-
-            # Add the list item
-            result.append(f"<li>{content}</li>")
-
-        # Close any open lists
-        while list_stack:
-            result.append(f"</ul>")
-            list_stack.pop()
-
-        return result
 
     def _split_into_blocks(self, text: str) -> List[str]:
         """
@@ -183,6 +66,134 @@ class ConversationMarkdownConverter:
 
         return blocks
 
+    def _apply_inline_formatting(self, text: str) -> str:
+        """
+        Apply inline formatting (bold, italic) to text.
+
+        Args:
+            text: The text to format
+
+        Returns:
+            Text with inline formatting applied
+        """
+        # Apply bold formatting
+        def replace_bold(match):
+            content = match.group(1) or match.group(2)
+            return f"<strong>{content}</strong>" if content else "**"
+
+        # Apply italic formatting
+        def replace_italic(match):
+            content = match.group(1) or match.group(2)
+            return f"<em>{content}</em>" if content else "*"
+
+        formatted = self._bold_pattern.sub(replace_bold, text)
+        return self._italic_pattern.sub(replace_italic, formatted)
+
+    def _classify_block(self, block: str) -> Tuple[str, str]:
+        """
+        Determine the type of a block and extract its content.
+
+        Args:
+            block: Block text to classify
+
+        Returns:
+            Tuple of (block_type, content) where block_type is one of:
+            'heading', 'list_item', 'paragraph'
+        """
+        # Check for headings
+        heading_match = self._heading_pattern.match(block)
+        if heading_match:
+            level = len(heading_match.group(1))
+            content = heading_match.group(2).strip()
+            return 'heading', (level, content)
+
+        # Check if any line is a list item
+        lines = block.split('\n')
+        is_list = any(self._list_item_pattern.match(line) for line in lines)
+        if is_list:
+            return 'list', lines
+
+        # Default to paragraph
+        return 'paragraph', block
+
+    def _convert_heading(self, level: int, content: str) -> str:
+        """
+        Convert a heading to HTML.
+
+        Args:
+            level: Heading level (1-6)
+            content: Heading content
+
+        Returns:
+            HTML heading
+        """
+        # Apply inline formatting within the heading
+        formatted_content = self._apply_inline_formatting(content)
+        return f"<h{level}>{formatted_content}</h{level}>"
+
+    def _process_list_items(self, lines: List[str]) -> str:
+        """
+        Process multiple lines with potential list items.
+
+        Args:
+            lines: List of text lines that may contain list items
+
+        Returns:
+            HTML for the list structure
+        """
+        # Track list structure
+        html_parts = []
+        list_stack = []
+
+        for line in lines:
+            match = self._list_item_pattern.match(line)
+            if not match:
+                # Handle non-list lines within a list block
+                if list_stack:
+                    # This is content for the previous list item (indented content)
+                    html_parts.append(line)
+                else:
+                    # This shouldn't normally happen in a 'list' block
+                    formatted_line = self._apply_inline_formatting(line)
+                    html_parts.append(formatted_line)
+                continue
+
+            # Extract information from the match
+            indent = len(match.group(1))
+            marker = match.group(2)
+            content = match.group(3)
+
+            # Apply inline formatting to content
+            formatted_content = self._apply_inline_formatting(content)
+
+            # Calculate list level based on indentation
+            level = indent // 2
+
+            # Adjust list stack if needed
+            if not list_stack:
+                # Start first list
+                html_parts.append("<ul>")
+                list_stack.append(level)
+            elif level > list_stack[-1]:
+                # Start a nested list
+                html_parts.append("<ul>")
+                list_stack.append(level)
+            elif level < list_stack[-1]:
+                # Close deeper lists
+                while list_stack and level < list_stack[-1]:
+                    html_parts.append("</ul>")
+                    list_stack.pop()
+
+            # Add the list item
+            html_parts.append(f"<li>{formatted_content}</li>")
+
+        # Close any remaining open lists
+        while list_stack:
+            html_parts.append("</ul>")
+            list_stack.pop()
+
+        return "\n".join(html_parts)
+
     def _convert_block(self, block: str) -> str:
         """
         Convert a single block of markdown to HTML.
@@ -193,24 +204,20 @@ class ConversationMarkdownConverter:
         Returns:
             HTML converted text
         """
-        # Check if it matches a heading pattern
-        if self._heading_pattern.match(block):
-            return self._convert_headings(block)
+        block_type, content = self._classify_block(block)
 
-        # Check if it matches a list pattern
-        if self._list_pattern.match(block):
-            # Individual list items are handled in _handle_list_blocks
-            return block
-
-        # Apply inline formatting
-        formatted = self._convert_bold(block)
-        formatted = self._convert_italic(formatted)
-
-        # Wrap in paragraph if it doesn't start with HTML tag
-        if not formatted.startswith('<'):
-            return f"<p>{formatted}</p>"
-
-        return formatted
+        if block_type == 'heading':
+            level, heading_text = content
+            return self._convert_heading(level, heading_text)
+        elif block_type == 'list':
+            return self._process_list_items(content)
+        else:  # paragraph
+            # Apply inline formatting
+            formatted = self._apply_inline_formatting(content)
+            # Wrap in paragraph tags if it's not already a HTML tag
+            if not formatted.strip().startswith('<'):
+                return f"<p>{formatted}</p>"
+            return formatted
 
     def convert_incremental(self, new_text: str) -> str:
         """
@@ -225,64 +232,65 @@ class ConversationMarkdownConverter:
         # Split into blocks
         new_blocks = self._split_into_blocks(new_text)
 
-        # If we have no previous blocks, process everything
+        # Handle empty input
+        if not new_blocks:
+            return ""
+
+        # Initialize if this is the first conversion
         if not self._current_blocks:
             self._current_blocks = new_blocks
             self._block_converted = [False] * len(new_blocks)
             self._block_html = [""] * len(new_blocks)
-            self._partial_last_block = new_blocks[-1] if new_blocks else ""
+            self._partial_last_block = new_blocks[-1]
         else:
-            # Check if blocks have been added or modified
+            # Find how many blocks match from the beginning
             common_prefix_len = 0
-
-            # Find common prefix length
             for i, (old, new) in enumerate(zip(self._current_blocks, new_blocks)):
                 if old == new:
                     common_prefix_len = i + 1
                 else:
                     break
 
-            # Update blocks
+            # Update our tracking arrays
             if len(new_blocks) > len(self._current_blocks):
                 # New blocks added
                 self._current_blocks = new_blocks
-                # Mark added blocks as not converted
-                self._block_converted.extend([False] * (len(new_blocks) - len(self._block_converted)))
-                self._block_html.extend([""] * (len(new_blocks) - len(self._block_html)))
-                self._partial_last_block = new_blocks[-1]
-            elif len(new_blocks) <= len(self._current_blocks) and common_prefix_len < len(new_blocks):
-                # Last common block changed
+                # Keep converted status for existing blocks
+                self._block_converted = (
+                    self._block_converted +
+                    [False] * (len(new_blocks) - len(self._block_converted))
+                )
+                # Keep HTML for existing blocks
+                self._block_html = (
+                    self._block_html +
+                    [""] * (len(new_blocks) - len(self._block_html))
+                )
+                # Always consider the last block as "in progress"
+                self._block_converted[-1] = False
+            elif common_prefix_len < len(new_blocks):
+                # Update with changed blocks
                 self._current_blocks = new_blocks
-                self._block_converted[common_prefix_len:] = [False] * (len(new_blocks) - common_prefix_len)
-                self._block_html[common_prefix_len:] = [""] * (len(new_blocks) - common_prefix_len)
-                self._partial_last_block = new_blocks[-1]
-            else:
-                # Weird case - same or fewer blocks with existing content unchanged
-                # Just reset to be safe
-                self._current_blocks = new_blocks
-                self._block_converted = [False] * len(new_blocks)
-                self._block_html = [""] * len(new_blocks)
-                self._partial_last_block = new_blocks[-1] if new_blocks else ""
+                # Mark changed blocks as not converted
+                for i in range(common_prefix_len, len(new_blocks)):
+                    self._block_converted[i] = False
+                    self._block_html[i] = ""
+                # Trim arrays if blocks were removed
+                if len(new_blocks) < len(self._block_converted):
+                    self._block_converted = self._block_converted[:len(new_blocks)]
+                    self._block_html = self._block_html[:len(new_blocks)]
 
-        # Convert each unconverted block
+            self._partial_last_block = new_blocks[-1]
+
+        # Process all unconverted blocks
         for i, block in enumerate(self._current_blocks):
             if not self._block_converted[i]:
-                # Last block might be still in progress, so don't mark it as converted
-                is_last_block = (i == len(self._current_blocks) - 1)
-
-                # Convert the block
-                converted = self._convert_block(block)
-                self._block_html[i] = converted
-
-                # Mark as converted (except last block)
-                if not is_last_block:
+                self._block_html[i] = self._convert_block(block)
+                # Mark all blocks except the last one as converted
+                if i < len(self._current_blocks) - 1:
                     self._block_converted[i] = True
 
-        # Handle lists - process all blocks to ensure proper list structure
-        converted_blocks = self._handle_list_blocks(self._block_html)
-
-        # Join all blocks and return
-        return '\n'.join(converted_blocks)
+        # Combine all processed blocks
+        return "\n".join(self._block_html)
 
     def reset(self):
         """Reset the converter state."""
@@ -290,5 +298,4 @@ class ConversationMarkdownConverter:
         self._block_converted = []
         self._block_html = []
         self._partial_last_block = ""
-        self._in_list = False
-        self._list_depth = 0
+        self._list_states = []
