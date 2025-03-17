@@ -270,7 +270,7 @@ class ConversationMarkdownConverter:
         Process a sequence of list items and generate HTML.
 
         Handles nested lists based on relative indentation rather than fixed boundaries.
-        Supports both ordered and unordered lists.
+        Supports both ordered and unordered lists, including mixed nested list types.
 
         Args:
             items: List of (indent, marker, content) tuples from _identify_line_type
@@ -282,65 +282,81 @@ class ConversationMarkdownConverter:
         if not items:
             return ""
 
-        # Track list structure
-        html_parts = []
-        list_stack = []  # Stack of tuples: (indentation level, list type)
+        # Define a class to represent a node in our list hierarchy
+        class ListNode:
+            def __init__(self, indent, is_ordered, parent=None):
+                self.indent = indent
+                self.is_ordered = is_ordered
+                self.parent = parent
+                self.children = []  # Both list items and nested lists
+                self.content = []   # For list items at this level
 
-        # Track indentation of the first list item to determine relative indentation
-        base_indent = items[0][0]
-        current_levels = {base_indent: 0}  # Maps indentation to nesting level
+            def add_content(self, content):
+                self.content.append(content)
 
-        for indent, marker, content in items:
+            def add_child(self, child):
+                self.children.append(child)
+
+            def to_html(self):
+                tag = "ol" if self.is_ordered else "ul"
+                html = [f"<{tag}>"]
+
+                # Add list items at this level
+                for item in self.content:
+                    html.append(f"<li>{item}</li>")
+
+                # Add nested lists
+                html.extend([child.to_html() for child in self.children])
+
+                html.append(f"</{tag}>")
+                return "\n".join(html)
+
+        # Extract information about each list item
+        processed_items = []
+        for i, (indent, marker, content) in enumerate(items):
+            # Determine if this is an ordered list item
+            is_ordered = isinstance(marker, str) and marker.isdigit()
+
             # Apply inline formatting to content
             formatted_content = self._apply_inline_formatting(content)
 
-            # Determine the nesting level based on relative indentation
-            if indent not in current_levels:
-                # Find the closest lower indentation level
-                prev_indents = [i for i in current_levels.keys() if i < indent]
-                if prev_indents:
-                    closest_indent = max(prev_indents)
-                    # This is a new level one deeper than the closest lower level
-                    current_levels[indent] = current_levels[closest_indent] + 1
-                else:
-                    # If no lower indent exists, this must be a new root level
-                    current_levels[indent] = 0
+            processed_items.append((indent, is_ordered, formatted_content))
 
-            level = current_levels[indent]
+        # If there are no items, return empty string
+        if not processed_items:
+            return ""
 
-            # Adjust list stack if needed
-            current_stack_level = len(list_stack) - 1 if list_stack else -1
+        # Create root node based on the type of the first item
+        root = ListNode(0, ordered)
+        current = root
 
-            if current_stack_level < level:
-                # Need to open new lists
-                while current_stack_level < level:
-                    # Determine if this should be an ordered or unordered list
-                    # For now, we'll use the same type as the parent list
-                    # This could be enhanced to detect type changes
-                    list_tag = "ol" if ordered else "ul"
-                    html_parts.append(f"<{list_tag}>")
-                    list_stack.append((level, ordered))
-                    current_stack_level += 1
-            elif current_stack_level > level:
-                # Need to close lists
-                while list_stack and current_stack_level > level:
-                    _, is_ordered = list_stack[-1]
-                    list_tag = "ol" if is_ordered else "ul"
-                    html_parts.append(f"</{list_tag}>")
-                    list_stack.pop()
-                    current_stack_level -= 1
+        # Stack to track current list hierarchy
+        stack = [root]
 
-            # Add the list item
-            html_parts.append(f"<li>{formatted_content}</li>")
+        for indent, is_ordered, content in processed_items:
+            # Find the parent node for this item based on indentation
+            while stack and stack[-1].indent >= indent:
+                stack.pop()
 
-        # Close any remaining open lists
-        while list_stack:
-            _, is_ordered = list_stack[-1]
-            list_tag = "ol" if is_ordered else "ul"
-            html_parts.append(f"</{list_tag}>")
-            list_stack.pop()
+            # If stack is empty, we're at the root level
+            if not stack:
+                stack.append(root)
 
-        return "\n".join(html_parts)
+            parent = stack[-1]
+
+            # If this item has more indentation than its parent, it's part of a nested list
+            if indent > parent.indent:
+                # Create a new list node
+                new_list = ListNode(indent, is_ordered, parent)
+                parent.add_child(new_list)
+                stack.append(new_list)
+                new_list.add_content(content)
+            else:
+                # This is a direct child of the parent
+                parent.add_content(content)
+
+        # Convert the list hierarchy to HTML
+        return root.to_html()
 
     def _convert_block(self, block: str) -> str:
         """
