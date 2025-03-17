@@ -6,7 +6,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 """
 
 import re
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, Any
 
 
 class ConversationMarkdownConverter:
@@ -88,7 +88,6 @@ class ConversationMarkdownConverter:
             Text with inline formatting applied
         """
         # First, escape special HTML characters
-        # This needs to be done before applying formatting
         def escape_html(text):
             # Replace < with &lt; and > with &gt;
             text = text.replace('&', '&amp;')  # Must come first to avoid double-escaping
@@ -173,114 +172,39 @@ class ConversationMarkdownConverter:
         # Default to regular text
         return 'text', line
 
-    def _classify_block(self, block: str) -> List[Tuple[str, any]]:
+    def _convert_block(self, block: str) -> str:
         """
-        Analyze a block and break it down into its component elements.
+        Convert a single block of markdown to HTML.
 
-        This approach processes the block line by line, identifying each line type
-        and returning a sequence of elements that should be converted to HTML.
+        This simplified approach handles block conversion directly.
 
         Args:
-            block: Block text to classify
+            block: The block of text to convert
 
         Returns:
-            List of (element_type, content) tuples representing the parsed structure
+            HTML converted text
         """
         lines = block.split('\n')
-        elements = []
 
-        # List item detection
-        list_items = []
-        current_list_type = None  # Either 'ordered' or 'unordered'
-        prev_list_item_indent = -1
+        # Check for heading block (simple case)
+        if lines and self._heading_pattern.match(lines[0]):
+            line_type, content = self._identify_line_type(lines[0])
+            level, heading_text = content
+            return self._convert_heading(level, heading_text)
 
-        # Paragraph tracking
-        current_paragraph_lines = []
+        # Check if this is a list block
+        has_list_items = any(
+            self._identify_line_type(line)[0] in ('ordered_list_item', 'unordered_list_item')
+            for line in lines
+        )
 
-        def finalize_paragraph():
-            """Helper to finalize the current paragraph"""
-            nonlocal current_paragraph_lines
-            if current_paragraph_lines:
-                paragraph_text = '\n'.join(current_paragraph_lines)
-                elements.append(('paragraph', paragraph_text))
-                current_paragraph_lines = []
+        if has_list_items:
+            return self._handle_list_block(lines)
 
-        def process_list_items():
-            """Helper to process accumulated list items"""
-            nonlocal list_items, current_list_type
-            if list_items:
-                # Determine if this is an ordered or unordered list
-                is_ordered = current_list_type == 'ordered'
-                elements.append((current_list_type + '_list', list_items))
-                list_items = []
-                current_list_type = None
-                prev_list_item_indent = -1
-
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            line_type, content = self._identify_line_type(line)
-
-            if line_type == 'heading':
-                # Finalize any open structures
-                process_list_items()
-                finalize_paragraph()
-
-                # Add the heading
-                elements.append(('heading', content))
-
-            elif line_type in ('unordered_list_item', 'ordered_list_item'):
-                # Finalize any open paragraph
-                finalize_paragraph()
-
-                # Determine list type
-                list_type = 'ordered' if line_type == 'ordered_list_item' else 'unordered'
-
-                # If we're starting a new list or switching types at the same level
-                indent, marker, item_content = content
-
-                # If this is the first list item or if we're switching list types at the base level
-                if not list_items or (indent == 0 and current_list_type != list_type):
-                    # Process any previous list
-                    process_list_items()
-                    current_list_type = list_type
-
-                # Add this item to our list
-                list_items.append(content)
-                prev_list_item_indent = indent
-
-            elif line_type == 'blank':
-                # Blank line in the middle of a list doesn't break the list
-                # But it does end paragraphs
-                finalize_paragraph()
-
-            elif line_type == 'text':
-                # If we have list items, we need to determine if this text
-                # is part of the previous list item or a new paragraph
-                if list_items and i > 0:
-                    prev_line_type, _ = self._identify_line_type(lines[i-1])
-                    if prev_line_type in ('unordered_list_item', 'ordered_list_item'):
-                        # This text might be a continuation of the previous list item
-                        # We'll add it to the content of the last list item
-                        if list_items:
-                            indent, marker, item_content = list_items[-1]
-                            list_items[-1] = (indent, marker, item_content + "\n" + line)
-                            i += 1
-                            continue
-
-                # Not continuation of a list item - process any lists we were building
-                process_list_items()
-
-                # Add to current paragraph
-                current_paragraph_lines.append(line)
-
-            i += 1
-
-        # Don't forget any remaining structures
-        process_list_items()
-        finalize_paragraph()
-
-        return elements
+        # Otherwise, treat as paragraph
+        paragraph_text = self._handle_line_breaks('\n'.join(lines))
+        formatted_text = self._apply_inline_formatting(paragraph_text)
+        return f"<p>{formatted_text}</p>"
 
     def _convert_heading(self, level: int, content: str) -> str:
         """
@@ -297,132 +221,190 @@ class ConversationMarkdownConverter:
         formatted_content = self._apply_inline_formatting(content)
         return f"<h{level}>{formatted_content}</h{level}>"
 
-    def _process_list_items(self, items: List[Tuple[int, str, str]], ordered: bool = False) -> str:
+    def _handle_list_block(self, lines: List[str]) -> str:
         """
-        Process a sequence of list items and generate HTML.
-
-        Handles nested lists based on relative indentation rather than fixed boundaries.
-        Supports both ordered and unordered lists, including mixed nested list types.
+        Handle a block of text containing list items.
 
         Args:
-            items: List of (indent, marker, content) tuples from _identify_line_type
-            ordered: Whether the root list is ordered (ol) or unordered (ul)
+            lines: Lines of text that include list items
 
         Returns:
-            HTML for the list structure
+            HTML string representing the list structure
         """
-        if not items:
-            return ""
+        # Parse each line into a list item structure
+        list_items = []
+        i = 0
+        while i < len(lines):
+            line_type, content = self._identify_line_type(lines[i])
 
-        # Map indentation levels to list item information
-        # Store items in a structure that preserves their hierarchy
-        # Structure: [indent_level, marker_type, content, [children]]
-        # where children is a list that will contain nested items
+            if line_type in ('ordered_list_item', 'unordered_list_item'):
+                indent, marker, text = content
 
-        # First determine the base indentation level (from the first item)
-        base_indent = items[0][0]
+                # Check for continuation lines
+                continuation_text = []
+                j = i + 1
+                while j < len(lines) and self._identify_line_type(lines[j])[0] == 'text':
+                    continuation_text.append(lines[j])
+                    j += 1
 
-        # Helper function to determine if a marker indicates an ordered list
-        def is_ordered_marker(marker):
-            if isinstance(marker, int) or (isinstance(marker, str) and marker.isdigit()):
-                return True
-            if isinstance(marker, str) and marker.strip().endswith('.') and marker.strip()[:-1].isdigit():
-                return True
-            return False
+                # Append continuation lines to text if any
+                if continuation_text:
+                    text += '\n' + '\n'.join(continuation_text)
+                    i = j - 1  # Skip these lines
 
-        # Create a hierarchical structure of the list items
-        root_items = []
-        item_stack = []  # Stack of (indent, items_list) to track hierarchy
+                # Add list item with its processed content
+                list_items.append((line_type, (indent, marker, text)))
+            elif line_type != 'blank':
+                # Non-empty, non-list line - treat as a paragraph
+                formatted_text = self._apply_inline_formatting(self._handle_line_breaks(lines[i]))
+                list_items.append(('paragraph', formatted_text))
 
-        for indent, marker, content in items:
-            # Determine if this is an ordered list item
-            is_ordered_item = is_ordered_marker(marker)
+            i += 1
 
-            # Format the content
-            formatted_content = self._apply_inline_formatting(content)
+        # Now process the list items
+        return self._process_list_items(list_items)
 
-            # Create item entry [indent, is_ordered, content, children]
-            item = [indent, is_ordered_item, formatted_content, []]
-
-            # Find the appropriate parent for this item based on indentation
-            while item_stack and item_stack[-1][0] >= indent:
-                item_stack.pop()
-
-            if not item_stack:  # This is a top-level item
-                root_items.append(item)
-                item_stack.append((indent, root_items))
-            else:  # This is a child of the last item on the stack
-                parent_indent, parent_items = item_stack[-1]
-                parent_items[-1][3].append(item)  # Add to children of the last item
-                item_stack.append((indent, item[3]))  # Push this item's children list
-
-        # Generate HTML from the hierarchical structure
-        def generate_html(items, parent_ordered=None):
-            if not items:
-                return ""
-
-            # Determine if this list should be ordered or unordered
-            # If all items are ordered markers, create an ordered list
-            # Otherwise, create an unordered list (or use parent_ordered for the first level)
-            if parent_ordered is not None:
-                is_ordered = parent_ordered
-            else:
-                is_ordered = all(item[1] for item in items)
-
-            # Create the list
-            list_tag = "ol" if is_ordered else "ul"
-            html = [f"<{list_tag}>"]
-
-            # Add each item
-            for _, item_is_ordered, content, children in items:
-                html.append(f"<li>{content}")
-
-                # Add nested list if there are children
-                if children:
-                    # Determine children's list type - if mixed, default based on first child
-                    children_html = generate_html(children)
-                    if children_html:
-                        html.append(children_html)
-
-                html.append("</li>")
-
-            html.append(f"</{list_tag}>")
-            return "\n".join(html)
-
-        # Generate HTML for the root items, using the specified 'ordered' parameter
-        return generate_html(root_items, ordered)
-
-    def _convert_block(self, block: str) -> str:
+    def _process_list_items(self, items: List[Tuple[str, Any]]) -> str:
         """
-        Convert a single block of markdown to HTML.
+        Process list items into proper HTML using a simplified stack approach.
 
         Args:
-            block: The block of text to convert
+            items: List of parsed items (line_type, content)
 
         Returns:
-            HTML converted text
+            HTML string
         """
-        # Get the sequence of elements in this block
-        elements = self._classify_block(block)
+        # Filter only actual list items
+        list_items = [item for item in items if item[0] in ('ordered_list_item', 'unordered_list_item')]
+
+        # If no list items, just return paragraphs
+        if not list_items:
+            html_parts = []
+            for item_type, content in items:
+                if item_type == 'paragraph':
+                    html_parts.append(f"<p>{content}</p>")
+            return "\n".join(html_parts)
+
+        # Start with paragraphs if there are any before the first list
         html_parts = []
+        for item in items:
+            if item[0] == 'paragraph':
+                html_parts.append(f"<p>{item[1]}</p>")
+            else:
+                break
 
-        for element_type, content in elements:
-            if element_type == 'heading':
-                level, heading_text = content
-                html_parts.append(self._convert_heading(level, heading_text))
-            elif element_type == 'unordered_list':
-                html_parts.append(self._process_list_items(content, ordered=False))
-            elif element_type == 'ordered_list':
-                html_parts.append(self._process_list_items(content, ordered=True))
-            elif element_type == 'paragraph':
-                # Process line breaks (lines ending with two spaces)
-                content_with_breaks = self._handle_line_breaks(content)
+        # Each stack entry: [indent, is_ordered, in_item, item_content]
+        list_stack = []
 
-                # Apply inline formatting
-                formatted = self._apply_inline_formatting(content_with_breaks)
+        # Find base indentation
+        base_indent = min(indent for item_type, (indent, _, _) in list_items)
 
-                # Wrap in paragraph tags
-                html_parts.append(f"<p>{formatted}</p>")
+        # Process each list item
+        for item_type, (indent, marker, content) in list_items:
+            # Format content
+            formatted_content = self._apply_inline_formatting(content)
+            is_ordered = (item_type == 'ordered_list_item')
+
+            # If stack is empty, start first list
+            if not list_stack:
+                list_tag = "ol" if is_ordered else "ul"
+                html_parts.append(f"<{list_tag}>")
+                html_parts.append(f"<li>{formatted_content}")
+                list_stack.append([indent, is_ordered, True, formatted_content])
+                continue
+
+            # Check relationship with top of stack
+            top_indent, top_ordered, in_item, _ = list_stack[-1]
+
+            # Same level as top of stack
+            if indent == top_indent:
+                # Close previous item if needed
+                if in_item:
+                    html_parts.append("</li>")
+
+                # If different list type at same level, close old and start new
+                if is_ordered != top_ordered:
+                    # Close all nested lists up to this level
+                    while list_stack and list_stack[-1][0] >= indent:
+                        if list_stack[-1][2]:  # in_item
+                            html_parts.append("</li>")
+                        list_tag = "ol" if list_stack[-1][1] else "ul"
+                        html_parts.append(f"</{list_tag}>")
+                        list_stack.pop()
+
+                    # Start new list of correct type
+                    list_tag = "ol" if is_ordered else "ul"
+                    html_parts.append(f"<{list_tag}>")
+
+                # Add new item
+                html_parts.append(f"<li>{formatted_content}")
+
+                # Update stack
+                list_stack[-1] = [indent, is_ordered, True, formatted_content]
+
+            # Nested deeper than top of stack
+            elif indent > top_indent:
+                # Start a nested list
+                list_tag = "ol" if is_ordered else "ul"
+                html_parts.append(f"<{list_tag}>")
+                html_parts.append(f"<li>{formatted_content}")
+
+                # Add to stack
+                list_stack.append([indent, is_ordered, True, formatted_content])
+
+            # Less indented than top of stack - moving out
+            else:
+                # Close lists until we find appropriate level
+                while list_stack and list_stack[-1][0] > indent:
+                    if list_stack[-1][2]:  # in_item
+                        html_parts.append("</li>")
+                    list_tag = "ol" if list_stack[-1][1] else "ul"
+                    html_parts.append(f"</{list_tag}>")
+                    list_stack.pop()
+
+                # At this point, we should be at the same level or still deeper
+                if list_stack and list_stack[-1][0] == indent:
+                    # Same level - close current item if any
+                    if list_stack[-1][2]:
+                        html_parts.append("</li>")
+
+                    # If different list type, close and start new
+                    if list_stack[-1][1] != is_ordered:
+                        list_tag = "ol" if list_stack[-1][1] else "ul"
+                        html_parts.append(f"</{list_tag}>")
+                        list_stack.pop()
+
+                        # Start new list
+                        list_tag = "ol" if is_ordered else "ul"
+                        html_parts.append(f"<{list_tag}>")
+                        html_parts.append(f"<li>{formatted_content}")
+                        list_stack.append([indent, is_ordered, True, formatted_content])
+                    else:
+                        # Same type - continue list
+                        html_parts.append(f"<li>{formatted_content}")
+                        list_stack[-1] = [indent, is_ordered, True, formatted_content]
+                else:
+                    # We've closed too many lists - start a new one
+                    list_tag = "ol" if is_ordered else "ul"
+                    html_parts.append(f"<{list_tag}>")
+                    html_parts.append(f"<li>{formatted_content}")
+                    list_stack.append([indent, is_ordered, True, formatted_content])
+
+        # Close any remaining open lists
+        while list_stack:
+            if list_stack[-1][2]:  # in_item
+                html_parts.append("</li>")
+            list_tag = "ol" if list_stack[-1][1] else "ul"
+            html_parts.append(f"</{list_tag}>")
+            list_stack.pop()
+
+        # Add paragraphs after the list if any
+        paragraph_found = False
+        for item in items:
+            if paragraph_found and item[0] == 'paragraph':
+                html_parts.append(f"<p>{item[1]}</p>")
+            elif item[0] != 'paragraph':
+                paragraph_found = True
 
         return "\n".join(html_parts)
 
@@ -497,7 +479,6 @@ class ConversationMarkdownConverter:
                     self._block_converted[i] = True
 
         # Combine all processed blocks
-        print(f"\n".join(self._block_html))
         return "\n".join(self._block_html)
 
     def reset(self):
