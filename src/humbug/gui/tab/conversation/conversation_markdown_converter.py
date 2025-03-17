@@ -41,7 +41,10 @@ class ConversationMarkdownConverter:
 
     def _split_into_blocks(self, text: str) -> List[str]:
         """
-        Split text into blocks based on blank lines.
+        Split text into logical blocks for processing.
+
+        This method separates text at blank lines, but also ensures
+        headings start new blocks even without blank lines before them.
 
         Args:
             text: The text to split
@@ -53,14 +56,24 @@ class ConversationMarkdownConverter:
         current_block = []
 
         lines = text.split('\n')
-        for line in lines:
-            if line.strip() == "":
+        for i, line in enumerate(lines):
+            # Check if line is a heading
+            is_heading = self._heading_pattern.match(line)
+
+            # If we find a heading (and it's not the first line), start a new block
+            if is_heading and current_block and i > 0:
+                blocks.append('\n'.join(current_block))
+                current_block = [line]
+            # If we find a blank line, end the current block
+            elif line.strip() == "":
                 if current_block:
                     blocks.append('\n'.join(current_block))
                     current_block = []
+            # Otherwise add to the current block
             else:
                 current_block.append(line)
 
+        # Add the last block if there is one
         if current_block:
             blocks.append('\n'.join(current_block))
 
@@ -89,32 +102,94 @@ class ConversationMarkdownConverter:
         formatted = self._bold_pattern.sub(replace_bold, text)
         return self._italic_pattern.sub(replace_italic, formatted)
 
-    def _classify_block(self, block: str) -> Tuple[str, str]:
+    def _identify_line_type(self, line: str) -> Tuple[str, any]:
         """
-        Determine the type of a block and extract its content.
+        Identify the type of a single line of text.
 
         Args:
-            block: Block text to classify
+            line: The line to identify
 
         Returns:
-            Tuple of (block_type, content) where block_type is one of:
-            'heading', 'list_item', 'paragraph'
+            Tuple of (line_type, content) where line_type is one of:
+            'heading', 'list_item', 'blank', 'text'
         """
-        # Check for headings
-        heading_match = self._heading_pattern.match(block)
+        if not line.strip():
+            return 'blank', None
+
+        # Check for heading
+        heading_match = self._heading_pattern.match(line)
         if heading_match:
             level = len(heading_match.group(1))
             content = heading_match.group(2).strip()
             return 'heading', (level, content)
 
-        # Check if any line is a list item
-        lines = block.split('\n')
-        is_list = any(self._list_item_pattern.match(line) for line in lines)
-        if is_list:
-            return 'list', lines
+        # Check for list item
+        list_match = self._list_item_pattern.match(line)
+        if list_match:
+            indent = len(list_match.group(1))
+            marker = list_match.group(2)
+            content = list_match.group(3)
+            return 'list_item', (indent, marker, content)
 
-        # Default to paragraph
-        return 'paragraph', block
+        # Default to regular text
+        return 'text', line.strip()
+
+    def _classify_block(self, block: str) -> List[Tuple[str, any]]:
+        """
+        Analyze a block and break it down into its component elements.
+
+        This approach processes the block line by line, identifying each line type
+        and returning a sequence of elements that should be converted to HTML.
+
+        Args:
+            block: Block text to classify
+
+        Returns:
+            List of (element_type, content) tuples representing the parsed structure
+        """
+        lines = block.split('\n')
+        elements = []
+        current_list_items = []
+        in_list = False
+
+        for line in lines:
+            line_type, content = self._identify_line_type(line)
+
+            if line_type == 'heading':
+                # If we were processing a list, finalize it
+                if in_list:
+                    elements.append(('list', current_list_items))
+                    current_list_items = []
+                    in_list = False
+
+                # Add the heading
+                elements.append(('heading', content))
+
+            elif line_type == 'list_item':
+                # Start or continue a list
+                in_list = True
+                current_list_items.append(content)
+
+            elif line_type == 'blank':
+                # Blank lines inside lists are ignored
+                # Blank lines outside lists are ignored too
+                pass
+
+            elif line_type == 'text':
+                # If we were processing a list, finalize it
+                if in_list:
+                    elements.append(('list', current_list_items))
+                    current_list_items = []
+                    in_list = False
+
+                # Add as paragraph text
+                elements.append(('paragraph', content))
+
+        # Don't forget any remaining list items
+        if in_list and current_list_items:
+            elements.append(('list', current_list_items))
+
+        return elements
 
     def _convert_heading(self, level: int, content: str) -> str:
         """
@@ -131,43 +206,35 @@ class ConversationMarkdownConverter:
         formatted_content = self._apply_inline_formatting(content)
         return f"<h{level}>{formatted_content}</h{level}>"
 
-    def _process_list_items(self, lines: List[str]) -> str:
+    def _process_list_items(self, items: List[Tuple[int, str, str]]) -> str:
         """
-        Process multiple lines with potential list items.
+        Process a sequence of list items and generate HTML.
 
         Args:
-            lines: List of text lines that may contain list items
+            items: List of (indent, marker, content) tuples from _identify_line_type
 
         Returns:
             HTML for the list structure
         """
+        if not items:
+            return ""
+
         # Track list structure
         html_parts = []
         list_stack = []
 
-        for line in lines:
-            match = self._list_item_pattern.match(line)
-            if not match:
-                # Handle non-list lines within a list block
-                if list_stack:
-                    # This is content for the previous list item (indented content)
-                    html_parts.append(line)
-                else:
-                    # This shouldn't normally happen in a 'list' block
-                    formatted_line = self._apply_inline_formatting(line)
-                    html_parts.append(formatted_line)
-                continue
-
-            # Extract information from the match
-            indent = len(match.group(1))
-            marker = match.group(2)
-            content = match.group(3)
-
+        for indent, marker, content in items:
             # Apply inline formatting to content
             formatted_content = self._apply_inline_formatting(content)
 
-            # Calculate list level based on indentation
-            level = indent // 2
+            # Calculate list nesting level (0 for top level)
+            level = 0
+            if indent >= 4:
+                level = 1
+            if indent >= 8:
+                level = 2
+            if indent >= 12:
+                level = 3
 
             # Adjust list stack if needed
             if not list_stack:
@@ -204,20 +271,23 @@ class ConversationMarkdownConverter:
         Returns:
             HTML converted text
         """
-        block_type, content = self._classify_block(block)
+        # Get the sequence of elements in this block
+        elements = self._classify_block(block)
+        html_parts = []
 
-        if block_type == 'heading':
-            level, heading_text = content
-            return self._convert_heading(level, heading_text)
-        elif block_type == 'list':
-            return self._process_list_items(content)
-        else:  # paragraph
-            # Apply inline formatting
-            formatted = self._apply_inline_formatting(content)
-            # Wrap in paragraph tags if it's not already a HTML tag
-            if not formatted.strip().startswith('<'):
-                return f"<p>{formatted}</p>"
-            return formatted
+        for element_type, content in elements:
+            if element_type == 'heading':
+                level, heading_text = content
+                html_parts.append(self._convert_heading(level, heading_text))
+            elif element_type == 'list':
+                html_parts.append(self._process_list_items(content))
+            elif element_type == 'paragraph':
+                # Apply inline formatting
+                formatted = self._apply_inline_formatting(content)
+                # Wrap in paragraph tags
+                html_parts.append(f"<p>{formatted}</p>")
+
+        return "\n".join(html_parts)
 
     def convert_incremental(self, new_text: str) -> str:
         """
