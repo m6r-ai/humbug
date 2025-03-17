@@ -41,8 +41,8 @@ class ConversationMarkdownConverter:
         """
         Split text into logical blocks for processing.
 
-        This method separates text at blank lines, but also ensures
-        headings start new blocks even without blank lines before them.
+        This method separates text at blank lines, and ensures
+        headings start new blocks even without blank lines.
 
         Args:
             text: The text to split
@@ -58,17 +58,17 @@ class ConversationMarkdownConverter:
             # Check if line is a heading
             is_heading = self._heading_pattern.match(line)
 
-            # If we find a heading (and it's not the first line), start a new block
-            if is_heading and current_block and i > 0:
+            # Start a new block if:
+            # 1. We encounter a heading (and it's not the first line/block is not empty)
+            # 2. We encounter a blank line (and current block is not empty)
+            if is_heading and current_block:
                 blocks.append('\n'.join(current_block))
                 current_block = [line]
-            # If we find a blank line, end the current block
-            elif line.strip() == "":
-                if current_block:
-                    blocks.append('\n'.join(current_block))
-                    current_block = []
+            elif line.strip() == "" and current_block:
+                blocks.append('\n'.join(current_block))
+                current_block = []
             # Otherwise add to the current block
-            else:
+            elif line.strip() != "" or current_block:  # Skip consecutive blank lines
                 current_block.append(line)
 
         # Add the last block if there is one
@@ -99,6 +99,27 @@ class ConversationMarkdownConverter:
 
         formatted = self._bold_pattern.sub(replace_bold, text)
         return self._italic_pattern.sub(replace_italic, formatted)
+
+    def _handle_line_breaks(self, text: str) -> str:
+        """
+        Process text to convert lines ending with two spaces to line breaks.
+
+        Args:
+            text: The text to process
+
+        Returns:
+            Text with appropriate line breaks added
+        """
+        lines = text.split('\n')
+        processed_lines = []
+
+        for line in lines:
+            if line.endswith('  '):  # Line ends with exactly two spaces
+                processed_lines.append(line.rstrip() + '<br />')
+            else:
+                processed_lines.append(line)
+
+        return '\n'.join(processed_lines)
 
     def _identify_line_type(self, line: str) -> Tuple[str, any]:
         """
@@ -161,20 +182,40 @@ class ConversationMarkdownConverter:
         current_list_type = None  # Either 'ordered' or 'unordered'
         in_list = False
 
-        for line in lines:
+        # Paragraph tracking
+        current_paragraph_lines = []
+
+        for i, line in enumerate(lines):
             line_type, content = self._identify_line_type(line)
 
-            if line_type == 'heading':
-                # If we were processing a list, finalize it
+            # Finish current paragraph if necessary
+            def finalize_paragraph():
+                nonlocal current_paragraph_lines
+                if current_paragraph_lines:
+                    paragraph_text = '\n'.join(current_paragraph_lines)
+                    elements.append(('paragraph', paragraph_text))
+                    current_paragraph_lines = []
+
+            # Finish current list if necessary
+            def finalize_list():
+                nonlocal current_list_items, current_list_type, in_list
                 if in_list:
                     elements.append((current_list_type + '_list', current_list_items))
                     current_list_items = []
                     in_list = False
 
+            if line_type == 'heading':
+                # Finalize any open structures
+                finalize_list()
+                finalize_paragraph()
+
                 # Add the heading
                 elements.append(('heading', content))
 
             elif line_type in ('unordered_list_item', 'ordered_list_item'):
+                # Finalize any open paragraph
+                finalize_paragraph()
+
                 # If we're switching list types, finalize the current list
                 list_type = 'ordered' if line_type == 'ordered_list_item' else 'unordered'
 
@@ -188,23 +229,24 @@ class ConversationMarkdownConverter:
                 current_list_items.append(content)
 
             elif line_type == 'blank':
-                # Blank lines inside lists are ignored
-                # Blank lines outside lists are ignored too
-                pass
+                # Blank line - end current paragraph
+                finalize_paragraph()
+                # We don't finalize lists on blank lines - they can contain blank lines
 
             elif line_type == 'text':
-                # If we were processing a list, finalize it
-                if in_list:
-                    elements.append((current_list_type + '_list', current_list_items))
-                    current_list_items = []
-                    in_list = False
+                # If we were in a list, finalize it
+                finalize_list()
 
-                # Add as paragraph text
-                elements.append(('paragraph', content))
+                # Add to current paragraph
+                current_paragraph_lines.append(content)
 
-        # Don't forget any remaining list items
-        if in_list and current_list_items:
-            elements.append((current_list_type + '_list', current_list_items))
+                # If this is the last line, finalize the paragraph
+                if i == len(lines) - 1:
+                    finalize_paragraph()
+
+        # Don't forget any remaining structures
+        finalize_list()
+        finalize_paragraph()
 
         return elements
 
@@ -323,8 +365,12 @@ class ConversationMarkdownConverter:
             elif element_type == 'ordered_list':
                 html_parts.append(self._process_list_items(content, ordered=True))
             elif element_type == 'paragraph':
+                # Process line breaks (lines ending with two spaces)
+                content_with_breaks = self._handle_line_breaks(content)
+
                 # Apply inline formatting
-                formatted = self._apply_inline_formatting(content)
+                formatted = self._apply_inline_formatting(content_with_breaks)
+
                 # Wrap in paragraph tags
                 html_parts.append(f"<p>{formatted}</p>")
 
