@@ -6,7 +6,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 """
 
 import re
-from typing import List, Tuple, Dict, Optional, Any
+from typing import List, Tuple, Any
 
 
 class ConversationMarkdownConverter:
@@ -94,6 +94,7 @@ class ConversationMarkdownConverter:
                 # Always start a new block for headings
                 if current_block:
                     blocks.append('\n'.join(current_block))
+
                 current_block = [line]
                 current_block_type = 'heading'
                 in_list = False
@@ -113,6 +114,7 @@ class ConversationMarkdownConverter:
                     else:
                         # Already in a list or starting a new one
                         current_block.append(line)
+
                     current_block_type = 'list'
                     in_list = True
             elif line_type == 'blank':
@@ -121,7 +123,11 @@ class ConversationMarkdownConverter:
                     if in_list:
                         j = i + 1
                         next_line = ""
-                        while j < len(lines) and not next_line.strip():
+                        while j < len(lines):
+                            next_line = lines[j]
+                            if next_line.strip():
+                                break
+
                             j += 1
                             if j < len(lines):
                                 next_line = lines[j]
@@ -154,6 +160,7 @@ class ConversationMarkdownConverter:
                     if not current_block:
                         # Starting a new paragraph
                         current_block_type = 'paragraph'
+
                     current_block.append(line)
 
             i += 1
@@ -275,7 +282,7 @@ class ConversationMarkdownConverter:
 
         # Check for heading block (simple case)
         if lines and self._heading_pattern.match(lines[0]):
-            line_type, content = self._identify_line_type(lines[0])
+            _line_type, content = self._identify_line_type(lines[0])
             level, heading_text = content
             return self._convert_heading(level, heading_text)
 
@@ -401,11 +408,8 @@ class ConversationMarkdownConverter:
         # Each stack entry: [indent, is_ordered, in_item, item_content]
         list_stack = []
 
-        # Find base indentation
-        base_indent = min(indent for item_type, (indent, _, _) in list_items)
-
         # Process each list item
-        for item_type, (indent, marker, content) in list_items:
+        for item_type, (indent, _marker, content) in list_items:
             # Format content
             formatted_content = self._apply_inline_formatting(content)
             is_ordered = (item_type == 'ordered_list_item')
@@ -584,6 +588,7 @@ class ConversationMarkdownConverter:
                     self._block_converted[i] = True
 
         # Combine all processed blocks
+        print("\n".join(self._block_html))
         return "\n".join(self._block_html)
 
     def reset(self):
