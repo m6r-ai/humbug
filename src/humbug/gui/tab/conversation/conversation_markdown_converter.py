@@ -14,8 +14,8 @@ class ConversationMarkdownConverter:
     Converts simplified markdown to HTML.
 
     This class handles the incremental conversion of simplified markdown to HTML,
-    focusing on headings, unordered lists, bold, and italic formatting with proper
-    handling of block-level vs inline elements.
+    focusing on headings, unordered lists, ordered lists, bold, and italic formatting
+    with proper handling of block-level vs inline elements.
     """
 
     def __init__(self):
@@ -25,16 +25,14 @@ class ConversationMarkdownConverter:
         self._bold_pattern = re.compile(r'\*\*(.*?)\*\*|\b__(.*?)__\b')
         self._italic_pattern = re.compile(r'\*([^*]+)\*|\b_([^_]+)_\b')
 
-        # List item pattern - captures leading spaces, list marker, and content
-        self._list_item_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
+        # List item patterns - capture leading spaces, list marker, and content
+        self._unordered_list_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
+        self._ordered_list_pattern = re.compile(r'^(\s*)(\d+)\.[ \t]+(.*?)$', re.MULTILINE)
 
         # Track block state for incremental conversion
         self._current_blocks: List[str] = []
         self._block_converted: List[bool] = []
         self._block_html: List[str] = []
-
-        # Track list state between block processing
-        self._list_states: List[Dict] = []
 
         # Track the part of the last block we've processed so far
         self._partial_last_block = ""
@@ -111,7 +109,7 @@ class ConversationMarkdownConverter:
 
         Returns:
             Tuple of (line_type, content) where line_type is one of:
-            'heading', 'list_item', 'blank', 'text'
+            'heading', 'unordered_list_item', 'ordered_list_item', 'blank', 'text'
         """
         if not line.strip():
             return 'blank', None
@@ -123,13 +121,21 @@ class ConversationMarkdownConverter:
             content = heading_match.group(2).strip()
             return 'heading', (level, content)
 
-        # Check for list item - capture the entire indent
-        list_match = self._list_item_pattern.match(line)
-        if list_match:
-            indent = len(list_match.group(1))
-            marker = list_match.group(2)
-            content = list_match.group(3)
-            return 'list_item', (indent, marker, content)
+        # Check for unordered list item
+        unordered_match = self._unordered_list_pattern.match(line)
+        if unordered_match:
+            indent = len(unordered_match.group(1))
+            marker = unordered_match.group(2)
+            content = unordered_match.group(3)
+            return 'unordered_list_item', (indent, marker, content)
+
+        # Check for ordered list item
+        ordered_match = self._ordered_list_pattern.match(line)
+        if ordered_match:
+            indent = len(ordered_match.group(1))
+            number = ordered_match.group(2)
+            content = ordered_match.group(3)
+            return 'ordered_list_item', (indent, number, content)
 
         # Default to regular text
         return 'text', line
@@ -149,7 +155,10 @@ class ConversationMarkdownConverter:
         """
         lines = block.split('\n')
         elements = []
+
+        # List tracking
         current_list_items = []
+        current_list_type = None  # Either 'ordered' or 'unordered'
         in_list = False
 
         for line in lines:
@@ -158,16 +167,24 @@ class ConversationMarkdownConverter:
             if line_type == 'heading':
                 # If we were processing a list, finalize it
                 if in_list:
-                    elements.append(('list', current_list_items))
+                    elements.append((current_list_type + '_list', current_list_items))
                     current_list_items = []
                     in_list = False
 
                 # Add the heading
                 elements.append(('heading', content))
 
-            elif line_type == 'list_item':
+            elif line_type in ('unordered_list_item', 'ordered_list_item'):
+                # If we're switching list types, finalize the current list
+                list_type = 'ordered' if line_type == 'ordered_list_item' else 'unordered'
+
+                if in_list and current_list_type != list_type:
+                    elements.append((current_list_type + '_list', current_list_items))
+                    current_list_items = []
+
                 # Start or continue a list
                 in_list = True
+                current_list_type = list_type
                 current_list_items.append(content)
 
             elif line_type == 'blank':
@@ -178,7 +195,7 @@ class ConversationMarkdownConverter:
             elif line_type == 'text':
                 # If we were processing a list, finalize it
                 if in_list:
-                    elements.append(('list', current_list_items))
+                    elements.append((current_list_type + '_list', current_list_items))
                     current_list_items = []
                     in_list = False
 
@@ -187,7 +204,7 @@ class ConversationMarkdownConverter:
 
         # Don't forget any remaining list items
         if in_list and current_list_items:
-            elements.append(('list', current_list_items))
+            elements.append((current_list_type + '_list', current_list_items))
 
         return elements
 
@@ -206,14 +223,16 @@ class ConversationMarkdownConverter:
         formatted_content = self._apply_inline_formatting(content)
         return f"<h{level}>{formatted_content}</h{level}>"
 
-    def _process_list_items(self, items: List[Tuple[int, str, str]]) -> str:
+    def _process_list_items(self, items: List[Tuple[int, str, str]], ordered: bool = False) -> str:
         """
         Process a sequence of list items and generate HTML.
 
         Handles nested lists based on relative indentation rather than fixed boundaries.
+        Supports both ordered and unordered lists.
 
         Args:
             items: List of (indent, marker, content) tuples from _identify_line_type
+            ordered: Whether to generate an ordered (ol) or unordered (ul) list
 
         Returns:
             HTML for the list structure
@@ -223,7 +242,7 @@ class ConversationMarkdownConverter:
 
         # Track list structure
         html_parts = []
-        list_stack = []  # Stack of indentation levels
+        list_stack = []  # Stack of tuples: (indentation level, list type)
 
         # Track indentation of the first list item to determine relative indentation
         base_indent = items[0][0]
@@ -253,13 +272,19 @@ class ConversationMarkdownConverter:
             if current_stack_level < level:
                 # Need to open new lists
                 while current_stack_level < level:
-                    html_parts.append("<ul>")
-                    list_stack.append(level)
+                    # Determine if this should be an ordered or unordered list
+                    # For now, we'll use the same type as the parent list
+                    # This could be enhanced to detect type changes
+                    list_tag = "ol" if ordered else "ul"
+                    html_parts.append(f"<{list_tag}>")
+                    list_stack.append((level, ordered))
                     current_stack_level += 1
             elif current_stack_level > level:
                 # Need to close lists
                 while list_stack and current_stack_level > level:
-                    html_parts.append("</ul>")
+                    _, is_ordered = list_stack[-1]
+                    list_tag = "ol" if is_ordered else "ul"
+                    html_parts.append(f"</{list_tag}>")
                     list_stack.pop()
                     current_stack_level -= 1
 
@@ -268,7 +293,9 @@ class ConversationMarkdownConverter:
 
         # Close any remaining open lists
         while list_stack:
-            html_parts.append("</ul>")
+            _, is_ordered = list_stack[-1]
+            list_tag = "ol" if is_ordered else "ul"
+            html_parts.append(f"</{list_tag}>")
             list_stack.pop()
 
         return "\n".join(html_parts)
@@ -291,8 +318,10 @@ class ConversationMarkdownConverter:
             if element_type == 'heading':
                 level, heading_text = content
                 html_parts.append(self._convert_heading(level, heading_text))
-            elif element_type == 'list':
-                html_parts.append(self._process_list_items(content))
+            elif element_type == 'unordered_list':
+                html_parts.append(self._process_list_items(content, ordered=False))
+            elif element_type == 'ordered_list':
+                html_parts.append(self._process_list_items(content, ordered=True))
             elif element_type == 'paragraph':
                 # Apply inline formatting
                 formatted = self._apply_inline_formatting(content)
@@ -380,4 +409,3 @@ class ConversationMarkdownConverter:
         self._block_converted = []
         self._block_html = []
         self._partial_last_block = ""
-        self._list_states = []
