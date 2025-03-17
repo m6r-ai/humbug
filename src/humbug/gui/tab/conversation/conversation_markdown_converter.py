@@ -123,7 +123,7 @@ class ConversationMarkdownConverter:
             content = heading_match.group(2).strip()
             return 'heading', (level, content)
 
-        # Check for list item
+        # Check for list item - capture the entire indent
         list_match = self._list_item_pattern.match(line)
         if list_match:
             indent = len(list_match.group(1))
@@ -132,7 +132,7 @@ class ConversationMarkdownConverter:
             return 'list_item', (indent, marker, content)
 
         # Default to regular text
-        return 'text', line.strip()
+        return 'text', line
 
     def _classify_block(self, block: str) -> List[Tuple[str, any]]:
         """
@@ -210,6 +210,8 @@ class ConversationMarkdownConverter:
         """
         Process a sequence of list items and generate HTML.
 
+        Handles nested lists based on relative indentation rather than fixed boundaries.
+
         Args:
             items: List of (indent, marker, content) tuples from _identify_line_type
 
@@ -221,35 +223,45 @@ class ConversationMarkdownConverter:
 
         # Track list structure
         html_parts = []
-        list_stack = []
+        list_stack = []  # Stack of indentation levels
+
+        # Track indentation of the first list item to determine relative indentation
+        base_indent = items[0][0]
+        current_levels = {base_indent: 0}  # Maps indentation to nesting level
 
         for indent, marker, content in items:
             # Apply inline formatting to content
             formatted_content = self._apply_inline_formatting(content)
 
-            # Calculate list nesting level (0 for top level)
-            level = 0
-            if indent >= 4:
-                level = 1
-            if indent >= 8:
-                level = 2
-            if indent >= 12:
-                level = 3
+            # Determine the nesting level based on relative indentation
+            if indent not in current_levels:
+                # Find the closest lower indentation level
+                prev_indents = [i for i in current_levels.keys() if i < indent]
+                if prev_indents:
+                    closest_indent = max(prev_indents)
+                    # This is a new level one deeper than the closest lower level
+                    current_levels[indent] = current_levels[closest_indent] + 1
+                else:
+                    # If no lower indent exists, this must be a new root level
+                    current_levels[indent] = 0
+
+            level = current_levels[indent]
 
             # Adjust list stack if needed
-            if not list_stack:
-                # Start first list
-                html_parts.append("<ul>")
-                list_stack.append(level)
-            elif level > list_stack[-1]:
-                # Start a nested list
-                html_parts.append("<ul>")
-                list_stack.append(level)
-            elif level < list_stack[-1]:
-                # Close deeper lists
-                while list_stack and level < list_stack[-1]:
+            current_stack_level = len(list_stack) - 1 if list_stack else -1
+
+            if current_stack_level < level:
+                # Need to open new lists
+                while current_stack_level < level:
+                    html_parts.append("<ul>")
+                    list_stack.append(level)
+                    current_stack_level += 1
+            elif current_stack_level > level:
+                # Need to close lists
+                while list_stack and current_stack_level > level:
                     html_parts.append("</ul>")
                     list_stack.pop()
+                    current_stack_level -= 1
 
             # Add the list item
             html_parts.append(f"<li>{formatted_content}</li>")
