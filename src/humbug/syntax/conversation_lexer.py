@@ -20,22 +20,13 @@ class ConversationLexer(Lexer):
         :param ch: The start character
         :return: The lexing function
         """
-        if self._is_letter_or_digit(ch):
-            return self._read_text
-
         if self._is_whitespace(ch):
             return self._read_whitespace
 
         if ch == '`':
             return self._read_backtick
 
-        return self._read_symbol
-
-    def _read_symbol(self) -> None:
-        start: int = self._position
-        self._position += 1
-        text_value = self._input[start:self._position]
-        self._tokens.append(Token(type=TokenType.SYMBOL, value=text_value, start=start))
+        return self._read_text
 
     def _read_text(self) -> None:
         start: int = self._position

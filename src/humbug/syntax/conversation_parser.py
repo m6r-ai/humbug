@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.conversation_lexer import ConversationLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
@@ -167,14 +167,6 @@ class ConversationParser(Parser):
         parser_state.fence_depth = fence_depth
         parser_state.language = language
         if parse_embedded:
-            if input_str.startswith(' ' * fence_depth):
-                input_str = input_str[fence_depth:]
-            else:
-                if input_str.strip():
-                    input_str = ""
-                else:
-                    self._tokens.append(Token(type=TokenType.ERROR, value='[Invalid indent]', start=0))
-
             new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
             parser_state.embedded_parser_state = new_embedded_parser_state
             if new_embedded_parser_state:

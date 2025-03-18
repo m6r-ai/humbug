@@ -52,7 +52,6 @@ class TokenType(IntEnum):
     SCRIPT = auto()
     STRING = auto()
     STYLE = auto()
-    SYMBOL = auto()
     TEXT = auto()
     TYPE = auto()
     TYPE_PARAMETER = auto()
