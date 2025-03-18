@@ -22,6 +22,7 @@ Internal structure changes:
 - Non-GUI terminal functionality has been moved into a new directory at the top level of the
   source tree so it's easier to use outside of the GUI.
 - Optimized the terminal emulator performance for large terminals.
+- Load times for very large conversation histories are now about 50% faster.
 
 Bug fixes:
 
