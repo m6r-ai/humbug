@@ -301,6 +301,15 @@ class ConversationMessage(QFrame):
                 section.set_content(section_text)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
+
+                text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+                background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+                color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
+                factor = self._style_manager.zoom_factor
+                font = self.font()
+                base_font_size = self._style_manager.base_font_size
+                font.setPointSizeF(base_font_size * factor)
+                section.apply_style(text_color, color, font)
             elif i == len(self._sections) - 1:
                 self._sections[-1].set_content(section_text)
 
@@ -309,9 +318,6 @@ class ConversationMessage(QFrame):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
-
-        # Apply styling
-        self._handle_style_changed()
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""

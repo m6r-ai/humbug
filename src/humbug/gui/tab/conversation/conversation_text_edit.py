@@ -462,50 +462,21 @@ class ConversationTextEdit(QTextEdit):
         if self.parent():
             self.parent().updateGeometry()
 
-    def set_incremental_text(self, text: str):
-        """Update text content incrementally by only adding new content."""
+    def set_text(self, text: str):
+        """Update text content if we have anything new."""
         if len(text) == self._current_length:
             # No new content
             return
 
-        if len(text) < self._current_length:
-            # Content is shorter than what we have - do a full reset
-            self._logger.warning("text is shorter than before!: '%s'", text)
-            self.clear()
-            self._current_length = 0
+        self.setText(text)
+
+    def set_html(self, text: str):
+        """Update HTML content if we have anything new."""
+        if len(text) == self._current_length:
+            # No new content
             return
 
-        # Store the current cursor position and selection
-        current_cursor = self.textCursor()
-        position = current_cursor.position()
-        has_selection = current_cursor.hasSelection()
-        selection_start = current_cursor.selectionStart()
-        selection_end = current_cursor.selectionEnd()
-
-        # Create a new cursor for inserting text at the end
-        insert_cursor = QTextCursor(self.document())
-        insert_cursor.movePosition(QTextCursor.End)
-        self.setTextCursor(insert_cursor)
-
-        # Insert the new text
-        new_text = text[self._current_length:]
-        insert_cursor.insertText(new_text)
-        self._current_length = len(text)
-
-        # Restore the original cursor position and selection
-        restored_cursor = self.textCursor()
-        restored_cursor.setPosition(position)
-        if has_selection:
-            # If there was a selection, restore it
-            if position == selection_end:
-                # Cursor was at end of selection
-                restored_cursor.setPosition(selection_start, QTextCursor.MoveAnchor)
-                restored_cursor.setPosition(selection_end, QTextCursor.KeepAnchor)
-            else:
-                # Cursor was at start of selection
-                restored_cursor.setPosition(selection_end, QTextCursor.KeepAnchor)
-
-        self.setTextCursor(restored_cursor)
+        self.setHtml(text)
 
     def clear(self):
         """Override clear to reset current length."""

@@ -240,18 +240,18 @@ class ConversationMessageSection(QFrame):
         """
         # Are we using plain text?
         if not self._use_markdown:
-            self._text_area.set_incremental_text(text)
+            self._text_area.set_text(text)
             return
 
         try:
             # Convert markdown to HTML
             html_content = self._markdown_converter.convert_incremental(text)
-            self._text_area.setHtml(html_content)
+            self._text_area.set_html(html_content)
 
         except Exception:
             # If HTML conversion fails, fall back to plain text
             self._logger.exception("Failed to convert markdown to HTML")
-            self._text_area.set_incremental_text(text)
+            self._text_area.set_text(text)
 
     def has_selection(self) -> bool:
         """Check if text is selected in the text area."""
