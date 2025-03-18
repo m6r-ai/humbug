@@ -295,7 +295,6 @@ class ConversationMessage(QFrame):
 
         # Create or update sections
         for i, (section_text, language) in enumerate(section_data):
-            print(f"-------------------\nsection: {section_text}")
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(language)

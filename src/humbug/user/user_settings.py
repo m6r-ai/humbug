@@ -61,7 +61,6 @@ class UserSettings:
                         settings.api_keys[key] = value
 
                 language_code = data.get("language", "EN")
-                print(f"lang code {language_code}")
                 settings.language = LanguageCode[language_code]
                 settings.font_size = data.get("fontSize", None)
 

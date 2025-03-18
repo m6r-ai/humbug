@@ -398,7 +398,6 @@ class MainWindow(QMainWindow):
         else:
             app.setLayoutDirection(Qt.RightToLeft)
 
-        print(f"lang: {self._language_manager._current_language}")
         strings = self._language_manager.strings
 
         # Update menu titles
