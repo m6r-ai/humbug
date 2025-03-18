@@ -34,6 +34,9 @@ class ConversationMarkdownConverter:
         self._block_converted: List[bool] = []
         self._block_html: List[str] = []
 
+        # Each list stack entry: [indent, is_ordered, in_item, item_content]
+        self._list_stack = []
+
         # Track the part of the last block we've processed so far
         self._partial_last_block = ""
 
@@ -395,6 +398,7 @@ class ConversationMarkdownConverter:
             for item_type, content in items:
                 if item_type == 'paragraph':
                     html_parts.append(f"<p>{content}</p>")
+
             return "\n".join(html_parts)
 
         # Start with paragraphs if there are any before the first list
@@ -405,8 +409,12 @@ class ConversationMarkdownConverter:
             else:
                 break
 
-        # Each stack entry: [indent, is_ordered, in_item, item_content]
-        list_stack = []
+        # If we have previously had a list stack then restore it and put ourselves
+        # to the correct list indentation to match.
+        list_stack = self._list_stack.copy()
+        for list_item in list_stack:
+            list_tag = "ol" if list_item[1] else "ul"
+            html_parts.append(f"<{list_tag}>")
 
         # Process each list item
         for item_type, (indent, _marker, content) in list_items:
@@ -500,6 +508,12 @@ class ConversationMarkdownConverter:
                     html_parts.append(f"<li>{formatted_content}")
                     list_stack.append([indent, is_ordered, True, formatted_content])
 
+        # Record any remaining open lists.  If this is the last block in a message section
+        # then we'll need this list to start the next message section at the correct
+        # list indentation level.
+        if list_stack:
+            self._list_stack = list_stack.copy()
+
         # Close any remaining open lists
         while list_stack:
             if list_stack[-1][2]:  # in_item
@@ -514,6 +528,7 @@ class ConversationMarkdownConverter:
         for item in items:
             if paragraph_found and item[0] == 'paragraph':
                 html_parts.append(f"<p>{item[1]}</p>")
+                print("PARA - CAN WE REALLY GET HERE?")
             elif item[0] != 'paragraph':
                 paragraph_found = True
 
