@@ -449,7 +449,8 @@ class ConversationMarkdownConverter:
                 html_parts.append(f"<li>{formatted_content}")
 
                 # Update stack
-                list_stack[-1] = [indent, is_ordered, True, formatted_content]
+                if list_stack:  # We shouldn't need this!
+                    list_stack[-1] = [indent, is_ordered, True, formatted_content]
 
             # Nested deeper than top of stack
             elif indent > top_indent:

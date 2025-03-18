@@ -22,9 +22,6 @@ from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
-# Import the markdown converter
-from humbug.gui.tab.conversation.conversation_markdown_converter import ConversationMarkdownConverter
-
 
 class ConversationMessageSection(QFrame):
     """Widget for displaying a section of a message with markdown support."""
@@ -96,15 +93,7 @@ class ConversationMessageSection(QFrame):
 
         # Create text area
         self._text_area = ConversationTextEdit()
-
-        # Set rich text support based on whether we'll use markdown
-        if self._use_markdown:
-            self._text_area.setAcceptRichText(True)
-            self._markdown_converter = ConversationMarkdownConverter()
-        else:
-            self._text_area.setAcceptRichText(False)
-            self._markdown_converter = None
-
+        self._text_area.setAcceptRichText(self._use_markdown)
         self._text_area.setReadOnly(not is_input)
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -243,15 +232,8 @@ class ConversationMessageSection(QFrame):
             self._text_area.set_text(text)
             return
 
-        try:
-            # Convert markdown to HTML
-            html_content = self._markdown_converter.convert_incremental(text)
-            self._text_area.set_html(html_content)
-
-        except Exception:
-            # If HTML conversion fails, fall back to plain text
-            self._logger.exception("Failed to convert markdown to HTML")
-            self._text_area.set_text(text)
+        # Convert markdown to HTML
+        self._text_area.set_html(text)
 
     def has_selection(self) -> bool:
         """Check if text is selected in the text area."""

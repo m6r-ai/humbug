@@ -11,6 +11,7 @@ from PySide6.QtCore import Signal, QPoint
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.conversation.conversation_markdown_converter import ConversationMarkdownConverter
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -81,6 +82,8 @@ class ConversationMessage(QFrame):
             section = self._create_section_widget()
             self._sections.append(section)
             self._sections_layout.addWidget(section)
+
+        self._markdown_converter = ConversationMarkdownConverter()
 
         # Add bookmark status
         self._is_bookmarked = False
@@ -289,6 +292,7 @@ class ConversationMessage(QFrame):
 
             self._sections = []
             self._section_with_selection = None
+            self._handle_style_changed()
 
         # Parse content into sections with language information
         section_data = self._parse_content_sections(text)
@@ -298,6 +302,10 @@ class ConversationMessage(QFrame):
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(language)
+                if language is None and not self._is_input:
+                    self._markdown_converter.reset()
+                    section_text = self._markdown_converter.convert_incremental(section_text)
+
                 section.set_content(section_text)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
@@ -311,6 +319,9 @@ class ConversationMessage(QFrame):
                 font.setPointSizeF(base_font_size * factor)
                 section.apply_style(text_color, color, font)
             elif i == len(self._sections) - 1:
+                if language is None and not self._is_input:
+                    section_text = self._markdown_converter.convert_incremental(section_text)
+
                 self._sections[-1].set_content(section_text)
 
         # Remove any extra sections
