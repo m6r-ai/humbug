@@ -503,6 +503,7 @@ class ConversationMarkdownConverter:
         while list_stack:
             if list_stack[-1][2]:  # in_item
                 html_parts.append("</li>")
+
             list_tag = "ol" if list_stack[-1][1] else "ul"
             html_parts.append(f"</{list_tag}>")
             list_stack.pop()
@@ -588,7 +589,6 @@ class ConversationMarkdownConverter:
                     self._block_converted[i] = True
 
         # Combine all processed blocks
-        print("\n".join(self._block_html))
         return "\n".join(self._block_html)
 
     def reset(self):
