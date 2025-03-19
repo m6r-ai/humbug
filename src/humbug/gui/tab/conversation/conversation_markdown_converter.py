@@ -52,128 +52,6 @@ class ConversationMarkdownConverter:
         """
         return bool(self._unordered_list_pattern.match(line) or self._ordered_list_pattern.match(line))
 
-    def _split_into_blocks(self, text: str) -> List[str]:
-        """
-        Split text into logical blocks for processing.
-
-        This method separates text at:
-        1. Blank lines (unless between list items)
-        2. Headings
-        3. Transitions between block types (headings, lists, paragraphs)
-
-        It also keeps list items with blank lines between them in the same block.
-
-        Args:
-            text: The text to split
-
-        Returns:
-            List of text blocks
-        """
-        blocks = []
-        current_block = []
-        in_list = False
-        current_block_type = None  # Can be 'heading', 'list', 'paragraph', or None
-
-        lines = text.split('\n')
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            # Check the type of the current line
-            is_heading = self._heading_pattern.match(line)
-            is_list_item = self._is_list_item(line)
-
-            # Determine the line type
-            if is_heading:
-                line_type = 'heading'
-            elif is_list_item:
-                line_type = 'list'
-            elif line.strip():
-                line_type = 'paragraph'
-            else:
-                line_type = 'blank'
-
-            # Handle transitions between different block types
-            if line_type == 'heading':
-                # Always start a new block for headings
-                if current_block:
-                    blocks.append('\n'.join(current_block))
-
-                current_block = [line]
-                current_block_type = 'heading'
-                in_list = False
-            elif line_type == 'list':
-                # Start a new block if transitioning from heading to list
-                if current_block_type == 'heading':
-                    blocks.append('\n'.join(current_block))
-                    current_block = [line]
-                    current_block_type = 'list'
-                    in_list = True
-                # Continue the current block for nested lists or lists following paragraphs
-                else:
-                    if not in_list and current_block:
-                        # Transitioning from paragraph to list
-                        blocks.append('\n'.join(current_block))
-                        current_block = [line]
-                    else:
-                        # Already in a list or starting a new one
-                        current_block.append(line)
-
-                    current_block_type = 'list'
-                    in_list = True
-            elif line_type == 'blank':
-                if current_block:
-                    # If we're in a list, look ahead to see if the list continues
-                    if in_list:
-                        j = i + 1
-                        next_line = ""
-                        while j < len(lines):
-                            next_line = lines[j]
-                            if next_line.strip():
-                                break
-
-                            j += 1
-                            if j < len(lines):
-                                next_line = lines[j]
-
-                        # If next non-blank line is a list item, add blank line to current block
-                        if j < len(lines) and self._is_list_item(next_line):
-                            current_block.append(line)
-                        else:
-                            # End of list
-                            blocks.append('\n'.join(current_block))
-                            current_block = []
-                            current_block_type = None
-                            in_list = False
-                    else:
-                        # Not in a list, treat blank line as block separator
-                        blocks.append('\n'.join(current_block))
-                        current_block = []
-                        current_block_type = None
-            else:  # paragraph line
-                if current_block_type == 'heading':
-                    # If coming from a heading, start a new block
-                    blocks.append('\n'.join(current_block))
-                    current_block = [line]
-                    current_block_type = 'paragraph'
-                elif in_list:
-                    # If in a list, this is probably a continuation or indented content
-                    current_block.append(line)
-                else:
-                    # Regular paragraph content
-                    if not current_block:
-                        # Starting a new paragraph
-                        current_block_type = 'paragraph'
-
-                    current_block.append(line)
-
-            i += 1
-
-        # Add the last block if there is one
-        if current_block:
-            blocks.append('\n'.join(current_block))
-
-        return blocks
-
     def _apply_inline_formatting(self, text: str) -> str:
         """
         Apply inline formatting (bold, italic) to text.
@@ -341,18 +219,21 @@ class ConversationMarkdownConverter:
                 continuation_text = []
                 j = i + 1
                 while j < len(lines):
+# This logic is wrong - it's only a text continuation if the text lines up with list item text and not the bullet!
                     next_line_type, _ = self._identify_line_type(lines[j])
                     # Include continuation text and blank lines
                     if next_line_type == 'text':
                         continuation_text.append(lines[j])
                         j += 1
                     elif next_line_type == 'blank':
+# If we have a blank line followed by more indented text then we've got paragraphs inside the list bullet!
                         # Check if there's a list item after this blank line
                         if j + 1 < len(lines):
                             after_blank_type, _ = self._identify_line_type(lines[j + 1])
                             if after_blank_type in ('ordered_list_item', 'unordered_list_item'):
                                 # This is a blank line between list items
                                 break
+
                         # Add blank line as part of content
                         continuation_text.append(lines[j])
                         j += 1
@@ -533,6 +414,120 @@ class ConversationMarkdownConverter:
                 paragraph_found = True
 
         return "\n".join(html_parts)
+
+    def _split_into_blocks(self, text: str) -> List[str]:
+        """
+        Split text into logical blocks for processing.
+
+        This method separates text at:
+        1. Blank lines (unless between list items)
+        2. Headings
+        3. Transitions between block types (headings, lists, paragraphs)
+
+        It also keeps list items with blank lines between them in the same block.
+
+        Args:
+            text: The text to split
+
+        Returns:
+            List of text blocks
+        """
+        blocks = []
+        current_block = []
+        in_list = False
+        current_block_type = None  # Can be 'heading', 'list', 'paragraph', or None
+
+        lines = text.split('\n')
+        for i, line in enumerate(lines):
+            # Is this a heading?
+            if self._heading_pattern.match(line):
+                # Always start a new block for headings
+                if current_block:
+                    blocks.append('\n'.join(current_block))
+
+                current_block = [line]
+                current_block_type = 'heading'
+                in_list = False
+                continue
+
+            # Is this a list?
+            if self._is_list_item(line):
+                # Start a new block if transitioning from heading to list
+                if current_block_type == 'heading':
+                    blocks.append('\n'.join(current_block))
+                    current_block = [line]
+                    current_block_type = 'list'
+                    in_list = True
+                # Continue the current block for nested lists or lists following paragraphs
+                else:
+                    if not in_list and current_block:
+                        # Transitioning from paragraph to list
+                        blocks.append('\n'.join(current_block))
+                        current_block = [line]
+                    else:
+                        # Already in a list or starting a new one
+                        current_block.append(line)
+
+                    current_block_type = 'list'
+                    in_list = True
+
+                continue
+
+            # Is this a blank line?
+            if not line.strip():
+                if current_block:
+                    # If we're in a list, look ahead to see if the list continues
+                    if in_list:
+                        j = i + 1
+                        next_line = ""
+                        while j < len(lines):
+                            next_line = lines[j]
+                            if next_line.strip():
+                                break
+
+                            j += 1
+                            if j < len(lines):
+                                next_line = lines[j]
+
+                        # If next non-blank line is a list item, add blank line to current block
+                        if j < len(lines) and self._is_list_item(next_line):
+                            current_block.append(line)
+                        else:
+                            # End of list
+                            blocks.append('\n'.join(current_block))
+                            current_block = []
+                            current_block_type = None
+                            in_list = False
+                    else:
+                        # Not in a list, treat blank line as block separator
+                        blocks.append('\n'.join(current_block))
+                        current_block = []
+                        current_block_type = None
+
+                continue
+
+            # This must be a paragraph
+            if current_block_type == 'heading':
+                # If coming from a heading, start a new block
+                blocks.append('\n'.join(current_block))
+                current_block = [line]
+                current_block_type = 'paragraph'
+            elif in_list:
+                # If in a list, this is probably a continuation or indented content
+                current_block.append(line)
+            else:
+                # Regular paragraph content
+                if not current_block:
+                    # Starting a new paragraph
+                    current_block_type = 'paragraph'
+
+                current_block.append(line)
+
+        # Add the last block if there is one
+        if current_block:
+            blocks.append('\n'.join(current_block))
+
+        return blocks
 
     def convert_incremental(self, new_text: str) -> str:
         """
