@@ -29,16 +29,16 @@ class ConversationMarkdownConverter:
         self._unordered_list_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
         self._ordered_list_pattern = re.compile(r'^(\s*)(\d+)\.[ \t]+(.*?)$', re.MULTILINE)
 
-        # Track block state for incremental conversion
-        self._current_blocks: List[str] = []
-        self._block_converted: List[bool] = []
-        self._block_html: List[str] = []
+        # Track line state for incremental conversion
+        self._current_lines: List[str] = []
+        self._line_converted: List[bool] = []
+        self._line_html: List[str] = []
 
         # Each list stack entry: [indent, is_ordered, in_item, item_content]
         self._list_stack = []
 
-        # Track the part of the last block we've processed so far
-        self._partial_last_block = ""
+        # Track the part of the last line we've processed so far
+        self._partial_last_line = ""
 
     def _is_list_item(self, line: str) -> bool:
         """
@@ -96,14 +96,12 @@ class ConversationMarkdownConverter:
         Returns:
             Text with appropriate line breaks added
         """
-        lines = text.split('\n')
         processed_lines = []
 
-        for line in lines:
-            if line.endswith('  '):  # Line ends with exactly two spaces
-                processed_lines.append(line.rstrip() + '<br />')
-            else:
-                processed_lines.append(line)
+        if text.endswith('  '):  # Line ends with exactly two spaces
+            processed_lines.append(text.rstrip() + '<br />')
+        else:
+            processed_lines.append(text)
 
         return '\n'.join(processed_lines)
 
@@ -283,7 +281,7 @@ class ConversationMarkdownConverter:
                     html_parts.append(f"<li>{formatted_content}")
                     list_stack.append([indent, is_ordered, True, formatted_content])
 
-        # Record any remaining open lists.  If this is the last block in a message section
+        # Record any remaining open lists.  If this is the last line in a message section
         # then we'll need this list to start the next message section at the correct
         # list indentation level.
         if list_stack:
@@ -300,9 +298,9 @@ class ConversationMarkdownConverter:
 
         return "\n".join(html_parts)
 
-    def _handle_list_block(self, lines: List[str]) -> str:
+    def _handle_list_line(self, line: str) -> str:
         """
-        Handle a block of text containing list items.
+        Handle a line of text containing list items.
 
         Args:
             lines: Lines of text that include list items
@@ -313,8 +311,8 @@ class ConversationMarkdownConverter:
         # Parse each line into a list item structure
         list_items = []
         i = 0
-        while i < len(lines):
-            line_type, content = self._identify_line_type(lines[i])
+        while i < 1:
+            line_type, content = self._identify_line_type(line)
 
             # Skip past blank lines
             if line_type == 'blank':
@@ -327,24 +325,24 @@ class ConversationMarkdownConverter:
                 # Check for continuation lines
                 continuation_text = []
                 j = i + 1
-                while j < len(lines):
+                while j < 1: # was line lenght
 # This logic is wrong - it's only a text continuation if the text lines up with list item text and not the bullet!
-                    next_line_type, _ = self._identify_line_type(lines[j])
+                    next_line_type, _ = self._identify_line_type(line)
                     # Include continuation text and blank lines
                     if next_line_type == 'text':
-                        continuation_text.append(lines[j])
+                        continuation_text.append(line)
                         j += 1
                     elif next_line_type == 'blank':
 # If we have a blank line followed by more indented text then we've got paragraphs inside the list bullet!
                         # Check if there's a list item after this blank line
-                        if j + 1 < len(lines):
+                        if j + 1 < 1: # was line legnth
                             after_blank_type, _ = self._identify_line_type(lines[j + 1])
                             if after_blank_type in ('ordered_list_item', 'unordered_list_item'):
                                 # This is a blank line between list items
                                 break
 
                         # Add blank line as part of content
-                        continuation_text.append(lines[j])
+                        continuation_text.append(line)
                         j += 1
                     else:
                         break
@@ -361,7 +359,7 @@ class ConversationMarkdownConverter:
                 continue
 
             # Non-empty, non-list line - treat as a paragraph
-            formatted_text = self._apply_inline_formatting(self._handle_line_breaks(lines[i]))
+            formatted_text = self._apply_inline_formatting(self._handle_line_breaks(line))
             print(f"annotate para: {formatted_text}")
             list_items.append(('paragraph', formatted_text))
 
@@ -370,156 +368,37 @@ class ConversationMarkdownConverter:
         # Now process the list items
         return self._process_list_items(list_items)
 
-    def _convert_block(self, block: str) -> str:
+    def _process_unconverted_lines(self) -> None:
         """
-        Convert a single block of markdown to HTML.
+        Convert a single line of markdown to HTML.
 
-        This simplified approach handles block conversion directly.
+        This simplified approach handles line conversion directly.
 
         Args:
-            block: The block of text to convert
+            line: The line of text to convert
 
         Returns:
             HTML converted text
         """
-        lines = block.split('\n')
-
-        # Check for heading block (simple case)
-        if lines and self._heading_pattern.match(lines[0]):
-            _line_type, content = self._identify_line_type(lines[0])
-            level, heading_text = content
-            return self._convert_heading(level, heading_text)
-
-        # Check if this is a list block
-        has_list_items = any(
-            self._identify_line_type(line)[0] in ('ordered_list_item', 'unordered_list_item')
-            for line in lines
-        )
-
-        if has_list_items:
-            return self._handle_list_block(lines)
-
-        # Otherwise, treat as paragraph
-        paragraph_text = self._handle_line_breaks('\n'.join(lines))
-        formatted_text = self._apply_inline_formatting(paragraph_text)
-        return f"<p>{formatted_text}</p>"
-
-    def _split_into_blocks(self, text: str) -> List[str]:
-        """
-        Split text into logical blocks for processing.
-
-        This method separates text at:
-        1. Blank lines (unless between list items)
-        2. Headings
-        3. Transitions between block types (headings, lists, paragraphs)
-
-        It also keeps list items with blank lines between them in the same block.
-
-        Args:
-            text: The text to split
-
-        Returns:
-            List of text blocks
-        """
-        blocks = []
-        current_block = []
-        in_list = False
-        current_block_type = None  # Can be 'heading', 'list', 'paragraph', or None
-
-        lines = text.split('\n')
-        for i, line in enumerate(lines):
-            # Is this a heading?
-            if self._heading_pattern.match(line):
-                # Always start a new block for headings
-                if current_block:
-                    blocks.append('\n'.join(current_block))
-
-                current_block = [line]
-                current_block_type = 'heading'
-                in_list = False
-                continue
-
-            # Is this a list?
-            if self._is_list_item(line):
-                # Start a new block if transitioning from heading to list
-                if current_block_type == 'heading':
-                    blocks.append('\n'.join(current_block))
-                    current_block = [line]
-                # Continue the current block for nested lists or lists following paragraphs
+        for i, line in enumerate(self._current_lines):
+            if not self._line_converted[i]:
+                # Check for heading line (simple case)
+                if self._heading_pattern.match(line):
+                    _line_type, content = self._identify_line_type(line)
+                    level, heading_text = content
+                    self._line_html[i] = self._convert_heading(level, heading_text)
+                elif self._identify_line_type(line) in ('ordered_list_item', 'unordered_list_item'):
+                    self._line_html[i] = self._handle_list_line(line)
                 else:
-                    if not in_list and current_block:
-                        # Transitioning from paragraph to list
-                        blocks.append('\n'.join(current_block))
-                        current_block = [line]
-                    else:
-                        # Already in a list or starting a new one
-                        current_block.append(line)
+                    # Otherwise, treat as paragraph
+                    paragraph_text = self._handle_line_breaks(line)
+                    formatted_text = self._apply_inline_formatting(paragraph_text)
+                    self._line_html[i] = f"<p>{formatted_text}</p>"
 
-                current_block_type = 'list'
-                in_list = True
-                continue
-
-            # Is this a blank line?
-            if not line.strip():
-                if not current_block:
-                    continue
-
-                # If we're not in a list, treat the blank line as a block separator
-                if not in_list:
-                    blocks.append('\n'.join(current_block))
-                    current_block = []
-                    current_block_type = None
-                    continue
-
-                # We're in a list
-                j = i + 1
-                next_line = ""
-                while j < len(lines):
-                    next_line = lines[j]
-                    if next_line.strip():
-                        break
-
-                    j += 1
-                    if j < len(lines):
-                        next_line = lines[j]
-
-                # If next non-blank line is a list item, add blank line to current block
-                if j < len(lines) and self._is_list_item(next_line):
-                    current_block.append(line)
-                else:
-                    # End of list
-                    blocks.append('\n'.join(current_block))
-                    current_block = []
-                    current_block_type = None
-                    in_list = False
-
-                continue
-
-            # This must be a paragraph
-            if current_block_type == 'heading':
-                # If coming from a heading, start a new block
-                blocks.append('\n'.join(current_block))
-                current_block = [line]
-                current_block_type = 'paragraph'
-                continue
-
-            # If we're in a list, this is probably a continuation or indented content
-            if in_list:
-                current_block.append(line)
-                continue
-
-            # Regular paragraph content
-            if not current_block:
-                # Starting a new paragraph
-                current_block_type = 'paragraph'
-
-            current_block.append(line)
-
-        # Add the last block if there is one
-        if current_block:
-            blocks.append('\n'.join(current_block))
-
-        return blocks
+                # Mark all lines except the last one as converted
+                if i < len(self._current_lines) - 1:
+                    self._line_converted[i] = True
+                    # TODO: Need to save the parsing state here and restore it after the for loop!
 
     def convert_incremental(self, new_text: str) -> str:
         """
@@ -531,72 +410,68 @@ class ConversationMarkdownConverter:
         Returns:
             HTML converted text
         """
-        # Split into blocks
-        new_blocks = self._split_into_blocks(new_text)
+        # Split into lines
+        new_lines = new_text.split('\n')
 
         # Handle empty input
-        if not new_blocks:
+        if not new_lines:
             return ""
 
         # Initialize if this is the first conversion
-        if not self._current_blocks:
-            self._current_blocks = new_blocks
-            self._block_converted = [False] * len(new_blocks)
-            self._block_html = [""] * len(new_blocks)
-            self._partial_last_block = new_blocks[-1]
+        if not self._current_lines:
+            self._current_lines = new_lines
+            self._line_converted = [False] * len(new_lines)
+            self._line_html = [""] * len(new_lines)
+            self._partial_last_line = new_lines[-1]
         else:
-            # Find how many blocks match from the beginning
+            # Find how many lines match from the beginning
             common_prefix_len = 0
-            for i, (old, new) in enumerate(zip(self._current_blocks, new_blocks)):
+            for i, (old, new) in enumerate(zip(self._current_lines, new_lines)):
                 if old == new:
                     common_prefix_len = i + 1
                 else:
                     break
 
             # Update our tracking arrays
-            if len(new_blocks) > len(self._current_blocks):
-                # New blocks added
-                self._current_blocks = new_blocks
-                # Keep converted status for existing blocks
-                self._block_converted = (
-                    self._block_converted +
-                    [False] * (len(new_blocks) - len(self._block_converted))
+            if len(new_lines) > len(self._current_lines):
+                # New lines added
+                self._current_lines = new_lines
+                # Keep converted status for existing lines
+                self._line_converted = (
+                    self._line_converted +
+                    [False] * (len(new_lines) - len(self._line_converted))
                 )
-                # Keep HTML for existing blocks
-                self._block_html = (
-                    self._block_html +
-                    [""] * (len(new_blocks) - len(self._block_html))
+                # Keep HTML for existing liness
+                self._line_html = (
+                    self._line_html +
+                    [""] * (len(new_lines) - len(self._line_html))
                 )
-                # Always consider the last block as "in progress"
-                self._block_converted[-1] = False
-            elif common_prefix_len < len(new_blocks):
-                # Update with changed blocks
-                self._current_blocks = new_blocks
-                # Mark changed blocks as not converted
-                for i in range(common_prefix_len, len(new_blocks)):
-                    self._block_converted[i] = False
-                    self._block_html[i] = ""
-                # Trim arrays if blocks were removed
-                if len(new_blocks) < len(self._block_converted):
-                    self._block_converted = self._block_converted[:len(new_blocks)]
-                    self._block_html = self._block_html[:len(new_blocks)]
+                # Always consider the last line as "in progress"
+                self._line_converted[-1] = False
+            elif common_prefix_len < len(new_lines):
+                # Update with changed lines
+                self._current_lines = new_lines
 
-            self._partial_last_block = new_blocks[-1]
+                # Mark changed lines as not converted
+                for i in range(common_prefix_len, len(new_lines)):
+                    self._line_converted[i] = False
+                    self._line_html[i] = ""
 
-        # Process all unconverted blocks
-        for i, block in enumerate(self._current_blocks):
-            if not self._block_converted[i]:
-                self._block_html[i] = self._convert_block(block)
-                # Mark all blocks except the last one as converted
-                if i < len(self._current_blocks) - 1:
-                    self._block_converted[i] = True
+                # Trim arrays if lines were removed
+                if len(new_lines) < len(self._line_converted):
+                    self._line_converted = self._line_converted[:len(new_lines)]
+                    self._line_html = self._line_html[:len(new_lines)]
 
-        # Combine all processed blocks
-        return "\n".join(self._block_html)
+            self._partial_last_line = new_lines[-1]
+
+        self._process_unconverted_lines()
+
+        # Combine all processed lines
+        return "\n".join(self._line_html)
 
     def reset(self):
         """Reset the converter state."""
-        self._current_blocks = []
-        self._block_converted = []
-        self._block_html = []
-        self._partial_last_block = ""
+        self._current_lines = []
+        self._line_converted = []
+        self._line_html = []
+        self._partial_last_line = ""
