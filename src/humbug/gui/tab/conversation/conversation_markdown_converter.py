@@ -147,40 +147,6 @@ class ConversationMarkdownConverter:
         # Default to regular text
         return 'text', line
 
-    def _convert_block(self, block: str) -> str:
-        """
-        Convert a single block of markdown to HTML.
-
-        This simplified approach handles block conversion directly.
-
-        Args:
-            block: The block of text to convert
-
-        Returns:
-            HTML converted text
-        """
-        lines = block.split('\n')
-
-        # Check for heading block (simple case)
-        if lines and self._heading_pattern.match(lines[0]):
-            _line_type, content = self._identify_line_type(lines[0])
-            level, heading_text = content
-            return self._convert_heading(level, heading_text)
-
-        # Check if this is a list block
-        has_list_items = any(
-            self._identify_line_type(line)[0] in ('ordered_list_item', 'unordered_list_item')
-            for line in lines
-        )
-
-        if has_list_items:
-            return self._handle_list_block(lines)
-
-        # Otherwise, treat as paragraph
-        paragraph_text = self._handle_line_breaks('\n'.join(lines))
-        formatted_text = self._apply_inline_formatting(paragraph_text)
-        return f"<p>{formatted_text}</p>"
-
     def _convert_heading(self, level: int, content: str) -> str:
         """
         Convert a heading to HTML.
@@ -196,70 +162,6 @@ class ConversationMarkdownConverter:
         formatted_content = self._apply_inline_formatting(content)
         return f"<h{level}>{formatted_content}</h{level}>"
 
-    def _handle_list_block(self, lines: List[str]) -> str:
-        """
-        Handle a block of text containing list items.
-
-        Args:
-            lines: Lines of text that include list items
-
-        Returns:
-            HTML string representing the list structure
-        """
-        # Parse each line into a list item structure
-        list_items = []
-        i = 0
-        while i < len(lines):
-            line_type, content = self._identify_line_type(lines[i])
-
-            if line_type in ('ordered_list_item', 'unordered_list_item'):
-                indent, marker, text = content
-
-                # Check for continuation lines
-                continuation_text = []
-                j = i + 1
-                while j < len(lines):
-# This logic is wrong - it's only a text continuation if the text lines up with list item text and not the bullet!
-                    next_line_type, _ = self._identify_line_type(lines[j])
-                    # Include continuation text and blank lines
-                    if next_line_type == 'text':
-                        continuation_text.append(lines[j])
-                        j += 1
-                    elif next_line_type == 'blank':
-# If we have a blank line followed by more indented text then we've got paragraphs inside the list bullet!
-                        # Check if there's a list item after this blank line
-                        if j + 1 < len(lines):
-                            after_blank_type, _ = self._identify_line_type(lines[j + 1])
-                            if after_blank_type in ('ordered_list_item', 'unordered_list_item'):
-                                # This is a blank line between list items
-                                break
-
-                        # Add blank line as part of content
-                        continuation_text.append(lines[j])
-                        j += 1
-                    else:
-                        break
-
-                # Append continuation lines to text if any
-                if continuation_text:
-                    text += '\n' + '\n'.join(continuation_text)
-                    i = j - 1  # Skip these lines
-
-                # Add list item with its processed content
-                list_items.append((line_type, (indent, marker, text)))
-            elif line_type == 'blank':
-                # Skip blank lines between list items
-                pass
-            else:
-                # Non-empty, non-list line - treat as a paragraph
-                formatted_text = self._apply_inline_formatting(self._handle_line_breaks(lines[i]))
-                list_items.append(('paragraph', formatted_text))
-
-            i += 1
-
-        # Now process the list items
-        return self._process_list_items(list_items)
-
     def _process_list_items(self, items: List[Tuple[str, Any]]) -> str:
         """
         Process list items into proper HTML using a simplified stack approach.
@@ -273,19 +175,11 @@ class ConversationMarkdownConverter:
         # Filter only actual list items
         list_items = [item for item in items if item[0] in ('ordered_list_item', 'unordered_list_item')]
 
-        # If no list items, just return paragraphs
-        if not list_items:
-            html_parts = []
-            for item_type, content in items:
-                if item_type == 'paragraph':
-                    html_parts.append(f"<p>{content}</p>")
-
-            return "\n".join(html_parts)
-
         # Start with paragraphs if there are any before the first list
         html_parts = []
         for item in items:
             if item[0] == 'paragraph':
+                print(f"how did we get a paragraph? {item[1]}")
                 html_parts.append(f"<p>{item[1]}</p>")
             else:
                 break
@@ -404,16 +298,111 @@ class ConversationMarkdownConverter:
             html_parts.append(f"</{list_tag}>")
             list_stack.pop()
 
-        # Add paragraphs after the list if any
-        paragraph_found = False
-        for item in items:
-            if paragraph_found and item[0] == 'paragraph':
-                html_parts.append(f"<p>{item[1]}</p>")
-                print("PARA - CAN WE REALLY GET HERE?")
-            elif item[0] != 'paragraph':
-                paragraph_found = True
-
         return "\n".join(html_parts)
+
+    def _handle_list_block(self, lines: List[str]) -> str:
+        """
+        Handle a block of text containing list items.
+
+        Args:
+            lines: Lines of text that include list items
+
+        Returns:
+            HTML string representing the list structure
+        """
+        # Parse each line into a list item structure
+        list_items = []
+        i = 0
+        while i < len(lines):
+            line_type, content = self._identify_line_type(lines[i])
+
+            # Skip past blank lines
+            if line_type == 'blank':
+                i += 1
+                continue
+
+            if line_type in ('ordered_list_item', 'unordered_list_item'):
+                indent, marker, text = content
+
+                # Check for continuation lines
+                continuation_text = []
+                j = i + 1
+                while j < len(lines):
+# This logic is wrong - it's only a text continuation if the text lines up with list item text and not the bullet!
+                    next_line_type, _ = self._identify_line_type(lines[j])
+                    # Include continuation text and blank lines
+                    if next_line_type == 'text':
+                        continuation_text.append(lines[j])
+                        j += 1
+                    elif next_line_type == 'blank':
+# If we have a blank line followed by more indented text then we've got paragraphs inside the list bullet!
+                        # Check if there's a list item after this blank line
+                        if j + 1 < len(lines):
+                            after_blank_type, _ = self._identify_line_type(lines[j + 1])
+                            if after_blank_type in ('ordered_list_item', 'unordered_list_item'):
+                                # This is a blank line between list items
+                                break
+
+                        # Add blank line as part of content
+                        continuation_text.append(lines[j])
+                        j += 1
+                    else:
+                        break
+
+                # Append continuation lines to text if any
+                if continuation_text:
+                    text += '\n' + '\n'.join(continuation_text)
+                    i = j - 1  # Skip these lines
+
+                # Add list item with its processed content
+                list_items.append((line_type, (indent, marker, text)))
+
+                i += 1
+                continue
+
+            # Non-empty, non-list line - treat as a paragraph
+            formatted_text = self._apply_inline_formatting(self._handle_line_breaks(lines[i]))
+            print(f"annotate para: {formatted_text}")
+            list_items.append(('paragraph', formatted_text))
+
+            i += 1
+
+        # Now process the list items
+        return self._process_list_items(list_items)
+
+    def _convert_block(self, block: str) -> str:
+        """
+        Convert a single block of markdown to HTML.
+
+        This simplified approach handles block conversion directly.
+
+        Args:
+            block: The block of text to convert
+
+        Returns:
+            HTML converted text
+        """
+        lines = block.split('\n')
+
+        # Check for heading block (simple case)
+        if lines and self._heading_pattern.match(lines[0]):
+            _line_type, content = self._identify_line_type(lines[0])
+            level, heading_text = content
+            return self._convert_heading(level, heading_text)
+
+        # Check if this is a list block
+        has_list_items = any(
+            self._identify_line_type(line)[0] in ('ordered_list_item', 'unordered_list_item')
+            for line in lines
+        )
+
+        if has_list_items:
+            return self._handle_list_block(lines)
+
+        # Otherwise, treat as paragraph
+        paragraph_text = self._handle_line_breaks('\n'.join(lines))
+        formatted_text = self._apply_inline_formatting(paragraph_text)
+        return f"<p>{formatted_text}</p>"
 
     def _split_into_blocks(self, text: str) -> List[str]:
         """
