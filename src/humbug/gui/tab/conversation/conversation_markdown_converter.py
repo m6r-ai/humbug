@@ -456,8 +456,6 @@ class ConversationMarkdownConverter:
                 if current_block_type == 'heading':
                     blocks.append('\n'.join(current_block))
                     current_block = [line]
-                    current_block_type = 'list'
-                    in_list = True
                 # Continue the current block for nested lists or lists following paragraphs
                 else:
                     if not in_list and current_block:
@@ -468,41 +466,43 @@ class ConversationMarkdownConverter:
                         # Already in a list or starting a new one
                         current_block.append(line)
 
-                    current_block_type = 'list'
-                    in_list = True
-
+                current_block_type = 'list'
+                in_list = True
                 continue
 
             # Is this a blank line?
             if not line.strip():
-                if current_block:
-                    # If we're in a list, look ahead to see if the list continues
-                    if in_list:
-                        j = i + 1
-                        next_line = ""
-                        while j < len(lines):
-                            next_line = lines[j]
-                            if next_line.strip():
-                                break
+                if not current_block:
+                    continue
 
-                            j += 1
-                            if j < len(lines):
-                                next_line = lines[j]
+                # If we're not in a list, treat the blank line as a block separator
+                if not in_list:
+                    blocks.append('\n'.join(current_block))
+                    current_block = []
+                    current_block_type = None
+                    continue
 
-                        # If next non-blank line is a list item, add blank line to current block
-                        if j < len(lines) and self._is_list_item(next_line):
-                            current_block.append(line)
-                        else:
-                            # End of list
-                            blocks.append('\n'.join(current_block))
-                            current_block = []
-                            current_block_type = None
-                            in_list = False
-                    else:
-                        # Not in a list, treat blank line as block separator
-                        blocks.append('\n'.join(current_block))
-                        current_block = []
-                        current_block_type = None
+                # We're in a list
+                j = i + 1
+                next_line = ""
+                while j < len(lines):
+                    next_line = lines[j]
+                    if next_line.strip():
+                        break
+
+                    j += 1
+                    if j < len(lines):
+                        next_line = lines[j]
+
+                # If next non-blank line is a list item, add blank line to current block
+                if j < len(lines) and self._is_list_item(next_line):
+                    current_block.append(line)
+                else:
+                    # End of list
+                    blocks.append('\n'.join(current_block))
+                    current_block = []
+                    current_block_type = None
+                    in_list = False
 
                 continue
 
@@ -512,16 +512,19 @@ class ConversationMarkdownConverter:
                 blocks.append('\n'.join(current_block))
                 current_block = [line]
                 current_block_type = 'paragraph'
-            elif in_list:
-                # If in a list, this is probably a continuation or indented content
-                current_block.append(line)
-            else:
-                # Regular paragraph content
-                if not current_block:
-                    # Starting a new paragraph
-                    current_block_type = 'paragraph'
+                continue
 
+            # If we're in a list, this is probably a continuation or indented content
+            if in_list:
                 current_block.append(line)
+                continue
+
+            # Regular paragraph content
+            if not current_block:
+                # Starting a new paragraph
+                current_block_type = 'paragraph'
+
+            current_block.append(line)
 
         # Add the last block if there is one
         if current_block:
