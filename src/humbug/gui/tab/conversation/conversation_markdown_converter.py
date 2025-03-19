@@ -383,12 +383,14 @@ class ConversationMarkdownConverter:
         for i, line in enumerate(self._current_lines):
             if not self._line_converted[i]:
                 # Check for heading line (simple case)
-                if self._heading_pattern.match(line):
-                    _line_type, content = self._identify_line_type(line)
+                line_type, content = self._identify_line_type(line)
+                if line_type == 'heading':
                     level, heading_text = content
                     self._line_html[i] = self._convert_heading(level, heading_text)
-                elif self._identify_line_type(line) in ('ordered_list_item', 'unordered_list_item'):
+                elif line_type in ('ordered_list_item', 'unordered_list_item'):
                     self._line_html[i] = self._handle_list_line(line)
+                elif line_type == 'blank':
+                    pass
                 else:
                     # Otherwise, treat as paragraph
                     paragraph_text = self._handle_line_breaks(line)
