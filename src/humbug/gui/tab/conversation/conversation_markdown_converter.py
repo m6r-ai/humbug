@@ -5,8 +5,15 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
+from enum import Enum, auto
 import re
 from typing import List, Tuple, Any
+
+
+class ConverterState(Enum):
+    NONE = auto()
+    PARAGRAPH = auto()
+    LIST = auto()
 
 
 class ConversationMarkdownConverter:
@@ -31,8 +38,9 @@ class ConversationMarkdownConverter:
 
         # Track line state for incremental conversion
         self._current_lines: List[str] = []
-        self._line_converted: List[bool] = []
+        self._last_line_converted: int = -1
         self._line_html: List[str] = []
+        self._state: ConverterState = ConverterState.NONE
 
         # Each list stack entry: [indent, is_ordered, in_item, item_content]
         self._list_stack = []
@@ -369,38 +377,29 @@ class ConversationMarkdownConverter:
         return self._process_list_items(list_items)
 
     def _process_unconverted_lines(self) -> None:
-        """
-        Convert a single line of markdown to HTML.
-
-        This simplified approach handles line conversion directly.
-
-        Args:
-            line: The line of text to convert
-
-        Returns:
-            HTML converted text
-        """
+        """Convert any previously unconverted lines to HTML."""
         for i, line in enumerate(self._current_lines):
-            if not self._line_converted[i]:
+            if i > self._last_line_converted:
                 # Check for heading line (simple case)
                 line_type, content = self._identify_line_type(line)
                 if line_type == 'heading':
                     level, heading_text = content
                     self._line_html[i] = self._convert_heading(level, heading_text)
+                    self._state = ConverterState.NONE
+                    self._last_line_converted = i - 1
                 elif line_type in ('ordered_list_item', 'unordered_list_item'):
                     self._line_html[i] = self._handle_list_line(line)
+                    self._last_line_converted = i - 1
+
                 elif line_type == 'blank':
-                    pass
+                    self._last_line_converted = i - 1
+
                 else:
                     # Otherwise, treat as paragraph
                     paragraph_text = self._handle_line_breaks(line)
                     formatted_text = self._apply_inline_formatting(paragraph_text)
                     self._line_html[i] = f"<p>{formatted_text}</p>"
-
-                # Mark all lines except the last one as converted
-                if i < len(self._current_lines) - 1:
-                    self._line_converted[i] = True
-                    # TODO: Need to save the parsing state here and restore it after the for loop!
+                    self._last_line_converted = i - 1
 
     def convert_incremental(self, new_text: str) -> str:
         """
@@ -422,7 +421,7 @@ class ConversationMarkdownConverter:
         # Initialize if this is the first conversion
         if not self._current_lines:
             self._current_lines = new_lines
-            self._line_converted = [False] * len(new_lines)
+            self._last_line_converted = -1
             self._line_html = [""] * len(new_lines)
             self._partial_last_line = new_lines[-1]
         else:
@@ -438,31 +437,19 @@ class ConversationMarkdownConverter:
             if len(new_lines) > len(self._current_lines):
                 # New lines added
                 self._current_lines = new_lines
-                # Keep converted status for existing lines
-                self._line_converted = (
-                    self._line_converted +
-                    [False] * (len(new_lines) - len(self._line_converted))
-                )
+
                 # Keep HTML for existing liness
                 self._line_html = (
                     self._line_html +
                     [""] * (len(new_lines) - len(self._line_html))
                 )
-                # Always consider the last line as "in progress"
-                self._line_converted[-1] = False
+
             elif common_prefix_len < len(new_lines):
                 # Update with changed lines
                 self._current_lines = new_lines
 
-                # Mark changed lines as not converted
                 for i in range(common_prefix_len, len(new_lines)):
-                    self._line_converted[i] = False
                     self._line_html[i] = ""
-
-                # Trim arrays if lines were removed
-                if len(new_lines) < len(self._line_converted):
-                    self._line_converted = self._line_converted[:len(new_lines)]
-                    self._line_html = self._line_html[:len(new_lines)]
 
             self._partial_last_line = new_lines[-1]
 
@@ -474,6 +461,7 @@ class ConversationMarkdownConverter:
     def reset(self):
         """Reset the converter state."""
         self._current_lines = []
-        self._line_converted = []
+        self._last_line_converted = -1
         self._line_html = []
+        self._state = ConverterState.NONE
         self._partial_last_line = ""
