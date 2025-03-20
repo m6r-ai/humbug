@@ -5,15 +5,8 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
-from enum import Enum, auto
 import re
 from typing import List, Tuple, Any
-
-
-class ConverterState(Enum):
-    NONE = auto()
-    PARAGRAPH = auto()
-    LIST = auto()
 
 
 class ConversationMarkdownConverter:
@@ -40,7 +33,6 @@ class ConversationMarkdownConverter:
         self._current_lines: List[str] = []
         self._last_line_converted: int = -1
         self._line_html: List[str] = []
-        self._state: ConverterState = ConverterState.NONE
 
         # Each list stack entry: [indent, is_ordered, in_item, item_content]
         self._list_stack = []
@@ -376,6 +368,28 @@ class ConversationMarkdownConverter:
         # Now process the list items
         return self._process_list_items(list_items)
 
+    def _process_heading(self, i, content) -> None:
+        level, heading_text = content
+        self._line_html[i] = self._convert_heading(level, heading_text)
+        self._last_line_converted = i - 1
+
+    def _process_ordered_list_item(self, i, line: str) -> None:
+        self._line_html[i] = self._handle_list_line(line)
+        self._last_line_converted = i - 1
+
+    def _process_unordered_list_item(self, i, line: str) -> None:
+        self._line_html[i] = self._handle_list_line(line)
+        self._last_line_converted = i - 1
+
+    def _process_text(self, i, line: str) -> None:
+        paragraph_text = self._handle_line_breaks(line)
+        formatted_text = self._apply_inline_formatting(paragraph_text)
+        self._line_html[i] = f"<p>{formatted_text}</p>"
+        self._last_line_converted = i - 1
+
+    def _process_blank(self, i) -> None:
+        self._last_line_converted = i - 1
+
     def _process_unconverted_lines(self) -> None:
         """Convert any previously unconverted lines to HTML."""
         for i, line in enumerate(self._current_lines):
@@ -383,23 +397,22 @@ class ConversationMarkdownConverter:
                 # Check for heading line (simple case)
                 line_type, content = self._identify_line_type(line)
                 if line_type == 'heading':
-                    level, heading_text = content
-                    self._line_html[i] = self._convert_heading(level, heading_text)
-                    self._state = ConverterState.NONE
-                    self._last_line_converted = i - 1
-                elif line_type in ('ordered_list_item', 'unordered_list_item'):
-                    self._line_html[i] = self._handle_list_line(line)
-                    self._last_line_converted = i - 1
+                    self._process_heading(i, content)
+                    continue
 
-                elif line_type == 'blank':
-                    self._last_line_converted = i - 1
+                if line_type == 'ordered_list_item':
+                    self._process_ordered_list_item(i, line)
+                    continue
 
-                else:
-                    # Otherwise, treat as paragraph
-                    paragraph_text = self._handle_line_breaks(line)
-                    formatted_text = self._apply_inline_formatting(paragraph_text)
-                    self._line_html[i] = f"<p>{formatted_text}</p>"
-                    self._last_line_converted = i - 1
+                if line_type == 'unordered_list_item':
+                    self._process_unordered_list_item(i, line)
+                    continue
+
+                if line_type == 'blank':
+                    self._process_blank(i)
+                    continue
+
+                self._process_text(i, line)
 
     def convert_incremental(self, new_text: str) -> str:
         """
@@ -463,5 +476,4 @@ class ConversationMarkdownConverter:
         self._current_lines = []
         self._last_line_converted = -1
         self._line_html = []
-        self._state = ConverterState.NONE
         self._partial_last_line = ""
