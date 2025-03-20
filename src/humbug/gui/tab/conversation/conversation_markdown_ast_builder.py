@@ -7,12 +7,13 @@ to HTML while preserving code blocks and handling streaming text updates.
 
 import logging
 import re
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Set, Optional
 
 from humbug.gui.tab.conversation.conversation_markdown_ast_node import (
     ASTNode, Document, Text, Emphasis, Bold, Heading, Paragraph,
     OrderedList, UnorderedList, ListItem, MarkdownParseError, CodeBlock
 )
+
 
 class ASTBuilder:
     """
@@ -42,6 +43,13 @@ class ASTBuilder:
 
         # List state tracking
         self.active_lists: List[Tuple[ASTNode, int]] = []  # (list_node, indent)
+        self.list_contains_blank_line: Set[ASTNode] = set()  # Lists that have blank lines
+
+        # Text continuation tracking
+        self.last_paragraph: Optional[Paragraph] = None
+        self.last_list_item: Optional[ListItem] = None
+        self.last_processed_line_type: str = ""
+        self.blank_line_count: int = 0
 
         # Code block state tracking
         self.in_code_block = False
@@ -349,6 +357,28 @@ class ASTBuilder:
 
         return new_list
 
+    def _add_paragraph_to_list_item(self, list_item: ListItem, content: str, line_num: int) -> None:
+        """
+        Add a paragraph to a list item, respecting the list's formatting style.
+
+        Args:
+            list_item: The list item to add content to
+            content: The text content to add
+            line_num: The line number
+
+        Returns:
+            None
+        """
+        paragraph = Paragraph()
+        formatted_text = self.handle_line_breaks(content)
+        for node in self.parse_inline_formatting(formatted_text):
+            paragraph.add_child(node)
+
+        paragraph.line_start = line_num
+        paragraph.line_end = line_num
+        list_item.add_child(paragraph)
+        self.register_node_line(paragraph, line_num)
+
     def parse_list_item(self, indent: int, marker: str, content: str, line_num: int, is_ordered: bool) -> ListItem:
         """
         Parse a list item and create a list item node.
@@ -373,14 +403,21 @@ class ASTBuilder:
         item = ListItem()
         list_node.add_child(item)
 
-        # Process the content with inline formatting
-        formatted_text = self.handle_line_breaks(content)
-        for node in self.parse_inline_formatting(formatted_text):
-            item.add_child(node)
+        # Check if this list has blank lines, which means we need to use paragraphs for content
+        if list_node in self.list_contains_blank_line:
+            self._add_paragraph_to_list_item(item, content, line_num)
+        else:
+            # Process the content with inline formatting
+            formatted_text = self.handle_line_breaks(content)
+            for node in self.parse_inline_formatting(formatted_text):
+                item.add_child(node)
 
         item.line_start = line_num
         item.line_end = line_num
         self.register_node_line(item, line_num)
+
+        # Update tracking variables
+        self.last_list_item = item
 
         return item
 
@@ -433,6 +470,63 @@ class ASTBuilder:
         self.code_block_content = []
         self.code_block_start_line = -1
 
+    def _handle_text_continuation(self, text: str, line_num: int) -> bool:
+        """
+        Handle text as a continuation of the previous paragraph or list item.
+
+        Args:
+            text: The text content
+            line_num: The line number
+
+        Returns:
+            True if handled as a continuation, False otherwise
+        """
+        # Can only continue if no blank lines were encountered
+        if self.blank_line_count > 0:
+            return False
+
+        # Case 1: Continue a paragraph
+        if self.last_paragraph and self.last_processed_line_type == 'text':
+            formatted_text = self.handle_line_breaks(text)
+            # Add a space between the continued text
+            self.last_paragraph.add_child(Text(" "))
+            for node in self.parse_inline_formatting(formatted_text):
+                self.last_paragraph.add_child(node)
+            self.last_paragraph.line_end = line_num
+            self.register_node_line(self.last_paragraph, line_num)
+            return True
+
+        # Case 2: Continue a list item
+        elif self.last_list_item and self.last_processed_line_type in ('unordered_list_item', 'ordered_list_item'):
+            formatted_text = self.handle_line_breaks(text)
+
+            # Check if the list has blank lines (uses paragraph formatting)
+            for list_node, _ in self.active_lists:
+                if list_node in self.list_contains_blank_line:
+                    # Create a new paragraph for this continuation
+                    self._add_paragraph_to_list_item(self.last_list_item, text, line_num)
+                    return True
+
+            # Otherwise continue inline
+            self.last_list_item.add_child(Text(" "))
+            for node in self.parse_inline_formatting(formatted_text):
+                self.last_list_item.add_child(node)
+            self.last_list_item.line_end = line_num
+            self.register_node_line(self.last_list_item, line_num)
+            return True
+
+        return False
+
+    def _handle_blank_line_in_list(self) -> None:
+        """
+        Mark all active lists as containing blank lines, which affects their formatting.
+
+        Returns:
+            None
+        """
+        for list_node, _ in self.active_lists:
+            self.list_contains_blank_line.add(list_node)
+
     def parse_line(self, line: str, line_num: int) -> None:
         """
         Parse a single line and add the resulting nodes to the AST.
@@ -450,16 +544,31 @@ class ASTBuilder:
         try:
             line_type, content = self.identify_line_type(line)
 
+            # Reset paragraph tracking if not continuing text
+            if line_type != 'text' and line_type != 'blank':
+                self.last_paragraph = None
+
+            # Handle blank lines for list state
+            if line_type == 'blank':
+                self.blank_line_count += 1
+                # If we're in a list, mark it as having blank lines
+                if self.active_lists:
+                    self._handle_blank_line_in_list()
+            else:
+                self.blank_line_count = 0
+
             # Handle code blocks
             if line_type == 'code_block_start':
                 self.in_code_block = True
                 self.code_block_language = content
                 self.code_block_content = []
                 self.code_block_start_line = line_num
+                self.last_processed_line_type = line_type
                 return
 
             if line_type == 'code_block_content':
                 self.code_block_content.append(content)
+                self.last_processed_line_type = line_type
                 return
 
             if line_type == 'code_block_end':
@@ -484,8 +593,12 @@ class ASTBuilder:
                 self.code_block_content = []
                 self.code_block_start_line = -1
 
-                # Reset list tracking after a code block
+                # Reset list tracking and other state after a code block
                 self.active_lists = []
+                self.list_contains_blank_line = set()
+                self.last_paragraph = None
+                self.last_list_item = None
+                self.last_processed_line_type = line_type
                 return
 
             if line_type == 'heading':
@@ -494,40 +607,35 @@ class ASTBuilder:
                 self.document.add_child(heading)
                 # Reset list tracking after a heading
                 self.active_lists = []
+                self.list_contains_blank_line = set()
+                self.last_list_item = None
 
             elif line_type == 'unordered_list_item':
                 indent, marker, text = content
-                self.parse_list_item(indent, marker, text, line_num, False)
+                self.last_list_item = self.parse_list_item(indent, marker, text, line_num, False)
 
             elif line_type == 'ordered_list_item':
                 indent, number, text = content
-                self.parse_list_item(indent, number, text, line_num, True)
+                self.last_list_item = self.parse_list_item(indent, number, text, line_num, True)
 
             elif line_type == 'blank':
-                # Blank lines don't need nodes, but they affect list continuity
-                # For simplicity, we're not closing lists on blank lines in this version
+                # Blank lines are handled above for list state
                 pass
 
             elif line_type == 'text':
-                # If we're in a list context, this might be a continuation
-                if self.active_lists and self.line_to_node_map.get(line_num - 1):
-                    # Check if previous line was a list item
-                    prev_nodes = self.line_to_node_map.get(line_num - 1, [])
-                    for node in prev_nodes:
-                        if isinstance(node, ListItem):
-                            # Add this text as a continuation
-                            formatted_text = self.handle_line_breaks(content)
-                            for text_node in self.parse_inline_formatting(formatted_text):
-                                node.add_child(text_node)
-                            node.line_end = line_num
-                            self.register_node_line(node, line_num)
-                            return
+                # Try to handle as a continuation first
+                if not self._handle_text_continuation(content, line_num):
+                    # Regular paragraph
+                    paragraph = self.parse_text(content, line_num)
+                    self.document.add_child(paragraph)
+                    self.last_paragraph = paragraph
+                    # Reset list tracking after a paragraph
+                    self.active_lists = []
+                    self.list_contains_blank_line = set()
+                    self.last_list_item = None
 
-                # Regular paragraph
-                paragraph = self.parse_text(content, line_num)
-                self.document.add_child(paragraph)
-                # Reset list tracking after a paragraph
-                self.active_lists = []
+            # Update the last processed line type
+            self.last_processed_line_type = line_type
 
         except Exception as e:
             self._logger.exception("Error parsing line %d: %s", line_num, line)
@@ -549,6 +657,11 @@ class ASTBuilder:
         self.document = Document()
         self.line_to_node_map = {}
         self.active_lists = []
+        self.list_contains_blank_line = set()
+        self.last_paragraph = None
+        self.last_list_item = None
+        self.last_processed_line_type = ""
+        self.blank_line_count = 0
         self.in_code_block = False
         self.code_block_language = ""
         self.code_block_content = []
@@ -637,6 +750,4 @@ class ASTBuilder:
                 self.line_to_node_map = saved_line_map
 
         # For more complex edits, do a full rebuild
-        # In a production implementation, we could be more sophisticated,
-        # preserving nodes in the unchanged parts of the document
         return self.build_ast(text)
