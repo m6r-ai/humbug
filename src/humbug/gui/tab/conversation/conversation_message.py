@@ -132,47 +132,6 @@ class ConversationMessage(QFrame):
         else:
             self._role_label.setText(role_text)
 
-    def _extract_sections_from_ast(self, document: ASTNode) -> List[Tuple[str, Optional[ProgrammingLanguage]]]:
-        """
-        Extract content sections from the AST document.
-
-        Args:
-            document: The AST document node
-
-        Returns:
-            List of (content, language) tuples where language is None for markdown content
-            and a ProgrammingLanguage enum for code blocks
-        """
-        sections = []
-        current_markdown = []
-
-        # Helper function to add accumulated markdown content as a section
-        def add_markdown_section():
-            if current_markdown:
-                # Join the HTML parts and add as a markdown section
-                sections.append(("".join(current_markdown), None))
-                current_markdown.clear()
-
-        # Process all nodes in the document
-        for node in document.children:
-            if isinstance(node, CodeBlock):
-                # Add any accumulated markdown before this code block
-                add_markdown_section()
-
-                # Process the code block
-                language = ProgrammingLanguageUtils.from_name(node.language) if node.language else ProgrammingLanguage.TEXT
-
-                # Add the code block as a section with its language
-                sections.append((node.content, language))
-            else:
-                # Render this node to HTML and add to current markdown content
-                current_markdown.append(self._html_renderer.visit(node))
-
-        # Add any remaining markdown content
-        add_markdown_section()
-
-        return sections
-
     def _create_section_widget(self, language: Optional[ProgrammingLanguage] = None) -> ConversationMessageSection:
         """
         Create a new section widget.
@@ -241,12 +200,10 @@ class ConversationMessage(QFrame):
             # Reset markdown converter for new style
             self._markdown_converter.reset()
 
-        # Use the markdown converter to parse content
+        # Extract sections directly using the markdown converter
         if not self._is_input:
-            html_content = self._markdown_converter.convert_incremental(text)
-
-            # Extract sections from the AST
-            sections_data = self._extract_sections_from_ast(self._markdown_converter.ast_builder.document)
+            # Process the content and extract sections in one step
+            sections_data = self._markdown_converter.extract_sections(text)
         else:
             # Input widgets don't use markdown processing
             sections_data = [(text, None)]

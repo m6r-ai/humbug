@@ -6,12 +6,15 @@ to HTML while preserving code blocks and handling streaming text updates.
 """
 
 import logging
+from typing import List, Tuple, Optional
 
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 from humbug.gui.tab.conversation.conversation_markdown_ast_builder import (
     ASTBuilder, MarkdownParseError
 )
 from humbug.gui.tab.conversation.conversation_markdown_ast_node import (
-    HTMLRenderer, ASTPrinter
+    HTMLRenderer, ASTPrinter, CodeBlock, ASTNode
 )
 
 
@@ -19,9 +22,8 @@ class ConversationMarkdownConverter:
     """
     Converts simplified markdown to HTML using an AST-based approach.
 
-    This class handles the incremental conversion of simplified markdown to HTML,
-    focusing on headings, unordered lists, ordered lists, bold, and italic formatting
-    with proper handling of block-level vs inline elements.
+    This class handles the incremental parsing of simplified markdown into an
+    Abstract Syntax Tree (AST) representation and extraction of content sections for rendering.
     """
 
     def __init__(self):
@@ -38,37 +40,75 @@ class ConversationMarkdownConverter:
         # Store builder state for preservation during reset
         self.builder_state = None
 
-    def convert_incremental(self, new_text: str) -> str:
+    def extract_sections(self, text: str) -> List[Tuple[str, Optional[ProgrammingLanguage]]]:
         """
-        Convert markdown to HTML incrementally as text is being added.
+        Process markdown text and extract content sections from it.
 
         Args:
-            new_text: The updated text to convert
+            text: The markdown text to process
 
         Returns:
-            HTML converted text
+            List of (content, language) tuples where language is None for markdown content
+            and a ProgrammingLanguage enum for code blocks
 
         Raises:
             None
         """
         try:
             # Update the AST based on the changes
-            self.ast_builder.update_ast(new_text, self.current_text)
+            self.ast_builder.update_ast(text, self.current_text)
 
             # Update the current text
-            self.current_text = new_text
+            self.current_text = text
 
-            # For debugging: print the AST structure
-            # self.ast_printer.visit(self.ast_builder.document)
-
-            # Render the AST to HTML
-            html = self.renderer.visit(self.ast_builder.document)
-            return html
+            # Extract content sections from the AST document
+            return self._extract_sections_from_ast(self.ast_builder.document)
 
         except MarkdownParseError as e:
             self._logger.exception("Error converting markdown")
-            # Return a fallback HTML message for the error
-            return f"<p>Error converting markdown: {e}</p>"
+            # Return a single error section
+            return [(f"Error converting markdown: {e}", None)]
+
+    def _extract_sections_from_ast(self, document: ASTNode) -> List[Tuple[str, Optional[ProgrammingLanguage]]]:
+        """
+        Extract content sections from the AST document.
+
+        Args:
+            document: The AST document node
+
+        Returns:
+            List of (content, language) tuples where language is None for markdown content
+            and a ProgrammingLanguage enum for code blocks
+        """
+        sections = []
+        current_markdown = []
+
+        # Helper function to add accumulated markdown content as a section
+        def add_markdown_section():
+            if current_markdown:
+                # Join the HTML parts and add as a markdown section
+                sections.append(("".join(current_markdown), None))
+                current_markdown.clear()
+
+        # Process all nodes in the document
+        for node in document.children:
+            if isinstance(node, CodeBlock):
+                # Add any accumulated markdown before this code block
+                add_markdown_section()
+
+                # Process the code block
+                language = ProgrammingLanguageUtils.from_name(node.language) if node.language else ProgrammingLanguage.TEXT
+
+                # Add the code block as a section with its language
+                sections.append((node.content, language))
+            else:
+                # Render this node to HTML and add to current markdown content
+                current_markdown.append(self.renderer.visit(node))
+
+        # Add any remaining markdown content
+        add_markdown_section()
+
+        return sections
 
     def reset(self):
         """
