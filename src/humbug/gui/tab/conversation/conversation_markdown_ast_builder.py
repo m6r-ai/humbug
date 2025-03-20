@@ -371,7 +371,7 @@ class ASTBuilder:
 
         # Check if we have a list at this level
         if self.active_lists and self.active_lists[-1][1] == indent:
-            list_node, list_indent = self.active_lists[-1]
+            list_node, _list_indent = self.active_lists[-1]
 
             # If list type matches, use it
             if (isinstance(list_node, OrderedList) and is_ordered) or \
@@ -518,6 +518,8 @@ class ASTBuilder:
     def _handle_text_continuation(self, text: str, line_num: int) -> bool:
         """
         Handle text as a continuation of the previous paragraph or list item.
+        A text line is only a continuation of a list item if it is indented
+        by at least the same amount as the original list item text.
 
         Args:
             text: The text content
@@ -543,13 +545,35 @@ class ASTBuilder:
 
         # Case 2: Continue a list item
         elif self.last_list_item and self.last_processed_line_type in ('unordered_list_item', 'ordered_list_item'):
-            formatted_text = self.handle_line_breaks(text)
+            # Get the indentation of the current line
+            current_indent = len(text) - len(text.lstrip())
+
+            # Get the required indentation for continuing a list item
+            list_item_content_indent = 0
+
+            # Find the active list that contains our last list item
+            for list_node, indent in self.active_lists:
+                for child in list_node.children:
+                    if child == self.last_list_item:
+                        # The content indentation is the list indent + the list marker + a space
+                        # For unordered lists: indent + 1(bullet) + 1(space) = indent + 2
+                        # For ordered lists: indent + number + . + space = varies, but at least indent + 3
+                        list_item_content_indent = indent + (3 if isinstance(list_node, OrderedList) else 2)
+                        break
+
+            # Check if the current line is indented enough to be a continuation
+            # It must have at least the same indentation as the list item content
+            if current_indent < list_item_content_indent:
+                # Not indented enough, so it's not a continuation
+                return False
+
+            formatted_text = self.handle_line_breaks(text.lstrip())
 
             # Check if the list has blank lines (uses paragraph formatting)
             for list_node, _ in self.active_lists:
                 if list_node in self.list_contains_blank_line:
                     # Create a new paragraph for this continuation
-                    self._add_paragraph_to_list_item(self.last_list_item, text, line_num)
+                    self._add_paragraph_to_list_item(self.last_list_item, text.lstrip(), line_num)
                     return True
 
             # Otherwise continue inline
