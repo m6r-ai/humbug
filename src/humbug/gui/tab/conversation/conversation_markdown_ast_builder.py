@@ -57,6 +57,9 @@ class ASTBuilder:
         self.code_block_content = []
         self.code_block_start_line = -1
 
+        # Imported state for continuity
+        self.imported_state = None
+
     def escape_html(self, text: str) -> str:
         """
         Escape special HTML characters in text.
@@ -74,6 +77,48 @@ class ASTBuilder:
         text = text.replace('<', '&lt;')
         text = text.replace('>', '&gt;')
         return text
+
+    def export_state(self) -> Dict[str, Any]:
+        """
+        Export the current state information needed for continuity.
+
+        This method captures the necessary state information without exposing
+        implementation details.
+
+        Returns:
+            A dictionary containing state information
+        """
+        # For list continuity, we need to know:
+        # 1. The hierarchy of lists (what type and at what indent level)
+        # 2. Whether lists have blank lines (affects formatting)
+
+        list_hierarchy = []
+        for list_node, indent in self.active_lists:
+            list_type = "ordered" if isinstance(list_node, OrderedList) else "unordered"
+            list_hierarchy.append({"type": list_type, "indent": indent})
+
+        # There are other aspects of state we might want to preserve
+        # but for the core issue of maintaining list structure, this should be sufficient
+        return {
+            "list_hierarchy": list_hierarchy,
+            "contains_blank_lines": len(self.list_contains_blank_line) > 0,
+            "last_processed_line_type": self.last_processed_line_type,
+            "blank_line_count": self.blank_line_count,
+        }
+
+    def import_state(self, state: Dict[str, Any]) -> None:
+        """
+        Import previously exported state information.
+
+        This method stores the imported state for use during AST building.
+
+        Args:
+            state: The state information to import
+
+        Returns:
+            None
+        """
+        self.imported_state = state
 
     def identify_line_type(self, line: str) -> Tuple[str, Any]:
         """
@@ -667,6 +712,10 @@ class ASTBuilder:
         self.code_block_content = []
         self.code_block_start_line = -1
 
+        # Restore list structure if we have imported state
+        if self.imported_state and 'list_hierarchy' in self.imported_state:
+            self._restore_list_structure()
+
         lines = text.split('\n')
         for i, line in enumerate(lines):
             self.parse_line(line, i)
@@ -676,6 +725,80 @@ class ASTBuilder:
             self._finalize_code_block(len(lines) - 1)
 
         return self.document
+
+    def _restore_list_structure(self) -> None:
+        """
+        Rebuild the list structure based on imported state.
+
+        This method recreates the list hierarchy that was active before a reset.
+
+        Returns:
+            None
+        """
+        if not self.imported_state or 'list_hierarchy' not in self.imported_state:
+            return
+
+        # Rebuild lists from outermost to innermost
+        for list_info in self.imported_state['list_hierarchy']:
+            is_ordered = list_info['type'] == 'ordered'
+            indent = list_info['indent']
+            self._create_list_at_indent(indent, is_ordered)
+
+        # Restore blank line information if needed
+        if self.imported_state.get('contains_blank_lines', False):
+            # Mark all active lists as having blank lines
+            for list_node, _ in self.active_lists:
+                self.list_contains_blank_line.add(list_node)
+
+        # Restore other state information
+        if 'last_processed_line_type' in self.imported_state:
+            self.last_processed_line_type = self.imported_state['last_processed_line_type']
+
+        if 'blank_line_count' in self.imported_state:
+            self.blank_line_count = self.imported_state['blank_line_count']
+
+    def _create_list_at_indent(self, indent: int, is_ordered: bool) -> ASTNode:
+        """
+        Create a list node at the specified indent level.
+
+        Args:
+            indent: The indentation level for the list
+            is_ordered: Whether to create an ordered or unordered list
+
+        Returns:
+            The created list node
+        """
+        # Find the parent for this list based on indent
+        parent = self.document
+        parent_indent = -1
+
+        for list_node, list_indent in self.active_lists:
+            if list_indent < indent and list_indent > parent_indent:
+                if list_node.children:
+                    parent = list_node.children[-1]  # Last list item
+                    parent_indent = list_indent
+
+        # Create a list item if the parent is a list
+        if any(isinstance(parent, list_type) for list_type in [OrderedList, UnorderedList]):
+            list_item = ListItem()
+            parent.add_child(list_item)
+            parent = list_item
+
+        # Create the appropriate list type
+        if is_ordered:
+            new_list = OrderedList(indent)
+        else:
+            new_list = UnorderedList(indent)
+
+        parent.add_child(new_list)
+        self.active_lists.append((new_list, indent))
+
+        # Create an initial list item to maintain proper structure
+        initial_item = ListItem()
+        new_list.add_child(initial_item)
+        self.last_list_item = initial_item
+
+        return new_list
 
     def update_ast(self, text: str, previous_text: str = None) -> Document:
         """

@@ -35,6 +35,9 @@ class ConversationMarkdownConverter:
         # Keep track of the current text for incremental updates
         self.current_text = ""
 
+        # Store builder state for preservation during reset
+        self.builder_state = None
+
     def convert_incremental(self, new_text: str) -> str:
         """
         Convert markdown to HTML incrementally as text is being added.
@@ -68,6 +71,19 @@ class ConversationMarkdownConverter:
             return f"<p>Error converting markdown: {e}</p>"
 
     def reset(self):
-        """Reset the converter state to initial values."""
+        """
+        Reset the converter state to initial values while preserving structural context.
+
+        This method saves the current parsing state before resetting, allowing content
+        after a reset to maintain proper nesting and formatting context.
+        """
+        # Save the current state before resetting
+        self.builder_state = self.ast_builder.export_state()
+
+        # Create a new AST builder with the exported state
         self.ast_builder = ASTBuilder()
+        if self.builder_state:
+            self.ast_builder.import_state(self.builder_state)
+
+        # Reset the current text
         self.current_text = ""
