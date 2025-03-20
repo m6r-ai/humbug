@@ -124,6 +124,10 @@ class ConversationMessageSection(QFrame):
 
         self._handle_language_changed()
 
+    @property
+    def language(self) -> str:
+        return self._language
+
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
         strings = self._language_manager.strings

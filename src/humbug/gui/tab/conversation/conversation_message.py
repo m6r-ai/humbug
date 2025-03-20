@@ -1,6 +1,5 @@
 from datetime import datetime
 import logging
-import re
 from typing import List, Tuple, Optional
 
 from PySide6.QtWidgets import (
@@ -13,6 +12,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_markdown_converter import ConversationMarkdownConverter
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
+from humbug.gui.tab.conversation.conversation_markdown_ast_node import HTMLRenderer, ASTNode, CodeBlock
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
@@ -83,17 +83,12 @@ class ConversationMessage(QFrame):
             self._sections.append(section)
             self._sections_layout.addWidget(section)
 
+        # Initialize markdown converter
         self._markdown_converter = ConversationMarkdownConverter()
+        self._html_renderer = HTMLRenderer()
 
         # Add bookmark status
         self._is_bookmarked = False
-
-        self._next_str: str = ""
-        self._text_list = []
-        self._language_list = [None]
-        self._in_fence_region = False
-        self._fence_indent = 0
-        self._current_language = None
 
         # Track current message style
         self._current_style: AIMessageSource = None
@@ -137,97 +132,46 @@ class ConversationMessage(QFrame):
         else:
             self._role_label.setText(role_text)
 
-    def _parse_line(self, text: str) -> None:
+    def _extract_sections_from_ast(self, document: ASTNode) -> List[Tuple[str, Optional[ProgrammingLanguage]]]:
         """
-        Process a line of text, detecting fence blocks (triple backticks) and handling language specifications.
+        Extract content sections from the AST document.
 
         Args:
-            text: A line of text to be processed
-        """
-        stripped_text = text.lstrip()
-        indentation = len(text) - len(text.lstrip())
-
-        if not stripped_text.startswith("```"):
-            self._next_str += text
-            return
-
-        if self._in_fence_region:
-            # Only close the fence if indentation is less than or equal to the opening fence
-            if indentation > self._fence_indent:
-                # This is a nested fence within a code block
-                # Treat it as regular text within the current fence
-                self._next_str += text
-                return
-
-            # This is the end of a fence block
-            self._in_fence_region = False
-
-            # Save accumulated text with the current language
-            self._text_list.append(self._next_str)
-            self._language_list.append(self._current_language)
-            self._current_language = None
-            self._next_str = ""
-            return
-
-        # This is the start of a fence block
-        self._in_fence_region = True
-        self._fence_indent = indentation
-
-        # Save any text accumulated so far
-        self._text_list.append(self._next_str)
-        self._language_list.append(None)
-        self._next_str = ""
-
-        # Try to extract language information
-        # The language would be specified after the backticks
-        language_part = stripped_text[3:].strip().lower()
-        if language_part:
-            # Map language string to programming language enum
-            self._current_language = ProgrammingLanguageUtils.from_name(language_part)
-        else:
-            self._current_language = ProgrammingLanguage.TEXT
-
-    def _parse_content_sections(self, text: str) -> List[tuple]:
-        """
-        Parse content into sections with associated languages.
-
-        Args:
-            text: The message text content
+            document: The AST document node
 
         Returns:
-            List of (section_text, language) tuples
+            List of (content, language) tuples where language is None for markdown content
+            and a ProgrammingLanguage enum for code blocks
         """
-        lines = text.splitlines(keepends=True)
-        self._next_str = ""
-        self._text_list = []
-        self._language_list = []
-        self._in_fence_region = False
-        self._current_language = None
-        self._fence_indent = 0
+        sections = []
+        current_markdown = []
 
-        for line in lines:
-            self._parse_line(line)
+        # Helper function to add accumulated markdown content as a section
+        def add_markdown_section():
+            if current_markdown:
+                # Join the HTML parts and add as a markdown section
+                sections.append(("".join(current_markdown), None))
+                current_markdown.clear()
 
-        # Handle any remaining text
-        if self._next_str:
-            self._text_list.append(self._next_str)
-            self._language_list.append(self._current_language)
+        # Process all nodes in the document
+        for node in document.children:
+            if isinstance(node, CodeBlock):
+                # Add any accumulated markdown before this code block
+                add_markdown_section()
 
-        # Strip any leading and trailing blank lines from each block. Also strip blank blocks.
-        new_text_list = []
-        new_language_list = []
-        for i, text_block in enumerate(self._text_list):
-            text_block = re.sub(r'^(\s*\n)+', '', text_block)
-            text_block = re.sub(r'(\n\s*)+$', '', text_block)
-            if text_block:
-                new_text_list.append(text_block)
-                new_language_list.append(self._language_list[i])
+                # Process the code block
+                language = ProgrammingLanguageUtils.from_name(node.language) if node.language else ProgrammingLanguage.TEXT
 
-        self._text_list = new_text_list
-        self._language_list = new_language_list
+                # Add the code block as a section with its language
+                sections.append((node.content, language))
+            else:
+                # Render this node to HTML and add to current markdown content
+                current_markdown.append(self._html_renderer.visit(node))
 
-        # Create a list of section tuples with (text, language)
-        return list(zip(self._text_list, self._language_list))
+        # Add any remaining markdown content
+        add_markdown_section()
+
+        return sections
 
     def _create_section_widget(self, language: Optional[ProgrammingLanguage] = None) -> ConversationMessageSection:
         """
@@ -294,18 +238,24 @@ class ConversationMessage(QFrame):
             self._section_with_selection = None
             self._handle_style_changed()
 
-        # Parse content into sections with language information
-        section_data = self._parse_content_sections(text)
+            # Reset markdown converter for new style
+            self._markdown_converter.reset()
+
+        # Use the markdown converter to parse content
+        if not self._is_input:
+            html_content = self._markdown_converter.convert_incremental(text)
+
+            # Extract sections from the AST
+            sections_data = self._extract_sections_from_ast(self._markdown_converter.ast_builder.document)
+        else:
+            # Input widgets don't use markdown processing
+            sections_data = [(text, None)]
 
         # Create or update sections
-        for i, (section_text, language) in enumerate(section_data):
+        for i, (section_text, language) in enumerate(sections_data):
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(language)
-                if language is None and not self._is_input:
-                    self._markdown_converter.reset()
-                    section_text = self._markdown_converter.convert_incremental(section_text)
-
                 section.set_content(section_text)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
@@ -319,13 +269,11 @@ class ConversationMessage(QFrame):
                 font.setPointSizeF(base_font_size * factor)
                 section.apply_style(text_color, color, font)
             elif i == len(self._sections) - 1:
-                if language is None and not self._is_input:
-                    section_text = self._markdown_converter.convert_incremental(section_text)
-
+                # Update the last section with new content
                 self._sections[-1].set_content(section_text)
 
         # Remove any extra sections
-        while len(self._sections) > len(section_data):
+        while len(self._sections) > len(sections_data):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
@@ -416,8 +364,8 @@ class ConversationMessage(QFrame):
         """)
 
         # Apply styling to all sections
-        for i, section in enumerate(self._sections):
-            language = self._language_list[i] if i < len(self._language_list) else None
+        for section in self._sections:
+            language = section.language
             color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
             section.apply_style(text_color, color, font)
 
