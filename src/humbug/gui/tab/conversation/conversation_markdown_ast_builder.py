@@ -546,6 +546,7 @@ class ASTBuilder:
             self.last_paragraph.add_child(Text(" "))
             for node in self.parse_inline_formatting(formatted_text):
                 self.last_paragraph.add_child(node)
+
             self.last_paragraph.line_end = line_num
             self.register_node_line(self.last_paragraph, line_num)
             return True
@@ -581,6 +582,7 @@ class ASTBuilder:
             self.last_list_item.add_child(Text(" "))
             for node in self.parse_inline_formatting(formatted_text):
                 self.last_list_item.add_child(node)
+
             self.last_list_item.line_end = line_num
             self.register_node_line(self.last_list_item, line_num)
             return True
@@ -694,15 +696,18 @@ class ASTBuilder:
 
             elif line_type == 'text':
                 # Try to handle as a continuation first
-                if not self._handle_text_continuation(content, line_num):
-                    # Regular paragraph
-                    paragraph = self.parse_text(content, line_num)
-                    self.document.add_child(paragraph)
-                    self.last_paragraph = paragraph
-                    # Reset list tracking after a paragraph
-                    self.active_lists = []
-                    self.list_contains_blank_line = set()
-                    self.last_list_item = None
+                if self._handle_text_continuation(content, line_num):
+                    return
+
+                # Regular paragraph
+                paragraph = self.parse_text(content, line_num)
+                self.document.add_child(paragraph)
+                self.last_paragraph = paragraph
+
+                # Reset list tracking after a paragraph
+                self.active_lists = []
+                self.list_contains_blank_line = set()
+                self.last_list_item = None
 
             # Update the last processed line type
             self.last_processed_line_type = line_type
