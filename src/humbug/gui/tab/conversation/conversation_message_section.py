@@ -109,13 +109,7 @@ class ConversationMessageSection(QFrame):
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add conversation highlighter
-        if language is None:
-            self._highlighter = ConversationHighlighter(self._text_area.document())
-            self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
-        else:
-            self._highlighter = ConversationLanguageHighlighter(self._text_area.document())
-            self._highlighter.set_language(language)
-            self._text_area.set_has_code_block(True)
+        self.set_language(language)
 
         self._mouse_left_button_pressed = False
 
@@ -128,6 +122,24 @@ class ConversationMessageSection(QFrame):
     def language(self) -> str:
         """Provide the language in use by this section."""
         return self._language
+
+    def set_language(self, language: ProgrammingLanguage) -> None:
+        self._language = language
+
+        if language is None:
+            self._highlighter = ConversationHighlighter(self._text_area.document())
+            self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
+        else:
+            self._highlighter = ConversationLanguageHighlighter(self._text_area.document())
+            self._highlighter.set_language(language)
+            self._text_area.set_has_code_block(True)
+
+        strings = self._language_manager.strings
+        if self._language_header:
+            language_header = strings.highlighting.format(
+                language=ProgrammingLanguageUtils.get_display_name(self._language)
+            )
+            self._language_header.setText(language_header)
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""

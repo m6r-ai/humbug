@@ -12,10 +12,9 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_markdown_converter import ConversationMarkdownConverter
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
-from humbug.gui.tab.conversation.conversation_markdown_ast_node import HTMLRenderer, ASTNode, CodeBlock
+from humbug.gui.tab.conversation.conversation_markdown_ast_node import HTMLRenderer
 from humbug.language.language_manager import LanguageManager
 from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class ConversationMessage(QFrame):
@@ -227,6 +226,9 @@ class ConversationMessage(QFrame):
                 section.apply_style(text_color, color, font)
             elif i == len(self._sections) - 1:
                 # Update the last section with new content
+                if language != self._sections[-1].language:
+                    self._sections[-1].set_language(language)
+
                 self._sections[-1].set_content(section_text)
 
         # Remove any extra sections
