@@ -448,6 +448,13 @@ class ASTBuilder:
         item = ListItem()
         list_node.add_child(item)
 
+        # Calculate the actual content indentation for this specific marker
+        # and update the list's content_indent if needed
+        marker_length = len(marker) + 1  # +1 for the space after marker
+        actual_content_indent = indent + marker_length
+        if actual_content_indent > list_node.content_indent:
+            list_node.content_indent = actual_content_indent
+
         # Check if this list has blank lines, which means we need to use paragraphs for content
         if list_node in self.list_contains_blank_line:
             self._add_paragraph_to_list_item(item, content, line_num)
@@ -544,26 +551,20 @@ class ASTBuilder:
             return True
 
         # Case 2: Continue a list item
-        elif self.last_list_item and self.last_processed_line_type in ('unordered_list_item', 'ordered_list_item'):
+        if self.last_list_item and self.last_processed_line_type in ('unordered_list_item', 'ordered_list_item'):
             # Get the indentation of the current line
             current_indent = len(text) - len(text.lstrip())
 
-            # Get the required indentation for continuing a list item
-            list_item_content_indent = 0
-
-            # Find the active list that contains our last list item
-            for list_node, indent in self.active_lists:
+            # Find which list contains our last list item
+            required_indent = 0
+            for list_node, _ in self.active_lists:
                 for child in list_node.children:
-                    if child == self.last_list_item:
-                        # The content indentation is the list indent + the list marker + a space
-                        # For unordered lists: indent + 1(bullet) + 1(space) = indent + 2
-                        # For ordered lists: indent + number + . + space = varies, but at least indent + 3
-                        list_item_content_indent = indent + (3 if isinstance(list_node, OrderedList) else 2)
+                    if child is self.last_list_item:
+                        required_indent = list_node.content_indent
                         break
 
             # Check if the current line is indented enough to be a continuation
-            # It must have at least the same indentation as the list item content
-            if current_indent < list_item_content_indent:
+            if current_indent < required_indent:
                 # Not indented enough, so it's not a continuation
                 return False
 

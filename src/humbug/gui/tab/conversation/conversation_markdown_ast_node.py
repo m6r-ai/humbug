@@ -99,6 +99,9 @@ class OrderedList(ASTNode):
         """
         super().__init__()
         self.indent = indent
+        # Content indent is typically indent + marker (e.g., "1.") + space
+        # For ordered lists, we use a default of 3 characters for the marker ("1. ")
+        self.content_indent = indent + 3
         if children:
             for child in children:
                 self.add_child(child)
@@ -116,6 +119,9 @@ class UnorderedList(ASTNode):
         """
         super().__init__()
         self.indent = indent
+        # Content indent is typically indent + marker (e.g., "-") + space
+        # For unordered lists, we use 2 characters for the marker ("- ")
+        self.content_indent = indent + 2
         if children:
             for child in children:
                 self.add_child(child)
