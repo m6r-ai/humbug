@@ -220,6 +220,19 @@ class MarkdownEmphasisNode(MarkdownASTNode):
                 self.add_child(child)
 
 
+class MarkdownInlineCodeNode(MarkdownASTNode):
+    """Node representing inline code (<code>)."""
+    def __init__(self, content=None):
+        """
+        Initialize an inline code node.
+
+        Args:
+            content: The code content
+        """
+        super().__init__()
+        self.content = content or ""
+
+
 class MarkdownCodeBlockNode(MarkdownASTNode):
     """Node representing a code block (<pre><code>)."""
     def __init__(self, language=None, content=None):

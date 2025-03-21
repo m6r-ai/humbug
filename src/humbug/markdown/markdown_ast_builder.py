@@ -13,7 +13,7 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode,
     MarkdownEmphasisNode, MarkdownBoldNode, MarkdownHeadingNode,
     MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
-    MarkdownListItemNode, MarkdownParseError, MarkdownCodeBlockNode
+    MarkdownListItemNode, MarkdownParseError, MarkdownInlineCodeNode, MarkdownCodeBlockNode
 )
 
 
@@ -29,6 +29,7 @@ class MarkdownASTBuilder:
         """Initialize the AST builder with regex patterns for markdown elements."""
         # Regular expressions for markdown elements
         self._heading_pattern = re.compile(r'^(#{1,6})\s+(.*?)(?:\s+#{1,6})?$', re.MULTILINE)
+        self._inline_code_pattern = re.compile(r'`([^`]+)`')
         self._bold_pattern = re.compile(r'\*\*(.*?)\*\*|\b__(.*?)__\b')
         self._italic_pattern = re.compile(r'\*([^*]+)\*|\b_([^_]+)_\b')
         self._unordered_list_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
@@ -181,7 +182,7 @@ class MarkdownASTBuilder:
 
     def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:
         """
-        Parse inline formatting (bold, italic) in text and create appropriate AST nodes.
+        Parse inline formatting (bold, italic, inline code) in text and create appropriate AST nodes.
 
         Args:
             text: The text to parse
@@ -194,94 +195,100 @@ class MarkdownASTBuilder:
         """
         # Escape HTML characters first
         text = self.escape_html(text)
+
+        # Simple state machine for inline formatting
+        i = 0
         nodes = []
+        current_text = ""
 
-        # Process bold formatting
-        bold_segments = []
-        last_end = 0
+        while i < len(text):
+            # Check for inline code (highest precedence)
+            if text[i] == '`':
+                # Look for the closing backtick
+                end_pos = text.find('`', i + 1)
+                if end_pos != -1:
+                    # Add any accumulated text before this code block
+                    if current_text:
+                        nodes.append(MarkdownTextNode(current_text))
+                        current_text = ""
 
-        for match in self._bold_pattern.finditer(text):
-            start, end = match.span()
-            # Add text before this match
-            if start > last_end:
-                bold_segments.append(('text', text[last_end:start]))
+                    # Extract the code content (excluding backticks)
+                    code_content = text[i+1:end_pos]
+                    nodes.append(MarkdownInlineCodeNode(code_content))
 
-            # Add the bold content
-            content = match.group(1) or match.group(2)
-            if content:
-                bold_segments.append(('bold', content))
-            else:
-                bold_segments.append(('text', '**'))
+                    # Move past the closing backtick
+                    i = end_pos + 1
+                    continue
 
-            last_end = end
+            # Check for bold formatting
+            elif (i + 1 < len(text) and 
+                ((text[i:i+2] == '**') or (text[i:i+2] == '__'))):
 
-        # Add any remaining text
-        if last_end < len(text):
-            bold_segments.append(('text', text[last_end:]))
+                # Determine which marker we're using
+                marker = text[i:i+2]
 
-        # Process italic formatting in each segment
-        for segment_type, segment_text in bold_segments:
-            if segment_type == 'text':
-                # Process italics in regular text
-                italic_segments = []
-                last_end = 0
+                # Look for the closing marker
+                end_pos = text.find(marker, i + 2)
+                if end_pos != -1:
+                    # Add any accumulated text before this bold block
+                    if current_text:
+                        nodes.append(MarkdownTextNode(current_text))
+                        current_text = ""
 
-                for match in self._italic_pattern.finditer(segment_text):
-                    start, end = match.span()
-                    # Add text before this match
-                    if start > last_end:
-                        italic_segments.append(MarkdownTextNode(segment_text[last_end:start]))
+                    # Extract the bold content (excluding markers)
+                    bold_content = text[i+2:end_pos]
 
-                    # Add the italic content
-                    content = match.group(1) or match.group(2)
-                    if content:
-                        emphasis = MarkdownEmphasisNode()
-                        emphasis.add_child(MarkdownTextNode(content))
-                        italic_segments.append(emphasis)
-                    else:
-                        italic_segments.append(MarkdownTextNode('*'))
+                    # Create bold node and process its content recursively
+                    bold_node = MarkdownBoldNode()
 
-                    last_end = end
+                    # Process the content inside the bold
+                    for child_node in self.parse_inline_formatting(bold_content):
+                        bold_node.add_child(child_node)
 
-                # Add any remaining text
-                if last_end < len(segment_text):
-                    italic_segments.append(MarkdownTextNode(segment_text[last_end:]))
+                    nodes.append(bold_node)
 
-                nodes.extend(italic_segments)
-            elif segment_type == 'bold':
-                # Create a bold node with its text content
-                bold = MarkdownBoldNode()
+                    # Move past the closing marker
+                    i = end_pos + 2
+                    continue
 
-                # Process italics within the bold text
-                italic_segments = []
-                last_end = 0
+            # Check for italic formatting
+            elif (text[i] == '*' or text[i] == '_') and (
+                    i == 0 or text[i-1] != text[i]):  # Avoid mistaking ** as *
 
-                for match in self._italic_pattern.finditer(segment_text):
-                    start, end = match.span()
-                    # Add text before this match
-                    if start > last_end:
-                        italic_segments.append(MarkdownTextNode(segment_text[last_end:start]))
+                # Determine which marker we're using
+                marker = text[i]
 
-                    # Add the italic content
-                    content = match.group(1) or match.group(2)
-                    if content:
-                        emphasis = MarkdownEmphasisNode()
-                        emphasis.add_child(MarkdownTextNode(content))
-                        italic_segments.append(emphasis)
-                    else:
-                        italic_segments.append(MarkdownTextNode('*'))
+                # Look for the closing marker
+                end_pos = text.find(marker, i + 1)
+                if end_pos != -1 and (end_pos + 1 >= len(text) or text[end_pos+1] != marker):  # Avoid **
+                    # Add any accumulated text before this italic block
+                    if current_text:
+                        nodes.append(MarkdownTextNode(current_text))
+                        current_text = ""
 
-                    last_end = end
+                    # Extract the italic content (excluding markers)
+                    italic_content = text[i+1:end_pos]
 
-                # Add any remaining text
-                if last_end < len(segment_text):
-                    italic_segments.append(MarkdownTextNode(segment_text[last_end:]))
+                    # Create emphasis node and process its content recursively
+                    emphasis_node = MarkdownEmphasisNode()
 
-                # Add all italic segments to the bold node
-                for node in italic_segments:
-                    bold.add_child(node)
+                    # Process the content inside the emphasis
+                    for child_node in self.parse_inline_formatting(italic_content):
+                        emphasis_node.add_child(child_node)
 
-                nodes.append(bold)
+                    nodes.append(emphasis_node)
+
+                    # Move past the closing marker
+                    i = end_pos + 1
+                    continue
+
+            # No formatting found, accumulate normal text
+            current_text += text[i]
+            i += 1
+
+        # Add any remaining accumulated text
+        if current_text:
+            nodes.append(MarkdownTextNode(current_text))
 
         return nodes
 

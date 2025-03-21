@@ -20,6 +20,7 @@ class MarkdownHTMLRenderer(MarkdownASTVisitor):
         html_parts = []
         for child in node.children:
             html_parts.append(self.visit(child))
+
         return "".join(html_parts)
 
     def visit_MarkdownParagraphNode(self, node):  # pylint: disable=invalid-name
@@ -125,6 +126,19 @@ class MarkdownHTMLRenderer(MarkdownASTVisitor):
         """
         inner_html = "".join(self.visit(child) for child in node.children)
         return f"<em>{inner_html}</em>"
+
+    def visit_MarkdownInlineCodeNode(self, node):  # pylint: disable=invalid-name
+        """
+        Render an inline code node to HTML.
+
+        Args:
+            node: The inline code node to render
+
+        Returns:
+            The HTML string representation of the inline code
+        """
+        # Inline code is already HTML-escaped at creation time
+        return f"<code>{node.content}</code>"
 
     def visit_MarkdownCodeBlockNode(self, node):  # pylint: disable=invalid-name
         """

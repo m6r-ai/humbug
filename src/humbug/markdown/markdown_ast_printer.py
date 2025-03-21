@@ -34,6 +34,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         line_range = ""
         if node.line_start is not None and node.line_end is not None:
             line_range = f" (lines {node.line_start}-{node.line_end})"
+
         print(f"{self._indent()}{node_name}{line_range}")
         self.indent_level += 1
         results = super().generic_visit(node)
@@ -53,6 +54,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         line_range = ""
         if node.line_start is not None:
             line_range = f" (line {node.line_start})"
+
         print(f"{self._indent()}Text{line_range}: '{node.content}'")
         return node.content
 
@@ -69,11 +71,29 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         line_range = ""
         if node.line_start is not None:
             line_range = f" (line {node.line_start})"
+
         print(f"{self._indent()}Heading (level {node.level}){line_range}")
         self.indent_level += 1
         results = super().generic_visit(node)
         self.indent_level -= 1
         return results
+
+    def visit_MarkdownInlineCodeNode(self, node):  # pylint: disable=invalid-name
+        """
+        Visit an inline code node and print its content.
+
+        Args:
+            node: The inline code node to visit
+
+        Returns:
+            The inline code content
+        """
+        line_range = ""
+        if node.line_start is not None:
+            line_range = f" (line {node.line_start})"
+
+        print(f"{self._indent()}InlineCode{line_range}: '{node.content}'")
+        return node.content
 
     def visit_MarkdownCodeBlockNode(self, node):  # pylint: disable=invalid-name
         """
@@ -88,6 +108,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         line_range = ""
         if node.line_start is not None and node.line_end is not None:
             line_range = f" (lines {node.line_start}-{node.line_end})"
+
         print(f"{self._indent()}CodeBlock{line_range}: language='{node.language}'")
         self.indent_level += 1
         print(f"{self._indent()}Content: '{node.content[:30]}...' ({len(node.content)} chars)")
