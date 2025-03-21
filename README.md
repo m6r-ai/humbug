@@ -71,6 +71,7 @@ v0.8 adds several new features:
   matches the user setting.
 - Messages from the AI are now rendered using the markdown formatting provides.  This makes them
   easier to read and hides the markdown annotations.
+- Added support for Google Gemini 2.0 pro (experimental).
 
 ## Features
 

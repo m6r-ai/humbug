@@ -1453,7 +1453,7 @@ Context: Capabilities
 
             - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022", "claude-3.7-sonnet-20250219"
             - Deepseek models: "deepseek-chat", "deepseek-reasoner"
-            - Google models: "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"
+            - Google models: "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp", "gemini-2.0-pro-exp"
             - M6R models: "tessa"
             - Mistral models: "codestral-latest", "mistral-large-latest", "mistral-small-latest"
             - Ollama models: "llama3.2", "phi4"
@@ -1480,6 +1480,7 @@ Context: Capabilities
         - gemini-1.5-flash: Supports temperature 0.0-1.0
         - gemini-1.5-pro: Supports temperature 0.0-1.0
         - gemini-2.0-flash-exp: Supports temperature 0.0-1.0
+        - gemini-2.0-pro-exp: Supports temperature 0.0-1.0
         - tessa: No temperature setting
         - codestral-latest: Supports temperature 0.0-1.0
         - mistral-large-latest: Supports temperature 0.0-1.0
