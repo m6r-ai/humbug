@@ -109,7 +109,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
                     continue
 
                 if in_code_block:
-                    self.setFormat(token.start, len(token.value), style_manager.get_highlight(TokenType.BACKTICK_CODE))
+                    self.setFormat(token.start, len(token.value), style_manager.get_highlight(TokenType.INLINE_CODE))
                     continue
 
             # Check if we need to rehighlight everything from this block onwards.

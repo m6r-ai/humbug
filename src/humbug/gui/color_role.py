@@ -63,7 +63,7 @@ class ColorRole(Enum):
 
     # Syntax highlighting
     SYNTAX_ADDRESS = auto()
-    SYNTAX_BACKTICK_CODE = auto()
+    SYNTAX_INLINE_CODE = auto()
     SYNTAX_CODE = auto()
     SYNTAX_COMMENT = auto()
     SYNTAX_CSS_AT_RULE = auto()

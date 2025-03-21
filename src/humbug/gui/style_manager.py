@@ -221,7 +221,7 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#80e0d0",
                 ColorMode.LIGHT: "#007070"
             },
-            ColorRole.SYNTAX_BACKTICK_CODE: {
+            ColorRole.SYNTAX_INLINE_CODE: {
                 ColorMode.DARK: "#8080f0",
                 ColorMode.LIGHT: "#3030c0"
             },
@@ -381,7 +381,7 @@ class StyleManager(QObject):
             TokenType.ADDRESS: ColorRole.SYNTAX_ADDRESS,
             TokenType.ANNOTATION: ColorRole.SYNTAX_HEADING,
             TokenType.ATTRIBUTE: ColorRole.SYNTAX_HEADING,
-            TokenType.BACKTICK_CODE: ColorRole.SYNTAX_BACKTICK_CODE,
+            TokenType.INLINE_CODE: ColorRole.SYNTAX_INLINE_CODE,
             TokenType.BOOLEAN: ColorRole.SYNTAX_NUMBER,
             TokenType.CHARACTER: ColorRole.SYNTAX_STRING,
             TokenType.CODE: ColorRole. SYNTAX_CODE,

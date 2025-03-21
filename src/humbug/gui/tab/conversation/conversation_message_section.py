@@ -58,6 +58,8 @@ class ConversationMessageSection(QFrame):
         self._copy_button = None
         self._save_as_button = None
 
+        self._content = None
+
         if language is not None:
             self._layout.setContentsMargins(10, 10, 10, 10)
 
@@ -249,7 +251,9 @@ class ConversationMessageSection(QFrame):
             self._text_area.set_text(text)
             return
 
-        # Convert markdown to HTML
+        # Set HTML.  Note we have to record the content for HTML so we can apply
+        # CSS styles to it if we change display theme.
+        self._content = text
         self._text_area.set_html(text)
 
     def has_selection(self) -> bool:
@@ -437,7 +441,7 @@ class ConversationMessageSection(QFrame):
                 }}
             """)
 
-        # Style the language header if present
+        # Style the language header if present, or the inline code style if it's not
         if self._language_header:
             label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
             self._language_header.setFont(font)
@@ -449,6 +453,14 @@ class ConversationMessageSection(QFrame):
                     padding: 0;
                 }}
             """)
+        else:
+            style_sheet = f"""
+                code {{
+                    color: {self._style_manager.get_color_str(ColorRole.SYNTAX_INLINE_CODE)};
+                }}
+                """
+            self._text_area.document().setDefaultStyleSheet(style_sheet)
+            self._text_area.setHtml(self._content)
 
         button_style = f"""
             QToolButton {{

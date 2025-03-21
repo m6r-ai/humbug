@@ -10,7 +10,7 @@ class TokenType(IntEnum):
     ANNOTATION = auto()
     ATTRIBUTE = auto()
     BACKTICK = auto()
-    BACKTICK_CODE = auto()
+    INLINE_CODE = auto()
     BOOLEAN = auto()
     CHARACTER = auto()
     CODE = auto()

@@ -12,7 +12,6 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
 from humbug.language.language_manager import LanguageManager
-from humbug.markdown.markdown_html_renderer import MarkdownHTMLRenderer
 from humbug.markdown.markdown_converter import MarkdownConverter
 from humbug.syntax.programming_language import ProgrammingLanguage
 
@@ -84,7 +83,6 @@ class ConversationMessage(QFrame):
 
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
-        self._html_renderer = MarkdownHTMLRenderer()
 
         # Add bookmark status
         self._is_bookmarked = False
@@ -212,7 +210,6 @@ class ConversationMessage(QFrame):
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(language)
-                section.set_content(section_text)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
 
@@ -224,6 +221,7 @@ class ConversationMessage(QFrame):
                 base_font_size = self._style_manager.base_font_size
                 font.setPointSizeF(base_font_size * factor)
                 section.apply_style(text_color, color, font)
+                section.set_content(section_text)
             elif i == len(self._sections) - 1:
                 # Update the last section with new content
                 section = self._sections[-1]
