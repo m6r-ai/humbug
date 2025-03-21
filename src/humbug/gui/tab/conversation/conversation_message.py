@@ -226,10 +226,11 @@ class ConversationMessage(QFrame):
                 section.apply_style(text_color, color, font)
             elif i == len(self._sections) - 1:
                 # Update the last section with new content
-                if language != self._sections[-1].language:
-                    self._sections[-1].set_language(language)
+                section = self._sections[-1]
+                if language != section.language:
+                    section.set_language(language)
 
-                self._sections[-1].set_content(section_text)
+                section.set_content(section_text)
 
         # Remove any extra sections
         while len(self._sections) > len(sections_data):
