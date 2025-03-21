@@ -647,7 +647,7 @@ class ASTBuilder:
                 # Create a code block node
                 code_block = CodeBlock(
                     language=self.code_block_language,
-                    content=self.escape_html('\n'.join(self.code_block_content))
+                    content='\n'.join(self.code_block_content)
                 )
                 code_block.line_start = self.code_block_start_line
                 code_block.line_end = line_num
