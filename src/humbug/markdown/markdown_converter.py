@@ -9,7 +9,7 @@ import logging
 from typing import List, Tuple, Optional
 
 from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownParseError
-from humbug.markdown.markdown_ast_node import CodeBlock, MarkdownASTNode
+from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode
 from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
 from humbug.markdown.markdown_html_renderer import MarkdownHTMLRenderer
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -90,7 +90,7 @@ class MarkdownConverter:
 
         # Process all nodes in the document
         for node in document.children:
-            if isinstance(node, CodeBlock):
+            if isinstance(node, MarkdownCodeBlockNode):
                 # Add any accumulated markdown before this code block
                 add_markdown_section()
 

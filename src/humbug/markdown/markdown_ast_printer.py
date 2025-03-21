@@ -40,7 +40,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_Text(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownTextNode(self, node):  # pylint: disable=invalid-name
         """
         Visit a text node and print its content.
 
@@ -56,7 +56,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         print(f"{self._indent()}Text{line_range}: '{node.content}'")
         return node.content
 
-    def visit_Heading(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownHeadingNode(self, node):  # pylint: disable=invalid-name
         """
         Visit a heading node and print its level.
 
@@ -75,7 +75,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_CodeBlock(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownCodeBlockNode(self, node):  # pylint: disable=invalid-name
         """
         Visit a code block node and print its language and content.
 

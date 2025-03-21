@@ -10,8 +10,10 @@ import re
 from typing import Dict, List, Tuple, Any, Set, Optional
 
 from humbug.markdown.markdown_ast_node import (
-    MarkdownASTNode, Document, Text, Emphasis, Bold, Heading, Paragraph,
-    OrderedList, UnorderedList, ListItem, MarkdownParseError, CodeBlock
+    MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode,
+    MarkdownEmphasisNode, MarkdownBoldNode, MarkdownHeadingNode,
+    MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
+    MarkdownListItemNode, MarkdownParseError, MarkdownCodeBlockNode
 )
 
 
@@ -36,7 +38,7 @@ class MarkdownASTBuilder:
         self._logger = logging.getLogger("ASTBuilder")
 
         # Initialize an empty document
-        self.document = Document()
+        self.document = MarkdownDocumentNode()
 
         # Mapping from line numbers to nodes for incremental updates
         self.line_to_node_map: Dict[int, List[MarkdownASTNode]] = {}
@@ -46,8 +48,8 @@ class MarkdownASTBuilder:
         self.list_contains_blank_line: Set[MarkdownASTNode] = set()  # Lists that have blank lines
 
         # Text continuation tracking
-        self.last_paragraph: Optional[Paragraph] = None
-        self.last_list_item: Optional[ListItem] = None
+        self.last_paragraph: Optional[MarkdownParagraphNode] = None
+        self.last_list_item: Optional[MarkdownListItemNode] = None
         self.last_processed_line_type: str = ""
         self.blank_line_count: int = 0
 
@@ -94,7 +96,7 @@ class MarkdownASTBuilder:
 
         list_hierarchy = []
         for list_node, indent in self.active_lists:
-            list_type = "ordered" if isinstance(list_node, OrderedList) else "unordered"
+            list_type = "ordered" if isinstance(list_node, MarkdownOrderedListNode) else "unordered"
             list_hierarchy.append({"type": list_type, "indent": indent})
 
         # There are other aspects of state we might want to preserve
@@ -228,27 +230,27 @@ class MarkdownASTBuilder:
                     start, end = match.span()
                     # Add text before this match
                     if start > last_end:
-                        italic_segments.append(Text(segment_text[last_end:start]))
+                        italic_segments.append(MarkdownTextNode(segment_text[last_end:start]))
 
                     # Add the italic content
                     content = match.group(1) or match.group(2)
                     if content:
-                        emphasis = Emphasis()
-                        emphasis.add_child(Text(content))
+                        emphasis = MarkdownEmphasisNode()
+                        emphasis.add_child(MarkdownTextNode(content))
                         italic_segments.append(emphasis)
                     else:
-                        italic_segments.append(Text('*'))
+                        italic_segments.append(MarkdownTextNode('*'))
 
                     last_end = end
 
                 # Add any remaining text
                 if last_end < len(segment_text):
-                    italic_segments.append(Text(segment_text[last_end:]))
+                    italic_segments.append(MarkdownTextNode(segment_text[last_end:]))
 
                 nodes.extend(italic_segments)
             elif segment_type == 'bold':
                 # Create a bold node with its text content
-                bold = Bold()
+                bold = MarkdownBoldNode()
 
                 # Process italics within the bold text
                 italic_segments = []
@@ -258,22 +260,22 @@ class MarkdownASTBuilder:
                     start, end = match.span()
                     # Add text before this match
                     if start > last_end:
-                        italic_segments.append(Text(segment_text[last_end:start]))
+                        italic_segments.append(MarkdownTextNode(segment_text[last_end:start]))
 
                     # Add the italic content
                     content = match.group(1) or match.group(2)
                     if content:
-                        emphasis = Emphasis()
-                        emphasis.add_child(Text(content))
+                        emphasis = MarkdownEmphasisNode()
+                        emphasis.add_child(MarkdownTextNode(content))
                         italic_segments.append(emphasis)
                     else:
-                        italic_segments.append(Text('*'))
+                        italic_segments.append(MarkdownTextNode('*'))
 
                     last_end = end
 
                 # Add any remaining text
                 if last_end < len(segment_text):
-                    italic_segments.append(Text(segment_text[last_end:]))
+                    italic_segments.append(MarkdownTextNode(segment_text[last_end:]))
 
                 # Add all italic segments to the bold node
                 for node in italic_segments:
@@ -300,7 +302,7 @@ class MarkdownASTBuilder:
             return text.rstrip() + '<br />'
         return text
 
-    def parse_heading(self, level: int, content: str, line_num: int) -> Heading:
+    def parse_heading(self, level: int, content: str, line_num: int) -> MarkdownHeadingNode:
         """
         Parse a heading line and create a heading node.
 
@@ -315,7 +317,7 @@ class MarkdownASTBuilder:
         Raises:
             None
         """
-        heading = Heading(level)
+        heading = MarkdownHeadingNode(level)
         formatted_text = self.handle_line_breaks(content)
         for node in self.parse_inline_formatting(formatted_text):
             heading.add_child(node)
@@ -326,7 +328,7 @@ class MarkdownASTBuilder:
 
         return heading
 
-    def parse_text(self, text: str, line_num: int) -> Paragraph:
+    def parse_text(self, text: str, line_num: int) -> MarkdownParagraphNode:
         """
         Parse a text line and create a paragraph node.
 
@@ -340,7 +342,7 @@ class MarkdownASTBuilder:
         Raises:
             None
         """
-        paragraph = Paragraph()
+        paragraph = MarkdownParagraphNode()
         formatted_text = self.handle_line_breaks(text)
         for node in self.parse_inline_formatting(formatted_text):
             paragraph.add_child(node)
@@ -360,7 +362,7 @@ class MarkdownASTBuilder:
             is_ordered: Whether this is an ordered list
 
         Returns:
-            A list node (either OrderedList or UnorderedList)
+            A list node (either MarkdownOrderedListNode or MarkdownUnorderedListNode)
 
         Raises:
             None
@@ -374,8 +376,8 @@ class MarkdownASTBuilder:
             list_node, _list_indent = self.active_lists[-1]
 
             # If list type matches, use it
-            if (isinstance(list_node, OrderedList) and is_ordered) or \
-               (isinstance(list_node, UnorderedList) and not is_ordered):
+            if (isinstance(list_node, MarkdownOrderedListNode) and is_ordered) or \
+               (isinstance(list_node, MarkdownUnorderedListNode) and not is_ordered):
                 return list_node
 
             # Otherwise, close this list and create a new one
@@ -393,16 +395,16 @@ class MarkdownASTBuilder:
 
         # Create the appropriate list type
         if is_ordered:
-            new_list = OrderedList(indent)
+            new_list = MarkdownOrderedListNode(indent)
         else:
-            new_list = UnorderedList(indent)
+            new_list = MarkdownUnorderedListNode(indent)
 
         parent.add_child(new_list)
         self.active_lists.append((new_list, indent))
 
         return new_list
 
-    def _add_paragraph_to_list_item(self, list_item: ListItem, content: str, line_num: int) -> None:
+    def _add_paragraph_to_list_item(self, list_item: MarkdownListItemNode, content: str, line_num: int) -> None:
         """
         Add a paragraph to a list item, respecting the list's formatting style.
 
@@ -414,7 +416,7 @@ class MarkdownASTBuilder:
         Returns:
             None
         """
-        paragraph = Paragraph()
+        paragraph = MarkdownParagraphNode()
         formatted_text = self.handle_line_breaks(content)
         for node in self.parse_inline_formatting(formatted_text):
             paragraph.add_child(node)
@@ -424,7 +426,7 @@ class MarkdownASTBuilder:
         list_item.add_child(paragraph)
         self.register_node_line(paragraph, line_num)
 
-    def parse_list_item(self, indent: int, marker: str, content: str, line_num: int, is_ordered: bool) -> ListItem:
+    def parse_list_item(self, indent: int, marker: str, content: str, line_num: int, is_ordered: bool) -> MarkdownListItemNode:
         """
         Parse a list item and create a list item node.
 
@@ -445,7 +447,7 @@ class MarkdownASTBuilder:
         list_node = self.find_or_create_list(indent, is_ordered)
 
         # Create the list item
-        item = ListItem()
+        item = MarkdownListItemNode()
         list_node.add_child(item)
 
         # Calculate the actual content indentation for this specific marker
@@ -502,7 +504,7 @@ class MarkdownASTBuilder:
             None
         """
         # Create a code block node for the unclosed block
-        code_block = CodeBlock(
+        code_block = MarkdownCodeBlockNode(
             language=self.code_block_language,
             content=self.escape_html('\n'.join(self.code_block_content))
         )
@@ -543,7 +545,7 @@ class MarkdownASTBuilder:
         if self.last_paragraph and self.last_processed_line_type == 'text':
             formatted_text = self.handle_line_breaks(text)
             # Add a space between the continued text
-            self.last_paragraph.add_child(Text(" "))
+            self.last_paragraph.add_child(MarkdownTextNode(" "))
             for node in self.parse_inline_formatting(formatted_text):
                 self.last_paragraph.add_child(node)
 
@@ -579,7 +581,7 @@ class MarkdownASTBuilder:
                     return True
 
             # Otherwise continue inline
-            self.last_list_item.add_child(Text(" "))
+            self.last_list_item.add_child(MarkdownTextNode(" "))
             for node in self.parse_inline_formatting(formatted_text):
                 self.last_list_item.add_child(node)
 
@@ -645,7 +647,7 @@ class MarkdownASTBuilder:
 
             if line_type == 'code_block_end':
                 # Create a code block node
-                code_block = CodeBlock(
+                code_block = MarkdownCodeBlockNode(
                     language=self.code_block_language,
                     content='\n'.join(self.code_block_content)
                 )
@@ -716,7 +718,7 @@ class MarkdownASTBuilder:
             self._logger.exception("Error parsing line %d: %s", line_num, line)
             raise MarkdownParseError(f"Failed to parse line {line_num}: {e}") from e
 
-    def build_ast(self, text: str) -> Document:
+    def build_ast(self, text: str) -> MarkdownDocumentNode:
         """
         Build a complete AST from the given text.
 
@@ -729,7 +731,7 @@ class MarkdownASTBuilder:
         Raises:
             MarkdownParseError: If there's an error parsing the text
         """
-        self.document = Document()
+        self.document = MarkdownDocumentNode()
         self.line_to_node_map = {}
         self.active_lists = []
         self.list_contains_blank_line = set()
@@ -809,28 +811,28 @@ class MarkdownASTBuilder:
                     parent_indent = list_indent
 
         # Create a list item if the parent is a list
-        if any(isinstance(parent, list_type) for list_type in [OrderedList, UnorderedList]):
-            list_item = ListItem()
+        if any(isinstance(parent, list_type) for list_type in [MarkdownOrderedListNode, MarkdownUnorderedListNode]):
+            list_item = MarkdownListItemNode()
             parent.add_child(list_item)
             parent = list_item
 
         # Create the appropriate list type
         if is_ordered:
-            new_list = OrderedList(indent)
+            new_list = MarkdownOrderedListNode(indent)
         else:
-            new_list = UnorderedList(indent)
+            new_list = MarkdownUnorderedListNode(indent)
 
         parent.add_child(new_list)
         self.active_lists.append((new_list, indent))
 
         # Create an initial list item to maintain proper structure
-        initial_item = ListItem()
+        initial_item = MarkdownListItemNode()
         new_list.add_child(initial_item)
         self.last_list_item = initial_item
 
         return new_list
 
-    def update_ast(self, text: str, previous_text: str = None) -> Document:
+    def update_ast(self, text: str, previous_text: str = None) -> MarkdownDocumentNode:
         """
         Update the AST incrementally based on changes between previous_text and text.
 

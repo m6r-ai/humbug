@@ -82,14 +82,14 @@ class MarkdownASTVisitor:
         return results
 
 
-class Document(MarkdownASTNode):
+class MarkdownDocumentNode(MarkdownASTNode):
     """Root node representing an entire HTML document."""
     def __init__(self):
         """Initialize a document node."""
         super().__init__()
 
 
-class Paragraph(MarkdownASTNode):
+class MarkdownParagraphNode(MarkdownASTNode):
     """Node representing an HTML paragraph (<p>)."""
     def __init__(self, children=None):
         """
@@ -104,7 +104,7 @@ class Paragraph(MarkdownASTNode):
                 self.add_child(child)
 
 
-class Heading(MarkdownASTNode):
+class MarkdownHeadingNode(MarkdownASTNode):
     """Node representing an HTML heading (<h1> through <h6>)."""
     def __init__(self, level, children=None):
         """
@@ -122,7 +122,7 @@ class Heading(MarkdownASTNode):
                 self.add_child(child)
 
 
-class OrderedList(MarkdownASTNode):
+class MarkdownOrderedListNode(MarkdownASTNode):
     """Node representing an HTML ordered list (<ol>)."""
     def __init__(self, indent=0, children=None):
         """
@@ -142,7 +142,7 @@ class OrderedList(MarkdownASTNode):
                 self.add_child(child)
 
 
-class UnorderedList(MarkdownASTNode):
+class MarkdownUnorderedListNode(MarkdownASTNode):
     """Node representing an HTML unordered list (<ul>)."""
     def __init__(self, indent=0, children=None):
         """
@@ -162,7 +162,7 @@ class UnorderedList(MarkdownASTNode):
                 self.add_child(child)
 
 
-class ListItem(MarkdownASTNode):
+class MarkdownListItemNode(MarkdownASTNode):
     """Node representing an HTML list item (<li>)."""
     def __init__(self, children=None):
         """
@@ -177,7 +177,7 @@ class ListItem(MarkdownASTNode):
                 self.add_child(child)
 
 
-class Text(MarkdownASTNode):
+class MarkdownTextNode(MarkdownASTNode):
     """Node representing plain text content."""
     def __init__(self, content):
         """
@@ -190,7 +190,7 @@ class Text(MarkdownASTNode):
         self.content = content
 
 
-class Bold(MarkdownASTNode):
+class MarkdownBoldNode(MarkdownASTNode):
     """Node representing bold text (<b> or <strong>)."""
     def __init__(self, children=None):
         """
@@ -205,7 +205,7 @@ class Bold(MarkdownASTNode):
                 self.add_child(child)
 
 
-class Emphasis(MarkdownASTNode):
+class MarkdownEmphasisNode(MarkdownASTNode):
     """Node representing emphasized text (<em> or <i>)."""
     def __init__(self, children=None):
         """
@@ -220,7 +220,7 @@ class Emphasis(MarkdownASTNode):
                 self.add_child(child)
 
 
-class CodeBlock(MarkdownASTNode):
+class MarkdownCodeBlockNode(MarkdownASTNode):
     """Node representing a code block (<pre><code>)."""
     def __init__(self, language=None, content=None):
         """
