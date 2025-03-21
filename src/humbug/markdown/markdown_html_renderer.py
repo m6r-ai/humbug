@@ -2,10 +2,10 @@
 Markdown AST visitor to render the AST as HTML.
 """
 
-from humbug.markdown.markdown_ast_node import ASTVisitor
+from humbug.markdown.markdown_ast_node import MarkdownASTVisitor
 
 
-class HTMLRenderer(ASTVisitor):
+class MarkdownHTMLRenderer(MarkdownASTVisitor):
     """Visitor that renders the AST back to HTML."""
     def visit_Document(self, node):  # pylint: disable=invalid-name
         """

@@ -2,10 +2,10 @@
 Visitor class to print markdown AST structures for debugging
 """
 
-from humbug.markdown.markdown_ast_node import ASTVisitor
+from humbug.markdown.markdown_ast_node import MarkdownASTVisitor
 
 
-class ASTPrinter(ASTVisitor):
+class MarkdownASTPrinter(MarkdownASTVisitor):
     """Visitor that prints the AST structure for debugging."""
     def __init__(self):
         """Initialize the AST printer with zero indentation."""

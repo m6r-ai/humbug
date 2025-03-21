@@ -8,7 +8,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 from typing import Optional
 
 
-class ASTNode:
+class MarkdownASTNode:
     """Base class for all AST nodes."""
     def __init__(self):
         """Initialize an AST node with an empty children list."""
@@ -48,9 +48,9 @@ class ASTNode:
         self.children = []
 
 
-class ASTVisitor:
+class MarkdownASTVisitor:
     """Base visitor class for AST traversal."""
-    def visit(self, node: ASTNode):
+    def visit(self, node: MarkdownASTNode):
         """
         Visit a node and dispatch to the appropriate visit method.
 
@@ -64,7 +64,7 @@ class ASTVisitor:
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: ASTNode):
+    def generic_visit(self, node: MarkdownASTNode):
         """
         Default visit method for nodes without specific handlers.
 
@@ -82,14 +82,14 @@ class ASTVisitor:
         return results
 
 
-class Document(ASTNode):
+class Document(MarkdownASTNode):
     """Root node representing an entire HTML document."""
     def __init__(self):
         """Initialize a document node."""
         super().__init__()
 
 
-class Paragraph(ASTNode):
+class Paragraph(MarkdownASTNode):
     """Node representing an HTML paragraph (<p>)."""
     def __init__(self, children=None):
         """
@@ -104,7 +104,7 @@ class Paragraph(ASTNode):
                 self.add_child(child)
 
 
-class Heading(ASTNode):
+class Heading(MarkdownASTNode):
     """Node representing an HTML heading (<h1> through <h6>)."""
     def __init__(self, level, children=None):
         """
@@ -122,7 +122,7 @@ class Heading(ASTNode):
                 self.add_child(child)
 
 
-class OrderedList(ASTNode):
+class OrderedList(MarkdownASTNode):
     """Node representing an HTML ordered list (<ol>)."""
     def __init__(self, indent=0, children=None):
         """
@@ -142,7 +142,7 @@ class OrderedList(ASTNode):
                 self.add_child(child)
 
 
-class UnorderedList(ASTNode):
+class UnorderedList(MarkdownASTNode):
     """Node representing an HTML unordered list (<ul>)."""
     def __init__(self, indent=0, children=None):
         """
@@ -162,7 +162,7 @@ class UnorderedList(ASTNode):
                 self.add_child(child)
 
 
-class ListItem(ASTNode):
+class ListItem(MarkdownASTNode):
     """Node representing an HTML list item (<li>)."""
     def __init__(self, children=None):
         """
@@ -177,7 +177,7 @@ class ListItem(ASTNode):
                 self.add_child(child)
 
 
-class Text(ASTNode):
+class Text(MarkdownASTNode):
     """Node representing plain text content."""
     def __init__(self, content):
         """
@@ -190,7 +190,7 @@ class Text(ASTNode):
         self.content = content
 
 
-class Bold(ASTNode):
+class Bold(MarkdownASTNode):
     """Node representing bold text (<b> or <strong>)."""
     def __init__(self, children=None):
         """
@@ -205,7 +205,7 @@ class Bold(ASTNode):
                 self.add_child(child)
 
 
-class Emphasis(ASTNode):
+class Emphasis(MarkdownASTNode):
     """Node representing emphasized text (<em> or <i>)."""
     def __init__(self, children=None):
         """
@@ -220,7 +220,7 @@ class Emphasis(ASTNode):
                 self.add_child(child)
 
 
-class CodeBlock(ASTNode):
+class CodeBlock(MarkdownASTNode):
     """Node representing a code block (<pre><code>)."""
     def __init__(self, language=None, content=None):
         """

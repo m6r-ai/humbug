@@ -9,9 +9,9 @@ import logging
 from typing import List, Tuple, Optional
 
 from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownParseError
-from humbug.markdown.markdown_ast_node import CodeBlock, ASTNode
-from humbug.markdown.markdown_ast_printer import ASTPrinter
-from humbug.markdown.markdown_html_renderer import HTMLRenderer
+from humbug.markdown.markdown_ast_node import CodeBlock, MarkdownASTNode
+from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
+from humbug.markdown.markdown_html_renderer import MarkdownHTMLRenderer
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -27,8 +27,8 @@ class MarkdownConverter:
     def __init__(self):
         """Initialize the markdown converter with an AST builder and HTML renderer."""
         self.ast_builder = MarkdownASTBuilder()
-        self.renderer = HTMLRenderer()
-        self.ast_printer = ASTPrinter()  # For debugging
+        self.renderer = MarkdownHTMLRenderer()
+        self.ast_printer = MarkdownASTPrinter()  # For debugging
 
         self._logger = logging.getLogger("ConversationMarkdownConverter")
 
@@ -67,7 +67,7 @@ class MarkdownConverter:
             # Return a single error section
             return [(f"Error converting markdown: {e}", None)]
 
-    def _extract_sections_from_ast(self, document: ASTNode) -> List[Tuple[str, Optional[ProgrammingLanguage]]]:
+    def _extract_sections_from_ast(self, document: MarkdownASTNode) -> List[Tuple[str, Optional[ProgrammingLanguage]]]:
         """
         Extract content sections from the AST document.
 

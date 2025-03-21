@@ -10,7 +10,7 @@ import re
 from typing import Dict, List, Tuple, Any, Set, Optional
 
 from humbug.markdown.markdown_ast_node import (
-    ASTNode, Document, Text, Emphasis, Bold, Heading, Paragraph,
+    MarkdownASTNode, Document, Text, Emphasis, Bold, Heading, Paragraph,
     OrderedList, UnorderedList, ListItem, MarkdownParseError, CodeBlock
 )
 
@@ -39,11 +39,11 @@ class MarkdownASTBuilder:
         self.document = Document()
 
         # Mapping from line numbers to nodes for incremental updates
-        self.line_to_node_map: Dict[int, List[ASTNode]] = {}
+        self.line_to_node_map: Dict[int, List[MarkdownASTNode]] = {}
 
         # List state tracking
-        self.active_lists: List[Tuple[ASTNode, int]] = []  # (list_node, indent)
-        self.list_contains_blank_line: Set[ASTNode] = set()  # Lists that have blank lines
+        self.active_lists: List[Tuple[MarkdownASTNode, int]] = []  # (list_node, indent)
+        self.list_contains_blank_line: Set[MarkdownASTNode] = set()  # Lists that have blank lines
 
         # Text continuation tracking
         self.last_paragraph: Optional[Paragraph] = None
@@ -177,7 +177,7 @@ class MarkdownASTBuilder:
         # Default to regular text
         return 'text', line
 
-    def parse_inline_formatting(self, text: str) -> List[ASTNode]:
+    def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:
         """
         Parse inline formatting (bold, italic) in text and create appropriate AST nodes.
 
@@ -351,7 +351,7 @@ class MarkdownASTBuilder:
 
         return paragraph
 
-    def find_or_create_list(self, indent: int, is_ordered: bool) -> ASTNode:
+    def find_or_create_list(self, indent: int, is_ordered: bool) -> MarkdownASTNode:
         """
         Find an existing list at the given indent level or create a new one.
 
@@ -473,7 +473,7 @@ class MarkdownASTBuilder:
 
         return item
 
-    def register_node_line(self, node: ASTNode, line_num: int) -> None:
+    def register_node_line(self, node: MarkdownASTNode, line_num: int) -> None:
         """
         Register a node with a line number for later reference.
 
@@ -787,7 +787,7 @@ class MarkdownASTBuilder:
         if 'blank_line_count' in self.imported_state:
             self.blank_line_count = self.imported_state['blank_line_count']
 
-    def _create_list_at_indent(self, indent: int, is_ordered: bool) -> ASTNode:
+    def _create_list_at_indent(self, indent: int, is_ordered: bool) -> MarkdownASTNode:
         """
         Create a list node at the specified indent level.
 
