@@ -248,5 +248,12 @@ class MarkdownCodeBlockNode(MarkdownASTNode):
         self.content = content or ""
 
 
+class MarkdownLineBreakNode(MarkdownASTNode):
+    """Node representing a line break."""
+    def __init__(self):
+        """Initialize a line break node."""
+        super().__init__()
+
+
 class MarkdownParseError(Exception):
     """Exception raised for errors during markdown parsing."""

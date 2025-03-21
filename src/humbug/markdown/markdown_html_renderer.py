@@ -152,3 +152,15 @@ class MarkdownHTMLRenderer(MarkdownASTVisitor):
         """
         language_class = f" class=\"language-{node.language}\"" if node.language else ""
         return f"<pre><code{language_class}>{node.content}</code></pre>"
+
+    def visit_MarkdownLineBreakNode(self, _node):  # pylint: disable=invalid-name
+        """
+        Render a line break node to HTML.
+
+        Args:
+            node: The line break node to render
+
+        Returns:
+            The HTML string representation of the line break
+        """
+        return "<br />"

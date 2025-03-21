@@ -10,7 +10,7 @@ import re
 from typing import Dict, List, Tuple, Any, Set, Optional
 
 from humbug.markdown.markdown_ast_node import (
-    MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode,
+    MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode, MarkdownLineBreakNode,
     MarkdownEmphasisNode, MarkdownBoldNode, MarkdownHeadingNode,
     MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
     MarkdownListItemNode, MarkdownParseError, MarkdownInlineCodeNode, MarkdownCodeBlockNode
@@ -63,7 +63,7 @@ class MarkdownASTBuilder:
         # Imported state for continuity
         self.imported_state = None
 
-    def escape_html(self, text: str) -> str:
+    def _escape_html(self, text: str) -> str:
         """
         Escape special HTML characters in text.
 
@@ -193,8 +193,8 @@ class MarkdownASTBuilder:
         Raises:
             None
         """
-        # Escape HTML characters first
-        text = self.escape_html(text)
+        # Check if text has trailing line break
+        has_line_break = text.endswith('  ')
 
         # Simple state machine for inline formatting
         i = 0
@@ -209,19 +209,19 @@ class MarkdownASTBuilder:
                 if end_pos != -1:
                     # Add any accumulated text before this code block
                     if current_text:
-                        nodes.append(MarkdownTextNode(current_text))
+                        nodes.append(MarkdownTextNode(self._escape_html(current_text)))
                         current_text = ""
 
                     # Extract the code content (excluding backticks)
                     code_content = text[i+1:end_pos]
-                    nodes.append(MarkdownInlineCodeNode(code_content))
+                    nodes.append(MarkdownInlineCodeNode(self._escape_html(code_content)))
 
                     # Move past the closing backtick
                     i = end_pos + 1
                     continue
 
             # Check for bold formatting
-            elif (i + 1 < len(text) and 
+            elif (i + 1 < len(text) and
                 ((text[i:i+2] == '**') or (text[i:i+2] == '__'))):
 
                 # Determine which marker we're using
@@ -232,7 +232,7 @@ class MarkdownASTBuilder:
                 if end_pos != -1:
                     # Add any accumulated text before this bold block
                     if current_text:
-                        nodes.append(MarkdownTextNode(current_text))
+                        nodes.append(MarkdownTextNode(self._escape_html(current_text)))
                         current_text = ""
 
                     # Extract the bold content (excluding markers)
@@ -263,7 +263,7 @@ class MarkdownASTBuilder:
                 if end_pos != -1 and (end_pos + 1 >= len(text) or text[end_pos+1] != marker):  # Avoid **
                     # Add any accumulated text before this italic block
                     if current_text:
-                        nodes.append(MarkdownTextNode(current_text))
+                        nodes.append(MarkdownTextNode(self._escape_html(current_text)))
                         current_text = ""
 
                     # Extract the italic content (excluding markers)
@@ -288,26 +288,13 @@ class MarkdownASTBuilder:
 
         # Add any remaining accumulated text
         if current_text:
-            nodes.append(MarkdownTextNode(current_text))
+            nodes.append(MarkdownTextNode(self._escape_html(current_text)))
+
+        # Append a line break node if needed
+        if has_line_break:
+            nodes.append(MarkdownLineBreakNode())
 
         return nodes
-
-    def handle_line_breaks(self, text: str) -> str:
-        """
-        Process text to convert trailing spaces to HTML line breaks.
-
-        Args:
-            text: The text to process
-
-        Returns:
-            Text with appropriate line breaks
-
-        Raises:
-            None
-        """
-        if text.endswith('  '):  # Line ends with exactly two spaces
-            return text.rstrip() + '<br />'
-        return text
 
     def parse_heading(self, level: int, content: str, line_num: int) -> MarkdownHeadingNode:
         """
@@ -325,8 +312,7 @@ class MarkdownASTBuilder:
             None
         """
         heading = MarkdownHeadingNode(level)
-        formatted_text = self.handle_line_breaks(content)
-        for node in self.parse_inline_formatting(formatted_text):
+        for node in self.parse_inline_formatting(content):
             heading.add_child(node)
 
         heading.line_start = line_num
@@ -350,8 +336,7 @@ class MarkdownASTBuilder:
             None
         """
         paragraph = MarkdownParagraphNode()
-        formatted_text = self.handle_line_breaks(text)
-        for node in self.parse_inline_formatting(formatted_text):
+        for node in self.parse_inline_formatting(text):
             paragraph.add_child(node)
 
         paragraph.line_start = line_num
@@ -424,8 +409,7 @@ class MarkdownASTBuilder:
             None
         """
         paragraph = MarkdownParagraphNode()
-        formatted_text = self.handle_line_breaks(content)
-        for node in self.parse_inline_formatting(formatted_text):
+        for node in self.parse_inline_formatting(content):
             paragraph.add_child(node)
 
         paragraph.line_start = line_num
@@ -469,8 +453,7 @@ class MarkdownASTBuilder:
             self._add_paragraph_to_list_item(item, content, line_num)
         else:
             # Process the content with inline formatting
-            formatted_text = self.handle_line_breaks(content)
-            for node in self.parse_inline_formatting(formatted_text):
+            for node in self.parse_inline_formatting(content):
                 item.add_child(node)
 
         item.line_start = line_num
@@ -550,10 +533,9 @@ class MarkdownASTBuilder:
 
         # Case 1: Continue a paragraph
         if self.last_paragraph and self.last_processed_line_type == 'text':
-            formatted_text = self.handle_line_breaks(text)
             # Add a space between the continued text
             self.last_paragraph.add_child(MarkdownTextNode(" "))
-            for node in self.parse_inline_formatting(formatted_text):
+            for node in self.parse_inline_formatting(text):
                 self.last_paragraph.add_child(node)
 
             self.last_paragraph.line_end = line_num
@@ -578,13 +560,13 @@ class MarkdownASTBuilder:
                 # Not indented enough, so it's not a continuation
                 return False
 
-            formatted_text = self.handle_line_breaks(text.lstrip())
+            formatted_text = text.lstrip()
 
             # Check if the list has blank lines (uses paragraph formatting)
             for list_node, _ in self.active_lists:
                 if list_node in self.list_contains_blank_line:
                     # Create a new paragraph for this continuation
-                    self._add_paragraph_to_list_item(self.last_list_item, text.lstrip(), line_num)
+                    self._add_paragraph_to_list_item(self.last_list_item, formatted_text, line_num)
                     return True
 
             # Otherwise continue inline
