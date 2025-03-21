@@ -12,7 +12,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
 from humbug.language.language_manager import LanguageManager
-from humbug.markdown.markdown_ast_node import HTMLRenderer
+from humbug.markdown.markdown_html_renderer import HTMLRenderer
 from humbug.markdown.markdown_converter import MarkdownConverter
 from humbug.syntax.programming_language import ProgrammingLanguage
 

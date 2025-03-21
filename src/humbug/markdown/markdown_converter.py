@@ -9,9 +9,9 @@ import logging
 from typing import List, Tuple, Optional
 
 from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownParseError
-from humbug.markdown.markdown_ast_node import (
-    HTMLRenderer, ASTPrinter, CodeBlock, ASTNode
-)
+from humbug.markdown.markdown_ast_node import CodeBlock, ASTNode
+from humbug.markdown.markdown_ast_printer import ASTPrinter
+from humbug.markdown.markdown_html_renderer import HTMLRenderer
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
