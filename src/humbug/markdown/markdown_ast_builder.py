@@ -513,7 +513,7 @@ class MarkdownASTBuilder:
         # Create a code block node for the unclosed block
         code_block = MarkdownCodeBlockNode(
             language=self.code_block_language,
-            content=self.escape_html('\n'.join(self.code_block_content))
+            content='\n'.join(self.code_block_content)
         )
         code_block.line_start = self.code_block_start_line
         code_block.line_end = end_line
@@ -654,25 +654,7 @@ class MarkdownASTBuilder:
 
             if line_type == 'code_block_end':
                 # Create a code block node
-                code_block = MarkdownCodeBlockNode(
-                    language=self.code_block_language,
-                    content='\n'.join(self.code_block_content)
-                )
-                code_block.line_start = self.code_block_start_line
-                code_block.line_end = line_num
-
-                # Add to document
-                self.document.add_child(code_block)
-
-                # Register code block with all lines it spans
-                for i in range(self.code_block_start_line, line_num + 1):
-                    self.register_node_line(code_block, i)
-
-                # Reset code block state
-                self.in_code_block = False
-                self.code_block_language = ""
-                self.code_block_content = []
-                self.code_block_start_line = -1
+                self._finalize_code_block(line_num)
 
                 # Reset list tracking and other state after a code block
                 self.active_lists = []
