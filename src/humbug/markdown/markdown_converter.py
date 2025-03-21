@@ -8,17 +8,15 @@ to HTML while preserving code blocks and handling streaming text updates.
 import logging
 from typing import List, Tuple, Optional
 
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
-from humbug.gui.tab.conversation.conversation_markdown_ast_builder import (
-    ASTBuilder, MarkdownParseError
-)
-from humbug.gui.tab.conversation.conversation_markdown_ast_node import (
+from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownParseError
+from humbug.markdown.markdown_ast_node import (
     HTMLRenderer, ASTPrinter, CodeBlock, ASTNode
 )
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
-class ConversationMarkdownConverter:
+class MarkdownConverter:
     """
     Converts simplified markdown to HTML using an AST-based approach.
 
@@ -28,7 +26,7 @@ class ConversationMarkdownConverter:
 
     def __init__(self):
         """Initialize the markdown converter with an AST builder and HTML renderer."""
-        self.ast_builder = ASTBuilder()
+        self.ast_builder = MarkdownASTBuilder()
         self.renderer = HTMLRenderer()
         self.ast_printer = ASTPrinter()  # For debugging
 
@@ -121,7 +119,7 @@ class ConversationMarkdownConverter:
         self.builder_state = self.ast_builder.export_state()
 
         # Create a new AST builder with the exported state
-        self.ast_builder = ASTBuilder()
+        self.ast_builder = MarkdownASTBuilder()
         if self.builder_state:
             self.ast_builder.import_state(self.builder_state)
 

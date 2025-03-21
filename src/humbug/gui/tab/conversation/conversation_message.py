@@ -10,10 +10,10 @@ from PySide6.QtCore import Signal, QPoint
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.conversation.conversation_markdown_converter import ConversationMarkdownConverter
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
-from humbug.gui.tab.conversation.conversation_markdown_ast_node import HTMLRenderer
 from humbug.language.language_manager import LanguageManager
+from humbug.markdown.markdown_ast_node import HTMLRenderer
+from humbug.markdown.markdown_converter import MarkdownConverter
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
@@ -83,7 +83,7 @@ class ConversationMessage(QFrame):
             self._sections_layout.addWidget(section)
 
         # Initialize markdown converter
-        self._markdown_converter = ConversationMarkdownConverter()
+        self._markdown_converter = MarkdownConverter()
         self._html_renderer = HTMLRenderer()
 
         # Add bookmark status

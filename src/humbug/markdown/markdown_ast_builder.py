@@ -9,13 +9,13 @@ import logging
 import re
 from typing import Dict, List, Tuple, Any, Set, Optional
 
-from humbug.gui.tab.conversation.conversation_markdown_ast_node import (
+from humbug.markdown.markdown_ast_node import (
     ASTNode, Document, Text, Emphasis, Bold, Heading, Paragraph,
     OrderedList, UnorderedList, ListItem, MarkdownParseError, CodeBlock
 )
 
 
-class ASTBuilder:
+class MarkdownASTBuilder:
     """
     Builder class for constructing an AST from markdown text.
 
