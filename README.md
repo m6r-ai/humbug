@@ -58,6 +58,10 @@ free API keys for low volume testing, so you can get started with either, or bot
 
 ![Humbug in action](./docs/humbug-v0.7-2.webp)
 
+## Join the community on Discord
+
+If you want to engage with other users and developers, you can join us on [Discord](https://discord.gg/GZhJ7ZtgwN).
+
 ## What's new
 
 v0.8 adds several new features:
