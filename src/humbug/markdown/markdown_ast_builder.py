@@ -34,7 +34,7 @@ class MarkdownASTBuilder:
         self._italic_pattern = re.compile(r'\*([^*]+)\*|\b_([^_]+)_\b')
         self._unordered_list_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
         self._ordered_list_pattern = re.compile(r'^(\s*)(\d+)\.[ \t]+(.*?)$', re.MULTILINE)
-        self._code_block_pattern = re.compile(r'^```(?:(\w+))?$')
+        self._code_block_pattern = re.compile(r'^```(?:([\w\-#+./*():\s]+))?$')
 
         self._logger = logging.getLogger("ASTBuilder")
 
@@ -143,6 +143,7 @@ class MarkdownASTBuilder:
             # Check for code block end
             if line.strip() == '```':
                 return 'code_block_end', None
+
             return 'code_block_content', line
 
         # Check for code block start
@@ -481,6 +482,7 @@ class MarkdownASTBuilder:
         """
         if line_num not in self.line_to_node_map:
             self.line_to_node_map[line_num] = []
+
         self.line_to_node_map[line_num].append(node)
 
     def _finalize_code_block(self, end_line: int) -> None:
