@@ -12,7 +12,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
 from humbug.language.language_manager import LanguageManager
-from humbug.markdown.markdown_converter import MarkdownConverter
+from humbug.markdown.markdown_converter import MarkdownConverter, MarkdownDocumentNode, MarkdownTextNode
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
@@ -203,10 +203,12 @@ class ConversationMessage(QFrame):
             sections_data = self._markdown_converter.extract_sections(text)
         else:
             # Input widgets don't use markdown processing
-            sections_data = [(text, None)]
+            text_node = MarkdownDocumentNode()
+            text_node.add_child(MarkdownTextNode(text))
+            sections_data = [(text_node, None)]
 
         # Create or update sections
-        for i, (section_text, language) in enumerate(sections_data):
+        for i, (node, language) in enumerate(sections_data):
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(language)
@@ -221,14 +223,14 @@ class ConversationMessage(QFrame):
                 base_font_size = self._style_manager.base_font_size
                 font.setPointSizeF(base_font_size * factor)
                 section.apply_style(text_color, color, font)
-                section.set_content(section_text)
+                section.set_content(node)
             elif i == len(self._sections) - 1:
                 # Update the last section with new content
                 section = self._sections[-1]
                 if language != section.language:
                     section.set_language(language)
 
-                section.set_content(section_text)
+                section.set_content(node)
 
         # Remove any extra sections
         while len(self._sections) > len(sections_data):

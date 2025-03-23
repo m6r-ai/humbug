@@ -17,8 +17,10 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.tab.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
+from humbug.gui.tab.conversation.conversation_markdown_renderer import ConversationMarkdownRenderer
 from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.language.language_manager import LanguageManager
+from humbug.markdown.markdown_converter import MarkdownConverter
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -239,23 +241,29 @@ class ConversationMessageSection(QFrame):
             )
             return False
 
-    def set_content(self, text: str):
+    def set_content(self, content):
         """
         Set the content of this section.
 
         Args:
-            text: The text content for this section
+            content: Either a MarkdownASTNode or text content
         """
-        # Are we using plain text?
+        # If we have code block node, extract its content as plain text
         if not self._use_markdown:
-            self._text_area.set_text(text)
+            self._text_area.set_text(content.content)
             return
-
-        # Set HTML.  Note we have to record the content for HTML so we can apply
-        # CSS styles to it if we change display theme.
-        self._content = text
-        self._text_area.set_html(text)
-
+        
+        # Store for re-styling
+        self._content_node = content
+        
+        # If we're using direct rendering, use the QTextDocument renderer
+        document = self._text_area.document()
+        document.clear()
+        
+        # Render directly to the document
+        self._renderer = ConversationMarkdownRenderer(document)
+        self._renderer.visit(content)
+                
     def has_selection(self) -> bool:
         """Check if text is selected in the text area."""
         return self._text_area.textCursor().hasSelection()
@@ -459,8 +467,8 @@ class ConversationMessageSection(QFrame):
                     color: {self._style_manager.get_color_str(ColorRole.SYNTAX_INLINE_CODE)};
                 }}
                 """
-            self._text_area.document().setDefaultStyleSheet(style_sheet)
-            self._text_area.setHtml(self._content)
+#            self._text_area.document().setDefaultStyleSheet(style_sheet)
+#            self._text_area.setHtml(self._content)
 
         button_style = f"""
             QToolButton {{

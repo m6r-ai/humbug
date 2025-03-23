@@ -13,6 +13,7 @@ class MarkdownASTNode:
     def __init__(self):
         """Initialize an AST node with an empty children list."""
         self.children = []
+        self.parent = None  # Reference to parent node
 
         # Source range information to support incremental updating
         self.line_start: Optional[int] = None
@@ -28,6 +29,7 @@ class MarkdownASTNode:
         Returns:
             The added child node for method chaining
         """
+        child.parent = self
         self.children.append(child)
         return child
 
@@ -45,6 +47,9 @@ class MarkdownASTNode:
 
     def remove_children(self):
         """Remove all children from this node."""
+        for child in self.children:
+            child.parent = None
+
         self.children = []
 
 
@@ -124,7 +129,7 @@ class MarkdownHeadingNode(MarkdownASTNode):
 
 class MarkdownOrderedListNode(MarkdownASTNode):
     """Node representing an HTML ordered list (<ol>)."""
-    def __init__(self, indent=0, children=None):
+    def __init__(self, indent=0, start=1, children=None):
         """
         Initialize an ordered list node.
 
@@ -134,6 +139,8 @@ class MarkdownOrderedListNode(MarkdownASTNode):
         """
         super().__init__()
         self.indent = indent
+        self.start = start
+
         # Content indent is typically indent + marker (e.g., "1.") + space
         # For ordered lists, we use a default of 3 characters for the marker ("1. ")
         self.content_indent = indent + 3
