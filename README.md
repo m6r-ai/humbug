@@ -1,17 +1,20 @@
 # Humbug v0.8
 
-Humbug is a versatile, GUI-based application designed to help you build and maintain software using AI.  It
-has a familiar IDE-like feel but its main purpose is to let you discuss your software with AI backends
-and then have them do most of the work.
+Humbug is an extensible open-source tool designed to help you build and maintain software using AI.  It goes beyond
+AI-powered app builders and IDEs by helping you capture what you want your software to do so AI can keep helping you
+long after the initial prototyping stage.
 
-To get the best out of the AIs it uses [Metaphor](https://m6r.ai/metaphor), an open source prompt creation
-language.  Metaphor lets you capture the intent of what you want your software to do and all the necessary
-context the AI will need to do it well.
+To do this it uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, prompt creation
+language.  Metaphor lets you capture what you want your software to do and all the information (context)
+an AI will need to help you develop and support that software throughout its lifecycle.
 
-By providing all the information the AI requires to do a task, Metaphor can massively reduce rates of
-hallucination.  Metaphor lets you really get to the "engineering" in prompt engineering.  It makes it cheap
-and easy to discard any interactions with the AI that don't work they way you want, and then iterate on the
-prompt until you get the results you're looking for.
+Metaphor lets you get to the "engineering" in prompt engineering.  It helps massively increase the work that
+can be done by AI, and significantly reduces rates of hallucination by ensuring the AI doesn't have to guess
+what you want to build.
+
+Humbug uses a familiar IDE-style environment but it's built to have AI at its core.  You can discuss your software,
+seek recommendations, get help designing and coding new and complex capabilities, or use it to understand and
+navigate what you have.
 
 ## Designed for AI, built by AI!
 
@@ -39,8 +42,8 @@ evolve very fast but with very little technical debt.
 
 ## What this isn't!
 
-While Humbug has a lot of the characteristics of a normal IDE, it's not intended to be a clone.  AIs can
-do many things far more quickly than people so we want to lean on AIs to do those things.
+While Humbug has a lot of the characteristics of a normal IDE, it's not intended to be a clone of a conventional
+IDE.  AIs can do many things far more quickly than people so we want to lean on AIs to do those things.
 
 Over time you will see many more AI-backed capabilities.  Manual features will increasingly just be a
 fallback.
