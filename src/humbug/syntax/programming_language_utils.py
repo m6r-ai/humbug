@@ -15,7 +15,7 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 class ProgrammingLanguageUtils:
     """
     Utility class for handling programming language conversions and metadata.
-    
+
     This class centralizes all language-related operations including:
     - Converting between string identifiers and ProgrammingLanguage enum values
     - Getting display names for languages
@@ -147,7 +147,7 @@ class ProgrammingLanguageUtils:
     def get_all_programming_languages(cls) -> List[ProgrammingLanguage]:
         """
         Get a list of all available programming languages.
-        
+
         Returns:
             List of all programming language enum values excluding UNKNOWN
         """
@@ -157,7 +157,7 @@ class ProgrammingLanguageUtils:
     def get_all_display_names(cls) -> List[Tuple[ProgrammingLanguage, str]]:
         """
         Get all language display names.
-        
+
         Returns:
             List of (language enum, display name) tuples
         """
@@ -167,10 +167,10 @@ class ProgrammingLanguageUtils:
     def from_name(cls, name: str) -> ProgrammingLanguage:
         """
         Convert a language name string to a ProgrammingLanguage enum value.
-        
+
         Args:
             name: The name of the programming language
-        
+
         Returns:
             The corresponding ProgrammingLanguage enum value,
             or ProgrammingLanguage.TEXT if not found
@@ -185,10 +185,10 @@ class ProgrammingLanguageUtils:
     def from_file_extension(cls, filename: Optional[str]) -> ProgrammingLanguage:
         """
         Detect programming language from file extension.
-        
+
         Args:
             filename: Path to file or None
-        
+
         Returns:
             The detected programming language enum value,
             or ProgrammingLanguage.TEXT if not detected
@@ -203,10 +203,10 @@ class ProgrammingLanguageUtils:
     def get_display_name(cls, language: ProgrammingLanguage) -> str:
         """
         Get the human-readable display name for a programming language.
-        
+
         Args:
             language: The programming language enum value
-        
+
         Returns:
             Human-readable language name for display
         """
@@ -216,10 +216,10 @@ class ProgrammingLanguageUtils:
     def get_file_extension(cls, language: Optional[ProgrammingLanguage]) -> str:
         """
         Get the file extension for a programming language.
-        
+
         Args:
             language: The programming language or None
-        
+
         Returns:
             The file extension with leading dot, or empty string if language is None
         """
@@ -232,7 +232,7 @@ class ProgrammingLanguageUtils:
     def get_supported_file_extensions(cls) -> List[str]:
         """
         Get a list of all supported file extensions.
-        
+
         Returns:
             List of supported file extensions with leading dots
         """

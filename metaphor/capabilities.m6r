@@ -125,7 +125,7 @@ Context: Capabilities
                         The pop-up menu supports creating new files based on syntax-highlighted file types.
                         New files are created using templates supported by the application's syntax highlighters.
 
-                        When a file type is selected, a new file is created in the current directory 
+                        When a file type is selected, a new file is created in the current directory
                         with a default name and the chosen file extension.
 
                 Context: Rename conversation

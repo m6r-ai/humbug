@@ -88,7 +88,7 @@ class MarkdownConverter:
                 container = MarkdownDocumentNode()
                 for node in current_markdown_nodes:
                     container.add_child(node)
-                
+
                 # Add as a markdown section
                 sections.append((container, None))
                 current_markdown_nodes.clear()

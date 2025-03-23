@@ -218,7 +218,7 @@ class JavaParser(Parser):
     def _get_last_token(self) -> Optional[Token]:
         """
         Get the last token.
-        
+
         Returns:
             The last token, or None if no such token exists
         """
@@ -230,7 +230,7 @@ class JavaParser(Parser):
     def _peek_after_generic_close(self, lexer: 'JavaLexer') -> Optional[Token]:
         """
         Look ahead to find the token after a generic type parameter list closes.
-        
+
         Args:
             lexer: The lexer instance for lookahead
 

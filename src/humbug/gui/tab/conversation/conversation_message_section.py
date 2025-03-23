@@ -252,18 +252,18 @@ class ConversationMessageSection(QFrame):
         if not self._use_markdown:
             self._text_area.set_text(content.content)
             return
-        
+
         # Store for re-styling
         self._content_node = content
-        
-        # If we're using direct rendering, use the QTextDocument renderer
+
+        # We're using direct rendering, use the QTextDocument renderer
         document = self._text_area.document()
         document.clear()
-        
+
         # Render directly to the document
         self._renderer = ConversationMarkdownRenderer(document)
         self._renderer.visit(content)
-                
+
     def has_selection(self) -> bool:
         """Check if text is selected in the text area."""
         return self._text_area.textCursor().hasSelection()

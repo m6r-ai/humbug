@@ -349,70 +349,72 @@ class MarkdownASTBuilder:
     def create_ordered_list(self, indent: int, start_number: int) -> MarkdownOrderedListNode:
         """
         Create an ordered list at the given indent level with specified start number.
-        
+
         Args:
             indent: The indentation level
             start_number: The starting number
-            
+
         Returns:
             The created ordered list node
         """
         # Close deeper lists
         self._close_deeper_lists(indent)
-        
+
         # Check if we already have an ordered list at this level
         if self.active_lists and self.active_lists[-1][1] == indent:
             list_node, _ = self.active_lists[-1]
             if isinstance(list_node, MarkdownOrderedListNode):
                 return list_node
+
             # Different list type, close it
             self.active_lists.pop()
-        
+
         # Find parent
         parent = self._find_parent_for_list()
-        
+
         # Create new ordered list
         new_list = MarkdownOrderedListNode(indent, start_number)
         parent.add_child(new_list)
         self.active_lists.append((new_list, indent))
-        
+
         return new_list
 
     def create_unordered_list(self, indent: int) -> MarkdownUnorderedListNode:
         """
         Create an unordered list at the given indent level.
-        
+
         Args:
             indent: The indentation level
-            
+
         Returns:
             The created unordered list node
         """
         # Close deeper lists
         self._close_deeper_lists(indent)
-        
+
         # Check if we already have an unordered list at this level
         if self.active_lists and self.active_lists[-1][1] == indent:
             list_node, _ = self.active_lists[-1]
             if isinstance(list_node, MarkdownUnorderedListNode):
                 return list_node
+
             # Different list type, close it
             self.active_lists.pop()
-        
+
         # Find parent
         parent = self._find_parent_for_list()
-        
+
         # Create new unordered list
         new_list = MarkdownUnorderedListNode(indent)
         parent.add_child(new_list)
         self.active_lists.append((new_list, indent))
-        
+
         return new_list
 
     def _close_deeper_lists(self, indent: int) -> None:
         """
         Close lists that are at a deeper indentation level.
-        
+
         Args:
             indent: The current indentation level
         """
@@ -422,7 +424,7 @@ class MarkdownASTBuilder:
     def _find_parent_for_list(self) -> MarkdownASTNode:
         """
         Find the appropriate parent for a new list.
-        
+
         Returns:
             The parent node
         """
@@ -478,20 +480,20 @@ class MarkdownASTBuilder:
             start_number = int(number)
         except ValueError:
             start_number = 1
-        
+
         # Create or find the ordered list
         list_node = self.create_ordered_list(indent, start_number)
-        
+
         # Create the list item
         item = MarkdownListItemNode()
         list_node.add_child(item)
-        
+
         # Calculate the actual content indentation for this specific marker
         marker_length = len(number) + 2  # +2 for the "." and space after number
         actual_content_indent = indent + marker_length
         if actual_content_indent > list_node.content_indent:
             list_node.content_indent = actual_content_indent
-        
+
         # Check if this list has blank lines, which means we need to use paragraphs for content
         if list_node in self.list_contains_blank_line:
             self._add_paragraph_to_list_item(item, content, line_num)
@@ -499,15 +501,15 @@ class MarkdownASTBuilder:
             # Process the content with inline formatting
             for node in self.parse_inline_formatting(content):
                 item.add_child(node)
-        
+
         item.line_start = line_num
         item.line_end = line_num
         self.register_node_line(item, line_num)
-        
+
         # Update tracking variables
         self.last_list_item = item
         self.last_processed_line_type = 'ordered_list_item'
-        
+
         return item
 
     def parse_unordered_list_item(self, indent: int, marker: str, content: str, line_num: int) -> MarkdownListItemNode:
@@ -528,17 +530,17 @@ class MarkdownASTBuilder:
         """
         # Create or find the unordered list
         list_node = self.create_unordered_list(indent)
-        
+
         # Create the list item
         item = MarkdownListItemNode()
         list_node.add_child(item)
-        
+
         # Calculate the actual content indentation for this specific marker
         marker_length = len(marker) + 1  # +1 for the space after marker
         actual_content_indent = indent + marker_length
         if actual_content_indent > list_node.content_indent:
             list_node.content_indent = actual_content_indent
-        
+
         # Check if this list has blank lines, which means we need to use paragraphs for content
         if list_node in self.list_contains_blank_line:
             self._add_paragraph_to_list_item(item, content, line_num)
@@ -546,15 +548,15 @@ class MarkdownASTBuilder:
             # Process the content with inline formatting
             for node in self.parse_inline_formatting(content):
                 item.add_child(node)
-        
+
         item.line_start = line_num
         item.line_end = line_num
         self.register_node_line(item, line_num)
-        
+
         # Update tracking variables
         self.last_list_item = item
         self.last_processed_line_type = 'unordered_list_item'
-        
+
         return item
 
     def register_node_line(self, node: MarkdownASTNode, line_num: int) -> None:

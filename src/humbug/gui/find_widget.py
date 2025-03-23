@@ -170,7 +170,7 @@ class FindWidget(QWidget):
 
     def set_match_status(self, current: int, total: int):
         """Set the match status display.
-        
+
         Args:
             current: Current match index (1-based)
             total: Total number of matches

@@ -375,7 +375,7 @@ class SwiftLexer(Lexer):
     def _read_identifier_or_keyword(self) -> None:
         """
         Read an identifier or keyword token.
-        
+
         Swift identifiers can contain:
         - Letters and digits
         - Underscores
