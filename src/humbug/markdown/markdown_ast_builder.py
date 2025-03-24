@@ -691,6 +691,7 @@ class MarkdownASTBuilder:
             # Handle blank lines for list state
             if line_type == 'blank':
                 self.blank_line_count += 1
+
                 # If we're in a list, mark it as having blank lines
                 if self.active_lists:
                     self._handle_blank_line_in_list()

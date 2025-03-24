@@ -75,12 +75,14 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         orig_block_format = self.cursor.blockFormat()
 
-        font = QFont()
-        font.setPointSizeF(self._style_manager.base_font_size)
-        font_metrics = QFontMetricsF(font)
-        block_format = QTextBlockFormat(orig_block_format)
-        block_format.setBottomMargin(font_metrics.height())
-        self.cursor.setBlockFormat(block_format)
+        # If we're in a list then ignore this.  We want our list formatting consistent.
+        if not self._lists:
+            font = QFont()
+            font.setPointSizeF(self._style_manager.base_font_size)
+            font_metrics = QFontMetricsF(font)
+            block_format = QTextBlockFormat(orig_block_format)
+            block_format.setBottomMargin(font_metrics.height())
+            self.cursor.setBlockFormat(block_format)
 
         # Process all inline content
         for child in node.children:
