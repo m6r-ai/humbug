@@ -63,24 +63,6 @@ class MarkdownASTBuilder:
         # Imported state for continuity
         self.imported_state = None
 
-    def _escape_html(self, text: str) -> str:
-        """
-        Escape special HTML characters in text.
-
-        Args:
-            text: The text to escape
-
-        Returns:
-            The escaped text
-
-        Raises:
-            None
-        """
-        text = text.replace('&', '&amp;')  # Must come first to avoid double-escaping
-        text = text.replace('<', '&lt;')
-        text = text.replace('>', '&gt;')
-        return text
-
     def export_state(self) -> Dict[str, Any]:
         """
         Export the current state information needed for continuity.
@@ -210,12 +192,12 @@ class MarkdownASTBuilder:
                 if end_pos != -1:
                     # Add any accumulated text before this code block
                     if current_text:
-                        nodes.append(MarkdownTextNode(self._escape_html(current_text)))
+                        nodes.append(MarkdownTextNode(current_text))
                         current_text = ""
 
                     # Extract the code content (excluding backticks)
                     code_content = text[i+1:end_pos]
-                    nodes.append(MarkdownInlineCodeNode(self._escape_html(code_content)))
+                    nodes.append(MarkdownInlineCodeNode(code_content))
 
                     # Move past the closing backtick
                     i = end_pos + 1
@@ -233,7 +215,7 @@ class MarkdownASTBuilder:
                 if end_pos != -1:
                     # Add any accumulated text before this bold block
                     if current_text:
-                        nodes.append(MarkdownTextNode(self._escape_html(current_text)))
+                        nodes.append(MarkdownTextNode(current_text))
                         current_text = ""
 
                     # Extract the bold content (excluding markers)
@@ -264,7 +246,7 @@ class MarkdownASTBuilder:
                 if end_pos != -1 and (end_pos + 1 >= len(text) or text[end_pos+1] != marker):  # Avoid **
                     # Add any accumulated text before this italic block
                     if current_text:
-                        nodes.append(MarkdownTextNode(self._escape_html(current_text)))
+                        nodes.append(MarkdownTextNode(current_text))
                         current_text = ""
 
                     # Extract the italic content (excluding markers)
@@ -289,7 +271,7 @@ class MarkdownASTBuilder:
 
         # Add any remaining accumulated text
         if current_text:
-            nodes.append(MarkdownTextNode(self._escape_html(current_text)))
+            nodes.append(MarkdownTextNode(current_text))
 
         # Append a line break node if needed
         if has_line_break:

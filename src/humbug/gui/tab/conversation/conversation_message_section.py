@@ -20,7 +20,7 @@ from humbug.gui.tab.conversation.conversation_language_highlighter import Conver
 from humbug.gui.tab.conversation.conversation_markdown_renderer import ConversationMarkdownRenderer
 from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.language.language_manager import LanguageManager
-from humbug.markdown.markdown_converter import MarkdownConverter
+from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -59,8 +59,6 @@ class ConversationMessageSection(QFrame):
         self._header_container = None
         self._copy_button = None
         self._save_as_button = None
-
-        self._content = None
 
         if language is not None:
             self._layout.setContentsMargins(10, 10, 10, 10)
@@ -106,6 +104,12 @@ class ConversationMessageSection(QFrame):
         self._text_area.setContextMenuPolicy(Qt.NoContextMenu)
 
         self._layout.addWidget(self._text_area)
+
+        self._content_node = None
+
+        # Render directly to the document
+        document = self._text_area.document()
+        self._renderer = ConversationMarkdownRenderer(document)
 
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
@@ -253,15 +257,12 @@ class ConversationMessageSection(QFrame):
             self._text_area.set_text(content.content)
             return
 
+        print("-------------------------\n")
+        printer = MarkdownASTPrinter()
+        printer.visit(content)
+
         # Store for re-styling
         self._content_node = content
-
-        # We're using direct rendering, use the QTextDocument renderer
-        document = self._text_area.document()
-        document.clear()
-
-        # Render directly to the document
-        self._renderer = ConversationMarkdownRenderer(document)
         self._renderer.visit(content)
 
     def has_selection(self) -> bool:

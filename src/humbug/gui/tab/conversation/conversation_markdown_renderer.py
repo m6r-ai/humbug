@@ -7,6 +7,7 @@ from PySide6.QtGui import (
     QTextListFormat, QFont
 )
 
+from humbug.gui.style_manager import StyleManager
 from humbug.markdown.markdown_ast_node import MarkdownASTVisitor
 
 
@@ -26,7 +27,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self.cursor.movePosition(QTextCursor.Start)
 
         # Maintain list state
-        self.current_lists = []  # Stack of QTextList objects
+        self._list_formats = []
         self.list_level = 0
 
         # Text formats for different elements
@@ -46,8 +47,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self.italic_format.setFontItalic(True)
 
         # Code format
+        style_manager = StyleManager()
         self.code_format = QTextCharFormat()
-        self.code_format.setFontFamily("Courier")
+        self.code_format.setFontFamilies(style_manager.monospace_font_families)
 
         # Heading formats (h1 to h6)
         self.heading_formats = []
@@ -56,6 +58,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             heading_format.setHeadingLevel(i)
 
             char_format = QTextCharFormat()
+
             # Adjust size based on heading level
             font_size = 20 - (i * 2)  # h1=18pt, h2=16pt, etc.
             char_format.setFontPointSize(font_size)
@@ -130,7 +133,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         block_format, _char_format = self.heading_formats[level]
         self.cursor.setBlockFormat(block_format)
 
-        print("heading")
         # Apply character format and add text
         for child in node.children:
             self.visit(child)
@@ -240,13 +242,14 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         for i, line in enumerate(lines):
             if i > 0:
                 self.cursor.insertBlock(block_format)
+
             self.cursor.insertText(line)
 
         # Restore normal format and add a trailing block
         self.cursor.setCharFormat(saved_format)
         self.cursor.insertBlock()
 
-    def visit_MarkdownOrderedListNode(self, node):
+    def visit_MarkdownOrderedListNode(self, node):  # pylint: disable=invalid-name
         """
         Render an ordered list node to the QTextDocument.
 
@@ -254,18 +257,31 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             node: The ordered list node to render
         """
         # Create ordered list format with correct start number
+        self.list_level += 1
+
+        # Set indentation based on nesting level
         list_format = QTextListFormat()
         list_format.setStyle(QTextListFormat.ListDecimal)
         list_format.setStart(node.start)
+        list_format.setIndent(self.list_level)
 
-        self._start_list(list_format)
+        # Store the format for this list level
+        self._list_formats.append(list_format)
 
+        # Process the child nodes (list items)
         for child in node.children:
             self.visit(child)
 
-        self._end_list()
+        # Exit this list level
+        self.list_level -= 1
+        self._list_formats.pop()
 
-    def visit_MarkdownUnorderedListNode(self, node):
+        # If we're completely out of lists, ensure we're not in a list anymore
+        if not self._list_formats and self.cursor.currentList():
+            self.cursor.insertBlock()
+            self.cursor.currentList().remove(self.cursor.block())
+
+    def visit_MarkdownUnorderedListNode(self, node):  # pylint: disable=invalid-name
         """
         Render an unordered list node to the QTextDocument.
 
@@ -273,15 +289,28 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             node: The unordered list node to render
         """
         # Create unordered list format
+        self.list_level += 1
+
+        # Set indentation based on nesting level
         list_format = QTextListFormat()
         list_format.setStyle(QTextListFormat.ListDisc)
+        list_format.setIndent(self.list_level)
 
-        self._start_list(list_format)
+        # Store the format for this list level
+        self._list_formats.append(list_format)
 
+        # Process the child nodes (list items)
         for child in node.children:
             self.visit(child)
 
-        self._end_list()
+        # Exit this list level
+        self.list_level -= 1
+        self._list_formats.pop()
+
+        # If we're completely out of lists, ensure we're not in a list anymore
+        if not self._list_formats and self.cursor.currentList():
+            self.cursor.insertBlock()
+            self.cursor.currentList().remove(self.cursor.block())
 
     def visit_MarkdownListItemNode(self, node):  # pylint: disable=invalid-name
         """
@@ -293,23 +322,31 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # Start a new list item by creating a block
+        # Start a new list item by creating a block if not at start of a block
         if not self.cursor.atBlockStart():
             self.cursor.insertBlock()
 
-        # Add the block to current list
-        current_list = self.current_lists[-1]
-        current_list.add(self.cursor.block())
+        # Apply the current list format to create or continue a list
+        current_format = self._list_formats[-1]
+        current_list = self.cursor.createList(current_format)
 
-        # Process all inline content
+        # Process all inline content for this list item
         for child in node.children:
             self.visit(child)
 
-        # If we're the last list item, ensure we're at end of block
-        if node == node.parent.children[-1]:
-            if not self.cursor.atBlockEnd():
+        # If this is the last child of its parent and we're not at block start,
+        # we need to prepare for potential continuation of an outer list
+        parent_list_items = node.parent.children if node.parent else []
+        is_last_item = parent_list_items and parent_list_items[-1] == node
+
+        if is_last_item and not self.cursor.atBlockStart():
+            # We only need to insert a block if we're transitioning to a different list level
+            if len(self._list_formats) > 1:
                 self.cursor.insertBlock()
-                current_list.add(self.cursor.block())  # Add empty block to list
+
+                # Apply the parent list format to continue the parent list
+                parent_format = self._list_formats[-2]
+                self.cursor.createList(parent_format)
 
     def visit_MarkdownLineBreakNode(self, _node):  # pylint: disable=invalid-name
         """
@@ -323,35 +360,3 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # Insert line break character
         self.cursor.insertText("\n")
-
-    def _start_list(self, list_format):
-        """
-        Start a new list with the given format.
-
-        Args:
-            list_format: The QTextListFormat to use
-
-        Returns:
-            None
-        """
-        # Increase the indent level for nested lists
-        self.list_level += 1
-
-        # Set indentation based on nesting level
-        text_format = QTextListFormat(list_format)
-        text_format.setIndent(self.list_level)
-
-        # Create a new list
-        current_list = self.cursor.createList(text_format)
-        self.current_lists.append(current_list)
-
-    def _end_list(self):
-        """
-        End the current list.
-
-        Returns:
-            None
-        """
-        if self.current_lists:
-            self.current_lists.pop()
-            self.list_level -= 1
