@@ -30,28 +30,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._lists = []
         self.list_level = 0
 
-        # Text formats for different elements
-        self._init_formats()
-
-    def _init_formats(self):
-        """Initialize text formats for different markdown elements."""
-        # Code format
         self._style_manager = StyleManager()
-
-        # Heading formats (h1 to h6)
-        self.heading_formats = []
-        for i in range(1, 7):
-            heading_format = QTextBlockFormat()
-            heading_format.setHeadingLevel(i)
-
-            char_format = QTextCharFormat()
-
-            # Adjust size based on heading level
-            font_size = (20 - (i * 2)) * self._style_manager.zoom_factor  # h1=18pt, h2=16pt, etc.
-            char_format.setFontPointSize(font_size)
-            char_format.setFontWeight(QFont.Bold)
-
-            self.heading_formats.append((heading_format, char_format))
 
     def visit_MarkdownDocumentNode(self, node):  # pylint: disable=invalid-name
         """
@@ -84,7 +63,10 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # If not at start of block, add a new block
         if not self.cursor.atBlockStart():
+            print('para: new block')
             self.cursor.insertBlock()
+        else:
+            print('para: already at start')
 
         # Process all inline content
         for child in node.children:
@@ -102,15 +84,22 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # Add a new block with heading format
         if not self.cursor.atStart():
+            print('heading: new block')
             self.cursor.insertBlock()
+        else:
+            print('heading: already at start')
 
         # Apply block format (heading level)
         level = min(node.level, 6) - 1  # Convert to 0-based index
-        block_format, char_format = self.heading_formats[level]
+        block_format = QTextBlockFormat()
+        block_format.setHeadingLevel(level)
         self.cursor.setBlockFormat(block_format)
 
-        # Save current format, apply heading format, then process children
         saved_format = self.cursor.charFormat()
+        char_format = QTextCharFormat(saved_format)
+        font_size = (24 - (level * 2)) * self._style_manager.zoom_factor
+        char_format.setFontPointSize(font_size)
+        char_format.setFontWeight(QFont.Bold)
         self.cursor.setCharFormat(char_format)  # Apply heading character format
 
         # Process all inline content for the heading
@@ -215,7 +204,10 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # Insert a new block if needed
         if not self.cursor.atStart():
+            print('code: new block')
             self.cursor.insertBlock()
+        else:
+            print('code: already at start')
 
         # Create a code block format with monospace font and background
         block_format = QTextBlockFormat()
@@ -250,8 +242,15 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Args:
             node: The ordered list node to render
         """
-        block_format = self.cursor.blockFormat()
-        char_format = self.cursor.charFormat()
+        # Insert a new block if needed
+        if not self.cursor.atStart():
+            print('ol: new block')
+            self.cursor.insertBlock()
+        else:
+            print('ol: already at start')
+
+        orig_block_format = self.cursor.blockFormat()
+        orig_char_format = self.cursor.charFormat()
 
         # Create ordered list format with correct start number
         self.list_level += 1
@@ -262,7 +261,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         list_format.setStart(node.start)
         list_format.setIndent(self.list_level)
 
-        new_list = self.cursor.insertList(list_format)
+        new_list = self.cursor.createList(list_format)
         self._lists.append(new_list)
 
         # Process the child nodes (list items)
@@ -277,8 +276,8 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         if not self.cursor.atBlockStart():
             self.cursor.insertBlock()
 
-        self.cursor.setCharFormat(char_format)
-        self.cursor.setBlockFormat(block_format)
+        self.cursor.setCharFormat(orig_char_format)
+        self.cursor.setBlockFormat(orig_block_format)
 
     def visit_MarkdownUnorderedListNode(self, node):  # pylint: disable=invalid-name
         """
@@ -287,8 +286,15 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Args:
             node: The unordered list node to render
         """
-        block_format = self.cursor.blockFormat()
-        char_format = self.cursor.charFormat()
+        # Insert a new block if needed
+        if not self.cursor.atStart():
+            print('ul: new block')
+            self.cursor.insertBlock()
+        else:
+            print('ul: already at start')
+
+        orig_block_format = self.cursor.blockFormat()
+        orig_char_format = self.cursor.charFormat()
 
         # Create unordered list format
         self.list_level += 1
@@ -298,7 +304,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         list_format.setStyle(QTextListFormat.ListDisc)
         list_format.setIndent(self.list_level)
 
-        new_list = self.cursor.insertList(list_format)
+        new_list = self.cursor.createList(list_format)
         self._lists.append(new_list)
 
         # Process the child nodes (list items)
@@ -313,8 +319,8 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         if not self.cursor.atBlockStart():
             self.cursor.insertBlock()
 
-        self.cursor.setCharFormat(char_format)
-        self.cursor.setBlockFormat(block_format)
+        self.cursor.setCharFormat(orig_char_format)
+        self.cursor.setBlockFormat(orig_block_format)
 
     def visit_MarkdownListItemNode(self, node):  # pylint: disable=invalid-name
         """
