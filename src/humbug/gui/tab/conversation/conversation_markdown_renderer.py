@@ -7,6 +7,7 @@ from PySide6.QtGui import (
     QTextListFormat, QFont, QFontMetricsF
 )
 
+from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownOrderedListNode, MarkdownUnorderedListNode
@@ -242,6 +243,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Create a new format based on the current one but with a monospace font
         code_format = QTextCharFormat(orig_char_format)
         code_format.setFontFamilies(self._style_manager.monospace_font_families)
+        code_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_INLINE_CODE))
         self.cursor.setCharFormat(code_format)
 
         self.cursor.insertText(node.content)
