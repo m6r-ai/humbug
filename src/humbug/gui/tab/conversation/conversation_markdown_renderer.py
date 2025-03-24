@@ -28,6 +28,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Maintain list state
         self._list_formats = []
+        self._lists = []
         self.list_level = 0
 
         # Text formats for different elements
@@ -102,17 +103,14 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # If not at beginning of document, add a new block
-        if not (self.cursor.atStart() and self.cursor.atBlockStart()):
+        # If not at start of block, add a new block
+        if not self.cursor.atBlockStart():
+            print(f"insert block: {self.cursor.atBlockStart()}")
             self.cursor.insertBlock()
 
         # Process all inline content
         for child in node.children:
             self.visit(child)
-
-        # End with a block if we don't have one yet
-        if not self.cursor.atBlockEnd():
-            self.cursor.insertBlock()
 
     def visit_MarkdownHeadingNode(self, node):  # pylint: disable=invalid-name
         """
@@ -136,9 +134,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Apply character format and add text
         for child in node.children:
             self.visit(child)
-
-        # End with a block break
-        self.cursor.insertBlock()
 
     def visit_MarkdownTextNode(self, node):  # pylint: disable=invalid-name
         """
@@ -247,7 +242,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Restore normal format and add a trailing block
         self.cursor.setCharFormat(saved_format)
-        self.cursor.insertBlock()
 
     def visit_MarkdownOrderedListNode(self, node):  # pylint: disable=invalid-name
         """
@@ -256,6 +250,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Args:
             node: The ordered list node to render
         """
+        block_format = self.cursor.blockFormat()
+        char_format = self.cursor.charFormat()
+
         # Create ordered list format with correct start number
         self.list_level += 1
 
@@ -268,18 +265,22 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Store the format for this list level
         self._list_formats.append(list_format)
 
+        new_list = self.cursor.insertList(list_format)
+        self._lists.append(new_list)
+
         # Process the child nodes (list items)
         for child in node.children:
             self.visit(child)
+
+        self._lists.pop()
 
         # Exit this list level
         self.list_level -= 1
         self._list_formats.pop()
 
-        # If we're completely out of lists, ensure we're not in a list anymore
-        if not self._list_formats and self.cursor.currentList():
-            self.cursor.insertBlock()
-            self.cursor.currentList().remove(self.cursor.block())
+        self.cursor.insertBlock()
+        self.cursor.setCharFormat(char_format)
+        self.cursor.setBlockFormat(block_format)
 
     def visit_MarkdownUnorderedListNode(self, node):  # pylint: disable=invalid-name
         """
@@ -288,6 +289,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Args:
             node: The unordered list node to render
         """
+        block_format = self.cursor.blockFormat()
+        char_format = self.cursor.charFormat()
+
         # Create unordered list format
         self.list_level += 1
 
@@ -299,18 +303,22 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Store the format for this list level
         self._list_formats.append(list_format)
 
+        new_list = self.cursor.insertList(list_format)
+        self._lists.append(new_list)
+
         # Process the child nodes (list items)
         for child in node.children:
             self.visit(child)
+
+        self._lists.pop()
 
         # Exit this list level
         self.list_level -= 1
         self._list_formats.pop()
 
-        # If we're completely out of lists, ensure we're not in a list anymore
-        if not self._list_formats and self.cursor.currentList():
-            self.cursor.insertBlock()
-            self.cursor.currentList().remove(self.cursor.block())
+        self.cursor.insertBlock()
+        self.cursor.setCharFormat(char_format)
+        self.cursor.setBlockFormat(block_format)
 
     def visit_MarkdownListItemNode(self, node):  # pylint: disable=invalid-name
         """
@@ -326,27 +334,11 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         if not self.cursor.atBlockStart():
             self.cursor.insertBlock()
 
-        # Apply the current list format to create or continue a list
-        current_format = self._list_formats[-1]
-        current_list = self.cursor.createList(current_format)
+        self._lists[-1].add(self.cursor.block())
 
         # Process all inline content for this list item
         for child in node.children:
             self.visit(child)
-
-        # If this is the last child of its parent and we're not at block start,
-        # we need to prepare for potential continuation of an outer list
-        parent_list_items = node.parent.children if node.parent else []
-        is_last_item = parent_list_items and parent_list_items[-1] == node
-
-        if is_last_item and not self.cursor.atBlockStart():
-            # We only need to insert a block if we're transitioning to a different list level
-            if len(self._list_formats) > 1:
-                self.cursor.insertBlock()
-
-                # Apply the parent list format to continue the parent list
-                parent_format = self._list_formats[-2]
-                self.cursor.createList(parent_format)
 
     def visit_MarkdownLineBreakNode(self, _node):  # pylint: disable=invalid-name
         """
