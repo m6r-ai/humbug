@@ -463,13 +463,8 @@ class ConversationMessageSection(QFrame):
                 }}
             """)
         else:
-            style_sheet = f"""
-                code {{
-                    color: {self._style_manager.get_color_str(ColorRole.SYNTAX_INLINE_CODE)};
-                }}
-                """
-#            self._text_area.document().setDefaultStyleSheet(style_sheet)
-#            self._text_area.setHtml(self._content)
+            if self._content_node:
+                self._renderer.visit(self._content_node)
 
         button_style = f"""
             QToolButton {{
