@@ -52,6 +52,38 @@ class MarkdownASTNode:
 
         self.children = []
 
+    def previous_sibling(self) -> Optional['MarkdownASTNode']:
+        """
+        Get the previous sibling of this node, if any.
+
+        Returns:
+            The previous sibling node, or None if this is the first child or has no parent
+        """
+        if self.parent is None:
+            return None
+
+        index = self.parent.children.index(self)
+        if index > 0:
+            return self.parent.children[index - 1]
+
+        return None
+
+    def next_sibling(self) -> Optional['MarkdownASTNode']:
+        """
+        Get the next sibling of this node, if any.
+
+        Returns:
+            The next sibling node, or None if this is the last child or has no parent
+        """
+        if self.parent is None:
+            return None
+
+        index = self.parent.children.index(self)
+        if index < len(self.parent.children) - 1:
+            return self.parent.children[index + 1]
+
+        return None
+
 
 class MarkdownASTVisitor:
     """Base visitor class for AST traversal."""
