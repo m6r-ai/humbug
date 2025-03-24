@@ -10,7 +10,6 @@ from typing import List, Tuple, Optional
 
 from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownParseError
 from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode
-from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -26,7 +25,6 @@ class MarkdownConverter:
     def __init__(self):
         """Initialize the markdown converter with an AST builder and HTML renderer."""
         self.ast_builder = MarkdownASTBuilder()
-        self.ast_printer = MarkdownASTPrinter()  # For debugging
 
         self._logger = logging.getLogger("ConversationMarkdownConverter")
 
