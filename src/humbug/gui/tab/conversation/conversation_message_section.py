@@ -257,9 +257,9 @@ class ConversationMessageSection(QFrame):
             self._text_area.set_text(content.content)
             return
 
-        print("-------------------------\n")
-        printer = MarkdownASTPrinter()
-        printer.visit(content)
+#        print("-------------------------\n")
+#        printer = MarkdownASTPrinter()
+#        printer.visit(content)
 
         # Store for re-styling
         self._content_node = content
