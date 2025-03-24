@@ -76,7 +76,7 @@ v0.8 adds several new features:
 - The default theme can now be set in the user settings.
 - Updated the Edit menu so the old "Dark Mode" option is now also replaced with "Display Theme" that
   matches the user setting.
-- Messages from the AI are now rendered using the markdown formatting provides.  This makes them
+- Messages from the AI are now rendered using the markdown formatting provided.  This makes them
   easier to read and hides the markdown annotations.
 - Added support for Google Gemini 2.0 pro (experimental).
 
