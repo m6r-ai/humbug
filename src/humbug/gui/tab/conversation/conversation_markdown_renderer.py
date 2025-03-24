@@ -127,8 +127,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Apply block format (heading level)
         level = min(node.level, 6) - 1  # Convert to 0-based index
-        block_format, _char_format = self.heading_formats[level]
+        block_format, char_format = self.heading_formats[level]
         self.cursor.setBlockFormat(block_format)
+        self.cursor.setCharFormat(char_format)
 
         # Apply character format and add text
         for child in node.children:
@@ -273,7 +274,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Exit this list level
         self.list_level -= 1
 
-        self.cursor.insertBlock()
+        if not self.cursor.atBlockStart():
+            self.cursor.insertBlock()
+
         self.cursor.setCharFormat(char_format)
         self.cursor.setBlockFormat(block_format)
 
@@ -307,7 +310,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Exit this list level
         self.list_level -= 1
 
-        self.cursor.insertBlock()
+        if not self.cursor.atBlockStart():
+            self.cursor.insertBlock()
+
         self.cursor.setCharFormat(char_format)
         self.cursor.setBlockFormat(block_format)
 
