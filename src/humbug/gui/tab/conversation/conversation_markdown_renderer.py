@@ -60,18 +60,11 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             char_format = QTextCharFormat()
 
             # Adjust size based on heading level
-            font_size = 20 - (i * 2)  # h1=18pt, h2=16pt, etc.
+            font_size = (20 - (i * 2)) * style_manager.zoom_factor  # h1=18pt, h2=16pt, etc.
             char_format.setFontPointSize(font_size)
             char_format.setFontWeight(QFont.Bold)
 
             self.heading_formats.append((heading_format, char_format))
-
-        # List formats
-        self.ordered_list_format = QTextListFormat()
-        self.ordered_list_format.setStyle(QTextListFormat.ListDecimal)
-
-        self.unordered_list_format = QTextListFormat()
-        self.unordered_list_format.setStyle(QTextListFormat.ListDisc)
 
     def visit_MarkdownDocumentNode(self, node):  # pylint: disable=invalid-name
         """
@@ -104,7 +97,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # If not at start of block, add a new block
         if not self.cursor.atBlockStart():
-            print(f"insert block: {self.cursor.atBlockStart()}")
             self.cursor.insertBlock()
 
         # Process all inline content
@@ -129,11 +121,17 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         level = min(node.level, 6) - 1  # Convert to 0-based index
         block_format, char_format = self.heading_formats[level]
         self.cursor.setBlockFormat(block_format)
-        self.cursor.setCharFormat(char_format)
 
-        # Apply character format and add text
+        # Save current format, apply heading format, then process children
+        saved_format = self.cursor.charFormat()
+        self.cursor.setCharFormat(char_format)  # Apply heading character format
+
+        # Process all inline content for the heading
         for child in node.children:
             self.visit(child)
+
+        # Restore the previous format
+        self.cursor.setCharFormat(saved_format)
 
     def visit_MarkdownTextNode(self, node):  # pylint: disable=invalid-name
         """
@@ -145,7 +143,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        self.cursor.insertText(node.content, self.normal_format)
+        self.cursor.insertText(node.content)  # Use the current cursor format
 
     def visit_MarkdownBoldNode(self, node):  # pylint: disable=invalid-name
         """
@@ -159,7 +157,12 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # Save current format, apply bold format, then process children
         saved_format = self.cursor.charFormat()
-        self.cursor.setCharFormat(self.bold_format)
+
+        # Create a new format based on the current one but with bold
+        bold_format = QTextCharFormat(saved_format)
+        bold_format.setFontWeight(QFont.Bold)
+
+        self.cursor.setCharFormat(bold_format)
 
         for child in node.children:
             self.visit(child)
@@ -179,7 +182,12 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # Save current format, apply italic format, then process children
         saved_format = self.cursor.charFormat()
-        self.cursor.setCharFormat(self.italic_format)
+
+        # Create a new format based on the current one but with italic
+        italic_format = QTextCharFormat(saved_format)
+        italic_format.setFontItalic(True)
+
+        self.cursor.setCharFormat(italic_format)
 
         for child in node.children:
             self.visit(child)
