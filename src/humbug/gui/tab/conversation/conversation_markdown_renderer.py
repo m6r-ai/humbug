@@ -427,4 +427,4 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             None
         """
         # Insert line break character
-        self._cursor.insertText("\n")
+        self._cursor.insertText("\u2028")
