@@ -27,7 +27,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self.cursor.movePosition(QTextCursor.Start)
 
         # Maintain list state
-        self._list_formats = []
         self._lists = []
         self.list_level = 0
 
@@ -262,9 +261,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         list_format.setStart(node.start)
         list_format.setIndent(self.list_level)
 
-        # Store the format for this list level
-        self._list_formats.append(list_format)
-
         new_list = self.cursor.insertList(list_format)
         self._lists.append(new_list)
 
@@ -276,7 +272,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Exit this list level
         self.list_level -= 1
-        self._list_formats.pop()
 
         self.cursor.insertBlock()
         self.cursor.setCharFormat(char_format)
@@ -300,9 +295,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         list_format.setStyle(QTextListFormat.ListDisc)
         list_format.setIndent(self.list_level)
 
-        # Store the format for this list level
-        self._list_formats.append(list_format)
-
         new_list = self.cursor.insertList(list_format)
         self._lists.append(new_list)
 
@@ -314,7 +306,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Exit this list level
         self.list_level -= 1
-        self._list_formats.pop()
 
         self.cursor.insertBlock()
         self.cursor.setCharFormat(char_format)
