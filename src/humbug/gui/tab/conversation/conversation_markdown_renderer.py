@@ -35,21 +35,8 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
     def _init_formats(self):
         """Initialize text formats for different markdown elements."""
-        # Normal text format
-        self.normal_format = QTextCharFormat()
-
-        # Bold text format
-        self.bold_format = QTextCharFormat()
-        self.bold_format.setFontWeight(QFont.Bold)
-
-        # Italic text format
-        self.italic_format = QTextCharFormat()
-        self.italic_format.setFontItalic(True)
-
         # Code format
-        style_manager = StyleManager()
-        self.code_format = QTextCharFormat()
-        self.code_format.setFontFamilies(style_manager.monospace_font_families)
+        self._style_manager = StyleManager()
 
         # Heading formats (h1 to h6)
         self.heading_formats = []
@@ -60,7 +47,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             char_format = QTextCharFormat()
 
             # Adjust size based on heading level
-            font_size = (20 - (i * 2)) * style_manager.zoom_factor  # h1=18pt, h2=16pt, etc.
+            font_size = (20 - (i * 2)) * self._style_manager.zoom_factor  # h1=18pt, h2=16pt, etc.
             char_format.setFontPointSize(font_size)
             char_format.setFontWeight(QFont.Bold)
 
@@ -161,7 +148,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Create a new format based on the current one but with bold
         bold_format = QTextCharFormat(saved_format)
         bold_format.setFontWeight(QFont.Bold)
-
         self.cursor.setCharFormat(bold_format)
 
         for child in node.children:
@@ -186,7 +172,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Create a new format based on the current one but with italic
         italic_format = QTextCharFormat(saved_format)
         italic_format.setFontItalic(True)
-
         self.cursor.setCharFormat(italic_format)
 
         for child in node.children:
@@ -207,7 +192,11 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # Save current format, apply code format, then insert text
         saved_format = self.cursor.charFormat()
-        self.cursor.setCharFormat(self.code_format)
+
+        # Create a new format based on the current one but with italic
+        code_format = QTextCharFormat(saved_format)
+        code_format.setFontFamilies(self._style_manager.monospace_font_families)
+        self.cursor.setCharFormat(code_format)
 
         self.cursor.insertText(node.content)
 
@@ -237,7 +226,10 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Apply code formatting and insert text
         saved_format = self.cursor.charFormat()
-        self.cursor.setCharFormat(self.code_format)
+
+        code_format = QTextCharFormat(saved_format)
+        code_format.setFontFamilies(self._style_manager.monospace_font_families)
+        self.cursor.setCharFormat(code_format)
 
         # Split content by lines and add each in its own block
         lines = node.content.split('\n')
