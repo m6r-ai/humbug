@@ -79,6 +79,7 @@ v0.8 adds several new features:
 - Messages from the AI are now rendered using the markdown formatting provided.  This makes them
   easier to read and hides the markdown annotations.
 - Added support for Google Gemini 2.0 pro (experimental).
+- Folded an implementation of the Metaphor compiler directly into Humbug.
 
 ## Features
 
@@ -153,7 +154,6 @@ Compatible with MacOS X (2020+), Linux (2020+), and Windows 10/11.
 - PySide6 (the GUI framework)
 - qasync (allows the GUI framework to work nicely with async Python code)
 - aiohttp (async HTTP client)
-- m6rclib (the Metaphor compiler)
 - certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)
 
 ## Installation

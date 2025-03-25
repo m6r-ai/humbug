@@ -6,7 +6,7 @@ import logging
 import os
 from typing import Optional, Dict
 
-from m6rclib import (
+from humbug.m6rc import (
     MetaphorParser, MetaphorParserError, format_ast, format_errors
 )
 

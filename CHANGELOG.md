@@ -14,6 +14,7 @@ New features:
 - Messages from the AI are now rendered using the markdown formatting provided.  This makes them
   easier to read and hides the markdown annotations.
 - Added support for Google Gemini 2.0 pro (experimental).
+- Folded an implementation of the Metaphor compiler directly into Humbug.
 
 Internal structure changes:
 

@@ -9,7 +9,6 @@ requires-python = ">=3.10"
 dependencies = [
     "aiohttp",
     "certifi",
-    "m6rclib",
     "pyside6",
     "qasync"
 ]
@@ -19,3 +18,30 @@ packages = ["src/humbug"]
 
 [tool.pyinstaller]
 excludes = ["build", "dist", "*.egg-info"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=src/humbug --cov-report=html"
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["m6rclib"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "raise ImportError",
+    "except ImportError:",
+]

@@ -524,9 +524,6 @@ Context: Implementation
             Context: Certifi
                 Use the certifi package to ensure we have the right root certs available for SSL.
 
-            Context: Metaphor compilation
-                Use the m6rclib library for Metaphor file compilation.
-
         Context: Exception handling philosophy
             Context: Exception documentation
                 Document what exceptions each function may raise in its docstring.

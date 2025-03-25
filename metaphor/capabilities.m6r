@@ -847,7 +847,7 @@ Context: Capabilities
 
                 When invoked the user will be prompted with a file selection dialog allowing them to
                 select a "*.m6r" file to use to start the conversation.  Once a file is selected then
-                it will be compiled using the m6rclib compiler.  If compilation fails then a message
+                it will be compiled using the Metaphor compiler.  If compilation fails then a message
                 box will indicate the problem/problems to the user.
 
                 On successful compilation of the Metaphor file a new conversation will be opened, and

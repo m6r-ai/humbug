@@ -15,6 +15,7 @@ build
 # Ignore code coverage reports
 .coverage
 htmlcol
+.pytest_cache
 
 # Ignore virtual environment
 venv
