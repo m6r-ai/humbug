@@ -37,16 +37,26 @@ def _format_node(node: MetaphorASTNode, depth: int, out: TextIO) -> None:
         out: Output buffer to write to
     """
     if node.node_type != MetaphorASTNodeType.ROOT:
-        indent = " " * ((depth - 1) * 4)
         if node.node_type == MetaphorASTNodeType.TEXT:
-            out.write(f"{indent}{node.value}\n")
+            out.write(f"{node.value}\n")
             return
 
+        # If we don't have a blank line before this block heading then add one
+        current_pos = out.tell()
+        if current_pos > 1:
+            out.seek(current_pos - 2)
+            prev_char = out.read(2)
+            out.seek(current_pos)
+            if prev_char != '\n\n':
+                out.write("\n")
+
+        indent = "#" * depth
         keyword = NODE_TYPE_MAP.get(node.node_type, "")
-        out.write(f"{indent}{keyword}")
+        out.write(f"{indent} {keyword}")
         if node.value:
             out.write(f" {node.value}")
-        out.write("\n")
+
+        out.write("\n\n")
 
     for child in node.children:
         _format_node(child, depth + 1, out)
