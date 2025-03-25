@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 import logging
+import time
 from typing import Dict, List, Optional, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
@@ -127,7 +128,13 @@ class ConversationWidget(QWidget):
 
         self._last_submitted_message = None
 
-        # Widget tracking
+        self._last_update_time = 0  # Timestamp of last UI update
+        self._update_timer = QTimer(self)  # Timer for throttled updates
+        self._update_timer.setSingleShot(True)
+        self._update_timer.timeout.connect(self._process_pending_update)
+        self._pending_message = None  # Store the most recent pending message
+
+            # Widget tracking
         self._messages: List[ConversationMessage] = []
         self._message_with_selection: Optional[ConversationMessage] = None
         self._is_streaming = False
@@ -328,22 +335,64 @@ class ConversationWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
+    async def _process_pending_update(self) -> None:
+        """Process any pending message update."""
+        if not self._pending_message:
+            return
+
+        await self._update_message(self._pending_message)
+        self._pending_message = None
+        self._last_update_time = time.time() * 1000
+
     async def _on_message_updated(self, message: AIMessage) -> None:
         """
-        Handle a message being updated.
+        Handle a message being updated with throttling.
+
+        The first update is processed immediately, subsequent updates
+        are throttled to once every 100ms.
 
         Args:
             message: The message that was updated
         """
-        await self._update_message(message)
+        # Make a deep copy of the message to prevent any reference issues
+        message_copy = message.copy()
+
+        # If no pending message exists, process immediately
+        if self._pending_message is None:
+            await self._update_message(message_copy)
+            self._last_update_time = time.time() * 1000  # Current time in ms
+            return
+
+        # Store the pending message (overwrite any existing pending message)
+        self._pending_message = message_copy
+
+        # If the timer is not active, start it
+        if not self._update_timer.isActive():
+            # Calculate time until next update (aim for 100ms between updates)
+            current_time = time.time() * 1000
+            elapsed = current_time - self._last_update_time
+            delay = max(0, 100 - elapsed)
+
+            self._update_timer.start(int(delay))
 
     async def _on_message_completed(self, message: AIMessage) -> None:
         """
         Handle a message being completed.
 
+        This cancels any pending updates and immediately updates with
+        the completed message.
+
         Args:
             message: The message that was completed
         """
+        # Cancel any pending update
+        if self._update_timer.isActive():
+            self._update_timer.stop()
+
+        # Clear the pending message state
+        self._pending_message = None
+
+        # Update with the completed message immediately
         await self._update_message(message)
         await self._write_transcript(message)
 
@@ -354,6 +403,12 @@ class ConversationWidget(QWidget):
         # Update status bar with token counts
         self._is_streaming = False
         self._input.set_streaming(False)
+
+        # Reset message update throttling state
+        self._pending_message = None
+        if self._update_timer.isActive():
+            self._update_timer.stop()
+
         self.status_updated.emit()
 
     def _handle_language_changed(self) -> None:

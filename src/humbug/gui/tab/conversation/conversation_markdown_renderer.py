@@ -46,9 +46,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             None
         """
         # Clear the document first
-        self._cursor.select(QTextCursor.Document)
-        self._cursor.removeSelectedText()
-        self._cursor.movePosition(QTextCursor.Start)
+        self._document.clear()
 
         self._cursor.setBlockFormat(self._orig_block_format)
 

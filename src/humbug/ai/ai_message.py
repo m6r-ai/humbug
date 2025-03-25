@@ -42,7 +42,7 @@ class AIMessage:
         temperature: Optional[float] = None,
         completed: bool = True,
         timestamp: Optional[datetime] = None
-    ) -> 'Message':
+    ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp:
             msg_timestamp = datetime.fromisoformat(timestamp)
@@ -59,6 +59,20 @@ class AIMessage:
             model=model,
             temperature=temperature,
             completed=completed
+        )
+
+    def copy(self) -> 'AIMessage':
+        """Create a deep copy of the message."""
+        return AIMessage(
+            id=self.id,  # We keep the same ID for tracking
+            source=self.source,
+            content=self.content,
+            timestamp=self.timestamp,
+            usage=self.usage.copy() if self.usage else None,
+            error=self.error.copy() if self.error else None,
+            model=self.model,
+            temperature=self.temperature,
+            completed=self.completed
         )
 
     def to_transcript_dict(self) -> Dict:
@@ -80,7 +94,7 @@ class AIMessage:
         return message
 
     @classmethod
-    def from_transcript_dict(cls, data: Dict) -> 'Message':
+    def from_transcript_dict(cls, data: Dict) -> 'AIMessage':
         """Create a Message instance from transcript dictionary format.
 
         Args:
