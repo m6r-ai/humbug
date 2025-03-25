@@ -60,54 +60,9 @@ class MarkdownASTBuilder:
         self._code_block_content = []
         self._code_block_start_line = -1
 
-        # Imported state for continuity
-        self._imported_state = None
-
     @property
     def document(self):
         return self._document
-
-    def export_state(self) -> Dict[str, Any]:
-        """
-        Export the current state information needed for continuity.
-
-        This method captures the necessary state information without exposing
-        implementation details.
-
-        Returns:
-            A dictionary containing state information
-        """
-        # For list continuity, we need to know:
-        # 1. The hierarchy of lists (what type and at what indent level)
-        # 2. Whether lists have blank lines (affects formatting)
-
-        list_hierarchy = []
-        for list_node, indent in self._active_lists:
-            list_type = "ordered" if isinstance(list_node, MarkdownOrderedListNode) else "unordered"
-            list_hierarchy.append({"type": list_type, "indent": indent})
-
-        # There are other aspects of state we might want to preserve
-        # but for the core issue of maintaining list structure, this should be sufficient
-        return {
-            "list_hierarchy": list_hierarchy,
-            "contains_blank_lines": len(self._list_contains_blank_line) > 0,
-            "last_processed_line_type": self._last_processed_line_type,
-            "blank_line_count": self._blank_line_count,
-        }
-
-    def import_state(self, state: Dict[str, Any]) -> None:
-        """
-        Import previously exported state information.
-
-        This method stores the imported state for use during AST building.
-
-        Args:
-            state: The state information to import
-
-        Returns:
-            None
-        """
-        self._imported_state = state
 
     def identify_line_type(self, line: str) -> Tuple[str, Any]:
         """
@@ -801,10 +756,6 @@ class MarkdownASTBuilder:
         self._code_block_content = []
         self._code_block_start_line = -1
 
-        # Restore list structure if we have imported state
-        if self._imported_state and 'list_hierarchy' in self._imported_state:
-            self._restore_list_structure()
-
         lines = text.split('\n')
         for i, line in enumerate(lines):
             self.parse_line(line, i)
@@ -814,37 +765,6 @@ class MarkdownASTBuilder:
             self._finalize_code_block(len(lines) - 1)
 
         return self._document
-
-    def _restore_list_structure(self) -> None:
-        """
-        Rebuild the list structure based on imported state.
-
-        This method recreates the list hierarchy that was active before a reset.
-
-        Returns:
-            None
-        """
-        if not self._imported_state or 'list_hierarchy' not in self._imported_state:
-            return
-
-        # Rebuild lists from outermost to innermost
-        for list_info in self._imported_state['list_hierarchy']:
-            is_ordered = list_info['type'] == 'ordered'
-            indent = list_info['indent']
-            self._create_list_at_indent(indent, is_ordered)
-
-        # Restore blank line information if needed
-        if self._imported_state.get('contains_blank_lines', False):
-            # Mark all active lists as having blank lines
-            for list_node, _ in self._active_lists:
-                self._list_contains_blank_line.add(list_node)
-
-        # Restore other state information
-        if 'last_processed_line_type' in self._imported_state:
-            self._last_processed_line_type = self._imported_state['last_processed_line_type']
-
-        if 'blank_line_count' in self._imported_state:
-            self._blank_line_count = self._imported_state['blank_line_count']
 
     def _create_list_at_indent(self, indent: int, is_ordered: bool) -> MarkdownASTNode:
         """
@@ -928,38 +848,15 @@ class MarkdownASTBuilder:
                 break
 
         # Calculate changed region
-        old_start = common_prefix_len
+        start = common_prefix_len
         old_end = len(old_lines) - common_suffix_len
-        new_start = common_prefix_len
         new_end = len(new_lines) - common_suffix_len
 
         # If nothing changed, return existing document
-        if old_start >= old_end and new_start >= new_end:
+        if start >= old_end and start >= new_end:
             return self._document
 
-        # For efficiency in highly incremental scenarios (e.g., typing at the end),
-        # handle the common case of appending to the document
-        if old_start == len(old_lines) and new_start == old_start:
-            # We're just appending lines - parse only the new lines
-            # Save existing state
-            saved_document = self._document
-            saved_line_map = self._line_to_node_map.copy()
-
-            # Parse just the new lines
-            try:
-                for i, line in enumerate(new_lines[old_start:], start=old_start):
-                    self.parse_line(line, i)
-
-                # Handle case where document ends while still in a code block
-                if self._in_code_block:
-                    self._finalize_code_block(len(new_lines) - 1)
-
-                return self._document
-            except Exception:
-                # If incremental update fails, fall back to full rebuild
-                self._logger.exception("Incremental append failed, falling back to full rebuild")
-                self._document = saved_document
-                self._line_to_node_map = saved_line_map
-
-        # For more complex edits, do a full rebuild
+        # In the future we might want to look at incrementally updating, but this is
+        # quite tricky because pure Markdown has some very odd behaviours in which
+        # follow-on lines can affect earlier ones.
         return self.build_ast(text)

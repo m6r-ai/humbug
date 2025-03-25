@@ -90,6 +90,8 @@ class ConversationMessageSection(QFrame):
             # Add header container to main layout
             self._layout.addWidget(self._header_container)
 
+        self._is_input = is_input
+
         # Determine if this section should use markdown (only AI responses without language)
         self._use_markdown = not is_input and language is None
 
@@ -135,9 +137,11 @@ class ConversationMessageSection(QFrame):
         self._language = language
 
         if language is None:
+            self._use_markdown = not self._is_input
             self._highlighter = ConversationHighlighter(self._text_area.document())
             self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
         else:
+            self._use_markdown = False
             self._highlighter = ConversationLanguageHighlighter(self._text_area.document())
             self._highlighter.set_language(language)
             self._text_area.set_has_code_block(True)

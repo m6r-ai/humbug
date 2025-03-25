@@ -110,21 +110,3 @@ class MarkdownConverter:
         add_markdown_section()
 
         return sections
-
-    def reset(self):
-        """
-        Reset the converter state to initial values while preserving structural context.
-
-        This method saves the current parsing state before resetting, allowing content
-        after a reset to maintain proper nesting and formatting context.
-        """
-        # Save the current state before resetting
-        self.builder_state = self.ast_builder.export_state()
-
-        # Create a new AST builder with the exported state
-        self.ast_builder = MarkdownASTBuilder()
-        if self.builder_state:
-            self.ast_builder.import_state(self.builder_state)
-
-        # Reset the current text
-        self.current_text = ""

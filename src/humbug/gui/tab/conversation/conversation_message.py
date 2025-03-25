@@ -194,9 +194,6 @@ class ConversationMessage(QFrame):
             self._section_with_selection = None
             self._handle_style_changed()
 
-            # Reset markdown converter for new style
-            self._markdown_converter.reset()
-
         # Extract sections directly using the markdown converter
         if not self._is_input:
             # Process the content and extract sections in one step
