@@ -278,7 +278,7 @@ class ConversationSettingsDialog(QDialog):
 
         # Add HIDDEN_REASONING if supported
         if capabilities & ReasoningCapability.HIDDEN_REASONING:
-            self._reasoning_combo.addItem(self._language_manager.strings.settings_no_reasoning, ReasoningCapability.HIDDEN_REASONING)
+            self._reasoning_combo.addItem(self._language_manager.strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING)
 
         # Add VISIBLE_REASONING if supported
         if capabilities & ReasoningCapability.VISIBLE_REASONING:
