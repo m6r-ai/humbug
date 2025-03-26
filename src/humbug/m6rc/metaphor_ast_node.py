@@ -29,6 +29,7 @@ class MetaphorASTNodeType(IntEnum):
     ROLE: int = 2
     CONTEXT: int = 3
     ACTION: int = 4
+    CODE: int = 5
 
 
 class MetaphorASTNode:

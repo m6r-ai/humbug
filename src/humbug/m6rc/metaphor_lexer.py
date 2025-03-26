@@ -107,9 +107,7 @@ class MetaphorLexer:
         start_column = len(line) - len(stripped_line) + 1
 
         if not stripped_line:
-            if self.in_fenced_code:
-                self._handle_blank_line(start_column)
-
+            self._handle_blank_line(start_column)
             return
 
         # Is this line a comment?
@@ -124,8 +122,10 @@ class MetaphorLexer:
                 return
 
         # Does this line start with a code fence?
+        in_fenced_code = self.in_fenced_code
         if stripped_line.startswith('```'):
-            self.in_fenced_code = not self.in_fenced_code
+            self.in_fenced_code = True
+            in_fenced_code = not in_fenced_code
 
         # If we're not in a fenced code block then look for keywords.
         if not self.in_fenced_code:
@@ -134,10 +134,12 @@ class MetaphorLexer:
 
             if first_word in self.KEYWORDS:
                 self._handle_keyword_line(line, words, first_word, start_column)
+                self.in_fenced_code = in_fenced_code
                 return
 
         # Treat this as a text block.
         self._handle_text_line(line, start_column)
+        self.in_fenced_code = in_fenced_code
 
     def _handle_tab_character(self, line: str, column: int) -> None:
         """
@@ -215,9 +217,10 @@ class MetaphorLexer:
             self._process_indentation(line, start_column)
 
         text_content = line[start_column - 1:]
+        token_type = TokenType.CODE if self.in_fenced_code else TokenType.TEXT
         self.tokens.append(
             Token(
-                type=TokenType.TEXT,
+                type=token_type,
                 value=text_content,
                 input=line,
                 filename=self.filename,
@@ -228,9 +231,10 @@ class MetaphorLexer:
         self.in_text_block = True
 
     def _handle_blank_line(self, start_column: int) -> None:
+        token_type = TokenType.CODE if self.in_fenced_code else TokenType.TEXT
         self.tokens.append(
             Token(
-                type=TokenType.TEXT,
+                type=token_type,
                 value="",
                 input="",
                 filename=self.filename,

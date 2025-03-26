@@ -33,6 +33,7 @@ class TokenType(IntEnum):
     BAD_OUTDENT: int = 11
     TAB: int = 12
     END_OF_FILE: int = 13
+    CODE: int = 14
 
 
 @dataclass(frozen=True)

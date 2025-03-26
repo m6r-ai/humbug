@@ -30,7 +30,7 @@ def test_format_ast_single_action():
     root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
     action = MetaphorASTNode(MetaphorASTNodeType.ACTION, "Test")
     root.attach_child(action)
-    assert format_ast(root) == "Action: Test\n"
+    assert format_ast(root) == "# Action: Test\n\n"
 
 
 def test_format_ast_nested_structure():
@@ -47,10 +47,10 @@ def test_format_ast_nested_structure():
     nested_context.attach_child(text2)
 
     expected = (
-        "Context: Main\n"
-        "    Context text\n"
-        "    Context: Nested\n"
-        "        Nested text\n"
+        "# Context: Main\n\n"
+        "Context text\n\n"
+        "## Context: Nested\n\n"
+        "Nested text\n"
     )
     assert format_ast(root) == expected
 
@@ -69,10 +69,10 @@ def test_format_ast_all_node_types():
     root.attach_child(action)
 
     expected = (
-        "Role: Expert\n"
-        "Context: Setup\n"
-        "Action:\n"
-        "    Review\n"
+        "# Role: Expert\n\n"
+        "# Context: Setup\n\n"
+        "# Action:\n\n"
+        "Review\n"
     )
     assert format_ast(root) == expected
 
@@ -136,3 +136,24 @@ def test_format_errors_multiple_errors():
 def test_format_errors_empty_list():
     """Test formatting an empty error list."""
     assert format_errors([]) == "----------------\n"
+
+
+def test_format_ast_remove_blank_lines():
+    """Test formatting an AST that has an unecessary blank line."""
+    root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
+    text1 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "")
+    context = MetaphorASTNode(MetaphorASTNodeType.CONTEXT, "Main")
+    text2 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "")
+    text3 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Context text")
+
+    root.attach_child(text1)
+    root.attach_child(context)
+    context.attach_child(text2)
+    context.attach_child(text3)
+
+    expected = (
+        "# Context: Main\n\n"
+        "Context text\n"
+    )
+    assert format_ast(root) == expected
+

@@ -309,7 +309,7 @@ def test_keyword_handling(parser):
     assert len(result.get_children_of_type(MetaphorASTNodeType.ACTION)) == 1
 
 
-def test_fenced_code_blocks(parser):
+def test_context_fenced_code_blocks(parser):
     """Test handling of fenced code blocks."""
     input_text = (
         "Context: Test\n"
@@ -326,16 +326,18 @@ def test_fenced_code_blocks(parser):
     result = parser.parse(input_text, "test.txt", [])
     context = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
     text_nodes = context.get_children_of_type(MetaphorASTNodeType.TEXT)
+    code_nodes = context.get_children_of_type(MetaphorASTNodeType.CODE)
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value for node in text_nodes]
+    code_values = [node.value for node in code_nodes]
     assert "Before code" in text_values
-    assert "```python" in text_values
-    assert "def hello():" in text_values
-    assert "    print('Hello')" in text_values
-    assert "" in text_values
-    assert "    print('World')" in text_values
-    assert "```" in text_values
+    assert "```python" in code_values
+    assert "def hello():" in code_values
+    assert "    print('Hello')" in code_values
+    assert "" in code_values
+    assert "    print('World')" in code_values
+    assert "```" in code_values
     assert "After code" in text_values
 
 
@@ -354,14 +356,16 @@ def test_fenced_code_blocks_with_blanks(parser):
     result = parser.parse(input_text, "test.txt", [])
     context = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
     text_nodes = context.get_children_of_type(MetaphorASTNodeType.TEXT)
+    code_nodes = context.get_children_of_type(MetaphorASTNodeType.CODE)
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value for node in text_nodes]
+    code_values = [node.value for node in code_nodes]
     assert "Before code" in text_values
-    assert "```python" in text_values
-    assert "def hello():" in text_values
-    assert "    print('Hello')" in text_values
-    assert "```" in text_values
+    assert "```python" in code_values
+    assert "def hello():" in code_values
+    assert "    print('Hello')" in code_values
+    assert "```" in code_values
     assert "After code" in text_values
 
 
@@ -378,9 +382,9 @@ def test_empty_lines(parser):
     result = parser.parse(input_text, "test.txt", [])
     role = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
     text_nodes = role.get_children_of_type(MetaphorASTNodeType.TEXT)
-    assert len(text_nodes) == 2
+    assert len(text_nodes) == 3
     assert text_nodes[0].value == "Description"
-    assert text_nodes[1].value == "More text"
+    assert text_nodes[2].value == "More text"
 
 
 def test_tab_characters(parser):
@@ -401,6 +405,7 @@ def test_tab_characters(parser):
 def test_comment_lines(parser):
     """Test handling of comment lines."""
     input_text = (
+        "\n"
         "Role: Test\n"
         "    # This is a comment\n"
         "    Actual content\n"
@@ -483,10 +488,10 @@ def test_python_embedding(parser, setup_files):
 
     result = parser.parse(input_text, "test.txt", [])
     context = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
-    text_nodes = context.get_children_of_type(MetaphorASTNodeType.TEXT)
+    code_nodes = context.get_children_of_type(MetaphorASTNodeType.CODE)
 
     # Find the code block
-    code_text = "\n".join(node.value for node in text_nodes)
+    code_text = "\n".join(node.value for node in code_nodes)
     assert "```python" in code_text
     assert "def hello():" in code_text
     assert "print('Hello, World!')" in code_text
@@ -606,6 +611,38 @@ def test_file_not_found(parser):
     assert any("File not found" in str(error.message) for error in exc_info.value.errors)
 
 
+def test_action_fenced_code_blocks(parser):
+    """Test handling of fenced code blocks."""
+    input_text = (
+        "Action: Test\n"
+        "    Before code\n"
+        "    ```python\n"
+        "    def hello():\n"
+        "        print('Hello')\n"
+        "\n"
+        "        print('World')\n"
+        "    ```\n"
+        "    After code\n"
+    )
+
+    result = parser.parse(input_text, "test.txt", [])
+    action = result.get_children_of_type(MetaphorASTNodeType.ACTION)[0]
+    text_nodes = action.get_children_of_type(MetaphorASTNodeType.TEXT)
+    code_nodes = action.get_children_of_type(MetaphorASTNodeType.CODE)
+
+    # Convert text nodes to list of values for easier testing
+    text_values = [node.value for node in text_nodes]
+    code_values = [node.value for node in code_nodes]
+    assert "Before code" in text_values
+    assert "```python" in code_values
+    assert "def hello():" in code_values
+    assert "    print('Hello')" in code_values
+    assert "" in code_values
+    assert "    print('World')" in code_values
+    assert "```" in code_values
+    assert "After code" in text_values
+
+
 def test_action_unexpected_token(tmp_path):
     """Test handling of unexpected tokens in Action blocks"""
     p = tmp_path / "action_bad_token.m6r"
@@ -707,6 +744,26 @@ def test_action_late_text(tmp_path):
     assert "Text must come first in an 'Action' block" in str(exc_info.value.errors[0].message)
 
 
+def test_action_late_code(tmp_path):
+    """Test handling of code after inner Action in Action blocks"""
+    p = tmp_path / "action_late_text.m6r"
+    p.write_text(
+        "Action: TestAction\n" \
+        "    First text\n" \
+        "    Action: Inner\n" \
+        "        Inner action\n" \
+        "    ```python\n" \
+        "    shouldn't be here!\n" \
+        "    ```\n"
+    )
+
+    parser = MetaphorParser()
+    with pytest.raises(MetaphorParserError) as exc_info:
+        parser.parse_file(str(p), [])
+
+    assert "Code must come first in an 'Action' block" in str(exc_info.value.errors[0].message)
+
+
 def test_action_duplicate_sections(parser, tmp_path):
     """Test handling of duplicate sections"""
     p = tmp_path / "duplicate.m6r"
@@ -721,6 +778,38 @@ def test_action_duplicate_sections(parser, tmp_path):
         parser.parse_file(str(p), [])
 
     assert "'Action' already defined" in str(exc_info.value.errors[0].message)
+
+
+def test_context_fenced_code_blocks(parser):
+    """Test handling of fenced code blocks."""
+    input_text = (
+        "Context: Test\n"
+        "    Before code\n"
+        "    ```python\n"
+        "    def hello():\n"
+        "        print('Hello')\n"
+        "\n"
+        "        print('World')\n"
+        "    ```\n"
+        "    After code\n"
+    )
+
+    result = parser.parse(input_text, "test.txt", [])
+    context = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
+    text_nodes = context.get_children_of_type(MetaphorASTNodeType.TEXT)
+    code_nodes = context.get_children_of_type(MetaphorASTNodeType.CODE)
+
+    # Convert text nodes to list of values for easier testing
+    text_values = [node.value for node in text_nodes]
+    code_values = [node.value for node in code_nodes]
+    assert "Before code" in text_values
+    assert "```python" in code_values
+    assert "def hello():" in code_values
+    assert "    print('Hello')" in code_values
+    assert "" in code_values
+    assert "    print('World')" in code_values
+    assert "```" in code_values
+    assert "After code" in text_values
 
 
 def test_context_missing_indent(tmp_path):
@@ -777,7 +866,7 @@ def test_context_late_text(tmp_path):
         "Context: TestContext\n" \
         "    First text\n" \
         "    Context: Inner\n" \
-        "        Inner content\n" \
+        "        Inner context\n" \
         "    Late text is wrong here\n"
     )
 
@@ -786,6 +875,26 @@ def test_context_late_text(tmp_path):
         parser.parse_file(str(p), [])
 
     assert "Text must come first in a 'Context' block" in str(exc_info.value.errors[0].message)
+
+
+def test_context_late_code(tmp_path):
+    """Test handling of code after inner Context in Context blocks"""
+    p = tmp_path / "action_late_text.m6r"
+    p.write_text(
+        "Context: TestContext\n" \
+        "    First text\n" \
+        "    Context: Inner\n" \
+        "        Inner context\n" \
+        "    ```python\n" \
+        "    shouldn't be here!\n" \
+        "    ```\n"
+    )
+
+    parser = MetaphorParser()
+    with pytest.raises(MetaphorParserError) as exc_info:
+        parser.parse_file(str(p), [])
+
+    assert "Code must come first in a 'Context' block" in str(exc_info.value.errors[0].message)
 
 
 def test_context_duplicate_sections(parser, tmp_path):
@@ -802,6 +911,38 @@ def test_context_duplicate_sections(parser, tmp_path):
         parser.parse_file(str(p), [])
 
     assert "'Context' already defined" in str(exc_info.value.errors[0].message)
+
+
+def test_role_fenced_code_blocks(parser):
+    """Test handling of fenced code blocks."""
+    input_text = (
+        "Role: Test\n"
+        "    Before code\n"
+        "    ```python\n"
+        "    def hello():\n"
+        "        print('Hello')\n"
+        "\n"
+        "        print('World')\n"
+        "    ```\n"
+        "    After code\n"
+    )
+
+    result = parser.parse(input_text, "test.txt", [])
+    role = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
+    text_nodes = role.get_children_of_type(MetaphorASTNodeType.TEXT)
+    code_nodes = role.get_children_of_type(MetaphorASTNodeType.CODE)
+
+    # Convert text nodes to list of values for easier testing
+    text_values = [node.value for node in text_nodes]
+    code_values = [node.value for node in code_nodes]
+    assert "Before code" in text_values
+    assert "```python" in code_values
+    assert "def hello():" in code_values
+    assert "    print('Hello')" in code_values
+    assert "" in code_values
+    assert "    print('World')" in code_values
+    assert "```" in code_values
+    assert "After code" in text_values
 
 
 def test_role_unexpected_token(tmp_path):
@@ -884,6 +1025,26 @@ def test_role_late_text(tmp_path):
         parser.parse_file(str(p), [])
 
     assert "Text must come first in a 'Role' block" in str(exc_info.value.errors[0].message)
+
+
+def test_role_late_code(tmp_path):
+    """Test handling of code after inner Role in Role blocks"""
+    p = tmp_path / "action_late_text.m6r"
+    p.write_text(
+        "Role: TestRole\n" \
+        "    First text\n" \
+        "    Role: Inner\n" \
+        "        Inner role\n" \
+        "    ```python\n" \
+        "    shouldn't be here!\n" \
+        "    ```\n"
+    )
+
+    parser = MetaphorParser()
+    with pytest.raises(MetaphorParserError) as exc_info:
+        parser.parse_file(str(p), [])
+
+    assert "Code must come first in a 'Role' block" in str(exc_info.value.errors[0].message)
 
 
 def test_role_duplicate_sections(parser, tmp_path):
@@ -1171,14 +1332,17 @@ def test_wildcard_embed(parser, tmp_path):
         embedded_text = [
             node for node in context.children if node.node_type == MetaphorASTNodeType.TEXT
         ]
+        embedded_code = [
+            node for node in context.children if node.node_type == MetaphorASTNodeType.CODE
+        ]
 
         # Should find both filenames
         assert any("test1.txt" in node.value for node in embedded_text)
         assert any("test2.txt" in node.value for node in embedded_text)
 
         # Should find both contents
-        assert any("Content 1" in node.value for node in embedded_text)
-        assert any("Content 2" in node.value for node in embedded_text)
+        assert any("Content 1" in node.value for node in embedded_code)
+        assert any("Content 2" in node.value for node in embedded_code)
     finally:
         os.chdir(current_dir)
 
@@ -1252,6 +1416,9 @@ def test_recursive_embed(tmp_path):
         embedded_text = [
             node for node in context.children if node.node_type == MetaphorASTNodeType.TEXT
         ]
+        embedded_code = [
+            node for node in context.children if node.node_type == MetaphorASTNodeType.CODE
+        ]
 
         # Should find all filenames
         assert any("root.txt" in node.value for node in embedded_text)
@@ -1259,8 +1426,8 @@ def test_recursive_embed(tmp_path):
         assert any("level2.txt" in node.value for node in embedded_text)
 
         # Should find all contents
-        assert any("Root content" in node.value for node in embedded_text)
-        assert any("Level 1 content" in node.value for node in embedded_text)
-        assert any("Level 2 content" in node.value for node in embedded_text)
+        assert any("Root content" in node.value for node in embedded_code)
+        assert any("Level 1 content" in node.value for node in embedded_code)
+        assert any("Level 2 content" in node.value for node in embedded_code)
     finally:
         os.chdir(current_dir)

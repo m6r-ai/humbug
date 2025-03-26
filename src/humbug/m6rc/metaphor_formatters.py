@@ -37,7 +37,22 @@ def _format_node(node: MetaphorASTNode, depth: int, out: TextIO) -> None:
         out: Output buffer to write to
     """
     if node.node_type != MetaphorASTNodeType.ROOT:
+        if node.node_type == MetaphorASTNodeType.CODE:
+            out.write(f"{node.value}\n")
+            return
+
         if node.node_type == MetaphorASTNodeType.TEXT:
+            if node.value == "":
+                current_pos = out.tell()
+                if current_pos <= 1:
+                    return
+
+                out.seek(current_pos - 2)
+                prev_char = out.read(2)
+                out.seek(current_pos)
+                if prev_char == '\n\n':
+                    return
+
             out.write(f"{node.value}\n")
             return
 

@@ -98,9 +98,10 @@ class EmbedLexer:
     def _tokenize(self) -> None:
         """Tokenizes the input file and handles embedded content."""
         self.tokens.append(Token(TokenType.TEXT, f"File: {self.filename}", "", self.filename, 0, 1))
+        self.tokens.append(Token(TokenType.TEXT, "", "", self.filename, 0, 1))
         self.tokens.append(
             Token(
-                TokenType.TEXT,
+                TokenType.CODE,
                 "```" + self._get_language_from_file_extension(self.filename),
                 "",
                 self.filename,
@@ -111,8 +112,9 @@ class EmbedLexer:
 
         lines = self.input.splitlines()
         for line in lines:
-            token = Token(TokenType.TEXT, line, line, self.filename, self.current_line, 1)
+            token = Token(TokenType.CODE, line, line, self.filename, self.current_line, 1)
             self.tokens.append(token)
             self.current_line += 1
 
-        self.tokens.append(Token(TokenType.TEXT, "```", "", self.filename, self.current_line, 1))
+        self.tokens.append(Token(TokenType.CODE, "```", "", self.filename, self.current_line, 1))
+        self.tokens.append(Token(TokenType.TEXT, "", "", self.filename, self.current_line, 1))

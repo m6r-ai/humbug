@@ -176,13 +176,19 @@ class MetaphorParser:
 
                     return self.syntax_tree
                 else:
+                    # Ignore blank lines
+                    if token.type == TokenType.TEXT and token.value == "":
+                        continue
+
                     self._record_syntax_error(token, f"Unexpected token: {token.value} at top level")
+
         except FileNotFoundError as e:
             err_token = self.current_token
             self.parse_errors.append(MetaphorParserSyntaxError(
                 f"{e}", err_token.filename, err_token.line, err_token.column, err_token.input
             ))
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
+
         except MetaphorParserFileAlreadyUsedError as e:
             self.parse_errors.append(MetaphorParserSyntaxError(
                 f"The file '{e.filename}' has already been used",
@@ -213,11 +219,13 @@ class MetaphorParser:
             self._check_file_not_loaded(filename)
             input_text = self._read_file(filename)
             return self.parse(input_text, filename, search_paths, embed_path)
+
         except FileNotFoundError as e:
             self.parse_errors.append(MetaphorParserSyntaxError(
                 f"{e}", "", 0, 0, ""
             ))
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
+
         except MetaphorParserError as e:
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
 
@@ -238,6 +246,15 @@ class MetaphorParser:
                 return token
 
         return Token(TokenType.END_OF_FILE, "", "", "", 0, 0)
+
+    def get_next_non_blank_token(self) -> Token:
+        """Get the next token that is not a blank line."""
+        token = None
+
+        while True:
+            token = self.get_next_token()
+            if not token or token.type != TokenType.TEXT or token.value != "":
+                return token
 
     def _record_syntax_error(self, token, message):
         """Raise a syntax error and add it to the error list."""
@@ -265,12 +282,16 @@ class MetaphorParser:
         try:
             with open(filename, 'r', encoding='utf-8') as file:
                 return file.read()
+
         except FileNotFoundError as e:
             raise FileNotFoundError(f"File not found: {filename}") from e
+
         except PermissionError as e:
             raise FileNotFoundError(f"You do not have permission to access: {filename}") from e
+
         except IsADirectoryError as e:
             raise FileNotFoundError(f"Is a directory: {filename}") from e
+
         except OSError as e:
             raise FileNotFoundError(f"OS error: {e}") from e
 
@@ -286,6 +307,10 @@ class MetaphorParser:
         """Parse a text block."""
         return MetaphorASTNode(MetaphorASTNodeType.TEXT, token.value)
 
+    def _parse_code(self, token):
+        """Parse a code block."""
+        return MetaphorASTNode(MetaphorASTNodeType.CODE, token.value)
+
     def _parse_action(self, token):
         """Parse an action block and construct its AST node."""
         label_name = ""
@@ -295,7 +320,7 @@ class MetaphorParser:
         init_token = self.get_next_token()
         if init_token.type == TokenType.KEYWORD_TEXT:
             label_name = init_token.value
-            indent_token = self.get_next_token()
+            indent_token = self.get_next_non_blank_token()
             if indent_token.type != TokenType.INDENT:
                 self._record_syntax_error(
                     token,
@@ -313,6 +338,11 @@ class MetaphorParser:
                     self._record_syntax_error(token, "Text must come first in an 'Action' block")
 
                 action_node.attach_child(self._parse_text(token))
+            elif token.type == TokenType.CODE:
+                if seen_token_type != TokenType.NONE:
+                    self._record_syntax_error(token, "Code must come first in an 'Action' block")
+
+                action_node.attach_child(self._parse_code(token))
             elif token.type == TokenType.ACTION:
                 action_node.attach_child(self._parse_action(token))
                 seen_token_type = TokenType.ACTION
@@ -333,7 +363,7 @@ class MetaphorParser:
         init_token = self.get_next_token()
         if init_token.type == TokenType.KEYWORD_TEXT:
             label_name = init_token.value
-            indent_token = self.get_next_token()
+            indent_token = self.get_next_non_blank_token()
             if indent_token.type != TokenType.INDENT:
                 self._record_syntax_error(
                     token,
@@ -351,6 +381,11 @@ class MetaphorParser:
                     self._record_syntax_error(token, "Text must come first in a 'Context' block")
 
                 context_node.attach_child(self._parse_text(token))
+            elif token.type == TokenType.CODE:
+                if seen_token_type != TokenType.NONE:
+                    self._record_syntax_error(token, "Code must come first in a 'Context' block")
+
+                context_node.attach_child(self._parse_code(token))
             elif token.type == TokenType.CONTEXT:
                 context_node.attach_child(self._parse_context(token))
                 seen_token_type = TokenType.CONTEXT
@@ -371,7 +406,7 @@ class MetaphorParser:
         init_token = self.get_next_token()
         if init_token.type == TokenType.KEYWORD_TEXT:
             label_name = init_token.value
-            indent_token = self.get_next_token()
+            indent_token = self.get_next_non_blank_token()
             if indent_token.type != TokenType.INDENT:
                 self._record_syntax_error(
                     token,
@@ -389,6 +424,11 @@ class MetaphorParser:
                     self._record_syntax_error(token, "Text must come first in a 'Role' block")
 
                 role_node.attach_child(self._parse_text(token))
+            elif token.type == TokenType.CODE:
+                if seen_token_type != TokenType.NONE:
+                    self._record_syntax_error(token, "Code must come first in a 'Role' block")
+
+                role_node.attach_child(self._parse_code(token))
             elif token.type == TokenType.ROLE:
                 role_node.attach_child(self._parse_role(token))
                 seen_token_type = TokenType.ROLE
