@@ -55,12 +55,6 @@ the cloud-based AIs.  To use them you'll need to get an API key (they're availab
 provider websites).  Most of them require you to pay for access, but Google and Mistral both currently offer
 free API keys for low volume testing, so you can get started with either, or both, of them.
 
-## Some examples
-
-![Humbug in action](./docs/humbug-v0.7-1.webp)
-
-![Humbug in action](./docs/humbug-v0.7-2.webp)
-
 ## Join the community on Discord
 
 If you want to engage with other users and developers, you can join us on [Discord](https://discord.gg/GZhJ7ZtgwN).
@@ -80,6 +74,14 @@ v0.8 adds several new features:
   easier to read and hides the markdown annotations.
 - Added support for Google Gemini 2.0 pro (experimental).
 - Folded an implementation of the Metaphor compiler directly into Humbug.
+
+## Some examples
+
+![Humbug in action](./docs/humbug-v0.8-1.webp)
+
+![Humbug in action](./docs/humbug-v0.8-2.webp)
+
+![Humbug in action](./docs/humbug-v0.8-3.webp)
 
 ## Features
 
