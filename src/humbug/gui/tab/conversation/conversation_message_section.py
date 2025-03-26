@@ -20,7 +20,6 @@ from humbug.gui.tab.conversation.conversation_language_highlighter import Conver
 from humbug.gui.tab.conversation.conversation_markdown_renderer import ConversationMarkdownRenderer
 from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.language.language_manager import LanguageManager
-from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -134,12 +133,16 @@ class ConversationMessageSection(QFrame):
         return self._language
 
     def set_language(self, language: ProgrammingLanguage) -> None:
+        """Set the programming language to use for this message section"""
         self._language = language
 
         if language is None:
             self._use_markdown = not self._is_input
-            self._highlighter = ConversationHighlighter(self._text_area.document())
-            self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
+            if self._use_markdown:
+                self._highlighter = None
+            else:
+                self._highlighter = ConversationHighlighter(self._text_area.document())
+                self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
         else:
             self._use_markdown = False
             self._highlighter = ConversationLanguageHighlighter(self._text_area.document())
@@ -239,6 +242,7 @@ class ConversationMessageSection(QFrame):
                 f.write(content)
 
             return True
+
         except Exception as e:
             self._logger.error("Failed to save file: %s", str(e))
             MessageBox.show_message(
@@ -260,10 +264,6 @@ class ConversationMessageSection(QFrame):
         if not self._use_markdown:
             self._text_area.set_text(content.content)
             return
-
-#        print("-------------------------\n")
-#        printer = MarkdownASTPrinter()
-#        printer.visit(content)
 
         # Store for re-styling
         self._content_node = content
@@ -504,4 +504,5 @@ class ConversationMessageSection(QFrame):
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode != self._init_colour_mode:
             self._init_colour_mode = self._style_manager.color_mode
-            self._highlighter.rehighlight()
+            if self._highlighter:
+                self._highlighter.rehighlight()

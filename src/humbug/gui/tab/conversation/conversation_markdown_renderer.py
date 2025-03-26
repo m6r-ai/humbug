@@ -45,10 +45,17 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # Clear the document first
+        # Treat this entire operation as one "edit" so Qt doesn't attempt to
+        # rendering as we're adding things.  It's *much* faster to do this as
+        # one batch update.
+        cursor = self._cursor
+        cursor.beginEditBlock()
+
+        # Clear the document.  At some point in the future we may want to do
+        # incremental edits instead.
         self._document.clear()
 
-        self._cursor.setBlockFormat(self._orig_block_format)
+        cursor.setBlockFormat(self._orig_block_format)
 
         # Process all children
         for child in node.children:
@@ -56,11 +63,13 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # If our last block is empty then delete it
         if self._cursor.block().text() == "":
-            cursor = self._cursor
             cursor.movePosition(QTextCursor.PreviousBlock)
             cursor.movePosition(QTextCursor.EndOfBlock)
             cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
             cursor.removeSelectedText()
+
+        # Enable all the changes to render
+        cursor.endEditBlock()
 
     def follows_list_node(self, node):
         """
