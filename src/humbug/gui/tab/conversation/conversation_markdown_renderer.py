@@ -9,9 +9,7 @@ from PySide6.QtGui import (
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.markdown.markdown_ast_node import (
-    MarkdownASTVisitor, MarkdownOrderedListNode, MarkdownUnorderedListNode
-)
+from humbug.markdown.markdown_ast_node import MarkdownASTVisitor
 
 
 class ConversationMarkdownRenderer(MarkdownASTVisitor):
@@ -32,6 +30,8 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._lists = []
         self._list_level = 0
+
+        self._default_font_height = 0
 
         self._style_manager = StyleManager()
 
@@ -55,6 +55,12 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # incremental edits instead.
         self._document.clear()
 
+        # Set up the default font size
+        font = QFont()
+        font.setPointSizeF(self._style_manager.base_font_size)
+        font_metrics = QFontMetricsF(font)
+        self._default_font_height = font_metrics.height()
+
         cursor.setBlockFormat(self._orig_block_format)
 
         # Process all children
@@ -70,19 +76,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Enable all the changes to render
         cursor.endEditBlock()
-
-    def follows_list_node(self, node):
-        """
-        Check if the given node follows a list node.
-
-        Args:
-            node: The node to check
-
-        Returns:
-            True if the node follows a list node, False otherwise
-        """
-        previous = node.previous_sibling()
-        return previous is not None and isinstance(previous, (MarkdownOrderedListNode, MarkdownUnorderedListNode))
 
     def visit_MarkdownParagraphNode(self, node):  # pylint: disable=invalid-name
         """
@@ -102,18 +95,8 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # If we're in a list then ignore this.  We want our list formatting consistent.
         if not self._lists:
-            font = QFont()
-            font.setPointSizeF(self._style_manager.base_font_size)
-            font_metrics = QFontMetricsF(font)
             block_format = QTextBlockFormat(orig_block_format)
-
-            # Always set bottom margin
-            block_format.setBottomMargin(font_metrics.height())
-
-            # Set top margin if this node follows a list node
-            if self.follows_list_node(node):
-                block_format.setTopMargin(font_metrics.height())
-
+            block_format.setBottomMargin(self._default_font_height)
             self._cursor.setBlockFormat(block_format)
 
         # Process all inline content
@@ -143,26 +126,24 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         orig_char_format = self._cursor.charFormat()
 
         char_format = QTextCharFormat(orig_char_format)
+
+        multipliers = [2.0, 1.782, 1.587, 1.414, 1.26, 1.122]
         level = min(node.level, 6) - 1  # Convert to 0-based index
-        font_size = (24 - (level * 2)) * self._style_manager.zoom_factor
+
+        base_font_size = self._style_manager.base_font_size
+        font_multiplier = ((self._style_manager.base_font_size * 2.0) - multipliers[level]) / base_font_size
+        font_size = base_font_size * font_multiplier * self._style_manager.zoom_factor
         char_format.setFontPointSize(font_size)
         char_format.setFontWeight(QFont.Bold)
         self._cursor.setCharFormat(char_format)  # Apply heading character format
 
         # Apply block format (heading level)
-        font = QFont()
-        font.setPointSizeF(font_size)
-        font_metrics = QFontMetricsF(font)
         block_format = QTextBlockFormat()
         block_format.setHeadingLevel(level)
+        if node.previous_sibling():
+            block_format.setTopMargin(self._default_font_height * (font_multiplier))
 
-        # Always set bottom margin
-        block_format.setBottomMargin(font_metrics.height())
-
-        # Set top margin if this node follows a list node
-        if self.follows_list_node(node):
-            block_format.setTopMargin(font_metrics.height())
-
+        block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
 
         # Process all inline content for the heading
@@ -281,13 +262,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         block_format = QTextBlockFormat()
         block_format.setIndent(1)  # Indent the block
 
-        # Set top margin if this node follows a list node
-        if self.follows_list_node(node):
-            font = QFont()
-            font.setPointSizeF(self._style_manager.base_font_size)
-            font_metrics = QFontMetricsF(font)
-            block_format.setTopMargin(font_metrics.height())
-
         # Apply the block format
         self._cursor.setBlockFormat(block_format)
 
@@ -348,6 +322,10 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._lists.pop()
 
+        block_format = self._cursor.blockFormat()
+        block_format.setBottomMargin(self._default_font_height)
+        self._cursor.setBlockFormat(block_format)
+
         # Exit this list level
         self._list_level -= 1
 
@@ -392,6 +370,10 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             self.visit(child)
 
         self._lists.pop()
+
+        block_format = self._cursor.blockFormat()
+        block_format.setBottomMargin(self._default_font_height)
+        self._cursor.setBlockFormat(block_format)
 
         # Exit this list level
         self._list_level -= 1
