@@ -95,6 +95,14 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
+        "gemini-2.5-pro-exp-03-25": AIModel(
+            name="gemini-2.5-pro-exp-03-25",
+            provider="google",
+            context_window=1000000,
+            max_output_tokens=64000,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
+        ),
 
         # M6R models
         "tessa": AIModel(
