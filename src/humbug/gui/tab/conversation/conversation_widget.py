@@ -529,7 +529,7 @@ class ConversationWidget(QWidget):
             self._auto_scroll = True
 
     @Slot(int, int)
-    def _on_scroll_range_changed(self, _minimum, _maximum):
+    def _on_scroll_range_changed(self, _minimum, maximum):
         """Handle the scroll range changing."""
         # If we're set to auto-scroll then do so now
         total_height = self._messages_container.height()
@@ -538,17 +538,14 @@ class ConversationWidget(QWidget):
 
         current_pos = self._scroll_area.verticalScrollBar().value()
 
-        # Work out what we're supposed to do about scrolling.
-        vbar_maximum = self._scroll_area.verticalScrollBar().maximum()
-
         if self._auto_scroll:
             self._scroll_to_bottom()
         elif current_pos > last_insertion_point:
-            if self._last_scroll_maximum != vbar_maximum:
-                max_diff = vbar_maximum - self._last_scroll_maximum
+            if self._last_scroll_maximum != maximum:
+                max_diff = maximum - self._last_scroll_maximum
                 self._scroll_area.verticalScrollBar().setValue(current_pos + max_diff)
 
-        self._last_scroll_maximum = vbar_maximum
+        self._last_scroll_maximum = maximum
 
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
