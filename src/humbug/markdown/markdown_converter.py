@@ -24,7 +24,7 @@ class MarkdownConverter:
 
     def __init__(self):
         """Initialize the markdown converter with an AST builder and HTML renderer."""
-        self.ast_builder = MarkdownASTBuilder()
+        self.ast_builder = MarkdownASTBuilder(True)
 
         self._logger = logging.getLogger("ConversationMarkdownConverter")
 

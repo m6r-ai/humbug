@@ -25,13 +25,19 @@ class MarkdownASTBuilder:
     Abstract Syntax Tree (AST) representation.
     """
 
-    def __init__(self):
+    def __init__(self, no_underscores: bool):
         """Initialize the AST builder with regex patterns for markdown elements."""
         # Regular expressions for markdown elements
-        self._heading_pattern = re.compile(r'^(#{1,6})\s+(.*?)(?:\s+#{1,6})?$', re.MULTILINE)
+        self._heading_pattern = re.compile(r'^(#{1,10})\s+(.*?)(?:\s+#{1,10})?$', re.MULTILINE)
         self._inline_code_pattern = re.compile(r'`([^`]+)`')
-        self._bold_pattern = re.compile(r'\*\*(.*?)\*\*|\b__(.*?)__\b')
-        self._italic_pattern = re.compile(r'\*([^*]+)\*|\b_([^_]+)_\b')
+
+        if no_underscores:
+            self._bold_pattern = re.compile(r'\*\*(.*?)\*\*')
+            self._italic_pattern = re.compile(r'\*([^*]+)\*')
+        else:
+            self._bold_pattern = re.compile(r'\*\*(.*?)\*\*|\b__(.*?)__\b')
+            self._italic_pattern = re.compile(r'\*([^*]+)\*|\b_([^_]+)_\b')
+
         self._unordered_list_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
         self._ordered_list_pattern = re.compile(r'^(\s*)(\d+)\.[ \t]+(.*?)$', re.MULTILINE)
         self._code_block_pattern = re.compile(r'^```(?:([\w\-#+./*():\s]+))?$')
