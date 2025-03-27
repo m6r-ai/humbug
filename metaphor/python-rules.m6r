@@ -1,6 +1,6 @@
 # Standard set of Python coding rules.
 
-Context: Python implementation and dependencies
+Context: Python implementation rules
     As an engineer working with the application, I want the application to be easy to use and understand,
     so I can maintain and enhance it over time.
 
