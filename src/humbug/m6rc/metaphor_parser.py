@@ -151,7 +151,7 @@ class MetaphorParser:
             seen_role_tree: bool = False
 
             while True:
-                token = self.get_next_token()
+                token = self.get_next_non_blank_token()
                 if token.type == TokenType.ACTION:
                     if seen_action_tree:
                         self._record_syntax_error(token, "'Action' already defined")
@@ -176,10 +176,6 @@ class MetaphorParser:
 
                     return self.syntax_tree
                 else:
-                    # Ignore blank lines
-                    if token.type == TokenType.TEXT and token.value == "":
-                        continue
-
                     self._record_syntax_error(token, f"Unexpected token: {token.value} at top level")
 
         except FileNotFoundError as e:
@@ -334,7 +330,7 @@ class MetaphorParser:
         while True:
             token = self.get_next_token()
             if token.type == TokenType.TEXT:
-                if seen_token_type != TokenType.NONE:
+                if token.value != "" and seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Text must come first in an 'Action' block")
 
                 action_node.attach_child(self._parse_text(token))
@@ -377,7 +373,7 @@ class MetaphorParser:
         while True:
             token = self.get_next_token()
             if token.type == TokenType.TEXT:
-                if seen_token_type != TokenType.NONE:
+                if token.value != "" and seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Text must come first in a 'Context' block")
 
                 context_node.attach_child(self._parse_text(token))
@@ -420,7 +416,7 @@ class MetaphorParser:
         while True:
             token = self.get_next_token()
             if token.type == TokenType.TEXT:
-                if seen_token_type != TokenType.NONE:
+                if token.value != "" and seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Text must come first in a 'Role' block")
 
                 role_node.attach_child(self._parse_text(token))
