@@ -4,11 +4,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Optional, Dict
-
-from humbug.m6rc import (
-    MetaphorParser, MetaphorParserError, format_ast, format_errors
-)
+from typing import Optional
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
@@ -30,6 +26,7 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
+from humbug.m6rc import MetaphorParser, MetaphorParserError, format_ast, format_errors
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
