@@ -206,6 +206,7 @@ src/humbug/
 ├── ai/            # AI backend and conversation implementations
 ├── gui/           # GUI components
 ├── language/      # I18n management and strings
+├── m6rc/          # Metaphor compiler
 ├── markdown/      # Markdown parser
 ├── mindspace/     # Mindspace management
 ├── syntax/        # Syntax highlighting and parsing
