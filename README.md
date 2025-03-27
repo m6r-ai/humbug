@@ -1,4 +1,4 @@
-# Humbug v0.8
+# Humbug v0.9
 
 Humbug is an extensible open-source tool designed to help you build and maintain software using AI.  It goes beyond
 AI-powered app builders and IDEs by helping you capture what you want your software to do so AI can keep helping you
@@ -61,20 +61,9 @@ If you want to engage with other users and developers, you can join us on [Disco
 
 ## What's new
 
-v0.8 adds several new features:
+v0.9 adds several new features:
 
-- Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes over the
-  "Ctrl+," shortcut, and "Conversation Settings" now moves to the "Ctrl+Shift+," shortcut.  Any API keys
-  configured for earlier versions of Humbug will be carried forwards.
-- The font size and language settings have moved from mindspace settings to user settings.
-- The default theme can now be set in the user settings.
-- Updated the Edit menu so the old "Dark Mode" option is now also replaced with "Display Theme" that
-  matches the user setting.
-- Messages from the AI are now rendered using the markdown formatting provided.  This makes them
-  easier to read and hides the markdown annotations.
-- Added support for Google Gemini 2.0 pro (experimental) and Gemini 2.5 pro (experimental).
-- Folded an implementation of the Metaphor compiler directly into Humbug.  Updated this so compiled Metaphor prompts
-  render more cleanly within the UI.
+TBD
 
 ## Some examples
 
