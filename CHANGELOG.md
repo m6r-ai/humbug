@@ -4,6 +4,11 @@
 
 New features:
 
+Bug fixes:
+
+- The Metaphor compiler's parser is now more permissive about the use of blank lines to help improve
+  the readability of inluded Metaphor.
+
 ## v0.8 (2025-03-27)
 
 New features:
