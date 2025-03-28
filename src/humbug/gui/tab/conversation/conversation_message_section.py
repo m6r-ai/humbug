@@ -342,12 +342,11 @@ class ConversationMessageSection(QFrame):
             dim_highlight_color: QColor for other matches, defaults to dimmer highlight color
         """
         # Default colors if not provided
-        style_manager = StyleManager()
         if not highlight_color:
-            highlight_color = style_manager.get_color(ColorRole.TEXT_FOUND)
+            highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND)
 
         if not dim_highlight_color:
-            dim_highlight_color = style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
+            dim_highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
 
         # Create format for current match
         current_format = QTextCharFormat()
@@ -485,18 +484,19 @@ class ConversationMessageSection(QFrame):
             }}
         """
 
+        icon_base_size = 14
+        icon_size = QSize(16 * self._style_manager.zoom_factor, 14 * self._style_manager.zoom_factor)
+
         if self._copy_button:
-            icon_size = QSize(16 * self._style_manager.zoom_factor, 14 * self._style_manager.zoom_factor)
             self._copy_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("copy"), 14
+                self._style_manager.get_icon_path("copy"), icon_base_size
             )))
             self._copy_button.setIconSize(icon_size)
             self._copy_button.setStyleSheet(button_style)
 
         if self._save_as_button:
-            icon_size = QSize(16 * self._style_manager.zoom_factor, 14 * self._style_manager.zoom_factor)
             self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("save"), 14
+                self._style_manager.get_icon_path("save"), icon_base_size
             )))
             self._save_as_button.setIconSize(icon_size)
             self._save_as_button.setStyleSheet(button_style)

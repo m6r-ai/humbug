@@ -445,6 +445,9 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setText(strings.merge_column_right)
         self._swap_column_left_action.setText(strings.swap_column_left)
         self._swap_column_right_action.setText(strings.swap_column_right)
+        self._toggle_bookmark_action.setText(strings.bookmark_section)
+        self._next_bookmark_action.setText(strings.next_bookmark)
+        self._previous_bookmark_action.setText(strings.previous_bookmark)
 
         # Our logic for left and right reverses for right-to-left languages
         left_to_right = self._language_manager.left_to_right
@@ -959,22 +962,23 @@ class MainWindow(QMainWindow):
                 strings.error_opening_conversation.format(path, str(e))
             )
 
+    async def _fork_conversation_async(self):
+        """Async helper for forking."""
+        try:
+            await self._column_manager.fork_conversation()
+        except ConversationError as e:
+            strings = self._language_manager.strings
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.conversation_error_title,
+                strings.error_forking_conversation.format(str(e))
+            )
+
     def _fork_conversation(self):
         """Create a new conversation tab with the history of the current conversation."""
-        async def fork_and_handle_errors():
-            try:
-                await self._column_manager.fork_conversation()
-            except ConversationError as e:
-                strings = self._language_manager.strings
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.conversation_error_title,
-                    strings.error_forking_conversation.format(str(e))
-                )
-
         # Create task to fork conversation
-        asyncio.create_task(fork_and_handle_errors())
+        asyncio.create_task(self._fork_conversation_async())
 
     def _close_tab(self):
         """Close the current tab."""
