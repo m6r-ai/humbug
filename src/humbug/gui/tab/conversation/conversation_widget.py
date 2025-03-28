@@ -80,7 +80,8 @@ class ConversationWidget(QWidget):
     # Signal to request scrolling to a specific widget and position
     scrollRequested = Signal(QWidget, int)  # Widget to scroll to, position within widget
 
-    activated = Signal()  # Emits when parent should be activated by user interaction
+    # Emits when parent should be activated by user interaction
+    activated = Signal()
 
     def __init__(
         self,
@@ -188,6 +189,10 @@ class ConversationWidget(QWidget):
 
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode
+
+        # Tracking for focused message
+        self._focused_message_index = -1
+        self._input.focusChanged.connect(self._handle_input_focus_changed)
 
         # Add bookmark status
         self._is_bookmarked = False
@@ -565,6 +570,127 @@ class ConversationWidget(QWidget):
         for child in widget.findChildren(QWidget):
             child.installEventFilter(self._event_filter)
 
+    def _handle_input_focus_changed(self, has_focus: bool):
+        """Handle input box focus changes."""
+        if has_focus:
+            # Clear any message focus
+            if 0 <= self._focused_message_index < len(self._messages):
+                self._messages[self._focused_message_index].set_focused(False)
+                self._focused_message_index = -1
+
+    def navigate_to_next_message(self) -> bool:
+        """Navigate to the next message or input box if possible."""
+        # If input box is focused, we're already at the bottom
+        if self._input.hasFocus():
+            return False
+
+        # If no message is focused, start with the last message
+        if self._focused_message_index == -1 and self._messages:
+            self._focused_message_index = len(self._messages) - 1
+            self._focus_message(self._focused_message_index)
+            return True
+
+        # If we're at the last message, move to input box
+        if self._focused_message_index == len(self._messages) - 1:
+            # Clear focus on current message
+            self._messages[self._focused_message_index].set_focused(False)
+            self._focused_message_index = -1
+
+            # Focus input box
+            self._input.setFocus()
+            return True
+
+        # Otherwise move to next message
+        if self._focused_message_index < len(self._messages) - 1:
+            # Clear focus on current message
+            if 0 <= self._focused_message_index < len(self._messages):
+                self._messages[self._focused_message_index].set_focused(False)
+
+            self._focused_message_index += 1
+            self._focus_message(self._focused_message_index)
+            return True
+
+        return False
+
+    def navigate_to_previous_message(self) -> bool:
+        """Navigate to the previous message if possible."""
+        # If input box is focused, move to the last message
+        if self._input.hasFocus():
+            if self._messages:
+                # Clear any existing message focus
+                if 0 <= self._focused_message_index < len(self._messages):
+                    self._messages[self._focused_message_index].set_focused(False)
+
+                # Focus the last message
+                self._focused_message_index = len(self._messages) - 1
+                self._focus_message(self._focused_message_index)
+                return True
+
+            return False
+
+        # If no message is focused, start with the last message
+        if self._focused_message_index == -1 and self._messages:
+            self._focused_message_index = len(self._messages) - 1
+            self._focus_message(self._focused_message_index)
+            return True
+
+        # Otherwise move to previous message if possible
+        if self._focused_message_index > 0:
+            # Clear focus on current message
+            if 0 <= self._focused_message_index < len(self._messages):
+                self._messages[self._focused_message_index].set_focused(False)
+
+            self._focused_message_index -= 1
+            self._focus_message(self._focused_message_index)
+            return True
+
+        return False
+
+    def _focus_message(self, index: int):
+        """Focus and highlight the specified message."""
+        if 0 <= index < len(self._messages):
+            # Set visual focus
+            self._messages[index].set_focused(True)
+
+            # Scroll to make the message visible
+            self._scroll_to_message(self._messages[index])
+
+    def _scroll_to_message(self, message: ConversationMessage):
+        """Ensure the message is visible in the scroll area."""
+        # Get the position of the message in the scroll area
+        message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
+
+        # Calculate the visible region
+        scroll_value = self._scroll_area.verticalScrollBar().value()
+        viewport_height = self._scroll_area.viewport().height()
+
+        delta = message_pos.y() - scroll_value
+
+        # Determine if scrolling is needed
+        if delta < 0:
+            # Message is above visible area
+            self._scroll_area.verticalScrollBar().setValue(message_pos.y())
+        elif delta + message.height() > viewport_height:
+            # Message is below visible area
+            if message.height() > viewport_height:
+                self._scroll_area.verticalScrollBar().setValue(message_pos.y())
+            else:
+                self._scroll_area.verticalScrollBar().setValue(message_pos.y() + message.height() - viewport_height + 10)
+
+    def clear_message_focus(self):
+        """Clear focus from any focused message."""
+        if 0 <= self._focused_message_index < len(self._messages):
+            self._messages[self._focused_message_index].set_focused(False)
+            self._focused_message_index = -1
+
+    def can_navigate_next_message(self) -> bool:
+        """Check if navigation to next message is possible."""
+        return not self._input.hasFocus()
+
+    def can_navigate_previous_message(self) -> bool:
+        """Check if navigation to previous message is possible."""
+        return self._input.hasFocus() or (0 <= self._focused_message_index < len(self._messages) and self._focused_message_index > 0)
+
     def _toggle_message_bookmark(self, message_widget: ConversationMessage):
         """Toggle bookmark status for a message."""
         if message_widget in self._bookmarked_messages:
@@ -810,12 +936,12 @@ class ConversationWidget(QWidget):
         toggle_bookmark_action.triggered.connect(self.toggle_bookmark)
 
         next_bookmark_action = menu.addAction(self._language_manager.strings.next_bookmark)
-        next_bookmark_action.setEnabled(self.can_next_bookmark())
-        next_bookmark_action.triggered.connect(self.next_bookmark)
+        next_bookmark_action.setEnabled(self.can_navigate_next_bookmark())
+        next_bookmark_action.triggered.connect(self.navigate_next_bookmark)
 
         prev_bookmark_action = menu.addAction(self._language_manager.strings.previous_bookmark)
-        prev_bookmark_action.setEnabled(self.can_previous_bookmark())
-        prev_bookmark_action.triggered.connect(self.previous_bookmark)
+        prev_bookmark_action.setEnabled(self.can_navigate_previous_bookmark())
+        prev_bookmark_action.triggered.connect(self.navigate_previous_bookmark)
 
         # Show menu at click position
         menu.exec_(self.mapToGlobal(pos))
@@ -868,19 +994,19 @@ class ConversationWidget(QWidget):
 
         self._toggle_message_bookmark(focus_widget)
 
-    def can_next_bookmark(self) -> bool:
+    def can_navigate_next_bookmark(self) -> bool:
         """Can we go to a next bookmark?"""
         return bool(self._bookmarked_messages)
 
-    def next_bookmark(self) -> None:
+    def navigate_next_bookmark(self) -> None:
         """Move to the next bookmark."""
         self.navigate_bookmarks(forward=True)
 
-    def can_previous_bookmark(self) -> bool:
+    def can_navigate_previous_bookmark(self) -> bool:
         """Can we go to a previous bookmark?"""
         return bool(self._bookmarked_messages)
 
-    def previous_bookmark(self) -> None:
+    def navigate_previous_bookmark(self) -> None:
         """Move to the previous bookmark."""
         self.navigate_bookmarks(forward=False)
 

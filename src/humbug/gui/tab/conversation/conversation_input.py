@@ -18,6 +18,7 @@ class ConversationInput(ConversationMessage):
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
+    focusChanged = Signal(bool)
 
     def __init__(self, parent=None):
         """Initialize the conversation input widget."""
@@ -35,6 +36,16 @@ class ConversationInput(ConversationMessage):
 
         # Install an event filter so we can capture clicks anywhere and redirect them to the input box
         self.installEventFilter(self)
+
+    def focusInEvent(self, event):
+        """Handle focus in events."""
+        super().focusInEvent(event)
+        self.focusChanged.emit(True)
+
+    def focusOutEvent(self, event):
+        """Handle focus out events."""
+        super().focusOutEvent(event)
+        self.focusChanged.emit(False)
 
     def _handle_language_changed(self):
         self._update_header_text()

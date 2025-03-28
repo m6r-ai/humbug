@@ -379,6 +379,22 @@ class ConversationTab(TabBase):
         if dialog.exec() == QDialog.Accepted:
             self._conversation_widget.update_conversation_settings(dialog.get_settings())
 
+    def can_navigate_next_message(self) -> bool:
+        """Check if navigation to next message is possible."""
+        return self._conversation_widget.can_navigate_next_message()
+
+    def navigate_next_message(self) -> None:
+        """Navigate to the next message."""
+        self._conversation_widget.navigate_to_next_message()
+
+    def can_navigate_previous_message(self) -> bool:
+        """Check if navigation to previous message is possible."""
+        return self._conversation_widget.can_navigate_previous_message()
+
+    def navigate_previous_message(self) -> None:
+        """Navigate to the previous message."""
+        self._conversation_widget.navigate_to_previous_message()
+
     def can_toggle_bookmark(self) -> bool:
         """Can we toggle bookmarks?"""
         return self._conversation_widget.can_toggle_bookmark()
@@ -391,21 +407,21 @@ class ConversationTab(TabBase):
         """Toggle a bookmark at the current message."""
         self._conversation_widget.toggle_bookmark()
 
-    def can_next_bookmark(self) -> bool:
+    def can_navigate_next_bookmark(self) -> bool:
         """Can we go to a next bookmark?"""
-        return self._conversation_widget.can_next_bookmark()
+        return self._conversation_widget.can_navigate_next_bookmark()
 
-    def next_bookmark(self) -> None:
+    def navigate_next_bookmark(self) -> None:
         """Move to the next bookmark."""
-        self._conversation_widget.next_bookmark()
+        self._conversation_widget.navigate_next_bookmark()
 
-    def can_previous_bookmark(self) -> bool:
+    def can_navigate_previous_bookmark(self) -> bool:
         """Can we go to a previous bookmark?"""
-        return self._conversation_widget.can_previous_bookmark()
+        return self._conversation_widget.can_navigate_previous_bookmark()
 
-    def previous_bookmark(self) -> None:
+    def navigate_previous_bookmark(self) -> None:
         """Move to the previous bookmark."""
-        self._conversation_widget.previous_bookmark()
+        self._conversation_widget.navigate_previous_bookmark()
 
     def set_input_text(self, text: str):
         """Set the input text."""

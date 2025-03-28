@@ -44,6 +44,7 @@ class ColorRole(Enum):
 
     # Message colours
     MESSAGE_BACKGROUND = auto()         # Message background
+    MESSAGE_FOCUSED = auto()            # For highlighting the focused message
     MESSAGE_USER = auto()               # User message background
     MESSAGE_AI = auto()                 # AI response background
     MESSAGE_REASONING = auto()          # AI reasoning background

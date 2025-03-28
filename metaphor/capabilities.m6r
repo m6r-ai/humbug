@@ -1125,6 +1125,21 @@ Context: Capabilities
             Context: Separator
                 There will be a horizontal Separator
 
+            Context: Next Message
+                If the current tab is a conversation then this menu item will navigate to the next message in the
+                conversation from the one that's currently active.
+
+                This will be matched with a keyboard shortcut (e.g. "Alt+DownArrow" for Windows).
+
+            Context: Previous Message
+                If the current tab is a conversation then this menu item will navigate to the previous message in
+                the conversation from the one that's currently active.
+
+                This will be matched with a keyboard shortcut (e.g. "Alt+UpArrow" for Windows).
+
+            Context: Separator
+                There will be a horizontal Separator
+
             Context: Toggle Bookmark
                 If the current focus is a conversation message then this option will allow the user to bookmark
                 the message.  This option will have a checkmark to indicate if the bookmark is being added or removed.

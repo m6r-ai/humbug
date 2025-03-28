@@ -1195,15 +1195,12 @@ class ColumnManager(QWidget):
 
     def can_show_conversation_settings_dialog(self) -> bool:
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
-            return False
-
-        return True
+        return isinstance(tab, ConversationTab)
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab):
             return
 
         tab.show_conversation_settings_dialog()
@@ -1211,64 +1208,74 @@ class ColumnManager(QWidget):
     def handle_esc_key(self) -> bool:
         """Handle processing of the "Esc" key."""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab):
             return False
 
         tab.cancel_current_tasks()
         return True
 
+    def can_navigate_next_message(self) -> bool:
+        """Check if next message navigation is possible."""
+        tab = self._get_current_tab()
+        return isinstance(tab, ConversationTab) and tab.can_navigate_next_message()
+
+    def navigate_next_message(self) -> None:
+        """Navigate to next message in active conversation tab."""
+        tab = self._get_current_tab()
+        if isinstance(tab, ConversationTab):
+            tab.navigate_next_message()
+
+    def can_navigate_previous_message(self) -> bool:
+        """Check if previous message navigation is possible."""
+        tab = self._get_current_tab()
+        return isinstance(tab, ConversationTab) and tab.can_navigate_previous_message()
+
+    def navigate_previous_message(self) -> None:
+        """Navigate to previous message in active conversation tab."""
+        tab = self._get_current_tab()
+        if isinstance(tab, ConversationTab):
+            tab.navigate_previous_message()
+
     def can_toggle_bookmark(self) -> bool:
         """Can we toggle a bookmark?"""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
-            return False
-
-        return tab.can_toggle_bookmark()
+        return isinstance(tab, ConversationTab) and tab.can_toggle_bookmark()
 
     def is_checked_bookmark(self) -> bool:
         """Is the current bookmark set (checked)?"""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
-            return False
-
-        return tab.is_checked_bookmark()
+        return isinstance(tab, ConversationTab) and tab.is_checked_bookmark()
 
     def toggle_bookmark(self) -> None:
         """Handle toggling a bookmark."""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab):
             return
 
         tab.toggle_bookmark()
 
-    def can_next_bookmark(self) -> bool:
+    def can_navigate_next_bookmark(self) -> bool:
         """Can we move to the next bookmark?"""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
-            return False
+        return isinstance(tab, ConversationTab) and tab.can_navigate_next_bookmark()
 
-        return tab.can_next_bookmark()
-
-    def next_bookmark(self) -> None:
+    def navigate_next_bookmark(self) -> None:
         """Handle navigating to the next bookmark."""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab):
             return
 
-        tab.next_bookmark()
+        tab.navigate_next_bookmark()
 
-    def can_previous_bookmark(self) -> bool:
+    def can_navigate_previous_bookmark(self) -> bool:
         """Can we move to the next bookmark?"""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
-            return False
+        return isinstance(tab, ConversationTab) and tab.can_navigate_previous_bookmark()
 
-        return tab.can_previous_bookmark()
-
-    def previous_bookmark(self) -> None:
+    def navigate_previous_bookmark(self) -> None:
         """Handle navigating to the next bookmark."""
         tab = self._get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab):
             return
 
-        tab.previous_bookmark()
+        tab.navigate_previous_bookmark()

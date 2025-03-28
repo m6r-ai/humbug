@@ -54,6 +54,8 @@ class LanguageStrings:
     merge_column_right: str
     swap_column_left: str
     swap_column_right: str
+    next_message: str
+    previous_message: str
 
     # Message roles and labels
     role_you: str

@@ -59,6 +59,8 @@ def get_english_strings() -> LanguageStrings:
         merge_column_right="Merge Column Right",
         swap_column_left="Swap Column Left",
         swap_column_right="Swap Column Right",
+        next_message="Next Message",
+        previous_message="Previous Message",
 
         # Message roles
         role_you="You",

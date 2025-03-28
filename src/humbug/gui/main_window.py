@@ -187,6 +187,14 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action = QAction(strings.swap_column_right, self)
         self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Alt+]"))
 
+        self._next_message_action = QAction(strings.next_message, self)
+        self._next_message_action.setShortcut(QKeySequence("Alt+Down"))
+        self._next_message_action.triggered.connect(self._navigate_next_message)
+
+        self._previous_message_action = QAction(strings.previous_message, self)
+        self._previous_message_action.setShortcut(QKeySequence("Alt+Up"))
+        self._previous_message_action.triggered.connect(self._navigate_previous_message)
+
         self._toggle_bookmark_action = QAction(strings.bookmark_section, self)
         self._toggle_bookmark_action.setCheckable(True)
         self._toggle_bookmark_action.setShortcut(QKeySequence("Ctrl+B"))
@@ -194,11 +202,11 @@ class MainWindow(QMainWindow):
 
         self._next_bookmark_action = QAction(strings.next_bookmark, self)
         self._next_bookmark_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
-        self._next_bookmark_action.triggered.connect(self._next_bookmark)
+        self._next_bookmark_action.triggered.connect(self._navigate_next_bookmark)
 
         self._previous_bookmark_action = QAction(strings.previous_bookmark, self)
         self._previous_bookmark_action.setShortcut(QKeySequence("Ctrl+Shift+P"))
-        self._previous_bookmark_action.triggered.connect(self._previous_bookmark)
+        self._previous_bookmark_action.triggered.connect(self._navigate_previous_bookmark)
 
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
@@ -263,6 +271,9 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._merge_column_right_action)
         self._view_menu.addAction(self._swap_column_left_action)
         self._view_menu.addAction(self._swap_column_right_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._next_message_action)
+        self._view_menu.addAction(self._previous_message_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._toggle_bookmark_action)
         self._view_menu.addAction(self._next_bookmark_action)
@@ -382,9 +393,11 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setEnabled(column_manager.can_merge_column(not left_to_right))
         self._swap_column_left_action.setEnabled(column_manager.can_swap_column(left_to_right))
         self._swap_column_right_action.setEnabled(column_manager.can_swap_column(not left_to_right))
+        self._next_message_action.setEnabled(column_manager.can_navigate_next_message())
+        self._previous_message_action.setEnabled(column_manager.can_navigate_previous_message())
         self._toggle_bookmark_action.setEnabled(column_manager.can_toggle_bookmark())
-        self._next_bookmark_action.setEnabled(column_manager.can_next_bookmark())
-        self._previous_bookmark_action.setEnabled(column_manager.can_previous_bookmark())
+        self._next_bookmark_action.setEnabled(column_manager.can_navigate_next_bookmark())
+        self._previous_bookmark_action.setEnabled(column_manager.can_navigate_previous_bookmark())
 
     def _handle_language_changed(self) -> None:
         """Update UI text when language changes."""
@@ -445,6 +458,8 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setText(strings.merge_column_right)
         self._swap_column_left_action.setText(strings.swap_column_left)
         self._swap_column_right_action.setText(strings.swap_column_right)
+        self._next_message_action.setText(strings.next_message)
+        self._previous_message_action.setText(strings.previous_message)
         self._toggle_bookmark_action.setText(strings.bookmark_section)
         self._next_bookmark_action.setText(strings.next_bookmark)
         self._previous_bookmark_action.setText(strings.previous_bookmark)
@@ -988,17 +1003,25 @@ class MainWindow(QMainWindow):
         """Handle message submission."""
         self._column_manager.submit_message()
 
+    def _navigate_next_message(self):
+        """Navigate to the next message in conversation."""
+        self._column_manager.navigate_next_message()
+
+    def _navigate_previous_message(self):
+        """Navigate to the previous message in conversation."""
+        self._column_manager.navigate_previous_message()
+
     def _toggle_bookmark(self):
         """Handle toggling a bookmark."""
         self._column_manager.toggle_bookmark()
 
-    def _next_bookmark(self):
+    def _navigate_next_bookmark(self):
         """Move to the next bookmark."""
-        self._column_manager.next_bookmark()
+        self._column_manager.navigate_next_bookmark()
 
-    def _previous_bookmark(self):
+    def _navigate_previous_bookmark(self):
         """Move to the previous bookmark."""
-        self._column_manager.previous_bookmark()
+        self._column_manager.navigate_previous_bookmark()
 
     def _show_user_settings_dialog(self):
         """Show the user settings dialog."""

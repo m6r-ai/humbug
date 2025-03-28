@@ -59,6 +59,8 @@ def get_french_strings() -> LanguageStrings:
         merge_column_right="Fusionner avec la colonne de droite",
         swap_column_left="Échanger la colonne gauche",
         swap_column_right="Échanger la colonne de droite",
+        next_message="Message Suivant",
+        previous_message="Message Précédent",
 
         # Message roles
         role_you="Vous",

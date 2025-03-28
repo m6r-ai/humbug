@@ -59,6 +59,8 @@ def get_arabic_strings() -> LanguageStrings:
         merge_column_right="دمج مع العمود الأيمن",
         swap_column_left="عمود المبادلة إلى اليسار",
         swap_column_right="عمود المبادلة لليمين",
+        next_message="الرسالة التالية",
+        previous_message="الرسالة السابقة",
 
         # Message roles
         role_you="أنت",

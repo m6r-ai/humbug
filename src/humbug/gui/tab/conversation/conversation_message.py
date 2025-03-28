@@ -84,7 +84,7 @@ class ConversationMessage(QFrame):
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
 
-        # Add bookmark status
+        self._is_focused = False
         self._is_bookmarked = False
 
         # Track current message style
@@ -93,6 +93,16 @@ class ConversationMessage(QFrame):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
+
+    def is_focused(self) -> bool:
+        """Check if this message is focused."""
+        return self._is_focused
+
+    def set_focused(self, focused: bool):
+        """Set the focused state of this message."""
+        if self._is_focused != focused:
+            self._is_focused = focused
+            self._handle_style_changed()
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
@@ -326,8 +336,11 @@ class ConversationMessage(QFrame):
             color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
             section.apply_style(text_color, color, font)
 
-        # Main frame styling
-        border = ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else ColorRole.MESSAGE_BACKGROUND
+        # Determine border color based on state (focused takes precedence over bookmarked)
+        border = ColorRole.MESSAGE_FOCUSED if self._is_focused else \
+                 ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else \
+                 ColorRole.MESSAGE_BACKGROUND
+
         self.setStyleSheet(f"""
             QWidget {{
                 background-color: {background_color};
