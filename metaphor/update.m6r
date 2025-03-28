@@ -1,0 +1,27 @@
+# A template for planning updates to Humbug.
+
+Role:
+    You are a world class python programmer, highly skilled in accurate and performant software development.  You
+    are going to assist me in making modifications to my application.
+
+Context:
+    # Pull in the default Python coding rules for the project.
+    Include: metaphor/python-rules.m6r
+
+    # The project only uses external dependencies if there's no other choice.  This makes it
+    # much easier for the AI to know what it's working with.
+    Context: Dependencies
+        Leverage standard library tools before custom solutions, unless specifically instructed, or
+        unless a depdency is already in use.
+
+    Context: Existing code
+        The following files are used in my application:
+
+        # Embed all the files that the AI will need to modify the code successfully.  If necessary,
+        # describe what those files are used for.
+
+        Embed: src/humbug/gui/style_manager.py
+
+Action:
+    # Describe the details of the change required.
+
