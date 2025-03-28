@@ -286,6 +286,41 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setBlockFormat(orig_block_format)
 
+    def _list_node_visitor(self, node):
+        """
+        Handle the common list node visitor operations.
+
+        Args:
+            node: The ordered list node to render
+        """
+        orig_char_format = self._cursor.charFormat()
+
+        # Process the child nodes (list items)
+        for child in node.children:
+            self.visit(child)
+
+        self._lists.pop()
+
+        block_format = self._cursor.blockFormat()
+        block_format.setBottomMargin(self._default_font_height)
+
+        # If we're still in the last list item then just update the block format.  If we're
+        # in a new block then skip backwards before we update the block format.
+        if not self._cursor.atBlockStart():
+            self._cursor.setBlockFormat(block_format)
+        else:
+            self._cursor.movePosition(QTextCursor.PreviousBlock)
+            self._cursor.setBlockFormat(block_format)
+            self._cursor.movePosition(QTextCursor.NextBlock)
+
+        # Exit this list level
+        self._list_level -= 1
+
+        self._cursor.setCharFormat(orig_char_format)
+
+        if not self._cursor.atBlockStart():
+            self._cursor.insertBlock()
+
     def visit_MarkdownOrderedListNode(self, node):  # pylint: disable=invalid-name
         """
         Render an ordered list node to the QTextDocument.
@@ -298,7 +333,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             self._cursor.insertBlock()
 
         orig_block_format = self._cursor.blockFormat()
-        orig_char_format = self._cursor.charFormat()
 
         # Create ordered list format with correct start number
         self._list_level += 1
@@ -315,25 +349,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         new_list = self._cursor.createList(list_format)
         self._lists.append(new_list)
-
-        # Process the child nodes (list items)
-        for child in node.children:
-            self.visit(child)
-
-        self._lists.pop()
-
-        block_format = self._cursor.blockFormat()
-        block_format.setBottomMargin(self._default_font_height)
-        self._cursor.setBlockFormat(block_format)
-
-        # Exit this list level
-        self._list_level -= 1
-
-        self._cursor.setCharFormat(orig_char_format)
-
-        if not self._cursor.atBlockStart():
-            self._cursor.insertBlock()
-
+        self._list_node_visitor(node)
         self._cursor.setBlockFormat(orig_block_format)
 
     def visit_MarkdownUnorderedListNode(self, node):  # pylint: disable=invalid-name
@@ -364,25 +380,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         new_list = self._cursor.createList(list_format)
         self._lists.append(new_list)
-
-        # Process the child nodes (list items)
-        for child in node.children:
-            self.visit(child)
-
-        self._lists.pop()
-
-        block_format = self._cursor.blockFormat()
-        block_format.setBottomMargin(self._default_font_height)
-        self._cursor.setBlockFormat(block_format)
-
-        # Exit this list level
-        self._list_level -= 1
-
-        self._cursor.setCharFormat(orig_char_format)
-
-        if not self._cursor.atBlockStart():
-            self._cursor.insertBlock()
-
+        self._list_node_visitor(node)
         self._cursor.setBlockFormat(orig_block_format)
 
     def visit_MarkdownListItemNode(self, node):  # pylint: disable=invalid-name
