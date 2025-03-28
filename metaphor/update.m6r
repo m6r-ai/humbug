@@ -20,7 +20,7 @@ Context:
         # Embed all the files that the AI will need to modify the code successfully.  If necessary,
         # describe what those files are used for.
 
-        Embed: src/humbug/gui/style_manager.py
+        Embed:
 
 Action:
     # Describe the details of the change required.
