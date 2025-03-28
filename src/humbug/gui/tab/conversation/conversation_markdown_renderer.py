@@ -301,16 +301,17 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._lists.pop()
 
+        # If we find ourselves in a new block then we need to look at its predecessor
+        # as that's the one that actulally has our last list item
+        at_block_start = self._cursor.atBlockStart()
+        if at_block_start:
+            self._cursor.movePosition(QTextCursor.PreviousBlock)
+
         block_format = self._cursor.blockFormat()
         block_format.setBottomMargin(self._default_font_height)
+        self._cursor.setBlockFormat(block_format)
 
-        # If we're still in the last list item then just update the block format.  If we're
-        # in a new block then skip backwards before we update the block format.
-        if not self._cursor.atBlockStart():
-            self._cursor.setBlockFormat(block_format)
-        else:
-            self._cursor.movePosition(QTextCursor.PreviousBlock)
-            self._cursor.setBlockFormat(block_format)
+        if at_block_start:
             self._cursor.movePosition(QTextCursor.NextBlock)
 
         # Exit this list level
@@ -364,7 +365,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             self._cursor.insertBlock()
 
         orig_block_format = self._cursor.blockFormat()
-        orig_char_format = self._cursor.charFormat()
 
         # Create unordered list format
         self._list_level += 1
