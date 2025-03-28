@@ -9,6 +9,7 @@ Bug fixes:
 - The Metaphor compiler's parser is now more permissive about the use of blank lines to help improve
   the readability of inluded Metaphor.
 - The bookmark menu items did not correctly change language when the language was changed at runtime.
+- Resolve a rendering problem with lists that contain paragraphs.
 
 ## v0.8 (2025-03-27)
 
