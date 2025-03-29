@@ -3,7 +3,7 @@
 import sys
 from typing import Dict
 
-from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent
+from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent, QTextCursor
 
 from humbug.gui.color_role import ColorRole
@@ -18,7 +18,6 @@ class ConversationInput(ConversationMessage):
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
-    focusChanged = Signal(bool)
 
     def __init__(self, parent=None):
         """Initialize the conversation input widget."""
@@ -33,19 +32,6 @@ class ConversationInput(ConversationMessage):
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
         self._update_header_text()
-
-        # Install an event filter so we can capture clicks anywhere and redirect them to the input box
-        self.installEventFilter(self)
-
-    def focusInEvent(self, event):
-        """Handle focus in events."""
-        super().focusInEvent(event)
-        self.focusChanged.emit(True)
-
-    def focusOutEvent(self, event):
-        """Handle focus out events."""
-        super().focusOutEvent(event)
-        self.focusChanged.emit(False)
 
     def _handle_language_changed(self):
         self._update_header_text()
@@ -100,14 +86,6 @@ class ConversationInput(ConversationMessage):
             cursor = self._sections[0]._text_area.textCursor()
             cursor.insertText(source.text())
 
-    def eventFilter(self, obj, event) -> bool:
-        """Handle window activation and mouse events to redirect focus to our input box."""
-        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
-            self._sections[0]._text_area.setFocus()
-            return False  # Don't consume the event
-
-        return super().eventFilter(obj, event)
-
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
         if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
@@ -141,6 +119,7 @@ class ConversationInput(ConversationMessage):
 
     def setFocus(self):
         """Set focus to the input area."""
+        print("set input focus")
         self._sections[0]._text_area.setFocus()
 
     def hasFocus(self) -> bool:

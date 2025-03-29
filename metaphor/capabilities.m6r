@@ -257,6 +257,13 @@ Context: Capabilities
                                 contents of the code block and either copy them to the clipboard, or else invoked
                                 as save-as dialog to allow the contents to be saved as a file.
 
+                    Context: Focus message
+                        Within any conversation the application will track the current "focused" message.  This will
+                        represent the one that the user is currently focused on.  If the user navigates to the next
+                        or previous message it will be done relative to this.
+
+                        The focus is indicated by having a distinct coloured and thicker border.
+
                     Context: History box navigation
                         In the history view, the user should be able to scroll vertically with the up and down
                         cursor keys and the page-up, page-down keys.  If a horizontal scroll bar is active then
@@ -1127,13 +1134,13 @@ Context: Capabilities
 
             Context: Next Message
                 If the current tab is a conversation then this menu item will navigate to the next message in the
-                conversation from the one that's currently active.
+                conversation from the one that's currently focused.
 
                 This will be matched with a keyboard shortcut (e.g. "Alt+DownArrow" for Windows).
 
             Context: Previous Message
                 If the current tab is a conversation then this menu item will navigate to the previous message in
-                the conversation from the one that's currently active.
+                the conversation from the one that's currently focuses.
 
                 This will be matched with a keyboard shortcut (e.g. "Alt+UpArrow" for Windows).
 

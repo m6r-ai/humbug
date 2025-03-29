@@ -50,16 +50,26 @@ class BookmarkData:
 class ConversationWidgetEventFilter(QObject):
     """Event filter to track activation events from child widgets."""
 
-    widget_activated = Signal()
+    widget_activated = Signal(object)
 
     def __init__(self, parent=None):
         """Initialize the event filter."""
         super().__init__(parent)
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        """Filter events to detect widget activation."""
+        """
+        Filter events to detect widget activation.
+
+        Args:
+            obj: The object that received the event
+            event: The event that was received
+
+        Returns:
+            True if event was handled, False to pass to the target object
+        """
         if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
-            self.widget_activated.emit()
+            # Simply emit the signal with the object that received the event
+            self.widget_activated.emit(obj)
             return False  # Don't consume the event
 
         return super().eventFilter(obj, event)
@@ -192,7 +202,6 @@ class ConversationWidget(QWidget):
 
         # Tracking for focused message
         self._focused_message_index = -1
-        self._input.focusChanged.connect(self._handle_input_focus_changed)
 
         # Add bookmark status
         self._is_bookmarked = False
@@ -229,7 +238,8 @@ class ConversationWidget(QWidget):
 
         # Set up activation tracking
         self._event_filter = ConversationWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self.activated)
+        self._event_filter.widget_activated.connect(self._handle_widget_activation)
+        self._install_activation_tracking(self._input)
 
     async def _add_message(self, message: AIMessage) -> None:
         """
@@ -570,42 +580,77 @@ class ConversationWidget(QWidget):
         for child in widget.findChildren(QWidget):
             child.installEventFilter(self._event_filter)
 
-    def _handle_input_focus_changed(self, has_focus: bool):
-        """Handle input box focus changes."""
-        if has_focus:
-            # Clear any message focus
-            if 0 <= self._focused_message_index < len(self._messages):
-                self._messages[self._focused_message_index].set_focused(False)
-                self._focused_message_index = -1
+    def _handle_widget_activation(self, widget):
+        """
+        Handle activation of a widget, focusing the associated message.
+
+        Args:
+            widget: The widget that was activated
+        """
+        # Emit activated signal to let the tab know this conversation was clicked
+        self.activated.emit()
+
+        # Find the ConversationMessage that contains this widget
+        message_widget = self._find_conversation_message(widget)
+
+        if message_widget is None:
+            # Not a message widget activation, no further action needed
+            return
+
+        # Clear focus on our currently focused message
+        if 0 <= self._focused_message_index < len(self._messages):
+            current_focused = self._messages[self._focused_message_index]
+            # If it's the same message, don't do anything
+            if current_focused == message_widget:
+                return
+            # Clear focus on currently focused message
+            current_focused.set_focused(False)
+        else:
+            self._input.set_focused(False)
+
+        # Set focus on the new message
+        if message_widget in self._messages:
+            self._focused_message_index = self._messages.index(message_widget)
+            message_widget.set_focused(True)
+        else:
+            self._focused_message_index = -1
+            self._input.set_focused(True)
+
+    def _find_conversation_message(self, widget):
+        """
+        Find the ConversationMessage that contains the given widget.
+
+        Args:
+            widget: The widget to find the containing ConversationMessage for
+
+        Returns:
+            The ConversationMessage containing the widget, or None if not found
+        """
+        current = widget
+        while current:
+            if isinstance(current, ConversationMessage):
+                return current
+
+            current = current.parent()
+
+        return None
 
     def navigate_to_next_message(self) -> bool:
         """Navigate to the next message or input box if possible."""
-        # If input box is focused, we're already at the bottom
-        if self._input.hasFocus():
+        # If input box is focused, do nothing
+        if self._focused_message_index == -1:
             return False
-
-        # If no message is focused, start with the last message
-        if self._focused_message_index == -1 and self._messages:
-            self._focused_message_index = len(self._messages) - 1
-            self._focus_message(self._focused_message_index)
-            return True
 
         # If we're at the last message, move to input box
         if self._focused_message_index == len(self._messages) - 1:
-            # Clear focus on current message
             self._messages[self._focused_message_index].set_focused(False)
             self._focused_message_index = -1
-
-            # Focus input box
-            self._input.setFocus()
+            self._input.set_focused(True)
             return True
 
         # Otherwise move to next message
         if self._focused_message_index < len(self._messages) - 1:
-            # Clear focus on current message
-            if 0 <= self._focused_message_index < len(self._messages):
-                self._messages[self._focused_message_index].set_focused(False)
-
+            self._messages[self._focused_message_index].set_focused(False)
             self._focused_message_index += 1
             self._focus_message(self._focused_message_index)
             return True
@@ -615,31 +660,18 @@ class ConversationWidget(QWidget):
     def navigate_to_previous_message(self) -> bool:
         """Navigate to the previous message if possible."""
         # If input box is focused, move to the last message
-        if self._input.hasFocus():
+        if self._focused_message_index == -1:
             if self._messages:
-                # Clear any existing message focus
-                if 0 <= self._focused_message_index < len(self._messages):
-                    self._messages[self._focused_message_index].set_focused(False)
-
-                # Focus the last message
+                self._input.set_focused(False)
                 self._focused_message_index = len(self._messages) - 1
                 self._focus_message(self._focused_message_index)
                 return True
 
             return False
 
-        # If no message is focused, start with the last message
-        if self._focused_message_index == -1 and self._messages:
-            self._focused_message_index = len(self._messages) - 1
-            self._focus_message(self._focused_message_index)
-            return True
-
         # Otherwise move to previous message if possible
         if self._focused_message_index > 0:
-            # Clear focus on current message
-            if 0 <= self._focused_message_index < len(self._messages):
-                self._messages[self._focused_message_index].set_focused(False)
-
+            self._messages[self._focused_message_index].set_focused(False)
             self._focused_message_index -= 1
             self._focus_message(self._focused_message_index)
             return True
@@ -654,6 +686,8 @@ class ConversationWidget(QWidget):
 
             # Scroll to make the message visible
             self._scroll_to_message(self._messages[index])
+        else:
+            self._scroll_to_message(self._input)
 
     def _scroll_to_message(self, message: ConversationMessage):
         """Ensure the message is visible in the scroll area."""
