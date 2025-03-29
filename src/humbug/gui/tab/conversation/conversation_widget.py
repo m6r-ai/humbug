@@ -631,7 +631,6 @@ class ConversationWidget(QWidget):
         else:
             self._input.set_focused(False)
 
-
     def _find_conversation_message(self, widget):
         """
         Find the ConversationMessage that contains the given widget.
