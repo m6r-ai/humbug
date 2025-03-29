@@ -51,6 +51,7 @@ class ConversationWidgetEventFilter(QObject):
     """Event filter to track activation events from child widgets."""
 
     widget_activated = Signal(object)
+    widget_deactivated = Signal(object)
 
     def __init__(self, parent=None):
         """Initialize the event filter."""
@@ -70,6 +71,11 @@ class ConversationWidgetEventFilter(QObject):
         if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
             # Simply emit the signal with the object that received the event
             self.widget_activated.emit(obj)
+            return False  # Don't consume the event
+
+        elif event.type() == QEvent.FocusOut:
+            # Emit a widget deactivated signal
+            self.widget_deactivated.emit(obj)
             return False  # Don't consume the event
 
         return super().eventFilter(obj, event)
@@ -239,6 +245,7 @@ class ConversationWidget(QWidget):
         # Set up activation tracking
         self._event_filter = ConversationWidgetEventFilter(self)
         self._event_filter.widget_activated.connect(self._handle_widget_activation)
+        self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
         self._install_activation_tracking(self._input)
 
     async def _add_message(self, message: AIMessage) -> None:
@@ -598,11 +605,6 @@ class ConversationWidget(QWidget):
         if message_widget.is_focused():
             return
 
-        if self._focused_message_index == -1:
-            self._input.set_focused(False)
-        else:
-            self._messages[self._focused_message_index].set_focused(False)
-
         # Set focus on the new message
         if message_widget in self._messages:
             self._focused_message_index = self._messages.index(message_widget)
@@ -610,6 +612,25 @@ class ConversationWidget(QWidget):
         else:
             self._focused_message_index = -1
             self._input.set_focused(True)
+
+    def _handle_widget_deactivation(self, widget):
+        """
+        Handle deactivation of a widget, checking if focus is leaving the associated message.
+
+        Args:
+            widget: The widget that lost focus
+        """
+        # Find the ConversationMessage that contains this widget
+        message_widget = self._find_conversation_message(widget)
+        if message_widget is None:
+            return
+
+        # Remove focus from the currently focused message
+        if self._focused_message_index != -1:
+            self._messages[self._focused_message_index].set_focused(False)
+        else:
+            self._input.set_focused(False)
+
 
     def _find_conversation_message(self, widget):
         """
