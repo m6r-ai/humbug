@@ -119,7 +119,6 @@ class ConversationInput(ConversationMessage):
 
     def setFocus(self):
         """Set focus to the input area."""
-        print("set input focus")
         self._sections[0]._text_area.setFocus()
 
     def hasFocus(self) -> bool:

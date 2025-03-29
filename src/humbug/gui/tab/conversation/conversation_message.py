@@ -103,7 +103,8 @@ class ConversationMessage(QFrame):
         if self._is_focused != focused:
             self._is_focused = focused
             self._handle_style_changed()
-            self.setFocus()
+            if focused:
+                self.setFocus()
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""

@@ -592,21 +592,16 @@ class ConversationWidget(QWidget):
 
         # Find the ConversationMessage that contains this widget
         message_widget = self._find_conversation_message(widget)
-
         if message_widget is None:
-            # Not a message widget activation, no further action needed
             return
 
-        # Clear focus on our currently focused message
-        if 0 <= self._focused_message_index < len(self._messages):
-            current_focused = self._messages[self._focused_message_index]
-            # If it's the same message, don't do anything
-            if current_focused == message_widget:
-                return
-            # Clear focus on currently focused message
-            current_focused.set_focused(False)
-        else:
+        if message_widget.is_focused():
+            return
+
+        if self._focused_message_index == -1:
             self._input.set_focused(False)
+        else:
+            self._messages[self._focused_message_index].set_focused(False)
 
         # Set focus on the new message
         if message_widget in self._messages:
@@ -645,14 +640,14 @@ class ConversationWidget(QWidget):
         if self._focused_message_index == len(self._messages) - 1:
             self._messages[self._focused_message_index].set_focused(False)
             self._focused_message_index = -1
-            self._input.set_focused(True)
+            self._focus_message()
             return True
 
         # Otherwise move to next message
         if self._focused_message_index < len(self._messages) - 1:
             self._messages[self._focused_message_index].set_focused(False)
             self._focused_message_index += 1
-            self._focus_message(self._focused_message_index)
+            self._focus_message()
             return True
 
         return False
@@ -664,7 +659,7 @@ class ConversationWidget(QWidget):
             if self._messages:
                 self._input.set_focused(False)
                 self._focused_message_index = len(self._messages) - 1
-                self._focus_message(self._focused_message_index)
+                self._focus_message()
                 return True
 
             return False
@@ -673,20 +668,19 @@ class ConversationWidget(QWidget):
         if self._focused_message_index > 0:
             self._messages[self._focused_message_index].set_focused(False)
             self._focused_message_index -= 1
-            self._focus_message(self._focused_message_index)
+            self._focus_message()
             return True
 
         return False
 
-    def _focus_message(self, index: int):
+    def _focus_message(self):
         """Focus and highlight the specified message."""
+        index = self._focused_message_index
         if 0 <= index < len(self._messages):
-            # Set visual focus
             self._messages[index].set_focused(True)
-
-            # Scroll to make the message visible
             self._scroll_to_message(self._messages[index])
         else:
+            self._input.set_focused(True)
             self._scroll_to_message(self._input)
 
     def _scroll_to_message(self, message: ConversationMessage):
@@ -710,12 +704,6 @@ class ConversationWidget(QWidget):
                 self._scroll_area.verticalScrollBar().setValue(message_pos.y())
             else:
                 self._scroll_area.verticalScrollBar().setValue(message_pos.y() + message.height() - viewport_height + 10)
-
-    def clear_message_focus(self):
-        """Clear focus from any focused message."""
-        if 0 <= self._focused_message_index < len(self._messages):
-            self._messages[self._focused_message_index].set_focused(False)
-            self._focused_message_index = -1
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""
