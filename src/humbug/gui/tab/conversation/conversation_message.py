@@ -100,11 +100,14 @@ class ConversationMessage(QFrame):
 
     def set_focused(self, focused: bool):
         """Set the focused state of this message."""
-        if self._is_focused != focused:
-            self._is_focused = focused
-            self._handle_style_changed()
-            if focused:
-                self.setFocus()
+        if self._is_focused == focused:
+            return
+
+        self._is_focused = focused
+        if focused:
+            self.setFocus()
+
+        self._handle_style_changed()
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
@@ -339,7 +342,7 @@ class ConversationMessage(QFrame):
             section.apply_style(text_color, color, font)
 
         # Determine border color based on state (focused takes precedence over bookmarked)
-        border = ColorRole.MESSAGE_FOCUSED if self._is_focused else \
+        border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
                  ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else \
                  ColorRole.MESSAGE_BACKGROUND
 
