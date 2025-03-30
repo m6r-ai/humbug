@@ -53,6 +53,13 @@ class EditorWidget(QPlainTextEdit):
         self._last_search = ""
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
+    def focusInEvent(self, event):
+        """Handle focus in event."""
+        super().focusInEvent(event)
+
+        # Ensure this widget ends up with the focus
+        self.setFocus()
+
     def _handle_language_changed(self) -> None:
         """Handle language changes by updating the UI."""
         self.update_line_number_area_width()
