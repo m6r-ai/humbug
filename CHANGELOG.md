@@ -4,12 +4,16 @@
 
 New features:
 
+- The current focus message is now highlighted across all conversations.  You can now step between
+  messages in the current conversation using "Alt+Up" and "Alt+Down".
+
 Bug fixes:
 
 - The Metaphor compiler's parser is now more permissive about the use of blank lines to help improve
   the readability of inluded Metaphor.
 - The bookmark menu items did not correctly change language when the language was changed at runtime.
 - Resolve a rendering problem with lists that contain paragraphs.
+- Resolve a problem where editor windows did not get focus correctly when clicked.
 
 ## v0.8 (2025-03-27)
 

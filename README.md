@@ -63,7 +63,8 @@ If you want to engage with other users and developers, you can join us on [Disco
 
 v0.9 adds several new features:
 
-TBD
+- The current focus message is now highlighted across all conversations.  You can now step between
+  messages in the current conversation using "Alt+Up" and "Alt+Down".
 
 ## Some examples
 
