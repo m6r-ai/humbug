@@ -211,5 +211,7 @@ def get_english_strings() -> LanguageStrings:
 
         # Tool tips
         tooltip_copy_contents="Copy all contents",
-        tooltip_save_contents="Save contents to a file"
+        tooltip_save_contents="Save contents to a file",
+        tooltip_copy_message="Copy message to clipboard",
+        tooltip_save_message="Save message as markdown"
     )

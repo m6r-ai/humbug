@@ -66,7 +66,7 @@ class ConversationMessageSection(QFrame):
             self._header_container = QWidget()
             self._header_layout = QHBoxLayout(self._header_container)
             self._header_layout.setContentsMargins(0, 0, 0, 0)
-            self._header_layout.setSpacing(5)
+            self._header_layout.setSpacing(4)
 
             # Add language label on the left
             self._language_header = QLabel()
@@ -471,10 +471,10 @@ class ConversationMessageSection(QFrame):
 
         button_style = f"""
             QToolButton {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                background-color: {background_color};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                padding: 2px;
+                padding: 0px;
             }}
             QToolButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};

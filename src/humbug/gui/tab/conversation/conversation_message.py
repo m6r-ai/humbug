@@ -3,14 +3,16 @@ import logging
 from typing import List, Tuple, Optional
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog
 )
-from PySide6.QtCore import Signal, QPoint
+from PySide6.QtCore import Signal, QPoint, QSize
+from PySide6.QtGui import QIcon, QGuiApplication
 
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
+from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_converter import MarkdownConverter, MarkdownDocumentNode, MarkdownTextNode
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -41,6 +43,7 @@ class ConversationMessage(QFrame):
         self._language_manager.language_changed.connect(self._handle_language_changed)
         self._message_source = None
         self._message_timestamp = None
+        self._message_content = ""
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -52,7 +55,7 @@ class ConversationMessage(QFrame):
         self._header = QWidget(self)
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
-        self._header_layout.setSpacing(0)
+        self._header_layout.setSpacing(4)
 
         # Create role and timestamp labels
         self._role_label = QLabel(self)
@@ -60,6 +63,17 @@ class ConversationMessage(QFrame):
         self._header_layout.addWidget(self._role_label)
         self._header_layout.addWidget(self._timestamp_label)
         self._header_layout.addStretch()
+
+        self._copy_message_button = None
+        self._save_message_button = None
+        if not is_input:
+            self._copy_message_button = QToolButton(self)
+            self._copy_message_button.clicked.connect(self._copy_message)
+            self._header_layout.addWidget(self._copy_message_button)
+
+            self._save_message_button = QToolButton(self)
+            self._save_message_button.clicked.connect(self._save_message)
+            self._header_layout.addWidget(self._save_message_button)
 
         # Add header widget to main layout
         self._layout.addWidget(self._header)
@@ -93,6 +107,7 @@ class ConversationMessage(QFrame):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
+        self._handle_language_changed()
 
     def is_focused(self) -> bool:
         """Check if this message is focused."""
@@ -123,6 +138,13 @@ class ConversationMessage(QFrame):
         if not self._is_input:
             # Don't update input widget headers
             self._update_role_text()
+
+            strings = self._language_manager.strings
+            if self._copy_message_button:
+                self._copy_message_button.setToolTip(strings.tooltip_copy_message)
+
+            if self._save_message_button:
+                self._save_message_button.setToolTip(strings.tooltip_save_message)
 
     def _update_role_text(self) -> None:
         """Update the role text based on current language."""
@@ -193,6 +215,7 @@ class ConversationMessage(QFrame):
         """
         self._message_source = style
         self._message_timestamp = timestamp
+        self._message_content = text
 
         # Check if style changed - if so, we need to recreate all sections
         if style != self._current_style:
@@ -249,6 +272,43 @@ class ConversationMessage(QFrame):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
+
+    def _copy_message(self):
+        """Copy the entire message content to clipboard."""
+        content = self._message_content
+        QGuiApplication.clipboard().setText(content)
+
+    def _save_message(self):
+        """Show save as dialog and save message as a markdown file."""
+        strings = self._language_manager.strings
+
+        # Show file dialog
+        export_dialog = QFileDialog()
+        export_dialog.setWindowTitle(strings.file_dialog_save_file)
+        export_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        export_dialog.selectFile("message.md")
+
+        if export_dialog.exec_() != QFileDialog.Accepted:
+            return False
+
+        filename = export_dialog.selectedFiles()[0]
+
+        # Save the file
+        try:
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(self._message_content)
+
+            return True
+
+        except Exception as e:
+            self._logger.error("Failed to save message: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                strings.could_not_save.format(filename, str(e))
+            )
+            return False
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -323,6 +383,40 @@ class ConversationMessage(QFrame):
                 background-color: {background_color};
             }}
         """)
+
+        # Button styling for message action buttons
+        button_style = f"""
+            QToolButton {{
+                background-color: {background_color};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 0px;
+            }}
+            QToolButton:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QToolButton:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+        """
+
+        # Apply icon and styling to copy and save buttons
+        icon_base_size = 14
+        icon_size = QSize(16 * self._style_manager.zoom_factor, 14 * self._style_manager.zoom_factor)
+
+        if self._copy_message_button:
+            self._copy_message_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("copy"), icon_base_size
+            )))
+            self._copy_message_button.setIconSize(icon_size)
+            self._copy_message_button.setStyleSheet(button_style)
+
+        if self._save_message_button:
+            self._save_message_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("save"), icon_base_size
+            )))
+            self._save_message_button.setIconSize(icon_size)
+            self._save_message_button.setStyleSheet(button_style)
 
         # Header widget styling
         self._header.setStyleSheet(f"""

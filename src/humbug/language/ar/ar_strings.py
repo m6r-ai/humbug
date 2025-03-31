@@ -211,5 +211,7 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Tool tips
         tooltip_copy_contents="نسخ جميع المحتويات",
-        tooltip_save_contents="حفظ المحتويات إلى ملف"
+        tooltip_save_contents="حفظ المحتويات إلى ملف",
+        tooltip_copy_message="نسخ الرسالة إلى الحافظة",
+        tooltip_save_message="حفظ الرسالة كملف ماركداون",
     )
