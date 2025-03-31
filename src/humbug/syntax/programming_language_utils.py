@@ -197,13 +197,10 @@ class ProgrammingLanguageUtils:
             The detected programming language enum value,
             or ProgrammingLanguage.TEXT if not detected
         """
-        print(f"Detecting language from filename: {filename}")
         if not filename:
             return ProgrammingLanguage.TEXT
 
         ext = os.path.splitext(filename)[1].lower()
-        print(f"Extracted extension: {ext}")
-        print(f"Available extensions: {cls._EXTENSION_TO_LANGUAGE.keys()}")
         return cls._EXTENSION_TO_LANGUAGE.get(ext, ProgrammingLanguage.TEXT)
 
     @classmethod
