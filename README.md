@@ -90,7 +90,7 @@ v0.9 adds several new features:
 ### File editing
 
 - Syntax highlighting for various languages and file formats.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
-    JavaScript, JSON, Kotlin, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
+  JavaScript, JSON, Kotlin, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
 - Auto-backup functionality for unsaved changes.
 
 ### Command line shell
@@ -101,7 +101,7 @@ v0.9 adds several new features:
 ### Multi-tab interface
 
 - Tabs can be arranged into multiple columns, with columns being able to split, merge and swap.  It's a natural way to
-    discuss what you want with an AI and also look at the code you're working with.
+  discuss what you want with an AI and also look at the code you're working with.
 - Tabs can be easily rearranged and closed.
 - Drag and drop between columns.
 
@@ -115,7 +115,7 @@ v0.9 adds several new features:
 ### Multi-kanguage support
 
 - Mindspaces can be configured to use different human languages.  Currently supported English, French,
-    and Arabic.
+  and Arabic.
 
 ### User interface
 
