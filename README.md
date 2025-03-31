@@ -67,6 +67,7 @@ v0.9 adds several new features:
   messages in the current conversation using "Alt+Up" and "Alt+Down".
 - You can now both copy to the clipboard, or save, whole messages in Markdown format, as well as copying or
   saving code blocks within messages.
+- Markdown syntax highlighting is now supported.
 
 ## Some examples
 
