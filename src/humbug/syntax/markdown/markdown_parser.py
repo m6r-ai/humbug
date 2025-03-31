@@ -143,7 +143,6 @@ class MarkdownParser(Parser):
             # Collect all tokens from the lexer
             while True:
                 token = lexer.get_next_token()
-                print(f"Token: {token}, {in_list_item}")
                 if not token:
                     break
 
@@ -208,14 +207,14 @@ class MarkdownParser(Parser):
                     # If we encounter a list marker, we need to check if we're in a list item
                     in_list_item = True
                     block_type = token.type
-                    list_indent = token.start
+
+                    next_token = lexer.peek_next_token()
+                    list_indent = 0 if not next_token else next_token.start
                     self._tokens.append(token)
                     continue
 
                 if in_list_item:
-                    print("in list item")
                     # Check if this is a continuation of a list item
-                    print(f"current indent {token.start}, list indent {list_indent}")
                     if token.start >= list_indent:
                         token.type = TokenType.LIST_MARKER
                         self._tokens.append(token)
