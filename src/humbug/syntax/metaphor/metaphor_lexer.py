@@ -18,7 +18,7 @@ class MetaphorLexer(Lexer):
         super().__init__()
         self._seen_keyword: bool = False
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
+    def lex(self, _prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
         """
         Lex all the tokens in the input.
         """

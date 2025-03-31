@@ -1,4 +1,5 @@
 from typing import Callable, Optional
+from dataclasses import dataclass
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -11,7 +12,11 @@ class MarkdownLexer(Lexer):
     headings, blockquotes, lists, and inline formatting.
     """
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
+    def __init__(self):
+        super().__init__()
+        self._first_token = True
+
+    def lex(self, _prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
         """
         Lex all the tokens in the input.
 
@@ -24,6 +29,7 @@ class MarkdownLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
+        self._first_token = True
         self._inner_lex()
         return None
 
@@ -37,24 +43,32 @@ class MarkdownLexer(Lexer):
         Returns:
             The lexing function
         """
-        if ch == '>':
-            return self._read_blockquote
-
-        if ch == '#':
-            return self._read_heading
-
-        if ch in ('*', '-', '+'):
-            # Check if this might be a list marker
-            if ((self._position + 1) < self._input_len and
-                self._is_whitespace(self._input[self._position + 1])):
-                return self._read_unordered_list
-
-        if self._is_digit(ch):
-            # Check if this might be an ordered list marker
-            return self._read_ordered_list
-
         if self._is_whitespace(ch):
             return self._read_whitespace
+
+        # Check for block elements only if this is the first non-whitespace token on the line
+        # Note: Since newlines are stripped, we're only checking first_token flag
+        if self._first_token:
+            # First check for indentation
+            # Now check for block elements
+            if ch == '>':
+                return self._read_blockquote
+
+            if ch == '#':
+                return self._read_heading
+
+            if ch in ('*', '-', '+'):
+                # Check if this might be a list marker
+                if ((self._position + 1) < self._input_len and
+                    self._is_whitespace(self._input[self._position + 1])):
+                    return self._read_unordered_list
+
+            if self._is_digit(ch):
+                # Check if this might be an ordered list marker
+                return self._read_ordered_list
+
+            # If we get here, it's not a block element, so mark that we've seen the first token
+            self._first_token = False
 
         if ch == '`':
             return self._read_backtick

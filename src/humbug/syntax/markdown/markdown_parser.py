@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List, Tuple
 
-from humbug.syntax.lexer import TokenType
+from humbug.syntax.lexer import TokenType, Token
 from humbug.syntax.markdown.markdown_lexer import MarkdownLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
@@ -19,11 +19,17 @@ class MarkdownParserState(ParserState):
         fence_depth: Indentation of the current fence block (if we are in one)
         language: The current programming language being parsed
         embedded_parser_state: State of the embedded language parser
+        in_list_item: Indicates if we're currently in a list item
+        list_indent: The indentation level of the current list item
+        block_type: The type of block element we're in (heading, blockquote, list)
     """
     in_fence_block: bool = False
     fence_depth: int = 0
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState = None
+    in_list_item: bool = False
+    list_indent: int = 0
+    block_type: Optional[TokenType] = None
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.MARKDOWN)
@@ -74,6 +80,24 @@ class MarkdownParser(Parser):
 
         return embedded_parser_state
 
+    def _apply_block_style(self, tokens: List[Token], block_type: TokenType) -> None:
+        """
+        Apply a block style to all tokens that aren't already block elements.
+
+        Args:
+            tokens: List of tokens to modify
+            block_type: The token type to apply
+        """
+        for i, token in enumerate(tokens):
+            if token.type not in (TokenType.FENCE, TokenType.FENCE_START, TokenType.FENCE_END,
+                                  TokenType.LANGUAGE, TokenType.HEADING,
+                                  TokenType.BLOCKQUOTE, TokenType.LIST_MARKER):
+                tokens[i] = Token(
+                    type=block_type,
+                    value=token.value,
+                    start=token.start
+                )
+
     def parse(self, prev_parser_state: Optional[MarkdownParserState], input_str: str) -> MarkdownParserState:
         """
         Parse conversation content including embedded code blocks.
@@ -94,12 +118,19 @@ class MarkdownParser(Parser):
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
         parsing_continuation = False
+        in_list_item = False
+        list_indent = 0
+        block_type = None
+
         if prev_parser_state:
             in_fence_block = prev_parser_state.in_fence_block
             fence_depth = prev_parser_state.fence_depth
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
             parsing_continuation = prev_parser_state.parsing_continuation
+            in_list_item = prev_parser_state.in_list_item
+            list_indent = prev_parser_state.list_indent
+            block_type = prev_parser_state.block_type
 
         parse_embedded = language != ProgrammingLanguage.UNKNOWN
 
@@ -109,43 +140,47 @@ class MarkdownParser(Parser):
 
             seen_text = False
 
+            # Collect all tokens from the lexer
             while True:
-                lex_token = lexer.get_next_token()
-                if not lex_token:
+                token = lexer.get_next_token()
+                print(f"Token: {token}, {in_list_item}")
+                if not token:
                     break
 
-                # If we've already processed something interesting on this line then run to the
-                # end of the line.
+                # If we've already proessed something interesting on this line, run to the end of it
                 if seen_text:
-                    self._tokens.append(lex_token)
+                    if block_type is not None:
+                        token.type = block_type
+
+                    self._tokens.append(token)
                     continue
 
                 seen_text = True
 
-                if lex_token.type == TokenType.FENCE:
+                if token.type == TokenType.FENCE:
                     if in_fence_block:
                         # Only close the fence if indentation is less than or equal to opening fence
-                        if lex_token.start > fence_depth:
+                        if token.start > fence_depth:
                             # This fence is indented more than the opening fence
                             # Treat it as regular text within the current fence block
-                            lex_token.type = TokenType.TEXT
-                            self._tokens.append(lex_token)
+                            token.type = TokenType.TEXT
+                            self._tokens.append(token)
                             continue
 
-                        lex_token.type = TokenType.FENCE_END
-                        self._tokens.append(lex_token)
+                        token.type = TokenType.FENCE_END
+                        self._tokens.append(token)
                         in_fence_block = False
                         fence_depth = 0
                         language = ProgrammingLanguage.UNKNOWN
                         embedded_parser_state = None
                         parse_embedded = False
-                        continue
+                        break
 
                     in_fence_block = True
-                    fence_depth = lex_token.start
+                    fence_depth = token.start
                     embedded_parser_state = None
-                    lex_token.type = TokenType.FENCE_START
-                    self._tokens.append(lex_token)
+                    token.type = TokenType.FENCE_START
+                    self._tokens.append(token)
 
                     next_token = lexer.peek_next_token()
                     if next_token and (next_token.type == TokenType.TEXT):
@@ -161,12 +196,44 @@ class MarkdownParser(Parser):
                 if parse_embedded:
                     break
 
-                self._tokens.append(lex_token)
+                if token.type in (TokenType.HEADING, TokenType.BLOCKQUOTE):
+                    # If we encounter a block element, we need to check if we're in a list item
+                    in_list_item = False
+                    block_type = token.type
+                    list_indent = 0
+                    self._tokens.append(token)
+                    continue
+
+                if token.type == TokenType.LIST_MARKER:
+                    # If we encounter a list marker, we need to check if we're in a list item
+                    in_list_item = True
+                    block_type = token.type
+                    list_indent = token.start
+                    self._tokens.append(token)
+                    continue
+
+                if in_list_item:
+                    print("in list item")
+                    # Check if this is a continuation of a list item
+                    print(f"current indent {token.start}, list indent {list_indent}")
+                    if token.start >= list_indent:
+                        token.type = TokenType.LIST_MARKER
+                        self._tokens.append(token)
+                        continue
+
+                block_type = None
+                in_list_item = False
+                list_indent = 0
+                self._tokens.append(token)
 
         parser_state = MarkdownParserState()
         parser_state.in_fence_block = in_fence_block
         parser_state.fence_depth = fence_depth
         parser_state.language = language
+        parser_state.in_list_item = in_list_item
+        parser_state.list_indent = list_indent
+        parser_state.block_type = block_type
+
         if parse_embedded:
             new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
             parser_state.embedded_parser_state = new_embedded_parser_state
