@@ -307,6 +307,7 @@ class EditorTab(TabBase):
                 self._editor_widget.setPlainText(content)
                 self._last_save_content = content
                 self._set_modified(False)
+
             except Exception as e:
                 strings = self._language_manager.strings
                 MessageBox.show_message(

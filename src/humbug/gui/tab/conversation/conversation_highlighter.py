@@ -8,7 +8,7 @@ from PySide6.QtCore import Signal
 
 from humbug.gui.style_manager import StyleManager
 from humbug.syntax.lexer import TokenType
-from humbug.syntax.conversation_parser import ConversationParser, ConversationParserState
+from humbug.syntax.markdown.markdown_parser import MarkdownParser, MarkdownParserState
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
@@ -58,13 +58,13 @@ class ConversationHighlighter(QSyntaxHighlighter):
             current_block_data: ConversationHighlighterBlockData = current_block.userData()
             if current_block_data:
                 current_fence_depth = current_block_data.fence_depth
-                current_parser_data: ConversationParserState = current_block_data.parser_state
+                current_parser_data: MarkdownParserState = current_block_data.parser_state
                 if current_parser_data:
                     language = current_parser_data.language
                     contination_state = current_parser_data.continuation_state
 
-            parser = ConversationParser()
-            parser_state: ConversationParserState = parser.parse(prev_parser_state, text)
+            parser = MarkdownParser()
+            parser_state: MarkdownParserState = parser.parse(prev_parser_state, text)
 
             in_code_block = False
 

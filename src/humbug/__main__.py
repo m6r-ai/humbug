@@ -21,6 +21,7 @@ from humbug.syntax.java.java_parser import JavaParser
 from humbug.syntax.javascript.javascript_parser import JavaScriptParser
 from humbug.syntax.json.json_parser import JSONParser
 from humbug.syntax.kotlin.kotlin_parser import KotlinParser
+from humbug.syntax.markdown.markdown_parser import MarkdownParser
 from humbug.syntax.metaphor.metaphor_parser import MetaphorParser
 from humbug.syntax.move.move_parser import MoveParser
 from humbug.syntax.python.python_parser import PythonParser

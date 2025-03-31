@@ -42,6 +42,8 @@ class ProgrammingLanguageUtils:
         "json": ProgrammingLanguage.JSON,
         "kotlin": ProgrammingLanguage.KOTLIN,
         "kt": ProgrammingLanguage.KOTLIN,
+        "markdown": ProgrammingLanguage.MARKDOWN,
+        "md": ProgrammingLanguage.MARKDOWN,
         "metaphor": ProgrammingLanguage.METAPHOR,
         "m6r": ProgrammingLanguage.METAPHOR,
         "move": ProgrammingLanguage.MOVE,
@@ -84,7 +86,7 @@ class ProgrammingLanguageUtils:
         '.kt': ProgrammingLanguage.KOTLIN,
         '.kts': ProgrammingLanguage.KOTLIN,
         '.m6r': ProgrammingLanguage.METAPHOR,
-        '.md': ProgrammingLanguage.TEXT,
+        '.md': ProgrammingLanguage.MARKDOWN,
         '.move': ProgrammingLanguage.MOVE,
         '.py': ProgrammingLanguage.PYTHON,
         '.pyw': ProgrammingLanguage.PYTHON,
@@ -109,6 +111,7 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.JAVASCRIPT: "JavaScript",
         ProgrammingLanguage.JSON: "JSON",
         ProgrammingLanguage.KOTLIN: "Kotlin",
+        ProgrammingLanguage.MARKDOWN: "Markdown",
         ProgrammingLanguage.METAPHOR: "Metaphor",
         ProgrammingLanguage.MOVE: "Move",
         ProgrammingLanguage.PYTHON: "Python",
@@ -132,6 +135,7 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.JAVASCRIPT: ".js",
         ProgrammingLanguage.JSON: ".json",
         ProgrammingLanguage.KOTLIN: ".kt",
+        ProgrammingLanguage.MARKDOWN: ".md",
         ProgrammingLanguage.METAPHOR: ".m6r",
         ProgrammingLanguage.MOVE: ".move",
         ProgrammingLanguage.PYTHON: ".py",
@@ -193,10 +197,13 @@ class ProgrammingLanguageUtils:
             The detected programming language enum value,
             or ProgrammingLanguage.TEXT if not detected
         """
+        print(f"Detecting language from filename: {filename}")
         if not filename:
             return ProgrammingLanguage.TEXT
 
         ext = os.path.splitext(filename)[1].lower()
+        print(f"Extracted extension: {ext}")
+        print(f"Available extensions: {cls._EXTENSION_TO_LANGUAGE.keys()}")
         return cls._EXTENSION_TO_LANGUAGE.get(ext, ProgrammingLanguage.TEXT)
 
     @classmethod

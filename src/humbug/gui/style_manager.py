@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
 from PySide6.QtGui import (
-    QTextCharFormat, QFontDatabase, QGuiApplication, QColor, QFontMetricsF, QFont, QPixmap
+    QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap
 )
 
 from humbug.gui.color_role import ColorRole
@@ -225,10 +225,6 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#80e0d0",
                 ColorMode.LIGHT: "#007070"
             },
-            ColorRole.SYNTAX_INLINE_CODE: {
-                ColorMode.DARK: "#8080f0",
-                ColorMode.LIGHT: "#3030c0"
-            },
             ColorRole.SYNTAX_CODE: {
                 ColorMode.DARK: "#f0f0f0",
                 ColorMode.LIGHT: "#202020"
@@ -272,6 +268,10 @@ class StyleManager(QObject):
             ColorRole.SYNTAX_IDENTIFIER: {
                 ColorMode.DARK: "#80b0f0",
                 ColorMode.LIGHT: "#0060c0"
+            },
+            ColorRole.SYNTAX_INLINE_CODE: {
+                ColorMode.DARK: "#8080f0",
+                ColorMode.LIGHT: "#3030c0"
             },
             ColorRole.SYNTAX_KEYWORD: {
                 ColorMode.DARK: "#ffc0eb",
@@ -385,7 +385,7 @@ class StyleManager(QObject):
             TokenType.ADDRESS: ColorRole.SYNTAX_ADDRESS,
             TokenType.ANNOTATION: ColorRole.SYNTAX_HEADING,
             TokenType.ATTRIBUTE: ColorRole.SYNTAX_HEADING,
-            TokenType.INLINE_CODE: ColorRole.SYNTAX_INLINE_CODE,
+            TokenType.BACKTICK: ColorRole.SYNTAX_INLINE_CODE,
             TokenType.BOOLEAN: ColorRole.SYNTAX_NUMBER,
             TokenType.CHARACTER: ColorRole.SYNTAX_STRING,
             TokenType.CODE: ColorRole. SYNTAX_CODE,
@@ -409,6 +409,7 @@ class StyleManager(QObject):
             TokenType.HTML_ATTRIBUTE: ColorRole.SYNTAX_HTML_ATTRIBUTE,
             TokenType.HTML_TAG: ColorRole.SYNTAX_HTML_TAG,
             TokenType.IDENTIFIER: ColorRole.SYNTAX_IDENTIFIER,
+            TokenType.INLINE_CODE: ColorRole.SYNTAX_INLINE_CODE,
             TokenType.KEYWORD: ColorRole.SYNTAX_KEYWORD,
             TokenType.LANGUAGE: ColorRole.SYNTAX_LANGUAGE,
             TokenType.LIFETIME: ColorRole.SYNTAX_OPERATOR,

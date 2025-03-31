@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.lexer import TokenType
-from humbug.syntax.conversation_lexer import ConversationLexer
+from humbug.syntax.markdown.markdown_lexer import MarkdownLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -10,9 +10,9 @@ from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 @dataclass
-class ConversationParserState(ParserState):
+class MarkdownParserState(ParserState):
     """
-    State information for the Conversation parser.
+    State information for the Markdown parser.
 
     Attributes:
         in_fence_block: Indicates if we're currently in a code fence block
@@ -26,7 +26,8 @@ class ConversationParserState(ParserState):
     embedded_parser_state: ParserState = None
 
 
-class ConversationParser(Parser):
+@ParserRegistry.register_parser(ProgrammingLanguage.MARKDOWN)
+class MarkdownParser(Parser):
     """
     Parser for conversation content with embedded code blocks.
 
@@ -73,7 +74,7 @@ class ConversationParser(Parser):
 
         return embedded_parser_state
 
-    def parse(self, prev_parser_state: Optional[ConversationParserState], input_str: str) -> ConversationParserState:
+    def parse(self, prev_parser_state: Optional[MarkdownParserState], input_str: str) -> MarkdownParserState:
         """
         Parse conversation content including embedded code blocks.
 
@@ -103,7 +104,7 @@ class ConversationParser(Parser):
         parse_embedded = language != ProgrammingLanguage.UNKNOWN
 
         if not parsing_continuation:
-            lexer = ConversationLexer()
+            lexer = MarkdownLexer()
             lexer.lex(None, input_str)
 
             seen_text = False
@@ -162,7 +163,7 @@ class ConversationParser(Parser):
 
                 self._tokens.append(lex_token)
 
-        parser_state = ConversationParserState()
+        parser_state = MarkdownParserState()
         parser_state.in_fence_block = in_fence_block
         parser_state.fence_depth = fence_depth
         parser_state.language = language
