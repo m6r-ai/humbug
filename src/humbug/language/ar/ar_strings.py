@@ -21,6 +21,8 @@ def get_arabic_strings() -> LanguageStrings:
         view_menu="عرض",
 
         # File menu items
+        about_humbug="حول هامبج",
+        quit_humbug="خروج من هامبج",
         new_mindspace="مساحة ذهنية جديدة",
         new_conversation="محادثة جديدة",
         new_metaphor_conversation="محادثة ميتافور جديدة...",

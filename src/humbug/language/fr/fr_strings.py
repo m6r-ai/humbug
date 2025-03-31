@@ -21,6 +21,8 @@ def get_french_strings() -> LanguageStrings:
         view_menu="Affichage",
 
         # File menu items
+        about_humbug="À propos de Humbug",
+        quit_humbug="Quitter Humbug",
         new_mindspace="Nouvel espace mental",
         new_conversation="Nouvelle conversation",
         new_metaphor_conversation="Nouvelle conversation Metaphor...",

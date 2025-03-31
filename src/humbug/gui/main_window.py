@@ -48,14 +48,17 @@ class MainWindow(QMainWindow):
         strings = self._language_manager.strings
 
         # Humbug menu actions
-        self._about_action = QAction("About Humbug", self)
+        self._about_action = QAction(strings.about_humbug, self)
+        self._about_action.setMenuRole(QAction.AboutRole)
         self._about_action.triggered.connect(self._show_about_dialog)
 
         self._user_settings_action = QAction(strings.user_settings, self)
+        self._user_settings_action.setMenuRole(QAction.PreferencesRole)
         self._user_settings_action.setShortcut(QKeySequence("Ctrl+,"))
         self._user_settings_action.triggered.connect(self._show_user_settings_dialog)
 
-        self._quit_action = QAction("Quit Humbug", self)
+        self._quit_action = QAction(strings.quit_humbug, self)
+        self._quit_action.setMenuRole(QAction.QuitRole)
         self._quit_action.setShortcut(QKeySequence("Ctrl+Q"))
         self._quit_action.triggered.connect(self.close)
 
@@ -417,8 +420,9 @@ class MainWindow(QMainWindow):
         self._view_menu.setTitle(strings.view_menu)
 
         # Update action texts
-        self._about_action.setText(strings.about_title)
+        self._about_action.setText(strings.about_humbug)
         self._user_settings_action.setText(strings.user_settings)
+        self._quit_action.setText(strings.quit_humbug)
         self._new_mindspace_action.setText(strings.new_mindspace)
         self._new_conv_action.setText(strings.new_conversation)
         self._new_metaphor_conv_action.setText(strings.new_metaphor_conversation)

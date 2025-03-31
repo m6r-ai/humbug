@@ -16,6 +16,8 @@ class LanguageStrings:
     view_menu: str
 
     # Menu items
+    about_humbug: str
+    quit_humbug: str
     new_mindspace: str
     new_conversation: str
     new_metaphor_conversation: str

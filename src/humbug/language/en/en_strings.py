@@ -21,6 +21,8 @@ def get_english_strings() -> LanguageStrings:
         view_menu="View",
 
         # File menu items
+        about_humbug="About Humbug",
+        quit_humbug="Quit Humbug",
         new_mindspace="New Mindspace",
         new_conversation="New Conversation",
         new_metaphor_conversation="New Metaphor Conversation...",
