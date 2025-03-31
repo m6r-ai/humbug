@@ -14,6 +14,7 @@ Bug fixes:
 - The bookmark menu items did not correctly change language when the language was changed at runtime.
 - Resolve a rendering problem with lists that contain paragraphs.
 - Resolve a problem where editor windows did not get focus correctly when clicked.
+- Resolved a duplicate "Humbug" menu item on MacOS.
 
 ## v0.8 (2025-03-27)
 
