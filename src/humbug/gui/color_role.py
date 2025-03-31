@@ -78,6 +78,7 @@ class ColorRole(Enum):
     SYNTAX_INLINE_CODE = auto()
     SYNTAX_KEYWORD = auto()
     SYNTAX_LANGUAGE = auto()
+    SYNTAX_LIST_MARKER = auto()
     SYNTAX_NUMBER = auto()
     SYNTAX_OPERATOR = auto()
     SYNTAX_PREPROCESSOR = auto()

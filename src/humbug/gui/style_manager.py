@@ -281,6 +281,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#f0e060",
                 ColorMode.LIGHT: "#a09040"
             },
+            ColorRole.SYNTAX_LIST_MARKER: {
+                ColorMode.DARK: "#c05040",
+                ColorMode.LIGHT: "#803828"
+            },
             ColorRole.SYNTAX_NUMBER: {
                 ColorMode.DARK: "#88d048",
                 ColorMode.LIGHT: "#508020"
@@ -387,6 +391,7 @@ class StyleManager(QObject):
             TokenType.ATTRIBUTE: ColorRole.SYNTAX_HEADING,
             TokenType.BACKTICK: ColorRole.SYNTAX_INLINE_CODE,
             TokenType.BOOLEAN: ColorRole.SYNTAX_NUMBER,
+            TokenType.BLOCKQUOTE: ColorRole.SYNTAX_KEYWORD,
             TokenType.CHARACTER: ColorRole.SYNTAX_STRING,
             TokenType.CODE: ColorRole. SYNTAX_CODE,
             TokenType.COMMENT: ColorRole.SYNTAX_COMMENT,
@@ -413,6 +418,7 @@ class StyleManager(QObject):
             TokenType.KEYWORD: ColorRole.SYNTAX_KEYWORD,
             TokenType.LANGUAGE: ColorRole.SYNTAX_LANGUAGE,
             TokenType.LIFETIME: ColorRole.SYNTAX_OPERATOR,
+            TokenType.LIST_MARKER: ColorRole.SYNTAX_LIST_MARKER,
             TokenType.LPAREN: ColorRole.SYNTAX_OPERATOR,
             TokenType.NUMBER: ColorRole.SYNTAX_NUMBER,
             TokenType.OPERATOR: ColorRole.SYNTAX_OPERATOR,
