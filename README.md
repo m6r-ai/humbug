@@ -1,4 +1,4 @@
-# Humbug v0.9
+# Humbug v0.10
 
 Humbug is an extensible open-source tool designed to help you build and maintain software using AI.
 
@@ -59,13 +59,9 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.9
 
-v0.9 adds several new features:
+v0.10 adds several new features:
 
-- The current focus message is now highlighted across all conversations.  You can now step between
-  messages in the current conversation using "Alt+Up" and "Alt+Down".
-- You can now both copy to the clipboard, or save, whole messages in Markdown format, as well as copying or
-  saving code blocks within messages.
-- Block-level Markdown syntax highlighting is now supported.
+TBD
 
 ## Features
 
