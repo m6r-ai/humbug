@@ -215,17 +215,17 @@ Context: Capabilities
 
                             ```plaintext
                             +------------------------------------------+
-                            |  You                                     |
+                            | You                                  c s |
                             |                                          |
-                            |  This is a user message that wraps       |
-                            |  across multiple lines as needed.        |
+                            | This is a user message that wraps        |
+                            | across multiple lines as needed.         |
                             +------------------------------------------+
                                             ↕ 10px
                             +------------------------------------------+
-                            |  Assistant Response                      |
+                            | Assistant Response                   c s |
                             |                                          |
-                            |  This is an AI response that also wraps  |
-                            |  across multiple lines as needed.        |
+                            | This is an AI response that also wraps   |
+                            | across multiple lines as needed.         |
                             |                                          |
                             | +--------------------------------------+ |
                             | | Python                           c s | |
@@ -234,28 +234,32 @@ Context: Capabilities
                             | |          formatting")                | |
                             | +--------------------------------------+ |
                             |                                          |
-                            |  This is another response that also      |
-                            |  wraps across multiple lines as needed.  |
+                            | This is another response that also       |
+                            | wraps across multiple lines as needed.   |
                             +------------------------------------------+
                                             ↕ 10px
                             +------------------------------------------+
-                            |  System Message                          |
+                            | System Message                       c s |
                             |                                          |
-                            |  This is a system message that wraps     |
-                            |  across multiple lines as needed.        |
+                            | This is a system message that wraps      |
+                            | across multiple lines as needed.         |
                             +------------------------------------------+
                             ```
 
                             Within the assistant response, or assistant reasoning, any code blocks will be shown
                             as sub-blocks within the larger block to make it easy to extract them.
 
+                            Each message also has icons, marked here as "c" and "s" that implement "copy" and "save-as".
+                            These capture the entire contents of the message in Markdown format and either copy them to
+                            the clipboard, or invoke a save-as dialog to allow the message to be saved as a file.
+
                             Context: Code blocks
                                 Embedded within the messages can be code blocks.  These have a distinct visual
                                 style that differentiates them from other parts of the AI response.  Where the
                                 language is known then their sub-header shows this.  They also have icons, marked
                                 here as "c" and "s" that implement "copy" and "save-as".  These capture the
-                                contents of the code block and either copy them to the clipboard, or else invoked
-                                as save-as dialog to allow the contents to be saved as a file.
+                                contents of the code block and either copy them to the clipboard, or invoke
+                                a save-as dialog to allow the contents to be saved as a file.
 
                     Context: Focus message
                         Within any conversation the application will track the current "focused" message.  This will
@@ -466,6 +470,7 @@ Context: Capabilities
                     - JavaScript
                     - JSON
                     - Kotlin
+                    - Markdown
                     - Metaphor
                     - Move (Sui Move)
                     - Python
