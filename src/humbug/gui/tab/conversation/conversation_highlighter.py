@@ -102,6 +102,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
                             in_code_block = not in_code_block
                             continue
 
+
                 if fence_depth > 0:
                     highlight_len = len(token.value) + token.start - last_token_pos
                     self.setFormat(last_token_pos, highlight_len, style_manager.get_highlight(token.type))
@@ -111,6 +112,8 @@ class ConversationHighlighter(QSyntaxHighlighter):
                 if in_code_block:
                     self.setFormat(token.start, len(token.value), style_manager.get_highlight(TokenType.INLINE_CODE))
                     continue
+
+                self.setFormat(token.start, len(token.value), style_manager.get_proportional_highlight(token.type))
 
             # Check if we need to rehighlight everything from this block onwards.
             if (contination_state != parser_state.continuation_state) or (current_fence_depth != fence_depth) or (language != parser_state.language):

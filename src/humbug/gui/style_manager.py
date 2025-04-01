@@ -58,9 +58,11 @@ class StyleManager(QObject):
             self._color_mode = ColorMode.DARK  # Default to dark mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
+            self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
 
             self._code_font_families = ["Menlo", "Consolas", "Monaco", "monospace"]
             self._initialize_highlights()
+            self._initialize_proportional_highlights()
             self._create_theme_icons()
 
     def _initialize_colors(self) -> Dict[ColorRole, Dict[ColorMode, str]]:
@@ -446,6 +448,27 @@ class StyleManager(QObject):
 
         return text_highlight
 
+    def _initialize_proportional_highlights(self):
+        # Mapping from token type to colour
+        colour_mapping = {
+            TokenType.BLOCKQUOTE: ColorRole.SYNTAX_KEYWORD,
+            TokenType.HEADING: ColorRole.SYNTAX_HEADING,
+            TokenType.LIST_MARKER: ColorRole.SYNTAX_LIST_MARKER,
+            TokenType.TEXT: ColorRole.SYNTAX_TEXT
+        }
+
+        for token_type, role in colour_mapping.items():
+            text_format = self._create_proportional_highlight(role)
+            self._proportional_highlights[token_type] = text_format
+
+        self._error_proportional_highlight = self._create_proportional_highlight(ColorRole.SYNTAX_ERROR)
+
+    def _create_proportional_highlight(self, role: ColorRole) -> QTextCharFormat:
+        text_highlight = QTextCharFormat()
+        text_highlight.setForeground(QColor(self._colors[role][self._color_mode]))
+
+        return text_highlight
+
     def _create_app_icon_svg(self, bg_color: str, text_color: str) -> str:
         """
         Create an application icon SVG with specified colors.
@@ -730,10 +753,34 @@ class StyleManager(QObject):
         return self._colors[role][self._color_mode]
 
     def get_highlight(self, token_type: TokenType) -> QTextCharFormat:
+        """
+        Get the highlight format for a specific token type.
+
+        Args:
+            token_type: The TokenType to look up
+
+        Returns:
+            QTextCharFormat: The highlight format for the specified token type
+        """
         if token_type not in self._highlights:
             print(f"token type {token_type} not mapped")
 
         return self._highlights.get(token_type, self._error_highlight)
+
+    def get_proportional_highlight(self, token_type: TokenType) -> QTextCharFormat:
+        """
+        Get the proportionally-spaced highlight format for a specific token type.
+
+        Args:
+            token_type: The TokenType to look up
+
+        Returns:
+            QTextCharFormat: The highlight format for the specified token type
+        """
+        if token_type not in self._proportional_highlights:
+            print(f"token type {token_type} not mapped")
+
+        return self._proportional_highlights.get(token_type, self._error_proportional_highlight)
 
     def _determine_base_font_size(self) -> float:
         """
@@ -792,6 +839,7 @@ class StyleManager(QObject):
         if mode != self._color_mode:
             self._color_mode = mode
             self._initialize_highlights()  # Reinitialize highlights with new colors
+            self._initialize_proportional_highlights()
             self.style_changed.emit()  # Trigger style update
 
     @property
