@@ -81,6 +81,9 @@ class UnixTerminal(TerminalBase):
                         # Some signals can't be modified (like SIGKILL)
                         pass
 
+                # Set TERM environment variable
+                os.environ['TERM'] = 'xterm-256color'
+
                 # Execute shell/command
                 os.execvp(shell.split()[0], shell.split())
 
