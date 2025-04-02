@@ -2,7 +2,9 @@
 
 ## v0.10 (2025-04-xx)
 
-TBD
+Bug fixes:
+
+- The TERM environment variable is now set to xterm-256color on MacOS and Linux.
 
 ## v0.9 (2025-04-01)
 
