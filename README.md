@@ -45,6 +45,15 @@ One fun aspect of using Metaphor is we can use Humbug to become an expert on its
 Metaphor script `humbug-expert.m6r` and run this with a model that has a very large context window (e.g. Gemini)
 then you can ask the AI anything about the design or implementation of the software!
 
+## Engineering over vibes!
+
+Vibe coding can be a great way to experiment and try out ideas but can be incredibly frustrating for experienced
+engineers.  Vibe coding can be incredible to support prototyping and brainstorming, but high quality code requires
+careful review and understanding.
+
+By offering a solid grounding context, Metaphor and Humbug aim to provide a way to capture the learnings from
+vibe coding into something that can be used in a more predictable way.
+
 ## What's new in v0.9
 
 v0.9 adds several new features:
