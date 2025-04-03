@@ -71,11 +71,13 @@ Compatible with MacOS X, Linux, and Windows 10/11.
 - Copy or save whole messages as Markdown.
 - Full text search across all parts of a conversation.
 - Bookmarks messages for rapid navigation.
+- Syntax highlighting for various languages and file formats, including nested systax highlighting where code for
+  one language appears inside a different one.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
+  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
 
 ### File editing
 
-- Syntax highlighting for various languages and file formats.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
-  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
+- Full file editing with syntax highlighting.
 - Auto-backup functionality for unsaved changes.
 
 ### Terminal emulator
@@ -97,9 +99,9 @@ Compatible with MacOS X, Linux, and Windows 10/11.
 - Mindspace state persistence for restoring open tabs and cursor positions.
 - Home directory tracking of last opened mindspace.
 
-### Multi-kanguage support
+### Multi-language support
 
-- Mindspaces can be configured to use different human languages.  Currently supported English, French,
+- Humbug can be configured to use different human languages.  Currently supported English, French,
   and Arabic.
 
 ## Getting started
@@ -112,7 +114,7 @@ free API keys for low volume testing, so you can get started with either, or bot
 ## Requirements
 
 - Python 3.10 or higher
-- API keys for at least one of the supported AI providers (Anthropic, DeepSeek, Google, Mistral, Ollama, or OpenAI)
+- You will need API keys for any AI models other than Ollama
 - PySide6 (the GUI framework)
 - qasync (allows the GUI framework to work nicely with async Python code)
 - aiohttp (async HTTP client)
