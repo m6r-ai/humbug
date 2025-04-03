@@ -1,65 +1,38 @@
 # Humbug v0.9
 
-Humbug is an extensible open-source tool designed to help you build and maintain software using AI.  It goes beyond
-AI-powered app builders and IDEs by helping you capture what you want your software to do so AI can keep helping you
-long after the initial prototyping stage.
+Humbug is an extensible open-source tool designed to help you build and maintain software using AI.
 
-To do this it uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, prompt creation
-language.  Metaphor lets you capture what you want your software to do and all the information (context)
-an AI will need to help you develop and support that software throughout its lifecycle.
+To do this it uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation
+language.  Metaphor aims to let you be clear about what you want to achieve so your AI is not left guessing or
+hallucinating.  Humbug has been built and maintained using this approach too (the Metaphor files are in the repo).
 
-Metaphor lets you get to the "engineering" in prompt engineering.  It helps massively increase the work that
-can be done by AI, and significantly reduces rates of hallucination by ensuring the AI doesn't have to guess
-what you want to build.
+Metaphor scripts are designed to let you capture context in a structured way.  To make this simpler, you can embed
+files and explain how you want the AI to use them (source code, requirements docs, design specs, information about
+public APIs in libraries, etc).  Metaphor descriptions can also be broken into components so they can be
+reused across projects.  For example you might have design or coding rules, UX style guidelines, or implementation
+details for how you use specific parts of your tech stack.
 
-Humbug uses a familiar IDE-style environment but it's built to have AI at its core.  You can discuss your software,
-seek recommendations, get help designing and coding new and complex capabilities, or use it to understand and
-navigate what you have.
+By treating prompt creation this way it's easy to try new ideas, and iterate towards what you want.  It's easy
+to make adjustments to a Metaphor scripts and try again.  You can also try the same things with different AI models.
 
-## Designed for AI, built by AI!
+![Humbug in action](./docs/humbug-v0.9-1.webp)
 
-Humbug is a tool to build with AI, but is also a demonstration of how to build software this way.  You can read
-through the Metaphor description of Humbug - the same description that is used to help build and update it.
+![Humbug in action](./docs/humbug-v0.8-2.webp)
 
-You can find out more about how AI does this by checking out [@m6rai on YouTube](https://youtube.com/@m6rai).
+![Humbug in action](./docs/humbug-v0.9-2.webp)
 
-While AI builds the software it also helps maintain the Metaphor description so we end up with a virtuous
-circle where we have a definition of what the software is supposed to do, and the code that implements it.
-This means the AIs working on the code know what's there by intent, rather than just what ended up being
-coded.  That helps us keep the implementation on track, but also makes it possible to discuss what the
-software does, why it does it, and how it does it.  If you've seen your AI code-completion on your IDE do
-weird things, it's usually because those approaches don't really understand the intent behind your code.
+![Humbug in action](./docs/humbug-v0.9-5.webp)
 
 ## What does that mean in practice?
 
-By providing an AI everything it needs, Metaphor can stretch an AI model to its limits.  In most versions
-there have been examples of 100+ line changes to the code across multiple files that were all generated from a
-single Metaphor prompt.  The biggest changes have been well over 1000 lines of code each (both done with Claude
-Sonnet 3.7).
+Providing an AI everything it needs lets Metaphor stretch an AI model way beyond code completions.  In most versions
+there have been many 100+ line changes to the code across multiple files that were all generated from
+single Metaphor prompts.  The biggest changes have been well over 1000 lines of code each.
 
 The ability to use AI for large refactoring and redesign tasks also means Humbug is a codebase that can
 evolve very fast but with very little technical debt.
 
-## What this isn't!
-
-While Humbug has a lot of the characteristics of a normal IDE, it's not intended to be a clone of a conventional
-IDE.  AIs can do many things far more quickly than people so we want to lean on AIs to do those things.
-
-Over time you will see many more AI-backed capabilities.  Manual features will increasingly just be a
-fallback.
-
-## Getting started
-
-Humbug can use an Ollama model running locally on your system but the best results currently come from one of
-the cloud-based AIs.  To use them you'll need to get an API key (they're available from the various AI
-provider websites).  Most of them require you to pay for access, but Google and Mistral both currently offer
-free API keys for low volume testing, so you can get started with either, or both, of them.
-
-## Join the community on Discord
-
-If you want to engage with other users and developers, you can join us on [Discord](https://discord.gg/GZhJ7ZtgwN).
-
-## What's new
+## What's new in v0.9
 
 v0.9 adds several new features:
 
@@ -69,15 +42,11 @@ v0.9 adds several new features:
   saving code blocks within messages.
 - Block-level Markdown syntax highlighting is now supported.
 
-## Some examples
-
-![Humbug in action](./docs/humbug-v0.8-1.webp)
-
-![Humbug in action](./docs/humbug-v0.8-2.webp)
-
-![Humbug in action](./docs/humbug-v0.8-3.webp)
-
 ## Features
+
+### Cross-platform support
+
+Compatible with MacOS X, Linux, and Windows 10/11.
 
 ### AI interaction
 
@@ -88,15 +57,24 @@ v0.9 adds several new features:
 - Handles reasoning outputs for models that support them.
 - Error handling and retry mechanisms for API requests.
 
+### Conversation features
+
+- Markdown-style code formatting in input and history.
+- Message history with distinct cards for user, AI reasoning, AI response, and system messages.
+- Code blocks are broken into sections and it's easy to copy a whole section or save it as a file.
+- Copy or save whole messages as Markdown.
+- Full text search across all parts of a conversation.
+- Bookmarks messages for rapid navigation.
+
 ### File editing
 
 - Syntax highlighting for various languages and file formats.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
-  JavaScript, JSON, Kotlin, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
+  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
 - Auto-backup functionality for unsaved changes.
 
-### Command line shell
+### Terminal emulator
 
-- Support for accessing the local shell on Linux and MacOS systems.
+- Support for accessing the local shells/command prompts (Unix shells, or Windows command prompt).
 - Full text search across the terminal history.
 
 ### Multi-tab interface
@@ -118,30 +96,12 @@ v0.9 adds several new features:
 - Mindspaces can be configured to use different human languages.  Currently supported English, French,
   and Arabic.
 
-### User interface
+## Getting started
 
-- Keyboard navigation and mouse support.
-- Resizable splitters between file tree and tab columns.
-- Consistent styling with light/dark mode themes.
-- Status bar for application information.
-
-### Conversation features
-
-- Markdown-style code formatting in input and history.
-- Message history with distinct cards for user, AI reasoning, AI response, and system messages.
-- Code blocks are broken into sections and it's easy to copy a whole section or save it as a file.
-- Full text search across all parts of a conversation.
-- Bookmarks messages for rapid navigation.
-
-### File tree
-
-- Displays all files and folders in the mindspace directory.
-- Excludes the ".humbug" directory and other hidden files/folders.
-- Supports keyboard navigation and automatic refresh when files change.
-
-### Cross-platform support
-
-Compatible with MacOS X (2020+), Linux (2020+), and Windows 10/11.
+Humbug can use an Ollama model running locally on your system but the best results currently come from one of
+the cloud-based AIs.  To use them you'll need to get an API key (they're available from the various AI
+provider websites).  Most of them require you to pay for access, but Google and Mistral both currently offer
+free API keys for low volume testing, so you can get started with either, or both, of them.
 
 ## Requirements
 
@@ -217,15 +177,27 @@ Please note this is in your home directory, not the `.humbug` directory that you
 
 The software is released under an Apache 2.0 open source license.
 
+## Find out more on YouTube
+
+You can find out more about Humbug and Metaphor on YouTube: [@m6rai on YouTube](https://youtube.com/@m6rai).
+
+## Join us on Discord
+
+If you want to engage with other users and developers, you can join us on [Discord](https://discord.gg/GZhJ7ZtgwN).
+
 ## More information
 
 You can find out more about Metaphor and some of the things we've done with it here:
 
-- [Hello, Metaphr (A brief tutorial)](https://github.com:/m6r-ai/hello-metaphor)
+- [Hello, Metaphor (A brief tutorial)](https://github.com:/m6r-ai/hello-metaphor)
 - [m6rclib (Metaphor compiler library)](https://github.com:/m6r-ai/m6rclib)
 - [m6rc (Stand-alone Metaphor compiler)](https://github.com:/m6r-ai/m6rc)
 - [commit-critic (Code review tool)](https://github.com:/m6r-ai/commit-critic)
 - [demo-blog-editor (How we code up blog posts)](https://github.com:/m6r-ai/demo-blog-editor)
+
+## Commercial support
+
+Humbug and Metaphor are supported by M6R Ltd.  To find out more please head over to [m6r.ai](https://m6r.ai)
 
 ## Contributing
 
