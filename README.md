@@ -48,11 +48,14 @@ then you can ask the AI anything about the design or implementation of the softw
 ## Engineering over vibes!
 
 Vibe coding can be a great way to experiment and try out ideas but can be incredibly frustrating for experienced
-engineers.  Vibe coding can be incredible to support prototyping and brainstorming, but high quality code requires
+engineers.  Vibe coding can be an incredible way to support prototyping and brainstorming, but high quality code requires
 careful review and understanding.
 
 By offering a solid grounding context, Metaphor and Humbug aim to provide a way to capture the learnings from
-vibe coding into something that can be used in a more predictable way.
+vibe coding into something that can be used in a more predictable way.  We can start from our reference context,
+explore interactively, update the context and iterate.  We can go further than normal vibe coding because we can also
+have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
+can be used to refine the Metaphor context.
 
 ## What's new in v0.9
 
