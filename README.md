@@ -4,7 +4,7 @@ Humbug is an extensible open-source tool designed to help you build and maintain
 
 To do this it uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation
 language.  Metaphor aims to let you be clear about what you want to achieve so your AI is not left guessing or
-hallucinating.  Humbug has been built and maintained using this approach too (the Metaphor files are in the repo).
+hallucinating.
 
 Metaphor scripts are designed to let you capture context in a structured way.  To make this simpler, you can embed
 files and explain how you want the AI to use them (source code, requirements docs, design specs, information about
@@ -20,6 +20,9 @@ While Metaphor is designed to help start your conversations with AI, and Humbug 
 those conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into
 your software and documentation.  The built-in editor and terminal also lets you update and test anything you get back from
 the AI, and provides you access to any command line tools you might want to use.
+
+Well over 80% of Humbug has been built and maintained by AI using Metaphor (the Metaphor files are in the repo), so
+it demonstrates how effective this approach can be.
 
 ![Humbug in action](./docs/humbug-v0.9-1.webp)
 
@@ -37,6 +40,10 @@ single Metaphor prompts.  The biggest changes have been well over 1000 lines of 
 
 The ability to use AI for large refactoring and redesign tasks also means Humbug is a codebase that can
 evolve very fast but with very little technical debt.
+
+One fun aspect of using Metaphor is we can use Humbug to become an expert on its own design.  If you use the
+Metaphor script `humbug-expert.m6r` and run this with a model that has a very large context window (e.g. Gemini)
+then you can ask the AI anything about the design or implementation of the software!
 
 ## What's new in v0.9
 
