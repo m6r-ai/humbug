@@ -13,7 +13,7 @@ reused across projects.  For example you might have design or coding rules, UX s
 details for how you use specific parts of your tech stack.
 
 By making prompt creation a repeatable engineering process it's easy to try new ideas, and iterate towards what you
-want.  If you don't get what you want, you can make adjustments to your Metaphor scripts and try again.  If you want to
+want.  If you don't like something, you can make adjustments to your Metaphor scripts and try again.  If you want to
 see if a different AI models will give you better results you can do that too!
 
 While Metaphor is designed to help start your conversations with AI, and Humbug is the tool designed to get the most out of
