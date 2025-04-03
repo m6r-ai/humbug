@@ -2,7 +2,10 @@
 Visitor class to print Metaphor AST structures for debugging
 """
 
-from humbug.m6rc.metaphor_ast_node import MetaphorASTVisitor, MetaphorASTNode, MetaphorASTNodeType
+from humbug.m6rc.metaphor_ast_node import (
+    MetaphorASTVisitor, MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode,
+    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode, MetaphorRootNode
+)
 
 
 class MetaphorASTPrinter(MetaphorASTVisitor):
@@ -22,49 +25,75 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         """
         return "  " * self.indent_level
 
-    def visit(self, node: MetaphorASTNode):
+    def generic_visit(self, node: MetaphorASTNode):
         """
-        Visit a node and print its details.
+        Default visit method that prints the node type.
 
         Args:
             node: The node to visit
 
         Returns:
-            The results of visiting the node
+            The results of visiting the children
         """
         # Print node information
-        print(f"{self._indent()}{node.node_type.name}: {node.value}")
+        node_class = node.__class__.__name__
+        print(f"{self._indent()}{node_class}: {node.value}")
 
         # Visit children with increased indentation
         self.indent_level += 1
-        results = []
-        for child in node.children:
-            results.append(self.visit(child))
-
+        results = super().generic_visit(node)
         self.indent_level -= 1
 
         return results
 
-    def visit_with_node_types(self, node: MetaphorASTNode, types_to_show=None):
+    def visit_MetaphorTextNode(self, node: MetaphorTextNode):
         """
-        Visit a node and only print details for specific node types.
+        Visit a text node and print its content.
+
+        Args:
+            node: The text node to visit
+
+        Returns:
+            The text content
+        """
+        print(f"{self._indent()}Text: '{node.value}'")
+        return node.value
+
+    def visit_MetaphorCodeNode(self, node: MetaphorCodeNode):
+        """
+        Visit a code node and print a preview of its content.
+
+        Args:
+            node: The code node to visit
+
+        Returns:
+            The code content
+        """
+        content_preview = node.value[:30] + "..." if len(node.value) > 30 else node.value
+        print(f"{self._indent()}Code: '{content_preview}' ({len(node.value)} chars)")
+        return node.value
+
+    def visit_with_specific_types(self, node: MetaphorASTNode, types_to_show=None):
+        """
+        Visit a node and only print details for specific node classes.
 
         Args:
             node: The node to visit
-            types_to_show: List of node types to display, or None for all
+            types_to_show: List of node classes to display, or None for all
 
         Returns:
             The results of visiting the node
         """
         # Check if we should display this node
-        if types_to_show is None or node.node_type in types_to_show:
-            print(f"{self._indent()}{node.node_type.name}: {node.value}")
+        if types_to_show is None or any(isinstance(node, t) for t in types_to_show):
+            node_class = node.__class__.__name__
+            print(f"{self._indent()}{node_class}: {node.value}")
 
         # Visit children with increased indentation
         self.indent_level += 1
         results = []
         for child in node.children:
-            results.append(self.visit_with_node_types(child, types_to_show))
+            results.append(self.visit_with_specific_types(child, types_to_show))
 
         self.indent_level -= 1
 

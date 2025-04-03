@@ -3,35 +3,28 @@ Types and classes for representing the AST (Abstract Syntax Tree)
 of a Metaphor document.
 """
 
-from typing import List
+from typing import List, Any, Optional
 from enum import IntEnum
 
 from humbug.ast.ast import ASTNode, ASTVisitor
 
 
-class MetaphorASTNodeType(IntEnum):
-    """
-    Types of nodes that can appear in a Metaphor AST.
-    """
-    ROOT: int = 0
-    TEXT: int = 1
-    ROLE: int = 2
-    CONTEXT: int = 3
-    ACTION: int = 4
-    CODE: int = 5
-
-
 class MetaphorASTNode(ASTNode['MetaphorASTNode']):
     """
-    Represents a node in the Metaphor Abstract Syntax Tree (AST).
+    Base class for all Metaphor AST nodes.
 
-    Attributes:
-        node_type (MetaphorASTNodeType): The type of the token the node represents.
-        value (str): The value associated with the node.
+    This class provides common functionality for all Metaphor nodes
+    regardless of their specific type.
     """
-    def __init__(self, node_type: MetaphorASTNodeType, value: str) -> None:
+
+    def __init__(self, value: str = "") -> None:
+        """
+        Initialize a base Metaphor AST node.
+
+        Args:
+            value: The value associated with the node
+        """
         super().__init__()
-        self._node_type: MetaphorASTNodeType = node_type
         self._value: str = value
 
     def __str__(self, indent: int = 0) -> str:
@@ -39,16 +32,17 @@ class MetaphorASTNode(ASTNode['MetaphorASTNode']):
         Returns a string representation of the node and its children in a tree format.
 
         Args:
-            indent (int): The current indentation level (used recursively)
+            indent: The current indentation level (used recursively)
 
         Returns:
-            str: A formatted string showing the node's type, value, and children
+            A formatted string showing the node's type, value, and children
         """
         # Create the indentation string
         indent_str = "    " * indent
 
         # Start with this node's information
-        result = f"{indent_str}{self.node_type.name}: {self.value}"
+        node_type_name = self.__class__.__name__
+        result = f"{indent_str}{node_type_name}: {self.value}"
 
         # Add all children with increased indentation
         for child in self.children:
@@ -61,9 +55,15 @@ class MetaphorASTNode(ASTNode['MetaphorASTNode']):
         Returns a concise representation of the node for debugging.
 
         Returns:
-            str: A string in format 'NodeType(value)[num_children]'
+            A string in format 'NodeType(value)[num_children]'
         """
-        return f"{self.node_type.name}({self.value})[{len(self.children)}]"
+        node_type_name = self.__class__.__name__
+        return f"{node_type_name}({self.value})[{len(self.children)}]"
+
+    @property
+    def value(self) -> str:
+        """The raw text value of this node."""
+        return self._value
 
     def attach_child(self, child: 'MetaphorASTNode') -> None:
         """Add a child node to this MetaphorASTNode."""
@@ -72,38 +72,142 @@ class MetaphorASTNode(ASTNode['MetaphorASTNode']):
     def detach_child(self, child: 'MetaphorASTNode') -> None:
         """
         Detach a child node from this node in the AST.
-        
+
         Args:
             child: The child node to detach
-            
+
         Raises:
             ValueError: If the child is not a child of this node
         """
         self.remove_child(child)
 
-    @property
-    def node_type(self) -> MetaphorASTNodeType:
-        """The type of this node."""
-        return self._node_type
-
-    @property
-    def value(self) -> str:
-        """The raw text value of this node."""
-        return self._value
-
-    def get_children_of_type(self, node_type: MetaphorASTNodeType) -> List['MetaphorASTNode']:
+    def get_children_of_type(self, node_class: type) -> List['MetaphorASTNode']:
         """
-        Returns a list of all immediate children that match the specified node type.
+        Returns a list of all immediate children that are instances of the specified class.
 
         Args:
-            node_type (MetaphorASTNodeType): The type of nodes to filter for
+            node_class: The class to filter for
 
         Returns:
-            List[MetaphorASTNode]: List of child nodes matching the specified type
+            List of child nodes matching the specified class
         """
-        return [child for child in self.children if child.node_type == node_type]
+        return [child for child in self.children if isinstance(child, node_class)]
+
+    def accept(self, visitor: 'MetaphorASTVisitor') -> Any:
+        """
+        Accept a visitor to process this node.
+
+        Args:
+            visitor: The visitor to accept
+
+        Returns:
+            The result of the visitor's visit method
+        """
+        return visitor.visit(self)
+
+
+class MetaphorRootNode(MetaphorASTNode):
+    """Root node of a Metaphor AST representing an entire document."""
+
+    def __init__(self) -> None:
+        """Initialize a root node."""
+        super().__init__("")
+
+
+class MetaphorTextNode(MetaphorASTNode):
+    """Node representing text content in a Metaphor document."""
+
+    def __init__(self, content: str) -> None:
+        """
+        Initialize a text node.
+
+        Args:
+            content: The text content
+        """
+        super().__init__(content)
+
+
+class MetaphorCodeNode(MetaphorASTNode):
+    """Node representing a code block in a Metaphor document."""
+
+    def __init__(self, content: str) -> None:
+        """
+        Initialize a code block node.
+
+        Args:
+            content: The code content
+        """
+        super().__init__(content)
+
+
+class MetaphorRoleNode(MetaphorASTNode):
+    """Node representing a Role block in a Metaphor document."""
+
+    def __init__(self, label: str = "") -> None:
+        """
+        Initialize a role node.
+
+        Args:
+            label: Optional label for the role
+        """
+        super().__init__(label)
+
+
+class MetaphorContextNode(MetaphorASTNode):
+    """Node representing a Context block in a Metaphor document."""
+
+    def __init__(self, label: str = "") -> None:
+        """
+        Initialize a context node.
+
+        Args:
+            label: Optional label for the context
+        """
+        super().__init__(label)
+
+
+class MetaphorActionNode(MetaphorASTNode):
+    """Node representing an Action block in a Metaphor document."""
+
+    def __init__(self, label: str = "") -> None:
+        """
+        Initialize an action node.
+
+        Args:
+            label: Optional label for the action
+        """
+        super().__init__(label)
 
 
 class MetaphorASTVisitor(ASTVisitor['MetaphorASTNode']):
     """Base visitor class for Metaphor AST traversal."""
-    pass
+
+    def visit(self, node: MetaphorASTNode) -> Any:
+        """
+        Visit a node and dispatch to the appropriate visit method.
+
+        Args:
+            node: The node to visit
+
+        Returns:
+            The result of visiting the node
+        """
+        method_name = f'visit_{node.__class__.__name__}'
+        visitor = getattr(self, method_name, self.generic_visit)
+        return visitor(node)
+
+    def generic_visit(self, node: MetaphorASTNode) -> List[Any]:
+        """
+        Default visit method for nodes without specific handlers.
+
+        Args:
+            node: The node to visit
+
+        Returns:
+            A list of results from visiting each child
+        """
+        results = []
+        for child in node.children:
+            results.append(self.visit(child))
+
+        return results

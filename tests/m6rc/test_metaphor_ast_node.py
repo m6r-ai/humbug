@@ -2,21 +2,22 @@ import pytest
 
 from humbug.m6rc import (
     MetaphorASTNode,
-    MetaphorASTNodeType,
+    MetaphorRootNode, MetaphorTextNode, MetaphorRoleNode,
+    MetaphorContextNode, MetaphorActionNode, MetaphorCodeNode
 )
 
 
 @pytest.fixture
 def sample_node():
-    return MetaphorASTNode(MetaphorASTNodeType.TEXT, "test input")
+    return MetaphorTextNode("test input")
 
 @pytest.fixture
 def complex_tree():
-    root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "document")
-    text1 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Hello")
-    role = MetaphorASTNode(MetaphorASTNodeType.ROLE, "user")
-    text2 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "World")
-    context = MetaphorASTNode(MetaphorASTNodeType.CONTEXT, "global")
+    root = MetaphorRootNode()
+    text1 = MetaphorTextNode("Hello")
+    role = MetaphorRoleNode("user")
+    text2 = MetaphorTextNode("World")
+    context = MetaphorContextNode("global")
 
     root.attach_child(text1)
     root.attach_child(role)
@@ -28,8 +29,7 @@ def complex_tree():
 
 def test_metaphor_ast_node_creation(sample_node):
     """Test basic node creation"""
-    node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "hello")
-    assert node.node_type == MetaphorASTNodeType.TEXT
+    node = MetaphorTextNode("hello")
     assert node.value == "hello"
     assert node.parent is None
     assert len(node.children) == 0
@@ -37,7 +37,7 @@ def test_metaphor_ast_node_creation(sample_node):
 
 def test_metaphor_ast_node_attach_child(sample_node):
     """Test attaching child nodes"""
-    child_node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "child input")
+    child_node = MetaphorTextNode("child input")
 
     sample_node.attach_child(child_node)
     assert len(sample_node.children) == 1
@@ -47,8 +47,8 @@ def test_metaphor_ast_node_attach_child(sample_node):
 
 def test_metaphor_ast_node_detach_child(sample_node):
     """Test detaching a child node"""
-    child1_node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "child1")
-    child2_node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "child2")
+    child1_node = MetaphorTextNode("child1")
+    child2_node = MetaphorTextNode("child2")
 
     sample_node.attach_child(child1_node)
     sample_node.attach_child(child2_node)
@@ -61,8 +61,8 @@ def test_metaphor_ast_node_detach_child(sample_node):
 
 def test_metaphor_ast_node_detach_unattached_child(sample_node):
     """Test detaching a child node"""
-    child1_node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "child1")
-    child2_node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "child2")
+    child1_node = MetaphorTextNode("child1")
+    child2_node = MetaphorTextNode("child2")
 
     sample_node.attach_child(child1_node)
     assert len(sample_node.children) == 1
@@ -75,18 +75,18 @@ def test_metaphor_ast_node_detach_unattached_child(sample_node):
 
 def test_str_single_node(sample_node):
     """Test string representation of a single node without children"""
-    assert str(sample_node) == "TEXT: test input"
+    assert str(sample_node) == "MetaphorTextNode: test input"
 
 
 def test_str_with_child():
     """Test string representation of a parent node with one child"""
-    parent = MetaphorASTNode(MetaphorASTNodeType.ROOT, "parent")
-    child = MetaphorASTNode(MetaphorASTNodeType.TEXT, "child")
+    parent = MetaphorRootNode()
+    child = MetaphorTextNode("child")
     parent.attach_child(child)
 
     expected = (
-        "ROOT: parent\n"
-        "    TEXT: child"
+        "MetaphorRootNode: \n"
+        "    MetaphorTextNode: child"
     )
     assert str(parent) == expected
 
@@ -94,41 +94,61 @@ def test_str_with_child():
 def test_str_complex_tree(complex_tree):
     """Test string representation of a complex tree structure"""
     expected = (
-        "ROOT: document\n"
-        "    TEXT: Hello\n"
-        "    ROLE: user\n"
-        "        TEXT: World\n"
-        "        CONTEXT: global"
+        "MetaphorRootNode: \n"
+        "    MetaphorTextNode: Hello\n"
+        "    MetaphorRoleNode: user\n"
+        "        MetaphorTextNode: World\n"
+        "        MetaphorContextNode: global"
     )
     assert str(complex_tree) == expected
 
 
 def test_str_empty_value():
     """Test string representation of a node with empty value"""
-    node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "")
-    assert str(node) == "TEXT: "
+    node = MetaphorTextNode("")
+    assert str(node) == "MetaphorTextNode: "
 
 
 def test_repr_single_node(sample_node):
     """Test repr of a single node without children"""
-    assert repr(sample_node) == "TEXT(test input)[0]"
+    assert repr(sample_node) == "MetaphorTextNode(test input)[0]"
 
 
 def test_repr_with_children(complex_tree):
     """Test repr of nodes with different numbers of children"""
-    assert repr(complex_tree) == "ROOT(document)[2]"
-    assert repr(complex_tree.children[1]) == "ROLE(user)[2]"  # The ROLE node has 2 children
+    assert repr(complex_tree) == "MetaphorRootNode()[2]"
+    assert repr(complex_tree.children[1]) == "MetaphorRoleNode(user)[2]"  # The ROLE node has 2 children
 
 
 def test_str_special_characters():
     """Test string representation with special characters"""
-    node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Hello\nWorld")
-    assert str(node) == "TEXT: Hello\nWorld"
-    assert repr(node) == "TEXT(Hello\nWorld)[0]"
+    node = MetaphorTextNode("Hello\nWorld")
+    assert str(node) == "MetaphorTextNode: Hello\nWorld"
+    assert repr(node) == "MetaphorTextNode(Hello\nWorld)[0]"
 
 
 def test_str_unicode_characters():
     """Test string representation with Unicode characters"""
-    node = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Hello 🌍")
-    assert str(node) == "TEXT: Hello 🌍"
-    assert repr(node) == "TEXT(Hello 🌍)[0]"
+    node = MetaphorTextNode("Hello 🌍")
+    assert str(node) == "MetaphorTextNode: Hello 🌍"
+    assert repr(node) == "MetaphorTextNode(Hello 🌍)[0]"
+
+
+def test_get_children_of_type():
+    """Test getting children of specific type"""
+    parent = MetaphorRootNode()
+    text1 = MetaphorTextNode("Text 1")
+    text2 = MetaphorTextNode("Text 2")
+    role = MetaphorRoleNode("user")
+
+    parent.attach_child(text1)
+    parent.attach_child(role)
+    parent.attach_child(text2)
+
+    text_nodes = parent.get_children_of_type(MetaphorTextNode)
+    assert len(text_nodes) == 2
+    assert all(isinstance(node, MetaphorTextNode) for node in text_nodes)
+
+    role_nodes = parent.get_children_of_type(MetaphorRoleNode)
+    assert len(role_nodes) == 1
+    assert isinstance(role_nodes[0], MetaphorRoleNode)

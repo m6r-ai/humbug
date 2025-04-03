@@ -1,16 +1,19 @@
 """Functions for formatting Metaphor AST nodes and error messages."""
 
 import io
-from typing import List, TextIO, Dict, Final
+from typing import List, TextIO, Dict, Final, Type
 
-from .metaphor_ast_node import MetaphorASTNode, MetaphorASTNodeType
+from .metaphor_ast_node import (
+    MetaphorASTNode, MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
+    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
+)
 from .metaphor_parser import MetaphorParserSyntaxError
 
 
-NODE_TYPE_MAP: Final[Dict[MetaphorASTNodeType, str]] = {
-    MetaphorASTNodeType.ACTION: "Action:",
-    MetaphorASTNodeType.CONTEXT: "Context:",
-    MetaphorASTNodeType.ROLE: "Role:"
+NODE_CLASS_MAP: Final[Dict[Type[MetaphorASTNode], str]] = {
+    MetaphorActionNode: "Action:",
+    MetaphorContextNode: "Context:",
+    MetaphorRoleNode: "Role:"
 }
 
 
@@ -36,12 +39,12 @@ def _format_node(node: MetaphorASTNode, depth: int, out: TextIO) -> None:
         depth: Current tree depth
         out: Output buffer to write to
     """
-    if node.node_type != MetaphorASTNodeType.ROOT:
-        if node.node_type == MetaphorASTNodeType.CODE:
+    if not isinstance(node, MetaphorRootNode):
+        if isinstance(node, MetaphorCodeNode):
             out.write(f"{node.value}\n")
             return
 
-        if node.node_type == MetaphorASTNodeType.TEXT:
+        if isinstance(node, MetaphorTextNode):
             if node.value == "":
                 current_pos = out.tell()
                 if current_pos <= 1:
@@ -66,7 +69,7 @@ def _format_node(node: MetaphorASTNode, depth: int, out: TextIO) -> None:
                 out.write("\n")
 
         indent = "#" * depth
-        keyword = NODE_TYPE_MAP.get(node.node_type, "")
+        keyword = NODE_CLASS_MAP.get(node.__class__, "")
         out.write(f"{indent} {keyword}")
         if node.value:
             out.write(f" {node.value}")

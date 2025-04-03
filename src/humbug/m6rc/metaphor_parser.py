@@ -15,13 +15,16 @@
 import glob
 import os
 from pathlib import Path
-
 from typing import List, Set, Optional, Union
 
 from .metaphor_token import Token, TokenType
 from .embed_lexer import EmbedLexer
 from .metaphor_lexer import MetaphorLexer
-from .metaphor_ast_node import MetaphorASTNode, MetaphorASTNodeType
+from .metaphor_ast_node import (
+    MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
+    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
+)
+
 
 class MetaphorParserFileAlreadyUsedError(Exception):
     """Exception raised when a file is used more than once."""
@@ -54,7 +57,7 @@ class MetaphorParser:
     Parser class to process tokens and build an Abstract Syntax Tree (AST).
 
     Attributes:
-        syntax_tree (MetaphorASTNode): The root node of the AST.
+        syntax_tree (MetaphorRootNode): The root node of the AST.
         parse_errors (List[MetaphorParserSyntaxError]): List of syntax errors encountered during parsing.
         lexers (List[Union[MetaphorLexer, EmbedLexer]]): Stack of lexers used for parsing multiple files.
         previously_seen_files (Set[str]): Set of canonical filenames already processed.
@@ -62,7 +65,7 @@ class MetaphorParser:
         current_token (Optional[Token]): The current token being processed.
     """
     def __init__(self) -> None:
-        self.syntax_tree: MetaphorASTNode = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
+        self.syntax_tree: MetaphorRootNode = MetaphorRootNode()
         self.parse_errors: List[MetaphorParserSyntaxError] = []
         self.lexers: List[Union[MetaphorLexer, EmbedLexer]] = []
         self.previously_seen_files: Set[str] = set()
@@ -71,7 +74,7 @@ class MetaphorParser:
         self.current_token: Optional[Token] = None
 
     def _insert_preamble_text(self, text: str) -> None:
-        self.syntax_tree.attach_child(MetaphorASTNode(MetaphorASTNodeType.TEXT, text))
+        self.syntax_tree.attach_child(MetaphorTextNode(text))
 
     def _generate_preamble(self) -> None:
         preamble: List[str] = [
@@ -122,7 +125,7 @@ class MetaphorParser:
         for text in preamble:
             self._insert_preamble_text(text)
 
-    def parse(self, input_text: str, filename: str, search_paths: List[str], embed_path: Optional[str]=None) -> MetaphorASTNode:
+    def parse(self, input_text: str, filename: str, search_paths: List[str], embed_path: Optional[str]=None) -> MetaphorRootNode:
         """
         Parse an input string and construct the AST.
 
@@ -133,7 +136,7 @@ class MetaphorParser:
             embed_path: Path used to search for embedded files (uses CWD if None).
 
         Returns:
-            List[Optional[MetaphorASTNode]]: A list containing the role, context, and action AST nodes.
+            MetaphorRootNode: The root node of the AST.
 
         Raises:
             MetaphorParserError: If there are syntax errors during parsing.
@@ -195,7 +198,7 @@ class MetaphorParser:
             ))
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
 
-    def parse_file(self, filename: str, search_paths: List[str], embed_path: Optional[str]=None) -> MetaphorASTNode:
+    def parse_file(self, filename: str, search_paths: List[str], embed_path: Optional[str]=None) -> MetaphorRootNode:
         """
         Parse a file and construct the AST.
 
@@ -205,7 +208,7 @@ class MetaphorParser:
             embed_path: Path used to search for embedded files (uses CWD if None).
 
         Returns:
-            List[Optional[MetaphorASTNode]]: A list containing the role, context, and action AST nodes.
+            MetaphorRootNode: The root node of the AST.
 
         Raises:
             MetaphorParserError: If there are syntax errors during parsing.
@@ -301,11 +304,11 @@ class MetaphorParser:
 
     def _parse_text(self, token):
         """Parse a text block."""
-        return MetaphorASTNode(MetaphorASTNodeType.TEXT, token.value)
+        return MetaphorTextNode(token.value)
 
     def _parse_code(self, token):
         """Parse a code block."""
-        return MetaphorASTNode(MetaphorASTNodeType.CODE, token.value)
+        return MetaphorCodeNode(token.value)
 
     def _parse_action(self, token):
         """Parse an action block and construct its AST node."""
@@ -325,7 +328,7 @@ class MetaphorParser:
         elif init_token.type != TokenType.INDENT:
             self._record_syntax_error(token, "Expected description or indent for 'Action' block")
 
-        action_node = MetaphorASTNode(MetaphorASTNodeType.ACTION, label_name)
+        action_node = MetaphorActionNode(label_name)
 
         while True:
             token = self.get_next_token()
@@ -368,7 +371,7 @@ class MetaphorParser:
         elif init_token.type != TokenType.INDENT:
             self._record_syntax_error(token, "Expected description or indent for 'Context' block")
 
-        context_node = MetaphorASTNode(MetaphorASTNodeType.CONTEXT, label_name)
+        context_node = MetaphorContextNode(label_name)
 
         while True:
             token = self.get_next_token()
@@ -411,7 +414,7 @@ class MetaphorParser:
         elif init_token.type != TokenType.INDENT:
             self._record_syntax_error(token, "Expected description or indent for 'Role' block")
 
-        role_node = MetaphorASTNode(MetaphorASTNodeType.ROLE, label_name)
+        role_node = MetaphorRoleNode(label_name)
 
         while True:
             token = self.get_next_token()

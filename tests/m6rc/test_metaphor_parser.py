@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 
 from humbug.m6rc import (
-    MetaphorASTNodeType,
+    MetaphorTextNode, MetaphorCodeNode,
+    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
     MetaphorParser,
     MetaphorParserError,
     format_ast,
@@ -90,10 +91,10 @@ def test_basic_parsing(parser, temp_test_files):
     """Test basic parsing of a valid file"""
     main_file = Path(temp_test_files) / "main.m6r"
     result = parser.parse_file(str(main_file), [])
-    assert len(result.get_children_of_type(MetaphorASTNodeType.TEXT)) > 1
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ROLE)) == 1
-    assert len(result.get_children_of_type(MetaphorASTNodeType.CONTEXT)) == 1
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ACTION)) == 1
+    assert len([node for node in result.children if isinstance(node, MetaphorTextNode)]) > 1
+    assert len([node for node in result.children if isinstance(node, MetaphorRoleNode)]) == 1
+    assert len([node for node in result.children if isinstance(node, MetaphorContextNode)]) == 1
+    assert len([node for node in result.children if isinstance(node, MetaphorActionNode)]) == 1
 
 
 def test_invalid_structure(parser, tmp_path):
@@ -118,7 +119,7 @@ def test_valid_keyword_parsing(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    roles = result.get_children_of_type(MetaphorASTNodeType.ROLE)
+    roles = [node for node in result.children if isinstance(node, MetaphorRoleNode)]
     assert len(roles) == 1
     assert roles[0].value == "Test"
 
@@ -158,7 +159,7 @@ def test_keyword_empty_value(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    role = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
+    role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
     assert role.value == ""
 
 
@@ -170,7 +171,7 @@ def test_keyword_whitespace_value(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    role = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
+    role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
     assert role.value == ""
 
 
@@ -230,7 +231,7 @@ def test_keyword_text_preservation(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    role = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
+    role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
     assert role.value == "Test Role Description"
 
 
@@ -243,8 +244,8 @@ def test_text_content_preservation(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    role = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
-    texts = role.get_children_of_type(MetaphorASTNodeType.TEXT)
+    role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
+    texts = [node for node in role.children if isinstance(node, MetaphorTextNode)]
     assert len(texts) == 2
     assert texts[0].value == "First line"
     assert texts[1].value == "Second line"
@@ -258,9 +259,9 @@ def test_empty_input(parser):
     assert len(result.children) > 0
 
     # But no user content
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ROLE)) == 0
-    assert len(result.get_children_of_type(MetaphorASTNodeType.CONTEXT)) == 0
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ACTION)) == 0
+    assert len([node for node in result.children if isinstance(node, MetaphorRoleNode)]) == 0
+    assert len([node for node in result.children if isinstance(node, MetaphorContextNode)]) == 0
+    assert len([node for node in result.children if isinstance(node, MetaphorActionNode)]) == 0
 
 
 def test_indentation_handling(parser):
@@ -272,10 +273,10 @@ def test_indentation_handling(parser):
         "        Nested content\n"
     )
     result = parser.parse(input_text, "test.txt", [])
-    context_node = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
-    nested_contexts = context_node.get_children_of_type(MetaphorASTNodeType.CONTEXT)
+    context_node = [node for node in result.children if isinstance(node, MetaphorContextNode)][0]
+    nested_contexts = [node for node in context_node.children if isinstance(node, MetaphorContextNode)]
     assert len(nested_contexts) == 1
-    assert len(nested_contexts[0].get_children_of_type(MetaphorASTNodeType.TEXT)) == 1
+    assert len([node for node in nested_contexts[0].children if isinstance(node, MetaphorTextNode)]) == 1
 
 
 def test_incorrect_indentation(parser):
@@ -304,41 +305,9 @@ def test_keyword_handling(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ROLE)) == 1
-    assert len(result.get_children_of_type(MetaphorASTNodeType.CONTEXT)) == 1
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ACTION)) == 1
-
-
-def test_context_fenced_code_blocks(parser):
-    """Test handling of fenced code blocks."""
-    input_text = (
-        "Context: Test\n"
-        "    Before code\n"
-        "    ```python\n"
-        "    def hello():\n"
-        "        print('Hello')\n"
-        "\n"
-        "        print('World')\n"
-        "    ```\n"
-        "    After code\n"
-    )
-
-    result = parser.parse(input_text, "test.txt", [])
-    context = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
-    text_nodes = context.get_children_of_type(MetaphorASTNodeType.TEXT)
-    code_nodes = context.get_children_of_type(MetaphorASTNodeType.CODE)
-
-    # Convert text nodes to list of values for easier testing
-    text_values = [node.value for node in text_nodes]
-    code_values = [node.value for node in code_nodes]
-    assert "Before code" in text_values
-    assert "```python" in code_values
-    assert "def hello():" in code_values
-    assert "    print('Hello')" in code_values
-    assert "" in code_values
-    assert "    print('World')" in code_values
-    assert "```" in code_values
-    assert "After code" in text_values
+    assert len([node for node in result.children if isinstance(node, MetaphorRoleNode)]) == 1
+    assert len([node for node in result.children if isinstance(node, MetaphorContextNode)]) == 1
+    assert len([node for node in result.children if isinstance(node, MetaphorActionNode)]) == 1
 
 
 def test_fenced_code_blocks_with_blanks(parser):
@@ -354,9 +323,9 @@ def test_fenced_code_blocks_with_blanks(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    context = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
-    text_nodes = context.get_children_of_type(MetaphorASTNodeType.TEXT)
-    code_nodes = context.get_children_of_type(MetaphorASTNodeType.CODE)
+    context = [node for node in result.children if isinstance(node, MetaphorContextNode)][0]
+    text_nodes = [node for node in context.children if isinstance(node, MetaphorTextNode)]
+    code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value for node in text_nodes]
@@ -380,8 +349,8 @@ def test_empty_lines(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    role = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
-    text_nodes = role.get_children_of_type(MetaphorASTNodeType.TEXT)
+    role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
+    text_nodes = [node for node in role.children if isinstance(node, MetaphorTextNode)]
     assert len(text_nodes) == 3
     assert text_nodes[0].value == "Description"
     assert text_nodes[2].value == "More text"
@@ -414,8 +383,8 @@ def test_comment_lines(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    role_node = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
-    text_nodes = role_node.get_children_of_type(MetaphorASTNodeType.TEXT)
+    role_node = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
+    text_nodes = [node for node in role_node.children if isinstance(node, MetaphorTextNode)]
 
     # Comments should be ignored
     assert len(text_nodes) == 2
@@ -448,8 +417,8 @@ def test_tab_in_content_block(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    role_node = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
-    text_nodes = role_node.get_children_of_type(MetaphorASTNodeType.TEXT)
+    role_node = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
+    text_nodes = [node for node in role_node.children if isinstance(node, MetaphorTextNode)]
     assert len(text_nodes) == 3
     assert "\t" in text_nodes[1].value  # Tab preserved in content
 
@@ -467,11 +436,11 @@ def test_commented_keywords(parser):
 
     result = parser.parse(input_text, "test.txt", [])
     # Should only have one Role node since others are commented
-    roles = result.get_children_of_type(MetaphorASTNodeType.ROLE)
+    roles = [node for node in result.children if isinstance(node, MetaphorRoleNode)]
     assert len(roles) == 1
 
-    # Should have three text lines
-    text_nodes = roles[0].get_children_of_type(MetaphorASTNodeType.TEXT)
+# Should have three text lines
+    text_nodes = [node for node in roles[0].children if isinstance(node, MetaphorTextNode)]
     assert len(text_nodes) == 3
     assert text_nodes[0].value == "First line"
     assert text_nodes[1].value == "Second line"
@@ -487,8 +456,8 @@ def test_python_embedding(parser, setup_files):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    context = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
-    code_nodes = context.get_children_of_type(MetaphorASTNodeType.CODE)
+    context = [node for node in result.children if isinstance(node, MetaphorContextNode)][0]
+    code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
 
     # Find the code block
     code_text = "\n".join(node.value for node in code_nodes)
@@ -626,9 +595,9 @@ def test_action_fenced_code_blocks(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    action = result.get_children_of_type(MetaphorASTNodeType.ACTION)[0]
-    text_nodes = action.get_children_of_type(MetaphorASTNodeType.TEXT)
-    code_nodes = action.get_children_of_type(MetaphorASTNodeType.CODE)
+    action = [node for node in result.children if isinstance(node, MetaphorActionNode)][0]
+    text_nodes = [node for node in action.children if isinstance(node, MetaphorTextNode)]
+    code_nodes = [node for node in action.children if isinstance(node, MetaphorCodeNode)]
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value for node in text_nodes]
@@ -795,9 +764,11 @@ def test_context_fenced_code_blocks(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    context = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)[0]
-    text_nodes = context.get_children_of_type(MetaphorASTNodeType.TEXT)
-    code_nodes = context.get_children_of_type(MetaphorASTNodeType.CODE)
+    # Get the first context node using class-based filtering
+    context = [node for node in result.children if isinstance(node, MetaphorContextNode)][0]
+    # Get text and code nodes using class-based filtering
+    text_nodes = [node for node in context.children if isinstance(node, MetaphorTextNode)]
+    code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value for node in text_nodes]
@@ -928,9 +899,9 @@ def test_role_fenced_code_blocks(parser):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    role = result.get_children_of_type(MetaphorASTNodeType.ROLE)[0]
-    text_nodes = role.get_children_of_type(MetaphorASTNodeType.TEXT)
-    code_nodes = role.get_children_of_type(MetaphorASTNodeType.CODE)
+    role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
+    text_nodes = [node for node in role.children if isinstance(node, MetaphorTextNode)]
+    code_nodes = [node for node in role.children if isinstance(node, MetaphorCodeNode)]
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value for node in text_nodes]
@@ -1081,8 +1052,8 @@ def test_include_rel_path(parser, tmp_path):
     )
 
     result = parser.parse_file(str(main_file), [str(tmp_path)])
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ROLE)) == 1
-    context_nodes = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)
+    assert len([node for node in result.children if isinstance(node, MetaphorRoleNode)]) == 1
+    context_nodes = [node for node in result.children if isinstance(node, MetaphorContextNode)]
     assert len(context_nodes) == 1
 
     # The first child node should be the keyword text "Included"
@@ -1107,8 +1078,8 @@ def test_include_abs_path(parser, tmp_path):
     )
 
     result = parser.parse_file(str(main_file), [str(tmp_path)])
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ROLE)) == 1
-    context_nodes = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)
+    assert len([node for node in result.children if isinstance(node, MetaphorRoleNode)]) == 1
+    context_nodes = [node for node in result.children if isinstance(node, MetaphorContextNode)]
     assert len(context_nodes) == 1
 
     # The first child node should be the keyword text "Included"
@@ -1164,8 +1135,8 @@ def test_include_search_paths(parser, tmp_path):
     )
 
     result = parser.parse_file(str(main_file), [str(empty_include_dir), str(include_dir)])
-    assert len(result.get_children_of_type(MetaphorASTNodeType.ROLE)) == 1
-    assert len(result.get_children_of_type(MetaphorASTNodeType.CONTEXT)) == 1
+    assert len([node for node in result.children if isinstance(node, MetaphorRoleNode)]) == 1
+    assert len([node for node in result.children if isinstance(node, MetaphorContextNode)]) == 1
 
 
 def test_include_missing_filename(tmp_path):
@@ -1286,15 +1257,15 @@ def test_embed_directive(parser, tmp_path):
     os.chdir(tmp_path)
     try:
         result = parser.parse_file(str(main_file), [])
-        assert len(result.get_children_of_type(MetaphorASTNodeType.ROLE)) == 1
-        context_nodes = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)
+        assert len([node for node in result.children if isinstance(node, MetaphorRoleNode)]) == 1
+        context_nodes = [node for node in result.children if isinstance(node, MetaphorContextNode)]
         assert len(context_nodes) == 1
 
         # The embedded content should be part of the Context block's content
         context = context_nodes[0]
         embedded_text = [
             node for node in context.children
-            if node.node_type == MetaphorASTNodeType.TEXT and
+            if isinstance(node, MetaphorTextNode) and
             ("test.txt" in node.value or "plaintext" in node.value)
         ]
         assert len(embedded_text) > 0
@@ -1323,17 +1294,17 @@ def test_wildcard_embed(parser, tmp_path):
     os.chdir(tmp_path)
     try:
         result = parser.parse_file(str(main_file), [])
-        assert len(result.get_children_of_type(MetaphorASTNodeType.ROLE)) == 1
-        context_nodes = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)
+        assert len([node for node in result.children if isinstance(node, MetaphorRoleNode)]) == 1
+        context_nodes = [node for node in result.children if isinstance(node, MetaphorContextNode)]
         assert len(context_nodes) == 1
 
         # Check for content from both embedded files
         context = context_nodes[0]
         embedded_text = [
-            node for node in context.children if node.node_type == MetaphorASTNodeType.TEXT
+            node for node in context.children if isinstance(node, MetaphorTextNode)
         ]
         embedded_code = [
-            node for node in context.children if node.node_type == MetaphorASTNodeType.CODE
+            node for node in context.children if isinstance(node, MetaphorCodeNode)
         ]
 
         # Should find both filenames
@@ -1411,13 +1382,13 @@ def test_recursive_embed(tmp_path):
         result = parser.parse_file(str(main_file), [])
 
         # Check for content from all embedded files
-        context_nodes = result.get_children_of_type(MetaphorASTNodeType.CONTEXT)
+        context_nodes = [node for node in result.children if isinstance(node, MetaphorContextNode)]
         context = context_nodes[0]
         embedded_text = [
-            node for node in context.children if node.node_type == MetaphorASTNodeType.TEXT
+            node for node in context.children if isinstance(node, MetaphorTextNode)
         ]
         embedded_code = [
-            node for node in context.children if node.node_type == MetaphorASTNodeType.CODE
+            node for node in context.children if isinstance(node, MetaphorCodeNode)
         ]
 
         # Should find all filenames

@@ -3,8 +3,8 @@
 import pytest
 
 from humbug.m6rc import (
-    MetaphorASTNode,
-    MetaphorASTNodeType,
+    MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
+    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
     MetaphorParserSyntaxError,
     format_ast,
     format_errors
@@ -13,33 +13,33 @@ from humbug.m6rc import (
 
 def test_format_ast_empty_root():
     """Test formatting an empty root node."""
-    root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
+    root = MetaphorRootNode()
     assert format_ast(root) == ""
 
 
 def test_format_ast_single_text():
     """Test formatting a single text node."""
-    root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
-    text = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Hello world")
+    root = MetaphorRootNode()
+    text = MetaphorTextNode("Hello world")
     root.attach_child(text)
     assert format_ast(root) == "Hello world\n"
 
 
 def test_format_ast_single_action():
     """Test formatting a single action node."""
-    root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
-    action = MetaphorASTNode(MetaphorASTNodeType.ACTION, "Test")
+    root = MetaphorRootNode()
+    action = MetaphorActionNode("Test")
     root.attach_child(action)
     assert format_ast(root) == "# Action: Test\n\n"
 
 
 def test_format_ast_nested_structure():
     """Test formatting a nested structure with multiple node types."""
-    root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
-    context = MetaphorASTNode(MetaphorASTNodeType.CONTEXT, "Main")
-    text1 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Context text")
-    nested_context = MetaphorASTNode(MetaphorASTNodeType.CONTEXT, "Nested")
-    text2 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Nested text")
+    root = MetaphorRootNode()
+    context = MetaphorContextNode("Main")
+    text1 = MetaphorTextNode("Context text")
+    nested_context = MetaphorContextNode("Nested")
+    text2 = MetaphorTextNode("Nested text")
 
     root.attach_child(context)
     context.attach_child(text1)
@@ -57,11 +57,11 @@ def test_format_ast_nested_structure():
 
 def test_format_ast_all_node_types():
     """Test formatting with all possible node types."""
-    root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
-    role = MetaphorASTNode(MetaphorASTNodeType.ROLE, "Expert")
-    context = MetaphorASTNode(MetaphorASTNodeType.CONTEXT, "Setup")
-    action = MetaphorASTNode(MetaphorASTNodeType.ACTION, "")
-    text = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Review")
+    root = MetaphorRootNode()
+    role = MetaphorRoleNode("Expert")
+    context = MetaphorContextNode("Setup")
+    action = MetaphorActionNode("")
+    text = MetaphorTextNode("Review")
 
     action.attach_child(text)
     root.attach_child(role)
@@ -140,11 +140,11 @@ def test_format_errors_empty_list():
 
 def test_format_ast_remove_blank_lines():
     """Test formatting an AST that has an unecessary blank line."""
-    root = MetaphorASTNode(MetaphorASTNodeType.ROOT, "")
-    text1 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "")
-    context = MetaphorASTNode(MetaphorASTNodeType.CONTEXT, "Main")
-    text2 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "")
-    text3 = MetaphorASTNode(MetaphorASTNodeType.TEXT, "Context text")
+    root = MetaphorRootNode()
+    text1 = MetaphorTextNode("")
+    context = MetaphorContextNode("Main")
+    text2 = MetaphorTextNode("")
+    text3 = MetaphorTextNode("Context text")
 
     root.attach_child(text1)
     root.attach_child(context)
@@ -157,3 +157,24 @@ def test_format_ast_remove_blank_lines():
     )
     assert format_ast(root) == expected
 
+
+def test_format_ast_with_code():
+    """Test formatting AST with code blocks."""
+    root = MetaphorRootNode()
+    context = MetaphorContextNode("Code Example")
+    text = MetaphorTextNode("Here's some code:")
+    code = MetaphorCodeNode("```python\ndef hello():\n    print('Hello world')\n```")
+
+    root.attach_child(context)
+    context.attach_child(text)
+    context.attach_child(code)
+
+    expected = (
+        "# Context: Code Example\n\n"
+        "Here's some code:\n"
+        "```python\n"
+        "def hello():\n"
+        "    print('Hello world')\n"
+        "```\n"
+    )
+    assert format_ast(root) == expected
