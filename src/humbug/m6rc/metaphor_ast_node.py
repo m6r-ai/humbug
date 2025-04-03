@@ -1,24 +1,13 @@
-# Copyright 2024 M6R Ltd.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 Types and classes for representing the AST (Abstract Syntax Tree)
 of a Metaphor document.
 """
 
-from typing import List, Optional
+from typing import List
 from enum import IntEnum
+
+from humbug.ast.ast import ASTNode, ASTVisitor
+
 
 class MetaphorASTNodeType(IntEnum):
     """
@@ -32,19 +21,18 @@ class MetaphorASTNodeType(IntEnum):
     CODE: int = 5
 
 
-class MetaphorASTNode:
+class MetaphorASTNode(ASTNode['MetaphorASTNode']):
     """
-    Represents a node in the Abstract Syntax Tree (AST).
-    
+    Represents a node in the Metaphor Abstract Syntax Tree (AST).
+
     Attributes:
         node_type (MetaphorASTNodeType): The type of the token the node represents.
         value (str): The value associated with the node.
     """
     def __init__(self, node_type: MetaphorASTNodeType, value: str) -> None:
+        super().__init__()
         self._node_type: MetaphorASTNodeType = node_type
         self._value: str = value
-        self._parent: Optional['MetaphorASTNode'] = None
-        self._children: List['MetaphorASTNode'] = []
 
     def __str__(self, indent: int = 0) -> str:
         """
@@ -63,7 +51,7 @@ class MetaphorASTNode:
         result = f"{indent_str}{self.node_type.name}: {self.value}"
 
         # Add all children with increased indentation
-        for child in self._children:
+        for child in self.children:
             result += "\n" + child.__str__(indent + 1)
 
         return result
@@ -75,20 +63,23 @@ class MetaphorASTNode:
         Returns:
             str: A string in format 'NodeType(value)[num_children]'
         """
-        return f"{self.node_type.name}({self.value})[{len(self._children)}]"
+        return f"{self.node_type.name}({self.value})[{len(self.children)}]"
 
     def attach_child(self, child: 'MetaphorASTNode') -> None:
         """Add a child node to this MetaphorASTNode."""
-        child.parent = self
-        self._children.append(child)
+        self.add_child(child)
 
     def detach_child(self, child: 'MetaphorASTNode') -> None:
-        """Detach a child node from this node in the AST."""
-        if child not in self.children:
-            raise ValueError("Node is not a child of this node")
-
-        self._children.remove(child)
-        child.parent = None
+        """
+        Detach a child node from this node in the AST.
+        
+        Args:
+            child: The child node to detach
+            
+        Raises:
+            ValueError: If the child is not a child of this node
+        """
+        self.remove_child(child)
 
     @property
     def node_type(self) -> MetaphorASTNodeType:
@@ -100,20 +91,6 @@ class MetaphorASTNode:
         """The raw text value of this node."""
         return self._value
 
-    @property
-    def parent(self) -> Optional['MetaphorASTNode']:
-        """The parent node, if any."""
-        return self._parent
-
-    @parent.setter
-    def parent(self, new_parent: Optional['MetaphorASTNode']) -> None:
-        self._parent = new_parent
-
-    @property
-    def children(self) -> List['MetaphorASTNode']:
-        """The node's children (returns a shallow copy to prevent direct list modification)."""
-        return self._children.copy()
-
     def get_children_of_type(self, node_type: MetaphorASTNodeType) -> List['MetaphorASTNode']:
         """
         Returns a list of all immediate children that match the specified node type.
@@ -124,4 +101,9 @@ class MetaphorASTNode:
         Returns:
             List[MetaphorASTNode]: List of child nodes matching the specified type
         """
-        return [child for child in self._children if child.node_type == node_type]
+        return [child for child in self.children if child.node_type == node_type]
+
+
+class MetaphorASTVisitor(ASTVisitor['MetaphorASTNode']):
+    """Base visitor class for Metaphor AST traversal."""
+    pass

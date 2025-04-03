@@ -9,6 +9,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
     """Visitor that prints the AST structure for debugging."""
     def __init__(self):
         """Initialize the AST printer with zero indentation."""
+        super().__init__()
         self.indent_level = 0
 
     def _indent(self):

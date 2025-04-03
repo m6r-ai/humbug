@@ -5,35 +5,23 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
-from typing import Optional
+from typing import Optional, Any
+
+from humbug.ast.ast import ASTNode, ASTVisitor
 
 
-class MarkdownASTNode:
-    """Base class for all AST nodes."""
-    def __init__(self):
-        """Initialize an AST node with an empty children list."""
-        self.children = []
-        self.parent = None  # Reference to parent node
+class MarkdownASTNode(ASTNode['MarkdownASTNode']):
+    """Base class for all Markdown AST nodes."""
+
+    def __init__(self) -> None:
+        """Initialize an AST node with common markdown properties."""
+        super().__init__()
 
         # Source range information to support incremental updating
         self.line_start: Optional[int] = None
         self.line_end: Optional[int] = None
 
-    def add_child(self, child):
-        """
-        Add a child node to this node.
-
-        Args:
-            child: The child node to add
-
-        Returns:
-            The added child node for method chaining
-        """
-        child.parent = self
-        self.children.append(child)
-        return child
-
-    def accept(self, visitor):
+    def accept(self, visitor: 'MarkdownASTVisitor') -> Any:
         """
         Accept a visitor to process this node.
 
@@ -45,78 +33,9 @@ class MarkdownASTNode:
         """
         return visitor.visit(self)
 
-    def remove_children(self):
-        """Remove all children from this node."""
-        for child in self.children:
-            child.parent = None
 
-        self.children = []
-
-    def previous_sibling(self) -> Optional['MarkdownASTNode']:
-        """
-        Get the previous sibling of this node, if any.
-
-        Returns:
-            The previous sibling node, or None if this is the first child or has no parent
-        """
-        if self.parent is None:
-            return None
-
-        index = self.parent.children.index(self)
-        if index > 0:
-            return self.parent.children[index - 1]
-
-        return None
-
-    def next_sibling(self) -> Optional['MarkdownASTNode']:
-        """
-        Get the next sibling of this node, if any.
-
-        Returns:
-            The next sibling node, or None if this is the last child or has no parent
-        """
-        if self.parent is None:
-            return None
-
-        index = self.parent.children.index(self)
-        if index < len(self.parent.children) - 1:
-            return self.parent.children[index + 1]
-
-        return None
-
-
-class MarkdownASTVisitor:
-    """Base visitor class for AST traversal."""
-    def visit(self, node: MarkdownASTNode):
-        """
-        Visit a node and dispatch to the appropriate visit method.
-
-        Args:
-            node: The node to visit
-
-        Returns:
-            The result of visiting the node
-        """
-        method_name = f'visit_{node.__class__.__name__}'
-        visitor = getattr(self, method_name, self.generic_visit)
-        return visitor(node)
-
-    def generic_visit(self, node: MarkdownASTNode):
-        """
-        Default visit method for nodes without specific handlers.
-
-        Args:
-            node: The node to visit
-
-        Returns:
-            A list of results from visiting each child
-        """
-        results = []
-        for child in node.children:
-            if child:
-                results.append(self.visit(child))
-
-        return results
+class MarkdownASTVisitor(ASTVisitor['MarkdownASTNode']):
+    """Base visitor class for Markdown AST traversal."""
 
 
 class MarkdownDocumentNode(MarkdownASTNode):
