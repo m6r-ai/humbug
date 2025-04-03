@@ -12,8 +12,14 @@ public APIs in libraries, etc).  Metaphor descriptions can also be broken into c
 reused across projects.  For example you might have design or coding rules, UX style guidelines, or implementation
 details for how you use specific parts of your tech stack.
 
-By treating prompt creation this way it's easy to try new ideas, and iterate towards what you want.  It's easy
-to make adjustments to a Metaphor scripts and try again.  You can also try the same things with different AI models.
+By making prompt creation a repeatable engineering process it's easy to try new ideas, and iterate towards what you
+want.  If you don't get what you want, you can make adjustments to your Metaphor scripts and try again.  If you want to
+see if a different AI models will give you better results you can do that too!
+
+While Metaphor is designed to help start your conversations with AI, and Humbug is the tool designed to get the most out of
+those conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into
+your software and documentation.  The built-in editor and terminal also lets you update and test anything you get back from
+the AI, and provides you access to any command line tools you might want to use.
 
 ![Humbug in action](./docs/humbug-v0.9-1.webp)
 
