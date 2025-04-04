@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import IntEnum, auto
-from typing import List, Callable, Optional, Set, ClassVar
+from typing import List, Callable, Optional, Set, ClassVar, Dict
 
 
 class TokenType(IntEnum):
@@ -102,7 +102,7 @@ class Lexer(ABC):
 
     # Default empty operator map - to be overridden by subclasses
     _OPERATORS: ClassVar[List[str]] = []
-    _OPERATORS_MAP: ClassVar[dict] = {}
+    _OPERATORS_MAP: ClassVar[Dict[str, List[str]]] = {}
 
     def __init__(self):
         self._input: str = ""
@@ -243,7 +243,7 @@ class Lexer(ABC):
         self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
 
     @staticmethod
-    def build_operator_map(operators: List[str]) -> dict:
+    def build_operator_map(operators: List[str]) -> Dict[str, List[str]]:
         """
         Build an operator map from a list of operators.
 
@@ -254,7 +254,7 @@ class Lexer(ABC):
             A dictionary mapping first characters to lists of operators
             starting with that character, sorted by length (longest first)
         """
-        operator_map = {}
+        operator_map: Dict[str, List[str]] = {}
         for op in operators:
             if not op:
                 continue

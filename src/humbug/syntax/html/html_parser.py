@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from humbug.syntax.html.html_lexer import HTMLLexer
-from humbug.syntax.lexer import Token, TokenType
+from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -32,9 +32,9 @@ class HTMLParser(Parser):
     def _embedded_parse(
             self,
             language: ProgrammingLanguage,
-            prev_embedded_parser_state: ParserState,
+            prev_embedded_parser_state: ParserState | None,
             input_str: str
-    ) -> ParserState:
+    ) -> ParserState | None:
         """
         Parse embedded code content using an appropriate language parser.
 
@@ -68,7 +68,7 @@ class HTMLParser(Parser):
 
         return embedded_parser_state
 
-    def parse(self, prev_parser_state: Optional[HTMLParserState], input_str: str) -> HTMLParserState:
+    def parse(self, prev_parser_state: HTMLParserState | None, input_str: str) -> HTMLParserState:
         """
         Parse the input string using the provided parser state.
 

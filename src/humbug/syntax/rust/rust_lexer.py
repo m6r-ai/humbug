@@ -48,7 +48,7 @@ class RustLexer(Lexer):
         self._in_block_comment = False
         self._block_comment_depth = 0
 
-    def lex(self, prev_lexer_state: Optional[RustLexerState], input_str: str) -> RustLexerState:
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> RustLexerState:
         """
         Lex all the tokens in the input.
 
@@ -58,10 +58,16 @@ class RustLexer(Lexer):
 
         Returns:
             The updated lexer state after processing
+
+        Raises:
+            TypeError: If the previous lexer state is not None and not a RustLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
-        if prev_lexer_state:
+        if prev_lexer_state is not None:
+            if not isinstance(prev_lexer_state, RustLexerState):
+                raise TypeError(f"Expected RustLexerState, got {type(prev_lexer_state).__name__}")
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._block_comment_depth = prev_lexer_state.block_comment_depth
 

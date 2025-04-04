@@ -51,7 +51,7 @@ class GoLexer(Lexer):
         self._in_block_comment = False
         self._in_raw_string = False
 
-    def lex(self, prev_lexer_state: Optional[GoLexerState], input_str: str) -> GoLexerState:
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> GoLexerState:
         """
         Lex all the tokens in the input.
 
@@ -61,10 +61,16 @@ class GoLexer(Lexer):
 
         Returns:
             The updated lexer state after processing
+
+        Raises:
+            TypeError: If the previous lexer state is not None and not a GoLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
-        if prev_lexer_state:
+        if prev_lexer_state is not None:
+            if not isinstance(prev_lexer_state, GoLexerState):
+                raise TypeError(f"Expected GoLexerState, got {type(prev_lexer_state).__name__}")
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_raw_string = prev_lexer_state.in_raw_string
 

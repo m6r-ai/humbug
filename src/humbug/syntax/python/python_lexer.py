@@ -42,13 +42,26 @@ class PythonLexer(Lexer):
         self._in_docstring = False
         self._docstring_quote = ""
 
-    def lex(self, prev_lexer_state: Optional[PythonLexerState], input_str: str) -> PythonLexerState:
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> PythonLexerState:
         """
         Lex all the tokens in the input.
+
+        Args:
+            prev_lexer_state: Optional previous lexer state
+            input_str: The input string to parse
+
+        Returns:
+            The updated lexer state after processing
+
+        Raises:
+            TypeError: If the previous lexer state is not None and not a PythonLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state:
+            if not isinstance(prev_lexer_state, PythonLexerState):
+                raise TypeError(f"Expected PythonLexerState, got {type(prev_lexer_state).__name__}")
+
             self._in_docstring = prev_lexer_state.in_docstring
             self._docstring_quote = prev_lexer_state.docstring_quote
 

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from humbug.syntax.c.c_lexer import CLexer
 from humbug.syntax.lexer import TokenType
@@ -28,16 +27,20 @@ class CParser(Parser):
     like function calls and element access.
     """
 
-    def parse(self, prev_parser_state: Optional[CParserState], input_str: str) -> CParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> CParserState:
         """
         Parse the input string using the provided parser state.
 
         Args:
-            prev_parser_state: Optional previous parser state
+            prev_parser_state: Optional previous parser state of type CParserState.
+                If provided with a different ParserState subclass, TypeError will be raised.
             input_str: The input string to parse
 
         Returns:
-            The updated parser state after parsing
+            The updated CParserState after parsing
+
+        Raises:
+            TypeError: If prev_parser_state is not None and not a CParserState instance
 
         Note:
             The parser converts identifier tokens to FUNCTION_OR_METHOD tokens
@@ -46,7 +49,11 @@ class CParser(Parser):
         """
         in_element = False
         prev_lexer_state = None
-        if prev_parser_state:
+
+        if prev_parser_state is not None:
+            if not isinstance(prev_parser_state, CParserState):
+                raise TypeError(f"Expected CParserState, got {type(prev_parser_state).__name__}")
+
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

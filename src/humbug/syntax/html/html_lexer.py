@@ -48,13 +48,26 @@ class HTMLLexer(Lexer):
         self._in_script = False
         self._in_style = False
 
-    def lex(self, prev_lexer_state: Optional[HTMLLexerState], input_str: str) -> HTMLLexerState:
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> HTMLLexerState:
         """
         Lex all the tokens in the input.
+
+        Args:
+            prev_lexer_state: Optional previous lexer state
+            input_str: The input string to parse
+
+        Returns:
+            The updated lexer state after processing
+
+        Raises:
+            TypeError: If the previous lexer state is not None and not an HTMLLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
-        if prev_lexer_state:
+        if prev_lexer_state is not None:
+            if not isinstance(prev_lexer_state, HTMLLexerState):
+                raise TypeError(f"Expected HTMLLexerState, got {type(prev_lexer_state).__name__}")
+
             self._in_tag = prev_lexer_state.in_tag
             self._tag_name = prev_lexer_state.tag_name
             self._seen_equals = prev_lexer_state.seen_equals

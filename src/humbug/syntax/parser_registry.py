@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, Callable
 
 from humbug.syntax.parser import Parser
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -32,7 +32,7 @@ class ParserRegistry:
         return cls._instance
 
     @classmethod
-    def register_parser(cls, language: ProgrammingLanguage) -> callable:
+    def register_parser(cls, language: ProgrammingLanguage) -> Callable[[Type[Parser]], Type[Parser]]:
         """
         Register a parser class for a specific programming language.
 

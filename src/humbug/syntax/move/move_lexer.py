@@ -42,13 +42,26 @@ class MoveLexer(Lexer):
         super().__init__()
         self._in_block_comment = False
 
-    def lex(self, prev_lexer_state: Optional[MoveLexerState], input_str: str) -> MoveLexerState:
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> MoveLexerState:
         """
         Lex all the tokens in the input.
+
+        Args:
+            prev_lexer_state: Optional previous lexer state
+            input_str: The input string to parse
+
+        Returns:
+            The updated lexer state after processing
+
+        Raises:
+            TypeError: If the previous lexer state is not None and not a MoveLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
-        if prev_lexer_state:
+        if prev_lexer_state is not None:
+            if not isinstance(prev_lexer_state, MoveLexerState):
+                raise TypeError(f"Expected MoveLexerState, got {type(prev_lexer_state).__name__}")
+
             self._in_block_comment = prev_lexer_state.in_block_comment
 
         if self._in_block_comment:

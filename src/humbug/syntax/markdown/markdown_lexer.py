@@ -1,5 +1,4 @@
 from typing import Callable, Optional
-from dataclasses import dataclass
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 

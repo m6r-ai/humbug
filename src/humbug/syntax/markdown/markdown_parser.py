@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from typing import List
 
 from humbug.syntax.lexer import TokenType, Token
 from humbug.syntax.markdown.markdown_lexer import MarkdownLexer
@@ -26,10 +26,10 @@ class MarkdownParserState(ParserState):
     in_fence_block: bool = False
     fence_depth: int = 0
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
-    embedded_parser_state: ParserState = None
+    embedded_parser_state: ParserState | None = None
     in_list_item: bool = False
     list_indent: int = 0
-    block_type: Optional[TokenType] = None
+    block_type: TokenType | None = None
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.MARKDOWN)
@@ -44,9 +44,9 @@ class MarkdownParser(Parser):
     def _embedded_parse(
             self,
             language: ProgrammingLanguage,
-            prev_embedded_parser_state: ParserState,
+            prev_embedded_parser_state: ParserState | None,
             input_str: str
-    ) -> ParserState:
+    ) -> ParserState | None:
         """
         Parse embedded code content using an appropriate language parser.
 
@@ -98,7 +98,7 @@ class MarkdownParser(Parser):
                     start=token.start
                 )
 
-    def parse(self, prev_parser_state: Optional[MarkdownParserState], input_str: str) -> MarkdownParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> MarkdownParserState:
         """
         Parse conversation content including embedded code blocks.
 
@@ -108,6 +108,9 @@ class MarkdownParser(Parser):
 
         Returns:
             The updated parser state after parsing
+
+        Raises:
+            TypeError: If prev_parser_state is not None and not a MarkdownParserState instance
 
         Note:
             Handles transitions between regular conversation content and code fence blocks,
@@ -122,7 +125,10 @@ class MarkdownParser(Parser):
         list_indent = 0
         block_type = None
 
-        if prev_parser_state:
+        if prev_parser_state is not None:
+            if not isinstance(prev_parser_state, MarkdownParserState):
+                raise TypeError(f"Expected MarkdownParserState, got {type(prev_parser_state).__name__}")
+
             in_fence_block = prev_parser_state.in_fence_block
             fence_depth = prev_parser_state.fence_depth
             language = prev_parser_state.language

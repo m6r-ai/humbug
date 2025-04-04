@@ -27,13 +27,26 @@ class SchemeLexer(Lexer):
         super().__init__()
         self._in_comment = False
 
-    def lex(self, prev_lexer_state: Optional[SchemeLexerState], input_str: str) -> SchemeLexerState:
+    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> SchemeLexerState:
         """
         Lex all the tokens in the input.
+
+        Args:
+            prev_lexer_state: Optional previous lexer state
+            input_str: The input string to parse
+
+        Returns:
+            The updated lexer state after processing
+
+        Raises:
+            TypeError: If the previous lexer state is not None and not a SchemeLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
-        if prev_lexer_state:
+        if prev_lexer_state is not None:
+            if not isinstance(prev_lexer_state, SchemeLexerState):
+                raise TypeError(f"Expected SchemeLexerState, got {type(prev_lexer_state).__name__}")
+
             self._in_comment = prev_lexer_state.in_comment
 
         if self._in_comment:

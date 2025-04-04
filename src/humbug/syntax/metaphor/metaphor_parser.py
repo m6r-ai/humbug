@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.metaphor.metaphor_lexer import MetaphorLexer
@@ -21,7 +20,7 @@ class MetaphorParserState(ParserState):
     """
     in_fence_block: bool = False
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
-    embedded_parser_state: ParserState = None
+    embedded_parser_state: ParserState | None = None
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.METAPHOR)
@@ -36,9 +35,9 @@ class MetaphorParser(Parser):
     def _embedded_parse(
             self,
             language: ProgrammingLanguage,
-            prev_embedded_parser_state: ParserState,
+            prev_embedded_parser_state: ParserState | None,
             input_str: str
-    ) -> ParserState:
+    ) -> ParserState | None:
         """
         Parse embedded code content using an appropriate language parser.
 
@@ -72,7 +71,7 @@ class MetaphorParser(Parser):
 
         return embedded_parser_state
 
-    def parse(self, prev_parser_state: Optional[MetaphorParserState], input_str: str) -> MetaphorParserState:
+    def parse(self, prev_parser_state: MetaphorParserState | None, input_str: str) -> MetaphorParserState:
         """
         Parse the input string.
 

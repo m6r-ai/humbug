@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, List
 
-
 from humbug.syntax.lexer import Lexer, LexerState, Token
 
 
@@ -11,7 +10,7 @@ class ParserState:
     """
     State information for the Parser.
     """
-    lexer_state: LexerState = None
+    lexer_state: Optional[LexerState] = None
     parsing_continuation: bool = False
     continuation_state: int = 0
 
