@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple, Any, Set
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Slot, Signal, QEvent, QObject
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QEvent, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.ai.ai_conversation import AIConversation, AIConversationEvent
@@ -528,8 +528,7 @@ class ConversationWidget(QWidget):
         """
         return self._ai_conversation.get_settings()
 
-    @Slot(int)
-    def _on_scroll_value_changed(self, value: int):
+    def _on_scroll_value_changed(self, value: int) -> None:
         """
         Handle scroll value changes to detect user scrolling.
 
@@ -550,8 +549,7 @@ class ConversationWidget(QWidget):
         if at_bottom:
             self._auto_scroll = True
 
-    @Slot(int, int)
-    def _on_scroll_range_changed(self, _minimum, maximum):
+    def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
         # If we're set to auto-scroll then do so now
         total_height = self._messages_container.height()
@@ -1200,7 +1198,7 @@ class ConversationWidget(QWidget):
                     )
                     msg_widget.set_bookmarked(True)
 
-        # If we have a save conversation reference then we're going to take that over!
+        # If we have a conversation reference then we're going to take that over!
         if "ai_conversation_ref" in metadata:
             self._ai_conversation = metadata["ai_conversation_ref"]
             self._register_ai_conversation_callbacks()
