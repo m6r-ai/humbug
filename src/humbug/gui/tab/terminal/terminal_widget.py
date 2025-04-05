@@ -273,9 +273,9 @@ class TerminalWidget(QAbstractScrollArea):
     def _make_sgr_mouse_report(self, row: int, col: int, button: Qt.MouseButton, pressed: bool) -> str:
         """Create an SGR mouse report."""
         btn_num = {
-            Qt.LeftButton: 0,
-            Qt.MiddleButton: 1,
-            Qt.RightButton: 2
+            Qt.MouseButton.LeftButton: 0,
+            Qt.MouseButton.MiddleButton: 1,
+            Qt.MouseButton.RightButton: 2
         }.get(button, 3)
 
         if not pressed:
@@ -286,9 +286,9 @@ class TerminalWidget(QAbstractScrollArea):
     def _make_normal_mouse_report(self, row: int, col: int, button: Qt.MouseButton) -> str:
         """Create a normal X10/X11 mouse report."""
         btn_num = {
-            Qt.LeftButton: 0,
-            Qt.MiddleButton: 1,
-            Qt.RightButton: 2
+            Qt.MouseButton.LeftButton: 0,
+            Qt.MouseButton.MiddleButton: 1,
+            Qt.MouseButton.RightButton: 2
         }.get(button, 3)
 
         # Ensure values fit in a byte
@@ -300,7 +300,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press for both tracking and selection."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             # Handle text selection
             self._selecting = True
             pos = self._pixel_pos_to_text_pos(event.position().toPoint())
@@ -326,7 +326,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """Handle mouse release for both tracking and selection."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._selecting = False
 
         # Handle mouse tracking if enabled
@@ -366,11 +366,11 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
             btn_num = 32  # Default to button release
-            if buttons & Qt.LeftButton:
+            if buttons & Qt.MouseButton.LeftButton:
                 btn_num = 32
-            elif buttons & Qt.MiddleButton:
+            elif buttons & Qt.MouseButton.MiddleButton:
                 btn_num = 33
-            elif buttons & Qt.RightButton:
+            elif buttons & Qt.MouseButton.RightButton:
                 btn_num = 34
 
             if self._state.mouse_tracking.sgr_mode:
