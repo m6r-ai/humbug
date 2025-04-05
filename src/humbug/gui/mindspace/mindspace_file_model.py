@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtCore import QModelIndex, QSortFilterProxyModel
+from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex
 
 
 class MindspaceFileModel(QSortFilterProxyModel):
@@ -18,7 +18,7 @@ class MindspaceFileModel(QSortFilterProxyModel):
         self._mindspace_root = path
         self.invalidateFilter()
 
-    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
         """Filter out .humbug directory and other hidden files."""
         # If no mindspace is open, don't show any files
         if not self._mindspace_root:
@@ -41,7 +41,7 @@ class MindspaceFileModel(QSortFilterProxyModel):
 
         return True
 
-    def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
+    def lessThan(self, left: QModelIndex | QPersistentModelIndex, right: QModelIndex | QPersistentModelIndex) -> bool:
         """Sort directories before files, then alphabetically."""
         source_model = self.sourceModel()
 
