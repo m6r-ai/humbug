@@ -19,8 +19,8 @@ class EditorWidget(QPlainTextEdit):
         super().__init__(parent)
 
         # Enable standard scrollbars
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         # Editor settings
         self.setLineWrapMode(QPlainTextEdit.NoWrap)  # No word wrap for code

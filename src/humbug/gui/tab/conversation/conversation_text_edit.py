@@ -25,8 +25,8 @@ class ConversationTextEdit(QTextEdit):
         super().__init__(parent)
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
         self.document().setDocumentMargin(0)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setFrameStyle(QFrame.NoFrame)
 
         # Force the widget to always use the width of its container
@@ -80,10 +80,10 @@ class ConversationTextEdit(QTextEdit):
         self._has_code_block = has_code
         if has_code:
             self.setWordWrapMode(QTextOption.NoWrap)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         else:
             self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Force layout update
         self._on_content_changed()

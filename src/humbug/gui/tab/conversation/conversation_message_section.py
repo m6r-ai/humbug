@@ -98,8 +98,8 @@ class ConversationMessageSection(QFrame):
         self._text_area = ConversationTextEdit()
         self._text_area.setAcceptRichText(self._use_markdown)
         self._text_area.setReadOnly(not is_input)
-        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.NoContextMenu)

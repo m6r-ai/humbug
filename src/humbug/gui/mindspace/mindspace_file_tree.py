@@ -83,7 +83,7 @@ class MindspaceFileTree(QWidget):
         layout.addWidget(self._tree_view)
 
         # Hide horizontal scrollbar
-        self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Apply styling
         self._handle_style_changed()

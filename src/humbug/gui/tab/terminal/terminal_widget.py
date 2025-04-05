@@ -41,8 +41,8 @@ class TerminalWidget(QAbstractScrollArea):
         self._style_manager = StyleManager()
 
         # Set up scrollbar behavior
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.verticalScrollBar().valueChanged.connect(self._handle_scroll)
         self.setFocusPolicy(Qt.StrongFocus)
 

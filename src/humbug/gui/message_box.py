@@ -89,13 +89,13 @@ class MessageBox(QDialog):
         if line_count <= 3:
             content_height = ((line_count + 3) * line_height) + margins.top() + margins.bottom()
             self._text_edit.setFixedHeight(content_height)
-            self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         else:
             # For longer messages, set reasonable max height with scrollbar
             content_height = min(30 * line_height, int(self.screen().geometry().height() * 0.8))
             self._text_edit.setMinimumHeight(40)  # Minimum 2 lines
             self._text_edit.setMaximumHeight(content_height)
-            self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         header_layout.addWidget(self._text_edit, stretch=1)
         layout.addLayout(header_layout)
