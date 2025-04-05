@@ -192,7 +192,7 @@ class EditorWidget(QPlainTextEdit):
         reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
-        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't indent that line
         end_offs = 0
@@ -207,12 +207,12 @@ class EditorWidget(QPlainTextEdit):
                 cursor.insertText(" " * tab_size)
                 end += tab_size
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
+            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 # We hit the end of the file
                 break
 
         cursor.setPosition(start if not reverse else end)
-        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+        cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _indent_block_hard_tabs(self, cursor: QTextCursor) -> None:
         """
@@ -226,7 +226,7 @@ class EditorWidget(QPlainTextEdit):
         reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
-        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't indent that line
         end_offs = 0
@@ -241,12 +241,12 @@ class EditorWidget(QPlainTextEdit):
                 cursor.insertText("\t")
                 end += 1
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
+            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 # We hit the end of the file
                 break
 
         cursor.setPosition(start if not reverse else end)
-        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+        cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _outdent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
         """
@@ -295,7 +295,7 @@ class EditorWidget(QPlainTextEdit):
         reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
-        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't outdent that line
         end_offs = 0
@@ -324,12 +324,12 @@ class EditorWidget(QPlainTextEdit):
                 deletes_needed -= 1
                 end -= 1
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
+            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 # We hit the end of the block
                 break
 
         cursor.setPosition(start if not reverse else end)
-        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+        cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _outdent_block_hard_tabs(self, cursor: QTextCursor) -> None:
         """
@@ -343,7 +343,7 @@ class EditorWidget(QPlainTextEdit):
         reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
-        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't outdent that line
         end_offs = 0
@@ -364,12 +364,12 @@ class EditorWidget(QPlainTextEdit):
                 cursor.deleteChar()
                 end -= 1
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
+            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 # We hit the end of the block
                 break
 
         cursor.setPosition(start if not reverse else end)
-        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+        cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """
@@ -380,14 +380,14 @@ class EditorWidget(QPlainTextEdit):
         """
         if event.key() == Qt.Key.Key_Home:
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
             self.setTextCursor(cursor)
             event.accept()
             return
 
         if event.key() == Qt.Key.Key_End:
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.EndOfLine)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine)
             self.setTextCursor(cursor)
             event.accept()
             return
@@ -521,7 +521,7 @@ class EditorWidget(QPlainTextEdit):
         for i, (start, end) in enumerate(self._matches):
             cursor = QTextCursor(self.document())
             cursor.setPosition(start)
-            cursor.setPosition(end, QTextCursor.KeepAnchor)
+            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
 
             # Create extra selection
             extra_selection = QTextEdit.ExtraSelection()

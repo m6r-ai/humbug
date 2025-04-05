@@ -361,7 +361,7 @@ class ConversationMessageSection(QFrame):
         for i, (start, end) in enumerate(matches):
             cursor = QTextCursor(self._text_area.document())
             cursor.setPosition(start)
-            cursor.setPosition(end, QTextCursor.KeepAnchor)
+            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
 
             extra_selection = QTextEdit.ExtraSelection()
             extra_selection.cursor = cursor

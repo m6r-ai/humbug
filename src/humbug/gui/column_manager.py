@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 import logging
 import os
-from typing import Optional, Dict, List, cast
+from typing import Dict, List, cast
 import uuid
 
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget
@@ -26,6 +26,7 @@ from humbug.gui.tab.terminal.terminal_tab import TerminalTab
 from humbug.gui.welcome_widget import WelcomeWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 
 class TabData:
@@ -48,7 +49,7 @@ class ColumnManager(QWidget):
 
     status_message = Signal(StatusMessage)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         """Initialize the tab manager."""
         super().__init__(parent)
 
@@ -223,7 +224,7 @@ class ColumnManager(QWidget):
 
                     # Move all tabs from source to target
                     while source_column.count() > 0:
-                        tab = source_column.widget(0)
+                        tab = cast(TabBase, source_column.widget(0))
                         self._move_tab_between_columns(tab, source_column, target_column)
 
                     # Remove the empty column
@@ -441,7 +442,7 @@ class ColumnManager(QWidget):
         """
         # Find which column triggered the change
         sender = self.sender()
-        self._active_column = sender
+        self._active_column = cast(ColumnWidget, sender)
         self._update_tabs()
 
     def _handle_tab_activated(self, tab: TabBase) -> None:
@@ -531,7 +532,7 @@ class ColumnManager(QWidget):
             self.status_message.emit(StatusMessage(""))
             self._stack.setCurrentWidget(self._welcome_widget)
 
-    def _find_column_for_tab(self, tab: TabBase) -> Optional[ColumnWidget]:
+    def _find_column_for_tab(self, tab: TabBase) -> ColumnWidget | None:
         """Find which column contains the given tab."""
         for column in self._tab_columns:
             if column.indexOf(tab) != -1:
@@ -539,7 +540,7 @@ class ColumnManager(QWidget):
 
         return None
 
-    def _get_current_tab(self) -> Optional[TabBase]:
+    def _get_current_tab(self) -> TabBase | None:
         """
         Get the currently active tab.
 
@@ -666,7 +667,7 @@ class ColumnManager(QWidget):
 
         # Move all tabs to target column
         while current_column.count() > 0:
-            tab = current_column.widget(0)
+            tab = cast(TabBase, current_column.widget(0))
             self._move_tab_between_columns(tab, current_column, target_column)
 
         self._active_column = target_column
@@ -755,7 +756,7 @@ class ColumnManager(QWidget):
         """Get index of currently active column."""
         return self._tab_columns.index(self._active_column)
 
-    def find_conversation_tab_by_id(self, conversation_id: str) -> Optional[ConversationTab]:
+    def find_conversation_tab_by_id(self, conversation_id: str) -> ConversationTab | None:
         """
         Find a conversation tab by its conversation ID.
 
@@ -768,7 +769,7 @@ class ColumnManager(QWidget):
         tab = self._tabs.get(conversation_id)
         return tab if isinstance(tab, ConversationTab) else None
 
-    def find_editor_tab_by_filename(self, filename: str) -> Optional[EditorTab]:
+    def find_editor_tab_by_filename(self, filename: str) -> EditorTab | None:
         """
         Find an editor tab by its filename.
 
@@ -794,7 +795,7 @@ class ColumnManager(QWidget):
         self.add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
 
-    def open_file(self, path: str) -> Optional[EditorTab]:
+    def open_file(self, path: str) -> EditorTab | None:
         """Open a file in a new or existing editor tab."""
         # Check if file is already open
         existing_tab = self.find_editor_tab_by_filename(path)
@@ -810,7 +811,7 @@ class ColumnManager(QWidget):
         self.add_tab(editor, os.path.basename(path))
         return editor
 
-    def new_conversation(self, mindspace_path: str) -> Optional[str]:
+    def new_conversation(self, mindspace_path: str) -> str:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
         timestamp = datetime.utcnow()
@@ -829,7 +830,7 @@ class ColumnManager(QWidget):
         conversation_tab.forkRequested.connect(self._fork_conversation)
 
         # Set model based on mindspace settings
-        settings = self._mindspace_manager.settings
+        settings = cast(MindspaceSettings, self._mindspace_manager.settings)
         conversation_settings = AIConversationSettings(
             model=settings.model,
             temperature=settings.temperature if AIConversationSettings.supports_temperature(settings.model) else None,
@@ -840,7 +841,7 @@ class ColumnManager(QWidget):
         self.add_tab(conversation_tab, f"Conv: {conversation_id}")
         return conversation_id
 
-    def open_conversation(self, path: str) -> Optional[ConversationTab]:
+    def open_conversation(self, path: str) -> ConversationTab | None:
         """Open an existing conversation file."""
         conversation_id = os.path.splitext(os.path.basename(path))[0]
 
@@ -904,7 +905,7 @@ class ColumnManager(QWidget):
         # Create task to fork conversation
         asyncio.create_task(fork_and_handle_errors())
 
-    def new_terminal(self, command: Optional[str] = None) -> TerminalTab:
+    def new_terminal(self, command: str | None = None) -> TerminalTab:
         """Create new terminal tab.
 
         Args:
@@ -979,7 +980,7 @@ class ColumnManager(QWidget):
                 self._logger.exception("Failed to restore tab manager state: %s", str(e))
                 continue
 
-    def _restore_tab_from_state(self, state: TabState) -> Optional[TabBase]:
+    def _restore_tab_from_state(self, state: TabState) -> TabBase | None:
         """Create appropriate tab type from state."""
         if state.type == TabType.CONVERSATION:
             tab = ConversationTab.restore_from_state(state, self)

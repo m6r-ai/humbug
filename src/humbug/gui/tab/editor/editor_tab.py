@@ -186,15 +186,15 @@ class EditorTab(TabBase):
             return
 
         cursor = self._editor_widget.textCursor()
-        cursor.movePosition(QTextCursor.Start)
+        cursor.movePosition(QTextCursor.MoveOperation.Start)
 
         # Move cursor to specified position
         for _ in range(position.get("line", 0)):
-            cursor.movePosition(QTextCursor.NextBlock)
+            cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
 
         cursor.movePosition(
-            QTextCursor.Right,
-            QTextCursor.MoveAnchor,
+            QTextCursor.MoveOperation.Right,
+            QTextCursor.MoveMode.MoveAnchor,
             position.get("column", 0)
         )
 

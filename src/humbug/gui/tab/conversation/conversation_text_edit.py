@@ -142,7 +142,7 @@ class ConversationTextEdit(QTextEdit):
         reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
-        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't indent that line
         end_offs = 0
@@ -157,11 +157,11 @@ class ConversationTextEdit(QTextEdit):
                 cursor.insertText(" " * tab_size)
                 end += tab_size
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
+            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 break
 
         cursor.setPosition(start if not reverse else end)
-        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+        cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _indent_block_hard_tabs(self, cursor: QTextCursor) -> None:
         """Indent a block of text using hard tabs.
@@ -174,7 +174,7 @@ class ConversationTextEdit(QTextEdit):
         reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
-        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't indent that line
         end_offs = 0
@@ -189,11 +189,11 @@ class ConversationTextEdit(QTextEdit):
                 cursor.insertText("\t")
                 end += 1
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
+            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 break
 
         cursor.setPosition(start if not reverse else end)
-        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+        cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _outdent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
         """Outdent a single line using soft tabs (spaces).
@@ -239,7 +239,7 @@ class ConversationTextEdit(QTextEdit):
         reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
-        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't outdent that line
         end_offs = 0
@@ -268,11 +268,11 @@ class ConversationTextEdit(QTextEdit):
                 deletes_needed -= 1
                 end -= 1
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
+            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 break
 
         cursor.setPosition(start if not reverse else end)
-        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+        cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _outdent_block_hard_tabs(self, cursor: QTextCursor) -> None:
         """Outdent a block of text using hard tabs.
@@ -285,7 +285,7 @@ class ConversationTextEdit(QTextEdit):
         reverse: bool = start == cursor.position()
 
         cursor.setPosition(start)
-        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't outdent that line
         end_offs = 0
@@ -306,11 +306,11 @@ class ConversationTextEdit(QTextEdit):
                 cursor.deleteChar()
                 end -= 1
 
-            if not cursor.movePosition(QTextCursor.NextBlock):
+            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 break
 
         cursor.setPosition(start if not reverse else end)
-        cursor.setPosition(end if not reverse else start, QTextCursor.KeepAnchor)
+        cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
@@ -355,8 +355,8 @@ class ConversationTextEdit(QTextEdit):
                 cursor = self.textCursor()
                 orig_pos = cursor.position()
 
-                movement = QTextCursor.Up if event.key() == Qt.Key.Key_PageUp else QTextCursor.Down
-                cursor.movePosition(movement, QTextCursor.MoveAnchor, visible_lines)
+                movement = QTextCursor.MoveOperation.Up if event.key() == Qt.Key.Key_PageUp else QTextCursor.MoveOperation.Down
+                cursor.movePosition(movement, QTextCursor.MoveMode.MoveAnchor, visible_lines)
 
                 # Only set cursor if it actually moved
                 if cursor.position() != orig_pos:
@@ -369,14 +369,14 @@ class ConversationTextEdit(QTextEdit):
 
         if event.key() == Qt.Key.Key_Home:
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
             self.setTextCursor(cursor)
             event.accept()
             return
 
         if event.key() == Qt.Key.Key_End:
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.EndOfLine)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine)
             self.setTextCursor(cursor)
             event.accept()
             return

@@ -25,7 +25,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         super().__init__()
         self._document = document
         self._cursor = QTextCursor(document)
-        self._cursor.movePosition(QTextCursor.Start)
+        self._cursor.movePosition(QTextCursor.MoveOperation.Start)
         self._orig_block_format = self._cursor.blockFormat()
 
         self._lists = []
@@ -69,9 +69,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # If our last block is empty then delete it
         if self._cursor.block().text() == "":
-            cursor.movePosition(QTextCursor.PreviousBlock)
-            cursor.movePosition(QTextCursor.EndOfBlock)
-            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+            cursor.movePosition(QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor)
             cursor.removeSelectedText()
 
         # Enable all the changes to render
@@ -305,14 +305,14 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # as that's the one that actulally has our last list item
         at_block_start = self._cursor.atBlockStart()
         if at_block_start:
-            self._cursor.movePosition(QTextCursor.PreviousBlock)
+            self._cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
 
         block_format = self._cursor.blockFormat()
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
 
         if at_block_start:
-            self._cursor.movePosition(QTextCursor.NextBlock)
+            self._cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
 
         # Exit this list level
         self._list_level -= 1

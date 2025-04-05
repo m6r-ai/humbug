@@ -7,7 +7,6 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent, QTextCursor
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.gui.tab.conversation.conversation_message import ConversationMessage
 from humbug.language.language_manager import LanguageManager
 
@@ -34,6 +33,7 @@ class ConversationInput(ConversationMessage):
         self._update_header_text()
 
     def _handle_language_changed(self):
+        """Handle language change event."""
         self._update_header_text()
 
     def set_streaming(self, streaming: bool):
@@ -73,13 +73,6 @@ class ConversationInput(ConversationMessage):
             }}
         """)
 
-    def _create_text_area(self) -> ConversationTextEdit:
-        """Create and configure the input text area."""
-        text_area = super()._create_text_area()
-        # Override paste behavior to strip formatting
-        text_area.insertFromMimeData = self._insert_from_mime_data
-        return text_area
-
     def _insert_from_mime_data(self, source: QMimeData) -> None:
         """Override default paste behavior to insert only plain text."""
         if source.hasText():
@@ -88,7 +81,7 @@ class ConversationInput(ConversationMessage):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
-        if event.key() == Qt.Key.Key_J and event.modifiers() == Qt.ControlModifier:
+        if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if not self._is_streaming:
                 text = self._sections[0]._text_area.toPlainText().strip()
                 if text:
@@ -161,15 +154,15 @@ class ConversationInput(ConversationMessage):
             position: Dictionary with 'line' and 'column' keys
         """
         cursor = self._sections[0]._text_area.textCursor()
-        cursor.movePosition(QTextCursor.Start)
+        cursor.movePosition(QTextCursor.MoveOperation.Start)
 
         # Move cursor to specified position
         for _ in range(position.get("line", 0)):
-            cursor.movePosition(QTextCursor.NextBlock)
+            cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
 
         cursor.movePosition(
-            QTextCursor.Right,
-            QTextCursor.MoveAnchor,
+            QTextCursor.MoveOperation.Right,
+            QTextCursor.MoveMode.MoveAnchor,
             position.get("column", 0)
         )
 
