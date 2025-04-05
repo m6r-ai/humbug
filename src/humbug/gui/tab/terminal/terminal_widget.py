@@ -387,7 +387,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         """Handle mouse wheel scrolling."""
-        if event.modifiers() & Qt.ControlModifier:
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Let parent handle if Control is pressed (e.g., for zoom)
             event.ignore()
             return
@@ -409,7 +409,7 @@ class TerminalWidget(QAbstractScrollArea):
         modifiers = event.modifiers()
 
         # Handle Alt/Meta key combinations
-        if modifiers & Qt.AltModifier:
+        if modifiers & Qt.KeyboardModifier.AltModifier:
             # Alt + letter sends ESC + letter
             if key >= Qt.Key.Key_A and key <= Qt.Key.Key_Z:
                 self.data_ready.emit(b'\x1b' + chr(key).lower().encode())
@@ -471,7 +471,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
         # Handle Control + Function keys
-        if modifiers & Qt.ControlModifier:
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
             ctrl_fn_map = {
                 Qt.Key.Key_F1: b'\x1b[1;5P',
                 Qt.Key.Key_F2: b'\x1b[1;5Q',
@@ -512,7 +512,7 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Handle control key combinations
-        if modifiers & Qt.ControlModifier:
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
             if key >= Qt.Key_A and key <= Qt.Key_Z:
                 # Calculate control character (1-26)
                 ctrl_char = bytes([key - Qt.Key_A + 1])
@@ -563,7 +563,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Add control and shift modifiers for cursor keys
         if key in cursor_map:
             base_seq = cursor_map[key]
-            if modifiers & Qt.ControlModifier:
+            if modifiers & Qt.KeyboardModifier.ControlModifier:
                 if b'O' in base_seq:
                     mod_seq = base_seq.replace(b'O', b'[1;5')
                 else:
@@ -584,7 +584,7 @@ class TerminalWidget(QAbstractScrollArea):
         special_map = {
             Qt.Key.Key_Return: b'\r',
             Qt.Key.Key_Enter: b'\r',
-            Qt.Key.Key_Backspace: b'\b' if modifiers & Qt.ControlModifier else b'\x7f',
+            Qt.Key.Key_Backspace: b'\b' if modifiers & Qt.KeyboardModifier.ControlModifier else b'\x7f',
             Qt.Key.Key_Delete: b'\x1b[3~',
             Qt.Key.Key_Insert: b'\x1b[2~',
             Qt.Key.Key_PageUp: b'\x1b[5~',
