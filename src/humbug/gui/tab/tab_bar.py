@@ -20,12 +20,12 @@ class TabBar(QTabBar):
             # Only emit signal when hovering over a new tab
             if tab_index != self.current_hovered_tab:
                 if self.current_hovered_tab != -1:
-                    label = self.tabButton(self.current_hovered_tab, QTabBar.LeftSide)
+                    label = self.tabButton(self.current_hovered_tab, QTabBar.ButtonPosition.LeftSide)
                     if label:
                         label.update_hover_state(False)
 
                 if tab_index != -1:
-                    label = self.tabButton(tab_index, QTabBar.LeftSide)
+                    label = self.tabButton(tab_index, QTabBar.ButtonPosition.LeftSide)
                     if label:
                         label.update_hover_state(True)
 
@@ -34,7 +34,7 @@ class TabBar(QTabBar):
         # Handle mouse leaving the widget
         elif event.type() == QEvent.Type.Leave:
             if self.current_hovered_tab != -1:
-                label = self.tabButton(self.current_hovered_tab, QTabBar.LeftSide)
+                label = self.tabButton(self.current_hovered_tab, QTabBar.ButtonPosition.LeftSide)
                 if label:
                     label.update_hover_state(False)
 

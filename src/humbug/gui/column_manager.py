@@ -150,7 +150,7 @@ class ColumnManager(QWidget):
         self._tab_labels[tab_data.tab_id] = tab_data.label
 
         index = column.addTab(tab_data.tab, "")
-        column.tabBar().setTabButton(index, QTabBar.LeftSide, tab_data.label)
+        column.tabBar().setTabButton(index, QTabBar.ButtonPosition.LeftSide, tab_data.label)
         column.setCurrentWidget(tab_data.tab)
 
     def _move_tab_between_columns(
@@ -247,7 +247,7 @@ class ColumnManager(QWidget):
             return
 
         source_column = self._find_column_for_tab(tab)
-        if not source_column:
+        if source_column is None:
             return
 
         source_index = source_column.indexOf(tab)
@@ -359,9 +359,11 @@ class ColumnManager(QWidget):
             return
 
         source_column = self._find_column_for_tab(dragged_tab)
-        target_column = self._find_column_for_tab(target_tab)
+        if source_column is None:
+            return
 
-        if not source_column or not target_column:
+        target_column = self._find_column_for_tab(target_tab)
+        if target_column is None:
             return
 
         # Get the target index
@@ -405,6 +407,9 @@ class ColumnManager(QWidget):
         for tab_id, label in self._tab_labels.items():
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
+            if column is None:
+                continue
+
             column_index = column.currentIndex()
             is_current = column_index != -1 and tab == column.widget(column_index)
             label.set_current(is_current, is_current and column == self._active_column)
@@ -448,7 +453,10 @@ class ColumnManager(QWidget):
         """
         # Find which column contains the tab
         column = self._find_column_for_tab(tab)
-        if not column or column == self._active_column:
+        if column is None:
+            return
+
+        if column == self._active_column:
             return
 
         # Update active column
@@ -502,7 +510,7 @@ class ColumnManager(QWidget):
 
         # Find which column contains the tab
         column = self._find_column_for_tab(tab)
-        if not column:
+        if column is None:
             return
 
         self._remove_tab_from_column(tab, column)
@@ -554,9 +562,11 @@ class ColumnManager(QWidget):
 
         # Find which column contains the tab
         column = self._find_column_for_tab(tab)
-        if column:
-            column.setCurrentWidget(tab)
-            self._active_column = column
+        if column is None:
+            return
+
+        column.setCurrentWidget(tab)
+        self._active_column = column
 
     def _handle_tab_title_changed(self, tab_id: str, title: str) -> None:
         """
@@ -925,6 +935,7 @@ class ColumnManager(QWidget):
                     state = tab.get_state(False)
                     state_dict = state.to_dict()
                     tab_states.append(state_dict)
+
                 except Exception as e:
                     self._logger.exception("Failed to save tab manager state: %s", str(e))
                     continue
@@ -1050,6 +1061,9 @@ class ColumnManager(QWidget):
         for tab_id, label in self._tab_labels.items():
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
+            if column is None:
+                continue
+
             is_label_active = column == self._active_column and tab == column.currentWidget()
             label.handle_style_changed(is_label_active)
 
