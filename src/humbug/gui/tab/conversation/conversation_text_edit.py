@@ -318,24 +318,24 @@ class ConversationTextEdit(QTextEdit):
         # leaving it to the parent to handle them.
         if self.isReadOnly():
             # Handle horizontal scrolling
-            if self._has_code_block and event.key() in (Qt.Key_Left, Qt.Key_Right):
+            if self._has_code_block and event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
                 hbar = self.horizontalScrollBar()
                 if hbar and hbar.isVisible():
                     current = hbar.value()
                     step = 50  # Adjust scroll step size as needed
-                    if event.key() == Qt.Key_Left:
+                    if event.key() == Qt.Key.Key_Left:
                         hbar.setValue(max(hbar.minimum(), current - step))
                     else:
                         hbar.setValue(min(hbar.maximum(), current + step))
                     event.accept()
                     return
 
-            if event.key() in (Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Up, Qt.Key_Down):
+            if event.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown, Qt.Key.Key_Up, Qt.Key.Key_Down):
                 event.ignore()
 
             return
 
-        if event.key() in (Qt.Key_PageUp, Qt.Key_PageDown):
+        if event.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown):
             # Find the scroll area viewport by walking up hierarchy
             widget = self
             viewport = None
@@ -355,7 +355,7 @@ class ConversationTextEdit(QTextEdit):
                 cursor = self.textCursor()
                 orig_pos = cursor.position()
 
-                movement = QTextCursor.Up if event.key() == Qt.Key_PageUp else QTextCursor.Down
+                movement = QTextCursor.Up if event.key() == Qt.Key.Key_PageUp else QTextCursor.Down
                 cursor.movePosition(movement, QTextCursor.MoveAnchor, visible_lines)
 
                 # Only set cursor if it actually moved
@@ -367,21 +367,21 @@ class ConversationTextEdit(QTextEdit):
             event.accept()
             return
 
-        if event.key() == Qt.Key_Home:
+        if event.key() == Qt.Key.Key_Home:
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.StartOfLine)
             self.setTextCursor(cursor)
             event.accept()
             return
 
-        if event.key() == Qt.Key_End:
+        if event.key() == Qt.Key.Key_End:
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.EndOfLine)
             self.setTextCursor(cursor)
             event.accept()
             return
 
-        if event.key() == Qt.Key_Tab:
+        if event.key() == Qt.Key.Key_Tab:
             cursor = self.textCursor()
             mindspace_manager = MindspaceManager()
             if not mindspace_manager.has_mindspace:
@@ -412,7 +412,7 @@ class ConversationTextEdit(QTextEdit):
             event.accept()
             return
 
-        if event.key() == Qt.Key_Backtab:  # Shift+Tab
+        if event.key() == Qt.Key.Key_Backtab:  # Shift+Tab
             cursor = self.textCursor()
             mindspace_manager = MindspaceManager()
             if not mindspace_manager.has_mindspace:

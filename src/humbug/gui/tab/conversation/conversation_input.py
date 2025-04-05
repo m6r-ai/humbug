@@ -88,7 +88,7 @@ class ConversationInput(ConversationMessage):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle special key events."""
-        if event.key() == Qt.Key_J and event.modifiers() == Qt.ControlModifier:
+        if event.key() == Qt.Key.Key_J and event.modifiers() == Qt.ControlModifier:
             if not self._is_streaming:
                 text = self._sections[0]._text_area.toPlainText().strip()
                 if text:

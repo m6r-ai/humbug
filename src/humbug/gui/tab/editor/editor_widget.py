@@ -378,21 +378,21 @@ class EditorWidget(QPlainTextEdit):
         Args:
             event: The key event to handle
         """
-        if event.key() == Qt.Key_Home:
+        if event.key() == Qt.Key.Key_Home:
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.StartOfLine)
             self.setTextCursor(cursor)
             event.accept()
             return
 
-        if event.key() == Qt.Key_End:
+        if event.key() == Qt.Key.Key_End:
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.EndOfLine)
             self.setTextCursor(cursor)
             event.accept()
             return
 
-        if event.key() == Qt.Key_Tab:
+        if event.key() == Qt.Key.Key_Tab:
             cursor = self.textCursor()
             mindspace_manager = MindspaceManager()
             if not mindspace_manager.has_mindspace:
@@ -423,7 +423,7 @@ class EditorWidget(QPlainTextEdit):
             event.accept()
             return
 
-        if event.key() == Qt.Key_Backtab:  # Shift+Tab
+        if event.key() == Qt.Key.Key_Backtab:  # Shift+Tab
             cursor = self.textCursor()
             mindspace_manager = MindspaceManager()
             if not mindspace_manager.has_mindspace:

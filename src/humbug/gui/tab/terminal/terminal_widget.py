@@ -411,13 +411,13 @@ class TerminalWidget(QAbstractScrollArea):
         # Handle Alt/Meta key combinations
         if modifiers & Qt.AltModifier:
             # Alt + letter sends ESC + letter
-            if key >= Qt.Key_A and key <= Qt.Key_Z:
+            if key >= Qt.Key.Key_A and key <= Qt.Key.Key_Z:
                 self.data_ready.emit(b'\x1b' + chr(key).lower().encode())
                 event.accept()
                 return
 
             # Alt + number sends ESC + number
-            if key >= Qt.Key_0 and key <= Qt.Key_9:
+            if key >= Qt.Key.Key_0 and key <= Qt.Key.Key_9:
                 self.data_ready.emit(b'\x1b' + chr(key).encode())
                 event.accept()
                 return
@@ -425,23 +425,23 @@ class TerminalWidget(QAbstractScrollArea):
         # Handle keypad in application mode
         if self._state.application_keypad_mode and not modifiers:
             keypad_map = {
-                Qt.Key_0: b'\x1bOp',
-                Qt.Key_1: b'\x1bOq',
-                Qt.Key_2: b'\x1bOr',
-                Qt.Key_3: b'\x1bOs',
-                Qt.Key_4: b'\x1bOt',
-                Qt.Key_5: b'\x1bOu',
-                Qt.Key_6: b'\x1bOv',
-                Qt.Key_7: b'\x1bOw',
-                Qt.Key_8: b'\x1bOx',
-                Qt.Key_9: b'\x1bOy',
-                Qt.Key_Minus: b'\x1bOm',
-                Qt.Key_Plus: b'\x1bOl',
-                Qt.Key_Period: b'\x1bOn',
-                Qt.Key_Enter: b'\x1bOM',
-                Qt.Key_Equal: b'\x1bOX',  # equals key
-                Qt.Key_Slash: b'\x1bOo',  # divide key
-                Qt.Key_Asterisk: b'\x1bOj', # multiply key
+                Qt.Key.Key_0: b'\x1bOp',
+                Qt.Key.Key_1: b'\x1bOq',
+                Qt.Key.Key_2: b'\x1bOr',
+                Qt.Key.Key_3: b'\x1bOs',
+                Qt.Key.Key_4: b'\x1bOt',
+                Qt.Key.Key_5: b'\x1bOu',
+                Qt.Key.Key_6: b'\x1bOv',
+                Qt.Key.Key_7: b'\x1bOw',
+                Qt.Key.Key_8: b'\x1bOx',
+                Qt.Key.Key_9: b'\x1bOy',
+                Qt.Key.Key_Minus: b'\x1bOm',
+                Qt.Key.Key_Plus: b'\x1bOl',
+                Qt.Key.Key_Period: b'\x1bOn',
+                Qt.Key.Key_Enter: b'\x1bOM',
+                Qt.Key.Key_Equal: b'\x1bOX',  # equals key
+                Qt.Key.Key_Slash: b'\x1bOo',  # divide key
+                Qt.Key.Key_Asterisk: b'\x1bOj', # multiply key
             }
 
             if key in keypad_map:
@@ -452,18 +452,18 @@ class TerminalWidget(QAbstractScrollArea):
         # Handle Shift + Function keys
         if modifiers & Qt.ShiftModifier:
             shift_fn_map = {
-                Qt.Key_F1: b'\x1b[1;2P',
-                Qt.Key_F2: b'\x1b[1;2Q',
-                Qt.Key_F3: b'\x1b[1;2R',
-                Qt.Key_F4: b'\x1b[1;2S',
-                Qt.Key_F5: b'\x1b[15;2~',
-                Qt.Key_F6: b'\x1b[17;2~',
-                Qt.Key_F7: b'\x1b[18;2~',
-                Qt.Key_F8: b'\x1b[19;2~',
-                Qt.Key_F9: b'\x1b[20;2~',
-                Qt.Key_F10: b'\x1b[21;2~',
-                Qt.Key_F11: b'\x1b[23;2~',
-                Qt.Key_F12: b'\x1b[24;2~',
+                Qt.Key.Key_F1: b'\x1b[1;2P',
+                Qt.Key.Key_F2: b'\x1b[1;2Q',
+                Qt.Key.Key_F3: b'\x1b[1;2R',
+                Qt.Key.Key_F4: b'\x1b[1;2S',
+                Qt.Key.Key_F5: b'\x1b[15;2~',
+                Qt.Key.Key_F6: b'\x1b[17;2~',
+                Qt.Key.Key_F7: b'\x1b[18;2~',
+                Qt.Key.Key_F8: b'\x1b[19;2~',
+                Qt.Key.Key_F9: b'\x1b[20;2~',
+                Qt.Key.Key_F10: b'\x1b[21;2~',
+                Qt.Key.Key_F11: b'\x1b[23;2~',
+                Qt.Key.Key_F12: b'\x1b[24;2~',
             }
             if key in shift_fn_map:
                 self.data_ready.emit(shift_fn_map[key])
@@ -473,18 +473,18 @@ class TerminalWidget(QAbstractScrollArea):
         # Handle Control + Function keys
         if modifiers & Qt.ControlModifier:
             ctrl_fn_map = {
-                Qt.Key_F1: b'\x1b[1;5P',
-                Qt.Key_F2: b'\x1b[1;5Q',
-                Qt.Key_F3: b'\x1b[1;5R',
-                Qt.Key_F4: b'\x1b[1;5S',
-                Qt.Key_F5: b'\x1b[15;5~',
-                Qt.Key_F6: b'\x1b[17;5~',
-                Qt.Key_F7: b'\x1b[18;5~',
-                Qt.Key_F8: b'\x1b[19;5~',
-                Qt.Key_F9: b'\x1b[20;5~',
-                Qt.Key_F10: b'\x1b[21;5~',
-                Qt.Key_F11: b'\x1b[23;5~',
-                Qt.Key_F12: b'\x1b[24;5~',
+                Qt.Key.Key_F1: b'\x1b[1;5P',
+                Qt.Key.Key_F2: b'\x1b[1;5Q',
+                Qt.Key.Key_F3: b'\x1b[1;5R',
+                Qt.Key.Key_F4: b'\x1b[1;5S',
+                Qt.Key.Key_F5: b'\x1b[15;5~',
+                Qt.Key.Key_F6: b'\x1b[17;5~',
+                Qt.Key.Key_F7: b'\x1b[18;5~',
+                Qt.Key.Key_F8: b'\x1b[19;5~',
+                Qt.Key.Key_F9: b'\x1b[20;5~',
+                Qt.Key.Key_F10: b'\x1b[21;5~',
+                Qt.Key.Key_F11: b'\x1b[23;5~',
+                Qt.Key.Key_F12: b'\x1b[24;5~',
             }
             if key in ctrl_fn_map:
                 self.data_ready.emit(ctrl_fn_map[key])
@@ -493,18 +493,18 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle standard function keys
         fn_map = {
-            Qt.Key_F1: b'\x1bOP',
-            Qt.Key_F2: b'\x1bOQ',
-            Qt.Key_F3: b'\x1bOR',
-            Qt.Key_F4: b'\x1bOS',
-            Qt.Key_F5: b'\x1b[15~',
-            Qt.Key_F6: b'\x1b[17~',
-            Qt.Key_F7: b'\x1b[18~',
-            Qt.Key_F8: b'\x1b[19~',
-            Qt.Key_F9: b'\x1b[20~',
-            Qt.Key_F10: b'\x1b[21~',
-            Qt.Key_F11: b'\x1b[23~',
-            Qt.Key_F12: b'\x1b[24~',
+            Qt.Key.Key_F1: b'\x1bOP',
+            Qt.Key.Key_F2: b'\x1bOQ',
+            Qt.Key.Key_F3: b'\x1bOR',
+            Qt.Key.Key_F4: b'\x1bOS',
+            Qt.Key.Key_F5: b'\x1b[15~',
+            Qt.Key.Key_F6: b'\x1b[17~',
+            Qt.Key.Key_F7: b'\x1b[18~',
+            Qt.Key.Key_F8: b'\x1b[19~',
+            Qt.Key.Key_F9: b'\x1b[20~',
+            Qt.Key.Key_F10: b'\x1b[21~',
+            Qt.Key.Key_F11: b'\x1b[23~',
+            Qt.Key.Key_F12: b'\x1b[24~',
         }
         if key in fn_map and not modifiers:
             self.data_ready.emit(fn_map[key])
@@ -522,18 +522,18 @@ class TerminalWidget(QAbstractScrollArea):
 
             # Handle special control sequences
             ctrl_map = {
-                Qt.Key_2: b'\x00',  # Ctrl+@, Ctrl+2
-                Qt.Key_3: b'\x1b',  # Ctrl+[, Ctrl+3
-                Qt.Key_4: b'\x1c',  # Ctrl+\, Ctrl+4
-                Qt.Key_5: b'\x1d',  # Ctrl+], Ctrl+5
-                Qt.Key_6: b'\x1e',  # Ctrl+^, Ctrl+6
-                Qt.Key_7: b'\x1f',  # Ctrl+_, Ctrl+7
-                Qt.Key_8: b'\x7f',  # Ctrl+8 (delete)
-                Qt.Key_Space: b'\x00',  # Ctrl+Space
-                Qt.Key_Backslash: b'\x1c',  # Ctrl+\
-                Qt.Key_BracketRight: b'\x1d',  # Ctrl+]
-                Qt.Key_BracketLeft: b'\x1b',  # Ctrl+[
-                Qt.Key_Minus: b'\x1f',  # Ctrl+-
+                Qt.Key.Key_2: b'\x00',  # Ctrl+@, Ctrl+2
+                Qt.Key.Key_3: b'\x1b',  # Ctrl+[, Ctrl+3
+                Qt.Key.Key_4: b'\x1c',  # Ctrl+\, Ctrl+4
+                Qt.Key.Key_5: b'\x1d',  # Ctrl+], Ctrl+5
+                Qt.Key.Key_6: b'\x1e',  # Ctrl+^, Ctrl+6
+                Qt.Key.Key_7: b'\x1f',  # Ctrl+_, Ctrl+7
+                Qt.Key.Key_8: b'\x7f',  # Ctrl+8 (delete)
+                Qt.Key.Key_Space: b'\x00',  # Ctrl+Space
+                Qt.Key.Key_Backslash: b'\x1c',  # Ctrl+\
+                Qt.Key.Key_BracketRight: b'\x1d',  # Ctrl+]
+                Qt.Key.Key_BracketLeft: b'\x1b',  # Ctrl+[
+                Qt.Key.Key_Minus: b'\x1f',  # Ctrl+-
             }
             if key in ctrl_map:
                 self.data_ready.emit(ctrl_map[key])
@@ -543,21 +543,21 @@ class TerminalWidget(QAbstractScrollArea):
         # Handle cursor keys based on mode
         if self._state.application_cursor_mode:
             cursor_map = {
-                Qt.Key_Up: b'\x1bOA',
-                Qt.Key_Down: b'\x1bOB',
-                Qt.Key_Right: b'\x1bOC',
-                Qt.Key_Left: b'\x1bOD',
-                Qt.Key_Home: b'\x1bOH',
-                Qt.Key_End: b'\x1bOF',
+                Qt.Key.Key_Up: b'\x1bOA',
+                Qt.Key.Key_Down: b'\x1bOB',
+                Qt.Key.Key_Right: b'\x1bOC',
+                Qt.Key.Key_Left: b'\x1bOD',
+                Qt.Key.Key_Home: b'\x1bOH',
+                Qt.Key.Key_End: b'\x1bOF',
             }
         else:
             cursor_map = {
-                Qt.Key_Up: b'\x1b[A',
-                Qt.Key_Down: b'\x1b[B',
-                Qt.Key_Right: b'\x1b[C',
-                Qt.Key_Left: b'\x1b[D',
-                Qt.Key_Home: b'\x1b[H',
-                Qt.Key_End: b'\x1b[F',
+                Qt.Key.Key_Up: b'\x1b[A',
+                Qt.Key.Key_Down: b'\x1b[B',
+                Qt.Key.Key_Right: b'\x1b[C',
+                Qt.Key.Key_Left: b'\x1b[D',
+                Qt.Key.Key_Home: b'\x1b[H',
+                Qt.Key.Key_End: b'\x1b[F',
             }
 
         # Add control and shift modifiers for cursor keys
@@ -582,15 +582,15 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle other special keys
         special_map = {
-            Qt.Key_Return: b'\r',
-            Qt.Key_Enter: b'\r',
-            Qt.Key_Backspace: b'\b' if modifiers & Qt.ControlModifier else b'\x7f',
-            Qt.Key_Delete: b'\x1b[3~',
-            Qt.Key_Insert: b'\x1b[2~',
-            Qt.Key_PageUp: b'\x1b[5~',
-            Qt.Key_PageDown: b'\x1b[6~',
-            Qt.Key_Tab: b'\t',
-            Qt.Key_Backtab: b'\x1b[Z',  # Shift+Tab
+            Qt.Key.Key_Return: b'\r',
+            Qt.Key.Key_Enter: b'\r',
+            Qt.Key.Key_Backspace: b'\b' if modifiers & Qt.ControlModifier else b'\x7f',
+            Qt.Key.Key_Delete: b'\x1b[3~',
+            Qt.Key.Key_Insert: b'\x1b[2~',
+            Qt.Key.Key_PageUp: b'\x1b[5~',
+            Qt.Key.Key_PageDown: b'\x1b[6~',
+            Qt.Key.Key_Tab: b'\t',
+            Qt.Key.Key_Backtab: b'\x1b[Z',  # Shift+Tab
         }
 
         if key in special_map:

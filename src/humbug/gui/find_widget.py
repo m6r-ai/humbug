@@ -131,9 +131,9 @@ class FindWidget(QWidget):
             }}
         """)
 
-    def keyPressEvent(self, event):
+    def PressEvent(self, event):
         """Handle key events."""
-        if event.key() == Qt.Key_Escape:
+        if event.key() == Qt.Key.Key_Escape:
             self.close()
             event.accept()
             return
