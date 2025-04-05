@@ -68,12 +68,12 @@ class ConversationWidgetEventFilter(QObject):
         Returns:
             True if event was handled, False to pass to the target object
         """
-        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
+        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Simply emit the signal with the object that received the event
             self.widget_activated.emit(obj)
             return False  # Don't consume the event
 
-        elif event.type() == QEvent.FocusOut:
+        elif event.type() == QEvent.Type.FocusOut:
             # Emit a widget deactivated signal
             self.widget_deactivated.emit(obj)
             return False  # Don't consume the event

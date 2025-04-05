@@ -18,7 +18,7 @@ class TabEventFilter(QObject):
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Filter events to detect widget activation."""
-        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
+        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             self.widget_activated.emit()
             return False  # Don't consume the event
 

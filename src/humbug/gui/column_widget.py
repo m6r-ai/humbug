@@ -33,7 +33,7 @@ class ColumnWidget(QTabWidget):
 
     def eventFilter(self, obj, event) -> bool:
         """Handle window activation and mouse events to detect active column."""
-        if event.type() in (QEvent.MouseButtonPress, QEvent.FocusIn):
+        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Emit activation on mouse press or focus
             self.column_activated.emit(self)
             return False  # Don't consume the event
