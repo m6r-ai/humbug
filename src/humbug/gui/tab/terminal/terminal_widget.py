@@ -513,9 +513,9 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle control key combinations
         if modifiers & Qt.KeyboardModifier.ControlModifier:
-            if key >= Qt.Key_A and key <= Qt.Key_Z:
+            if key >= Qt.Key.Key_A and key <= Qt.Key.Key_Z:
                 # Calculate control character (1-26)
-                ctrl_char = bytes([key - Qt.Key_A + 1])
+                ctrl_char = bytes([key - Qt.Key.Key_A + 1])
                 self.data_ready.emit(ctrl_char)
                 event.accept()
                 return
