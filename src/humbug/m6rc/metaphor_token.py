@@ -13,27 +13,27 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from enum import IntEnum
+from enum import IntEnum, auto
 
 class TokenType(IntEnum):
     """
     Enum-like class representing different types of tokens in the source file.
     """
-    NONE: int = 0
-    INDENT: int = 1
-    OUTDENT: int = 2
-    INCLUDE: int = 3
-    EMBED: int = 4
-    KEYWORD_TEXT: int = 5
-    TEXT: int = 6
-    ACTION: int = 7
-    CONTEXT: int = 8
-    ROLE: int = 9
-    BAD_INDENT: int = 10
-    BAD_OUTDENT: int = 11
-    TAB: int = 12
-    END_OF_FILE: int = 13
-    CODE: int = 14
+    NONE = auto()
+    INDENT = auto()
+    OUTDENT = auto()
+    INCLUDE = auto()
+    EMBED = auto()
+    KEYWORD_TEXT = auto()
+    TEXT = auto()
+    ACTION = auto()
+    CONTEXT = auto()
+    ROLE = auto()
+    BAD_INDENT = auto()
+    BAD_OUTDENT = auto()
+    TAB = auto()
+    END_OF_FILE = auto()
+    CODE = auto()
 
 
 @dataclass(frozen=True)

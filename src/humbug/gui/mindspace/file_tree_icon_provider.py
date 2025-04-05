@@ -162,7 +162,7 @@ class FileTreeIconProvider(QFileIconProvider):
 
         # Paint the SVG onto the pixmap
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         renderer.render(painter)
         painter.end()
 
