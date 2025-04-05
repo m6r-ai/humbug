@@ -70,7 +70,7 @@ class ConversationMessageSection(QFrame):
 
             # Add language label on the left
             self._language_header = QLabel()
-            self._language_header.setAlignment(Qt.AlignLeft)
+            self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._header_layout.addWidget(self._language_header)
 
             # Add stretch to push buttons to the right

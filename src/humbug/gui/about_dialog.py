@@ -43,14 +43,14 @@ class AboutDialog(QDialog):
             Qt.KeepAspectRatio,
             Qt.SmoothTransformation
         ))
-        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(icon_label)
         layout.addSpacing(8)  # Space between icon and title
 
         # Title with version
         title_label = QLabel(f"Humbug v{format_version()}")
         title_label.setObjectName("titleLabel")
-        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setMinimumHeight(40)
         layout.addWidget(title_label)
 
@@ -59,7 +59,7 @@ class AboutDialog(QDialog):
             "Visit <a href='https://m6r.ai'>m6r.ai</a> to learn more."
         )
         desc_label.setWordWrap(True)
-        desc_label.setAlignment(Qt.AlignCenter)
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc_label.setMinimumHeight(40)
         desc_label.setOpenExternalLinks(True)
         layout.addWidget(desc_label)
@@ -70,7 +70,7 @@ class AboutDialog(QDialog):
         close_button.setMinimumWidth(80)
         close_button.setContentsMargins(6, 6, 6, 6)
         layout.addSpacing(24)  # Add spacing before button
-        layout.addWidget(close_button, alignment=Qt.AlignCenter)
+        layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addSpacing(16)  # Space at the bottom
 
         self.setLayout(layout)

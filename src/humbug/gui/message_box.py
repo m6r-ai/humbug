@@ -70,7 +70,7 @@ class MessageBox(QDialog):
         if icon:
             icon_label = QLabel()
             icon_label.setPixmap(icon)
-            header_layout.addWidget(icon_label, alignment=Qt.AlignTop)
+            header_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignTop)
 
         # Add message text using QPlainTextEdit
         self._text_edit = QPlainTextEdit()

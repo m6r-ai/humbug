@@ -137,7 +137,7 @@ class EditorWidget(QPlainTextEdit):
 
         # Adjust alignment and padding based on layout direction
         is_rtl = self.layoutDirection() == Qt.RightToLeft
-        alignment = Qt.AlignLeft if is_rtl else Qt.AlignRight
+        alignment = Qt.AlignmentFlag.AlignLeft if is_rtl else Qt.AlignmentFlag.AlignRight
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():

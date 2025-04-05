@@ -25,14 +25,14 @@ class WelcomeWidget(QFrame):
 
         # Add application icon
         self._icon_label = QLabel()
-        self._icon_label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        self._icon_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
         layout.addStretch()
         layout.addWidget(self._icon_label)
         layout.addSpacing(20)  # Space between icon and title
 
         # Application name
         self._title_label = QLabel(f"Humbug v{format_version()}")
-        self._title_label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        self._title_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
 
         # Add widgets to layout
         layout.addWidget(self._title_label)
