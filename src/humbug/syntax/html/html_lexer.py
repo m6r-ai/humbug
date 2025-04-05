@@ -248,7 +248,7 @@ class HTMLLexer(Lexer):
             start=start
         ))
 
-    def _read_tag_or_attribute(self, token_type: str) -> Token:
+    def _read_tag_or_attribute(self, token_type: TokenType) -> Token:
         """
         Read a tag name or attribute name.
 
