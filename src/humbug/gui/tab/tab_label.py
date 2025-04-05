@@ -47,7 +47,7 @@ class TabLabel(QWidget):
         self._layout.addWidget(self._label)
 
         self._close_button = QToolButton()
-        self._close_button.setCursor(Qt.PointingHandCursor)
+        self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._close_button.clicked.connect(self.close_clicked)
         self._close_button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._layout.addWidget(self._close_button)
@@ -60,16 +60,16 @@ class TabLabel(QWidget):
         icon = QIcon()
         icon_path = self._style_manager.get_icon_path("close")
         pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
-        icon.addPixmap(pixmap, QIcon.Normal, QIcon.Off)
-        icon.addPixmap(pixmap, QIcon.Active, QIcon.Off)
+        icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
 
     def _create_visible_disabled_close_icon(self) -> QIcon:
         icon = QIcon()
         icon_path = self._style_manager.get_icon_path("disabled-close")
         pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
-        icon.addPixmap(pixmap, QIcon.Normal, QIcon.Off)
-        icon.addPixmap(pixmap, QIcon.Active, QIcon.Off)
+        icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
 
     def _create_invisible_close_icon(self) -> QIcon:
