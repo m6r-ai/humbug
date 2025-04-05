@@ -53,7 +53,7 @@ class MindspaceFileTree(QWidget):
 
         # Create a spacer widget
         spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         header_layout.addWidget(spacer)
 
         layout.addWidget(header_widget)

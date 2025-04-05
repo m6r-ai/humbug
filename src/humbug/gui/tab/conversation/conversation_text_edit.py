@@ -30,7 +30,7 @@ class ConversationTextEdit(QTextEdit):
         self.setFrameStyle(QFrame.NoFrame)
 
         # Force the widget to always use the width of its container
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         # Set word wrap mode to adjust to widget width
         self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)

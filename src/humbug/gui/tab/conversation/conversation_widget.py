@@ -170,7 +170,7 @@ class ConversationWidget(QWidget):
         self._scroll_area = QScrollArea()
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
-        self._scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -194,7 +194,7 @@ class ConversationWidget(QWidget):
         self._messages_layout.addStretch()
         self._messages_layout.addWidget(self._input)
 
-        self._messages_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setWidget(self._messages_container)
 
         # Add the scroll area to the main layout

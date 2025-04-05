@@ -59,7 +59,7 @@ class MindspaceFoldersDialog(QDialog):
 
         # Create a spacer widget
         spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         value_layout.addWidget(spacer)
 
         path_layout.addWidget(value_container)

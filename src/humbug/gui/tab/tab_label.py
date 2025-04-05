@@ -36,20 +36,20 @@ class TabLabel(QWidget):
         self._style_manager = StyleManager()
         self._drag_start_pos: Optional[QPoint] = None
 
-        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
         self._layout = QHBoxLayout(self)
         self.setLayout(self._layout)
 
         # Add label with size policy
         self._label = QLabel(text)
-        self._label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self._label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._layout.addWidget(self._label)
 
         self._close_button = QToolButton()
         self._close_button.setCursor(Qt.PointingHandCursor)
         self._close_button.clicked.connect(self.close_clicked)
-        self._close_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self._close_button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._layout.addWidget(self._close_button)
 
         self.handle_style_changed(False)
