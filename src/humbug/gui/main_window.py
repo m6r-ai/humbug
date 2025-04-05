@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Optional
+from typing import cast
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
@@ -404,7 +404,7 @@ class MainWindow(QMainWindow):
 
     def _handle_language_changed(self) -> None:
         """Update UI text when language changes."""
-        app = QApplication.instance()
+        app = cast(QApplication, QApplication.instance())
         left_to_right = self._language_manager.left_to_right
         if left_to_right:
             app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
@@ -888,7 +888,7 @@ class MainWindow(QMainWindow):
             }}
         """)
 
-    def _new_conversation(self) -> Optional[str]:
+    def _new_conversation(self) -> str | None:
         """Create new conversation tab."""
         if not self._mindspace_manager.has_mindspace:
             return None
