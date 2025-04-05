@@ -368,7 +368,7 @@ class MindspaceFileTree(QWidget):
         self._tree_view.setFont(font)
 
         branch_icon_size = int(12 * zoom_factor)
-        expand_icon = "arrow-right" if self.layoutDirection() == Qt.LeftToRight else "arrow-left"
+        expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
 
         self.setStyleSheet(f"""
             QWidget#header_widget, QWidget#header_widget > QWidget {{

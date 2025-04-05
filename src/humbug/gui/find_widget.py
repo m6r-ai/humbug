@@ -78,11 +78,11 @@ class FindWidget(QWidget):
         font.setPointSizeF(font_size)
         self.setFont(font)
 
-        prev_icon = "arrow-left" if self.layoutDirection() == Qt.LeftToRight else "arrow-right"
+        prev_icon = "arrow-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-right"
         self._prev_button.setIcon(QIcon(self._style_manager.scale_icon(
             self._style_manager.get_icon_path(prev_icon), 15
         )))
-        next_icon = "arrow-right" if self.layoutDirection() == Qt.LeftToRight else "arrow-left"
+        next_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
         self._next_button.setIcon(QIcon(self._style_manager.scale_icon(
             self._style_manager.get_icon_path(next_icon), 15
         )))

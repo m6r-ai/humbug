@@ -407,9 +407,9 @@ class MainWindow(QMainWindow):
         app = QApplication.instance()
         left_to_right = self._language_manager.left_to_right
         if left_to_right:
-            app.setLayoutDirection(Qt.LeftToRight)
+            app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         else:
-            app.setLayoutDirection(Qt.RightToLeft)
+            app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
         strings = self._language_manager.strings
 
