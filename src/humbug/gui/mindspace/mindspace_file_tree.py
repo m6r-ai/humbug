@@ -160,7 +160,7 @@ class MindspaceFileTree(QWidget):
         strings = self._language_manager.strings
         old_name = os.path.basename(path)
         dialog = FileRenameDialog(old_name, self)
-        if dialog.exec() != QDialog.Accepted:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
         new_name = dialog.get_name()
@@ -264,7 +264,7 @@ class MindspaceFileTree(QWidget):
         # Show dialog to get new name
         old_name = os.path.splitext(os.path.basename(path))[0]
         dialog = ConversationRenameDialog(old_name, self)
-        if dialog.exec() != QDialog.Accepted:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
         new_name = dialog.get_name()

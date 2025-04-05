@@ -376,7 +376,7 @@ class ConversationTab(TabBase):
         dialog = ConversationSettingsDialog(self)
         dialog.set_settings(self._conversation_widget.get_settings())
 
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self._conversation_widget.update_conversation_settings(dialog.get_settings())
 
     def can_navigate_next_message(self) -> bool:

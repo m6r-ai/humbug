@@ -533,8 +533,8 @@ class EditorTab(TabBase):
         export_dialog = QFileDialog()
         export_dialog.setWindowTitle(strings.file_dialog_save_file)
         export_dialog.setDirectory(self._path or self._mindspace_manager.file_dialog_directory)
-        export_dialog.setAcceptMode(QFileDialog.AcceptSave)
-        if export_dialog.exec_() != QFileDialog.Accepted:
+        export_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        if export_dialog.exec_() != QFileDialog.DialogCode.Accepted:
             return False
 
         filename = export_dialog.selectedFiles()[0]
