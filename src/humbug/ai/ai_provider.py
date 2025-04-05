@@ -36,7 +36,7 @@ class AIProvider:
         Returns:
             Dictionary mapping provider names to backend instances
         """
-        backends = {}
+        backends: Dict[str, AIBackend] = {}
         if anthropic_key:
             backends["anthropic"] = AnthropicBackend(anthropic_key)
 
