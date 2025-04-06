@@ -1,8 +1,10 @@
 """File tree view implementation for mindspace files."""
 
 import os
+from typing import cast
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex
+from PySide6.QtWidgets import QFileSystemModel
 
 
 class MindspaceFileModel(QSortFilterProxyModel):
@@ -24,7 +26,7 @@ class MindspaceFileModel(QSortFilterProxyModel):
         if not self._mindspace_root:
             return False
 
-        source_model = self.sourceModel()
+        source_model = cast(QFileSystemModel, self.sourceModel())
         if not source_model:
             return False
 
@@ -43,7 +45,9 @@ class MindspaceFileModel(QSortFilterProxyModel):
 
     def lessThan(self, left: QModelIndex | QPersistentModelIndex, right: QModelIndex | QPersistentModelIndex) -> bool:
         """Sort directories before files, then alphabetically."""
-        source_model = self.sourceModel()
+        source_model = cast(QFileSystemModel, self.sourceModel())
+        if not source_model:
+            return False
 
         # Get file info for both indexes
         left_info = source_model.fileInfo(left)
