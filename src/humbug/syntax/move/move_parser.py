@@ -87,9 +87,9 @@ class MoveParser(Parser):
                         next_token = lexer.peek_next_token()
                         if next_token and next_token.type == TokenType.IDENTIFIER:
                             self._tokens.append(token)
-                            token = lexer.get_next_token()
-                            token.type = TokenType.TYPE
-                            self._tokens.append(token)
+                            lexer.get_next_token()  # consume the identifier
+                            next_token.type = TokenType.TYPE
+                            self._tokens.append(next_token)
                             continue
 
                     if token.value == '<':
@@ -97,9 +97,9 @@ class MoveParser(Parser):
                         next_token = lexer.peek_next_token()
                         if next_token and next_token.type == TokenType.IDENTIFIER:
                             self._tokens.append(token)
-                            token = lexer.get_next_token()
-                            token.type = TokenType.TYPE
-                            self._tokens.append(token)
+                            lexer.get_next_token()  # consume the identifier
+                            next_token.type = TokenType.TYPE
+                            self._tokens.append(next_token)
                             continue
 
                     if token.value not in ('.', '::'):

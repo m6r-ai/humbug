@@ -125,7 +125,7 @@ class MetaphorParser(Parser):
 
                     next_token = lexer.peek_next_token()
                     if next_token and (next_token.type == TokenType.TEXT):
-                        next_token = lexer.get_next_token()
+                        lexer.get_next_token()  # Consume the text token
                         next_token.type = TokenType.LANGUAGE
                         self._tokens.append(next_token)
 
