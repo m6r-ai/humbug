@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, cast
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -49,7 +49,7 @@ class KotlinLexer(Lexer):
         self._string_template_braces = 0
         self._raw_string_quotes = 0
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> KotlinLexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> KotlinLexerState:
         """
         Lex all the tokens in the input.
 
@@ -66,9 +66,7 @@ class KotlinLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            if not isinstance(prev_lexer_state, KotlinLexerState):
-                raise TypeError(f"Expected KotlinLexerState, got {type(prev_lexer_state).__name__}")
-
+            prev_lexer_state = cast(KotlinLexerState, prev_lexer_state)
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_string_template = prev_lexer_state.in_string_template
             self._string_template_braces = prev_lexer_state.string_template_braces

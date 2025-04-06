@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.go.go_lexer import GoLexer
 from humbug.syntax.lexer import TokenType
@@ -34,7 +34,7 @@ class GoParser(Parser):
     - Struct literals
     """
 
-    def parse(self, prev_parser_state: Optional[GoParserState], input_str: str) -> GoParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> GoParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -57,6 +57,7 @@ class GoParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
+            prev_parser_state = cast(GoParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             in_struct_literal = prev_parser_state.in_struct_literal
             prev_lexer_state = prev_parser_state.lexer_state

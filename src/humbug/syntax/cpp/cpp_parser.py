@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.c.c_parser import CParser, CParserState
 from humbug.syntax.cpp.cpp_lexer import CppLexer
 from humbug.syntax.lexer import TokenType
+from humbug.syntax.parser import ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
 
@@ -25,7 +26,7 @@ class CppParser(CParser):
     element access.
     """
 
-    def parse(self, prev_parser_state: Optional[CppParserState], input_str: str) -> CppParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> CppParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -45,6 +46,7 @@ class CppParser(CParser):
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:
+            prev_parser_state = cast(CppParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.metaphor.metaphor_lexer import MetaphorLexer
@@ -60,7 +61,8 @@ class MetaphorParser(Parser):
         # We apply a per-parser offset to any continuation value in case we switched language!
         continuation_offset = int(language) * 0x1000
         embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
-        embedded_parser_state.continuation_state += continuation_offset
+        if embedded_parser_state is not None:
+            embedded_parser_state.continuation_state += continuation_offset
 
         while True:
             token = embedded_parser.get_next_token()
@@ -71,7 +73,7 @@ class MetaphorParser(Parser):
 
         return embedded_parser_state
 
-    def parse(self, prev_parser_state: MetaphorParserState | None, input_str: str) -> MetaphorParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> MetaphorParserState:
         """
         Parse the input string.
 
@@ -91,6 +93,7 @@ class MetaphorParser(Parser):
         embedded_parser_state = None
         parsing_continuation = False
         if prev_parser_state:
+            prev_parser_state = cast(MetaphorParserState, prev_parser_state)
             in_fence_block = prev_parser_state.in_fence_block
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
@@ -149,7 +152,7 @@ class MetaphorParser(Parser):
         if parse_embedded:
             new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
             parser_state.embedded_parser_state = new_embedded_parser_state
-            if new_embedded_parser_state:
+            if new_embedded_parser_state is not None:
                 parser_state.continuation_state = new_embedded_parser_state.continuation_state
                 parser_state.parsing_continuation = new_embedded_parser_state.parsing_continuation
 

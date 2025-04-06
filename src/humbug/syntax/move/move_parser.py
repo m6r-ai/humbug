@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.move.move_lexer import MoveLexer
@@ -35,7 +35,7 @@ class MoveParser(Parser):
     - Vector operations
     """
 
-    def parse(self, prev_parser_state: Optional[MoveParserState], input_str: str) -> MoveParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> MoveParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -56,6 +56,7 @@ class MoveParser(Parser):
         in_module_access = False
         prev_lexer_state = None
         if prev_parser_state:
+            prev_parser_state = cast(MoveParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             in_module_access = prev_parser_state.in_module_access
             prev_lexer_state = prev_parser_state.lexer_state

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import cast, List
 
 from humbug.syntax.csharp.csharp_lexer import CSharpLexer
 from humbug.syntax.lexer import Token, TokenType
@@ -40,7 +40,7 @@ class CSharpParser(Parser):
     - LINQ_KEYWORD: Keywords used in LINQ expressions
     """
 
-    def parse(self, prev_parser_state: Optional[CSharpParserState], input_str: str) -> CSharpParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> CSharpParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -63,6 +63,7 @@ class CSharpParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
+            prev_parser_state = cast(CSharpParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             in_generic = prev_parser_state.in_generic
             generic_depth = prev_parser_state.generic_depth
@@ -232,7 +233,7 @@ class CSharpParser(Parser):
         parser_state.in_using = in_using
         return parser_state
 
-    def _get_last_non_whitespace_token(self) -> Optional[Token]:
+    def _get_last_non_whitespace_token(self) -> Token | None:
         """
         Get the last token that isn't whitespace.
 
@@ -244,7 +245,7 @@ class CSharpParser(Parser):
 
         return None
 
-    def _is_generic_start(self, prev_token: Optional[Token], lexer: CSharpLexer) -> bool:
+    def _is_generic_start(self, prev_token: Token | None, lexer: CSharpLexer) -> bool:
         """
         Determine if a '<' operator is the start of generic type parameters.
 

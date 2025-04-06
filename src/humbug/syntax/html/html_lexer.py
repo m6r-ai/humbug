@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, cast
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -48,7 +48,7 @@ class HTMLLexer(Lexer):
         self._in_script = False
         self._in_style = False
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> HTMLLexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> HTMLLexerState:
         """
         Lex all the tokens in the input.
 
@@ -65,9 +65,7 @@ class HTMLLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            if not isinstance(prev_lexer_state, HTMLLexerState):
-                raise TypeError(f"Expected HTMLLexerState, got {type(prev_lexer_state).__name__}")
-
+            prev_lexer_state = cast(HTMLLexerState, prev_lexer_state)
             self._in_tag = prev_lexer_state.in_tag
             self._tag_name = prev_lexer_state.tag_name
             self._seen_equals = prev_lexer_state.seen_equals

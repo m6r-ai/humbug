@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -35,7 +35,7 @@ class RustParser(Parser):
     - Raw identifiers
     """
 
-    def parse(self, prev_parser_state: Optional[RustParserState], input_str: str) -> RustParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> RustParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -52,6 +52,7 @@ class RustParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
+            prev_parser_state = cast(RustParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             in_generic_params = prev_parser_state.in_generic_params
             generic_depth = prev_parser_state.generic_depth
@@ -111,7 +112,7 @@ class RustParser(Parser):
         parser_state.generic_depth = generic_depth
         return parser_state
 
-    def _is_type_parameter_start(self, token: Token, next_token: Optional[Token]) -> bool:
+    def _is_type_parameter_start(self, token: Token, next_token: Token | None) -> bool:
         """
         Determine if tokens indicate the start of a type parameter list.
 

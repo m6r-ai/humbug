@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, cast
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -59,9 +59,7 @@ class MoveLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            if not isinstance(prev_lexer_state, MoveLexerState):
-                raise TypeError(f"Expected MoveLexerState, got {type(prev_lexer_state).__name__}")
-
+            prev_lexer_state = cast(MoveLexerState, prev_lexer_state)
             self._in_block_comment = prev_lexer_state.in_block_comment
 
         if self._in_block_comment:

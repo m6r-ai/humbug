@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.html.html_lexer import HTMLLexer
 from humbug.syntax.lexer import TokenType
@@ -17,7 +17,7 @@ class HTMLParserState(ParserState):
         js_parser: Optional JavaScript parser for script content
         css_parser: Optional CSS parser for style content
     """
-    embedded_parser_state: ParserState = None
+    embedded_parser_state: ParserState | None = None
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.HTML)
@@ -57,7 +57,8 @@ class HTMLParser(Parser):
         # We apply a per-parser offset to any continuation value in case we switched language!
         continuation_offset = int(language) * 0x1000
         embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
-        embedded_parser_state.continuation_state += continuation_offset
+        if embedded_parser_state is not None:
+            embedded_parser_state.continuation_state += continuation_offset
 
         while True:
             token = embedded_parser.get_next_token()
@@ -68,7 +69,7 @@ class HTMLParser(Parser):
 
         return embedded_parser_state
 
-    def parse(self, prev_parser_state: HTMLParserState | None, input_str: str) -> HTMLParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> HTMLParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -86,6 +87,7 @@ class HTMLParser(Parser):
         prev_lexer_state = None
         embedded_parser_state = None
         if prev_parser_state:
+            prev_parser_state = cast(HTMLParserState, prev_parser_state)
             prev_lexer_state = prev_parser_state.lexer_state
             embedded_parser_state = prev_parser_state.embedded_parser_state
 
@@ -107,14 +109,14 @@ class HTMLParser(Parser):
 
             if token.type == TokenType.SCRIPT:
                 embedded_parser_state = self._embedded_parse(ProgrammingLanguage.JAVASCRIPT, embedded_parser_state, token.value)
-                if embedded_parser_state:
+                if embedded_parser_state is not None:
                     continuation_state = embedded_parser_state.continuation_state
 
                 continue
 
             if token.type == TokenType.STYLE:
                 embedded_parser_state = self._embedded_parse(ProgrammingLanguage.CSS, embedded_parser_state, token.value)
-                if embedded_parser_state:
+                if embedded_parser_state is not None:
                     continuation_state = embedded_parser_state.continuation_state
 
                 continue

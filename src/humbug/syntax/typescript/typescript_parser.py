@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.javascript.javascript_parser import JavaScriptParser, JavaScriptParserState
 from humbug.syntax.lexer import TokenType
+from humbug.syntax.parser import ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.typescript.typescript_lexer import TypeScriptLexer
@@ -24,7 +25,7 @@ class TypeScriptParser(JavaScriptParser):
     and constructs.
     """
 
-    def parse(self, prev_parser_state: Optional[TypeScriptParserState], input_str: str) -> TypeScriptParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> TypeScriptParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -42,6 +43,7 @@ class TypeScriptParser(JavaScriptParser):
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:
+            prev_parser_state = cast(TypeScriptParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

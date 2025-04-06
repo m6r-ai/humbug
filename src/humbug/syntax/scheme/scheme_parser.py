@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -28,7 +28,7 @@ class SchemeParser(Parser):
     like nested expressions and vectors.
     """
 
-    def parse(self, prev_parser_state: Optional[SchemeParserState], input_str: str) -> SchemeParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> SchemeParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -44,6 +44,7 @@ class SchemeParser(Parser):
         continuation_state = 0
 
         if prev_parser_state:
+            prev_parser_state = cast(SchemeParserState, prev_parser_state)
             in_vector = prev_parser_state.in_vector
             prev_lexer_state = prev_parser_state.lexer_state
             continuation_state = prev_parser_state.continuation_state

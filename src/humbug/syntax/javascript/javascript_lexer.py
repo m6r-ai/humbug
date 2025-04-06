@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, cast
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -41,7 +41,7 @@ class JavaScriptLexer(Lexer):
         super().__init__()
         self._in_block_comment = False
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> JavaScriptLexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> JavaScriptLexerState:
         """
         Lex all the tokens in the input.
 
@@ -58,9 +58,7 @@ class JavaScriptLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            if not isinstance(prev_lexer_state, JavaScriptLexerState):
-                raise TypeError(f"Expected JavaScriptLexerState, got {type(prev_lexer_state).__name__}")
-
+            prev_lexer_state = cast(JavaScriptLexerState, prev_lexer_state)
             self._in_block_comment = prev_lexer_state.in_block_comment
 
         if self._in_block_comment:

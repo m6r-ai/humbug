@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.javascript.javascript_lexer import JavaScriptLexer
 from humbug.syntax.lexer import TokenType
@@ -28,7 +28,7 @@ class JavaScriptParser(Parser):
     like function calls and element access.
     """
 
-    def parse(self, prev_parser_state: Optional[JavaScriptParserState], input_str: str) -> JavaScriptParserState:
+    def parse(self, prev_parser_state: ParserState, input_str: str) -> JavaScriptParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -47,6 +47,7 @@ class JavaScriptParser(Parser):
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:
+            prev_parser_state = cast(JavaScriptParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 
