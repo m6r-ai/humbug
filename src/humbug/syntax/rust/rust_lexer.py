@@ -323,25 +323,25 @@ class RustLexer(Lexer):
             prefix = self._input[self._position + 1].lower()
             if prefix == 'x':  # Hexadecimal
                 self._position += 2
-                self._read_digits(self._is_hex_digit, '_')
+                self._read_digits(self._is_hex_digit)
                 self._read_type_suffix()
                 self._add_number_token(start)
                 return
             elif prefix == 'o':  # Octal
                 self._position += 2
-                self._read_digits(self._is_octal_digit, '_')
+                self._read_digits(self._is_octal_digit)
                 self._read_type_suffix()
                 self._add_number_token(start)
                 return
             elif prefix == 'b':  # Binary
                 self._position += 2
-                self._read_digits(self._is_binary_digit, '_')
+                self._read_digits(self._is_binary_digit)
                 self._read_type_suffix()
                 self._add_number_token(start)
                 return
 
         # Decimal integer or float
-        self._read_digits(self._is_digit, '_')
+        self._read_digits(self._is_digit)
 
         # Check for decimal point
         if (self._position < self._input_len and
@@ -351,7 +351,7 @@ class RustLexer(Lexer):
             if (next_pos < self._input_len and
                     self._input[next_pos] != '.'):
                 self._position += 1
-                self._read_digits(self._is_digit, '_')
+                self._read_digits(self._is_digit)
 
         # Check for exponent
         if self._position < self._input_len:
@@ -361,19 +361,18 @@ class RustLexer(Lexer):
                 if (self._position < self._input_len and
                         self._input[self._position] in '+-'):
                     self._position += 1
-                self._read_digits(self._is_digit, '_')
+                self._read_digits(self._is_digit)
 
         # Read type suffix
         self._read_type_suffix()
         self._add_number_token(start)
 
-    def _read_digits(self, is_valid_digit: Callable, separator: str = None) -> None:
+    def _read_digits(self, is_valid_digit: Callable) -> None:
         """
         Read a sequence of digits with optional separator.
 
         Args:
             is_valid_digit: Function to check if a character is a valid digit
-            separator: Optional separator character allowed between digits
         """
         has_digit = False
         while self._position < self._input_len:
@@ -381,7 +380,7 @@ class RustLexer(Lexer):
             if is_valid_digit(ch):
                 has_digit = True
                 self._position += 1
-            elif separator and ch == separator and has_digit:
+            elif ch == '_' and has_digit:
                 # Ensure we've seen at least one digit before a separator
                 self._position += 1
             else:

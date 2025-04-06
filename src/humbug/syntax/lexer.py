@@ -104,7 +104,7 @@ class Lexer(ABC):
     _OPERATORS: ClassVar[List[str]] = []
     _OPERATORS_MAP: ClassVar[Dict[str, List[str]]] = {}
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._input: str = ""
         self._input_len: int = 0
         self._position: int = 0

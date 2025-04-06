@@ -16,7 +16,7 @@ class ParserState:
 
 
 class Parser(ABC):
-    def __init__(self):
+    def __init__(self) -> None:
         self._lexer: Optional[Lexer] = None
         self._tokens: List[Token] = []
         self._next_token: int = 0
