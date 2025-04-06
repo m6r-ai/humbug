@@ -20,7 +20,7 @@ class ConversationSettingsDialog(QDialog):
 
     settings_changed = Signal(AIConversationSettings)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         """Initialize the conversation settings dialog."""
         super().__init__(parent)
         self._language_manager = LanguageManager()
@@ -33,8 +33,8 @@ class ConversationSettingsDialog(QDialog):
         self._user_manager = UserManager()
         self._ai_backends = self._user_manager.get_ai_backends()
         self._available_models: List[str] = []
-        self._initial_settings = None
-        self._current_settings = None
+        self._initial_settings: AIConversationSettings | None = None
+        self._current_settings: AIConversationSettings | None = None
 
         style_manager = StyleManager()
 

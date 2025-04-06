@@ -267,6 +267,14 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement can_submit")
 
+    def submit(self):
+        """
+        Submit the current message.
+
+        Must be implemented by subclasses.
+        """
+        raise NotImplementedError("Subclasses must implement submit")
+
     def update_status(self) -> None:
         """
         Update status bar with tab-specific status information.

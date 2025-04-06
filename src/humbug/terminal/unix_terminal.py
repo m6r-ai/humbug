@@ -10,7 +10,7 @@ import struct
 import termios
 import tty
 import fcntl
-from typing import Optional, Tuple
+from typing import Tuple
 
 from humbug.terminal.terminal_base import TerminalBase
 
@@ -18,17 +18,17 @@ from humbug.terminal.terminal_base import TerminalBase
 class UnixTerminal(TerminalBase):
     """Unix-specific terminal implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Unix terminal."""
         super().__init__()
-        self._main_fd: Optional[int] = None
+        self._main_fd: int | None = None
 
     def _set_nonblocking(self, fd: int) -> None:
         """Set file descriptor to non-blocking mode."""
         flags = fcntl.fcntl(fd, fcntl.F_GETFL)
         fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-    async def start(self, command: Optional[str] = None) -> Tuple[int, int]:
+    async def start(self, command: str | None = None) -> Tuple[int, int]:
         """Start Unix terminal process with proper PTY setup."""
         main_fd, secondary_fd = pty.openpty()
 
