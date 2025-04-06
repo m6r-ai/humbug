@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -15,7 +15,7 @@ class MarkdownLexer(Lexer):
         super().__init__()
         self._first_token = True
 
-    def lex(self, _prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
+    def lex(self, _prev_lexer_state: LexerState | None, input_str: str) -> None:
         """
         Lex all the tokens in the input.
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -42,7 +42,7 @@ class MoveLexer(Lexer):
         super().__init__()
         self._in_block_comment = False
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> MoveLexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> MoveLexerState:
         """
         Lex all the tokens in the input.
 

@@ -2,11 +2,6 @@ from dataclasses import dataclass
 from typing import Callable, Optional
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
-from humbug.syntax.programming_language import ProgrammingLanguage
-
-# Add Go to the ProgrammingLanguage enum if not already present
-if not hasattr(ProgrammingLanguage, 'GO'):
-    ProgrammingLanguage.GO = 14  # Assuming the last enum value was 13
 
 
 @dataclass

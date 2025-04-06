@@ -367,7 +367,7 @@ class RustLexer(Lexer):
         self._read_type_suffix()
         self._add_number_token(start)
 
-    def _read_digits(self, is_valid_digit: callable, separator: str = None) -> None:
+    def _read_digits(self, is_valid_digit: Callable, separator: str = None) -> None:
         """
         Read a sequence of digits with optional separator.
 

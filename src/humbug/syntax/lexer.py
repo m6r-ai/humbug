@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import IntEnum, auto
-from typing import List, Callable, Optional, Set, ClassVar, Dict
+from typing import List, Callable, Set, ClassVar, Dict
 
 
 class TokenType(IntEnum):
@@ -124,7 +124,7 @@ class Lexer(ABC):
         """
 
     @abstractmethod
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> LexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> LexerState | None:
         """
         Parse the input string
 
@@ -144,7 +144,7 @@ class Lexer(ABC):
             ch = self._input[self._position]
             self._get_lexing_function(ch)()
 
-    def get_next_token(self) -> Optional[Token]:
+    def get_next_token(self) -> Token | None:
         """
         Gets the next token from the input.
 
@@ -158,7 +158,7 @@ class Lexer(ABC):
         self._next_token += 1
         return token
 
-    def peek_next_token(self, offset: int = 0) -> Optional[Token]:
+    def peek_next_token(self, offset: int = 0) -> Token | None:
         """
         Get the token that is 'offset' positions ahead.
 

@@ -70,7 +70,7 @@ class SchemeParser(Parser):
 
                 next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.IDENTIFIER:
-                    next_token = lexer.get_next_token()
+                    lexer.get_next_token()  # Consume the identifier
                     next_token.type = TokenType.FUNCTION_OR_METHOD
                     self._tokens.append(next_token)
                     continue
