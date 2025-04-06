@@ -139,7 +139,7 @@ class AIConversation:
         """
         return self._conversation
 
-    def get_token_counts(self) -> dict:
+    def get_token_counts(self) -> Dict[str, int]:
         """
         Get the current token counts for status display.
 

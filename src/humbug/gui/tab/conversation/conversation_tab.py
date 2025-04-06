@@ -122,6 +122,7 @@ class ConversationTab(TabBase):
             # Write history to new transcript file
             handler = ConversationTranscriptHandler(new_path, timestamp)
             await handler.write(transcript_messages)
+
         except Exception as e:
             raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
@@ -242,7 +243,13 @@ class ConversationTab(TabBase):
     def update_status(self) -> None:
         """Update status bar with token counts and settings."""
         counts = self._conversation_widget.get_token_counts()
+        if counts is None:
+            return
+
         settings = self._conversation_widget.get_settings()
+        if settings is None:
+            return
+
         strings = self._language_manager.strings
 
         # Temperature display depends on whether it's available

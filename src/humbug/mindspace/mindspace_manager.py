@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import shutil
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal
 
@@ -54,14 +54,14 @@ class MindspaceManager(QObject):
         """Initialize mindspace manager if not already initialized."""
         if not hasattr(self, '_initialized'):
             super().__init__()
-            self._mindspace_path: Optional[str] = None
-            self._settings: Optional[MindspaceSettings] = None
+            self._mindspace_path: str | None = None
+            self._settings: MindspaceSettings | None = None
             self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
             self._directory_tracker = DirectoryTracker()
             self._initialized = True
 
     @property
-    def mindspace_path(self) -> Optional[str]:
+    def mindspace_path(self) -> str | None:
         """
         Get the current mindspace path.
 
@@ -71,7 +71,7 @@ class MindspaceManager(QObject):
         return self._mindspace_path
 
     @property
-    def settings(self) -> Optional[MindspaceSettings]:
+    def settings(self) -> MindspaceSettings | None:
         """
         Get the current mindspace settings.
 
@@ -104,6 +104,7 @@ class MindspaceManager(QObject):
             new_settings.save(settings_path)
             self._settings = new_settings
             self.settings_changed.emit()
+
         except OSError as e:
             raise MindspaceError(f"Failed to save mindspace settings: {str(e)}") from e
 
@@ -289,7 +290,7 @@ class MindspaceManager(QObject):
         except OSError as e:
             raise MindspaceError(f"Failed to load mindspace state: {str(e)}") from e
 
-    def get_last_mindspace(self) -> Optional[str]:
+    def get_last_mindspace(self) -> str | None:
         """
         Get the path of the last opened mindspace.
 
@@ -324,7 +325,7 @@ class MindspaceManager(QObject):
             raise MindspaceNotFoundError("No mindspace is currently open")
         return os.path.join(self._mindspace_path, relative_path)
 
-    def make_relative_path(self, path: str) -> Optional[str]:
+    def make_relative_path(self, path: str) -> str | None:
         """
         Convert an absolute path to a mindspace-relative path if possible.
 
@@ -400,11 +401,11 @@ class MindspaceManager(QObject):
             self._directory_tracker.save_tracking(self._mindspace_path)
 
     @property
-    def file_dialog_directory(self) -> Optional[str]:
+    def file_dialog_directory(self) -> str | None:
         """Get the last used file dialog directory."""
         return self._directory_tracker.file_dialog_directory
 
     @property
-    def conversations_directory(self) -> Optional[str]:
+    def conversations_directory(self) -> str | None:
         """Get the last used conversations directory."""
         return self._directory_tracker.conversations_directory

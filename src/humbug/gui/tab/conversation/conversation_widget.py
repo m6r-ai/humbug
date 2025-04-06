@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import logging
 import time
-from typing import Dict, List, Optional, Tuple, Any, Set
+from typing import Dict, List, Optional, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
@@ -219,7 +219,7 @@ class ConversationWidget(QWidget):
         self._scroll_timer = QTimer(self)
         self._scroll_timer.setInterval(16)  # ~60fps
         self._scroll_timer.timeout.connect(self._update_scroll)
-        self._last_mouse_pos = None
+        self._last_mouse_pos: QPoint | None = None
 
         # Setup context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -272,37 +272,39 @@ class ConversationWidget(QWidget):
 
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all callbacks from the AIConversation object."""
-        self._ai_conversation.unregister_callback(
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        ai_conversation.unregister_callback(
             AIConversationEvent.ERROR, self._on_request_error
         )
-        self._ai_conversation.unregister_callback(
+        ai_conversation.unregister_callback(
             AIConversationEvent.MESSAGE_ADDED, self._on_message_added
         )
-        self._ai_conversation.unregister_callback(
+        ai_conversation.unregister_callback(
             AIConversationEvent.MESSAGE_UPDATED, self._on_message_updated
         )
-        self._ai_conversation.unregister_callback(
+        ai_conversation.unregister_callback(
             AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
         )
-        self._ai_conversation.unregister_callback(
+        ai_conversation.unregister_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
         )
 
     def _register_ai_conversation_callbacks(self) -> None:
         """Register callbacks for AIConversation events."""
-        self._ai_conversation.register_callback(
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        ai_conversation.register_callback(
             AIConversationEvent.ERROR, self._on_request_error
         )
-        self._ai_conversation.register_callback(
+        ai_conversation.register_callback(
             AIConversationEvent.MESSAGE_ADDED, self._on_message_added
         )
-        self._ai_conversation.register_callback(
+        ai_conversation.register_callback(
             AIConversationEvent.MESSAGE_UPDATED, self._on_message_updated
         )
-        self._ai_conversation.register_callback(
+        ai_conversation.register_callback(
             AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
         )
-        self._ai_conversation.register_callback(
+        ai_conversation.register_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
         )
 
@@ -486,7 +488,7 @@ class ConversationWidget(QWidget):
 
     def _update_scroll(self):
         """Update scroll position based on mouse position."""
-        if not self._last_mouse_pos:
+        if self._last_mouse_pos is None:
             self._scroll_timer.stop()
             return
 
@@ -519,14 +521,15 @@ class ConversationWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
-    def get_settings(self) -> AIConversationSettings:
+    def get_settings(self) -> AIConversationSettings | None:
         """
         Get current conversation settings.
 
         Returns:
             Current conversation settings
         """
-        return self._ai_conversation.get_settings()
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        return ai_conversation.get_settings()
 
     def _on_scroll_value_changed(self, value: int) -> None:
         """
@@ -873,14 +876,19 @@ class ConversationWidget(QWidget):
         """
         # Establish a baseline for conversation settings
         if not reuse_ai_conversation:
-            default_settings = AIConversationSettings(
-                model=self._mindspace_manager.settings.model,
-                temperature=self._mindspace_manager.settings.temperature
-            )
-            self._ai_conversation.update_conversation_settings(default_settings)
+            settings = self._mindspace_manager.settings
+            if settings is None:
+                self._logger.error("Failed to load conversation settings.")
+                return
 
-            # Load messages into AIConversation
-            self._ai_conversation.load_message_history(messages)
+            default_settings = AIConversationSettings(
+                model=settings.model,
+                temperature=settings.temperature
+            )
+
+            ai_conversation = cast(AIConversation, self._ai_conversation)
+            ai_conversation.update_conversation_settings(default_settings)
+            ai_conversation.load_message_history(messages)
 
         # Add messages to this widget.
         loop = asyncio.get_event_loop()
@@ -904,11 +912,13 @@ class ConversationWidget(QWidget):
 
     def cancel_current_tasks(self):
         """Cancel any ongoing AI response tasks."""
-        self._ai_conversation.cancel_current_tasks()
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        ai_conversation.cancel_current_tasks()
 
     def update_conversation_settings(self, new_settings: AIConversationSettings):
         """Update conversation settings and associated backend."""
-        self._ai_conversation.update_conversation_settings(new_settings)
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        ai_conversation.update_conversation_settings(new_settings)
         self.status_updated.emit()
 
     def _handle_style_changed(self) -> None:
@@ -988,7 +998,7 @@ class ConversationWidget(QWidget):
 
     def can_toggle_bookmark(self) -> bool:
         """Can we toggle bookmarks?"""
-        focus_widget = self.focusWidget()
+        focus_widget: QWidget | None = self.focusWidget()
         if not focus_widget:
             return False
 
@@ -1004,7 +1014,7 @@ class ConversationWidget(QWidget):
 
     def is_checked_bookmark(self) -> bool:
         """Is the current bookmark set (checked)?"""
-        focus_widget = self.focusWidget()
+        focus_widget: QWidget | None = self.focusWidget()
         if not focus_widget:
             return False
 
@@ -1016,11 +1026,11 @@ class ConversationWidget(QWidget):
         if isinstance(focus_widget, ConversationInput):
             return False
 
-        return focus_widget.is_bookmarked()
+        return cast(ConversationMessage, focus_widget).is_bookmarked()
 
     def toggle_bookmark(self) -> None:
         """Toggle a bookmark at the current message."""
-        focus_widget = self.focusWidget()
+        focus_widget: QWidget | None = self.focusWidget()
         if not focus_widget:
             return
 
@@ -1032,7 +1042,7 @@ class ConversationWidget(QWidget):
         if isinstance(focus_widget, ConversationInput):
             return
 
-        self._toggle_message_bookmark(focus_widget)
+        self._toggle_message_bookmark(cast(ConversationMessage, focus_widget))
 
     def can_navigate_next_bookmark(self) -> bool:
         """Can we go to a next bookmark?"""
@@ -1120,7 +1130,8 @@ class ConversationWidget(QWidget):
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""
-        return self._ai_conversation.get_conversation_history()
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        return ai_conversation.get_conversation_history()
 
     def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
         """
@@ -1129,7 +1140,7 @@ class ConversationWidget(QWidget):
         Returns:
             Dictionary containing conversation state metadata
         """
-        metadata = {}
+        metadata: Dict[str, Any] = {}
 
         # Store current input content
         metadata["content"] = self._input.to_plain_text()
@@ -1147,7 +1158,8 @@ class ConversationWidget(QWidget):
         metadata['bookmarks'] = bookmark_data
 
         # Store current settings
-        settings = self._ai_conversation.get_settings()
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        settings = ai_conversation.get_settings()
         metadata["settings"] = {
             "model": settings.model,
             "temperature": settings.temperature,
@@ -1200,11 +1212,12 @@ class ConversationWidget(QWidget):
 
         # If we have a conversation reference then we're going to take that over!
         if "ai_conversation_ref" in metadata:
-            self._ai_conversation = metadata["ai_conversation_ref"]
+            ai_conversation: AIConversation = metadata["ai_conversation_ref"]
+            self._ai_conversation = ai_conversation
             self._register_ai_conversation_callbacks()
 
             # Update streaming state if the AI conversation is already streaming
-            self._is_streaming = self._ai_conversation.is_streaming
+            self._is_streaming = ai_conversation.is_streaming
             self._input.set_streaming(self._is_streaming)
         else:
             # Restore settings
@@ -1238,13 +1251,16 @@ class ConversationWidget(QWidget):
         """
         return self._input.get_cursor_position()
 
-    def get_token_counts(self) -> dict:
+    def get_token_counts(self) -> Dict[str, int] | None:
         """
         Get the current token counts for status display.
 
         Returns:
             Dictionary with token count information
         """
+        if self._ai_conversation is None:
+            return None
+
         return self._ai_conversation.get_token_counts()
 
     def get_selected_text(self) -> str:
