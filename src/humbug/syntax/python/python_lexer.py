@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, cast
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -37,12 +37,12 @@ class PythonLexer(Lexer):
     # Build the operator map
     _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._in_docstring = False
         self._docstring_quote = ""
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> PythonLexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> PythonLexerState:
         """
         Lex all the tokens in the input.
 
@@ -59,9 +59,7 @@ class PythonLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state:
-            if not isinstance(prev_lexer_state, PythonLexerState):
-                raise TypeError(f"Expected PythonLexerState, got {type(prev_lexer_state).__name__}")
-
+            prev_lexer_state = cast(PythonLexerState, prev_lexer_state)
             self._in_docstring = prev_lexer_state.in_docstring
             self._docstring_quote = prev_lexer_state.docstring_quote
 

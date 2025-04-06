@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.css.css_lexer import CSSLexer
 from humbug.syntax.lexer import TokenType
@@ -27,7 +27,7 @@ class CSSParser(Parser):
     like function calls and property values.
     """
 
-    def parse(self, prev_parser_state: Optional[CSSParserState], input_str: str) -> CSSParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> CSSParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -44,6 +44,7 @@ class CSSParser(Parser):
         """
         prev_lexer_state = None
         if prev_parser_state:
+            prev_parser_state = cast(CSSParserState, prev_parser_state)
             prev_lexer_state = prev_parser_state.lexer_state
 
         lexer = CSSLexer()

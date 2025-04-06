@@ -1,17 +1,7 @@
-from dataclasses import dataclass
-from typing import Optional
-
 from humbug.syntax.json.json_lexer import JSONLexer
 from humbug.syntax.parser import Parser, ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language import ProgrammingLanguage
-
-
-@dataclass
-class JSONParserState(ParserState):
-    """
-    State information for the JSON parser.
-    """
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.JSON)
@@ -23,7 +13,7 @@ class JSONParser(Parser):
     JSON syntax.
     """
 
-    def parse(self, prev_parser_state: Optional[JSONParserState], input_str: str) -> JSONParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> None:
         """
         Parse the input string using the provided parser state.
 
@@ -44,4 +34,4 @@ class JSONParser(Parser):
 
             self._tokens.append(token)
 
-        return JSONParserState()
+        return None

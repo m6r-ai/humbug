@@ -28,7 +28,7 @@ class JavaScriptParser(Parser):
     like function calls and element access.
     """
 
-    def parse(self, prev_parser_state: ParserState, input_str: str) -> JavaScriptParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> JavaScriptParserState:
         """
         Parse the input string using the provided parser state.
 

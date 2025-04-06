@@ -310,7 +310,7 @@ class CSharpParser(Parser):
 
         # After the '>', we should see a '(' for a method call
         current_token = lexer.peek_next_token(offset=token_pos)
-        return current_token and current_token.type == TokenType.OPERATOR and current_token.value == '('
+        return current_token is not None and current_token.type == TokenType.OPERATOR and current_token.value == '('
 
     def _get_linq_keywords(self) -> List[str]:
         """

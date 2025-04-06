@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, cast
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -59,7 +59,7 @@ class JavaLexer(Lexer):
         self._in_annotation = False
         self._text_block_quotes = 0
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> JavaLexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> JavaLexerState:
         """
         Lex all the tokens in the input.
 
@@ -76,9 +76,7 @@ class JavaLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            if not isinstance(prev_lexer_state, JavaLexerState):
-                raise TypeError(f"Expected JavaLexerState, got {type(prev_lexer_state).__name__}")
-
+            prev_lexer_state = cast(JavaLexerState, prev_lexer_state)
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_javadoc = prev_lexer_state.in_javadoc
             self._in_text_block = prev_lexer_state.in_text_block

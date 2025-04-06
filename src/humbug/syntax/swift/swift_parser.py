@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -36,7 +36,7 @@ class SwiftParser(Parser):
     like function calls, property access, closure expressions, and generic types.
     """
 
-    def parse(self, prev_parser_state: Optional[SwiftParserState], input_str: str) -> SwiftParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> SwiftParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -62,6 +62,7 @@ class SwiftParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
+            prev_parser_state = cast(SwiftParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             in_closure = prev_parser_state.in_closure
             closure_brace_count = prev_parser_state.closure_brace_count

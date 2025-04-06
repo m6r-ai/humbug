@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.java.java_lexer import JavaLexer
 from humbug.syntax.lexer import Token, TokenType
@@ -34,7 +34,7 @@ class JavaParser(Parser):
     - TYPE_PARAMETER: Type parameters in generic declarations
     """
 
-    def parse(self, prev_parser_state: Optional[JavaParserState], input_str: str) -> JavaParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> JavaParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -56,6 +56,7 @@ class JavaParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
+            prev_parser_state = cast(JavaParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             in_generic = prev_parser_state.in_generic
             generic_depth = prev_parser_state.generic_depth
@@ -215,7 +216,7 @@ class JavaParser(Parser):
         # Regular identifier
         self._tokens.append(token)
 
-    def _get_last_token(self) -> Optional[Token]:
+    def _get_last_token(self) -> Token | None:
         """
         Get the last token.
 
@@ -227,7 +228,7 @@ class JavaParser(Parser):
 
         return None
 
-    def _peek_after_generic_close(self, lexer: 'JavaLexer') -> Optional[Token]:
+    def _peek_after_generic_close(self, lexer: 'JavaLexer') -> Token | None:
         """
         Look ahead to find the token after a generic type parameter list closes.
 

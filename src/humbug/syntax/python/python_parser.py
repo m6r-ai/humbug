@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -28,7 +28,7 @@ class PythonParser(Parser):
     like function calls and element access.
     """
 
-    def parse(self, prev_parser_state: Optional[PythonParserState], input_str: str) -> PythonParserState:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> PythonParserState:
         """
         Parse the input string using the provided parser state.
 
@@ -48,6 +48,7 @@ class PythonParser(Parser):
         in_import = False
         prev_lexer_state = None
         if prev_parser_state:
+            prev_parser_state = cast(PythonParserState, prev_parser_state)
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, cast
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -19,7 +19,7 @@ class JSONLexer(Lexer):
     booleans, null, and structural elements.
     """
 
-    def lex(self, prev_lexer_state: Optional[LexerState], input_str: str) -> JSONLexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> JSONLexerState:
         """
         Lex all the tokens in the input.
 
