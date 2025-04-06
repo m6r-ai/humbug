@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime
 import logging
 import os
-from typing import List, Optional
+from typing import List, cast
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QWidget
@@ -40,7 +40,7 @@ class ConversationTab(TabBase):
         tab_id: str,
         path: str,
         timestamp: datetime,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
         use_existing_ai_conversation: bool = False
     ) -> None:
         """
@@ -54,7 +54,7 @@ class ConversationTab(TabBase):
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
-        self._path = path
+        self._path: str = path
         self._timestamp = timestamp
         self._current_tasks: List[asyncio.Task] = []
 
@@ -112,7 +112,7 @@ class ConversationTab(TabBase):
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
-        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, self.parent())
+        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, cast(QWidget, self.parent()))
 
         # Get all messages and write to new transcript
         messages = self._conversation_widget.get_conversation_history().get_messages()
@@ -271,11 +271,11 @@ class ConversationTab(TabBase):
 
         self.status_message.emit(StatusMessage(status))
 
-    def can_close(self) -> bool:
+    def can_close_tab(self) -> bool:
         """Check if terminal can be closed."""
         return True
 
-    def close(self) -> None:
+    def close_tab(self) -> None:
         """Close the terminal."""
         self.cancel_current_tasks()
 

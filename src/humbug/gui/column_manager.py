@@ -504,10 +504,10 @@ class ColumnManager(QWidget):
             return
 
         # Check if tab can be closed
-        if not force_close and not tab.can_close():
+        if not force_close and not tab.can_close_tab():
             return
 
-        tab.close()
+        tab.close_tab()
 
         # Find which column contains the tab
         column = self._find_column_for_tab(tab)
@@ -1142,7 +1142,7 @@ class ColumnManager(QWidget):
         """Can we close all the tabs that are open?"""
         all_tabs = list(self._tabs.values())
         for tab in all_tabs:
-            if tab.is_modified and not tab.can_close():
+            if tab.is_modified and not tab.can_close_tab():
                 return False
 
         return True
@@ -1154,6 +1154,7 @@ class ColumnManager(QWidget):
             self._close_tab_by_id(tab.tab_id)
 
     def can_close_tab(self) -> bool:
+        """Can we close the currently active tab?"""
         tab = self._get_current_tab()
         return False if not tab else True
 
@@ -1166,6 +1167,7 @@ class ColumnManager(QWidget):
         self._close_tab_by_id(tab.tab_id)
 
     def can_save_file(self) -> bool:
+        """Check if the current file can be saved."""
         tab = self._get_current_tab()
         return False if not tab else tab.can_save()
 
@@ -1176,6 +1178,7 @@ class ColumnManager(QWidget):
             current_tab.save()
 
     def can_save_file_as(self) -> bool:
+        """Check if the current file can be saved as a new file."""
         tab = self._get_current_tab()
         return False if not tab else tab.can_save_as()
 
@@ -1186,9 +1189,11 @@ class ColumnManager(QWidget):
             current_tab.save_as()
 
     def can_show_all_columns(self) -> bool:
+        """Check if all columns can be shown."""
         return False if len(self._tab_columns) == 0 else True
 
     def show_all_columns(self) -> None:
+        """Show all columns in the tab manager."""
         if len(self._tab_columns) < 1:
             return
 
@@ -1197,6 +1202,7 @@ class ColumnManager(QWidget):
         self._column_splitter.setSizes(sizes)
 
     def can_submit_message(self) -> bool:
+        """Check if the current tab can submit a message."""
         tab = self._get_current_tab()
         return False if not tab else tab.can_submit()
 
@@ -1209,6 +1215,7 @@ class ColumnManager(QWidget):
         tab.submit()
 
     def can_show_conversation_settings_dialog(self) -> bool:
+        """Check if the conversation settings dialog can be shown."""
         tab = self._get_current_tab()
         return isinstance(tab, ConversationTab)
 

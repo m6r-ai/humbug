@@ -121,7 +121,7 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement restore_from_state")
 
-    def can_close(self) -> bool:
+    def can_close_tab(self) -> bool:
         """
         Check if the tab can be closed.
 
@@ -129,7 +129,7 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement can_close")
 
-    def close(self) -> None:
+    def close_tab(self) -> None:
         """
         Close the tab's content if applicable.
 

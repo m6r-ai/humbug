@@ -521,7 +521,7 @@ class ConversationWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
-    def get_settings(self) -> AIConversationSettings | None:
+    def get_settings(self) -> AIConversationSettings:
         """
         Get current conversation settings.
 

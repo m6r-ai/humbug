@@ -388,11 +388,11 @@ class TerminalTab(TabBase):
             self._tab_id
         )
 
-    def can_close(self) -> bool:
+    def can_close_tab(self) -> bool:
         """Check if terminal can be closed."""
         return True
 
-    def close(self) -> None:
+    def close_tab(self) -> None:
         """Close the terminal."""
         # Immediately stop running and prevent further operations
         self._running = False

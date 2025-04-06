@@ -449,7 +449,7 @@ class EditorTab(TabBase):
             except OSError as e:
                 self._logger.warning("Failed to clean up backups: %s", str(e))
 
-    def can_close(self) -> bool:
+    def can_close_tab(self) -> bool:
         """Check if the file can be closed."""
         if not self._is_modified:
             return True
@@ -472,7 +472,7 @@ class EditorTab(TabBase):
 
         return False
 
-    def close(self) -> None:
+    def close_tab(self) -> None:
         # Delete any backup files when we close
         if not self._auto_backup_timer.isActive():
             return
