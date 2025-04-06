@@ -47,7 +47,7 @@ class StyleManager(QObject):
             cls._instance = super(StyleManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize QObject base class if not already done."""
         if not hasattr(self, '_initialized'):
             super().__init__()
@@ -719,7 +719,10 @@ class StyleManager(QObject):
         pixmap = QPixmap(icon_path)
         scaled_size = self.get_scaled_size(target_size)
         return pixmap.scaled(
-            scaled_size, scaled_size, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            scaled_size,
+            scaled_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
         )
 
     def get_color(self, role: ColorRole) -> QColor:
@@ -793,18 +796,18 @@ class StyleManager(QObject):
         os_type = QOperatingSystemVersion.current()
 
         # Get system default font
-        system_font = QFontDatabase.systemFont(QFontDatabase.GeneralFont)
+        system_font = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont)
         system_size = system_font.pointSizeF()
 
         # Apply OS-specific adjustments if system detection fails
         if system_size > 0:
             return system_size
 
-        if os_type.type() == QOperatingSystemVersion.MacOS:
+        if os_type.type() == QOperatingSystemVersion.OSType.MacOS:
             # macOS typically uses 13pt as default
             return 13
 
-        if os_type.type() == QOperatingSystemVersion.Windows:
+        if os_type.type() == QOperatingSystemVersion.OSType.Windows:
             # Windows typically uses 9pt as default
             return 9
 

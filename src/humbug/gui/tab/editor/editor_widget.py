@@ -23,7 +23,7 @@ class EditorWidget(QPlainTextEdit):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         # Editor settings
-        self.setLineWrapMode(QPlainTextEdit.NoWrap)  # No word wrap for code
+        self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)  # No word wrap for code
         self.setTabStopDistance(32)  # 4 spaces worth of tab stops
 
         self._style_manager = StyleManager()

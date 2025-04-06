@@ -33,7 +33,7 @@ class ConversationTextEdit(QTextEdit):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         # Set word wrap mode to adjust to widget width
-        self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+        self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
 
         # Calculate tab stops
         self._style_manager = StyleManager()
@@ -79,10 +79,10 @@ class ConversationTextEdit(QTextEdit):
 
         self._has_code_block = has_code
         if has_code:
-            self.setWordWrapMode(QTextOption.NoWrap)
+            self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         else:
-            self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+            self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Force layout update

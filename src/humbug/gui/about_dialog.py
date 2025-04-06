@@ -40,8 +40,8 @@ class AboutDialog(QDialog):
         scaled_size = int(160 * style_manager.zoom_factor)  # 160px base size
         icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
         ))
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(icon_label)
