@@ -2,14 +2,14 @@
 
 from dataclasses import dataclass
 import logging
-from typing import Optional, Tuple, Dict, List
+from typing import Tuple, Dict, List, cast
 
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer, QPointF, QRectF
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetricsF,
     QResizeEvent, QKeyEvent, QMouseEvent,
-    QGuiApplication, QWheelEvent, QFont, QTextCharFormat
+    QGuiApplication, QWheelEvent, QFont
 )
 
 from humbug.gui.color_role import ColorRole
@@ -34,7 +34,7 @@ class TerminalWidget(QAbstractScrollArea):
     data_ready = Signal(bytes)  # Emitted when user input is ready
     size_changed = Signal()  # Emitted when terminal size changes
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         """Initialize terminal widget."""
         super().__init__(parent)
         self._logger = logging.getLogger("TerminalWidget")
@@ -52,10 +52,10 @@ class TerminalWidget(QAbstractScrollArea):
         self._state = TerminalState(24, 80)  # Default size
 
         # Initialize highlight tracking
-        self._search_highlights = {}
+        self._search_highlights: Dict[int, List[Tuple[int, int, bool]]] = {}
 
         # Selection state
-        self._selection: Optional[TerminalSelection] = None
+        self._selection: TerminalSelection | None = None
         self._selecting = False
 
         # Default colors
@@ -303,8 +303,8 @@ class TerminalWidget(QAbstractScrollArea):
         if event.button() & Qt.MouseButton.LeftButton:
             # Handle text selection
             self._selecting = True
-            pos = self._pixel_pos_to_text_pos(event.position().toPoint())
-            self._selection = TerminalSelection(pos[0], pos[1], pos[0], pos[1])
+            row, col = self._pixel_pos_to_text_pos(event.position().toPoint())
+            self._selection = TerminalSelection(row, col, row, col)
             self.viewport().update()
 
         # Handle mouse tracking if enabled
@@ -346,11 +346,11 @@ class TerminalWidget(QAbstractScrollArea):
         """Handle mouse movement for selection and tracking."""
         # Handle text selection
         if self._selecting and self._selection is not None:
-            pos = self._pixel_pos_to_text_pos(event.position().toPoint())
-            if (pos[0] != self._selection.end_row or
-                pos[1] != self._selection.end_col):
-                self._selection.end_row = pos[0]
-                self._selection.end_col = pos[1]
+            row, col = self._pixel_pos_to_text_pos(event.position().toPoint())
+            if (row != self._selection.end_row or
+                col != self._selection.end_col):
+                self._selection.end_row = row
+                self._selection.end_col = col
                 self.viewport().update()
 
         # Handle mouse tracking if enabled and in button event mode (1002) or any event mode (1003)
@@ -424,7 +424,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle keypad in application mode
         if self._state.application_keypad_mode and not modifiers:
-            keypad_map = {
+            keypad_map: Dict[int, bytes] = {
                 Qt.Key.Key_0: b'\x1bOp',
                 Qt.Key.Key_1: b'\x1bOq',
                 Qt.Key.Key_2: b'\x1bOr',
@@ -450,8 +450,8 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
         # Handle Shift + Function keys
-        if modifiers & Qt.ShiftModifier:
-            shift_fn_map = {
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            shift_fn_map: Dict[int, bytes] = {
                 Qt.Key.Key_F1: b'\x1b[1;2P',
                 Qt.Key.Key_F2: b'\x1b[1;2Q',
                 Qt.Key.Key_F3: b'\x1b[1;2R',
@@ -472,7 +472,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle Control + Function keys
         if modifiers & Qt.KeyboardModifier.ControlModifier:
-            ctrl_fn_map = {
+            ctrl_fn_map: Dict[int, bytes] = {
                 Qt.Key.Key_F1: b'\x1b[1;5P',
                 Qt.Key.Key_F2: b'\x1b[1;5Q',
                 Qt.Key.Key_F3: b'\x1b[1;5R',
@@ -492,7 +492,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
         # Handle standard function keys
-        fn_map = {
+        fn_map: Dict[int, bytes] = {
             Qt.Key.Key_F1: b'\x1bOP',
             Qt.Key.Key_F2: b'\x1bOQ',
             Qt.Key.Key_F3: b'\x1bOR',
@@ -521,7 +521,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
             # Handle special control sequences
-            ctrl_map = {
+            ctrl_map: Dict[int, bytes] = {
                 Qt.Key.Key_2: b'\x00',  # Ctrl+@, Ctrl+2
                 Qt.Key.Key_3: b'\x1b',  # Ctrl+[, Ctrl+3
                 Qt.Key.Key_4: b'\x1c',  # Ctrl+\, Ctrl+4
@@ -541,6 +541,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
         # Handle cursor keys based on mode
+        cursor_map: Dict[int, bytes] = {}
         if self._state.application_cursor_mode:
             cursor_map = {
                 Qt.Key.Key_Up: b'\x1bOA',
@@ -569,7 +570,7 @@ class TerminalWidget(QAbstractScrollArea):
                 else:
                     mod_seq = base_seq[:-1] + b';5' + base_seq[-1:]
                 self.data_ready.emit(mod_seq)
-            elif modifiers & Qt.ShiftModifier:
+            elif modifiers & Qt.KeyboardModifier.ShiftModifier:
                 if b'O' in base_seq:
                     mod_seq = base_seq.replace(b'O', b'[1;2')
                 else:
@@ -581,7 +582,7 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Handle other special keys
-        special_map = {
+        special_map: Dict[int, bytes] = {
             Qt.Key.Key_Return: b'\r',
             Qt.Key.Key_Enter: b'\r',
             Qt.Key.Key_Backspace: b'\b' if modifiers & Qt.KeyboardModifier.ControlModifier else b'\x7f',
@@ -662,8 +663,8 @@ class TerminalWidget(QAbstractScrollArea):
             line = buffer.lines[line_index]
             current_run_start_col = start_col
             current_text = ""
-            current_attrs = None
-            current_colors = None
+            current_attrs = CharacterAttributes.NONE
+            current_colors: Tuple[int | None, int | None] = (None, None)
 
             for col in range(start_col, end_col):
                 char, attrs, fg_color, bg_color = line.get_character(col)
@@ -906,7 +907,7 @@ class TerminalWidget(QAbstractScrollArea):
         terminal_history_lines: int
     ) -> None:
         """Draw text selection overlay using floating-point positioning."""
-        selection = self._selection.normalize()
+        selection = cast(TerminalSelection, self._selection).normalize()
         visible_start_row = selection.start_row - first_visible_line
         visible_end_row = selection.end_row - first_visible_line
 
@@ -988,7 +989,7 @@ class TerminalWidget(QAbstractScrollArea):
         terminal_history_lines = self._state.terminal_history_lines
 
         # Get normalized selection
-        selection = self._selection.normalize()
+        selection = cast(TerminalSelection, self._selection).normalize()
 
         # Build selected text
         text = []
@@ -1104,7 +1105,7 @@ class TerminalWidget(QAbstractScrollArea):
         """Get current terminal title."""
         return self._state.terminal_title
 
-    def get_current_directory(self) -> Optional[str]:
+    def get_current_directory(self) -> str | None:
         """Get current working directory if known."""
         return self._state._current_directory
 
@@ -1127,7 +1128,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._search_highlights.clear()
         self.viewport().update()
 
-    def get_row_highlights(self, row: int) -> List[Tuple[int, int, QTextCharFormat]]:
+    def get_row_highlights(self, row: int) -> List[Tuple[int, int, bool]]:
         """Get highlights for a given row.
 
         Args:
@@ -1225,10 +1226,11 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Group matches by row
-        row_matches = {}
+        row_matches: Dict[int, List[Tuple[int, int, bool]]] = {}
         for match in self._matches:
             if match.row not in row_matches:
                 row_matches[match.row] = []
+
             row_matches[match.row].append(
                 (match.start_col, match.end_col, match.is_current)
             )
