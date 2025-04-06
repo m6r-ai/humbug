@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Optional, Set
+from typing import Any, Dict, Set
 
 from PySide6.QtWidgets import QVBoxLayout
 
@@ -14,6 +14,7 @@ from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
 from humbug.gui.tab.terminal.terminal_widget import TerminalWidget
+from humbug.terminal.terminal_base import TerminalBase
 from humbug.terminal.terminal_factory import create_terminal
 from humbug.language.language_manager import LanguageManager
 
@@ -63,7 +64,7 @@ class UTF8Buffer:
 class TerminalTab(TabBase):
     """Tab containing a terminal emulator."""
 
-    def __init__(self, tab_id: str, command: Optional[str] = None, parent=None, start_process: bool=True):
+    def __init__(self, tab_id: str, command: str | None = None, parent=None, start_process: bool=True) -> None:
         """
         Initialize terminal tab.
 
@@ -108,7 +109,7 @@ class TerminalTab(TabBase):
         self._install_activation_tracking(self._terminal_widget)
 
         # Initialize process and task tracking
-        self._terminal_process = create_terminal()
+        self._terminal_process: TerminalBase | None = create_terminal()
         self._tasks: Set[asyncio.Task] = set()
         self._running = True
         self._transferring = False
@@ -207,6 +208,7 @@ class TerminalTab(TabBase):
                 except asyncio.CancelledError:
                     # Task was cancelled, exit cleanly
                     raise
+
                 except Exception as e:
                     if not self._running:
                         break
@@ -216,12 +218,15 @@ class TerminalTab(TabBase):
         except asyncio.CancelledError:
             self._logger.debug("Read loop task cancelled")
             raise  # Re-raise to ensure proper task cancellation
+
         except Exception as e:
             self._logger.exception("Error in read loop: %s", str(e))
+
         finally:
             if self._running and not self._transferring:
                 try:
                     self._terminal_widget.put_data(b"\r\n[Process completed]\r\n")
+
                 except Exception as e:
                     self._logger.debug("Could not write completion message: %s", e)
 
@@ -230,6 +235,7 @@ class TerminalTab(TabBase):
         try:
             if self._running:
                 asyncio.create_task(self._terminal_process.write_data(data))
+
         except Exception as e:
             self._logger.error("Failed to write to process: %s", str(e))
 
@@ -292,7 +298,7 @@ class TerminalTab(TabBase):
         Returns:
             TabState containing tab state
         """
-        metadata = {}
+        metadata: Dict[str, Any] = {}
 
         # Store command for both persistent and temporary state
         if self._command:
@@ -413,6 +419,7 @@ class TerminalTab(TabBase):
                 if loop.is_running():
                     # Create and run termination task directly
                     loop.create_task(self._terminal_process.terminate())
+
             except Exception as e:
                 self._logger.exception("Error terminating process: %s", str(e))
 

@@ -119,6 +119,7 @@ class UnixTerminal(TerminalBase):
                     await asyncio.get_event_loop().run_in_executor(
                         None, os.waitpid, self._process_id, 0
                     )
+
                 except ChildProcessError:
                     pass  # Already terminated
 
@@ -142,6 +143,7 @@ class UnixTerminal(TerminalBase):
         try:
             os.kill(self._process_id, 0)
             return True
+
         except ProcessLookupError:
             return False
 
@@ -155,6 +157,7 @@ class UnixTerminal(TerminalBase):
                 # Signal process group
                 if self._process_id:
                     os.killpg(os.getpgid(self._process_id), signal.SIGWINCH)
+
             except OSError as e:
                 self._logger.exception("Failed to update window size: %s", str(e))
 
