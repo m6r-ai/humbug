@@ -5,16 +5,18 @@ Context: Python implementation rules
     so I can maintain and enhance it over time.
 
     Context: Implement in Python 3
-        The application will be written in the latest version of Python 3.
+        The application will be written in the latest version of Python 3.  Assume a baseline of Python 3.10.
 
     Context: Indentation of code
         Code must be indented by 4 spaces.
 
     Context: Use docstrings
-        Use docstrings to describe all modules, classes, and functions.  This should follow PEP 257 guidelines.
+        Docstrings must be used to describe all modules, classes, and functions.  This should follow PEP 257 guidelines.
 
     Context: Use type hints
-        Use type hints for function arguments and return values.
+        Type hints must be used for function arguments and return values.
+
+        As we're using Python 3.10 as a minimum we can use `T | None` instead of `Optional[T]`.
 
     Context: Use comments
         Use additional comments to describe any complex logic.
@@ -42,6 +44,14 @@ Context: Python implementation rules
         else:
             next_statement()
         ```
+
+    Context: Handle error and exception paths early
+        If it is possible to detect errors and exceptions early then do so.  Always prefer to do this as early
+        as possible within the code so we have the fewest possible conditional checks by the time we reach the
+        main purpose of any function or method.
+
+        This is sometimes known as "flattening the code to the left" as there is generally less indentation required
+        when we do this.  This makes the code easier to read.
 
     Context: Exception handling philosophy
         Context: Exception documentation
@@ -78,9 +88,11 @@ Context: Python implementation rules
             ```python
             try:
                 await self.api_client.fetch_data()
+
             except ConnectionError as e:
                 logger.error("Failed to retrieve data from API endpoint", exc_info=True)
                 raise DataFetchError(f"Failed to retrieve data from API endpoint: {e}") from e
+
             except TimeoutError as e:
                 logger.warning("API request timed out, will retry", exc_info=True)
                 # Handle retry logic
