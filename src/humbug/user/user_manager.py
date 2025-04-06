@@ -4,7 +4,7 @@ Manages Humbug application user settings, primarily API keys.
 
 import logging
 import os
-from typing import Dict, Optional
+from typing import Dict, cast
 
 from PySide6.QtCore import QObject, Signal
 
@@ -45,7 +45,7 @@ class UserManager(QObject):
         if not hasattr(self, '_initialized'):
             super().__init__()
             self._user_path = os.path.expanduser(f"~/{self.USER_DIR}")
-            self._settings: Optional[UserSettings] = None
+            self._settings: UserSettings | None = None
             self._ai_backends: Dict[str, AIBackend] = {}
             self._load_settings()
             self._initialize_ai_backends()
@@ -157,9 +157,10 @@ class UserManager(QObject):
         Returns:
             The current UserSettings object
         """
-        if not self._settings:
+        if self._settings is None:
             self._load_settings()
-        return self._settings
+
+        return cast(UserSettings, self._settings)
 
     def get_api_keys(self, include_env_vars: bool = True) -> Dict[str, str]:
         """
@@ -173,10 +174,10 @@ class UserManager(QObject):
         Returns:
             Dictionary of API keys
         """
-        if not self._settings:
+        if self._settings is None:
             self._load_settings()
 
-        api_keys = self._settings.api_keys.copy()
+        api_keys = cast(UserSettings, self._settings).api_keys.copy()
 
         if include_env_vars:
             # Check environment variables and override stored keys if present
