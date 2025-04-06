@@ -102,7 +102,7 @@ class ConversationMessageSection(QFrame):
         self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Disable the standard context menu as our parent widget will handle that
-        self._text_area.setContextMenuPolicy(Qt.NoContextMenu)
+        self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
         self._layout.addWidget(self._text_area)
 

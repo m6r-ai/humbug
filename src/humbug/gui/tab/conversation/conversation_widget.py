@@ -222,7 +222,7 @@ class ConversationWidget(QWidget):
         self._last_mouse_pos = None
 
         # Setup context menu
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_conversation_context_menu)
 
         # Connect to the vertical scrollbar's change signals

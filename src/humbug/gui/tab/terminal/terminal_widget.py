@@ -44,7 +44,7 @@ class TerminalWidget(QAbstractScrollArea):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.verticalScrollBar().valueChanged.connect(self._handle_scroll)
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.setViewportMargins(4, 4, 4, 4)
 
@@ -99,7 +99,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._char_ascent: float = 0.0
 
         # Initialize size and connect signals
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_terminal_context_menu)
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
@@ -300,7 +300,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press for both tracking and selection."""
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event.button() & Qt.MouseButton.LeftButton:
             # Handle text selection
             self._selecting = True
             pos = self._pixel_pos_to_text_pos(event.position().toPoint())
@@ -326,7 +326,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """Handle mouse release for both tracking and selection."""
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event.button() & Qt.MouseButton.LeftButton:
             self._selecting = False
 
         # Handle mouse tracking if enabled

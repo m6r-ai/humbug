@@ -14,20 +14,20 @@ class FileTreeView(QTreeView):
         """Initialize the tree view."""
         super().__init__(parent)
         self.setDragEnabled(True)
-        self.setDragDropMode(QTreeView.DragOnly)
+        self.setDragDropMode(QTreeView.DragDropMode.DragOnly)
         self._drag_start_pos = None
 
         self.setHeaderHidden(True)
         self.setAnimated(True)
-        self.header().setSortIndicator(0, Qt.AscendingOrder)
+        self.header().setSortIndicator(0, Qt.SortOrder.AscendingOrder)
         self.setSortingEnabled(True)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)
 
     def mousePressEvent(self, event):
         """Handle mouse press events for drag initiation."""
-        if event.button() == Qt.LeftButton:
+        if event.button() & Qt.MouseButton.LeftButton:
             self._drag_start_pos = event.pos()
 
         super().mousePressEvent(event)
