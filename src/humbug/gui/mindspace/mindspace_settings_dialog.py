@@ -26,8 +26,9 @@ class MindspaceSettingsDialog(QDialog):
 
     settings_changed = Signal(MindspaceSettings)
 
-    def __init__(self, parent=None):
-        """Initialize the mindspace settings dialog.
+    def __init__(self, parent=None) -> None:
+        """
+        Initialize the mindspace settings dialog.
 
         Args:
             parent: Parent widget, typically the main window.

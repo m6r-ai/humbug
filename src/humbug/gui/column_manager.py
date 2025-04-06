@@ -931,7 +931,7 @@ class ColumnManager(QWidget):
         for column in self._tab_columns:
             tab_states = []
             for index in range(column.count()):
-                tab = column.widget(index)
+                tab = cast(TabBase, column.widget(index))
                 try:
                     state = tab.get_state(False)
                     state_dict = state.to_dict()
@@ -983,14 +983,14 @@ class ColumnManager(QWidget):
     def _restore_tab_from_state(self, state: TabState) -> TabBase | None:
         """Create appropriate tab type from state."""
         if state.type == TabType.CONVERSATION:
-            tab = ConversationTab.restore_from_state(state, self)
-            tab.forkRequested.connect(self._fork_conversation)
-            return tab
+            conversation_tab = ConversationTab.restore_from_state(state, self)
+            conversation_tab.forkRequested.connect(self._fork_conversation)
+            return conversation_tab
 
         if state.type == TabType.EDITOR:
-            tab = EditorTab.restore_from_state(state, self)
-            self._connect_editor_signals(tab)
-            return tab
+            editor_tab = EditorTab.restore_from_state(state, self)
+            self._connect_editor_signals(editor_tab)
+            return editor_tab
 
         if state.type == TabType.TERMINAL:
             return TerminalTab.restore_from_state(state, self)
@@ -1061,11 +1061,11 @@ class ColumnManager(QWidget):
         # Update all tab labels, setting active state only for the current active tab.
         for tab_id, label in self._tab_labels.items():
             tab = self._tabs[tab_id]
-            column = self._find_column_for_tab(tab)
-            if column is None:
+            tab_column = self._find_column_for_tab(tab)
+            if tab_column is None:
                 continue
 
-            is_label_active = column == self._active_column and tab == column.currentWidget()
+            is_label_active = tab_column == self._active_column and tab == tab_column.currentWidget()
             label.handle_style_changed(is_label_active)
 
         self._column_splitter.setStyleSheet(f"""

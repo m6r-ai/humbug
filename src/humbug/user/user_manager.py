@@ -40,7 +40,7 @@ class UserManager(QObject):
             cls._instance = super(UserManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize user manager if not already initialized."""
         if not hasattr(self, '_initialized'):
             super().__init__()
