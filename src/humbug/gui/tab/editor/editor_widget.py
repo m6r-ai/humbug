@@ -84,6 +84,7 @@ class EditorWidget(QPlainTextEdit):
         # Set margin on appropriate side based on layout direction
         if self.layoutDirection() == Qt.RightToLeft:
             self.setViewportMargins(0, 0, 0, 0)  # Right margin
+
         else:
             self.setViewportMargins(width, 0, 0, 0)  # Left margin
 
@@ -91,6 +92,7 @@ class EditorWidget(QPlainTextEdit):
         """Handle updates to the line number area."""
         if dy:
             self._line_number_area.scroll(0, dy)
+
         else:
             self._line_number_area.update(0, rect.y(),
                 self._line_number_area.width(), rect.height())
@@ -111,6 +113,7 @@ class EditorWidget(QPlainTextEdit):
                 width,
                 cr.height()
             )
+
         else:
             self._line_number_area.setGeometry(
                 cr.left(),
@@ -409,13 +412,17 @@ class EditorWidget(QPlainTextEdit):
                 if not cursor.hasSelection():
                     if settings.use_soft_tabs:
                         self._indent_single_line_soft_tabs(cursor, settings.tab_size)
+
                     else:
                         self._indent_single_line_hard_tabs(cursor)
+
                 else:
                     if settings.use_soft_tabs:
                         self._indent_block_soft_tabs(cursor, settings.tab_size)
+
                     else:
                         self._indent_block_hard_tabs(cursor)
+
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)
@@ -440,11 +447,14 @@ class EditorWidget(QPlainTextEdit):
                 if not cursor.hasSelection():
                     if settings.use_soft_tabs:
                         self._outdent_single_line_soft_tabs(cursor, settings.tab_size)
+
                     else:
                         self._outdent_single_line_hard_tabs(cursor)
+
                 else:
                     if settings.use_soft_tabs:
                         self._outdent_block_soft_tabs(cursor, settings.tab_size)
+
                     else:
                         self._outdent_block_hard_tabs(cursor)
 
@@ -486,6 +496,7 @@ class EditorWidget(QPlainTextEdit):
                 cursor = document.find(text, cursor)
                 if cursor.isNull():
                     break
+
                 self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
 
         if not self._matches:
@@ -494,6 +505,7 @@ class EditorWidget(QPlainTextEdit):
         # Move to next/previous match
         if forward:
             self._current_match = (self._current_match + 1) % len(self._matches)
+
         else:
             self._current_match = (self._current_match - 1) if self._current_match > 0 else len(self._matches) - 1
 
@@ -526,13 +538,16 @@ class EditorWidget(QPlainTextEdit):
 
             # Create extra selection
             extra_selection = QTextEdit.ExtraSelection()
-            extra_selection.cursor = cursor
+
+            # We have to tell mypy to ingore attributes it doesn't know about
+            extra_selection.cursor = cursor  # type: ignore
 
             # Use different format for current match
             if i == self._current_match:
-                extra_selection.format = found_format
+                extra_selection.format = found_format  # type: ignore
+
             else:
-                extra_selection.format = dim_found_format
+                extra_selection.format = dim_found_format  # type: ignore
 
             selections.append(extra_selection)
 
