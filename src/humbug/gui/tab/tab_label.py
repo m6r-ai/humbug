@@ -74,9 +74,9 @@ class TabLabel(QWidget):
 
     def _create_invisible_close_icon(self) -> QIcon:
         """Create a transparent icon for the inactive state."""
-        size = self._style_manager.get_scaled_size(16)
+        size = int(self._style_manager.get_scaled_size(16))
         transparent_pixmap = QPixmap(size, size)
-        transparent_pixmap.fill(Qt.transparent)
+        transparent_pixmap.fill(Qt.GlobalColor.transparent)
         return QIcon(transparent_pixmap)
 
     def handle_style_changed(self, is_active: bool):

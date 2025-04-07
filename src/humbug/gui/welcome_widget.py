@@ -73,8 +73,8 @@ class WelcomeWidget(QFrame):
         scaled_size = int(160 * zoom_factor)  # 160px base size for welcome screen
         self._icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
         ))
 
         # Update colors and frame style

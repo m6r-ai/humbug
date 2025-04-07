@@ -158,7 +158,7 @@ class FileTreeIconProvider(QFileIconProvider):
 
         # Create transparent pixmap
         pixmap = QPixmap(scaled_size, scaled_size)
-        pixmap.fill(Qt.transparent)
+        pixmap.fill(Qt.GlobalColor.transparent)
 
         # Paint the SVG onto the pixmap
         painter = QPainter(pixmap)
