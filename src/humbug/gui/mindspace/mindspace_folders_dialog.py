@@ -1,6 +1,6 @@
 """Dialog for configuring initial mindspace folder structure."""
 
-from typing import List
+from typing import List, cast
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
@@ -166,11 +166,19 @@ class MindspaceFoldersDialog(QDialog):
             [strings.conversations_folder, strings.metaphor_folder, strings.src_folder]
         ):
             # Find the label widget in the checkbox's parent layout
-            layout = checkbox.parent().layout()
-            if layout:
-                label_widget = layout.itemAt(0).widget()
-                if isinstance(label_widget, QLabel):
-                    label_widget.setText(label)
+            layout = cast(QWidget, checkbox.parent()).layout()
+            if layout is None:
+                continue
+
+            item = layout.itemAt(0)
+            if item is None:
+                continue
+
+            label_widget = item.widget()
+            if not isinstance(label_widget, QLabel):
+                continue
+
+            label_widget.setText(label)
 
         self.ok_button.setText(strings.ok)
         self.cancel_button.setText(strings.cancel)

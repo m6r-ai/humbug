@@ -256,7 +256,7 @@ class MessageBox(QDialog):
 
     @classmethod
     def show_message(cls, parent, msg_type: MessageBoxType, title: str, text: str,
-                    buttons: List[MessageBoxButton] = None) -> MessageBoxButton:
+                    buttons: List[MessageBoxButton] = []) -> MessageBoxButton:
         """
         Show a message box and return the clicked button.
 

@@ -2,20 +2,27 @@
 Markdown AST visitor to render the AST directly to a QTextDocument.
 """
 
+from typing import List
+
 from PySide6.QtGui import (
     QTextCursor, QTextDocument, QTextCharFormat, QTextBlockFormat,
-    QTextListFormat, QFont, QFontMetricsF
+    QTextListFormat, QFont, QFontMetricsF, QTextList
 )
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.markdown.markdown_ast_node import MarkdownASTVisitor
+from humbug.markdown.markdown_ast_node import (
+    MarkdownASTVisitor, MarkdownDocumentNode, MarkdownParagraphNode, MarkdownHeadingNode,
+    MarkdownTextNode, MarkdownBoldNode, MarkdownEmphasisNode, MarkdownInlineCodeNode,
+    MarkdownCodeBlockNode, MarkdownListItemNode, MarkdownOrderedListNode,
+    MarkdownUnorderedListNode, MarkdownLineBreakNode
+)
 
 
 class ConversationMarkdownRenderer(MarkdownASTVisitor):
     """Visitor that renders the AST directly to a QTextDocument."""
 
-    def __init__(self, document: QTextDocument):
+    def __init__(self, document: QTextDocument) -> None:
         """
         Initialize the document renderer.
 
@@ -28,14 +35,14 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._cursor.movePosition(QTextCursor.MoveOperation.Start)
         self._orig_block_format = self._cursor.blockFormat()
 
-        self._lists = []
+        self._lists: List[QTextList] = []
         self._list_level = 0
 
-        self._default_font_height = 0
+        self._default_font_height: float = 0
 
         self._style_manager = StyleManager()
 
-    def visit_MarkdownDocumentNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownDocumentNode(self, node: MarkdownDocumentNode) -> None:  # pylint: disable=invalid-name
         """
         Render a document node to the QTextDocument.
 
@@ -77,7 +84,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Enable all the changes to render
         cursor.endEditBlock()
 
-    def visit_MarkdownParagraphNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownParagraphNode(self, node: MarkdownParagraphNode) -> None:  # pylint: disable=invalid-name
         """
         Render a paragraph node to the QTextDocument.
 
@@ -108,7 +115,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setBlockFormat(orig_block_format)
 
-    def visit_MarkdownHeadingNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownHeadingNode(self, node: MarkdownHeadingNode) -> None:  # pylint: disable=invalid-name
         """
         Render a heading node to the QTextDocument.
 
@@ -134,14 +141,14 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         font_multiplier = ((self._style_manager.base_font_size * 2.0) - multipliers[level]) / base_font_size
         font_size = base_font_size * font_multiplier * self._style_manager.zoom_factor
         char_format.setFontPointSize(font_size)
-        char_format.setFontWeight(QFont.Bold)
+        char_format.setFontWeight(QFont.Weight.Bold)
         self._cursor.setCharFormat(char_format)  # Apply heading character format
 
         # Apply block format (heading level)
         block_format = QTextBlockFormat()
         block_format.setHeadingLevel(level)
         if node.previous_sibling():
-            block_format.setTopMargin(self._default_font_height * (font_multiplier))
+            block_format.setTopMargin(self._default_font_height * font_multiplier)
 
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
@@ -157,7 +164,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setBlockFormat(orig_block_format)
 
-    def visit_MarkdownTextNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownTextNode(self, node: MarkdownTextNode) -> None:  # pylint: disable=invalid-name
         """
         Render a text node to the QTextDocument.
 
@@ -169,7 +176,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         self._cursor.insertText(node.content)  # Use the current cursor format
 
-    def visit_MarkdownBoldNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownBoldNode(self, node: MarkdownBoldNode) -> None:  # pylint: disable=invalid-name
         """
         Render a bold node to the QTextDocument.
 
@@ -184,7 +191,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Create a new format based on the current one but with bold
         bold_format = QTextCharFormat(orig_char_format)
-        bold_format.setFontWeight(QFont.Bold)
+        bold_format.setFontWeight(QFont.Weight.Bold)
         self._cursor.setCharFormat(bold_format)
 
         for child in node.children:
@@ -193,7 +200,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Restore previous format
         self._cursor.setCharFormat(orig_char_format)
 
-    def visit_MarkdownEmphasisNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownEmphasisNode(self, node: MarkdownEmphasisNode) -> None:  # pylint: disable=invalid-name
         """
         Render an emphasis node to the QTextDocument.
 
@@ -217,7 +224,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Restore previous format
         self._cursor.setCharFormat(orig_char_format)
 
-    def visit_MarkdownInlineCodeNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownInlineCodeNode(self, node: MarkdownInlineCodeNode) -> None:  # pylint: disable=invalid-name
         """
         Render an inline code node to the QTextDocument.
 
@@ -241,7 +248,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Restore previous format
         self._cursor.setCharFormat(orig_char_format)
 
-    def visit_MarkdownCodeBlockNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownCodeBlockNode(self, node: MarkdownCodeBlockNode) -> None:  # pylint: disable=invalid-name
         """
         Render a code block node to the QTextDocument.
 
@@ -322,7 +329,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         if not self._cursor.atBlockStart():
             self._cursor.insertBlock()
 
-    def visit_MarkdownOrderedListNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownOrderedListNode(self, node: MarkdownOrderedListNode) -> None:  # pylint: disable=invalid-name
         """
         Render an ordered list node to the QTextDocument.
 
@@ -344,7 +351,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Set indentation based on nesting level
         list_format = QTextListFormat()
-        list_format.setStyle(QTextListFormat.ListDecimal)
+        list_format.setStyle(QTextListFormat.Style.ListDecimal)
         list_format.setStart(node.start)
         list_format.setIndent(self._list_level)
 
@@ -353,7 +360,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._list_node_visitor(node)
         self._cursor.setBlockFormat(orig_block_format)
 
-    def visit_MarkdownUnorderedListNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownUnorderedListNode(self, node: MarkdownUnorderedListNode) -> None:  # pylint: disable=invalid-name
         """
         Render an unordered list node to the QTextDocument.
 
@@ -375,7 +382,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Set indentation based on nesting level
         list_format = QTextListFormat()
-        list_format.setStyle(QTextListFormat.ListDisc)
+        list_format.setStyle(QTextListFormat.Style.ListDisc)
         list_format.setIndent(self._list_level)
 
         new_list = self._cursor.createList(list_format)
@@ -383,7 +390,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._list_node_visitor(node)
         self._cursor.setBlockFormat(orig_block_format)
 
-    def visit_MarkdownListItemNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownListItemNode(self, node: MarkdownListItemNode) -> None:  # pylint: disable=invalid-name
         """
         Render a list item node to the QTextDocument.
 
@@ -403,7 +410,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         for child in node.children:
             self.visit(child)
 
-    def visit_MarkdownLineBreakNode(self, _node):  # pylint: disable=invalid-name
+    def visit_MarkdownLineBreakNode(self, _node: MarkdownLineBreakNode) -> None:  # pylint: disable=invalid-name
         """
         Render a line break node to the QTextDocument.
 
