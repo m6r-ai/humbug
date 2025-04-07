@@ -145,7 +145,7 @@ class ConversationWidget(QWidget):
 
         self._last_submitted_message = None
 
-        self._last_update_time = 0  # Timestamp of last UI update
+        self._last_update_time: float = 0  # Timestamp of last UI update
         self._update_timer = QTimer(self)  # Timer for throttled updates
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._process_pending_update)
@@ -1322,9 +1322,11 @@ class ConversationWidget(QWidget):
             if forward:
                 self._current_widget_index = 0
                 self._current_match_index = 0
+
             else:
                 self._current_widget_index = len(self._matches) - 1
                 self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
+
         else:
             # Move to next/previous match
             if forward:
@@ -1335,7 +1337,9 @@ class ConversationWidget(QWidget):
                     # If we've reached the end of widgets, wrap around
                     if self._current_widget_index >= len(self._matches):
                         self._current_widget_index = 0
+
                     self._current_match_index = 0
+
             else:
                 self._current_match_index -= 1
                 # If we've reached the start of matches in current widget
@@ -1344,6 +1348,7 @@ class ConversationWidget(QWidget):
                     # If we've reached the start of widgets, wrap around
                     if self._current_widget_index < 0:
                         self._current_widget_index = len(self._matches) - 1
+
                     self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
 
         # Highlight all matches

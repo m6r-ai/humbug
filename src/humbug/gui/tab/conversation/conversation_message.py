@@ -259,7 +259,9 @@ class ConversationMessage(QFrame):
                 font.setPointSizeF(base_font_size * factor)
                 section.apply_style(text_color, color, font)
                 section.set_content(node)
-            elif i == len(self._sections) - 1:
+                continue
+
+            if i == len(self._sections) - 1:
                 # Update the last section with new content
                 section = self._sections[-1]
                 if language != section.language:
@@ -452,7 +454,7 @@ class ConversationMessage(QFrame):
             }}
         """)
 
-    def find_text(self, text: str) -> List[Tuple[int, int, ConversationMessageSection]]:
+    def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """
         Find all instances of text in this message.
 
@@ -460,9 +462,9 @@ class ConversationMessage(QFrame):
             text: Text to search for
 
         Returns:
-            List of (start_position, end_position, section) tuples for each match
+            List of (section, start_position, end_position) tuples for each match
         """
-        all_matches = []
+        all_matches: List[Tuple[int, int, int]] = []
         for i, section in enumerate(self._sections):
             section_matches = section.find_text(text)
             if section_matches:

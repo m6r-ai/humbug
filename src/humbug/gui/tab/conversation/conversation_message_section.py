@@ -1,7 +1,7 @@
 """Widget for displaying a section of a message."""
 
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
@@ -31,7 +31,7 @@ class ConversationMessageSection(QFrame):
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
 
-    def __init__(self, is_input: bool, language: Optional[ProgrammingLanguage] = None, parent=None):
+    def __init__(self, is_input: bool, language: ProgrammingLanguage | None = None, parent=None):
         """
         Initialize a message section widget.
 
@@ -118,6 +118,7 @@ class ConversationMessageSection(QFrame):
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Add conversation highlighter
+        self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
         self.set_language(language)
 
         self._mouse_left_button_pressed = False
@@ -128,11 +129,11 @@ class ConversationMessageSection(QFrame):
         self._handle_language_changed()
 
     @property
-    def language(self) -> str:
+    def language(self) -> ProgrammingLanguage | None:
         """Provide the language in use by this section."""
         return self._language
 
-    def set_language(self, language: ProgrammingLanguage) -> None:
+    def set_language(self, language: ProgrammingLanguage | None) -> None:
         """Set the programming language to use for this message section"""
         self._language = language
 
@@ -140,19 +141,22 @@ class ConversationMessageSection(QFrame):
             self._use_markdown = not self._is_input
             if self._use_markdown:
                 self._highlighter = None
+
             else:
                 self._highlighter = ConversationHighlighter(self._text_area.document())
                 self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
+
         else:
             self._use_markdown = False
-            self._highlighter = ConversationLanguageHighlighter(self._text_area.document())
-            self._highlighter.set_language(language)
+            highlighter = ConversationLanguageHighlighter(self._text_area.document())
+            highlighter.set_language(language)
+            self._highlighter = highlighter
             self._text_area.set_has_code_block(True)
 
         strings = self._language_manager.strings
         if self._language_header:
             language_header = strings.highlighting.format(
-                language=ProgrammingLanguageUtils.get_display_name(self._language)
+                language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
             )
             self._language_header.setText(language_header)
 
@@ -162,7 +166,7 @@ class ConversationMessageSection(QFrame):
 
         if self._language_header:
             language_header = strings.highlighting.format(
-                language=ProgrammingLanguageUtils.get_display_name(self._language)
+                language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
             )
             self._language_header.setText(language_header)
 
@@ -485,7 +489,7 @@ class ConversationMessageSection(QFrame):
         """
 
         icon_base_size = 14
-        icon_size = QSize(16 * self._style_manager.zoom_factor, 14 * self._style_manager.zoom_factor)
+        icon_size = QSize(int(16 * self._style_manager.zoom_factor), int(14 * self._style_manager.zoom_factor))
 
         if self._copy_button:
             self._copy_button.setIcon(QIcon(self._style_manager.scale_icon(

@@ -13,7 +13,7 @@ class MindspaceFileModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
         """Initialize the filter model."""
         super().__init__(parent)
-        self._mindspace_root = None
+        self._mindspace_root = ""
 
     def set_mindspace_root(self, path: str):
         """Set the mindspace root path for relative path calculations."""

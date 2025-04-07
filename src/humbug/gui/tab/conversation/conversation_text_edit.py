@@ -4,7 +4,7 @@ import logging
 from typing import cast
 
 from PySide6.QtWidgets import (
-    QFrame, QTextEdit, QSizePolicy, QScrollArea
+    QFrame, QTextEdit, QSizePolicy, QScrollArea, QWidget
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
 from PySide6.QtGui import (
@@ -23,13 +23,13 @@ class ConversationTextEdit(QTextEdit):
     mouseReleased = Signal(QMouseEvent)
     pageScrollRequested = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
         self.document().setDocumentMargin(0)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setFrameStyle(QFrame.NoFrame)
+        self.setFrameStyle(QFrame.Shape.NoFrame)
 
         # Force the widget to always use the width of its container
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -342,12 +342,12 @@ class ConversationTextEdit(QTextEdit):
             widget = self
             viewport = None
             while widget:
-                if isinstance(widget.parent(), QScrollArea):
-                    viewport = widget.parent().viewport()
-                    break
                 widget = widget.parent()
+                if isinstance(widget, QScrollArea):
+                    viewport = widget.viewport()
+                    break
 
-            if viewport:
+            if viewport is not None:
                 # Calculate visible lines based on cursor height
                 cursor_rect = self.cursorRect()
                 line_height = cursor_rect.height()

@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Set
 
 from humbug.ai.ai_conversation_history import AIConversationHistory
 from humbug.ai.ai_conversation_settings import AIConversationSettings
@@ -48,8 +48,8 @@ class AIConversation:
         self._settings = AIConversationSettings()
         self._conversation = AIConversationHistory(conversation_id)
         self._current_tasks: List[asyncio.Task] = []
-        self._current_ai_message = None
-        self._current_reasoning_message = None
+        self._current_ai_message: AIMessage | None = None
+        self._current_reasoning_message: AIMessage | None = None
         self._is_streaming = False
 
         # Callbacks for events
@@ -298,8 +298,8 @@ class AIConversation:
         self,
         reasoning: str,
         content: str,
-        usage: Optional[AIUsage] = None,
-        error: Optional[AIError] = None
+        usage: AIUsage | None = None,
+        error: AIError | None = None
     ) -> None:
         """
         Update the current AI response in the conversation.

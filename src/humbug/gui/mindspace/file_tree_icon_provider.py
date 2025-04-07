@@ -15,7 +15,7 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 class FileTreeIconProvider(QFileIconProvider):
     """Custom file icon provider with theme-aware scalable SVG icons."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the icon provider."""
         super().__init__()
         self._style_manager = StyleManager()
@@ -126,7 +126,7 @@ class FileTreeIconProvider(QFileIconProvider):
         accent_color = self._style_manager.get_color(ColorRole.BUTTON_BACKGROUND_HOVER)
         return base_color, accent_color
 
-    def _create_svg_icon(self, svg_data: str, accent_color: Optional[str] = None) -> QIcon:
+    def _create_svg_icon(self, svg_data: str, accent_color: str = "") -> QIcon:
         """Create an icon from SVG data with theme-aware colors.
 
         Args:
@@ -186,9 +186,8 @@ class FileTreeIconProvider(QFileIconProvider):
         if info.isDir():
             cache_key = 'folder'
             if cache_key not in self._cached_icons:
-                self._cached_icons[cache_key] = self._create_svg_icon(
-                    self._svg_paths['folder']
-                )
+                self._cached_icons[cache_key] = self._create_svg_icon(self._svg_paths['folder'])
+
             return self._cached_icons[cache_key]
 
         # Get file extension and map to icon type

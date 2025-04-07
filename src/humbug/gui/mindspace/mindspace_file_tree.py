@@ -28,7 +28,7 @@ class MindspaceFileTree(QWidget):
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         """Initialize the file tree widget."""
         super().__init__(parent)
 
@@ -313,7 +313,7 @@ class MindspaceFileTree(QWidget):
 
         if not path:
             # Clear the model when no mindspace is active
-            self._filter_model.set_mindspace_root(None)
+            self._filter_model.set_mindspace_root("")
             self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
             return
 
