@@ -9,7 +9,7 @@ from humbug.ai.mistral.mistral_stream_response import MistralStreamResponse
 class MistralBackend(AIBackend):
     """Mistral API backend implementation with streaming support."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         """Initialize the Mistral backend."""
         super().__init__()
         self._api_key = api_key

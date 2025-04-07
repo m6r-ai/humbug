@@ -9,7 +9,7 @@ from humbug.ai.openai.openai_stream_response import OpenAIStreamResponse
 class OpenAIBackend(AIBackend):
     """OpenAI API backend implementation with streaming support."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         """Initialize the OpenAI backend."""
         super().__init__()
         self._api_key = api_key

@@ -9,7 +9,7 @@ from humbug.ai.m6r.m6r_stream_response import M6RStreamResponse
 class M6RBackend(AIBackend):
     """M6R API backend implementation."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         """Initialize the M6R backend."""
         super().__init__()
         self._api_key = api_key

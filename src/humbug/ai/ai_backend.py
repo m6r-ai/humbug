@@ -47,7 +47,7 @@ class AIBackend(ABC):
         return self._conversation_settings.get(conversation_id, self._default_settings)
 
     @abstractmethod
-    def _build_request_data(self, conversation_history: List[str], settings: AIConversationSettings) -> dict:
+    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Abstract method to build backend-specific request data."""
 
     @abstractmethod

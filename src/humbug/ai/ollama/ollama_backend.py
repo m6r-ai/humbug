@@ -9,7 +9,7 @@ from humbug.ai.ollama.ollama_stream_response import OllamaStreamResponse # Impor
 class OllamaBackend(AIBackend):
     """Ollama API backend implementation with streaming support."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Ollama backend."""
         super().__init__()
         self._api_url = "http://localhost:11434/api/chat"

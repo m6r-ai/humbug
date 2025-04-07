@@ -1,7 +1,6 @@
 """Handles streaming response from Anthropic API."""
 
 import logging
-from typing import Optional
 
 from humbug.ai.ai_usage import AIUsage
 from humbug.ai.ai_response import AIError
@@ -10,12 +9,12 @@ from humbug.ai.ai_response import AIError
 class AnthropicStreamResponse:
     """Handles streaming response from Anthropic API."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize stream response handler."""
         self.reasoning = ""
         self.content = ""
-        self.usage: Optional[AIUsage] = None
-        self.error: Optional[AIError] = None
+        self.usage: AIUsage | None = None
+        self.error: AIError | None = None
         self._logger = logging.getLogger("AnthropicStreamResponse")
 
         # Internal tracking of tokens
@@ -42,23 +41,29 @@ class AnthropicStreamResponse:
             if "message" in chunk and "usage" in chunk["message"]:
                 usage = chunk["message"]["usage"]
                 self._input_tokens = usage.get("input_tokens", 0)
+
         elif event_type == "content_block_delta":
             delta = chunk.get("delta", {})
             if delta.get("type") == "text_delta":
                 self.content += delta.get("text", "")
+
             elif delta.get("type") == "thinking_delta":
                 self.reasoning += delta.get("thinking", "")
+
             elif delta.get("type") == "signature_delta":
                 self.reasoning += "\n\nSignature: " + delta.get("signature", "") + "\n"
+
         elif event_type == "content_block_start":
             content_block = chunk.get("content_block", {})
             if content_block.get("type") == "redacted_thinking":
                 self.reasoning += "\n\nRedacted: " + content_block.get("data", "") + "\n"
+
         elif event_type == "message_delta":
             # Track output tokens but don't expose them yet
             if "usage" in chunk:
                 usage = chunk["usage"]
                 self._output_tokens = usage.get("output_tokens", 0)
+
         elif event_type == "message_stop":
             # Only now do we create and expose the usage stats
             self.usage = AIUsage(

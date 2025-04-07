@@ -1,7 +1,6 @@
 """Handles streaming response from OpenAI API."""
 
 import logging
-from typing import Optional
 
 from humbug.ai.ai_usage import AIUsage
 from humbug.ai.ai_response import AIError
@@ -10,12 +9,12 @@ from humbug.ai.ai_response import AIError
 class OpenAIStreamResponse:
     """Handles streaming response from OpenAI API."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize stream response handler."""
         self.reasoning = ""
         self.content = ""
-        self.usage: Optional[AIUsage] = None
-        self.error: Optional[AIError] = None
+        self.usage: AIUsage | None = None
+        self.error: AIError | None = None
         self._logger = logging.getLogger("OpenAIStreamResponse")
 
     def update_from_chunk(self, chunk: dict) -> None:
