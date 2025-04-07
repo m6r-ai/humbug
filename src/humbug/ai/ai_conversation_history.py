@@ -1,6 +1,6 @@
 """AI conversation state management."""
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
@@ -9,7 +9,7 @@ from humbug.ai.ai_usage import AIUsage
 class AIConversationHistory:
     """Manages the conversation history and state."""
 
-    def __init__(self, conversation_id: str):
+    def __init__(self, conversation_id: str) -> None:
         """Initialize empty conversation history."""
         self._conversation_id = conversation_id
         self._messages: List[AIMessage] = []
@@ -23,9 +23,9 @@ class AIConversationHistory:
         self,
         message_id: str,
         content: str,
-        usage: Optional[AIUsage] = None,
-        completed: bool = None
-    ) -> Optional[AIMessage]:
+        usage: AIUsage | None = None,
+        completed: bool | None = None
+    ) -> AIMessage | None:
         """Update an existing message and return the updated message."""
         for message in self._messages:
             if message.id == message_id:
