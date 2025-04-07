@@ -585,8 +585,9 @@ class ConversationWidget(QWidget):
             widget: Widget to track for activation events
         """
         widget.installEventFilter(self._event_filter)
+        child: QWidget
         for child in widget.findChildren(QWidget):
-            child.installEventFilter(self._event_filter)
+            cast(QWidget, child).installEventFilter(self._event_filter)
 
     def _handle_widget_activation(self, widget):
         """

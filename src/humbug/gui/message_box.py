@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QPlainTextEdit
 )
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QKeyEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -143,7 +143,7 @@ class MessageBox(QDialog):
         self._handle_style_changed()
 
         # Store result
-        self.result_button: Optional[MessageBoxButton] = None
+        self.result_button: MessageBoxButton = MessageBoxButton.OK
 
     def _create_icon(self, msg_type: MessageBoxType) -> Optional[QPixmap]:
         """Create appropriate icon for message type."""
@@ -180,9 +180,9 @@ class MessageBox(QDialog):
         self.result_button = self._button_results[button]
         self.accept()
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle key events, specifically for Escape key."""
-        if event.key() == Qt.Key_Escape and self._escape_button:
+        if event.key() == Qt.Key.Key_Escape and self._escape_button:
             self.result_button = self._button_results[self._escape_button]
             self.reject()
 

@@ -4,9 +4,9 @@ import logging
 from typing import cast
 
 from PySide6.QtWidgets import (
-    QFrame, QTextEdit, QSizePolicy, QScrollArea, QWidget
+    QFrame, QTextEdit, QSizePolicy, QScrollArea
 )
-from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot
+from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot, QObject
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
@@ -339,7 +339,7 @@ class ConversationTextEdit(QTextEdit):
 
         if event.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown):
             # Find the scroll area viewport by walking up hierarchy
-            widget = self
+            widget: QObject = self
             viewport = None
             while widget:
                 widget = widget.parent()
