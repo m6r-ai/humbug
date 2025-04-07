@@ -47,15 +47,19 @@ class UTF8Buffer:
                 # Check if this starts a complete sequence
                 if byte & 0b10000000 == 0:  # ASCII byte
                     return i + 1
+
                 elif (byte & 0b11100000) == 0b11000000:  # 2-byte sequence
                     if i + 2 <= len(self.buffer):
                         return i + 2
+
                 elif (byte & 0b11100000) == 0b11100000:  # 3-byte sequence
                     if i + 3 <= len(self.buffer):
                         return i + 3
+
                 elif (byte & 0b11110000) == 0b11110000:  # 4-byte sequence
                     if i + 4 <= len(self.buffer):
                         return i + 4
+
                 # If we get here, we found an incomplete sequence
                 return i
         return 0
@@ -109,7 +113,7 @@ class TerminalTab(TabBase):
         self._install_activation_tracking(self._terminal_widget)
 
         # Initialize process and task tracking
-        self._terminal_process: TerminalBase | None = create_terminal()
+        self._terminal_process: TerminalBase = create_terminal()
         self._tasks: Set[asyncio.Task] = set()
         self._running = True
         self._transferring = False
@@ -362,7 +366,7 @@ class TerminalTab(TabBase):
         Args:
             source_tab: Source terminal tab to transfer from
         """
-        if not source_tab._terminal_process:
+        if source_tab._terminal_process is not None:
             return
 
         # Mark source tab as transferring to prevent completion message
@@ -422,9 +426,6 @@ class TerminalTab(TabBase):
 
             except Exception as e:
                 self._logger.exception("Error terminating process: %s", str(e))
-
-        # Clear references
-        self._terminal_process = None
 
     def can_save(self) -> bool:
         """Check if terminal can be saved."""
@@ -496,6 +497,9 @@ class TerminalTab(TabBase):
     def can_submit(self) -> bool:
         """Check if terminal can submit (not supported)."""
         return False
+
+    def submit(self) -> None:
+        """Submit terminal input (not supported)."""
 
     def update_status(self) -> None:
         """Update status bar."""

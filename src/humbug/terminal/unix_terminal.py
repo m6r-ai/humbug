@@ -131,8 +131,10 @@ class UnixTerminal(TerminalBase):
         if self._main_fd is not None:
             try:
                 os.close(self._main_fd)
+
             except OSError:
                 pass
+
             self._main_fd = None
 
     def is_running(self) -> bool:
@@ -172,6 +174,9 @@ class UnixTerminal(TerminalBase):
             EOFError: If pipe is closed/EOF reached
             OSError: On actual errors
         """
+        if self._main_fd is None or not self._running:
+            return b''
+
         loop = asyncio.get_event_loop()
         try:
             # Wait for data with select
@@ -207,7 +212,7 @@ class UnixTerminal(TerminalBase):
         """Write data to Unix terminal."""
         if self._main_fd is not None and self._running:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, lambda: os.write(self._main_fd, data))
+            await loop.run_in_executor(None, lambda: os.write(cast(int, self._main_fd), data))
 
     def transfer_to(self, other: 'TerminalBase') -> None:
         """Transfer Unix terminal ownership."""
