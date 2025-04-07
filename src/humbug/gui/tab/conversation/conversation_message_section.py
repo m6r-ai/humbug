@@ -41,7 +41,7 @@ class ConversationMessageSection(QFrame):
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self.setFrameStyle(QFrame.Box | QFrame.Plain)
+        self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
         self._logger = logging.getLogger("ConversationMessageSection")
         self._language_manager = LanguageManager()
