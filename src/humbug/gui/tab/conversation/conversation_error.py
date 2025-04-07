@@ -4,7 +4,7 @@
 class ConversationError(Exception):
     """Base class for conversation-related exceptions."""
 
-    def __init__(self, message: str, details: dict = None):
+    def __init__(self, message: str, details: dict | None = None) -> None:
         """
         Initialize conversation error.
 

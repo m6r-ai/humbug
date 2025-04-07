@@ -6,7 +6,7 @@ such as API keys for different AI backends.
 """
 
 import logging
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
@@ -26,7 +26,7 @@ class UserSettingsDialog(QDialog):
 
     settings_changed = Signal(UserSettings)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         """
         Initialize the user settings dialog.
 
@@ -42,8 +42,8 @@ class UserSettingsDialog(QDialog):
         self.setMinimumWidth(750)
         self.setModal(True)
 
-        self._initial_settings: Optional[UserSettings] = None
-        self._current_settings: Optional[UserSettings] = None
+        self._initial_settings: UserSettings | None = None
+        self._current_settings: UserSettings | None = None
         self._api_key_entries: Dict[str, QLineEdit] = {}
         self._api_key_labels: Dict[str, QLabel] = {}
         self._logger = logging.getLogger(__name__)

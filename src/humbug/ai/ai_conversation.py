@@ -211,7 +211,7 @@ class AIConversation:
                 error_message = AIMessage.create(
                     AIMessageSource.SYSTEM,
                     error_msg,
-                    {"code": "backend_error", "message": error_msg}
+                    error={"code": "backend_error", "message": error_msg}
                 )
                 self._conversation.add_message(error_message)
                 await self._trigger_event(AIConversationEvent.ERROR, True, error_message)

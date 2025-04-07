@@ -66,7 +66,7 @@ class EmbedLexer:
         "yml": "yaml"
     }
 
-    def __init__(self, input_text, filename):
+    def __init__(self, input_text, filename) -> None:
         """
         Initialize the EmbedLexer for handling embedded content.
 

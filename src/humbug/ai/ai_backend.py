@@ -21,7 +21,7 @@ from humbug.ai.ai_rate_limiter import AIRateLimiter
 class AIBackend(ABC):
     """Abstract base class for AI backends."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize common attributes."""
         self._conversation_settings: Dict[str, AIConversationSettings] = {}
         self._default_settings = AIConversationSettings()
@@ -31,7 +31,7 @@ class AIBackend(ABC):
         self._rate_limiter = AIRateLimiter()
         self._logger = logging.getLogger(self.__class__.__name__) # Logger based on class name
 
-        if getattr(sys, "frozen", False):  # Check if running as a bundled app
+        if getattr(sys, "frozen", False) and hasattr(sys, '_MEIPASS'):  # Check if running as a bundled app
             cert_path = os.path.join(sys._MEIPASS, "certifi", "cacert.pem")
         else:
             cert_path = certifi.where()
@@ -64,8 +64,8 @@ class AIBackend(ABC):
 
     async def stream_message(
         self,
-        conversation_history: List[str],
-        conversation_id: str = None
+        conversation_history: List[Dict[str, str]],
+        conversation_id: str
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""
         settings = self.get_conversation_settings(conversation_id) if conversation_id else self._default_settings

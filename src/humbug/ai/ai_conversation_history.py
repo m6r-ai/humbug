@@ -54,7 +54,7 @@ class AIConversationHistory:
         """
         return self._messages.copy()
 
-    def get_messages_for_context(self) -> List[str]:
+    def get_messages_for_context(self) -> List[Dict[str, str]]:
         """
         Get messages formatted for AI context.
 

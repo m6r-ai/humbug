@@ -142,7 +142,7 @@ class TabStopState:
 @dataclass
 class BufferState:
     """Serializable terminal buffer state."""
-    lines: list[dict]  # List of line states
+    lines: list[list[dict]]  # List of line states
     cursor: dict  # Cursor state
     attributes: dict  # Attribute state
     scroll_region: dict  # Scroll region state

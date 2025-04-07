@@ -70,7 +70,7 @@ class MetaphorParser:
         self.lexers: List[Union[MetaphorLexer, EmbedLexer]] = []
         self.previously_seen_files: Set[str] = set()
         self.search_paths: List[str] = []
-        self.embed_path: str = None
+        self.embed_path: str = ""
         self.current_token: Token | None = None
 
     def _insert_preamble_text(self, text: str) -> None:
@@ -125,7 +125,7 @@ class MetaphorParser:
         for text in preamble:
             self._insert_preamble_text(text)
 
-    def parse(self, input_text: str, filename: str, search_paths: List[str], embed_path: str | None = None) -> MetaphorRootNode:
+    def parse(self, input_text: str, filename: str, search_paths: List[str], embed_path: str = "") -> MetaphorRootNode:
         """
         Parse an input string and construct the AST.
 
@@ -198,7 +198,7 @@ class MetaphorParser:
             ))
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
 
-    def parse_file(self, filename: str, search_paths: List[str], embed_path: str | None = None) -> MetaphorRootNode:
+    def parse_file(self, filename: str, search_paths: List[str], embed_path: str = "") -> MetaphorRootNode:
         """
         Parse a file and construct the AST.
 
