@@ -9,6 +9,7 @@ from PySide6.QtGui import (
 from humbug.gui.style_manager import StyleManager
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser import ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 
 
@@ -64,7 +65,7 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
             if not parser:
                 return
 
-            parser_state = parser.parse(prev_parser_state, text)
+            parser_state: ParserState | None = parser.parse(prev_parser_state, text)
 
             # Apply syntax highlighting based on token types
             last_token_pos = 0
@@ -91,7 +92,7 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
                 if current_parser_state:
                     continuation_state = current_parser_state.continuation_state
 
-            if continuation_state != parser_state.continuation_state:
+            if parser_state is not None and continuation_state != parser_state.continuation_state:
                 self.setCurrentBlockState(self.currentBlockState() + 1)
 
             block_data = ConversationLanguageHighlighterBlockData()

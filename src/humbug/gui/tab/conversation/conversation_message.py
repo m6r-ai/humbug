@@ -25,7 +25,7 @@ class ConversationMessage(QFrame):
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
 
-    def __init__(self, parent=None, is_input=False):
+    def __init__(self, parent=None, is_input=False) -> None:
         """
         Initialize the message widget.
 
@@ -34,15 +34,15 @@ class ConversationMessage(QFrame):
             is_input: Whether this is an input widget (affects styling)
         """
         super().__init__(parent)
-        self.setFrameStyle(QFrame.Box | QFrame.Plain)
+        self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
         self._is_input = is_input
 
         self._logger = logging.getLogger("ConversationMessage")
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
-        self._message_source = None
-        self._message_timestamp = None
+        self._message_source: AIMessageSource | None = None
+        self._message_timestamp: datetime | None = None
         self._message_content = ""
 
         # Create layout
@@ -59,9 +59,7 @@ class ConversationMessage(QFrame):
 
         # Create role and timestamp labels
         self._role_label = QLabel(self)
-        self._timestamp_label = QLabel(self)
         self._header_layout.addWidget(self._role_label)
-        self._header_layout.addWidget(self._timestamp_label)
         self._header_layout.addStretch()
 
         self._copy_message_button = None
@@ -102,7 +100,7 @@ class ConversationMessage(QFrame):
         self._is_bookmarked = False
 
         # Track current message style
-        self._current_style: AIMessageSource = None
+        self._current_style: AIMessageSource | None = None
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -160,7 +158,7 @@ class ConversationMessage(QFrame):
         }.get(self._message_source, "Unknown")
 
         # Format with timestamp
-        if self._message_timestamp:
+        if self._message_timestamp is not None:
             timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             self._role_label.setText(f"{role_text} @ {timestamp_str}")
         else:
@@ -371,17 +369,6 @@ class ConversationMessage(QFrame):
                 color: {label_color};
                 margin: 0;
                 padding: 0;
-                background-color: {background_color};
-            }}
-        """)
-
-        # Timestamp label styling (normal weight)
-        self._timestamp_label.setFont(font)
-        self._timestamp_label.setStyleSheet(f"""
-            QLabel {{
-                color: {label_color};
-                padding: 0;
-                margin: 0;
                 background-color: {background_color};
             }}
         """)
