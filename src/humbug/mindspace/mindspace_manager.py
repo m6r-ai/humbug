@@ -54,14 +54,14 @@ class MindspaceManager(QObject):
         """Initialize mindspace manager if not already initialized."""
         if not hasattr(self, '_initialized'):
             super().__init__()
-            self._mindspace_path: str | None = None
+            self._mindspace_path: str = ""
             self._settings: MindspaceSettings | None = None
             self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
             self._directory_tracker = DirectoryTracker()
             self._initialized = True
 
     @property
-    def mindspace_path(self) -> str | None:
+    def mindspace_path(self) -> str:
         """
         Get the current mindspace path.
 
@@ -116,7 +116,7 @@ class MindspaceManager(QObject):
         Returns:
             True if a mindspace is open, False otherwise.
         """
-        return self._mindspace_path is not None
+        return bool(self._mindspace_path)
 
     def is_already_mindspace(self, path: str) -> bool:
         """Check if we already have a mindspace at the specified path."""
@@ -126,7 +126,7 @@ class MindspaceManager(QObject):
 
         return False
 
-    def create_mindspace(self, path: str, folders: List[str] = None) -> None:
+    def create_mindspace(self, path: str, folders: List[str]) -> None:
         """
         Create a new mindspace at the specified path.
 
@@ -213,7 +213,7 @@ class MindspaceManager(QObject):
         """Close the current mindspace."""
         if self.has_mindspace:
             self._directory_tracker.save_tracking(self._mindspace_path)
-            self._mindspace_path = None
+            self._mindspace_path = ""
             self._settings = None
             self._directory_tracker.clear_tracking()
             self._update_home_tracking()
@@ -241,14 +241,14 @@ class MindspaceManager(QObject):
                     try:
                         tab_state['path'] = os.path.relpath(
                             tab_state['path'],
-                            self.mindspace_path
+                            self._mindspace_path
                         )
                     except ValueError:
                         # Path is outside mindspace, keep as absolute
                         pass
 
             # Write session file
-            session_file = os.path.join(self.mindspace_path, self.MINDSPACE_DIR, self.SESSION_FILE)
+            session_file = os.path.join(self._mindspace_path, self.MINDSPACE_DIR, self.SESSION_FILE)
             with open(session_file, 'w', encoding='utf-8') as f:
                 json.dump(state, f)
 
@@ -269,7 +269,7 @@ class MindspaceManager(QObject):
             raise MindspaceError("No mindspace is active")
 
         try:
-            session_file = os.path.join(self.mindspace_path, self.MINDSPACE_DIR, self.SESSION_FILE)
+            session_file = os.path.join(self._mindspace_path, self.MINDSPACE_DIR, self.SESSION_FILE)
             if not os.path.exists(session_file):
                 return []
 
@@ -279,7 +279,7 @@ class MindspaceManager(QObject):
             for tab_state in state.get('tabs', []):
                 if 'path' in tab_state and not os.path.isabs(tab_state['path']):
                     tab_state['path'] = os.path.join(
-                        self.mindspace_path,
+                        self._mindspace_path,
                         tab_state['path']
                     )
 
@@ -287,6 +287,7 @@ class MindspaceManager(QObject):
 
         except json.JSONDecodeError as e:
             raise MindspaceError(f"Failed to parse mindspace state: {str(e)}") from e
+
         except OSError as e:
             raise MindspaceError(f"Failed to load mindspace state: {str(e)}") from e
 
@@ -304,8 +305,10 @@ class MindspaceManager(QObject):
                 mindspace_path = data.get("lastMindspace")
                 if mindspace_path and os.path.exists(mindspace_path):
                     return mindspace_path
+
         except (FileNotFoundError, json.JSONDecodeError):
             pass
+
         return None
 
     def get_mindspace_path(self, relative_path: str) -> str:
@@ -323,6 +326,7 @@ class MindspaceManager(QObject):
         """
         if not self.has_mindspace:
             raise MindspaceNotFoundError("No mindspace is currently open")
+
         return os.path.join(self._mindspace_path, relative_path)
 
     def make_relative_path(self, path: str) -> str | None:
@@ -351,6 +355,7 @@ class MindspaceManager(QObject):
 
             # If we get here, the path is within the mindspace, so make it relative
             return os.path.relpath(abs_path, mindspace_path)
+
         except ValueError:
             return None  # Path is on different
 
@@ -375,6 +380,7 @@ class MindspaceManager(QObject):
         try:
             os.makedirs(abs_path, exist_ok=True)
             return abs_path
+
         except OSError as e:
             raise MindspaceError(f"Failed to create directory '{dir_path}' in mindspace: {e}") from e
 
@@ -384,6 +390,7 @@ class MindspaceManager(QObject):
             os.makedirs(os.path.dirname(self._home_config), exist_ok=True)
             with open(self._home_config, 'w', encoding='utf-8') as f:
                 json.dump({"lastMindspace": self._mindspace_path}, f, indent=2)
+
         except OSError as e:
             self._logger.error("Failed to update home tracking: %s", str(e))
             # Non-critical error, don't raise
