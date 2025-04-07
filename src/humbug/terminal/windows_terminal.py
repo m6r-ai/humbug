@@ -2,13 +2,13 @@
 """Windows-specific terminal implementation."""
 
 import asyncio
-import os
-from typing import Optional, Tuple
 import ctypes
 from ctypes import windll, byref, pointer, c_void_p, c_ulong, Structure
 from ctypes import c_size_t, POINTER
 from ctypes.wintypes import HANDLE, DWORD, WORD, LPWSTR, BOOL, LPVOID, BYTE
 import msvcrt
+import os
+from typing import Optional, Tuple, cast
 
 from humbug.terminal.terminal_base import TerminalBase
 
@@ -371,15 +371,17 @@ class WindowsTerminal(TerminalBase):
 
     def transfer_to(self, other: 'TerminalBase') -> None:
         """Transfer Windows terminal ownership."""
-        other._process_id = self._process_id
-        other._process_name = self._process_name
-        other._process_handle = self._process_handle
-        other._thread_handle = self._thread_handle
-        other._pty_handle = self._pty_handle
-        other._pipe_in = self._pipe_in
-        other._pipe_out = self._pipe_out
-        other._main_fd = self._main_fd
-        other._running = True
+        other_terminal = cast(WindowsTerminal, other)
+
+        other_terminal._process_id = self._process_id
+        other_terminal._process_name = self._process_name
+        other_terminal._process_handle = self._process_handle
+        other_terminal._thread_handle = self._thread_handle
+        other_terminal._pty_handle = self._pty_handle
+        other_terminal._pipe_in = self._pipe_in
+        other_terminal._pipe_out = self._pipe_out
+        other_terminal._main_fd = self._main_fd
+        other_terminal._running = True
 
         # Clear our state without closing handles
         self._process_id = None

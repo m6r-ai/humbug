@@ -62,6 +62,7 @@ class MetaphorParser:
         lexers (List[Union[MetaphorLexer, EmbedLexer]]): Stack of lexers used for parsing multiple files.
         previously_seen_files (Set[str]): Set of canonical filenames already processed.
         search_paths (List[str]): List of paths to search for included files.
+        embed_path (str): Path used to search for embedded files.
         current_token (Token | None): The current token being processed.
     """
     def __init__(self) -> None:

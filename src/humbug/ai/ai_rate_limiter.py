@@ -3,16 +3,17 @@
 import asyncio
 from collections import deque
 import time
+from typing import Deque
 
 
 class AIRateLimiter:
     """Implements a sliding window rate limiter."""
 
-    def __init__(self, window_size: int = 60, max_requests: int = 50):
+    def __init__(self, window_size: int = 60, max_requests: int = 50) -> None:
         """Initialize rate limiter with window size in seconds."""
         self._window_size = window_size
         self._max_requests = max_requests
-        self._requests = deque()
+        self._requests: Deque[int] = deque()
 
     async def acquire(self):
         """Wait until a request can be made within rate limits."""

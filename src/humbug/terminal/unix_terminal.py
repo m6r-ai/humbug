@@ -2,6 +2,7 @@
 """Unix-specific terminal implementation."""
 
 import asyncio
+import fcntl
 import os
 import pty
 import select
@@ -9,8 +10,7 @@ import signal
 import struct
 import termios
 import tty
-import fcntl
-from typing import Tuple
+from typing import Tuple, cast
 
 from humbug.terminal.terminal_base import TerminalBase
 
@@ -211,10 +211,12 @@ class UnixTerminal(TerminalBase):
 
     def transfer_to(self, other: 'TerminalBase') -> None:
         """Transfer Unix terminal ownership."""
-        other._process_id = self._process_id
-        other._process_name = self._process_name
-        other._main_fd = self._main_fd
-        other._running = True
+        other_terminal = cast(UnixTerminal, other)
+
+        other_terminal._process_id = self._process_id
+        other_terminal._process_name = self._process_name
+        other_terminal._main_fd = self._main_fd
+        other_terminal._running = True
 
         # Clear our state without closing fd
         self._process_id = None
