@@ -259,6 +259,7 @@ class WindowsTerminal(TerminalBase):
         if self._process_handle:
             try:
                 windll.kernel32.TerminateProcess(self._process_handle, 1)
+
             except Exception as e:
                 self._logger.warning("Error terminating process: %s", str(e))
 
@@ -270,14 +271,17 @@ class WindowsTerminal(TerminalBase):
         if self._pty_handle:
             try:
                 self._ClosePseudoConsole(self._pty_handle)
+
             except Exception as e:
                 self._logger.warning("Error closing ConPTY: %s", str(e))
+
             self._pty_handle = None
 
         for handle in (self._process_handle, self._thread_handle):
             if handle:
                 try:
                     windll.kernel32.CloseHandle(handle)
+
                 except Exception as e:
                     self._logger.warning("Error closing handle: %s", str(e))
 
@@ -288,6 +292,7 @@ class WindowsTerminal(TerminalBase):
             if handle:
                 try:
                     windll.kernel32.CloseHandle(handle)
+
                 except Exception as e:
                     self._logger.warning("Error closing pipe handle: %s", str(e))
 
@@ -317,6 +322,7 @@ class WindowsTerminal(TerminalBase):
                 )
                 if result != 0:
                     self._logger.warning("Failed to resize ConPTY: %s", repr(result))
+
             except Exception as e:
                 self._logger.warning("Error updating window size: %s", str(e))
 
@@ -344,8 +350,10 @@ class WindowsTerminal(TerminalBase):
         except OSError as e:
             if e.winerror == 109:  # ERROR_BROKEN_PIPE
                 raise EOFError("Terminal pipe closed")
+
             if not self._running:
                 return b''
+
             raise
 
     async def write_data(self, data: bytes) -> None:
@@ -367,6 +375,7 @@ class WindowsTerminal(TerminalBase):
             except OSError as e:
                 if e.winerror == 109:  # ERROR_BROKEN_PIPE
                     return
+
                 raise
 
     def transfer_to(self, other: 'TerminalBase') -> None:

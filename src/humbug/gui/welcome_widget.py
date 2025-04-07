@@ -46,21 +46,42 @@ class WelcomeWidget(QFrame):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
-    def dragEnterEvent(self, event: QDragEnterEvent):
-        """Accept file drops."""
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """
+        Accept file drops.
+
+        Args:
+            event: The drag enter event
+        """
         if event.mimeData().hasFormat("application/x-humbug-file"):
             event.acceptProposedAction()
-        else:
-            event.ignore()
+            return
 
-    def dropEvent(self, event: QDropEvent):
-        """Handle file drops by emitting signal."""
+        event.ignore()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """
+        Handle file drops by emitting signal.
+
+        Args:
+            event: The drop event
+
+        Raises:
+            UnicodeDecodeError: If the file path data cannot be decoded as UTF-8
+        """
         if event.mimeData().hasFormat("application/x-humbug-file"):
-            file_path = event.mimeData().data("application/x-humbug-file").data().decode()
+            mime_data = event.mimeData().data("application/x-humbug-file").data()
+
+            # Convert to bytes first if it's not already bytes
+            if not isinstance(mime_data, bytes):
+                mime_data = bytes(mime_data)
+
+            file_path = mime_data.decode()
             self.file_dropped.emit(file_path)
             event.acceptProposedAction()
-        else:
-            event.ignore()
+            return
+
+        event.ignore()
 
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QTabWidget
 from PySide6.QtCore import Signal, QEvent
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
 
 from humbug.gui.tab.tab_bar import TabBar
 
@@ -40,14 +40,14 @@ class ColumnWidget(QTabWidget):
 
         return super().eventFilter(obj, event)
 
-    def addTab(self, widget, *args, **kwargs):
+    def addTab(self, widget, *args, **kwargs) -> int:
         """Override addTab to install event filter on new tabs."""
         result = super().addTab(widget, *args, **kwargs)
         # Install event filter on the widget to catch focus/mouse events
         widget.installEventFilter(self)
         return result
 
-    def removeTab(self, index):
+    def removeTab(self, index) -> None:
         """Override removeTab to properly clean up event filters."""
         widget = self.widget(index)
         if widget:
@@ -55,17 +55,36 @@ class ColumnWidget(QTabWidget):
 
         super().removeTab(index)
 
-    def dragEnterEvent(self, event: QDragEnterEvent):
-        """Handle drag enter events for tab drops."""
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """
+        Handle drag enter events for tab drops.
+
+        Args:
+            event: The drag enter event
+
+        Raises:
+            None
+        """
         if event.mimeData().hasFormat("application/x-humbug-tab"):
             event.acceptProposedAction()
-        elif event.mimeData().hasFormat("application/x-humbug-file"):
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+            return
 
-    def dragMoveEvent(self, event):
-        """Handle drag move events to show insertion position."""
+        if event.mimeData().hasFormat("application/x-humbug-file"):
+            event.acceptProposedAction()
+            return
+
+        event.ignore()
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        """
+        Handle drag move events to show insertion position.
+
+        Args:
+            event: The drag move event
+
+        Raises:
+            None
+        """
         if (event.mimeData().hasFormat("application/x-humbug-tab") or
                 event.mimeData().hasFormat("application/x-humbug-file")):
             event.acceptProposedAction()
@@ -73,16 +92,30 @@ class ColumnWidget(QTabWidget):
             # Map cursor position to the tab bar to find insertion position
             pos = self.tabBar().mapFromParent(event.pos())
             _index = self.tabBar().tabAt(pos)
+            return
             # Note: Could add visual indicator of insertion position here if desired
-        else:
-            event.ignore()
 
-    def dropEvent(self, event: QDropEvent):
-        """Handle drop events for tab movement and file drops."""
-        mime_data = event.mimeData()
-        if mime_data.hasFormat("application/x-humbug-tab"):
+        event.ignore()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """
+        Handle drop events for tab movement and file drops.
+
+        Args:
+            event: The drop event
+
+        Raises:
+            None
+        """
+        if event.mimeData().hasFormat("application/x-humbug-tab"):
             # Extract tab ID from mime data
-            tab_id = mime_data.data("application/x-humbug-tab").data().decode()
+            mime_data = event.mimeData().data("application/x-humbug-tab").data()
+
+            # Convert to bytes first if it's not already bytes
+            if not isinstance(mime_data, bytes):
+                mime_data = bytes(mime_data)
+
+            tab_id = mime_data.decode()
 
             # Map the drop position to the tab bar
             pos = self.tabBar().mapFromParent(event.pos())
@@ -95,9 +128,17 @@ class ColumnWidget(QTabWidget):
             # Emit signal with drop info for tab manager to handle
             self.tab_drop.emit(tab_id, self, target_index)
             event.acceptProposedAction()
-        elif mime_data.hasFormat("application/x-humbug-file"):
+            return
+
+        if event.mimeData().hasFormat("application/x-humbug-file"):
             # Extract file path from mime data
-            file_path = mime_data.data("application/x-humbug-file").data().decode()
+            mime_data = event.mimeData().data("application/x-humbug-file").data()
+
+            # Convert to bytes first if it's not already bytes
+            if not isinstance(mime_data, bytes):
+                mime_data = bytes(mime_data)
+
+            file_path = mime_data.decode()
 
             # Map the drop position to the tab bar
             pos = self.tabBar().mapFromParent(event.pos())
@@ -110,5 +151,6 @@ class ColumnWidget(QTabWidget):
             # Emit signal with file info for tab manager to handle
             self.file_drop.emit(file_path, self, target_index)
             event.acceptProposedAction()
-        else:
-            event.ignore()
+            return
+
+        event.ignore()
