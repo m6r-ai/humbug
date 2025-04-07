@@ -20,7 +20,7 @@ class MouseTrackingState:
 class TerminalState:
     """Manages terminal emulator state and processing."""
 
-    def __init__(self, rows: int, cols: int):
+    def __init__(self, rows: int, cols: int) -> None:
         """
         Initialize terminal state.
 
@@ -32,12 +32,12 @@ class TerminalState:
 
         # Initialize buffers
         self._main_buffer = TerminalBuffer(rows, cols, True)
-        self._alternate_buffer = None
+        self._alternate_buffer: TerminalBuffer | None = None
         self._current_buffer = self._main_buffer
 
         # Terminal state
         self._terminal_title = ""
-        self._current_directory = None
+        self._current_directory = ""
         self._escape_seq_buffer = ""
         self._in_escape_seq = False
         self._screen_reverse_mode = False
@@ -50,7 +50,7 @@ class TerminalState:
         self._default_bg = 0
 
         # ANSI color mapping - will be populated by widget
-        self._ansi_colors = {}
+        self._ansi_colors: dict = {}
 
     @property
     def current_buffer(self) -> TerminalBuffer:
@@ -169,6 +169,7 @@ class TerminalState:
                     self._process_escape_sequence(self._escape_seq_buffer)
                     self._escape_seq_buffer = ""
                     self._in_escape_seq = False
+
                 elif len(self._escape_seq_buffer) > 128:  # Safety limit
                     self._logger.warning(
                         "Escape sequence too long, discarding: %r", self._escape_seq_buffer
@@ -330,13 +331,17 @@ class TerminalState:
                 if data == '?':  # Query
                     # Should emit response with current selection
                     pass
+
                 elif data:  # Set
                     # Base64 decode data and update clipboard
                     decoded = base64.b64decode(data).decode('utf-8')
+
                     # Note: Actual clipboard operation will be handled by widget
                     self.clipboard_data = decoded
+
                 else:  # Clear
                     self.clipboard_data = None
+
         except (ValueError, TypeError) as e:
             self._logger.warning("Invalid selection data: %r: %s", param, e)
 
@@ -348,53 +353,72 @@ class TerminalState:
             for mode in modes:
                 if mode == 1:  # DECCKM - Application Cursor Keys
                     buffer.modes.application_cursor = set_mode
+
                 elif mode == 3:  # DECCOLM - 80/132 Column Mode
                     # In xterm this changes column count but for now we'll ignore
                     buffer.clear()
                     buffer.scroll_region.top = 0
                     buffer.scroll_region.bottom = buffer.rows
                     buffer.scroll_region.rows = buffer.rows
+
                 elif mode == 5:  # DECSCNM - Screen Mode (Reverse)
                     self._screen_reverse_mode = set_mode
+
                 elif mode == 6:  # DECOM - Origin Mode
                     buffer.set_origin(set_mode)
+
                 elif mode == 7:  # DECAWM - Auto-wrap Mode
                     buffer.modes.auto_wrap = set_mode
+
                 elif mode == 12:  # att610 - Start/Stop Blinking Cursor
                     buffer.set_cursor_blink(set_mode)
+
                 elif mode == 25:  # DECTCEM - Text Cursor Enable Mode
                     buffer.set_cursor_visible(set_mode)
+
                 elif mode == 1000:  # X11 mouse reporting - normal tracking mode
                     self._mouse_tracking.enabled = set_mode
                     self._mouse_tracking.mode = 1000 if set_mode else 0
+
                 elif mode == 1002:  # X11 mouse reporting - button event tracking
                     self._mouse_tracking.enabled = set_mode
                     self._mouse_tracking.mode = 1002 if set_mode else 0
+
                 elif mode == 1003:  # X11 mouse reporting - any event tracking
                     self._mouse_tracking.enabled = set_mode
                     self._mouse_tracking.mode = 1003 if set_mode else 0
+
                 elif mode == 1005:  # UTF-8 mouse mode
                     self._mouse_tracking.utf8_mode = set_mode
+
                 elif mode == 1006:  # SGR mouse mode
                     self._mouse_tracking.sgr_mode = set_mode
+
                 elif mode == 1047:  # Use Alternate Screen Buffer
                     self._handle_alternate_screen(set_mode)
+
                 elif mode == 1048:  # Save/Restore cursor
                     if set_mode:
                         buffer.save_cursor()
+
                     else:
                         buffer.restore_cursor()
+
                 elif mode == 1049:  # Alternate Screen + save/restore cursor
                     if set_mode:
                         buffer.save_cursor()
                         self._handle_alternate_screen(True)
+
                     else:
                         self._handle_alternate_screen(False)
                         self.current_buffer.restore_cursor()
+
                 elif mode == 2004:  # Bracketed paste mode
                     buffer.modes.bracketed_paste = set_mode
+
                 else:
                     self._logger.warning("Unknown PM operation %d", mode)
+
         except ValueError as e:
             self._logger.warning("Invalid private mode parameter: %r, error: %s", params, e)
 
@@ -622,7 +646,7 @@ class TerminalState:
         Returns:
             Dictionary containing terminal state metadata
         """
-        metadata = {}
+        metadata: Dict[str, Any] = {}
 
         # Get state from main buffer
         metadata['main_buffer'] = self._main_buffer.get_state()

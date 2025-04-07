@@ -44,7 +44,7 @@ class MarkdownASTBuilder:
         self._line_to_node_map: Dict[int, List[MarkdownASTNode]] = {}
 
         # List state tracking
-        self._active_lists: List[Tuple[MarkdownASTNode, int]] = []  # (list_node, indent)
+        self._active_lists: List[Tuple[MarkdownOrderedListNode | MarkdownUnorderedListNode, int]] = []  # (list_node, indent)
         self._list_contains_blank_line: Set[MarkdownASTNode] = set()  # Lists that have blank lines
 
         # Text continuation tracking
@@ -56,7 +56,7 @@ class MarkdownASTBuilder:
         # Code block state tracking
         self._in_code_block = False
         self._code_block_language = ""
-        self._code_block_content = []
+        self._code_block_content: List[str] = []
         self._code_block_start_line = -1
 
     @property
@@ -141,7 +141,7 @@ class MarkdownASTBuilder:
 
         # Simple state machine for inline formatting
         i = 0
-        nodes = []
+        nodes: List[MarkdownASTNode] = []
         current_text = ""
 
         while i < len(text):
@@ -370,7 +370,7 @@ class MarkdownASTBuilder:
         Returns:
             The parent node
         """
-        parent = self._document
+        parent: MarkdownASTNode = self._document
         if self._active_lists:
             for i in range(len(self._active_lists) - 1, -1, -1):
                 list_node, _ = self._active_lists[i]
@@ -777,7 +777,7 @@ class MarkdownASTBuilder:
             The created list node
         """
         # Find the parent for this list based on indent
-        parent = self._document
+        parent: MarkdownASTNode = self._document
         parent_indent = -1
 
         for list_node, list_indent in self._active_lists:
@@ -793,6 +793,7 @@ class MarkdownASTBuilder:
             parent = list_item
 
         # Create the appropriate list type
+        new_list: MarkdownOrderedListNode | MarkdownUnorderedListNode
         if is_ordered:
             new_list = MarkdownOrderedListNode(indent)
         else:
@@ -808,7 +809,7 @@ class MarkdownASTBuilder:
 
         return new_list
 
-    def update_ast(self, text: str, previous_text: str = None) -> MarkdownDocumentNode:
+    def update_ast(self, text: str, previous_text: str) -> MarkdownDocumentNode:
         """
         Update the AST incrementally based on changes between previous_text and text.
 

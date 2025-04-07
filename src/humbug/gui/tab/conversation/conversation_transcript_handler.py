@@ -5,7 +5,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from humbug.ai.ai_message import AIMessage
 from humbug.gui.tab.conversation.conversation_transcript_error import (
@@ -42,7 +42,7 @@ class ConversationTranscriptData:
 class ConversationTranscriptHandler:
     """Handles reading and writing conversation transcripts."""
 
-    def __init__(self, filename: str, timestamp: Optional[datetime] = None):
+    def __init__(self, filename: str, timestamp: datetime | None = None):
         """
         Initialize transcript handler for a conversation.
 
@@ -54,13 +54,13 @@ class ConversationTranscriptHandler:
             ValueError: If creating new transcript without timestamp
         """
         self._filename = filename
-        self._timestamp = timestamp
         self._logger = logging.getLogger("ConversationTranscriptHandler")
 
         if not os.path.exists(filename):
             if timestamp is None:
                 raise ValueError("Timestamp required when creating new transcript")
-            self._initialize_file()
+
+            self._initialize_file(timestamp)
 
     def update_path(self, new_path: str):
         """Update the transcript file path.
@@ -70,7 +70,7 @@ class ConversationTranscriptHandler:
         """
         self._filename = new_path
 
-    def _initialize_file(self) -> None:
+    def _initialize_file(self, timestamp: datetime) -> None:
         """
         Initialize a new transcript file with metadata.
 
@@ -79,7 +79,7 @@ class ConversationTranscriptHandler:
         """
         metadata = {
             "metadata": {
-                "timestamp": self._timestamp.isoformat(),
+                "timestamp": timestamp.isoformat(),
                 "version": "0.1",
             },
             "conversation": []
@@ -88,6 +88,7 @@ class ConversationTranscriptHandler:
         try:
             with open(self._filename, 'w', encoding='utf-8') as f:
                 json.dump(metadata, f, indent=2, cls=FloatOneDecimalEncoder)
+
         except Exception as e:
             raise ConversationTranscriptIOError(
                 f"Failed to create transcript file: {str(e)}"
@@ -136,8 +137,10 @@ class ConversationTranscriptHandler:
         try:
             with open(self._filename, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+
         except json.JSONDecodeError as e:
             raise ConversationTranscriptFormatError(f"Invalid JSON: {str(e)}") from e
+
         except Exception as e:
             raise ConversationTranscriptIOError(f"Failed to read transcript: {str(e)}") from e
 
@@ -149,11 +152,13 @@ class ConversationTranscriptHandler:
             try:
                 message = AIMessage.from_transcript_dict(msg)
                 messages.append(message)
+
             except ValueError as e:
                 raise ConversationTranscriptFormatError(f"Invalid message format: {str(e)}") from e
 
         try:
             timestamp = datetime.fromisoformat(data["metadata"]["timestamp"])
+
         except ValueError as e:
             raise ConversationTranscriptFormatError(f"Invalid timestamp format: {str(e)}") from e
 
@@ -196,6 +201,7 @@ class ConversationTranscriptHandler:
                     backup = f"{self._filename}.backup"
                     os.replace(self._filename, backup)
                     self._logger.info("Created transcript backup: %s", backup)
+
             except Exception as backup_error:
                 self._logger.error(
                     "Failed to create backup file: %s",

@@ -2,21 +2,21 @@
 
 from abc import ABC, abstractmethod
 import logging
-from typing import Optional, Tuple
+from typing import Tuple
 
 
 class TerminalBase(ABC):
     """Abstract base class defining terminal interface."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize terminal base."""
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._process_id: Optional[int] = None
+        self._process_id: int | None = None
         self._process_name: str = ""
         self._running = True
 
     @abstractmethod
-    async def start(self, command: Optional[str] = None) -> Tuple[int, int]:
+    async def start(self, command: str | None = None) -> Tuple[int, int]:
         """
         Start terminal process.
 
@@ -75,7 +75,7 @@ class TerminalBase(ABC):
             OSError: If write operation fails
         """
 
-    def get_process_id(self) -> Optional[int]:
+    def get_process_id(self) -> int | None:
         """Get process ID."""
         return self._process_id
 

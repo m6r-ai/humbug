@@ -14,3 +14,11 @@ class AIUsage:
     def to_dict(self) -> Dict:
         """Convert usage to dictionary."""
         return asdict(self)
+
+    def copy(self) -> 'AIUsage':
+        """Create a deep copy of the usage."""
+        return AIUsage(
+            prompt_tokens=self.prompt_tokens,
+            completion_tokens=self.completion_tokens,
+            total_tokens=self.total_tokens
+        )

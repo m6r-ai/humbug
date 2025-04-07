@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 import uuid
 
 from humbug.ai.ai_message_source import AIMessageSource
@@ -16,10 +16,10 @@ class AIMessage:
     source: AIMessageSource
     content: str
     timestamp: datetime
-    usage: Optional[AIUsage] = None
-    error: Optional[Dict] = None
-    model: Optional[str] = None
-    temperature: Optional[float] = None
+    usage: AIUsage | None = None
+    error: Dict | None = None
+    model: str | None = None
+    temperature: float | None = None
     completed: bool = True
 
     # Map between AIMessageSource enum and transcript type strings
@@ -36,24 +36,22 @@ class AIMessage:
         cls,
         source: AIMessageSource,
         content: str,
-        usage: Optional[AIUsage] = None,
-        error: Optional[Dict] = None,
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
+        usage: AIUsage | None = None,
+        error: Dict | None = None,
+        model: str | None = None,
+        temperature: float | None = None,
         completed: bool = True,
-        timestamp: Optional[datetime] = None
+        timestamp: datetime | None = None
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
-        if timestamp:
-            msg_timestamp = datetime.fromisoformat(timestamp)
-        else:
-            msg_timestamp = datetime.utcnow()
+        if timestamp is None:
+            timestamp = datetime.utcnow()
 
         return cls(
             id=str(uuid.uuid4()),
             source=source,
             content=content,
-            timestamp=msg_timestamp,
+            timestamp=timestamp,
             usage=usage,
             error=error,
             model=model,

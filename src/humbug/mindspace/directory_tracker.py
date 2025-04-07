@@ -13,7 +13,7 @@ class DirectoryTracker:
 
     TRACKING_FILE = "directories.json"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the directory tracker."""
         self._logger = logging.getLogger("DirectoryTracker")
         self._tracking: DirectoryTracking | None = None
