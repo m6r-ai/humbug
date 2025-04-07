@@ -1,7 +1,7 @@
 """Updated file tree icon provider with theme-aware colors."""
 
 import os
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 from PySide6.QtCore import Qt, QFileInfo
 from PySide6.QtGui import QIcon, QPainter, QPixmap, QColor
@@ -173,15 +173,26 @@ class FileTreeIconProvider(QFileIconProvider):
         """Update icons when theme or zoom changes."""
         self._clear_cache()
 
-    def icon(self, info: QFileInfo) -> QIcon:
-        """Get the appropriate icon for a file type.
+    def icon(self, arg: QFileIconProvider.IconType | QFileInfo) -> QIcon:
+        """Get the appropriate icon for a file or standard type.
 
         Args:
-            info: File information to get icon for
+            arg: Either a QFileIconProvider.IconType or QFileInfo
 
         Returns:
-            QIcon instance for the file type
+            QIcon instance for the requested type
+
+        Raises:
+            ValueError: If an unknown icon type is requested
         """
+        # Handle standard icon types
+        if isinstance(arg, QFileIconProvider.IconType):
+            # For standard icons, delegate to parent class
+            return super().icon(arg)
+
+        # Handle QFileInfo
+        info = arg
+
         # Check if it's a directory first
         if info.isDir():
             cache_key = 'folder'
