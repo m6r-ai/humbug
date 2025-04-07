@@ -3,7 +3,6 @@
 import json
 import logging
 import os
-from typing import Optional
 
 
 from humbug.mindspace.directory_tracking import DirectoryTracking
@@ -17,7 +16,7 @@ class DirectoryTracker:
     def __init__(self):
         """Initialize the directory tracker."""
         self._logger = logging.getLogger("DirectoryTracker")
-        self._tracking: Optional[DirectoryTracking] = None
+        self._tracking: DirectoryTracking | None = None
 
     def _get_tracking_path(self, mindspace_path: str) -> str:
         """Get path to tracking file in mindspace."""
@@ -38,8 +37,10 @@ class DirectoryTracker:
                 # Verify paths still exist, reset to defaults if not
                 if not os.path.exists(self._tracking.file_dialog):
                     self._tracking.file_dialog = mindspace_path
+
                 if not os.path.exists(self._tracking.conversations):
                     self._tracking.conversations = os.path.join(mindspace_path, "conversations")
+
             else:
                 self._tracking = DirectoryTracking.create_default(mindspace_path)
 
@@ -75,11 +76,11 @@ class DirectoryTracker:
             self._tracking.conversations = os.path.dirname(path)
 
     @property
-    def file_dialog_directory(self) -> Optional[str]:
+    def file_dialog_directory(self) -> str | None:
         """Get the last used file dialog directory."""
         return self._tracking.file_dialog if self._tracking else None
 
     @property
-    def conversations_directory(self) -> Optional[str]:
+    def conversations_directory(self) -> str | None:
         """Get the last used conversations directory."""
         return self._tracking.conversations if self._tracking else None

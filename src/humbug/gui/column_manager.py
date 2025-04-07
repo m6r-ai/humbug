@@ -789,7 +789,7 @@ class ColumnManager(QWidget):
         self._untitled_count += 1
         tab_id = str(uuid.uuid4())
         editor = EditorTab(tab_id, self)
-        editor.set_filename(None, self._untitled_count)
+        editor.set_filename("", self._untitled_count)
 
         self._connect_editor_signals(editor)
         self.add_tab(editor, f"Untitled-{self._untitled_count}")

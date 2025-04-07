@@ -15,7 +15,7 @@
 import glob
 import os
 from pathlib import Path
-from typing import List, Set, Optional, Union
+from typing import List, Set, Union, cast
 
 from .metaphor_token import Token, TokenType
 from .embed_lexer import EmbedLexer
@@ -62,7 +62,7 @@ class MetaphorParser:
         lexers (List[Union[MetaphorLexer, EmbedLexer]]): Stack of lexers used for parsing multiple files.
         previously_seen_files (Set[str]): Set of canonical filenames already processed.
         search_paths (List[str]): List of paths to search for included files.
-        current_token (Optional[Token]): The current token being processed.
+        current_token (Token | None): The current token being processed.
     """
     def __init__(self) -> None:
         self.syntax_tree: MetaphorRootNode = MetaphorRootNode()
@@ -71,7 +71,7 @@ class MetaphorParser:
         self.previously_seen_files: Set[str] = set()
         self.search_paths: List[str] = []
         self.embed_path: str = None
-        self.current_token: Optional[Token] = None
+        self.current_token: Token | None = None
 
     def _insert_preamble_text(self, text: str) -> None:
         self.syntax_tree.attach_child(MetaphorTextNode(text))
@@ -125,7 +125,7 @@ class MetaphorParser:
         for text in preamble:
             self._insert_preamble_text(text)
 
-    def parse(self, input_text: str, filename: str, search_paths: List[str], embed_path: Optional[str]=None) -> MetaphorRootNode:
+    def parse(self, input_text: str, filename: str, search_paths: List[str], embed_path: str | None = None) -> MetaphorRootNode:
         """
         Parse an input string and construct the AST.
 
@@ -182,7 +182,7 @@ class MetaphorParser:
                     self._record_syntax_error(token, f"Unexpected token: {token.value} at top level")
 
         except FileNotFoundError as e:
-            err_token = self.current_token
+            err_token = cast(Token, self.current_token)
             self.parse_errors.append(MetaphorParserSyntaxError(
                 f"{e}", err_token.filename, err_token.line, err_token.column, err_token.input
             ))
@@ -198,7 +198,7 @@ class MetaphorParser:
             ))
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
 
-    def parse_file(self, filename: str, search_paths: List[str], embed_path: Optional[str]=None) -> MetaphorRootNode:
+    def parse_file(self, filename: str, search_paths: List[str], embed_path: str | None = None) -> MetaphorRootNode:
         """
         Parse a file and construct the AST.
 

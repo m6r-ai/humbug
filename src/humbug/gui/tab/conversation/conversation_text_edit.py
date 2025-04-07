@@ -1,6 +1,7 @@
 """Widget for displaying parts of individual conversation messages."""
 
 import logging
+from typing import cast
 
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy, QScrollArea
@@ -12,6 +13,7 @@ from PySide6.QtGui import (
 
 from humbug.gui.style_manager import StyleManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 
 class ConversationTextEdit(QTextEdit):
@@ -388,7 +390,7 @@ class ConversationTextEdit(QTextEdit):
                 super().keyPressEvent(event)
                 return
 
-            settings = mindspace_manager.settings
+            settings = cast(MindspaceSettings, mindspace_manager.settings)
 
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
@@ -419,7 +421,7 @@ class ConversationTextEdit(QTextEdit):
                 super().keyPressEvent(event)
                 return
 
-            settings = mindspace_manager.settings
+            settings = cast(MindspaceSettings, mindspace_manager.settings)
 
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal, QObject, QEvent
 
@@ -45,7 +43,6 @@ class TabBase(QFrame):
         super().__init__(parent)
         self._tab_id = tab_id
         self._is_modified = False
-        self._path: Optional[str] = None
 
         # Set up activation tracking
         self._event_filter = TabEventFilter(self)
@@ -69,11 +66,6 @@ class TabBase(QFrame):
     def tab_id(self) -> str:
         """Get the tab's unique identifier."""
         return self._tab_id
-
-    @property
-    def path(self) -> Optional[str]:
-        """Get the tab's associated file path."""
-        return self._path
 
     @property
     def is_modified(self) -> bool:

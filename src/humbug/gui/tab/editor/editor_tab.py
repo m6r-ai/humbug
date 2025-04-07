@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Dict, Optional
+from typing import Dict
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFileDialog
@@ -28,7 +28,7 @@ from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 class EditorTab(TabBase):
     """Tab for editing text files."""
 
-    def __init__(self, tab_id: str, parent=None):
+    def __init__(self, tab_id: str, parent=None) -> None:
         """Initialize editor tab.
 
         Args:
@@ -37,7 +37,8 @@ class EditorTab(TabBase):
         """
         super().__init__(tab_id, parent)
 
-        self._untitled_number: Optional[int] = None
+        self._path: str = ""
+        self._untitled_number: int | None = None
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode
         self._last_save_content = ""
@@ -83,7 +84,8 @@ class EditorTab(TabBase):
         # Update auto-backup based on current mindspace settings
         if self._mindspace_manager.has_mindspace:
             settings = self._mindspace_manager.settings
-            self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
+            if settings is not None:
+                self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
         # Connect to mindspace settings changes
         self._mindspace_manager.settings_changed.connect(self._handle_mindspace_settings_changed)
@@ -148,7 +150,7 @@ class EditorTab(TabBase):
         # Set filename and load content
         if state.path.startswith("untitled-"):
             number = int(state.path.split("-")[1])
-            tab.set_filename(None, number)
+            tab.set_filename("", number)
         else:
             tab.set_filename(state.path)
 
@@ -285,7 +287,7 @@ class EditorTab(TabBase):
         """Get the name of the file being edited."""
         return self._path
 
-    def set_filename(self, filename: Optional[str], untitled_number: Optional[int] = None) -> None:
+    def set_filename(self, filename: str, untitled_number: int | None = None) -> None:
         """
         Set the file being edited.
 
@@ -336,9 +338,17 @@ class EditorTab(TabBase):
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
 
-        if self._mindspace_manager.has_mindspace and self._mindspace_manager.settings.auto_backup:
+        if not self._mindspace_manager.has_mindspace:
+            return
+
+        settings = self._mindspace_manager.settings
+        if settings is None:
+            return
+
+        if settings.auto_backup:
             if is_modified and not self._auto_backup_timer.isActive():
                 self._auto_backup_timer.start()
+
             elif not is_modified:
                 self._auto_backup_timer.stop()
 
@@ -393,8 +403,10 @@ class EditorTab(TabBase):
                         if current_time - os.path.getctime(file_path) > 3600:
                             try:
                                 os.remove(file_path)
+
                             except OSError as e:
                                 self._logger.warning("Failed to remove old backup %s: %s", file_path, str(e))
+
             except OSError as e:
                 self._logger.warning("Failed to clean up old backups: %s", str(e))
 
@@ -411,14 +423,17 @@ class EditorTab(TabBase):
                     if time.time() - os.path.getctime(backup_file) > 86400:  # 24 hours
                         try:
                             os.remove(backup_file)
+
                         except OSError:
                             pass  # Ignore cleanup errors for old files
+
             except OSError:
                 pass  # Ignore stat errors
 
         try:
             with open(backup_file, 'w', encoding='utf-8') as f:
                 f.write(self._editor_widget.toPlainText())
+
         except Exception as e:
             self._logger.error("Failed to create backup file '%s': %s", backup_file, str(e))
 
@@ -433,8 +448,10 @@ class EditorTab(TabBase):
             try:
                 if os.path.exists(backup_file):
                     os.remove(backup_file)
+
             except OSError as e:
                 self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
+
         elif self._untitled_number:
             # Clean up backups for untitled file
             backup_dir = self._mindspace_manager.get_mindspace_path(os.path.join(".humbug", "backups"))
@@ -444,8 +461,10 @@ class EditorTab(TabBase):
                     if file.startswith(prefix):
                         try:
                             os.remove(os.path.join(backup_dir, file))
+
                         except OSError as e:
                             self._logger.warning("Failed to remove backup %s: %s", file, str(e))
+
             except OSError as e:
                 self._logger.warning("Failed to clean up backups: %s", str(e))
 
@@ -505,10 +524,12 @@ class EditorTab(TabBase):
             try:
                 if os.path.exists(backup_file):
                     os.remove(backup_file)
+
             except OSError as e:
                 self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
 
             return True
+
         except Exception as e:
             strings = self._language_manager.strings
             MessageBox.show_message(
@@ -532,7 +553,16 @@ class EditorTab(TabBase):
         strings = self._language_manager.strings
         export_dialog = QFileDialog()
         export_dialog.setWindowTitle(strings.file_dialog_save_file)
-        export_dialog.setDirectory(self._path or self._mindspace_manager.file_dialog_directory)
+        if self._path:
+            export_dialog.setDirectory(self._path)
+
+        else:
+            dir = self._mindspace_manager.file_dialog_directory
+            if dir is None:
+                return False
+
+            export_dialog.setDirectory(dir)
+
         export_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         if export_dialog.exec_() != QFileDialog.DialogCode.Accepted:
             return False
@@ -596,6 +626,9 @@ class EditorTab(TabBase):
 
     def can_submit(self) -> bool:
         return False
+
+    def submit(self) -> None:
+        """Not implemented for editor tabs."""
 
     def show_find(self):
         """Show the find widget."""

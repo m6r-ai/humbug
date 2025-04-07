@@ -1,13 +1,14 @@
 """Editor highlighter."""
 
 import logging
-from typing import Optional
+from typing import cast
 
 from PySide6.QtGui import (
     QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 )
 from humbug.gui.style_manager import StyleManager
 from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.parser import ParserState
 from humbug.syntax.parser_registry import ParserRegistry
 
 
@@ -21,7 +22,7 @@ class EditorHighlighterBlockData(QTextBlockUserData):
 class EditorHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for source code files."""
 
-    def __init__(self, parent: Optional[QTextDocument] = None) -> None:
+    def __init__(self, parent: QTextDocument) -> None:
         """Initialize the highlighter."""
         super().__init__(parent)
 
@@ -47,16 +48,16 @@ class EditorHighlighter(QSyntaxHighlighter):
             current_block = self.currentBlock()
             prev_block = current_block.previous()
 
-            prev_block_data: EditorHighlighterBlockData = None
+            prev_block_data: EditorHighlighterBlockData | None = None
             prev_parser_state = None
 
             if prev_block:
-                prev_block_data = prev_block.userData()
+                prev_block_data = cast(EditorHighlighterBlockData, prev_block.userData())
                 if prev_block_data:
                     prev_parser_state = prev_block_data.parser_state
 
             continuation_state = -1
-            current_block_data: EditorHighlighterBlockData = current_block.userData()
+            current_block_data = cast(EditorHighlighterBlockData, current_block.userData())
 
             # Use the appropriate language parser
             parser = ParserRegistry.create_parser(self._language)
@@ -79,12 +80,13 @@ class EditorHighlighter(QSyntaxHighlighter):
 
             # Check if we need to rehighlight everything from this block onwards
             if current_block_data:
-                current_parser_state = current_block_data.parser_state
+                current_parser_state = cast(ParserState, current_block_data.parser_state)
                 if current_parser_state:
                     continuation_state = current_parser_state.continuation_state
 
-            if continuation_state != parser_state.continuation_state:
-                self.setCurrentBlockState(self.currentBlockState() + 1)
+            if parser_state is not None:
+                if continuation_state != parser_state.continuation_state:
+                    self.setCurrentBlockState(self.currentBlockState() + 1)
 
             block_data = EditorHighlighterBlockData()
             block_data.parser_state = parser_state

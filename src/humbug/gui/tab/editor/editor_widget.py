@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit
 from PySide6.QtCore import Qt, QRect
@@ -9,12 +9,13 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.editor.editor_line_number_area import EditorLineNumberArea
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 
 class EditorWidget(QPlainTextEdit):
     """Text editor widget with line numbers, syntax highlighting, and find functionality."""
 
-    def __init__(self, parent: QWidget = None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the editor."""
         super().__init__(parent)
 
@@ -103,7 +104,7 @@ class EditorWidget(QPlainTextEdit):
         cr = self.contentsRect()
         width = self.line_number_area_width()
 
-        if self.layoutDirection() == Qt.RightToLeft:
+        if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
             self._line_number_area.setGeometry(
                 cr.right() - width,
                 cr.top(),
@@ -399,7 +400,7 @@ class EditorWidget(QPlainTextEdit):
                 super().keyPressEvent(event)
                 return
 
-            settings = mindspace_manager.settings
+            settings = cast(MindspaceSettings, mindspace_manager.settings)
 
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
@@ -430,7 +431,7 @@ class EditorWidget(QPlainTextEdit):
                 super().keyPressEvent(event)
                 return
 
-            settings = mindspace_manager.settings
+            settings = cast(MindspaceSettings, mindspace_manager.settings)
 
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
