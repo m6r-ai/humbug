@@ -77,7 +77,7 @@ class MarkdownConverter:
             and a ProgrammingLanguage enum for code blocks
         """
         sections = []
-        current_markdown_nodes = []
+        current_markdown_nodes: List[MarkdownASTNode] = []
 
         # Helper function to add accumulated markdown content as a section
         def add_markdown_section():

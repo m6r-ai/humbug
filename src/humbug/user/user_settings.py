@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 import json
 import os
-from typing import Dict, Optional
+from typing import Dict
 
 from humbug.language.language_code import LanguageCode
 from humbug.gui.style_manager import ColorMode
@@ -16,7 +16,7 @@ class UserSettings:
     """
     api_keys: Dict[str, str] = field(default_factory=dict)
     language: LanguageCode = LanguageCode.EN
-    font_size: float = None  # None means use the default font size
+    font_size: float| None = None  # None means use the default font size
     theme: ColorMode = ColorMode.DARK  # Default to dark mode
 
     @classmethod

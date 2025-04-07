@@ -271,7 +271,7 @@ class MindspaceManager(QObject):
         try:
             session_file = os.path.join(self._mindspace_path, self.MINDSPACE_DIR, self.SESSION_FILE)
             if not os.path.exists(session_file):
-                return []
+                return {}
 
             with open(session_file, encoding='utf-8') as f:
                 state = json.load(f)

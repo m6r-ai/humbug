@@ -1,7 +1,7 @@
 """Conversation language highlighter."""
 
 import logging
-from typing import Optional
+from typing import cast
 
 from PySide6.QtGui import (
     QSyntaxHighlighter, QTextDocument, QTextBlockUserData
@@ -23,7 +23,7 @@ class ConversationLanguageHighlighterBlockData(QTextBlockUserData):
 class ConversationLanguageHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for source code files."""
 
-    def __init__(self, parent: Optional[QTextDocument] = None) -> None:
+    def __init__(self, parent: QTextDocument) -> None:
         """Initialize the highlighter."""
         super().__init__(parent)
 
@@ -49,20 +49,20 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
             current_block = self.currentBlock()
             prev_block = current_block.previous()
 
-            prev_block_data: ConversationLanguageHighlighterBlockData = None
+            prev_block_data: ConversationLanguageHighlighterBlockData | None = None
             prev_parser_state = None
 
-            if prev_block:
-                prev_block_data = prev_block.userData()
-                if prev_block_data:
+            if prev_block is not None:
+                prev_block_data = cast(ConversationLanguageHighlighterBlockData, prev_block.userData())
+                if prev_block_data is not None:
                     prev_parser_state = prev_block_data.parser_state
 
             continuation_state = -1
-            current_block_data: ConversationLanguageHighlighterBlockData = current_block.userData()
+            current_block_data = cast(ConversationLanguageHighlighterBlockData, current_block.userData())
 
             # Use the appropriate language parser
             parser = ParserRegistry.create_parser(self._language)
-            if not parser:
+            if parser is None:
                 return
 
             parser_state: ParserState | None = parser.parse(prev_parser_state, text)
@@ -87,9 +87,9 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
                 last_token_pos += highlight_len
 
             # Check if we need to rehighlight everything from this block onwards
-            if current_block_data:
+            if current_block_data is not None:
                 current_parser_state = current_block_data.parser_state
-                if current_parser_state:
+                if current_parser_state is not None:
                     continuation_state = current_parser_state.continuation_state
 
             if parser_state is not None and continuation_state != parser_state.continuation_state:

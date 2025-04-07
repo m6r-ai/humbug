@@ -22,7 +22,7 @@ class LanguageManager(QObject):
             cls._instance = super(LanguageManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not hasattr(self, '_initialized'):
             super().__init__()
             self._current_language = LanguageCode.EN

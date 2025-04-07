@@ -1,7 +1,7 @@
 """Conversation code highlighter."""
 
 import logging
-from typing import Optional
+from typing import cast
 
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 from PySide6.QtCore import Signal
@@ -26,7 +26,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
     # Signal emitted when code block state changes
     codeBlockStateChanged = Signal(bool)
 
-    def __init__(self, parent: Optional[QTextDocument] = None) -> None:
+    def __init__(self, parent: QTextDocument) -> None:
         """Initialize the highlighter."""
         super().__init__(parent)
 
@@ -41,13 +41,13 @@ class ConversationHighlighter(QSyntaxHighlighter):
             current_block = self.currentBlock()
             prev_block = current_block.previous()
 
-            prev_block_data: ConversationHighlighterBlockData = None
+            prev_block_data: ConversationHighlighterBlockData | None = None
             prev_parser_state = None
             fence_depth = 0
             seen_fence = False
-            if prev_block:
-                prev_block_data = prev_block.userData()
-                if prev_block_data:
+            if prev_block is not None:
+                prev_block_data = cast(ConversationHighlighterBlockData, prev_block.userData())
+                if prev_block_data is not None:
                     prev_parser_state = prev_block_data.parser_state
                     fence_depth = prev_block_data.fence_depth
                     seen_fence = prev_block_data.seen_fence
@@ -55,11 +55,11 @@ class ConversationHighlighter(QSyntaxHighlighter):
             language = ProgrammingLanguage.UNKNOWN
             contination_state = -1
             current_fence_depth = 0
-            current_block_data: ConversationHighlighterBlockData = current_block.userData()
-            if current_block_data:
+            current_block_data = cast(ConversationHighlighterBlockData, current_block.userData())
+            if current_block_data is not None:
                 current_fence_depth = current_block_data.fence_depth
                 current_parser_data: MarkdownParserState = current_block_data.parser_state
-                if current_parser_data:
+                if current_parser_data is not None:
                     language = current_parser_data.language
                     contination_state = current_parser_data.continuation_state
 

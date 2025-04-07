@@ -1,3 +1,5 @@
+from typing import cast
+
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal, QObject, QEvent
 
@@ -59,8 +61,9 @@ class TabBase(QFrame):
             widget: Widget to track for activation events
         """
         widget.installEventFilter(self._event_filter)
+        child: QWidget
         for child in widget.findChildren(QWidget):
-            child.installEventFilter(self._event_filter)
+            cast(QWidget, child).installEventFilter(self._event_filter)
 
     @property
     def tab_id(self) -> str:
