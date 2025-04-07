@@ -53,7 +53,7 @@ class StyleManager(QObject):
             super().__init__()
             self._zoom_factor = 1.0
             self._base_font_size = self._determine_base_font_size()
-            self._user_font_size = None
+            self._user_font_size: float | None = None
             self._initialized = True
             self._color_mode = ColorMode.DARK  # Default to dark mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
@@ -717,7 +717,7 @@ class StyleManager(QObject):
             Scaled QPixmap of the icon
         """
         pixmap = QPixmap(icon_path)
-        scaled_size = self.get_scaled_size(target_size)
+        scaled_size = int(self.get_scaled_size(target_size))
         return pixmap.scaled(
             scaled_size,
             scaled_size,
