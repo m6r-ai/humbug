@@ -93,11 +93,11 @@ class TabLabel(QWidget):
 
         # Update close button size
         factor = self._style_manager.zoom_factor
-        button_size = 16 * factor
+        button_size = int(16 * factor)
         self._close_button.setFixedSize(button_size, button_size)
 
         # Update icon size
-        icon_size = 16 * factor
+        icon_size = int(16 * factor)
         self._close_button.setIconSize(QSize(icon_size, icon_size))
 
         # Recreate icons at new size
@@ -106,9 +106,9 @@ class TabLabel(QWidget):
         self._invisible_close_icon = self._create_invisible_close_icon()
 
         # Update layout margins and spacing
-        self._layout.setSpacing(6 * factor)
-        margins = 8 * factor
-        v_margins = 4 * factor
+        self._layout.setSpacing(int(6 * factor))
+        margins = int(8 * factor)
+        v_margins = int(4 * factor)
         self._layout.setContentsMargins(margins, v_margins, margins, v_margins)
 
         self._update_close_button()
@@ -125,7 +125,7 @@ class TabLabel(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press events for drag initiation."""
-        if event.button() == Qt.LeftButton:
+        if event.button() & Qt.MouseButton.LeftButton:
             self._drag_start_pos = event.pos()
 
         super().mousePressEvent(event)
@@ -176,7 +176,7 @@ class TabLabel(QWidget):
         self.drag_started.emit()
 
         # Execute drag operation
-        drag.exec_(Qt.MoveAction)
+        drag.exec_(Qt.DropAction.MoveAction)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         """Handle mouse release events."""
