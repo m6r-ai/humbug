@@ -13,8 +13,27 @@ dependencies = [
     "qasync"
 ]
 
+[tool.coverage.run]
+source = ["m6rclib"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "raise ImportError",
+    "except ImportError:",
+]
 [tool.hatch.build.targets.wheel]
 packages = ["src/humbug"]
+
+[tool.mypy]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
 
 [tool.pyinstaller]
 excludes = ["build", "dist", "*.egg-info"]
@@ -32,16 +51,3 @@ filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 
-[tool.coverage.run]
-source = ["m6rclib"]
-branch = true
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if __name__ == .__main__.:",
-    "raise NotImplementedError",
-    "raise ImportError",
-    "except ImportError:",
-]
