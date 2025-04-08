@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QSize
 from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor
 )
 
 from humbug.gui.color_role import ColorRole
@@ -31,7 +31,12 @@ class ConversationMessageSection(QFrame):
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
 
-    def __init__(self, is_input: bool, language: ProgrammingLanguage | None = None, parent=None):
+    def __init__(
+        self,
+        is_input: bool,
+        language: ProgrammingLanguage | None = None,
+        parent: QWidget | None = None
+    ) -> None:
         """
         Initialize a message section widget.
 
@@ -333,9 +338,9 @@ class ConversationMessageSection(QFrame):
         self,
         matches: List[Tuple[int, int]],
         current_match_index: int = -1,
-        highlight_color=None,
-        dim_highlight_color=None
-    ):
+        highlight_color: QColor | None = None,
+        dim_highlight_color: QColor | None = None
+    ) -> None:
         """
         Highlight matches in this section.
 
@@ -489,7 +494,8 @@ class ConversationMessageSection(QFrame):
         """
 
         icon_base_size = 14
-        icon_size = QSize(int(16 * self._style_manager.zoom_factor), int(14 * self._style_manager.zoom_factor))
+        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor)
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         if self._copy_button:
             self._copy_button.setIcon(QIcon(self._style_manager.scale_icon(

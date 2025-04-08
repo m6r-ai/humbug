@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog
 )
 from PySide6.QtCore import Signal, QPoint, QSize
-from PySide6.QtGui import QIcon, QGuiApplication
+from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
@@ -25,7 +25,7 @@ class ConversationMessage(QFrame):
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
 
-    def __init__(self, parent=None, is_input=False) -> None:
+    def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
         """
         Initialize the message widget.
 
@@ -111,7 +111,7 @@ class ConversationMessage(QFrame):
         """Check if this message is focused."""
         return self._is_focused
 
-    def set_focused(self, focused: bool):
+    def set_focused(self, focused: bool) -> None:
         """Set the focused state of this message."""
         if self._is_focused == focused:
             return
@@ -126,7 +126,7 @@ class ConversationMessage(QFrame):
         """Check if this message is bookmarked."""
         return self._is_bookmarked
 
-    def set_bookmarked(self, bookmarked: bool):
+    def set_bookmarked(self, bookmarked: bool) -> None:
         """Set the bookmarked state."""
         self._is_bookmarked = bookmarked
         self._handle_style_changed()
@@ -182,7 +182,7 @@ class ConversationMessage(QFrame):
         section.mouseReleased.connect(self.mouseReleased)
         return section
 
-    def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool):
+    def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
         """
         Handle selection changes in a section widget.
 
@@ -202,7 +202,7 @@ class ConversationMessage(QFrame):
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, style: AIMessageSource, timestamp: datetime):
+    def set_content(self, text: str, style: AIMessageSource, timestamp: datetime) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
 
@@ -273,22 +273,22 @@ class ConversationMessage(QFrame):
             self._sections_layout.removeWidget(section)
             section.deleteLater()
 
-    def _copy_message(self):
+    def _copy_message(self) -> None:
         """Copy the entire message content to clipboard."""
         content = self._message_content
         QGuiApplication.clipboard().setText(content)
 
-    def _save_message(self):
+    def _save_message(self) -> bool:
         """Show save as dialog and save message as a markdown file."""
         strings = self._language_manager.strings
 
         # Show file dialog
         export_dialog = QFileDialog()
         export_dialog.setWindowTitle(strings.file_dialog_save_file)
-        export_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        export_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         export_dialog.selectFile("message.md")
 
-        if export_dialog.exec_() != QFileDialog.Accepted:
+        if export_dialog.exec_() != QFileDialog.DialogCode.Accepted:
             return False
 
         filename = export_dialog.selectedFiles()[0]
@@ -326,22 +326,22 @@ class ConversationMessage(QFrame):
 
         return ""
 
-    def copy_selection(self):
+    def copy_selection(self) -> None:
         """Copy selected text to clipboard."""
         if self._section_with_selection:
             self._section_with_selection.copy_selection()
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         """Clear any text selection in this message."""
         if self._section_with_selection:
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _handle_style_changed(self):
+    def _handle_style_changed(self) -> None:
         """Handle the style changing"""
         factor = self._style_manager.zoom_factor
         font = self.font()
@@ -357,7 +357,8 @@ class ConversationMessage(QFrame):
             AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM
         }
 
-        role = role_colours.get(self._current_style, ColorRole.MESSAGE_USER)
+        current_style = self._message_source or AIMessageSource.USER
+        role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
         background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
@@ -391,7 +392,8 @@ class ConversationMessage(QFrame):
 
         # Apply icon and styling to copy and save buttons
         icon_base_size = 14
-        icon_size = QSize(16 * self._style_manager.zoom_factor, 14 * self._style_manager.zoom_factor)
+        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor)
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         if self._copy_message_button:
             self._copy_message_button.setIcon(QIcon(self._style_manager.scale_icon(
@@ -465,9 +467,9 @@ class ConversationMessage(QFrame):
         self,
         matches: List[Tuple[int, int, int]],
         current_match_index: int = -1,
-        highlight_color=None,
-        dim_highlight_color=None
-    ):
+        highlight_color: QColor | None = None,
+        dim_highlight_color: QColor | None = None
+    ) -> None:
         """
         Highlight matches in this message.
 
@@ -518,7 +520,7 @@ class ConversationMessage(QFrame):
                 dim_highlight_color
             )
 
-    def clear_highlights(self):
+    def clear_highlights(self) -> None:
         """Clear all highlights from the message."""
         for section in self._sections:
             section.clear_highlights()
