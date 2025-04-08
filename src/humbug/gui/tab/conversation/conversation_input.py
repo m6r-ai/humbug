@@ -4,7 +4,7 @@ import sys
 from typing import Dict
 
 from PySide6.QtCore import Signal, Qt, QMimeData, QRect
-from PySide6.QtGui import QKeyEvent, QTextCursor
+from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
 from humbug.gui.color_role import ColorRole
@@ -101,7 +101,7 @@ class ConversationInput(ConversationMessage):
         """Get the current input text."""
         return self._sections[0]._text_area.toPlainText()
 
-    def set_plain_text(self, text: str):
+    def set_plain_text(self, text: str) -> None:
         """Set the input text."""
         self._sections[0]._text_area.setPlainText(text)
 
@@ -112,9 +112,13 @@ class ConversationInput(ConversationMessage):
         cursor = QRect(text_cursor.x(), offset + text_cursor.y(), text_cursor.width(), text_cursor.height())
         return cursor
 
-    def setFocus(self) -> None:
+    def setFocus(self, reason: Qt.FocusReason | None = None) -> None:
         """Set focus to the input area."""
-        self._sections[0]._text_area.setFocus()
+        if reason is None:
+            self._sections[0]._text_area.setFocus()
+            return
+
+        self._sections[0]._text_area.setFocus(reason)
 
     def hasFocus(self) -> bool:
         """Check if the input area has focus."""
