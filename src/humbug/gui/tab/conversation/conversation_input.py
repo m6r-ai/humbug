@@ -5,6 +5,7 @@ from typing import Dict
 
 from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent, QTextCursor
+from PySide6.QtWidgets import QWidget
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.tab.conversation.conversation_message import ConversationMessage
@@ -18,7 +19,7 @@ class ConversationInput(ConversationMessage):
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
         self._is_streaming = False
         super().__init__(parent, is_input=True)
@@ -32,34 +33,35 @@ class ConversationInput(ConversationMessage):
 
         self._update_header_text()
 
-    def _handle_language_changed(self):
+    def _handle_language_changed(self) -> None:
         """Handle language change event."""
         self._update_header_text()
 
-    def set_streaming(self, streaming: bool):
+    def set_streaming(self, streaming: bool) -> None:
         """Update the streaming state and header text."""
         self._is_streaming = streaming
         self._update_header_text()
 
-    def _get_submit_key_text(self):
+    def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
         if sys.platform == "darwin":
             return "⌘J"
 
         return "Ctrl+J"
 
-    def _update_header_text(self):
+    def _update_header_text(self) -> None:
         """Update the header text based on current state."""
         strings = self._language_manager.strings
         if self._is_streaming:
             self._role_label.setText(strings.processing_message)
+
         else:
             submit_key = self._get_submit_key_text()
             self._role_label.setText(strings.input_prompt.format(key=submit_key))
 
         self._set_role_style()
 
-    def _set_role_style(self):
+    def _set_role_style(self) -> None:
         """Set the role label color."""
         colour = ColorRole.TEXT_DISABLED if self._is_streaming else ColorRole.MESSAGE_USER
 
@@ -79,7 +81,7 @@ class ConversationInput(ConversationMessage):
             cursor = self._sections[0]._text_area.textCursor()
             cursor.insertText(source.text())
 
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle special key events."""
         if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if not self._is_streaming:
@@ -91,7 +93,7 @@ class ConversationInput(ConversationMessage):
 
         super().keyPressEvent(event)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the input area."""
         self._sections[0]._text_area.clear()
 
@@ -103,14 +105,14 @@ class ConversationInput(ConversationMessage):
         """Set the input text."""
         self._sections[0]._text_area.setPlainText(text)
 
-    def cursor_rect(self):
+    def cursor_rect(self) -> QRect:
         """Get the cursor rectangle from the input area."""
         text_cursor = self._sections[0]._text_area.cursorRect()
         offset = self._header.height()
         cursor = QRect(text_cursor.x(), offset + text_cursor.y(), text_cursor.width(), text_cursor.height())
         return cursor
 
-    def setFocus(self):
+    def setFocus(self) -> None:
         """Set focus to the input area."""
         self._sections[0]._text_area.setFocus()
 
@@ -118,31 +120,31 @@ class ConversationInput(ConversationMessage):
         """Check if the input area has focus."""
         return self._sections[0]._text_area.hasFocus()
 
-    def document(self):
+    def document(self) -> QTextDocument:
         """Get the document from the input area."""
         return self._sections[0]._text_area.document()
 
-    def text_cursor(self):
+    def text_cursor(self) -> QTextCursor:
         """Get the text cursor from the input area."""
         return self._sections[0]._text_area.textCursor()
 
-    def undo(self):
+    def undo(self) -> None:
         """Undo the last edit operation."""
         self._sections[0]._text_area.undo()
 
-    def redo(self):
+    def redo(self) -> None:
         """Redo the last undone edit operation."""
         self._sections[0]._text_area.redo()
 
-    def cut(self):
+    def cut(self) -> None:
         """Cut selected text to clipboard."""
         self._sections[0]._text_area.cut()
 
-    def copy(self):
+    def copy(self) -> None:
         """Copy selected text to clipboard."""
         self._sections[0]._text_area.copy()
 
-    def paste(self):
+    def paste(self) -> None:
         """Paste text from clipboard."""
         self._sections[0]._text_area.paste()
 
