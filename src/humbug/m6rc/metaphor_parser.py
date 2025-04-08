@@ -15,7 +15,7 @@
 import glob
 import os
 from pathlib import Path
-from typing import List, Set, Union, cast
+from typing import List, Set, cast
 
 from .metaphor_token import Token, TokenType
 from .embed_lexer import EmbedLexer
@@ -59,7 +59,7 @@ class MetaphorParser:
     Attributes:
         syntax_tree (MetaphorRootNode): The root node of the AST.
         parse_errors (List[MetaphorParserSyntaxError]): List of syntax errors encountered during parsing.
-        lexers (List[Union[MetaphorLexer, EmbedLexer]]): Stack of lexers used for parsing multiple files.
+        lexers (List[MetaphorLexer | EmbedLexer]): Stack of lexers used for parsing multiple files.
         previously_seen_files (Set[str]): Set of canonical filenames already processed.
         search_paths (List[str]): List of paths to search for included files.
         embed_path (str): Path used to search for embedded files.
@@ -68,7 +68,7 @@ class MetaphorParser:
     def __init__(self) -> None:
         self.syntax_tree: MetaphorRootNode = MetaphorRootNode()
         self.parse_errors: List[MetaphorParserSyntaxError] = []
-        self.lexers: List[Union[MetaphorLexer, EmbedLexer]] = []
+        self.lexers: List[MetaphorLexer | EmbedLexer] = []
         self.previously_seen_files: Set[str] = set()
         self.search_paths: List[str] = []
         self.embed_path: str = ""
