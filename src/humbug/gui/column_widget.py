@@ -1,5 +1,7 @@
-from PySide6.QtWidgets import QTabWidget
-from PySide6.QtCore import Signal, QEvent
+from typing import Any
+
+from PySide6.QtWidgets import QTabWidget, QWidget
+from PySide6.QtCore import Signal, QEvent, QObject
 from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
 
 from humbug.gui.tab.tab_bar import TabBar
@@ -12,7 +14,7 @@ class ColumnWidget(QTabWidget):
     tab_drop = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
     file_drop = Signal(str, QTabWidget, int)  # file_path, target_column, target_index
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab widget."""
         super().__init__(parent)
         self.setMovable(True)
@@ -31,7 +33,7 @@ class ColumnWidget(QTabWidget):
         self.installEventFilter(self)
         tab_bar.installEventFilter(self)
 
-    def eventFilter(self, obj, event) -> bool:
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Handle window activation and mouse events to detect active column."""
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Emit activation on mouse press or focus
@@ -40,14 +42,14 @@ class ColumnWidget(QTabWidget):
 
         return super().eventFilter(obj, event)
 
-    def addTab(self, widget, *args, **kwargs) -> int:
+    def addTab(self, widget: QWidget, *args: Any, **kwargs: Any) -> int:
         """Override addTab to install event filter on new tabs."""
         result = super().addTab(widget, *args, **kwargs)
         # Install event filter on the widget to catch focus/mouse events
         widget.installEventFilter(self)
         return result
 
-    def removeTab(self, index) -> None:
+    def removeTab(self, index: int) -> None:
         """Override removeTab to properly clean up event filters."""
         widget = self.widget(index)
         if widget:
