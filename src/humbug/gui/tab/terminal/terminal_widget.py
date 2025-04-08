@@ -8,14 +8,14 @@ from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer, QPointF, QRectF
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetricsF,
-    QResizeEvent, QKeyEvent, QMouseEvent,
+    QResizeEvent, QKeyEvent, QMouseEvent, QFocusEvent,
     QGuiApplication, QWheelEvent, QFont
 )
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.terminal.terminal_selection import TerminalSelection
-from humbug.terminal.terminal_buffer import CharacterAttributes
+from humbug.terminal.terminal_buffer import CharacterAttributes, TerminalBuffer
 from humbug.terminal.terminal_state import TerminalState
 
 
@@ -125,7 +125,7 @@ class TerminalWidget(QAbstractScrollArea):
         }
         self._state.set_ansi_colors(color_map)
 
-    def _handle_style_changed(self):
+    def _handle_style_changed(self) -> None:
         """Handle style changes."""
         # Update terminal font
         font = QFont()
@@ -168,11 +168,11 @@ class TerminalWidget(QAbstractScrollArea):
         self._update_scrollbar()
         self.size_changed.emit()
 
-    def _handle_scroll(self, _value: int):
+    def _handle_scroll(self, _value: int) -> None:
         """Handle scrollbar value changes."""
         self.viewport().update()
 
-    def _update_scrollbar(self):
+    def _update_scrollbar(self) -> None:
         """Update scrollbar range based on content size."""
         terminal_rows = self._state.terminal_rows
         history_lines = max(0, self._state.terminal_history_lines - terminal_rows)
@@ -209,12 +209,12 @@ class TerminalWidget(QAbstractScrollArea):
             scroll_to = row - visible_lines + 1
             self.verticalScrollBar().setValue(scroll_to)
 
-    def _scroll_to_bottom(self):
+    def _scroll_to_bottom(self) -> None:
         """Scroll the view to show the bottom of the terminal."""
         vbar = self.verticalScrollBar()
         vbar.setValue(vbar.maximum())
 
-    def _toggle_blink(self):
+    def _toggle_blink(self) -> None:
         """Toggle blink state and update display if needed."""
         self._blink_state = not self._blink_state
         if self._state.blinking_chars_on_screen():
@@ -402,7 +402,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         event.accept()
 
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle key press events including control sequences."""
         text = event.text()
         key = event.key()
@@ -944,7 +944,7 @@ class TerminalWidget(QAbstractScrollArea):
     def _draw_cursor(
         self,
         painter: QPainter,
-        buffer,
+        buffer: TerminalBuffer,
         terminal_rows: int,
         terminal_history_lines: int,
         first_visible_line: int
@@ -1041,7 +1041,7 @@ class TerminalWidget(QAbstractScrollArea):
             else:
                 self.data_ready.emit(text.encode())
 
-    def _show_terminal_context_menu(self, pos) -> None:
+    def _show_terminal_context_menu(self, pos: QPoint) -> None:
         """Show context menu for terminal operations."""
         menu = QMenu(self)
 
@@ -1074,13 +1074,13 @@ class TerminalWidget(QAbstractScrollArea):
         """Override to prevent tab from changing focus."""
         return False
 
-    def focusInEvent(self, event):
+    def focusInEvent(self, event: QFocusEvent) -> None:
         """Handle focus in event."""
         super().focusInEvent(event)
         self._has_focus = True
         self.viewport().update()
 
-    def focusOutEvent(self, event):
+    def focusOutEvent(self, event: QFocusEvent) -> None:
         """Handle focus out event."""
         super().focusOutEvent(event)
         self._has_focus = False

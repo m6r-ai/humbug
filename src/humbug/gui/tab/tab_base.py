@@ -12,7 +12,7 @@ class TabEventFilter(QObject):
 
     widget_activated = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the event filter."""
         super().__init__(parent)
 
@@ -34,7 +34,7 @@ class TabBase(QFrame):
     status_message = Signal(StatusMessage)
     activated = Signal()  # Emits when tab is activated by user interaction
 
-    def __init__(self, tab_id: str, parent=None):
+    def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
         """
         Initialize the base tab.
 
@@ -97,7 +97,7 @@ class TabBase(QFrame):
         raise NotImplementedError("Subclasses must implement get_state")
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent=None) -> 'TabBase':
+    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'TabBase':
         """
         Create and restore a tab from serialized state.
 
@@ -250,7 +250,7 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement paste")
 
-    def show_find(self):
+    def show_find(self) -> None:
         """Show the find widget."""
         raise NotImplementedError("Subclasses must implement show_find")
 
@@ -262,7 +262,7 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement can_submit")
 
-    def submit(self):
+    def submit(self) -> None:
         """
         Submit the current message.
 

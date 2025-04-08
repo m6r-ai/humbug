@@ -2,6 +2,7 @@ from typing import Callable
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QSize
+from PySide6.QtGui import QPaintEvent
 
 
 class EditorLineNumberArea(QWidget):
@@ -18,10 +19,10 @@ class EditorLineNumberArea(QWidget):
         self._get_line_number_area_width = get_line_number_area_width
         self._line_number_area_paint_event = line_number_area_paint_event
 
-    def sizeHint(self):
+    def sizeHint(self) -> QSize:
         """Get the needed width for the widget."""
         return QSize(self._get_line_number_area_width(), 0)
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         """Paint the line numbers."""
         self._line_number_area_paint_event(event)
