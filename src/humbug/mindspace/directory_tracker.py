@@ -76,11 +76,11 @@ class DirectoryTracker:
             self._tracking.conversations = os.path.dirname(path)
 
     @property
-    def file_dialog_directory(self) -> str | None:
+    def file_dialog_directory(self) -> str:
         """Get the last used file dialog directory."""
-        return self._tracking.file_dialog if self._tracking else None
+        return self._tracking.file_dialog if self._tracking else ""
 
     @property
-    def conversations_directory(self) -> str | None:
+    def conversations_directory(self) -> str:
         """Get the last used conversations directory."""
-        return self._tracking.conversations if self._tracking else None
+        return self._tracking.conversations if self._tracking else ""

@@ -1,9 +1,8 @@
 """Dialog box for About Humbug."""
 
 import os
-from typing import Optional
 
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 
@@ -16,7 +15,7 @@ from humbug.language.language_manager import LanguageManager
 class AboutDialog(QDialog):
     """About dialog for Humbug application."""
 
-    def __init__(self, parent: Optional[QDialog] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the About dialog."""
         super().__init__(parent)
 

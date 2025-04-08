@@ -558,7 +558,7 @@ class EditorTab(TabBase):
 
         else:
             dir = self._mindspace_manager.file_dialog_directory
-            if dir is None:
+            if not dir:
                 return False
 
             export_dialog.setDirectory(dir)

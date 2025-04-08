@@ -408,11 +408,11 @@ class MindspaceManager(QObject):
             self._directory_tracker.save_tracking(self._mindspace_path)
 
     @property
-    def file_dialog_directory(self) -> str | None:
+    def file_dialog_directory(self) -> str:
         """Get the last used file dialog directory."""
         return self._directory_tracker.file_dialog_directory
 
     @property
-    def conversations_directory(self) -> str | None:
+    def conversations_directory(self) -> str:
         """Get the last used conversations directory."""
         return self._directory_tracker.conversations_directory

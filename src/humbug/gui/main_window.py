@@ -4,13 +4,13 @@ import asyncio
 import json
 import logging
 import os
-from typing import cast
+from typing import cast, Dict
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
     QSplitter, QLabel, QApplication, QDialog, QMenu
 )
-from PySide6.QtCore import Qt, QTimer, Slot
+from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 from PySide6.QtWidgets import QStatusBar
 
@@ -37,7 +37,7 @@ from humbug.user.user_settings import UserSettings
 class MainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the main window."""
         super().__init__()
 
@@ -49,16 +49,16 @@ class MainWindow(QMainWindow):
 
         # Humbug menu actions
         self._about_action = QAction(strings.about_humbug, self)
-        self._about_action.setMenuRole(QAction.AboutRole)
+        self._about_action.setMenuRole(QAction.MenuRole.AboutRole)
         self._about_action.triggered.connect(self._show_about_dialog)
 
         self._user_settings_action = QAction(strings.user_settings, self)
-        self._user_settings_action.setMenuRole(QAction.PreferencesRole)
+        self._user_settings_action.setMenuRole(QAction.MenuRole.PreferencesRole)
         self._user_settings_action.setShortcut(QKeySequence("Ctrl+,"))
         self._user_settings_action.triggered.connect(self._show_user_settings_dialog)
 
         self._quit_action = QAction(strings.quit_humbug, self)
-        self._quit_action.setMenuRole(QAction.QuitRole)
+        self._quit_action.setMenuRole(QAction.MenuRole.QuitRole)
         self._quit_action.setShortcut(QKeySequence("Ctrl+Q"))
         self._quit_action.triggered.connect(self.close)
 
@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
         self._new_metaphor_conv_action.triggered.connect(self._new_metaphor_conversation)
 
         self._new_file_action = QAction(strings.new_file, self)
-        self._new_file_action.setShortcut(QKeySequence.New)
+        self._new_file_action.setShortcut(QKeySequence.StandardKey.New)
         self._new_file_action.triggered.connect(self._new_file)
 
         self._new_terminal_action = QAction(strings.new_terminal, self)
@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
         self._open_conv_action.triggered.connect(self._open_conversation)
 
         self._open_file_action = QAction(strings.open_file, self)
-        self._open_file_action.setShortcut(QKeySequence.Open)
+        self._open_file_action.setShortcut(QKeySequence.StandardKey.Open)
         self._open_file_action.triggered.connect(self._open_file)
 
         self._fork_conv_action = QAction(strings.fork_conversation, self)
@@ -100,11 +100,11 @@ class MainWindow(QMainWindow):
         self._fork_conv_action.triggered.connect(self._fork_conversation)
 
         self._save_action = QAction(strings.save, self)
-        self._save_action.setShortcut(QKeySequence.Save)
+        self._save_action.setShortcut(QKeySequence.StandardKey.Save)
         self._save_action.triggered.connect(self._save_file)
 
         self._save_as_action = QAction(strings.save_as, self)
-        self._save_as_action.setShortcut(QKeySequence.SaveAs)
+        self._save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs)
         self._save_as_action.triggered.connect(self._save_file_as)
 
         self._close_tab_action = QAction(strings.close_tab, self)
@@ -141,7 +141,7 @@ class MainWindow(QMainWindow):
         self._paste_action.triggered.connect(self._paste)
 
         self._find_action = QAction(strings.find, self)
-        self._find_action.setShortcut(QKeySequence.Find)
+        self._find_action.setShortcut(QKeySequence.StandardKey.Find)
         self._find_action.triggered.connect(self._find)
 
         self._mindspace_settings_action = QAction(strings.mindspace_settings, self)
@@ -153,8 +153,8 @@ class MainWindow(QMainWindow):
         self._conv_settings_action.triggered.connect(self._show_conversation_settings_dialog)
 
         # View menu actions - Theme menu will be created in _handle_language_changed
-        self._theme_menu = None
-        self._theme_actions = {}
+        self._theme_menu: QMenu | None = None
+        self._theme_actions: Dict[ColorMode, QAction] = {}
 
         self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
@@ -293,7 +293,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Create splitter
-        self._splitter = QSplitter(Qt.Horizontal)
+        self._splitter = QSplitter(Qt.Orientation.Horizontal)
         layout.addWidget(self._splitter)
 
         # Create and add file tree
@@ -355,8 +355,7 @@ class MainWindow(QMainWindow):
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 
-    @Slot()
-    def _update_menu_state(self):
+    def _update_menu_state(self) -> None:
         """Update enabled/disabled state of menu items."""
         # Update mindspace-specific actions
         has_mindspace = self._mindspace_manager.has_mindspace
@@ -408,6 +407,7 @@ class MainWindow(QMainWindow):
         left_to_right = self._language_manager.left_to_right
         if left_to_right:
             app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
         else:
             app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
@@ -545,7 +545,7 @@ class MainWindow(QMainWindow):
         if message.timeout:
             QTimer.singleShot(message.timeout, self._status_message_label.clear)
 
-    def _restore_last_mindspace(self):
+    def _restore_last_mindspace(self) -> None:
         """Restore last mindspace on startup if available."""
         try:
             with open(os.path.expanduser("~/.humbug/mindspace.json"), encoding='utf-8') as f:
@@ -556,13 +556,15 @@ class MainWindow(QMainWindow):
                         self._mindspace_manager.open_mindspace(mindspace_path)
                         self._file_tree.set_mindspace(mindspace_path)
                         self._restore_mindspace_state()
+
                     except MindspaceError as e:
                         self._logger.error("Failed to restore mindspace: %s", str(e))
                         # Don't show error dialog on startup, just log it
+
         except (FileNotFoundError, json.JSONDecodeError):
             pass
 
-    def _new_mindspace(self):
+    def _new_mindspace(self) -> None:
         """Show folder selection dialog and create new mindspace."""
         self._menu_timer.stop()
         strings = self._language_manager.strings
@@ -584,12 +586,13 @@ class MainWindow(QMainWindow):
 
         # Show folder configuration dialog
         dialog = MindspaceFoldersDialog(dir_path, self)
-        if dialog.exec() != QDialog.Accepted:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
         try:
             # Create mindspace with selected folders
             self._mindspace_manager.create_mindspace(dir_path, dialog.get_selected_folders())
+
         except MindspaceExistsError:
             MessageBox.show_message(
                 self,
@@ -598,6 +601,7 @@ class MainWindow(QMainWindow):
                 strings.mindspace_exists_error
             )
             return
+
         except MindspaceError as e:
             MessageBox.show_message(
                 self,
@@ -609,7 +613,7 @@ class MainWindow(QMainWindow):
 
         self._open_mindspace_path(dir_path)
 
-    def _open_mindspace(self):
+    def _open_mindspace(self) -> None:
         """Open a new mindspace."""
         self._menu_timer.stop()
         strings = self._language_manager.strings
@@ -631,6 +635,7 @@ class MainWindow(QMainWindow):
         try:
             self._mindspace_manager.open_mindspace(path)
             self._file_tree.set_mindspace(path)
+
         except MindspaceError as e:
             strings = self._language_manager.strings
             MessageBox.show_message(
@@ -644,17 +649,17 @@ class MainWindow(QMainWindow):
         # Restore the state of the newly opened mindspace
         self._restore_mindspace_state()
 
-    def _close_mindspace(self):
+    def _close_mindspace(self) -> None:
         if not self._mindspace_manager.has_mindspace:
             self._logger.error("No mindspace active, cannot close")
             return
 
         self._save_mindspace_state()
         self._close_all_tabs()
-        self._file_tree.set_mindspace(None)
+        self._file_tree.set_mindspace("")
         self._mindspace_manager.close_mindspace()
 
-    def _save_mindspace_state(self):
+    def _save_mindspace_state(self) -> None:
         """Save current mindspace state."""
         if not self._mindspace_manager.has_mindspace:
             self._logger.error("No mindspace active, cannot save")
@@ -663,6 +668,7 @@ class MainWindow(QMainWindow):
         try:
             mindspace_state = self._column_manager.save_state()
             self._mindspace_manager.save_mindspace_state(mindspace_state)
+
         except MindspaceError as e:
             self._logger.error("Failed to save mindspace state: %s", str(e))
             strings = self._language_manager.strings
@@ -673,7 +679,7 @@ class MainWindow(QMainWindow):
                 strings.error_saving_mindspace.format(str(e))
             )
 
-    def _restore_mindspace_state(self):
+    def _restore_mindspace_state(self) -> None:
         """Restore previously open tabs from mindspace state."""
         saved_state = self._mindspace_manager.load_mindspace_state()
         if not saved_state:
@@ -682,6 +688,7 @@ class MainWindow(QMainWindow):
 
         try:
             self._column_manager.restore_state(saved_state)
+
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
             strings = self._language_manager.strings
@@ -692,47 +699,47 @@ class MainWindow(QMainWindow):
                 strings.error_restoring_mindspace.format(str(e))
             )
 
-    def _close_all_tabs(self):
+    def _close_all_tabs(self) -> None:
         self._column_manager.close_all_tabs()
 
-    def _undo(self):
+    def _undo(self) -> None:
         self._column_manager.undo()
 
-    def _redo(self):
+    def _redo(self) -> None:
         self._column_manager.redo()
 
-    def _cut(self):
+    def _cut(self) -> None:
         self._column_manager.cut()
 
-    def _copy(self):
+    def _copy(self) -> None:
         self._column_manager.copy()
 
-    def _paste(self):
+    def _paste(self) -> None:
         self._column_manager.paste()
 
-    def _find(self):
+    def _find(self) -> None:
         self._column_manager.find()
 
-    def _show_about_dialog(self):
+    def _show_about_dialog(self) -> None:
         """Show the About dialog."""
         dialog = AboutDialog(self)
         dialog.exec()
 
-    def _new_terminal(self):
+    def _new_terminal(self) -> None:
         """Create a new terminal tab."""
         if not self._mindspace_manager.has_mindspace:
             return
 
         self._column_manager.new_terminal()
 
-    def _new_file(self):
+    def _new_file(self) -> None:
         """Create a new empty editor tab."""
         if not self._mindspace_manager.has_mindspace:
             return
 
         self._column_manager.new_file()
 
-    def _handle_file_activation(self, path: str):
+    def _handle_file_activation(self, path: str) -> None:
         """Handle file activation from the file tree."""
         # Are we opening a conversation or a file?
         ext = os.path.splitext(path)[1].lower()
@@ -742,7 +749,7 @@ class MainWindow(QMainWindow):
 
         self._open_file_path(path)
 
-    def _handle_file_deletion(self, path: str):
+    def _handle_file_deletion(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.
 
         Args:
@@ -750,7 +757,7 @@ class MainWindow(QMainWindow):
         """
         self._column_manager.close_deleted_file(path)
 
-    def _handle_file_rename(self, old_path: str, new_path: str):
+    def _handle_file_rename(self, old_path: str, new_path: str) -> None:
         """Handle renaming of files.
 
         Args:
@@ -759,7 +766,7 @@ class MainWindow(QMainWindow):
         """
         self._column_manager.handle_file_rename(old_path, new_path)
 
-    def _open_file(self):
+    def _open_file(self) -> None:
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
         strings = self._language_manager.strings
@@ -780,6 +787,7 @@ class MainWindow(QMainWindow):
         """Open file in editor tab."""
         try:
             self._column_manager.open_file(path)
+
         except OSError as e:
             strings = self._language_manager.strings
             MessageBox.show_message(
@@ -789,11 +797,11 @@ class MainWindow(QMainWindow):
                 strings.could_not_open.format(path, str(e))
             )
 
-    def _save_file(self):
+    def _save_file(self) -> None:
         """Save the current file."""
         self._column_manager.save_file()
 
-    def _save_file_as(self):
+    def _save_file_as(self) -> None:
         """Save the current file with a new name."""
         self._column_manager.save_file_as()
 
@@ -898,6 +906,7 @@ class MainWindow(QMainWindow):
             return self._column_manager.new_conversation(
                 self._mindspace_manager.mindspace_path
             )
+
         except MindspaceError as e:
             strings = self._language_manager.strings
             MessageBox.show_message(
@@ -908,7 +917,7 @@ class MainWindow(QMainWindow):
             )
             return None
 
-    def _new_metaphor_conversation(self):
+    def _new_metaphor_conversation(self) -> None:
         """Create new conversation from Metaphor file."""
         # Show file dialog
         self._menu_timer.stop()
@@ -940,6 +949,7 @@ class MainWindow(QMainWindow):
                 conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
                 if conversation_tab:
                     conversation_tab.set_input_text(prompt)
+
         except MetaphorParserError as e:
             strings = self._language_manager.strings
             MessageBox.show_message(
@@ -949,7 +959,7 @@ class MainWindow(QMainWindow):
                 strings.error_processing_metaphor.format(format_errors(e.errors))
             )
 
-    def _open_conversation(self):
+    def _open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""
         self._menu_timer.stop()
         strings = self._language_manager.strings
@@ -971,6 +981,7 @@ class MainWindow(QMainWindow):
         """Open an existing conversation file."""
         try:
             self._column_manager.open_conversation(path)
+
         except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
             strings = self._language_manager.strings
@@ -981,10 +992,11 @@ class MainWindow(QMainWindow):
                 strings.error_opening_conversation.format(path, str(e))
             )
 
-    async def _fork_conversation_async(self):
+    async def _fork_conversation_async(self) -> None:
         """Async helper for forking."""
         try:
             await self._column_manager.fork_conversation()
+
         except ConversationError as e:
             strings = self._language_manager.strings
             MessageBox.show_message(
@@ -994,45 +1006,45 @@ class MainWindow(QMainWindow):
                 strings.error_forking_conversation.format(str(e))
             )
 
-    def _fork_conversation(self):
+    def _fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
         # Create task to fork conversation
         asyncio.create_task(self._fork_conversation_async())
 
-    def _close_tab(self):
+    def _close_tab(self) -> None:
         """Close the current tab."""
         self._column_manager.close_tab()
 
-    def _submit_message(self):
+    def _submit_message(self) -> None:
         """Handle message submission."""
         self._column_manager.submit_message()
 
-    def _navigate_next_message(self):
+    def _navigate_next_message(self) -> None:
         """Navigate to the next message in conversation."""
         self._column_manager.navigate_next_message()
 
-    def _navigate_previous_message(self):
+    def _navigate_previous_message(self) -> None:
         """Navigate to the previous message in conversation."""
         self._column_manager.navigate_previous_message()
 
-    def _toggle_bookmark(self):
+    def _toggle_bookmark(self) -> None:
         """Handle toggling a bookmark."""
         self._column_manager.toggle_bookmark()
 
-    def _navigate_next_bookmark(self):
+    def _navigate_next_bookmark(self) -> None:
         """Move to the next bookmark."""
         self._column_manager.navigate_next_bookmark()
 
-    def _navigate_previous_bookmark(self):
+    def _navigate_previous_bookmark(self) -> None:
         """Move to the previous bookmark."""
         self._column_manager.navigate_previous_bookmark()
 
-    def _show_user_settings_dialog(self):
+    def _show_user_settings_dialog(self) -> None:
         """Show the user settings dialog."""
         dialog = UserSettingsDialog(self)
         dialog.set_settings(self._user_manager.settings)
 
-        def handle_settings_changed(new_settings: UserSettings):
+        def handle_settings_changed(new_settings: UserSettings) -> None:
             try:
                 self._user_manager.update_settings(new_settings)
                 self._style_manager.set_user_font_size(new_settings.font_size)
@@ -1045,6 +1057,7 @@ class MainWindow(QMainWindow):
                     self._update_theme_menu()
 
                 self._logger.info("User settings saved successfully")
+
             except UserError as e:
                 self._logger.error("Failed to save user settings: %s", str(e))
                 strings = self._language_manager.strings
@@ -1058,17 +1071,19 @@ class MainWindow(QMainWindow):
         dialog.settings_changed.connect(handle_settings_changed)
         dialog.exec()
 
-    def _show_mindspace_settings_dialog(self):
+    def _show_mindspace_settings_dialog(self) -> None:
         """Show the mindspace settings dialog."""
         if not self._mindspace_manager.has_mindspace:
             return
 
+        settings = cast(MindspaceSettings, self._mindspace_manager.settings)
         dialog = MindspaceSettingsDialog(self)
-        dialog.set_settings(self._mindspace_manager.settings)
+        dialog.set_settings(settings)
 
-        def handle_settings_changed(new_settings: MindspaceSettings):
+        def handle_settings_changed(new_settings: MindspaceSettings) -> None:
             try:
                 self._mindspace_manager.update_settings(new_settings)
+
             except OSError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
                 strings = self._language_manager.strings
@@ -1082,11 +1097,11 @@ class MainWindow(QMainWindow):
         dialog.settings_changed.connect(handle_settings_changed)
         dialog.exec()
 
-    def _show_conversation_settings_dialog(self):
+    def _show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
         self._column_manager.show_conversation_settings_dialog()
 
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle global key events."""
         if event.key() == Qt.Key.Key_Escape:
             if self._column_manager.handle_esc_key():
@@ -1094,16 +1109,16 @@ class MainWindow(QMainWindow):
 
         super().keyPressEvent(event)
 
-    def _handle_zoom(self, factor: float):
+    def _handle_zoom(self, factor: float) -> None:
         """Handle zoom in/out requests."""
         new_zoom = self._style_manager.zoom_factor * factor
         self._set_zoom(new_zoom)
 
-    def _set_zoom(self, zoom_level: float):
+    def _set_zoom(self, zoom_level: float) -> None:
         """Set zoom level for the application."""
         self._style_manager.set_zoom(zoom_level)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QEvent) -> None:
         """Handle application close request."""
         if not self._column_manager.can_close_all_tabs():
             event.ignore()

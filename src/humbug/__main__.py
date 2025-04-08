@@ -4,7 +4,10 @@ import asyncio
 import logging
 import sys
 import time
+from types import TracebackType
+from typing import List
 
+from PySide6.QtCore import QObject, QEvent
 from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 
 from humbug.gui.main_window import MainWindow
@@ -34,11 +37,12 @@ from humbug.syntax.parser_registry import ParserRegistry
 # pylint: enable=unused-import
 
 
-def install_global_exception_handler():
+def install_global_exception_handler() -> None:
     """Install a global exception handler for uncaught exceptions."""
     logger = logging.getLogger('GlobalExceptionHandler')
 
-    def handle_exception(exc_type, exc_value, exc_traceback):
+    def handle_exception(exc_type: type[BaseException], exc_value: BaseException, exc_traceback: TracebackType | None) -> None:
+        """Handle uncaught exceptions and log them."""
         if issubclass(exc_type, KeyboardInterrupt):
             # Don't log keyboard interrupt
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -55,11 +59,11 @@ def install_global_exception_handler():
 
 class HumbugApplication(QApplication):
     """Class for the application. Specialized to do event time reporting."""
-    def __init__(self, argv):
+    def __init__(self, argv: List[str]) -> None:
         super().__init__(argv)
         self._start_time = time.monotonic()
 
-    def notify(self, receiver, event):
+    def notify(self, receiver: QObject, event: QEvent) -> bool:
         event_type = event.type()
         receiver_name = receiver.objectName()
         start = time.monotonic()
@@ -73,7 +77,8 @@ class HumbugApplication(QApplication):
         return ret
 
 
-def main():
+def main() -> int:
+    """Main function to run the application."""
     install_global_exception_handler()
 
     # Create application
@@ -90,9 +95,11 @@ def main():
     try:
         with loop:
             loop.run_forever()
+
     except KeyboardInterrupt:
         return 0
 
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
