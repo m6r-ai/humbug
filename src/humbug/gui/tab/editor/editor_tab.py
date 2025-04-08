@@ -1,10 +1,10 @@
 import logging
 import os
 import time
-from typing import Dict
+from typing import Dict, cast
 
 from PySide6.QtWidgets import (
-    QVBoxLayout, QFileDialog
+    QVBoxLayout, QFileDialog, QWidget
 )
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QTextCursor
@@ -21,6 +21,7 @@ from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -28,7 +29,7 @@ from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 class EditorTab(TabBase):
     """Tab for editing text files."""
 
-    def __init__(self, tab_id: str, parent=None) -> None:
+    def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
         """Initialize editor tab.
 
         Args:
@@ -100,10 +101,10 @@ class EditorTab(TabBase):
         # Update status bar with translated terms
         self.update_status()
 
-    def _handle_mindspace_settings_changed(self):
+    def _handle_mindspace_settings_changed(self) -> None:
         """Handle mindspace settings changes."""
         if self._mindspace_manager.has_mindspace:
-            settings = self._mindspace_manager.settings
+            settings = cast(MindspaceSettings, self._mindspace_manager.settings)
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
     def update_auto_backup_settings(self, enabled: bool, interval: int) -> None:
@@ -142,7 +143,7 @@ class EditorTab(TabBase):
         )
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent=None) -> 'EditorTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'EditorTab':
         """Create and restore an editor tab from serialized state."""
         # Create new tab instance
         tab = cls(state.tab_id, parent)
@@ -630,7 +631,7 @@ class EditorTab(TabBase):
     def submit(self) -> None:
         """Not implemented for editor tabs."""
 
-    def show_find(self):
+    def show_find(self) -> None:
         """Show the find widget."""
         cursor = self._editor_widget.textCursor()
         if cursor.hasSelection():
@@ -646,12 +647,12 @@ class EditorTab(TabBase):
         self._find_widget.show()
         self._find_widget.setFocus()
 
-    def _close_find(self):
+    def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
         self._editor_widget.clear_find()
 
-    def _find_next(self, forward: bool = True):
+    def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
         self._editor_widget.find_text(text, forward)
