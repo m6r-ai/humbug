@@ -29,6 +29,15 @@ class GoogleBackend(AIBackend):
                 }]
             })
 
+        generation_config = {
+            "topP": 0.8,
+            "topK": 10
+        }
+
+        # Only include temperature if supported by model
+        if AIConversationSettings.supports_temperature(settings.model):
+            generation_config["temperature"] = settings.temperature
+
         data = {
             "contents": contents,
             "safetySettings": [
@@ -37,15 +46,8 @@ class GoogleBackend(AIBackend):
                     "threshold": "BLOCK_ONLY_HIGH"
                 }
             ],
-            "generationConfig": {
-                "topP": 0.8,
-                "topK": 10
-            }
+            "generationConfig": generation_config
         }
-
-        # Only include temperature if supported by model
-        if AIConversationSettings.supports_temperature(settings.model):
-            data["generationConfig"]["temperature"] = settings.temperature
 
         return data
 

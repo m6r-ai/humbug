@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog
@@ -85,7 +85,7 @@ class ConversationMessage(QFrame):
 
         # Track sections
         self._sections: List[ConversationMessageSection] = []
-        self._section_with_selection: Optional[ConversationMessageSection] = None
+        self._section_with_selection: ConversationMessageSection | None = None
 
         # If this is an input widget then create the input section
         if is_input:
@@ -164,7 +164,7 @@ class ConversationMessage(QFrame):
         else:
             self._role_label.setText(role_text)
 
-    def _create_section_widget(self, language: Optional[ProgrammingLanguage] = None) -> ConversationMessageSection:
+    def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> ConversationMessageSection:
         """
         Create a new section widget.
 
@@ -484,7 +484,7 @@ class ConversationMessage(QFrame):
             return
 
         # Group matches by section
-        section_matches = {}
+        section_matches: Dict[ConversationMessageSection, List[Tuple[int, int, int]]] = {}
         for section in self._sections:
             section_matches[section] = []
 

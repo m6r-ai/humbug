@@ -201,7 +201,7 @@ class ConversationWidget(QWidget):
         conversation_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights = {}
+        self._search_highlights: Dict[ConversationMessage, List[Tuple[int, int, int]]] = {}
 
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode

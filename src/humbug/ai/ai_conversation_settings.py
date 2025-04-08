@@ -216,7 +216,7 @@ class AIConversationSettings:
 
     def __init__(
         self, model: str = "gemini-1.5-flash",
-        temperature: float = 0.7,
+        temperature: float | None = 0.7,
         reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
     ):
         """
@@ -230,8 +230,9 @@ class AIConversationSettings:
         Raises:
             ValueError: If temperature is out of valid range (0.0-1.0)
         """
-        if not temperature:
+        if temperature is None:
             temperature = 0.7
+
         elif not 0 <= temperature <= 1:
             raise ValueError("Temperature must be between 0.0 and 1.0")
 
@@ -243,6 +244,7 @@ class AIConversationSettings:
         if model_config:
             self.context_window = model_config.context_window
             self.max_output_tokens = model_config.max_output_tokens
+
         else:
             # Fallback for unknown models
             self.context_window = self.DEFAULT_CONTEXT_WINDOW

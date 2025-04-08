@@ -5,7 +5,7 @@ import logging
 import sys
 import time
 
-from qasync import QEventLoop, QApplication
+from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 
 from humbug.gui.main_window import MainWindow
 

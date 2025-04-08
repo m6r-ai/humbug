@@ -155,20 +155,20 @@ class AIBackend(ABC):
                         response_handler = self._create_stream_response_handler()
                         async for line in response.content:
                             try:
-                                line = line.decode('utf-8').strip()
-                                if not line:
+                                decoded_line = line.decode('utf-8').strip()
+                                if not decoded_line:
                                     continue
 
                                 if self._uses_data:
-                                    if not line.startswith("data: "):
+                                    if not decoded_line.startswith("data: "):
                                         continue
 
-                                    line = line[6:]
+                                    decoded_line = decoded_line[6:]
 
-                                    if line == "[DONE]":
+                                    if decoded_line == "[DONE]":
                                         break
 
-                                chunk = json.loads(line)
+                                chunk = json.loads(decoded_line)
                                 response_handler.update_from_chunk(chunk)
                                 if response_handler.error:
                                     yield AIResponse(
