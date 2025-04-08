@@ -24,7 +24,7 @@ class FileTreeIconProvider(QFileIconProvider):
         # Initialize icon cache
         self._initialize_icons()
 
-    def _initialize_icons(self):
+    def _initialize_icons(self) -> None:
         """Create and cache standard icons."""
         # Create path shapes for each icon type in SVG format
         self._svg_paths = {
@@ -107,7 +107,7 @@ class FileTreeIconProvider(QFileIconProvider):
 
         self._clear_cache()
 
-    def _clear_cache(self):
+    def _clear_cache(self) -> None:
         """Clear the icon cache to force regeneration."""
         self._cached_icons.clear()
 
@@ -169,7 +169,7 @@ class FileTreeIconProvider(QFileIconProvider):
         icon.addPixmap(pixmap)
         return icon
 
-    def update_icons(self):
+    def update_icons(self) -> None:
         """Update icons when theme or zoom changes."""
         self._clear_cache()
 
@@ -212,6 +212,6 @@ class FileTreeIconProvider(QFileIconProvider):
         # Create icon if not in cache
         if cache_key not in self._cached_icons:
             svg_data = self._svg_paths[icon_type]
-            self._cached_icons[cache_key] = self._create_svg_icon(svg_data, accent_color)
+            self._cached_icons[cache_key] = self._create_svg_icon(svg_data, accent_color if accent_color is not None else "")
 
         return self._cached_icons[cache_key]

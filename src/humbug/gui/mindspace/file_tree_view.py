@@ -1,21 +1,22 @@
 """File tree view implementation for mindspace files."""
 
 import os
+from typing import cast
 
-from PySide6.QtWidgets import QTreeView, QApplication
-from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData
-from PySide6.QtGui import QDrag
+from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
+from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint
+from PySide6.QtGui import QDrag, QMouseEvent
 
 
 class FileTreeView(QTreeView):
     """Custom tree view with drag support."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         """Initialize the tree view."""
         super().__init__(parent)
         self.setDragEnabled(True)
         self.setDragDropMode(QTreeView.DragDropMode.DragOnly)
-        self._drag_start_pos = None
+        self._drag_start_pos: QPoint | None = None
 
         self.setHeaderHidden(True)
         self.setAnimated(True)
@@ -25,32 +26,32 @@ class FileTreeView(QTreeView):
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events for drag initiation."""
         if event.button() & Qt.MouseButton.LeftButton:
             self._drag_start_pos = event.pos()
 
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Handle mouse move events."""
-        # Get the item under the mouse to work out tool tips.
-        index = self.indexAt(event.pos())
-        if not index.isValid():
-            self.setToolTip("")
-        else:
-            # Get the file path from the source model
-            source_model = self.model()
-            if source_model:
-                # If using a proxy model, map to source
-                if isinstance(source_model, QSortFilterProxyModel):
-                    source_index = source_model.mapToSource(index)
-                    file_model = source_model.sourceModel()
-                    if file_model:
-                        path = file_model.filePath(source_index)
-                        self.setToolTip(path)
+        # Get the file path from the source model
+        source_model = cast(QSortFilterProxyModel, self.model())
+        if not source_model:
+            return
 
-        if not (event.buttons() & Qt.LeftButton):
+        index = self.indexAt(event.pos())
+        source_index = source_model.mapToSource(index)
+        file_model = cast(QFileSystemModel, source_model.sourceModel())
+        if not file_model:
+            return
+
+        path = file_model.filePath(source_index)
+
+        # Get the item under the mouse to work out tool tips.
+        self.setToolTip(path if index.isValid() else "")
+
+        if not (event.buttons() & Qt.MouseButton.LeftButton):
             return
 
         if not self._drag_start_pos:
@@ -61,24 +62,9 @@ class FileTreeView(QTreeView):
             return
 
         # Get the item under the mouse
-        index = self.indexAt(self._drag_start_pos)
-        if not index.isValid():
+        drag_index = self.indexAt(self._drag_start_pos)
+        if not drag_index.isValid():
             return
-
-        # Get the file path from the source model
-        source_model = self.model()
-        if not source_model:
-            return
-
-        # If using a proxy model, map to source
-        if isinstance(source_model, QSortFilterProxyModel):
-            source_index = source_model.mapToSource(index)
-            file_model = source_model.sourceModel()
-            if not file_model:
-                return
-            path = file_model.filePath(source_index)
-        else:
-            path = source_model.filePath(index)
 
         # Only allow dragging files, not directories
         if os.path.isdir(path):
@@ -98,6 +84,6 @@ class FileTreeView(QTreeView):
         drag.setHotSpot(event.pos() - self._drag_start_pos)
 
         # Execute drag operation
-        drag.exec_(Qt.CopyAction)
+        drag.exec_(Qt.DropAction.CopyAction)
 
         self._drag_start_pos = None

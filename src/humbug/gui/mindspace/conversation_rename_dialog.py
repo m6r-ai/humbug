@@ -1,5 +1,7 @@
+from typing import cast
+
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QDialogButtonBox
+    QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QDialogButtonBox, QWidget
 )
 
 from humbug.gui.color_role import ColorRole
@@ -10,7 +12,7 @@ from humbug.language.language_manager import LanguageManager
 class ConversationRenameDialog(QDialog):
     """Dialog for renaming conversations."""
 
-    def __init__(self, old_name: str, parent=None):
+    def __init__(self, old_name: str, parent: QWidget | None = None):
         super().__init__(parent)
         self._style_manager = StyleManager()
 
@@ -60,18 +62,20 @@ class ConversationRenameDialog(QDialog):
         # Select text for easy editing
         self._name_input.selectAll()
 
-    def _validate_input(self):
+    def _validate_input(self) -> None:
         """Validate the input and enable/disable OK button."""
         text = self._name_input.text().strip()
         valid = bool(text and not any(c in r'\/:*?"<>|' for c in text))
 
         # Find OK button and set enabled state
+        button: QPushButton
         for button in self.findChildren(QPushButton):
-            if button.text() == "OK":
-                button.setEnabled(valid)
+            found_button = cast(QPushButton, button)
+            if found_button.text() == "OK":
+                found_button.setEnabled(valid)
                 break
 
-    def _apply_styling(self):
+    def _apply_styling(self) -> None:
         """Apply consistent styling to the dialog."""
         zoom_factor = self._style_manager.zoom_factor
         base_font_size = self._style_manager.base_font_size

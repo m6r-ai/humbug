@@ -9,7 +9,7 @@ import logging
 from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QWidget,
     QPushButton, QLineEdit, QDoubleSpinBox, QComboBox, QListView
 )
 from PySide6.QtCore import Signal
@@ -26,7 +26,7 @@ class UserSettingsDialog(QDialog):
 
     settings_changed = Signal(UserSettings)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         """
         Initialize the user settings dialog.
 
@@ -282,7 +282,7 @@ class UserSettingsDialog(QDialog):
 
         return layout, label, line_edit
 
-    def _create_language_selector(self, parent) -> tuple[QHBoxLayout, QComboBox]:
+    def _create_language_selector(self, parent: QWidget) -> tuple[QHBoxLayout, QComboBox]:
         """
         Create language selection UI elements.
 
