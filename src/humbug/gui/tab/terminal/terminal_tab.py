@@ -2,9 +2,9 @@
 
 import asyncio
 import logging
-from typing import Any, Dict, Set
+from typing import Any, Coroutine, Dict, Set
 
-from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
@@ -21,7 +21,7 @@ from humbug.language.language_manager import LanguageManager
 
 class UTF8Buffer:
     """Class to handle UTF-8 character streams."""
-    def __init__(self):
+    def __init__(self) -> None:
         self.buffer = b''
 
     def add_data(self, data: bytes) -> bytes:
@@ -68,7 +68,13 @@ class UTF8Buffer:
 class TerminalTab(TabBase):
     """Tab containing a terminal emulator."""
 
-    def __init__(self, tab_id: str, command: str | None = None, parent=None, start_process: bool=True) -> None:
+    def __init__(
+        self,
+        tab_id: str,
+        command: str | None = None,
+        parent: QWidget | None = None,
+        start_process: bool = True
+    ) -> None:
         """
         Initialize terminal tab.
 
@@ -135,13 +141,13 @@ class TerminalTab(TabBase):
         # Update status bar
         self.update_status()
 
-    def _handle_terminal_resize(self):
+    def _handle_terminal_resize(self) -> None:
         """Handle terminal window resize events."""
         rows, cols = self._terminal_widget.get_terminal_size()
         self._terminal_process.update_window_size(rows, cols)
         self.update_status()
 
-    def _create_tracked_task(self, coro) -> asyncio.Task:
+    def _create_tracked_task(self, coro: Coroutine[Any, Any, None]) -> asyncio.Task:
         """
         Create a tracked asyncio task.
 
@@ -156,7 +162,7 @@ class TerminalTab(TabBase):
         task.add_done_callback(self._tasks.discard)
         return task
 
-    async def _start_process(self):
+    async def _start_process(self) -> None:
         """Start the terminal process."""
         try:
             self._logger.debug("Starting terminal process...")
@@ -177,7 +183,7 @@ class TerminalTab(TabBase):
             self._logger.exception("Failed to start terminal process: %s", str(e))
             self._terminal_widget.put_data(f"Failed to start terminal: {str(e)}\r\n".encode())
 
-    async def _read_loop(self):
+    async def _read_loop(self) -> None:
         """Read data from the terminal."""
         try:
             utf8_buffer = UTF8Buffer()
@@ -203,6 +209,7 @@ class TerminalTab(TabBase):
                         # Terminal pipe closed/EOF reached
                         self._logger.info("Terminal pipe closed")
                         break
+
                     except OSError as e:
                         if not self._running:
                             break
@@ -234,7 +241,7 @@ class TerminalTab(TabBase):
                 except Exception as e:
                     self._logger.debug("Could not write completion message: %s", e)
 
-    def _handle_data_ready(self, data: bytes):
+    def _handle_data_ready(self, data: bytes) -> None:
         """Handle data from terminal."""
         try:
             if self._running:
@@ -243,7 +250,7 @@ class TerminalTab(TabBase):
         except Exception as e:
             self._logger.error("Failed to write to process: %s", str(e))
 
-    def _handle_style_changed(self):
+    def _handle_style_changed(self) -> None:
         """Handle style changes."""
         # Apply consistent styling to both the terminal widget and its viewport
         self.setStyleSheet(f"""
@@ -323,7 +330,7 @@ class TerminalTab(TabBase):
         )
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent=None) -> 'TerminalTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'TerminalTab':
         """
         Restore terminal from saved state.
 
@@ -480,7 +487,7 @@ class TerminalTab(TabBase):
         """Paste into terminal."""
         self._terminal_widget.paste()
 
-    def show_find(self):
+    def show_find(self) -> None:
         """Show the find widget."""
         # Get the selected text if any
         if self._terminal_widget.has_selection():
@@ -514,12 +521,12 @@ class TerminalTab(TabBase):
         )
         self.status_message.emit(message)
 
-    def _close_find(self):
+    def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
         self._terminal_widget.clear_find()
 
-    def _find_next(self, forward: bool = True):
+    def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
         self._terminal_widget.find_text(text, forward)

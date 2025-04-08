@@ -34,7 +34,7 @@ class AIConversation:
         self,
         conversation_id: str,
         ai_backends: Dict[str, Any]
-    ):
+    ) -> None:
         """Initialize the AIConversation.
 
         Args:
@@ -88,7 +88,7 @@ class AIConversation:
         if callback in self._callbacks[event]:
             self._callbacks[event].remove(callback)
 
-    async def _trigger_event(self, event: AIConversationEvent, *args, **kwargs) -> None:
+    async def _trigger_event(self, event: AIConversationEvent, *args: Any, **kwargs: Any) -> None:
         """
         Trigger all callbacks registered for an event.
 
@@ -186,7 +186,7 @@ class AIConversation:
         task = asyncio.create_task(self._start_ai())
         self._current_tasks.append(task)
 
-        def task_done_callback(task):
+        def task_done_callback(task: asyncio.Task) -> None:
             try:
                 self._current_tasks.remove(task)
             except ValueError:

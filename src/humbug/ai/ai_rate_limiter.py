@@ -13,9 +13,9 @@ class AIRateLimiter:
         """Initialize rate limiter with window size in seconds."""
         self._window_size = window_size
         self._max_requests = max_requests
-        self._requests: Deque[int] = deque()
+        self._requests: Deque[float] = deque()
 
-    async def acquire(self):
+    async def acquire(self) -> None:
         """Wait until a request can be made within rate limits."""
         now = time.time()
 
