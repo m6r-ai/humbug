@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QSize
 from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor, QFont
 )
 
 from humbug.gui.color_role import ColorRole
@@ -20,6 +20,7 @@ from humbug.gui.tab.conversation.conversation_language_highlighter import Conver
 from humbug.gui.tab.conversation.conversation_markdown_renderer import ConversationMarkdownRenderer
 from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.language.language_manager import LanguageManager
+from humbug.markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -111,7 +112,7 @@ class ConversationMessageSection(QFrame):
 
         self._layout.addWidget(self._text_area)
 
-        self._content_node = None
+        self._content_node: MarkdownASTNode | None = None
 
         # Render directly to the document
         document = self._text_area.document()
@@ -181,17 +182,17 @@ class ConversationMessageSection(QFrame):
         if self._save_as_button:
             self._save_as_button.setToolTip(strings.tooltip_save_contents)
 
-    def _on_mouse_pressed(self, event: QMouseEvent):
+    def _on_mouse_pressed(self, event: QMouseEvent) -> None:
         """Handle mouse press from text area."""
         if event.buttons() == Qt.MouseButton.LeftButton:
             self._mouse_left_button_pressed = True
 
-    def _on_mouse_released(self, _event: QMouseEvent):
+    def _on_mouse_released(self, _event: QMouseEvent) -> None:
         """Handle mouse release from text area."""
         self._mouse_left_button_pressed = False
         self.mouseReleased.emit()
 
-    def _on_selection_changed(self):
+    def _on_selection_changed(self) -> None:
         """Handle selection changes in the text area."""
         cursor = self._text_area.textCursor()
         has_selection = cursor.hasSelection()
@@ -202,21 +203,21 @@ class ConversationMessageSection(QFrame):
 
         self.selectionChanged.emit(has_selection)
 
-    def _on_code_block_state_changed(self, has_code_block: bool):
+    def _on_code_block_state_changed(self, has_code_block: bool) -> None:
         """Handle changes in code block state."""
         self._text_area.set_has_code_block(has_code_block)
 
         # Ensure proper scroll behavior
         self.updateGeometry()
 
-    def _copy_all_content(self):
+    def _copy_all_content(self) -> None:
         """Copy all content in the text area to clipboard."""
         # Store current selection
         old_cursor = self._text_area.textCursor()
 
         # Select all text
         cursor = QTextCursor(self._text_area.document())
-        cursor.select(QTextCursor.Document)
+        cursor.select(QTextCursor.SelectionType.Document)
         self._text_area.setTextCursor(cursor)
 
         # Copy to clipboard
@@ -225,7 +226,7 @@ class ConversationMessageSection(QFrame):
         # Restore previous selection
         self._text_area.setTextCursor(old_cursor)
 
-    def _save_as(self):
+    def _save_as(self) -> bool:
         """Show save as dialog and save file."""
         strings = self._language_manager.strings
 
@@ -236,10 +237,10 @@ class ConversationMessageSection(QFrame):
         # Show file dialog
         export_dialog = QFileDialog()
         export_dialog.setWindowTitle(strings.file_dialog_save_file)
-        export_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        export_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         export_dialog.selectFile(default_filename)
 
-        if export_dialog.exec_() != QFileDialog.Accepted:
+        if export_dialog.exec_() != QFileDialog.DialogCode.Accepted:
             return False
 
         filename = export_dialog.selectedFiles()[0]
@@ -262,16 +263,17 @@ class ConversationMessageSection(QFrame):
             )
             return False
 
-    def set_content(self, content):
+    def set_content(self, content: MarkdownASTNode) -> None:
         """
         Set the content of this section.
 
         Args:
-            content: Either a MarkdownASTNode or text content
+            content: A MarkdownASTNode text content
         """
         # If we have code block node, extract its content as plain text
         if not self._use_markdown:
-            self._text_area.set_text(content.content)
+            text_content = cast(MarkdownTextNode, content)
+            self._text_area.set_text(text_content.content)
             return
 
         # Store for re-styling
@@ -297,11 +299,11 @@ class ConversationMessageSection(QFrame):
 
         return ""
 
-    def copy_selection(self):
+    def copy_selection(self) -> None:
         """Copy selected text to clipboard."""
         self._text_area.copy()
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         """Clear any text selection in this section."""
         cursor = self._text_area.textCursor()
         cursor.clearSelection()
@@ -380,7 +382,7 @@ class ConversationMessageSection(QFrame):
 
         self._text_area.setExtraSelections(selections)
 
-    def clear_highlights(self):
+    def clear_highlights(self) -> None:
         """Clear all highlights from the section."""
         self._text_area.setExtraSelections([])
 
@@ -406,7 +408,7 @@ class ConversationMessageSection(QFrame):
 
         return local_pos
 
-    def apply_style(self, text_color: str, background_color: str, font):
+    def apply_style(self, text_color: str, background_color: str, font: QFont) -> None:
         """
         Apply styling to this section.
 

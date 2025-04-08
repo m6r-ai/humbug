@@ -196,7 +196,7 @@ class MindspaceFileTree(QWidget):
                     strings.rename_error_generic.format(str(e))
                 )
 
-    def _create_new_file(self, extension):
+    def _create_new_file(self, extension: str) -> None:
         """Create a new file with the specified extension."""
         strings = self._language_manager.strings
 
@@ -228,7 +228,7 @@ class MindspaceFileTree(QWidget):
                 strings.file_creation_error.format(str(e))
             )
 
-    def _handle_delete_file(self, path: str):
+    def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
 
         Args:
@@ -263,7 +263,7 @@ class MindspaceFileTree(QWidget):
                     [MessageBoxButton.OK]
                 )
 
-    def _handle_rename_conversation(self, path: str):
+    def _handle_rename_conversation(self, path: str) -> None:
         """Handle request to rename a conversation file.
 
         Args:
@@ -316,7 +316,7 @@ class MindspaceFileTree(QWidget):
                 [MessageBoxButton.OK]
             )
 
-    def set_mindspace(self, path: str):
+    def set_mindspace(self, path: str) -> None:
         """Set the mindspace root directory."""
         self._mindspace_path = path
 
@@ -341,7 +341,7 @@ class MindspaceFileTree(QWidget):
         self._tree_view.header().hideSection(2)  # Type
         self._tree_view.header().hideSection(3)  # Date
 
-    def _handle_activation(self, index: QModelIndex):
+    def _handle_activation(self, index: QModelIndex) -> None:
         """Handle item activation (double-click or Enter)."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
@@ -351,14 +351,14 @@ class MindspaceFileTree(QWidget):
         if os.path.isfile(path):
             self.file_activated.emit(path)
 
-    def _handle_language_changed(self):
+    def _handle_language_changed(self) -> None:
         """Update when the language changes."""
         if not self._mindspace_path:
             self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
 
         self._handle_style_changed()
 
-    def _handle_style_changed(self):
+    def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor
         base_font_size = self._style_manager.base_font_size
@@ -370,7 +370,8 @@ class MindspaceFileTree(QWidget):
 
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
-        self._tree_view.setIconSize(QSize(16 * zoom_factor, 16 * zoom_factor))
+        file_icon_size = int(16 * zoom_factor)
+        self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
 
         # Update font size for tree
         self.setFont(font)
