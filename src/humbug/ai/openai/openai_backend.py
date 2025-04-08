@@ -34,7 +34,7 @@ class OpenAIBackend(AIBackend):
         self._logger.debug("stream message %r", data)
         return data
 
-    def _create_stream_response_handler(self):
+    def _create_stream_response_handler(self) -> OpenAIStreamResponse:
         """Create an OpenAI-specific stream response handler."""
         return OpenAIStreamResponse()
 

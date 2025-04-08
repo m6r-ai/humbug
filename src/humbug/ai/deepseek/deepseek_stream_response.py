@@ -1,38 +1,28 @@
 """Handles streaming response from Deepseek API."""
 
-import logging
+from typing import Dict
 
-from humbug.ai.ai_usage import AIUsage
-from humbug.ai.ai_response import AIError
+from humbug.ai.ai_stream_response import AIStreamResponse
 
 
-class DeepseekStreamResponse:
+class DeepseekStreamResponse(AIStreamResponse):
     """Handles streaming response from Deepseek API."""
 
-    def __init__(self) -> None:
-        """Initialize stream response handler."""
-        self.reasoning = ""
-        self.content = ""
-        self.usage: AIUsage | None = None
-        self.error: AIError | None = None
-        self._logger = logging.getLogger("DeepseekStreamResponse")
+    def update_from_chunk(self, chunk: Dict) -> None:
+        """
+        Update from a response chunk and return new content if any.
 
-    def update_from_chunk(self, chunk: dict) -> None:
-        """Update from a response chunk and return new content if any."""
+        Args:
+            chunk: Response chunk from Deepseek API
+        """
         if "error" in chunk:
-            self._logger.debug("Got error message: %s", chunk["error"])
-            self.error = AIError(
-                code="stream_error",
-                message=chunk["error"].get("message", "Unknown error"),
-                retries_exhausted=True,
-                details=chunk["error"]
-            )
+            self._handle_error(chunk["error"])
             return
 
         if "usage" in chunk:
             usage = chunk["usage"]
             if usage:
-                self.usage = AIUsage(
+                self._update_usage(
                     prompt_tokens=usage.get("prompt_tokens", 0),
                     completion_tokens=usage.get("completion_tokens", 0),
                     total_tokens=usage.get("total_tokens", 0)
@@ -46,6 +36,7 @@ class DeepseekStreamResponse:
             return
 
         delta = choices[0].get("delta", {})
+
         if "reasoning_content" in delta:
             new_reasoning = delta["reasoning_content"]
             if new_reasoning:

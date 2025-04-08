@@ -32,11 +32,11 @@ class OllamaBackend(AIBackend):
         }
         return data
 
-    def _create_stream_response_handler(self):
+    def _create_stream_response_handler(self) -> OllamaStreamResponse:
         """Create an Ollama-specific stream response handler."""
         return OllamaStreamResponse()
 
-    def _get_api_url(self, settings: AIConversationSettings) -> str:
+    def _get_api_url(self, _settings: AIConversationSettings) -> str:
         """Get the Ollama API URL."""
         return self._api_url
 

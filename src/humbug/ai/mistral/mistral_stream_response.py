@@ -1,38 +1,28 @@
 """Handles streaming response from Mistral API."""
 
-import logging
+from typing import Dict
 
-from humbug.ai.ai_usage import AIUsage
-from humbug.ai.ai_response import AIError
+from humbug.ai.ai_stream_response import AIStreamResponse
 
 
-class MistralStreamResponse:
+class MistralStreamResponse(AIStreamResponse):
     """Handles streaming response from Mistral API."""
 
-    def __init__(self) -> None:
-        """Initialize stream response handler."""
-        self.reasoning = ""
-        self.content = ""
-        self.usage: AIUsage | None = None
-        self.error: AIError | None = None
-        self._logger = logging.getLogger("MistralStreamResponse")
+    def update_from_chunk(self, chunk: Dict) -> None:
+        """
+        Update from a response chunk and return new content if any.
 
-    def update_from_chunk(self, chunk: dict) -> None:
-        """Update from a response chunk and return new content if any."""
+        Args:
+            chunk: Response chunk from Mistral API
+        """
         if "error" in chunk:
-            self._logger.debug("Got error message: %s", chunk["error"])
-            self.error = AIError(
-                code="stream_error",
-                message=chunk["error"].get("message", "Unknown error"),
-                retries_exhausted=True,
-                details=chunk["error"]
-            )
+            self._handle_error(chunk["error"])
             return
 
         if "usage" in chunk:
             usage = chunk["usage"]
             if usage:
-                self.usage = AIUsage(
+                self._update_usage(
                     prompt_tokens=usage.get("prompt_tokens", 0),
                     completion_tokens=usage.get("completion_tokens", 0),
                     total_tokens=usage.get("total_tokens", 0)

@@ -51,7 +51,7 @@ class GoogleBackend(AIBackend):
 
         return data
 
-    def _create_stream_response_handler(self):
+    def _create_stream_response_handler(self) -> GoogleStreamResponse:
         """Create a Google-specific stream response handler."""
         return GoogleStreamResponse()
 

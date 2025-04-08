@@ -34,7 +34,7 @@ class MistralBackend(AIBackend):
         self._logger.debug("stream message %r", data)
         return data
 
-    def _create_stream_response_handler(self):
+    def _create_stream_response_handler(self) -> MistralStreamResponse:
         """Create an Mistral-specific stream response handler."""
         return MistralStreamResponse()
 

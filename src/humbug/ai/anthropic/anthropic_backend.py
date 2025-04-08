@@ -42,7 +42,7 @@ class AnthropicBackend(AIBackend):
 
         return data
 
-    def _create_stream_response_handler(self):
+    def _create_stream_response_handler(self) -> AnthropicStreamResponse:
         """Create an Anthropic-specific stream response handler."""
         return AnthropicStreamResponse()
 

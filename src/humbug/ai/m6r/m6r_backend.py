@@ -31,7 +31,7 @@ class M6RBackend(AIBackend):
 
         return data
 
-    def _create_stream_response_handler(self):
+    def _create_stream_response_handler(self) -> M6RStreamResponse:
         """Create a M6R-specific stream response handler."""
         return M6RStreamResponse()
 

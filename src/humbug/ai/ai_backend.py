@@ -14,6 +14,7 @@ from aiohttp import ClientConnectorError, ClientError
 import certifi
 
 from humbug.ai.ai_response import AIResponse, AIError
+from humbug.ai.ai_stream_response import AIStreamResponse
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_rate_limiter import AIRateLimiter
 
@@ -38,7 +39,7 @@ class AIBackend(ABC):
 
         self._ssl_context = ssl.create_default_context(cafile=cert_path)
 
-    def update_conversation_settings(self, conversation_id: str, settings: AIConversationSettings):
+    def update_conversation_settings(self, conversation_id: str, settings: AIConversationSettings) -> None:
         """Update settings for a specific conversation."""
         self._conversation_settings[conversation_id] = settings
 
@@ -51,7 +52,7 @@ class AIBackend(ABC):
         """Abstract method to build backend-specific request data."""
 
     @abstractmethod
-    def _create_stream_response_handler(self):
+    def _create_stream_response_handler(self) -> AIStreamResponse:
         """Abstract method to create a backend-specific stream response handler."""
 
     @abstractmethod
