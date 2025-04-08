@@ -53,7 +53,7 @@ class ConversationWidgetEventFilter(QObject):
     widget_activated = Signal(object)
     widget_deactivated = Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the event filter."""
         super().__init__(parent)
 
@@ -143,7 +143,7 @@ class ConversationWidget(QWidget):
             # Register callbacks for AIConversation events
             self._register_ai_conversation_callbacks()
 
-        self._last_submitted_message = None
+        self._last_submitted_message: str = ""
 
         self._last_update_time: float = 0  # Timestamp of last UI update
         self._update_timer = QTimer(self)  # Timer for throttled updates
@@ -325,7 +325,7 @@ class ConversationWidget(QWidget):
 
             if self._last_submitted_message:
                 self._input.set_plain_text(self._last_submitted_message)
-                self._last_submitted_message = None
+                self._last_submitted_message = ""
                 self._input.setFocus()
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
@@ -470,7 +470,7 @@ class ConversationWidget(QWidget):
         """Get the timestamp of the conversation."""
         return self._timestamp
 
-    def _handle_selection_scroll(self, mouse_pos: QPoint):
+    def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
         viewport_pos = self._scroll_area.viewport().mapFromGlobal(mouse_pos)
 
@@ -479,14 +479,14 @@ class ConversationWidget(QWidget):
 
         self._last_mouse_pos = viewport_pos
 
-    def _stop_scroll(self):
+    def _stop_scroll(self) -> None:
         """Stop any ongoing selection scrolling."""
         if self._scroll_timer.isActive():
             self._scroll_timer.stop()
 
         self._last_mouse_pos = None
 
-    def _update_scroll(self):
+    def _update_scroll(self) -> None:
         """Update scroll position based on mouse position."""
         if self._last_mouse_pos is None:
             self._scroll_timer.stop()
@@ -503,6 +503,7 @@ class ConversationWidget(QWidget):
             distance_out = -self._last_mouse_pos.y()
             if distance_out > viewport_height * 2:
                 scrollbar.setValue(scrollbar.minimum())
+
             else:
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = max(scrollbar.minimum(), current_val - scroll_amount)
@@ -513,6 +514,7 @@ class ConversationWidget(QWidget):
             distance_out = self._last_mouse_pos.y() - viewport_height
             if distance_out > viewport_height * 2:
                 scrollbar.setValue(scrollbar.maximum())
+
             else:
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = min(scrollbar.maximum(), current_val + scroll_amount)
@@ -563,6 +565,7 @@ class ConversationWidget(QWidget):
 
         if self._auto_scroll:
             self._scroll_to_bottom()
+
         elif current_pos > last_insertion_point:
             if self._last_scroll_maximum != maximum:
                 max_diff = maximum - self._last_scroll_maximum
@@ -589,7 +592,7 @@ class ConversationWidget(QWidget):
         for child in widget.findChildren(QWidget):
             cast(QWidget, child).installEventFilter(self._event_filter)
 
-    def _handle_widget_activation(self, widget):
+    def _handle_widget_activation(self, widget: QWidget) -> None:
         """
         Handle activation of a widget, focusing the associated message.
 
@@ -611,11 +614,12 @@ class ConversationWidget(QWidget):
         if message_widget in self._messages:
             self._focused_message_index = self._messages.index(message_widget)
             message_widget.set_focused(True)
+
         else:
             self._focused_message_index = -1
             self._input.set_focused(True)
 
-    def _handle_widget_deactivation(self, widget):
+    def _handle_widget_deactivation(self, widget: QWidget) -> None:
         """
         Handle deactivation of a widget, checking if focus is leaving the associated message.
 
@@ -630,10 +634,11 @@ class ConversationWidget(QWidget):
         # Remove focus from the currently focused message
         if self._focused_message_index != -1:
             self._messages[self._focused_message_index].set_focused(False)
+
         else:
             self._input.set_focused(False)
 
-    def _find_conversation_message(self, widget):
+    def _find_conversation_message(self, widget: QWidget) -> ConversationMessage | None:
         """
         Find the ConversationMessage that contains the given widget.
 
@@ -643,7 +648,7 @@ class ConversationWidget(QWidget):
         Returns:
             The ConversationMessage containing the widget, or None if not found
         """
-        current = widget
+        current: QObject = widget
         while current:
             if isinstance(current, ConversationMessage):
                 return current
@@ -695,17 +700,18 @@ class ConversationWidget(QWidget):
 
         return False
 
-    def _focus_message(self):
+    def _focus_message(self) -> None:
         """Focus and highlight the specified message."""
         index = self._focused_message_index
         if 0 <= index < len(self._messages):
             self._messages[index].set_focused(True)
             self._scroll_to_message(self._messages[index])
-        else:
-            self._input.set_focused(True)
-            self._scroll_to_message(self._input)
+            return
 
-    def _scroll_to_message(self, message: ConversationMessage):
+        self._input.set_focused(True)
+        self._scroll_to_message(self._input)
+
+    def _scroll_to_message(self, message: ConversationMessage) -> None:
         """Ensure the message is visible in the scroll area."""
         # Get the position of the message in the scroll area
         message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
@@ -720,10 +726,12 @@ class ConversationWidget(QWidget):
         if delta < 0:
             # Message is above visible area
             self._scroll_area.verticalScrollBar().setValue(message_pos.y())
+
         elif delta + message.height() > viewport_height:
             # Message is below visible area
             if message.height() > viewport_height:
                 self._scroll_area.verticalScrollBar().setValue(message_pos.y())
+
             else:
                 self._scroll_area.verticalScrollBar().setValue(message_pos.y() + message.height() - viewport_height + 10)
 
@@ -735,7 +743,7 @@ class ConversationWidget(QWidget):
         """Check if navigation to previous message is possible."""
         return self._input.hasFocus() or (0 <= self._focused_message_index < len(self._messages) and self._focused_message_index > 0)
 
-    def _toggle_message_bookmark(self, message_widget: ConversationMessage):
+    def _toggle_message_bookmark(self, message_widget: ConversationMessage) -> None:
         """Toggle bookmark status for a message."""
         if message_widget in self._bookmarked_messages:
             # Remove bookmark
@@ -753,7 +761,7 @@ class ConversationWidget(QWidget):
         # Reset bookmark index when bookmarks change
         self._current_bookmark_index = None
 
-    def navigate_bookmarks(self, forward: bool = True):
+    def navigate_bookmarks(self, forward: bool = True) -> None:
         """Navigate between bookmarked messages."""
         if not self._bookmarked_messages:
             return
@@ -778,7 +786,7 @@ class ConversationWidget(QWidget):
         # Restore the scroll position
         self._scroll_area.verticalScrollBar().setValue(bookmark_data.scroll_position)
 
-    def _handle_selection_changed(self, message_widget: ConversationMessage, has_selection: bool):
+    def _handle_selection_changed(self, message_widget: ConversationMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
         if not has_selection:
             if self._message_with_selection:
@@ -793,14 +801,15 @@ class ConversationWidget(QWidget):
 
         if message_widget == self._input:
             self._message_with_selection = None
-        else:
-            self._message_with_selection = message_widget
+            return
+
+        self._message_with_selection = message_widget
 
     def has_selection(self) -> bool:
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
-    def update_path(self, new_id: str, new_path: str):
+    def update_path(self, new_id: str, new_path: str) -> None:
         """Update the conversation file path.
 
         Args:
@@ -818,7 +827,7 @@ class ConversationWidget(QWidget):
         # Input cursor has already moved - just ensure it's visible
         self._ensure_cursor_visible()
 
-    def _ensure_cursor_visible(self):
+    def _ensure_cursor_visible(self) -> None:
         """Ensure the cursor remains visible when it moves."""
         total_height = sum(msg.sizeHint().height() + self._messages_layout.spacing() for msg in self._messages)
         input_cursor = self._input.cursor_rect()
@@ -858,16 +867,16 @@ class ConversationWidget(QWidget):
             50   # ymargin - provide some context around the match
         )
 
-    def set_input_text(self, text: str):
+    def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._input.set_plain_text(text)
         self._input.setFocus()
 
-    def _set_initial_focus(self):
+    def _set_initial_focus(self) -> None:
         """Set initial focus to input area."""
         self._input.setFocus()
 
-    def load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool):
+    def load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool) -> None:
         """
         Load existing message history from transcript.
 
@@ -911,12 +920,12 @@ class ConversationWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-    def cancel_current_tasks(self):
+    def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""
         ai_conversation = cast(AIConversation, self._ai_conversation)
         ai_conversation.cancel_current_tasks()
 
-    def update_conversation_settings(self, new_settings: AIConversationSettings):
+    def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
         ai_conversation = cast(AIConversation, self._ai_conversation)
         ai_conversation.update_conversation_settings(new_settings)
@@ -956,7 +965,7 @@ class ConversationWidget(QWidget):
             }}
         """)
 
-    def _show_conversation_context_menu(self, pos) -> None:
+    def _show_conversation_context_menu(self, pos: QPoint) -> None:
         """
         Create and show the context menu at the given position.
 
@@ -1106,7 +1115,7 @@ class ConversationWidget(QWidget):
         """
         return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
 
-    def submit(self):
+    def submit(self) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
         if not content:
@@ -1124,10 +1133,13 @@ class ConversationWidget(QWidget):
 
         # Submit the message to the AIConversation instance
         loop = asyncio.get_event_loop()
-        if (loop.is_running()):
-            loop.create_task(self._add_message(message))
-            loop.create_task(self._ai_conversation.submit_message(message))
-            loop.create_task(self._write_transcript(message))
+        if not loop.is_running():
+            return
+
+        loop.create_task(self._add_message(message))
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        loop.create_task(ai_conversation.submit_message(message))
+        loop.create_task(self._write_transcript(message))
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""

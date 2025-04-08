@@ -4,7 +4,7 @@ from typing import List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QComboBox, QDoubleSpinBox, QListView
+    QComboBox, QDoubleSpinBox, QListView, QWidget
 )
 from PySide6.QtCore import Signal, Qt
 
@@ -20,7 +20,7 @@ class ConversationSettingsDialog(QDialog):
 
     settings_changed = Signal(AIConversationSettings)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the conversation settings dialog."""
         super().__init__(parent)
         self._language_manager = LanguageManager()

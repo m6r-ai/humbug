@@ -9,7 +9,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QPushButton, QSpinBox, QCheckBox, QDoubleSpinBox, QListView
+    QPushButton, QSpinBox, QCheckBox, QDoubleSpinBox, QListView, QWidget
 )
 from PySide6.QtCore import Signal
 
@@ -26,7 +26,7 @@ class MindspaceSettingsDialog(QDialog):
 
     settings_changed = Signal(MindspaceSettings)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         """
         Initialize the mindspace settings dialog.
 
