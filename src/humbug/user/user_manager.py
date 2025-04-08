@@ -34,10 +34,11 @@ class UserManager(QObject):
     _instance = None
     _logger = logging.getLogger("UserManager")
 
-    def __new__(cls):
+    def __new__(cls) -> 'UserManager':
         """Create or return singleton instance."""
         if cls._instance is None:
             cls._instance = super(UserManager, cls).__new__(cls)
+
         return cls._instance
 
     def __init__(self) -> None:
