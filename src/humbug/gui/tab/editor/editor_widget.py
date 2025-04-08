@@ -2,7 +2,10 @@ from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit
 from PySide6.QtCore import Qt, QRect
-from PySide6.QtGui import QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat
+from PySide6.QtGui import (
+    QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
+    QFocusEvent, QResizeEvent, QPaintEvent
+)
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -54,7 +57,7 @@ class EditorWidget(QPlainTextEdit):
         self._last_search = ""
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
-    def focusInEvent(self, event):
+    def focusInEvent(self, event: QFocusEvent) -> None:
         """Handle focus in event."""
         super().focusInEvent(event)
 
@@ -77,18 +80,18 @@ class EditorWidget(QPlainTextEdit):
         digit_width = self.fontMetrics().horizontalAdvance('9')
         return digit_width * (digits + 4)
 
-    def update_line_number_area_width(self):
+    def update_line_number_area_width(self) -> None:
         """Update the margins to accommodate the line numbers."""
         width = self.line_number_area_width()
 
         # Set margin on appropriate side based on layout direction
-        if self.layoutDirection() == Qt.RightToLeft:
+        if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
             self.setViewportMargins(0, 0, 0, 0)  # Right margin
 
         else:
             self.setViewportMargins(width, 0, 0, 0)  # Left margin
 
-    def _update_line_number_area(self, rect, dy):
+    def _update_line_number_area(self, rect: QRect, dy: int) -> None:
         """Handle updates to the line number area."""
         if dy:
             self._line_number_area.scroll(0, dy)
@@ -100,7 +103,7 @@ class EditorWidget(QPlainTextEdit):
         if rect.contains(self.viewport().rect()):
             self.update_line_number_area_width()
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
         super().resizeEvent(event)
         cr = self.contentsRect()
@@ -122,7 +125,7 @@ class EditorWidget(QPlainTextEdit):
                 cr.height()
             )
 
-    def line_number_area_paint_event(self, event):
+    def line_number_area_paint_event(self, event: QPaintEvent) -> None:
         """Paint the line numbers."""
         painter = QPainter(self._line_number_area)
         bg_color = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
@@ -140,7 +143,7 @@ class EditorWidget(QPlainTextEdit):
         padding = self.fontMetrics().horizontalAdvance('9') * 2
 
         # Adjust alignment and padding based on layout direction
-        is_rtl = self.layoutDirection() == Qt.RightToLeft
+        is_rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
         alignment = Qt.AlignmentFlag.AlignLeft if is_rtl else Qt.AlignmentFlag.AlignRight
 
         while block.isValid() and top <= event.rect().bottom():
