@@ -43,8 +43,6 @@ class TerminalState:
         self._screen_reverse_mode = False
         self._mouse_tracking = MouseTrackingState()
 
-        self.clipboard_data = None
-
         # Default colors (will be set by widget)
         self._default_fg = 0
         self._default_bg = 0
@@ -317,33 +315,8 @@ class TerminalState:
             elif command == 7:  # Set working directory
                 self._current_directory = param
 
-            elif command == 52:  # Manipulate selection data
-                self._handle_selection_data(param)
-
         except (ValueError, IndexError) as e:
             self._logger.warning("Invalid OSC sequence: %r, error: %s", sequence, e)
-
-    def _handle_selection_data(self, param: str):
-        """Handle OSC 52 selection data operations."""
-        try:
-            clipboard, data = param.split(';', 1)
-            if clipboard in ('c', 'p', 's'):  # Primary, clipboard, or secondary selection
-                if data == '?':  # Query
-                    # Should emit response with current selection
-                    pass
-
-                elif data:  # Set
-                    # Base64 decode data and update clipboard
-                    decoded = base64.b64decode(data).decode('utf-8')
-
-                    # Note: Actual clipboard operation will be handled by widget
-                    self.clipboard_data = decoded
-
-                else:  # Clear
-                    self.clipboard_data = None
-
-        except (ValueError, TypeError) as e:
-            self._logger.warning("Invalid selection data: %r: %s", param, e)
 
     def _process_private_mode(self, params: str, set_mode: bool):
         """Handle DEC private mode sequences (DECSET/DECRST)."""

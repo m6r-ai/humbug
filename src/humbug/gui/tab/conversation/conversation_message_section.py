@@ -368,8 +368,8 @@ class ConversationMessageSection(QFrame):
             cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
 
             extra_selection = QTextEdit.ExtraSelection()
-            extra_selection.cursor = cursor
-            extra_selection.format = current_format if i == current_match_index else other_format
+            extra_selection.cursor = cursor # type: ignore
+            extra_selection.format = current_format if i == current_match_index else other_format  # type: ignore
 
             selections.append(extra_selection)
 

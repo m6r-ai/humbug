@@ -1,6 +1,12 @@
 # File: unix_terminal.py
 """Unix-specific terminal implementation."""
 
+import sys
+
+if sys.platform == 'win32':
+    # type: ignore
+    raise ImportError("This module is only available on Unix-like systems.")
+
 import asyncio
 import fcntl
 import os

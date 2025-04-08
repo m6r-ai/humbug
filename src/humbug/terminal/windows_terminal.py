@@ -1,9 +1,15 @@
 # File: windows_terminal.py
 """Windows-specific terminal implementation."""
 
+import sys
+if sys.platform != 'win32':
+    # type: ignore
+    raise ImportError("This module is only available on Windows systems.")
+
+
 import asyncio
 import ctypes
-from ctypes import windll, byref, pointer, c_void_p, c_ulong, Structure
+from ctypes import windll, byref, pointer, c_void_p, c_ulong, Structure  # type: ignore
 from ctypes import c_size_t, POINTER
 from ctypes.wintypes import HANDLE, DWORD, WORD, LPWSTR, BOOL, LPVOID, BYTE
 import msvcrt
