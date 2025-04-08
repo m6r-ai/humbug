@@ -293,7 +293,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setBlockFormat(orig_block_format)
 
-    def _list_node_visitor(self, node):
+    def _list_node_visitor(self, node: MarkdownOrderedListNode | MarkdownUnorderedListNode) -> None:
         """
         Handle the common list node visitor operations.
 

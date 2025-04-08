@@ -4,11 +4,11 @@ import logging
 from typing import cast
 
 from PySide6.QtWidgets import (
-    QFrame, QTextEdit, QSizePolicy, QScrollArea
+    QFrame, QTextEdit, QSizePolicy, QScrollArea, QWidget
 )
 from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot, QObject
 from PySide6.QtGui import (
-    QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
+    QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
 )
 
 from humbug.gui.style_manager import StyleManager
@@ -23,7 +23,7 @@ class ConversationTextEdit(QTextEdit):
     mouseReleased = Signal(QMouseEvent)
     pageScrollRequested = Signal()
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
         self.document().setDocumentMargin(0)
@@ -65,16 +65,17 @@ class ConversationTextEdit(QTextEdit):
     def _handle_style_changed(self) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Propagate mouse press events to parent."""
         super().mousePressEvent(event)
         self.mousePressed.emit(event)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """Propagate mouse release events to parent."""
         super().mouseReleaseEvent(event)
         self.mouseReleased.emit(event)
 
-    def set_has_code_block(self, has_code: bool):
+    def set_has_code_block(self, has_code: bool) -> None:
         """Update word wrap mode based on whether content contains code blocks."""
         if has_code == self._has_code_block:
             return
@@ -83,6 +84,7 @@ class ConversationTextEdit(QTextEdit):
         if has_code:
             self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
         else:
             self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -94,7 +96,7 @@ class ConversationTextEdit(QTextEdit):
         """Check if content contains code blocks."""
         return self._has_code_block
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""
         # If this is a code block, handle horizontal scrolling for compatible mice
         if self._has_code_block and event.angleDelta().x() != 0:
@@ -314,7 +316,7 @@ class ConversationTextEdit(QTextEdit):
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle special key events."""
         # Is this a read-only widget?  If it is then we don't want to process certain key events,
         # leaving it to the parent to handle them.
@@ -430,13 +432,17 @@ class ConversationTextEdit(QTextEdit):
                 if not cursor.hasSelection():
                     if settings.use_soft_tabs:
                         self._outdent_single_line_soft_tabs(cursor, settings.tab_size)
+
                     else:
                         self._outdent_single_line_hard_tabs(cursor)
+
                 else:
                     if settings.use_soft_tabs:
                         self._outdent_block_soft_tabs(cursor, settings.tab_size)
+
                     else:
                         self._outdent_block_hard_tabs(cursor)
+
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)
@@ -447,24 +453,22 @@ class ConversationTextEdit(QTextEdit):
 
         super().keyPressEvent(event)
 
-    @Slot()
-    def _on_content_changed(self):
+    def _on_content_changed(self) -> None:
         """Queue a content update instead of processing immediately."""
         if not self._pending_update:
             self._pending_update = True
             self._update_timer.start()
 
-    @Slot()
-    def _process_delayed_update(self):
+    def _process_delayed_update(self) -> None:
         """Process the queued size update."""
         self._pending_update = False
         self.updateGeometry()
 
         # Ensure parent ConversationMessage updates as well
         if self.parent():
-            self.parent().updateGeometry()
+            cast(QWidget, self.parent()).updateGeometry()
 
-    def set_text(self, text: str):
+    def set_text(self, text: str) -> None:
         """Update text content if we have anything new."""
         if len(text) == self._current_length:
             # No new content
@@ -472,7 +476,7 @@ class ConversationTextEdit(QTextEdit):
 
         self.setText(text)
 
-    def set_html(self, text: str):
+    def set_html(self, text: str) -> None:
         """Update HTML content if we have anything new."""
         if len(text) == self._current_length:
             # No new content
@@ -480,7 +484,7 @@ class ConversationTextEdit(QTextEdit):
 
         self.setHtml(text)
 
-    def clear(self):
+    def clear(self) -> None:
         """Override clear to reset current length."""
         super().clear()
         self._current_length = 0

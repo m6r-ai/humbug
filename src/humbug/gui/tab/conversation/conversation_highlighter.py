@@ -13,11 +13,11 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 class ConversationHighlighterBlockData(QTextBlockUserData):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.seen_fence = False
         self.fence_depth = 0
-        self.parser_state = None
+        self.parser_state: MarkdownParserState | None = None
 
 
 class ConversationHighlighter(QSyntaxHighlighter):
@@ -58,7 +58,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
             current_block_data = cast(ConversationHighlighterBlockData, current_block.userData())
             if current_block_data is not None:
                 current_fence_depth = current_block_data.fence_depth
-                current_parser_data: MarkdownParserState = current_block_data.parser_state
+                current_parser_data = current_block_data.parser_state
                 if current_parser_data is not None:
                     language = current_parser_data.language
                     contination_state = current_parser_data.continuation_state

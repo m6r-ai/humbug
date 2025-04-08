@@ -33,7 +33,9 @@ class EditorWidget(QPlainTextEdit):
         self._style_manager = StyleManager()
 
         # Setup line number area
-        self._line_number_area = EditorLineNumberArea(self)
+        self._line_number_area = EditorLineNumberArea(
+            self, self._line_number_area_width, self._line_number_area_paint_event
+        )
         font = self._line_number_area.font()
         font.setFamilies(self._style_manager.monospace_font_families)
         self.setFont(font)
@@ -69,7 +71,7 @@ class EditorWidget(QPlainTextEdit):
         self.update_line_number_area_width()
         self.viewport().update()
 
-    def line_number_area_width(self) -> int:
+    def _line_number_area_width(self) -> int:
         """Calculate the width needed for the line number area."""
         digits = 1
         max_num = max(1, self.blockCount())
@@ -82,7 +84,7 @@ class EditorWidget(QPlainTextEdit):
 
     def update_line_number_area_width(self) -> None:
         """Update the margins to accommodate the line numbers."""
-        width = self.line_number_area_width()
+        width = self._line_number_area_width()
 
         # Set margin on appropriate side based on layout direction
         if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
@@ -107,7 +109,7 @@ class EditorWidget(QPlainTextEdit):
         """Handle resize events."""
         super().resizeEvent(event)
         cr = self.contentsRect()
-        width = self.line_number_area_width()
+        width = self._line_number_area_width()
 
         if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
             self._line_number_area.setGeometry(
@@ -125,7 +127,7 @@ class EditorWidget(QPlainTextEdit):
                 cr.height()
             )
 
-    def line_number_area_paint_event(self, event: QPaintEvent) -> None:
+    def _line_number_area_paint_event(self, event: QPaintEvent) -> None:
         """Paint the line numbers."""
         painter = QPainter(self._line_number_area)
         bg_color = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)

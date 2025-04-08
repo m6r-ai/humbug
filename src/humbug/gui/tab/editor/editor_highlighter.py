@@ -14,9 +14,9 @@ from humbug.syntax.parser_registry import ParserRegistry
 
 class EditorHighlighterBlockData(QTextBlockUserData):
     """Data associated with each text block."""
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.parser_state = None
+        self.parser_state: ParserState | None = None
 
 
 class EditorHighlighter(QSyntaxHighlighter):

@@ -15,7 +15,7 @@ from humbug.language.language_manager import LanguageManager
 class MindspaceFoldersDialog(QDialog):
     """Dialog for selecting which folders to create in a new mindspace."""
 
-    def __init__(self, mindspace_path: str, parent=None):
+    def __init__(self, mindspace_path: str, parent: QWidget | None = None) -> None:
         """Initialize the mindspace folders dialog.
 
         Args:
@@ -183,7 +183,7 @@ class MindspaceFoldersDialog(QDialog):
         self.ok_button.setText(strings.ok)
         self.cancel_button.setText(strings.cancel)
 
-    def _handle_style_changed(self):
+    def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor
