@@ -1,18 +1,22 @@
 """
 Visitor class to print markdown AST structures for debugging
 """
+from typing import List, Any
 
-from humbug.markdown.markdown_ast_node import MarkdownASTVisitor
+from humbug.markdown.markdown_ast_node import (
+    MarkdownASTVisitor, MarkdownTextNode, MarkdownHeadingNode, MarkdownInlineCodeNode,
+    MarkdownCodeBlockNode, MarkdownASTNode
+)
 
 
 class MarkdownASTPrinter(MarkdownASTVisitor):
     """Visitor that prints the AST structure for debugging."""
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the AST printer with zero indentation."""
         super().__init__()
         self.indent_level = 0
 
-    def _indent(self):
+    def _indent(self) -> str:
         """
         Get the current indentation string.
 
@@ -21,7 +25,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         """
         return "  " * self.indent_level
 
-    def generic_visit(self, node):
+    def generic_visit(self, node: MarkdownASTNode) -> List[Any]:
         """
         Default visit method that prints the node type.
 
@@ -42,7 +46,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownTextNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownTextNode(self, node: MarkdownTextNode) -> str:  # pylint: disable=invalid-name
         """
         Visit a text node and print its content.
 
@@ -59,7 +63,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         print(f"{self._indent()}Text{line_range}: '{node.content}'")
         return node.content
 
-    def visit_MarkdownHeadingNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownHeadingNode(self, node: MarkdownHeadingNode) -> List[Any]:  # pylint: disable=invalid-name
         """
         Visit a heading node and print its level.
 
@@ -79,7 +83,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownInlineCodeNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownInlineCodeNode(self, node: MarkdownInlineCodeNode) -> str:  # pylint: disable=invalid-name
         """
         Visit an inline code node and print its content.
 
@@ -96,7 +100,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         print(f"{self._indent()}InlineCode{line_range}: '{node.content}'")
         return node.content
 
-    def visit_MarkdownCodeBlockNode(self, node):  # pylint: disable=invalid-name
+    def visit_MarkdownCodeBlockNode(self, node: MarkdownCodeBlockNode) -> str:  # pylint: disable=invalid-name
         """
         Visit a code block node and print its language and content.
 

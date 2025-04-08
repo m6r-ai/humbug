@@ -180,9 +180,12 @@ class MessageBox(QDialog):
             MessageBoxButton.DISCARD: strings.discard
         }[button]
 
-    def _handle_button(self):
+    def _handle_button(self) -> None:
         """Handle button clicks."""
         button = self.sender()
+        if not isinstance(button, QPushButton):
+            return
+
         self.result_button = self._button_results[button]
         self.accept()
 
@@ -263,7 +266,7 @@ class MessageBox(QDialog):
     @classmethod
     def show_message(
         cls,
-        parent,
+        parent: QWidget | None,
         msg_type: MessageBoxType,
         title: str,
         text: str,

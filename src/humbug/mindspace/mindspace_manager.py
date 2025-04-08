@@ -43,11 +43,11 @@ class MindspaceManager(QObject):
     _instance = None
     _logger = logging.getLogger("MindspaceManager")
 
-    def __new__(cls):
+    def __new__(cls) -> 'MindspaceManager':
         """Create or return singleton instance."""
         if cls._instance is None:
             cls._instance = super(MindspaceManager, cls).__new__(cls)
-            # Note: Don't initialize here - wait for __init__
+
         return cls._instance
 
     def __init__(self) -> None:

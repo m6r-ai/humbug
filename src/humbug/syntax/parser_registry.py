@@ -19,7 +19,7 @@ class ParserRegistry:
     _instance = None
     _parser_classes: Dict[ProgrammingLanguage, Type[Parser]] = {}
 
-    def __new__(cls):
+    def __new__(cls) -> "ParserRegistry":
         """
         Implement the singleton pattern to ensure only one registry exists.
 

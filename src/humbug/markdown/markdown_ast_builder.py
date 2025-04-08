@@ -60,7 +60,13 @@ class MarkdownASTBuilder:
         self._code_block_start_line = -1
 
     @property
-    def document(self):
+    def document(self) -> MarkdownDocumentNode:
+        """
+        Get the current document node.
+
+        Returns:
+            The document node
+        """
         return self._document
 
     def identify_line_type(self, line: str) -> Tuple[str, Any]:

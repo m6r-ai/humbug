@@ -17,9 +17,10 @@ class LanguageManager(QObject):
     language_changed = Signal()
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls) -> 'LanguageManager':
         if cls._instance is None:
             cls._instance = super(LanguageManager, cls).__new__(cls)
+
         return cls._instance
 
     def __init__(self) -> None:

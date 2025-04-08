@@ -5,7 +5,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from humbug.ai.ai_message import AIMessage
 from humbug.gui.tab.conversation.conversation_transcript_error import (
@@ -15,7 +15,7 @@ from humbug.gui.tab.conversation.conversation_transcript_error import (
 
 class FloatOneDecimalEncoder(json.JSONEncoder):
     """JSON encoder that formats floats to one decimal place."""
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         """
         Convert object to JSON serializable form.
 
@@ -62,7 +62,7 @@ class ConversationTranscriptHandler:
 
             self._initialize_file(timestamp)
 
-    def update_path(self, new_path: str):
+    def update_path(self, new_path: str) -> None:
         """Update the transcript file path.
 
         Args:

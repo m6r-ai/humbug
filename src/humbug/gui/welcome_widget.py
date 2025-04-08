@@ -1,6 +1,6 @@
 """Welcome message widget implementation."""
 
-from PySide6.QtWidgets import QVBoxLayout, QLabel, QFrame
+from PySide6.QtWidgets import QVBoxLayout, QLabel, QFrame, QWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
 
@@ -13,7 +13,7 @@ class WelcomeWidget(QFrame):
     """Widget showing welcome message when no tabs are open."""
     file_dropped = Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         """Initialize welcome widget."""
         super().__init__(parent)
 

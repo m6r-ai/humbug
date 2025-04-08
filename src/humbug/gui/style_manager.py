@@ -41,10 +41,11 @@ class StyleManager(QObject):
     style_changed = Signal()
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls) -> 'StyleManager':
         """Create or return singleton instance."""
         if cls._instance is None:
             cls._instance = super(StyleManager, cls).__new__(cls)
+
         return cls._instance
 
     def __init__(self) -> None:
@@ -385,7 +386,7 @@ class StyleManager(QObject):
             }
         }
 
-    def _initialize_highlights(self):
+    def _initialize_highlights(self) -> None:
         # Mapping from token type to colour
         colour_mapping = {
             TokenType.ADDRESS: ColorRole.SYNTAX_ADDRESS,
@@ -448,7 +449,7 @@ class StyleManager(QObject):
 
         return text_highlight
 
-    def _initialize_proportional_highlights(self):
+    def _initialize_proportional_highlights(self) -> None:
         # Mapping from token type to colour
         colour_mapping = {
             TokenType.BLOCKQUOTE: ColorRole.SYNTAX_KEYWORD,
@@ -563,12 +564,12 @@ class StyleManager(QObject):
             </svg>
         '''
 
-    def _create_theme_icons(self):
+    def _create_theme_icons(self) -> None:
         """Create theme-specific icons in the user's .humbug directory."""
         icon_dir = os.path.expanduser("~/.humbug/icons")
         os.makedirs(icon_dir, exist_ok=True)
 
-        def write_icon(name: str, svg_data: str):
+        def write_icon(name: str, svg_data: str) -> None:
             with open(os.path.join(icon_dir, name), 'w', encoding='utf-8') as f:
                 f.write(svg_data)
 
@@ -832,7 +833,7 @@ class StyleManager(QObject):
         """Get the current color mode."""
         return self._color_mode
 
-    def set_color_mode(self, mode: ColorMode):
+    def set_color_mode(self, mode: ColorMode) -> None:
         """
         Set the color mode and update application styles.
 
@@ -850,7 +851,7 @@ class StyleManager(QObject):
         """Current zoom scaling factor."""
         return self._zoom_factor
 
-    def set_zoom(self, factor: float):
+    def set_zoom(self, factor: float) -> None:
         """
         Set new zoom factor and update application styles.
 

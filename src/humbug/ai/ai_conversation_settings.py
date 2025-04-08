@@ -1,6 +1,6 @@
 """Class to handle conversation settings."""
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Generator
 
 from humbug.ai.ai_model import AIModel, ReasoningCapability
 
@@ -355,7 +355,7 @@ class AIConversationSettings:
         return cls.DEFAULT_REASONING_CAPABILITY
 
     @classmethod
-    def iter_models_by_backends(cls, ai_backends: Dict[str, Any]):
+    def iter_models_by_backends(cls, ai_backends: Dict[str, Any]) -> Generator[str, None, None]:
         """
         Generator that yields models supported by available backends.
 

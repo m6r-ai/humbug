@@ -22,7 +22,7 @@ class MarkdownConverter:
     Abstract Syntax Tree (AST) representation and extraction of content sections for rendering.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the markdown converter with an AST builder and HTML renderer."""
         self.ast_builder = MarkdownASTBuilder(True)
 
@@ -76,11 +76,11 @@ class MarkdownConverter:
             List of (node, language) tuples where language is None for markdown content
             and a ProgrammingLanguage enum for code blocks
         """
-        sections = []
+        sections: List[tuple[MarkdownASTNode, ProgrammingLanguage | None]] = []
         current_markdown_nodes: List[MarkdownASTNode] = []
 
         # Helper function to add accumulated markdown content as a section
-        def add_markdown_section():
+        def add_markdown_section() -> None:
             if current_markdown_nodes:
                 # Create a container node for these markdown nodes
                 container = MarkdownDocumentNode()

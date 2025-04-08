@@ -9,7 +9,7 @@ import os
 __version__ = "0.9"
 
 
-def setup_logging():
+def setup_logging() -> None:
     """Configure application logging with timestamped files and rotation."""
     # Create logs directory in user's home .humbug directory
     log_dir = os.path.expanduser("~/.humbug/logs")
@@ -39,7 +39,7 @@ def setup_logging():
     cleanup_old_logs(log_dir, max_logs=50)
 
 
-def cleanup_old_logs(log_dir: str, max_logs: int):
+def cleanup_old_logs(log_dir: str, max_logs: int) -> None:
     """Remove oldest log files if we exceed maximum count."""
     log_files = glob.glob(os.path.join(log_dir, "*.log*"))
     log_files.sort(key=os.path.getctime)  # Sort by creation time

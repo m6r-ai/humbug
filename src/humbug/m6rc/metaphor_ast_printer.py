@@ -2,21 +2,22 @@
 Visitor class to print Metaphor AST structures for debugging
 """
 
+from typing import List, Any, Type
+
 from humbug.m6rc.metaphor_ast_node import (
-    MetaphorASTVisitor, MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode,
-    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode, MetaphorRootNode
+    MetaphorASTVisitor, MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode
 )
 
 
 class MetaphorASTPrinter(MetaphorASTVisitor):
     """Visitor that prints the Metaphor AST structure for debugging."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the AST printer with zero indentation."""
         super().__init__()
         self.indent_level = 0
 
-    def _indent(self):
+    def _indent(self) -> str:
         """
         Get the current indentation string.
 
@@ -25,7 +26,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         """
         return "  " * self.indent_level
 
-    def generic_visit(self, node: MetaphorASTNode):
+    def generic_visit(self, node: MetaphorASTNode) -> List[Any]:
         """
         Default visit method that prints the node type.
 
@@ -46,7 +47,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
 
         return results
 
-    def visit_MetaphorTextNode(self, node: MetaphorTextNode):
+    def visit_MetaphorTextNode(self, node: MetaphorTextNode) -> str:  # pylint: disable=invalid-name
         """
         Visit a text node and print its content.
 
@@ -59,7 +60,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         print(f"{self._indent()}Text: '{node.value}'")
         return node.value
 
-    def visit_MetaphorCodeNode(self, node: MetaphorCodeNode):
+    def visit_MetaphorCodeNode(self, node: MetaphorCodeNode) -> str:  # pylint: disable=invalid-name
         """
         Visit a code node and print a preview of its content.
 
@@ -73,7 +74,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         print(f"{self._indent()}Code: '{content_preview}' ({len(node.value)} chars)")
         return node.value
 
-    def visit_with_specific_types(self, node: MetaphorASTNode, types_to_show=None):
+    def visit_with_specific_types(self, node: MetaphorASTNode, types_to_show: List[Type[MetaphorASTNode]] | None = None) -> List[Any]:
         """
         Visit a node and only print details for specific node classes.
 

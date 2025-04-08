@@ -1,6 +1,5 @@
 """Terminal state management."""
 
-import base64
 import logging
 from dataclasses import dataclass
 from typing import Dict, Tuple, Any
@@ -278,13 +277,15 @@ class TerminalState:
 
         self._logger.warning("Unknown ESC sequence: %r", sequence)
 
-    def _process_osc(self, sequence: str):
+    def _process_osc(self, sequence: str) -> None:
         """Handle Operating System Command sequences."""
         # Remove ESC] prefix and terminator (BEL or ST)
         if sequence.endswith('\x07'):  # BEL
             params = sequence[2:-1]
+
         elif sequence.endswith('\x1b\\'):  # ST
             params = sequence[2:-2]
+
         else:
             return
 
@@ -318,7 +319,7 @@ class TerminalState:
         except (ValueError, IndexError) as e:
             self._logger.warning("Invalid OSC sequence: %r, error: %s", sequence, e)
 
-    def _process_private_mode(self, params: str, set_mode: bool):
+    def _process_private_mode(self, params: str, set_mode: bool) -> None:
         """Handle DEC private mode sequences (DECSET/DECRST)."""
         buffer = self._current_buffer
         try:
@@ -395,7 +396,7 @@ class TerminalState:
         except ValueError as e:
             self._logger.warning("Invalid private mode parameter: %r, error: %s", params, e)
 
-    def _handle_alternate_screen(self, enable: bool):
+    def _handle_alternate_screen(self, enable: bool) -> None:
         """Switch between main and alternate screen buffers."""
         if (enable and self._current_buffer == self._alternate_buffer) or \
            (not enable and self._current_buffer == self._main_buffer):
@@ -717,6 +718,6 @@ class TerminalState:
         """Get if terminal is in bracketed paste mode."""
         return self._current_buffer.modes.bracketed_paste
 
-    def blinking_chars_on_screen(self):
+    def blinking_chars_on_screen(self) -> bool:
         """Determine if there are any blinking characters on-screen."""
         return self._current_buffer.blinking_chars_on_screen()

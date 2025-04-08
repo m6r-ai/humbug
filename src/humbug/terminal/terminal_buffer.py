@@ -295,7 +295,7 @@ class TerminalBuffer:
         self.history_scrollback = state.history_scrollback
         self.max_cursor_row = state.max_cursor_row
 
-    def _get_new_line(self, cols) -> TerminalLine:
+    def _get_new_line(self, cols: int) -> TerminalLine:
         """"Get a new blank line."""
         line = TerminalLine(cols)
         # Fill line with spaces using default attributes
@@ -844,7 +844,7 @@ class TerminalBuffer:
         """Get the number of lines of history including the current display buffer"""
         return len(self.lines)
 
-    def blinking_chars_on_screen(self):
+    def blinking_chars_on_screen(self) -> bool:
         """Determine if there are any blinking characters on-screen."""
         for line in self.lines[-self.rows:]:
             for col in range(self.cols):
