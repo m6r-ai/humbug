@@ -3,8 +3,7 @@ Types and classes for representing the AST (Abstract Syntax Tree)
 of a Metaphor document.
 """
 
-from typing import List, Any, Optional
-from enum import IntEnum
+from typing import List, Any
 
 from humbug.ast.ast import ASTNode, ASTVisitor
 

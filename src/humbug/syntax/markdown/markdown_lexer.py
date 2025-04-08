@@ -11,7 +11,7 @@ class MarkdownLexer(Lexer):
     headings, blockquotes, lists, and inline formatting.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._first_token = True
 

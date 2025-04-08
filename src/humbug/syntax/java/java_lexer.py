@@ -51,7 +51,7 @@ class JavaLexer(Lexer):
     # Build the operator map
     _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._in_block_comment = False
         self._in_javadoc = False

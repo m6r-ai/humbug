@@ -22,7 +22,7 @@ class CharacterAttributes(Flag):
 
 class TerminalLine:
     """Fixed-width line of terminal characters."""
-    def __init__(self, width: int):
+    def __init__(self, width: int) -> None:
         """Initialize empty line with given width."""
         self.width = width
         # For each character cell we store:
@@ -39,7 +39,7 @@ class TerminalLine:
         attributes: CharacterAttributes,
         fg_color: Optional[int],
         bg_color: Optional[int]
-    ):
+    ) -> None:
         """Set character and attributes at position."""
         if 0 <= index < self.width:
             base = index * 4

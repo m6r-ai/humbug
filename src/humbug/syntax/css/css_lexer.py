@@ -32,7 +32,7 @@ class CSSLexer(Lexer):
     # Build the operator map
     _OPERATORS_MAP = Lexer.build_operator_map(_OPERATORS)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._in_comment = False
 

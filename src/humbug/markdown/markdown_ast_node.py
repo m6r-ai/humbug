@@ -5,7 +5,7 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
-from typing import Optional, Any
+from typing import Any, List
 
 from humbug.ast.ast import ASTNode, ASTVisitor
 
@@ -18,8 +18,8 @@ class MarkdownASTNode(ASTNode['MarkdownASTNode']):
         super().__init__()
 
         # Source range information to support incremental updating
-        self.line_start: Optional[int] = None
-        self.line_end: Optional[int] = None
+        self.line_start: int | None = None
+        self.line_end: int | None = None
 
     def accept(self, visitor: 'MarkdownASTVisitor') -> Any:
         """
@@ -40,14 +40,14 @@ class MarkdownASTVisitor(ASTVisitor['MarkdownASTNode']):
 
 class MarkdownDocumentNode(MarkdownASTNode):
     """Root node representing an entire HTML document."""
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize a document node."""
         super().__init__()
 
 
 class MarkdownParagraphNode(MarkdownASTNode):
     """Node representing an HTML paragraph (<p>)."""
-    def __init__(self, children=None):
+    def __init__(self, children: List[MarkdownASTNode] = []) -> None:
         """
         Initialize a paragraph node.
 
@@ -62,7 +62,7 @@ class MarkdownParagraphNode(MarkdownASTNode):
 
 class MarkdownHeadingNode(MarkdownASTNode):
     """Node representing an HTML heading (<h1> through <h6>)."""
-    def __init__(self, level, children=None):
+    def __init__(self, level: int, children: List[MarkdownASTNode] = []) -> None:
         """
         Initialize a heading node.
 
@@ -80,7 +80,7 @@ class MarkdownHeadingNode(MarkdownASTNode):
 
 class MarkdownOrderedListNode(MarkdownASTNode):
     """Node representing an HTML ordered list (<ol>)."""
-    def __init__(self, indent=0, start=1, children=None):
+    def __init__(self, indent: int = 0, start: int = 1, children: List[MarkdownASTNode] = []) -> None:
         """
         Initialize an ordered list node.
 
@@ -102,7 +102,7 @@ class MarkdownOrderedListNode(MarkdownASTNode):
 
 class MarkdownUnorderedListNode(MarkdownASTNode):
     """Node representing an HTML unordered list (<ul>)."""
-    def __init__(self, indent=0, children=None):
+    def __init__(self, indent: int = 0, children: List[MarkdownASTNode] = []) -> None:
         """
         Initialize an unordered list node.
 
@@ -122,7 +122,7 @@ class MarkdownUnorderedListNode(MarkdownASTNode):
 
 class MarkdownListItemNode(MarkdownASTNode):
     """Node representing an HTML list item (<li>)."""
-    def __init__(self, children=None):
+    def __init__(self, children: List[MarkdownASTNode] = []) -> None:
         """
         Initialize a list item node.
 
@@ -137,7 +137,7 @@ class MarkdownListItemNode(MarkdownASTNode):
 
 class MarkdownTextNode(MarkdownASTNode):
     """Node representing plain text content."""
-    def __init__(self, content):
+    def __init__(self, content: str) -> None:
         """
         Initialize a text node.
 
@@ -150,7 +150,7 @@ class MarkdownTextNode(MarkdownASTNode):
 
 class MarkdownBoldNode(MarkdownASTNode):
     """Node representing bold text (<b> or <strong>)."""
-    def __init__(self, children=None):
+    def __init__(self, children: List[MarkdownASTNode] = []) -> None:
         """
         Initialize a bold node.
 
@@ -165,7 +165,7 @@ class MarkdownBoldNode(MarkdownASTNode):
 
 class MarkdownEmphasisNode(MarkdownASTNode):
     """Node representing emphasized text (<em> or <i>)."""
-    def __init__(self, children=None):
+    def __init__(self, children: List[MarkdownASTNode] = []) -> None:
         """
         Initialize an emphasis node.
 
@@ -180,7 +180,7 @@ class MarkdownEmphasisNode(MarkdownASTNode):
 
 class MarkdownInlineCodeNode(MarkdownASTNode):
     """Node representing inline code (<code>)."""
-    def __init__(self, content=None):
+    def __init__(self, content: str = "") -> None:
         """
         Initialize an inline code node.
 
@@ -188,12 +188,12 @@ class MarkdownInlineCodeNode(MarkdownASTNode):
             content: The code content
         """
         super().__init__()
-        self.content = content or ""
+        self.content = content
 
 
 class MarkdownCodeBlockNode(MarkdownASTNode):
     """Node representing a code block (<pre><code>)."""
-    def __init__(self, language=None, content=None):
+    def __init__(self, language: str = "", content: str = "") -> None:
         """
         Initialize a code block node.
 
@@ -202,13 +202,13 @@ class MarkdownCodeBlockNode(MarkdownASTNode):
             content: The code content
         """
         super().__init__()
-        self.language = language or ""
-        self.content = content or ""
+        self.language = language
+        self.content = content
 
 
 class MarkdownLineBreakNode(MarkdownASTNode):
     """Node representing a line break."""
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize a line break node."""
         super().__init__()
 
