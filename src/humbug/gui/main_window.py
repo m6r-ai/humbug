@@ -8,11 +8,10 @@ from typing import cast, Dict
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
-    QSplitter, QLabel, QApplication, QDialog, QMenu
+    QSplitter, QLabel, QApplication, QDialog, QMenu, QStatusBar
 )
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
-from PySide6.QtWidgets import QStatusBar
 
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole

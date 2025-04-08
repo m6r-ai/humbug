@@ -61,7 +61,7 @@ class MindspaceFileTree(QWidget):
         # Create tree view
         self._tree_view = FileTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
-        self._tree_style = MindspaceFileTreeStyle(self._style_manager)
+        self._tree_style = MindspaceFileTreeStyle()
         self._tree_view.setStyle(self._tree_style)
 
         # Create file system model

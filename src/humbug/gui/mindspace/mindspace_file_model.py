@@ -4,18 +4,18 @@ import os
 from typing import cast
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex
-from PySide6.QtWidgets import QFileSystemModel
+from PySide6.QtWidgets import QFileSystemModel, QWidget
 
 
 class MindspaceFileModel(QSortFilterProxyModel):
     """Filter model to hide .humbug directory and apply custom sorting."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         """Initialize the filter model."""
         super().__init__(parent)
         self._mindspace_root = ""
 
-    def set_mindspace_root(self, path: str):
+    def set_mindspace_root(self, path: str) -> None:
         """Set the mindspace root path for relative path calculations."""
         self._mindspace_root = path
         self.invalidateFilter()
