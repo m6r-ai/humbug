@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLineEdit, QToolButton, QLabel
 )
 from PySide6.QtCore import Signal, Qt, QSize
-from PySide6.QtGui import QIcon, QFocusEvent
+from PySide6.QtGui import QIcon, QFocusEvent, QKeyEvent, QCloseEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -18,7 +18,7 @@ class FindWidget(QWidget):
     find_next = Signal()
     find_previous = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         """Initialize the find widget."""
         super().__init__(parent)
         self._style_manager = StyleManager()
@@ -90,7 +90,8 @@ class FindWidget(QWidget):
             self._style_manager.get_icon_path("close"), 15
         )))
 
-        icon_size = QSize(15 * factor, 15 * factor)
+        scaled_size = int(15 * factor)
+        icon_size = QSize(scaled_size, scaled_size)
         self._prev_button.setIconSize(icon_size)
         self._next_button.setIconSize(icon_size)
         self._close_button.setIconSize(icon_size)
@@ -131,7 +132,7 @@ class FindWidget(QWidget):
             }}
         """)
 
-    def PressEvent(self, event):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle key events."""
         if event.key() == Qt.Key.Key_Escape:
             self.close()
@@ -140,17 +141,17 @@ class FindWidget(QWidget):
 
         super().keyPressEvent(event)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent) -> None:
         """Emit closed signal when closing."""
         super().closeEvent(event)
         self.closed.emit()
 
-    def focusInEvent(self, _event: QFocusEvent):
+    def focusInEvent(self, _event: QFocusEvent) -> None:
         """Handle focus events."""
         self._search_input.setFocus()
         self._search_input.selectAll()
 
-    def _update_match_status(self):
+    def _update_match_status(self) -> None:
         """Update the match status display."""
 
         strings = self._language_manager.strings
@@ -168,7 +169,7 @@ class FindWidget(QWidget):
         self._prev_button.setEnabled(self._matches > 0)
         self._next_button.setEnabled(self._matches > 0)
 
-    def set_match_status(self, current: int, total: int):
+    def set_match_status(self, current: int, total: int) -> None:
         """Set the match status display.
 
         Args:
@@ -179,7 +180,7 @@ class FindWidget(QWidget):
         self._current_match = current
         self._update_match_status()
 
-    def _handle_text_changed(self):
+    def _handle_text_changed(self) -> None:
         """Handle changes to search text."""
         self.find_next.emit()
 
@@ -187,7 +188,7 @@ class FindWidget(QWidget):
         """Get the current search text."""
         return self._search_input.text()
 
-    def set_search_text(self, text: str):
+    def set_search_text(self, text: str) -> None:
         """Set the search text and trigger a search."""
         self._search_input.setText(text)
         self._search_input.selectAll()

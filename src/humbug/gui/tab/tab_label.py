@@ -18,7 +18,7 @@ class TabLabel(QWidget):
     close_clicked = Signal()
     drag_started = Signal()
 
-    def __init__(self, text: str, tab_id: str, parent=None):
+    def __init__(self, text: str, tab_id: str, parent: QWidget | None = None) -> None:
         """
         Initialize the tab label widget.
 
@@ -79,7 +79,7 @@ class TabLabel(QWidget):
         transparent_pixmap.fill(Qt.GlobalColor.transparent)
         return QIcon(transparent_pixmap)
 
-    def handle_style_changed(self, is_active: bool):
+    def handle_style_changed(self, is_active: bool) -> None:
         """
         Handle style changes from StyleManager.
 
@@ -115,7 +115,7 @@ class TabLabel(QWidget):
 
         self.adjustSize()
 
-    def _update_font_size(self):
+    def _update_font_size(self) -> None:
         """Update the label font size based on current zoom factor."""
         font = self._label.font()
         base_size = self._style_manager.base_font_size
@@ -123,14 +123,14 @@ class TabLabel(QWidget):
         font.setPointSizeF(scaled_size)
         self._label.setFont(font)
 
-    def mousePressEvent(self, event: QMouseEvent):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events for drag initiation."""
         if event.button() & Qt.MouseButton.LeftButton:
             self._drag_start_pos = event.pos()
 
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event: QMouseEvent):
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Handle mouse move events for drag operations."""
         if not self._drag_start_pos:
             return
@@ -178,17 +178,17 @@ class TabLabel(QWidget):
         # Execute drag operation
         drag.exec_(Qt.DropAction.MoveAction)
 
-    def mouseReleaseEvent(self, event: QMouseEvent):
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """Handle mouse release events."""
         self._drag_start_pos = None
         super().mouseReleaseEvent(event)
 
-    def update_hover_state(self, is_hovered: bool):
+    def update_hover_state(self, is_hovered: bool) -> None:
         """Handle updates to the hover state for the label."""
         self._is_hovered = is_hovered
         self._update_close_button()
 
-    def _update_close_button(self):
+    def _update_close_button(self) -> None:
         """Update close button appearance based on current state."""
         visible = self._is_current or self._is_hovered
 
@@ -209,7 +209,7 @@ class TabLabel(QWidget):
             """
             icon = self._visible_close_icon if self._is_active_column else self._visible_disabled_close_icon
             self._close_button.setIcon(icon)
-            self._close_button.setCursor(Qt.PointingHandCursor)
+            self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self._close_button.setToolTip("Close Tab")
         else:
             style = f"""
@@ -221,12 +221,12 @@ class TabLabel(QWidget):
                 }}
             """
             self._close_button.setIcon(self._invisible_close_icon)
-            self._close_button.setCursor(Qt.ArrowCursor)
+            self._close_button.setCursor(Qt.CursorShape.ArrowCursor)
             self._close_button.setToolTip("")
 
         self._close_button.setStyleSheet(style)
 
-    def set_current(self, is_current: bool, is_active_column: bool):
+    def set_current(self, is_current: bool, is_active_column: bool) -> None:
         """Update the current state of the tab."""
         self._is_current = is_current
         self._is_active_column = is_active_column

@@ -1,12 +1,15 @@
+from typing import Any
+
 from PySide6.QtWidgets import QSplitter
 
+
 class ColumnSplitter(QSplitter):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.setChildrenCollapsible(True)
         self.setHandleWidth(1)
 
-    def moveSplitter(self, pos: int, index: int):
+    def moveSplitter(self, pos: int, index: int) -> None:
         # Get the widget on either side of the splitter handle
         widget1 = self.widget(index)
         widget2 = self.widget(index + 1)
