@@ -155,7 +155,7 @@ class ConversationTab(TabBase):
         )
 
     @classmethod
-    def load_from_file(cls, path: str, parent=None) -> 'ConversationTab':
+    def load_from_file(cls, path: str, parent: QWidget | None = None) -> 'ConversationTab':
         """
         Load a conversation tab from a transcript file.
 
@@ -193,7 +193,7 @@ class ConversationTab(TabBase):
             raise ConversationError(f"Failed to create conversation tab: {str(e)}") from e
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent=None) -> 'ConversationTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
         if not state.timestamp:
             raise ConversationError("Conversation tab requires timestamp")
@@ -225,7 +225,7 @@ class ConversationTab(TabBase):
         except Exception as e:
             raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
 
-    def update_path(self, new_id: str, new_path: str):
+    def update_path(self, new_id: str, new_path: str) -> None:
         """Update the conversation file path.
 
         Args:
@@ -236,7 +236,7 @@ class ConversationTab(TabBase):
         self._tab_id = new_id
         self._conversation_widget.update_path(new_id, new_path)
 
-    def update_conversation_settings(self, new_settings: AIConversationSettings):
+    def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
 
@@ -299,21 +299,21 @@ class ConversationTab(TabBase):
         """Check if undo is available."""
         return False
 
-    def undo(self):
+    def undo(self) -> None:
         """Undo not supported for conversations."""
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
         return False
 
-    def redo(self):
+    def redo(self) -> None:
         """Redo not supported for conversations."""
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
         return self._conversation_widget.can_cut()
 
-    def cut(self):
+    def cut(self) -> None:
         """Cut selected text to clipboard."""
         self._conversation_widget.cut()
 
@@ -321,7 +321,7 @@ class ConversationTab(TabBase):
         """Check if copy is available."""
         return self._conversation_widget.can_copy()
 
-    def copy(self):
+    def copy(self) -> None:
         """Copy selected text to clipboard."""
         self._conversation_widget.copy()
 
@@ -329,7 +329,7 @@ class ConversationTab(TabBase):
         """Check if paste is available."""
         return self._conversation_widget.can_paste()
 
-    def paste(self):
+    def paste(self) -> None:
         """Paste text from clipboard."""
         self._conversation_widget.paste()
 
@@ -337,11 +337,11 @@ class ConversationTab(TabBase):
         """Check if message can be submitted."""
         return self._conversation_widget.can_submit()
 
-    def submit(self):
+    def submit(self) -> None:
         """Submit the current message."""
         self._conversation_widget.submit()
 
-    def show_find(self):
+    def show_find(self) -> None:
         """Show the find widget."""
         # Get selected text if any
         if self._conversation_widget.has_selection():
@@ -354,18 +354,18 @@ class ConversationTab(TabBase):
         self._find_widget.show()
         self._find_widget.setFocus()
 
-    def _close_find(self):
+    def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
         self._conversation_widget.clear_find()
 
-    def _find_next(self, forward: bool = True):
+    def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
         current, total = self._conversation_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
 
-    def _handle_style_changed(self):
+    def _handle_style_changed(self) -> None:
         """Handle style changes."""
         self.setStyleSheet(f"""
             QWidget {{
@@ -374,7 +374,7 @@ class ConversationTab(TabBase):
             }}
         """)
 
-    def cancel_current_tasks(self):
+    def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""
         self._conversation_widget.cancel_current_tasks()
 
@@ -430,6 +430,6 @@ class ConversationTab(TabBase):
         """Move to the previous bookmark."""
         self._conversation_widget.navigate_previous_bookmark()
 
-    def set_input_text(self, text: str):
+    def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._conversation_widget.set_input_text(text)
