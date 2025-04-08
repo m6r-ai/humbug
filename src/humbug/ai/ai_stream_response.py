@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict
 
 from humbug.ai.ai_usage import AIUsage
 from humbug.ai.ai_response import AIError
@@ -20,8 +20,8 @@ class AIStreamResponse(ABC):
         """Initialize stream response handler with default values."""
         self.reasoning = ""
         self.content = ""
-        self.usage: Optional[AIUsage] = None
-        self.error: Optional[AIError] = None
+        self.usage: AIUsage | None = None
+        self.error: AIError | None = None
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
@@ -38,7 +38,6 @@ class AIStreamResponse(ABC):
         Raises:
             NotImplementedError: If not implemented by subclass
         """
-        pass
 
     def _handle_error(self, error_data: Dict, error_code: str = "stream_error") -> None:
         """
