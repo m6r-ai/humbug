@@ -4,7 +4,7 @@ from enum import Enum, auto
 from typing import Optional, List
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QPlainTextEdit
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QPlainTextEdit, QWidget
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap, QKeyEvent
@@ -35,8 +35,14 @@ class MessageBoxButton(Enum):
 class MessageBox(QDialog):
     """Custom message box dialog with consistent styling and scrollable content."""
 
-    def __init__(self, msg_type: MessageBoxType, title: str, text: str,
-                 buttons: List[MessageBoxButton], parent=None):
+    def __init__(
+        self,
+        msg_type: MessageBoxType,
+        title: str,
+        text: str,
+        buttons: List[MessageBoxButton],
+        parent: QWidget | None = None
+    ) -> None:
         """
         Initialize the message box.
 
@@ -255,8 +261,14 @@ class MessageBox(QDialog):
         """)
 
     @classmethod
-    def show_message(cls, parent, msg_type: MessageBoxType, title: str, text: str,
-                    buttons: List[MessageBoxButton] = []) -> MessageBoxButton:
+    def show_message(
+        cls,
+        parent,
+        msg_type: MessageBoxType,
+        title: str,
+        text: str,
+        buttons: List[MessageBoxButton] | None = None
+    ) -> MessageBoxButton:
         """
         Show a message box and return the clicked button.
 
@@ -270,7 +282,7 @@ class MessageBox(QDialog):
         Returns:
             The MessageBoxButton that was clicked
         """
-        if not buttons:
+        if buttons is None:
             buttons = [MessageBoxButton.OK]
 
         dialog = cls(msg_type, title, text, buttons, parent)

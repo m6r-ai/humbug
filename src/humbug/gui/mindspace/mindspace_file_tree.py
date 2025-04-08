@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
     QLabel, QSizePolicy
 )
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize
+from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -28,7 +28,7 @@ class MindspaceFileTree(QWidget):
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the file tree widget."""
         super().__init__(parent)
 
@@ -98,7 +98,7 @@ class MindspaceFileTree(QWidget):
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
 
-    def _show_context_menu(self, position):
+    def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
         # Get the index at the clicked position
         index = self._tree_view.indexAt(position)
@@ -150,12 +150,14 @@ class MindspaceFileTree(QWidget):
                 if action == rename_action:
                     if not is_dir and path.lower().endswith('.conv'):
                         self._handle_rename_conversation(path)
+
                     else:
                         self._handle_rename_file(path)
+
                 elif action == delete_action:
                     self._handle_delete_file(path)
 
-    def _handle_rename_file(self, path):
+    def _handle_rename_file(self, path: str) -> None:
         """Prompt user to rename a file and handle renaming."""
         strings = self._language_manager.strings
         old_name = os.path.basename(path)
@@ -174,8 +176,9 @@ class MindspaceFileTree(QWidget):
             try:
                 # Check if file already exists
                 if os.path.exists(new_path):
-                    MessageBox.warning(
+                    MessageBox.show_message(
                         self,
+                        MessageBoxType.WARNING,
                         strings.rename_error_title,
                         strings.rename_error_exists
                     )
@@ -184,9 +187,11 @@ class MindspaceFileTree(QWidget):
                 os.rename(path, new_path)
                 # Emit signal for any necessary updates
                 self.file_renamed.emit(path, new_path)
+
             except OSError as e:
-                MessageBox.warning(
+                MessageBox.show_message(
                     self,
+                    MessageBoxType.WARNING,
                     strings.rename_error_title,
                     strings.rename_error_generic.format(str(e))
                 )
@@ -214,9 +219,11 @@ class MindspaceFileTree(QWidget):
 
             # Emit signal to open the newly created file
             self.file_activated.emit(new_file_path)
+
         except OSError as e:
-            MessageBox.warning(
+            MessageBox.show_message(
                 self,
+                MessageBoxType.WARNING,
                 strings.file_creation_error_title,
                 strings.file_creation_error.format(str(e))
             )
@@ -234,7 +241,7 @@ class MindspaceFileTree(QWidget):
             MessageBoxType.WARNING,
             strings.confirm_delete_title,
             strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" +
-            strings.delete_warning_detail,
+                strings.delete_warning_detail,
             [MessageBoxButton.YES, MessageBoxButton.NO]
         )
 
@@ -245,6 +252,7 @@ class MindspaceFileTree(QWidget):
 
                 # Then delete the file
                 os.remove(path)
+
             except OSError as e:
                 strings = self._language_manager.strings
                 MessageBox.show_message(
@@ -297,6 +305,7 @@ class MindspaceFileTree(QWidget):
 
             # Then rename the file
             os.rename(path, new_path)
+
         except OSError as e:
             strings = self._language_manager.strings
             MessageBox.show_message(
