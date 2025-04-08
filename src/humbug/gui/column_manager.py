@@ -49,7 +49,7 @@ class ColumnManager(QWidget):
 
     status_message = Signal(StatusMessage)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab manager."""
         super().__init__(parent)
 
@@ -204,7 +204,7 @@ class ColumnManager(QWidget):
             if editor_tab:
                 self._stack.setCurrentWidget(self._columns_widget)
 
-    def _handle_splitter_moved(self, _pos: int, _index: int):
+    def _handle_splitter_moved(self, _pos: int, _index: int) -> None:
         """Handle splitter movement and potential column merging."""
         sizes = self._column_splitter.sizes()
         min_width = 200  # Minimum width before merging
@@ -305,7 +305,7 @@ class ColumnManager(QWidget):
         except (ConversationError, OSError) as e:
             self._logger.exception("Failed to open dropped file '%s': %s", file_path, str(e))
 
-    def handle_file_rename(self, old_path: str, new_path: str):
+    def handle_file_rename(self, old_path: str, new_path: str) -> None:
         """Handle renaming of files by updating any open tabs.
 
         Args:
@@ -888,9 +888,9 @@ class ColumnManager(QWidget):
             self._logger.exception("Failed to fork conversation: %s", str(e))
             raise
 
-    def _fork_conversation(self):
+    def _fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
-        async def fork_and_handle_errors():
+        async def fork_and_handle_errors() -> None:
             try:
                 await self.fork_conversation()
             except ConversationError as e:
@@ -1077,49 +1077,84 @@ class ColumnManager(QWidget):
         """)
 
     def can_undo(self) -> bool:
+        """Check if the last action can be undone."""
         tab = self._get_current_tab()
-        return False if not tab else tab.can_undo()
+        return False if tab is None else tab.can_undo()
 
-    def undo(self):
-        self._get_current_tab().undo()
+    def undo(self) -> None:
+        """Undo the last action."""
+        tab = self._get_current_tab()
+        if tab is None:
+            return
+
+        tab.undo()
 
     def can_redo(self) -> bool:
+        """Check if the last action can be redone."""
         tab = self._get_current_tab()
-        return False if not tab else tab.can_redo()
+        return False if tab is None else tab.can_redo()
 
-    def redo(self):
-        self._get_current_tab().redo()
+    def redo(self) -> None:
+        """Redo the last undone action."""
+        tab = self._get_current_tab()
+        if tab is None:
+            return
+
+        tab.redo()
 
     def can_cut(self) -> bool:
+        """Check if the current selection can be cut."""
         tab = self._get_current_tab()
-        return False if not tab else tab.can_cut()
+        return False if tab is None else tab.can_cut()
 
-    def cut(self):
-        self._get_current_tab().cut()
+    def cut(self) -> None:
+        """Cut the current selection."""
+        tab = self._get_current_tab()
+        if tab is None:
+            return
+
+        tab.cut()
 
     def can_copy(self) -> bool:
+        """Check if the current selection can be copied."""
         tab = self._get_current_tab()
-        return False if not tab else tab.can_copy()
+        return False if tab is None else tab.can_copy()
 
-    def copy(self):
-        self._get_current_tab().copy()
+    def copy(self) -> None:
+        """Copy the current selection."""
+        tab = self._get_current_tab()
+        if tab is None:
+            return
+
+        tab.copy()
 
     def can_paste(self) -> bool:
+        """Check if the current selection can be pasted."""
         tab = self._get_current_tab()
         return False if not tab else tab.can_paste()
 
-    def paste(self):
-        self._get_current_tab().paste()
+    def paste(self) -> None:
+        """Paste the current selection."""
+        tab = self._get_current_tab()
+        if tab is None:
+            return
 
-    def can_find(self) -> bool:
+        tab.paste()
+
+    def can_show_find(self) -> bool:
+        """Check if the current tab can show the find dialog."""
         tab = self._get_current_tab()
         return tab is not None
 
-    def find(self):
+    def show_find(self) -> None:
+        """Show the find dialog for the current tab."""
         tab = self._get_current_tab()
+        if tab is None:
+            return
+
         tab.show_find()
 
-    def close_deleted_file(self, path: str):
+    def close_deleted_file(self, path: str) -> None:
         """
         Close any open tabs related to a file being deleted.
 

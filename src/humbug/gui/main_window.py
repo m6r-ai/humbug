@@ -379,7 +379,7 @@ class MainWindow(QMainWindow):
         self._cut_action.setEnabled(column_manager.can_cut())
         self._copy_action.setEnabled(column_manager.can_copy())
         self._paste_action.setEnabled(column_manager.can_paste())
-        self._find_action.setEnabled(column_manager.can_find())
+        self._find_action.setEnabled(column_manager.can_show_find())
         self._submit_message_action.setEnabled(column_manager.can_submit_message())
         self._conv_settings_action.setEnabled(column_manager.can_show_conversation_settings_dialog())
 
@@ -718,7 +718,7 @@ class MainWindow(QMainWindow):
         self._column_manager.paste()
 
     def _find(self) -> None:
-        self._column_manager.find()
+        self._column_manager.show_find()
 
     def _show_about_dialog(self) -> None:
         """Show the About dialog."""
