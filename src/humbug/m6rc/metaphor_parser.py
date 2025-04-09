@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import List, Set, cast
 
 from humbug.m6rc.metaphor_token import MetaphorToken, MetaphorTokenType
-from humbug.m6rc.embed_lexer import EmbedLexer
+from humbug.m6rc.embed_lexer import MetaphorEmbedLexer
 from humbug.m6rc.metaphor_lexer import MetaphorLexer
 from humbug.m6rc.metaphor_ast_node import (
     MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
@@ -59,7 +59,7 @@ class MetaphorParser:
     Attributes:
         syntax_tree (MetaphorRootNode): The root node of the AST.
         parse_errors (List[MetaphorParserSyntaxError]): List of syntax errors encountered during parsing.
-        lexers (List[MetaphorLexer | EmbedLexer]): Stack of lexers used for parsing multiple files.
+        lexers (List[MetaphorLexer | MetaphorEmbedLexer]): Stack of lexers used for parsing multiple files.
         previously_seen_files (Set[str]): Set of canonical filenames already processed.
         search_paths (List[str]): List of paths to search for included files.
         embed_path (str): Path used to search for embedded files.
@@ -68,7 +68,7 @@ class MetaphorParser:
     def __init__(self) -> None:
         self.syntax_tree: MetaphorRootNode = MetaphorRootNode()
         self.parse_errors: List[MetaphorParserSyntaxError] = []
-        self.lexers: List[MetaphorLexer | EmbedLexer] = []
+        self.lexers: List[MetaphorLexer | MetaphorEmbedLexer] = []
         self.previously_seen_files: Set[str] = set()
         self.search_paths: List[str] = []
         self.embed_path: str = ""
@@ -500,4 +500,4 @@ class MetaphorParser:
 
         for file in files:
             input_text = self._read_file(file)
-            self.lexers.append(EmbedLexer(input_text, file))
+            self.lexers.append(MetaphorEmbedLexer(input_text, file))
