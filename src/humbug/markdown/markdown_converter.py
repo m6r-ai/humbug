@@ -8,8 +8,8 @@ to HTML while preserving code blocks and handling streaming text updates.
 import logging
 from typing import List, Tuple
 
-from humbug.markdown.markdown_ast_builder import MarkdownParser, MarkdownParserError
 from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode
+from humbug.markdown.markdown_parser import MarkdownParser, MarkdownParserError
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
