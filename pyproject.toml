@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [tool.coverage.run]
-source = ["m6rclib"]
+source = ["metaphor"]
 branch = true
 
 [tool.coverage.report]
@@ -26,6 +26,7 @@ exclude_lines = [
     "raise ImportError",
     "except ImportError:"
 ]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/humbug"]
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from humbug.m6rc import (
+from humbug.metaphor import (
     MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
     MetaphorParser,

@@ -4,7 +4,7 @@ Visitor class to print Metaphor AST structures for debugging
 
 from typing import List, Any, Type
 
-from humbug.m6rc.metaphor_ast_node import (
+from humbug.metaphor.metaphor_ast_node import (
     MetaphorASTVisitor, MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode
 )
 

@@ -3,7 +3,7 @@
 import io
 from typing import List, TextIO, Dict, Final, Type
 
-from humbug.m6rc.metaphor_ast_node import (
+from humbug.metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
 )

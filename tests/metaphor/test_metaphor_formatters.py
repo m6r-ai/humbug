@@ -2,7 +2,7 @@
 
 import pytest
 
-from humbug.m6rc import (
+from humbug.metaphor import (
     MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
     MetaphorParserSyntaxError,

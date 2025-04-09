@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from humbug.m6rc.metaphor_token import MetaphorToken, MetaphorTokenType
+from humbug.metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
 
 class MetaphorEmbedLexer:
     """

@@ -1,6 +1,6 @@
 import pytest
 
-from humbug.m6rc import (
+from humbug.metaphor import (
     MetaphorASTNode,
     MetaphorRootNode, MetaphorTextNode, MetaphorRoleNode,
     MetaphorContextNode, MetaphorActionNode, MetaphorCodeNode
