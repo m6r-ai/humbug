@@ -13,6 +13,7 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 class ConversationHighlighterBlockData(QTextBlockUserData):
+    """User data for each block of text in the conversation highlighter."""
     def __init__(self) -> None:
         super().__init__()
         self.seen_fence = False
@@ -116,7 +117,9 @@ class ConversationHighlighter(QSyntaxHighlighter):
                 self.setFormat(token.start, len(token.value), style_manager.get_proportional_highlight(token.type))
 
             # Check if we need to rehighlight everything from this block onwards.
-            if (contination_state != parser_state.continuation_state) or (current_fence_depth != fence_depth) or (language != parser_state.language):
+            if ((contination_state != parser_state.continuation_state) or
+                    (current_fence_depth != fence_depth) or
+                    (language != parser_state.language)):
                 # It doesn't matter what we set this to, it just needs to be different to what it was before
                 self.setCurrentBlockState(self.currentBlockState() + 1)
 

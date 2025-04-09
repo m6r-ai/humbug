@@ -18,9 +18,7 @@ class ConversationTranscriptError(Exception):
 
 class ConversationTranscriptFormatError(ConversationTranscriptError):
     """Exception raised when transcript format is invalid."""
-    pass
 
 
 class ConversationTranscriptIOError(ConversationTranscriptError):
     """Exception raised when transcript file operations fail."""
-    pass

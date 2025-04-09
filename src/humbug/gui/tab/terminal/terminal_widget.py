@@ -806,7 +806,7 @@ class TerminalWidget(QAbstractScrollArea):
         x_start = start_col * self._char_width
 
         # If no highlights or blinking chars, draw entire run at once
-        if not highlights and not (attrs & CharacterAttributes.BLINK):
+        if not highlights and not attrs & CharacterAttributes.BLINK:
             width = len(text) * self._char_width
 
             # Draw background - use precise width calculation
@@ -1215,7 +1215,7 @@ class TerminalWidget(QAbstractScrollArea):
     def _update_current_match(self) -> None:
         """Update which match is marked as current."""
         for i, match in enumerate(self._matches):
-            match.is_current = (i == self._current_match)
+            match.is_current = bool(i == self._current_match)
 
     def _update_highlights(self) -> None:
         """Update highlight display in terminal."""

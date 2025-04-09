@@ -186,7 +186,10 @@ def get_french_strings() -> LanguageStrings:
 
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",
-        conversation_status="Modèle : {model} | {temperature} | Dernière réponse - Entrée : {input_tokens} ({max_input_tokens}) | Sortie : {output_tokens} ({max_output_tokens})",
+        conversation_status=(
+            "Modèle : {model} | {temperature} | Dernière réponse - Entrée : {input_tokens} "
+            "({max_input_tokens}) | Sortie : {output_tokens} ({max_output_tokens})"
+        ),
         conversation_status_temperature="Temp : {temperature:.1f}",
         conversation_status_no_temperature="Temp : N/D",
         terminal_status="Terminal : {name} ({columns}x{rows})",

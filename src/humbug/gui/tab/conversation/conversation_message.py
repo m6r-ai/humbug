@@ -250,7 +250,10 @@ class ConversationMessage(QFrame):
 
                 text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
                 background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-                color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
+                color = (
+                    self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None
+                    else background_color
+                )
                 factor = self._style_manager.zoom_factor()
                 font = self.font()
                 base_font_size = self._style_manager.base_font_size()

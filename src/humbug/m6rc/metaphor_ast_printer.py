@@ -76,7 +76,11 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         print(f"{self._indent()}Code: '{content_preview}' ({len(value)} chars)")
         return value
 
-    def visit_with_specific_types(self, node: MetaphorASTNode, types_to_show: List[Type[MetaphorASTNode]] | None = None) -> List[Any]:
+    def visit_with_specific_types(
+        self,
+        node: MetaphorASTNode,
+        types_to_show: List[Type[MetaphorASTNode]] | None = None
+    ) -> List[Any]:
         """
         Visit a node and only print details for specific node classes.
 

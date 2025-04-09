@@ -186,7 +186,10 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
-        conversation_status="النموذج: {model} | {temperature} | آخر رد - المدخلات: {input_tokens} ({max_input_tokens}) | المخرجات: {output_tokens} ({max_output_tokens})",
+        conversation_status=(
+            "النموذج: {model} | {temperature} | آخر رد - المدخلات: {input_tokens} "
+            "({max_input_tokens}) | المخرجات: {output_tokens} ({max_output_tokens})"
+        ),
         conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
         conversation_status_no_temperature="درجة الحرارة: غير متوفر",
         terminal_status="طرفية: {name} ({columns}x{rows})",
