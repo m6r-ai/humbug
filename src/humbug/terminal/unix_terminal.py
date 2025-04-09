@@ -5,6 +5,7 @@ import sys
 
 if sys.platform == 'win32':
     # type: ignore
+    # pylint: skip-file
     raise ImportError("This module is only available on Unix-like systems.")
 
 import asyncio

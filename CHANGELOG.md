@@ -1,5 +1,20 @@
 # Changelog for Humbug
 
+## v0.10 (2025-04-xx)
+
+New features:
+
+Internal structure changes:
+
+- The codebase is now fully type-checkable using mypy.
+- Removed the use of @property.  The use of @property decorators made it hard to determine if code was
+  making use of attributes or methods.  These are now much clearer, making it easier to ensure we don't
+  inadvertently access attributes and risking side effects.
+
+Bug fixes:
+
+- Several small bugs were resolved when implementing mypy type checking.
+
 ## v0.9 (2025-04-01)
 
 New features:

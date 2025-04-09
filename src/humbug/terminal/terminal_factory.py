@@ -21,9 +21,8 @@ def create_terminal() -> TerminalBase:
 
         return _windows_terminal()
 
-    else:
-        if _unix_terminal is None:
-            from humbug.terminal.unix_terminal import UnixTerminal
-            _unix_terminal = UnixTerminal
+    if _unix_terminal is None:
+        from humbug.terminal.unix_terminal import UnixTerminal
+        _unix_terminal = UnixTerminal
 
-        return _unix_terminal()
+    return _unix_terminal()

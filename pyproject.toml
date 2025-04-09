@@ -24,7 +24,7 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "raise NotImplementedError",
     "raise ImportError",
-    "except ImportError:",
+    "except ImportError:"
 ]
 [tool.hatch.build.targets.wheel]
 packages = ["src/humbug"]
@@ -38,6 +38,26 @@ disallow_untyped_decorators = true
 [tool.pyinstaller]
 excludes = ["build", "dist", "*.egg-info"]
 
+[tool.pylint]
+disable = [
+    "R0801"
+]
+
+enable = [
+    "protected-access"
+]
+
+# General configuration
+max-line-length = 132
+max-args = 5
+max-attributes = 12
+
+# Message control
+output-format = "colorized"
+
+[tool.pylint.master]
+extension-pkg-whitelist = "PySide6"
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --cov=src/humbug --cov-report=html"
@@ -48,6 +68,6 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 filterwarnings = [
     "error",
-    "ignore::DeprecationWarning",
+    "ignore::DeprecationWarning"
 ]
 
