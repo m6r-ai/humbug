@@ -134,7 +134,7 @@ class EditorTab(TabBase):
 
         return TabState(
             type=TabType.EDITOR,
-            tab_id=self.tab_id,
+            tab_id=self._tab_id,
             path=self._path if self._path else f"untitled-{self._untitled_number}",
             cursor_position=self._get_cursor_position(),
             horizontal_scroll=self._editor_widget.horizontalScrollBar().value(),
@@ -283,7 +283,6 @@ class EditorTab(TabBase):
             self._highlighter.set_language(new_language)
             self.update_status()
 
-    @property
     def filename(self) -> str:
         """Get the name of the file being edited."""
         return self._path

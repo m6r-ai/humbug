@@ -40,7 +40,7 @@ class TabData:
             title: Initial title for the tab
         """
         self.tab = tab
-        self.tab_id = tab.tab_id
+        self.tab_id = tab.tab_id()
         self.label = TabLabel(title, self.tab_id)
 
 
@@ -131,7 +131,7 @@ class ColumnManager(QWidget):
             tab: Tab to remove
             column: Column containing the tab
         """
-        tab_id = tab.tab_id
+        tab_id = tab.tab_id()
         tab_label = self._tab_labels.pop(tab_id)
         del self._tabs[tab_id]
         index = column.indexOf(tab)
@@ -170,7 +170,7 @@ class ColumnManager(QWidget):
         """
         # Save tab state before removal
         tab_state = tab.get_state(True)
-        tab_id = tab.tab_id
+        tab_id = tab.tab_id()
         tab_title = self._tab_labels[tab_id].text()
 
         # Remove from source
@@ -780,8 +780,9 @@ class ColumnManager(QWidget):
             The EditorTab if found, None otherwise
         """
         for tab in self._tabs.values():
-            if isinstance(tab, EditorTab) and tab.filename == filename:
+            if isinstance(tab, EditorTab) and tab.filename() == filename:
                 return tab
+
         return None
 
     def new_file(self) -> EditorTab:
@@ -800,7 +801,7 @@ class ColumnManager(QWidget):
         # Check if file is already open
         existing_tab = self.find_editor_tab_by_filename(path)
         if existing_tab:
-            self._set_current_tab(existing_tab.tab_id)
+            self._set_current_tab(existing_tab.tab_id())
             return existing_tab
 
         tab_id = str(uuid.uuid4())
@@ -882,7 +883,7 @@ class ColumnManager(QWidget):
             new_tab = await conversation_tab.fork_conversation()
 
             # Add new tab to manager
-            self.add_tab(new_tab, f"Conv: {new_tab.tab_id}")
+            self.add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
@@ -1005,7 +1006,7 @@ class ColumnManager(QWidget):
     def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
         """Get appropriate title for tab type."""
         if isinstance(tab, ConversationTab):
-            return f"Conv: {tab.tab_id}"
+            return f"Conv: {tab.tab_id()}"
 
         if isinstance(tab, TerminalTab):
             if state.metadata and "command" in state.metadata:
@@ -1164,20 +1165,20 @@ class ColumnManager(QWidget):
         # Find and close any editor tab for this file
         editor = self.find_editor_tab_by_filename(path)
         if editor:
-            self._close_tab_by_id(editor.tab_id, True)
+            self._close_tab_by_id(editor.tab_id(), True)
 
         # Also check for conversation files
         if path.endswith('.conv'):
             conversation_id = os.path.splitext(os.path.basename(path))[0]
             conversation = self.find_conversation_tab_by_id(conversation_id)
             if conversation:
-                self._close_tab_by_id(conversation.tab_id, True)
+                self._close_tab_by_id(conversation.tab_id(), True)
 
     def can_close_all_tabs(self) -> bool:
         """Can we close all the tabs that are open?"""
         all_tabs = list(self._tabs.values())
         for tab in all_tabs:
-            if tab.is_modified and not tab.can_close_tab():
+            if tab.is_modified() and not tab.can_close_tab():
                 return False
 
         return True
@@ -1186,7 +1187,7 @@ class ColumnManager(QWidget):
         """Close all open tabs."""
         all_tabs = list(self._tabs.values())
         for tab in all_tabs:
-            self._close_tab_by_id(tab.tab_id)
+            self._close_tab_by_id(tab.tab_id())
 
     def can_close_tab(self) -> bool:
         """Can we close the currently active tab?"""
@@ -1199,7 +1200,7 @@ class ColumnManager(QWidget):
         if not tab:
             return
 
-        self._close_tab_by_id(tab.tab_id)
+        self._close_tab_by_id(tab.tab_id())
 
     def can_save_file(self) -> bool:
         """Check if the current file can be saved."""

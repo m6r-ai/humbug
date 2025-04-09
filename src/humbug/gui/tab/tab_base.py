@@ -65,12 +65,10 @@ class TabBase(QFrame):
         for child in widget.findChildren(QWidget):
             cast(QWidget, child).installEventFilter(self._event_filter)
 
-    @property
     def tab_id(self) -> str:
         """Get the tab's unique identifier."""
         return self._tab_id
 
-    @property
     def is_modified(self) -> bool:
         """Check if the tab's content has unsaved modifications."""
         return self._is_modified
