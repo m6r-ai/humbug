@@ -242,7 +242,7 @@ class ConversationTab(TabBase):
         if counts is None:
             return
 
-        settings = self._conversation_widget.get_settings()
+        settings = self._conversation_widget.conversation_settings()
         if settings is None:
             return
 
@@ -377,7 +377,7 @@ class ConversationTab(TabBase):
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
         dialog = ConversationSettingsDialog(self)
-        dialog.set_settings(self._conversation_widget.get_settings())
+        dialog.set_settings(self._conversation_widget.conversation_settings())
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._conversation_widget.update_conversation_settings(dialog.get_settings())

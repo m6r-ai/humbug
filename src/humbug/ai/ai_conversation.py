@@ -107,7 +107,7 @@ class AIConversation:
         """
         self._settings = new_settings
 
-    def get_settings(self) -> AIConversationSettings:
+    def conversation_settings(self) -> AIConversationSettings:
         """
         Get current conversation settings.
 
@@ -156,6 +156,7 @@ class AIConversation:
                         message.usage.prompt_tokens,
                         message.usage.completion_tokens
                     )
+
                 if message.model:
                     self.update_conversation_settings(AIConversationSettings(
                         model=message.model,
@@ -191,7 +192,7 @@ class AIConversation:
             self._logger.debug("=== Starting new AI response ===")
 
             # Get appropriate backend for conversation
-            settings = self.get_settings()
+            settings = self.conversation_settings()
             provider = AIConversationSettings.get_provider(settings.model)
             backend = self._ai_backends.get(provider)
 
@@ -366,7 +367,7 @@ class AIConversation:
                     self._current_reasoning_message = None
 
                 # Create and add initial AI response message
-                settings = self.get_settings()
+                settings = self.conversation_settings()
                 message = AIMessage.create(
                     AIMessageSource.AI,
                     content,
@@ -402,7 +403,7 @@ class AIConversation:
             # We're handling reasoning from our AI. Is it the first time we're seeing this?
             if not self._current_reasoning_message:
                 # Create and add initial message
-                settings = self.get_settings()
+                settings = self.conversation_settings()
                 message = AIMessage.create(
                     AIMessageSource.REASONING,
                     reasoning,

@@ -503,7 +503,13 @@ class ConversationWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
-    def get_settings(self) -> AIConversationSettings:
+    def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
+        """Update conversation settings and associated backend."""
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        ai_conversation.update_conversation_settings(new_settings)
+        self.status_updated.emit()
+
+    def conversation_settings(self) -> AIConversationSettings:
         """
         Get current conversation settings.
 
@@ -511,7 +517,7 @@ class ConversationWidget(QWidget):
             Current conversation settings
         """
         ai_conversation = cast(AIConversation, self._ai_conversation)
-        return ai_conversation.get_settings()
+        return ai_conversation.conversation_settings()
 
     def _on_scroll_value_changed(self, value: int) -> None:
         """
@@ -909,12 +915,6 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         ai_conversation.cancel_current_tasks()
 
-    def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
-        """Update conversation settings and associated backend."""
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        ai_conversation.update_conversation_settings(new_settings)
-        self.status_updated.emit()
-
     def _handle_style_changed(self) -> None:
         factor = self._style_manager.zoom_factor()
         font = self.font()
@@ -1160,7 +1160,7 @@ class ConversationWidget(QWidget):
 
         # Store current settings
         ai_conversation = cast(AIConversation, self._ai_conversation)
-        settings = ai_conversation.get_settings()
+        settings = ai_conversation.conversation_settings()
         metadata["settings"] = {
             "model": settings.model,
             "temperature": settings.temperature,
@@ -1220,6 +1220,7 @@ class ConversationWidget(QWidget):
             # Update streaming state if the AI conversation is already streaming
             self._is_streaming = ai_conversation.is_streaming()
             self._input.set_streaming(self._is_streaming)
+
         else:
             # Restore settings
             if "settings" in metadata:
