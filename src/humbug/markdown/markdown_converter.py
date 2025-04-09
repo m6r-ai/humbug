@@ -8,7 +8,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 import logging
 from typing import List, Tuple
 
-from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownParseError
+from humbug.markdown.markdown_ast_builder import MarkdownParser, MarkdownParserError
 from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
@@ -24,7 +24,7 @@ class MarkdownConverter:
 
     def __init__(self) -> None:
         """Initialize the markdown converter with an AST builder and HTML renderer."""
-        self.ast_builder = MarkdownASTBuilder(True)
+        self.ast_builder = MarkdownParser(True)
 
         self._logger = logging.getLogger("ConversationMarkdownConverter")
 
@@ -58,7 +58,7 @@ class MarkdownConverter:
             # Extract content sections from the AST document
             return self._extract_sections_from_ast(self.ast_builder.document())
 
-        except MarkdownParseError as e:
+        except MarkdownParserError as e:
             self._logger.exception("Error converting markdown")
             # Return a single error section with a text node
             error_node = MarkdownDocumentNode()

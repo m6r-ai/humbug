@@ -151,7 +151,3 @@ class MarkdownCodeBlockNode(MarkdownASTNode):
 
 class MarkdownLineBreakNode(MarkdownASTNode):
     """Node representing a line break."""
-
-
-class MarkdownParseError(Exception):
-    """Exception raised for errors during markdown parsing."""

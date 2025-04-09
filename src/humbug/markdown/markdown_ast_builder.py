@@ -1,8 +1,5 @@
 """
-Utility for converting simplified markdown text to HTML.
-
-This module provides functionality to incrementally convert simplified markdown
-to HTML while preserving code blocks and handling streaming text updates.
+Parser to construct an AST from Markdown.
 """
 
 import logging
@@ -13,11 +10,15 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode, MarkdownLineBreakNode,
     MarkdownEmphasisNode, MarkdownBoldNode, MarkdownHeadingNode,
     MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
-    MarkdownListItemNode, MarkdownParseError, MarkdownInlineCodeNode, MarkdownCodeBlockNode
+    MarkdownListItemNode, MarkdownInlineCodeNode, MarkdownCodeBlockNode
 )
 
 
-class MarkdownASTBuilder:
+class MarkdownParserError(Exception):
+    """Exception raised for errors during markdown parsing."""
+
+
+class MarkdownParser:
     """
     Builder class for constructing an AST from markdown text.
 
@@ -644,7 +645,7 @@ class MarkdownASTBuilder:
             None
 
         Raises:
-            MarkdownParseError: If there's an error parsing the line
+            MarkdownParserError: If there's an error parsing the line
         """
         try:
             line_type, content = self.identify_line_type(line)
@@ -730,7 +731,7 @@ class MarkdownASTBuilder:
 
         except Exception as e:
             self._logger.exception("Error parsing line %d: %s", line_num, line)
-            raise MarkdownParseError(f"Failed to parse line {line_num}: {e}") from e
+            raise MarkdownParserError(f"Failed to parse line {line_num}: {e}") from e
 
     def build_ast(self, text: str) -> MarkdownDocumentNode:
         """
