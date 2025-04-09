@@ -154,7 +154,7 @@ class FileTreeIconProvider(QFileIconProvider):
 
         # Create icon at base size scaled by zoom factor
         base_size = 16
-        scaled_size = int(base_size * self._style_manager.zoom_factor)
+        scaled_size = int(base_size * self._style_manager.zoom_factor())
 
         # Create transparent pixmap
         pixmap = QPixmap(scaled_size, scaled_size)

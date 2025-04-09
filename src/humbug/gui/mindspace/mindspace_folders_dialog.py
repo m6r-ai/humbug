@@ -186,8 +186,8 @@ class MindspaceFoldersDialog(QDialog):
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor
-        base_font_size = style_manager.base_font_size
+        zoom_factor = style_manager.zoom_factor()
+        base_font_size = style_manager.base_font_size()
 
         # Update font sizes
         font = self.font()

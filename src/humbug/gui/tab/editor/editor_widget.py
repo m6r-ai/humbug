@@ -37,7 +37,7 @@ class EditorWidget(QPlainTextEdit):
             self, self._line_number_area_width, self._line_number_area_paint_event
         )
         font = self._line_number_area.font()
-        font.setFamilies(self._style_manager.monospace_font_families)
+        font.setFamilies(self._style_manager.monospace_font_families())
         self.setFont(font)
         self._line_number_area.setFont(font)
 

@@ -25,7 +25,7 @@ class AboutDialog(QDialog):
         self.setModal(True)
 
         style_manager = StyleManager()
-        base_font_size = style_manager.base_font_size
+        base_font_size = style_manager.base_font_size()
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
@@ -36,7 +36,7 @@ class AboutDialog(QDialog):
         icon_label = QLabel()
         icon_path = os.path.expanduser("~/.humbug/icons/app-icon.svg")
         icon_pixmap = QPixmap(icon_path)
-        scaled_size = int(160 * style_manager.zoom_factor)  # 160px base size
+        scaled_size = int(160 * style_manager.zoom_factor())  # 160px base size
         icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,

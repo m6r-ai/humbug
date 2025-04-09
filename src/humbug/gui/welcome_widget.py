@@ -85,8 +85,8 @@ class WelcomeWidget(QFrame):
 
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
-        zoom_factor = self._style_manager.zoom_factor
-        base_font_size = self._style_manager.base_font_size
+        zoom_factor = self._style_manager.zoom_factor()
+        base_font_size = self._style_manager.base_font_size()
 
         # Update icon size
         icon_path = self._style_manager.get_icon_path("app-icon-disabled")

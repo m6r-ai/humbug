@@ -64,7 +64,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Set up the default font size
         font = QFont()
-        font.setPointSizeF(self._style_manager.base_font_size)
+        font.setPointSizeF(self._style_manager.base_font_size())
         font_metrics = QFontMetricsF(font)
         self._default_font_height = font_metrics.height()
 
@@ -137,9 +137,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         multipliers = [2.0, 1.782, 1.587, 1.414, 1.26, 1.122]
         level = min(node.level, 6) - 1  # Convert to 0-based index
 
-        base_font_size = self._style_manager.base_font_size
-        font_multiplier = ((self._style_manager.base_font_size * 2.0) - multipliers[level]) / base_font_size
-        font_size = base_font_size * font_multiplier * self._style_manager.zoom_factor
+        base_font_size = self._style_manager.base_font_size()
+        font_multiplier = ((base_font_size * 2.0) - multipliers[level]) / base_font_size
+        font_size = base_font_size * font_multiplier * self._style_manager.zoom_factor()
         char_format.setFontPointSize(font_size)
         char_format.setFontWeight(QFont.Weight.Bold)
         self._cursor.setCharFormat(char_format)  # Apply heading character format
@@ -239,7 +239,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Create a new format based on the current one but with a monospace font
         code_format = QTextCharFormat(orig_char_format)
-        code_format.setFontFamilies(self._style_manager.monospace_font_families)
+        code_format.setFontFamilies(self._style_manager.monospace_font_families())
         code_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_INLINE_CODE))
         self._cursor.setCharFormat(code_format)
 
@@ -274,7 +274,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Apply code formatting and insert text
         code_format = QTextCharFormat(orig_char_format)
-        code_format.setFontFamilies(self._style_manager.monospace_font_families)
+        code_format.setFontFamilies(self._style_manager.monospace_font_families())
         self._cursor.setCharFormat(code_format)
 
         # Split content by lines and add each in its own block

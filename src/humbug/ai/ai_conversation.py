@@ -57,12 +57,10 @@ class AIConversation:
             event: set() for event in AIConversationEvent
         }
 
-    @property
     def conversation_id(self) -> str:
         """Get the conversation ID."""
         return self._conversation_id
 
-    @property
     def is_streaming(self) -> bool:
         """Check if the conversation is currently streaming a response."""
         return self._is_streaming

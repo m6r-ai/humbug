@@ -496,7 +496,7 @@ class ConversationMessageSection(QFrame):
         """
 
         icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor)
+        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         if self._copy_button:

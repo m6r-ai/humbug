@@ -222,9 +222,9 @@ class EditorTab(TabBase):
         Handle style and zoom changes.
         """
         # Update font size
-        zoom_factor = self._style_manager.zoom_factor
+        zoom_factor = self._style_manager.zoom_factor()
         font = self._editor_widget.font()
-        base_size = self._style_manager.base_font_size
+        base_size = self._style_manager.base_font_size()
         font.setPointSizeF(base_size * zoom_factor)
         self._editor_widget.setFont(font)
 

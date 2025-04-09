@@ -815,7 +815,6 @@ class StyleManager(QObject):
         # Linux typically uses 10pt as default
         return 10
 
-    @property
     def base_font_size(self) -> float:
         """Get the base font size for the current system."""
         return self._user_font_size or self._base_font_size
@@ -828,7 +827,6 @@ class StyleManager(QObject):
             if size:
                 self.style_changed.emit()
 
-    @property
     def color_mode(self) -> ColorMode:
         """Get the current color mode."""
         return self._color_mode
@@ -846,7 +844,6 @@ class StyleManager(QObject):
             self._initialize_proportional_highlights()
             self.style_changed.emit()  # Trigger style update
 
-    @property
     def zoom_factor(self) -> float:
         """Current zoom scaling factor."""
         return self._zoom_factor
@@ -877,13 +874,12 @@ class StyleManager(QObject):
 
     def get_space_width(self) -> float:
         """Get the width of a space character"""
-        font = QFont(self.monospace_font_families)
-        font.setPointSizeF(self.base_font_size * self._zoom_factor)
+        font = QFont(self._code_font_families)
+        font.setPointSizeF(self.base_font_size() * self._zoom_factor)
         font_metrics = QFontMetricsF(font)
         space_width = font_metrics.horizontalAdvance('        ') / 8
         return space_width
 
-    @property
     def monospace_font_families(self) -> List[str]:
         """Get the standard monospace font family fallback sequence."""
         return self._code_font_families

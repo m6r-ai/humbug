@@ -141,8 +141,8 @@ class ConversationSettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-        zoom_factor = style_manager.zoom_factor
-        base_font_size = style_manager.base_font_size
+        zoom_factor = style_manager.zoom_factor()
+        base_font_size = style_manager.base_font_size()
 
         # Apply consistent dialog styling
         self.setStyleSheet(f"""

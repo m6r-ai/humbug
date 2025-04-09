@@ -359,8 +359,8 @@ class MindspaceFileTree(QWidget):
 
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
-        zoom_factor = self._style_manager.zoom_factor
-        base_font_size = self._style_manager.base_font_size
+        zoom_factor = self._style_manager.zoom_factor()
+        base_font_size = self._style_manager.base_font_size()
 
         # Update font size for label
         font = self.font()

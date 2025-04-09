@@ -77,8 +77,8 @@ class FileRenameDialog(QDialog):
 
     def _apply_styling(self) -> None:
         """Apply consistent styling to the dialog."""
-        zoom_factor = self._style_manager.zoom_factor
-        base_font_size = self._style_manager.base_font_size
+        zoom_factor = self._style_manager.zoom_factor()
+        base_font_size = self._style_manager.base_font_size()
 
         self.setStyleSheet(f"""
             QDialog {{

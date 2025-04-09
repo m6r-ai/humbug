@@ -383,7 +383,7 @@ class MainWindow(QMainWindow):
         self._conv_settings_action.setEnabled(column_manager.can_show_conversation_settings_dialog())
 
         # Update view actions
-        current_zoom = self._style_manager.zoom_factor
+        current_zoom = self._style_manager.zoom_factor()
         left_to_right = self._language_manager.left_to_right
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
@@ -822,8 +822,8 @@ class MainWindow(QMainWindow):
 
     def _handle_style_changed(self) -> None:
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor
-        base_font_size = style_manager.base_font_size
+        zoom_factor = style_manager.zoom_factor()
+        base_font_size = style_manager.base_font_size()
 
         self.setStyleSheet(f"""
             QMainWindow {{
@@ -1110,7 +1110,7 @@ class MainWindow(QMainWindow):
 
     def _handle_zoom(self, factor: float) -> None:
         """Handle zoom in/out requests."""
-        new_zoom = self._style_manager.zoom_factor * factor
+        new_zoom = self._style_manager.zoom_factor() * factor
         self._set_zoom(new_zoom)
 
     def _set_zoom(self, zoom_level: float) -> None:

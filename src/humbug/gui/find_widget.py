@@ -71,9 +71,9 @@ class FindWidget(QWidget):
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
         # Update font size
-        factor = self._style_manager.zoom_factor
+        factor = self._style_manager.zoom_factor()
         font = self.font()
-        base_font_size = self._style_manager.base_font_size
+        base_font_size = self._style_manager.base_font_size()
         font_size = base_font_size * factor
         font.setPointSizeF(font_size)
         self.setFont(font)

@@ -251,9 +251,9 @@ class ConversationMessage(QFrame):
                 text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
                 background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
                 color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
-                factor = self._style_manager.zoom_factor
+                factor = self._style_manager.zoom_factor()
                 font = self.font()
-                base_font_size = self._style_manager.base_font_size
+                base_font_size = self._style_manager.base_font_size()
                 font.setPointSizeF(base_font_size * factor)
                 section.apply_style(text_color, color, font)
                 section.set_content(node)
@@ -343,9 +343,9 @@ class ConversationMessage(QFrame):
 
     def _handle_style_changed(self) -> None:
         """Handle the style changing"""
-        factor = self._style_manager.zoom_factor
+        factor = self._style_manager.zoom_factor()
         font = self.font()
-        base_font_size = self._style_manager.base_font_size
+        base_font_size = self._style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
@@ -392,7 +392,7 @@ class ConversationMessage(QFrame):
 
         # Apply icon and styling to copy and save buttons
         icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor)
+        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         if self._copy_message_button:

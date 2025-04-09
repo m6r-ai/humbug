@@ -90,7 +90,7 @@ class TabLabel(QWidget):
         self._update_font_size()
 
         # Update close button size
-        factor = self._style_manager.zoom_factor
+        factor = self._style_manager.zoom_factor()
         button_size = int(16 * factor)
         self._close_button.setFixedSize(button_size, button_size)
 
@@ -116,7 +116,7 @@ class TabLabel(QWidget):
     def _update_font_size(self) -> None:
         """Update the label font size based on current zoom factor."""
         font = self._label.font()
-        base_size = self._style_manager.base_font_size
+        base_size = self._style_manager.base_font_size()
         scaled_size = self._style_manager.get_scaled_size(base_size)
         font.setPointSizeF(scaled_size)
         self._label.setFont(font)

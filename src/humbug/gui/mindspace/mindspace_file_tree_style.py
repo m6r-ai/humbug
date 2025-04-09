@@ -15,4 +15,4 @@ class MindspaceFileTreeStyle(QProxyStyle):
     ) -> int:
         # Scale all tree view related metrics
         base_size = super().pixelMetric(metric, option, widget)
-        return int(base_size * self._style_manager.zoom_factor)
+        return int(base_size * self._style_manager.zoom_factor())

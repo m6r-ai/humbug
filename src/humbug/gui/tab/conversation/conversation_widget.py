@@ -932,9 +932,9 @@ class ConversationWidget(QWidget):
         self.status_updated.emit()
 
     def _handle_style_changed(self) -> None:
-        factor = self._style_manager.zoom_factor
+        factor = self._style_manager.zoom_factor()
         font = self.font()
-        base_font_size = self._style_manager.base_font_size
+        base_font_size = self._style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
@@ -1230,7 +1230,7 @@ class ConversationWidget(QWidget):
             self._register_ai_conversation_callbacks()
 
             # Update streaming state if the AI conversation is already streaming
-            self._is_streaming = ai_conversation.is_streaming
+            self._is_streaming = ai_conversation.is_streaming()
             self._input.set_streaming(self._is_streaming)
         else:
             # Restore settings

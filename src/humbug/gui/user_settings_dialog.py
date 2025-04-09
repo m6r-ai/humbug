@@ -141,8 +141,8 @@ class UserSettingsDialog(QDialog):
         self._handle_style_changed()
 
     def _handle_style_changed(self) -> None:
-        zoom_factor = self._style_manager.zoom_factor
-        base_font_size = self._style_manager.base_font_size
+        zoom_factor = self._style_manager.zoom_factor()
+        base_font_size = self._style_manager.base_font_size()
 
         # Apply consistent dialog styling
         self.setStyleSheet(f"""
@@ -437,7 +437,7 @@ class UserSettingsDialog(QDialog):
         self._language_combo.setCurrentIndex(current_index)
 
         # Set font size
-        self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size)
+        self._font_size_spin.setValue(settings.font_size if settings.font_size is not None else self._style_manager.base_font_size())
 
         # Set theme
         theme_index = self._theme_combo.findData(settings.theme)
