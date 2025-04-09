@@ -274,8 +274,8 @@ class Lexer(ABC):
             operator_map[first_char].append(op)
 
         # Sort each list by length, longest first to ensure greedy matching
-        for first_char in operator_map:
-            operator_map[first_char].sort(key=len, reverse=True)
+        for _first_char, operators_list in operator_map.items():
+            operators_list.sort(key=len, reverse=True)
 
         return operator_map
 

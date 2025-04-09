@@ -1107,7 +1107,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def get_current_directory(self) -> str | None:
         """Get current working directory if known."""
-        return self._state._current_directory
+        return self._state.current_directory()
 
     def set_search_highlights(self, row: int, highlights: List[Tuple[int, int, bool]]) -> None:
         """Set search highlights for a given row.

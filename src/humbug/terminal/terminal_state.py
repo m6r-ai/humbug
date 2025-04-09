@@ -674,6 +674,10 @@ class TerminalState:
         if 'current_directory' in metadata:
             self._current_directory = metadata['current_directory']
 
+    def current_directory(self) -> str:
+        """Get current working directory."""
+        return self._current_directory
+
     def get_terminal_size(self) -> Tuple[int, int]:
         """
         Get current terminal dimensions.
