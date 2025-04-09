@@ -134,7 +134,6 @@ class ConversationMessageSection(QFrame):
 
         self._handle_language_changed()
 
-    @property
     def language(self) -> ProgrammingLanguage | None:
         """Provide the language in use by this section."""
         return self._language

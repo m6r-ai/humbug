@@ -131,11 +131,6 @@ class ConversationTab(TabBase):
 
         return forked_tab
 
-    @property
-    def timestamp(self) -> datetime:
-        """Get the timestamp of the conversation."""
-        return self._timestamp
-
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""
         metadata = {}

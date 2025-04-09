@@ -262,7 +262,7 @@ class ConversationMessage(QFrame):
             if i == len(self._sections) - 1:
                 # Update the last section with new content
                 section = self._sections[-1]
-                if language != section.language:
+                if language != section.language():
                     section.set_language(language)
 
                 section.set_content(node)
@@ -422,7 +422,7 @@ class ConversationMessage(QFrame):
 
         # Apply styling to all sections
         for section in self._sections:
-            language = section.language
+            language = section.language()
             color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
             section.apply_style(text_color, color, font)
 

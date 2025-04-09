@@ -119,9 +119,6 @@ class ConversationWidget(QWidget):
         """
         super().__init__(parent)
         self._logger = logging.getLogger("ConversationWidget")
-        self._conversation_id = conversation_id
-        self._path = path
-        self._timestamp = timestamp
 
         self._user_manager = UserManager()
 
@@ -454,21 +451,6 @@ class ConversationWidget(QWidget):
             await self._transcript_handler.write([message.to_transcript_dict()])
         except ConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
-
-    @property
-    def conversation_id(self) -> str:
-        """Get the conversation ID."""
-        return self._conversation_id
-
-    @property
-    def path(self) -> str:
-        """Get the path to the conversation file."""
-        return self._path
-
-    @property
-    def timestamp(self) -> datetime:
-        """Get the timestamp of the conversation."""
-        return self._timestamp
 
     def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
@@ -816,8 +798,9 @@ class ConversationWidget(QWidget):
             new_id: New conversation ID
             new_path: New path for the conversation file
         """
-        self._path = new_path
-        self._conversation_id = new_id
+# TODO: This is a mess!
+#        self._path = new_path
+#        self._conversation_id = new_id
         self._transcript_handler.update_path(new_path)
 
     def _handle_edit_page_scroll(self) -> None:
