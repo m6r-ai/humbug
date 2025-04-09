@@ -51,7 +51,7 @@ class ConversationInput(ConversationMessage):
 
     def _update_header_text(self) -> None:
         """Update the header text based on current state."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         if self._is_streaming:
             self._role_label.setText(strings.processing_message)
 

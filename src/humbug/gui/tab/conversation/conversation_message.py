@@ -137,7 +137,7 @@ class ConversationMessage(QFrame):
             # Don't update input widget headers
             self._update_role_text()
 
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             if self._copy_message_button:
                 self._copy_message_button.setToolTip(strings.tooltip_copy_message)
 
@@ -149,7 +149,7 @@ class ConversationMessage(QFrame):
         if not self._message_source:
             return
 
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         role_text = {
             AIMessageSource.USER: strings.role_you,
             AIMessageSource.AI: strings.role_assistant,
@@ -280,7 +280,7 @@ class ConversationMessage(QFrame):
 
     def _save_message(self) -> bool:
         """Show save as dialog and save message as a markdown file."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         # Show file dialog
         export_dialog = QFileDialog()

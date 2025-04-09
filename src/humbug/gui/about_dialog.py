@@ -20,7 +20,8 @@ class AboutDialog(QDialog):
         super().__init__(parent)
 
         self._language_manager = LanguageManager()
-        self.setWindowTitle(self._language_manager.strings.about_title)
+        strings = self._language_manager.strings()
+        self.setWindowTitle(strings.about_title)
         self.setMinimumWidth(400)
         self.setModal(True)
 
@@ -64,7 +65,7 @@ class AboutDialog(QDialog):
         layout.addWidget(desc_label)
 
         # Close button with proper styling and sizing
-        close_button = QPushButton(self._language_manager.strings.close_button)
+        close_button = QPushButton(strings.close_button)
         close_button.clicked.connect(self.accept)
         close_button.setMinimumWidth(80)
         close_button.setContentsMargins(6, 6, 6, 6)

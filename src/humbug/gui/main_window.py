@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         # Humbug menu actions
         self._about_action = QAction(strings.about_humbug, self)
@@ -384,7 +384,7 @@ class MainWindow(QMainWindow):
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
-        left_to_right = self._language_manager.left_to_right
+        left_to_right = self._language_manager.left_to_right()
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
         self._show_all_columns_action.setEnabled(column_manager.can_show_all_columns())
@@ -403,14 +403,14 @@ class MainWindow(QMainWindow):
     def _handle_language_changed(self) -> None:
         """Update UI text when language changes."""
         app = cast(QApplication, QApplication.instance())
-        left_to_right = self._language_manager.left_to_right
+        left_to_right = self._language_manager.left_to_right()
         if left_to_right:
             app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
 
         else:
             app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         # Update menu titles
         self._humbug_menu.setTitle(strings.humbug_menu)
@@ -468,7 +468,7 @@ class MainWindow(QMainWindow):
         self._previous_bookmark_action.setText(strings.previous_bookmark)
 
         # Our logic for left and right reverses for right-to-left languages
-        left_to_right = self._language_manager.left_to_right
+        left_to_right = self._language_manager.left_to_right()
         self._split_column_left_action.triggered.disconnect()
         self._split_column_left_action.triggered.connect(lambda: self._split_column(left_to_right))
         self._split_column_right_action.triggered.disconnect()
@@ -491,7 +491,7 @@ class MainWindow(QMainWindow):
         Returns:
             QMenu: The theme submenu
         """
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         # Create the theme menu
         theme_menu = QMenu(strings.display_theme, self)
@@ -566,7 +566,7 @@ class MainWindow(QMainWindow):
     def _new_mindspace(self) -> None:
         """Show folder selection dialog and create new mindspace."""
         self._menu_timer.stop()
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         dir_path = QFileDialog.getExistingDirectory(
             self, strings.file_dialog_new_mindspace
         )
@@ -615,7 +615,7 @@ class MainWindow(QMainWindow):
     def _open_mindspace(self) -> None:
         """Open a new mindspace."""
         self._menu_timer.stop()
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         dir_path = QFileDialog.getExistingDirectory(self, strings.file_dialog_open_mindspace)
         self._menu_timer.start()
         if not dir_path:
@@ -636,7 +636,7 @@ class MainWindow(QMainWindow):
             self._file_tree.set_mindspace(path)
 
         except MindspaceError as e:
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -670,7 +670,7 @@ class MainWindow(QMainWindow):
 
         except MindspaceError as e:
             self._logger.error("Failed to save mindspace state: %s", str(e))
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -690,7 +690,7 @@ class MainWindow(QMainWindow):
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -768,7 +768,7 @@ class MainWindow(QMainWindow):
     def _open_file(self) -> None:
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             strings.file_dialog_open_file,
@@ -788,7 +788,7 @@ class MainWindow(QMainWindow):
             self._column_manager.open_file(path)
 
         except OSError as e:
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -907,7 +907,7 @@ class MainWindow(QMainWindow):
             )
 
         except MindspaceError as e:
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -920,7 +920,7 @@ class MainWindow(QMainWindow):
         """Create new conversation from Metaphor file."""
         # Show file dialog
         self._menu_timer.stop()
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             strings.file_dialog_open_metaphor,
@@ -950,7 +950,7 @@ class MainWindow(QMainWindow):
                     conversation_tab.set_input_text(prompt)
 
         except MetaphorParserError as e:
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -961,7 +961,7 @@ class MainWindow(QMainWindow):
     def _open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""
         self._menu_timer.stop()
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             strings.file_dialog_open_conversation,
@@ -983,7 +983,7 @@ class MainWindow(QMainWindow):
 
         except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -997,7 +997,7 @@ class MainWindow(QMainWindow):
             await self._column_manager.fork_conversation()
 
         except ConversationError as e:
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -1059,7 +1059,7 @@ class MainWindow(QMainWindow):
 
             except UserError as e:
                 self._logger.error("Failed to save user settings: %s", str(e))
-                strings = self._language_manager.strings
+                strings = self._language_manager.strings()
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
@@ -1085,7 +1085,7 @@ class MainWindow(QMainWindow):
 
             except OSError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
-                strings = self._language_manager.strings
+                strings = self._language_manager.strings()
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,

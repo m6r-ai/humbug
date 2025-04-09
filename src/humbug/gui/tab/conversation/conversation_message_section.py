@@ -158,7 +158,7 @@ class ConversationMessageSection(QFrame):
             self._highlighter = highlighter
             self._text_area.set_has_code_block(True)
 
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         if self._language_header:
             language_header = strings.highlighting.format(
                 language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
@@ -167,7 +167,7 @@ class ConversationMessageSection(QFrame):
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         if self._language_header:
             language_header = strings.highlighting.format(
@@ -227,7 +227,7 @@ class ConversationMessageSection(QFrame):
 
     def _save_as(self) -> bool:
         """Show save as dialog and save file."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         # Determine the suggested file extension based on language
         extension = ProgrammingLanguageUtils.get_file_extension(self._language)

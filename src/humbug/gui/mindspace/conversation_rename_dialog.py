@@ -17,7 +17,7 @@ class ConversationRenameDialog(QDialog):
         self._style_manager = StyleManager()
 
         self._language_manager = LanguageManager()
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.rename_conversation)
         self.setModal(True)

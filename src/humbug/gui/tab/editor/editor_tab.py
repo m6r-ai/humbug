@@ -311,7 +311,7 @@ class EditorTab(TabBase):
                 self._set_modified(False)
 
             except Exception as e:
-                strings = self._language_manager.strings
+                strings = self._language_manager.strings()
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
@@ -365,7 +365,7 @@ class EditorTab(TabBase):
         # Get language name for display
         file_type = ProgrammingLanguageUtils.get_display_name(self._current_programming_language)
 
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         message = StatusMessage(
             strings.editor_status.format(
                 line=line,
@@ -473,7 +473,7 @@ class EditorTab(TabBase):
         if not self._is_modified:
             return True
 
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         document_name = self._path or f'Untitled-{self._untitled_number}'
         result = MessageBox.show_message(
             self,
@@ -531,7 +531,7 @@ class EditorTab(TabBase):
             return True
 
         except Exception as e:
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -550,7 +550,7 @@ class EditorTab(TabBase):
         Returns:
             bool: True if save was successful
         """
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         export_dialog = QFileDialog()
         export_dialog.setWindowTitle(strings.file_dialog_save_file)
         if self._path:

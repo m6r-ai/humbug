@@ -34,12 +34,10 @@ class LanguageManager(QObject):
                 LanguageCode.AR: get_arabic_strings()
             }
 
-    @property
     def strings(self) -> LanguageStrings:
         """Get strings for current language."""
         return self._language_mappings[self._current_language]
 
-    @property
     def current_language(self) -> LanguageCode:
         """Get current language code."""
         return self._current_language
@@ -50,7 +48,6 @@ class LanguageManager(QObject):
             self._current_language = code
             self.language_changed.emit()
 
-    @property
     def left_to_right(self) -> bool:
         """Are we using a left to right language?"""
         return self._current_language is not LanguageCode.AR

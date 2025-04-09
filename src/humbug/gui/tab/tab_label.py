@@ -230,11 +230,6 @@ class TabLabel(QWidget):
         self._is_active_column = is_active_column
         self._update_close_button()
 
-    @property
-    def tab_id(self) -> str:
-        """Get the tab's unique identifier."""
-        return self._tab_id
-
     def text(self) -> str:
         """
         Get the current text of the tab label.

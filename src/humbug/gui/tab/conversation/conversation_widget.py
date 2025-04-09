@@ -956,33 +956,34 @@ class ConversationWidget(QWidget):
             pos: Local coordinates for menu position
         """
         menu = QMenu(self)
+        strings = self._language_manager.strings()
 
         # Copy action
-        copy_action = menu.addAction(self._language_manager.strings.copy)
+        copy_action = menu.addAction(strings.copy)
         copy_action.setEnabled(self.has_selection())
         copy_action.triggered.connect(self.copy)
 
         # Paste action
-        paste_action = menu.addAction(self._language_manager.strings.paste)
+        paste_action = menu.addAction(strings.paste)
         paste_action.setEnabled(True)
         paste_action.triggered.connect(self.paste)
         menu.addSeparator()
 
-        fork_action = menu.addAction(self._language_manager.strings.fork_conversation)
+        fork_action = menu.addAction(strings.fork_conversation)
         fork_action.triggered.connect(self.forkRequested)
         menu.addSeparator()
 
-        toggle_bookmark_action = menu.addAction(self._language_manager.strings.bookmark_section)
+        toggle_bookmark_action = menu.addAction(strings.bookmark_section)
         toggle_bookmark_action.setEnabled(self.can_toggle_bookmark())
         toggle_bookmark_action.setCheckable(True)
         toggle_bookmark_action.setChecked(self.is_checked_bookmark())
         toggle_bookmark_action.triggered.connect(self.toggle_bookmark)
 
-        next_bookmark_action = menu.addAction(self._language_manager.strings.next_bookmark)
+        next_bookmark_action = menu.addAction(strings.next_bookmark)
         next_bookmark_action.setEnabled(self.can_navigate_next_bookmark())
         next_bookmark_action.triggered.connect(self.navigate_next_bookmark)
 
-        prev_bookmark_action = menu.addAction(self._language_manager.strings.previous_bookmark)
+        prev_bookmark_action = menu.addAction(strings.previous_bookmark)
         prev_bookmark_action.setEnabled(self.can_navigate_previous_bookmark())
         prev_bookmark_action.triggered.connect(self.navigate_previous_bookmark)
 

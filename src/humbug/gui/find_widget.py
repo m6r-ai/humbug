@@ -63,7 +63,7 @@ class FindWidget(QWidget):
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
     def _handle_language_changed(self) -> None:
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         self._search_input.setPlaceholderText(strings.find_placeholder)
         self._update_match_status()
         self._handle_style_changed()
@@ -154,7 +154,7 @@ class FindWidget(QWidget):
     def _update_match_status(self) -> None:
         """Update the match status display."""
 
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         if self._matches > 0:
             self._status_label.setText(strings.find_match_count.format(
                 current=self._current_match,

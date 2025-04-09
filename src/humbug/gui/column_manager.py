@@ -895,7 +895,7 @@ class ColumnManager(QWidget):
             try:
                 await self.fork_conversation()
             except ConversationError as e:
-                strings = self._language_manager.strings
+                strings = self._language_manager.strings()
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,

@@ -95,7 +95,7 @@ class MindspaceFileTree(QWidget):
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
         # Set initial label text
-        self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
+        self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
@@ -104,7 +104,7 @@ class MindspaceFileTree(QWidget):
 
         # Create context menu
         menu = QMenu(self)
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         # Determine the path and whether it's a file or directory
         if index.isValid():
@@ -158,7 +158,7 @@ class MindspaceFileTree(QWidget):
 
     def _handle_rename_file(self, path: str) -> None:
         """Prompt user to rename a file and handle renaming."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         old_name = os.path.basename(path)
         dialog = FileRenameDialog(old_name, self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
@@ -197,7 +197,7 @@ class MindspaceFileTree(QWidget):
 
     def _create_new_file(self, extension: str) -> None:
         """Create a new file with the specified extension."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         # Determine the current directory
         current_path = self._mindspace_path or self._fs_model.rootPath()
@@ -234,7 +234,7 @@ class MindspaceFileTree(QWidget):
             path: Path to the file to delete
         """
         # Show confirmation dialog using MessageBox
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         result = MessageBox.show_message(
             self,
             MessageBoxType.WARNING,
@@ -253,7 +253,6 @@ class MindspaceFileTree(QWidget):
                 os.remove(path)
 
             except OSError as e:
-                strings = self._language_manager.strings
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,
@@ -288,7 +287,7 @@ class MindspaceFileTree(QWidget):
 
         # Check if target already exists
         if os.path.exists(new_path):
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.WARNING,
@@ -306,7 +305,7 @@ class MindspaceFileTree(QWidget):
             os.rename(path, new_path)
 
         except OSError as e:
-            strings = self._language_manager.strings
+            strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -322,7 +321,7 @@ class MindspaceFileTree(QWidget):
         if not path:
             # Clear the model when no mindspace is active
             self._filter_model.set_mindspace_root("")
-            self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
+            self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
             return
 
         self._fs_model.setRootPath(path)
@@ -353,7 +352,7 @@ class MindspaceFileTree(QWidget):
     def _handle_language_changed(self) -> None:
         """Update when the language changes."""
         if not self._mindspace_path:
-            self._mindspace_label.setText(self._language_manager.strings.mindspace_label_none)
+            self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
         self._handle_style_changed()
 

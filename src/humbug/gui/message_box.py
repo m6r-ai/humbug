@@ -172,7 +172,7 @@ class MessageBox(QDialog):
 
     def _get_button_text(self, button: MessageBoxButton) -> str:
         """Get display text for button type."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         return {
             MessageBoxButton.OK: strings.ok,
             MessageBoxButton.CANCEL: strings.cancel,

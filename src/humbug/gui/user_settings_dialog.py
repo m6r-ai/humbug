@@ -36,7 +36,7 @@ class UserSettingsDialog(QDialog):
         super().__init__(parent)
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.user_settings)
         self.setMinimumWidth(750)
@@ -295,7 +295,7 @@ class UserSettingsDialog(QDialog):
         language_manager = LanguageManager()
 
         layout = QHBoxLayout()
-        self._language_label = QLabel(language_manager.strings.select_language)
+        self._language_label = QLabel(language_manager.strings().select_language)
         self._language_label.setMinimumHeight(40)
         combo = QComboBox(parent)
         combo.setView(QListView())  # Weird workaround to get styles to work!
@@ -313,7 +313,7 @@ class UserSettingsDialog(QDialog):
             combo.addItem(language_names[code], code)
 
         # Set current language
-        current_index = combo.findData(language_manager.current_language)
+        current_index = combo.findData(language_manager.current_language())
         combo.setCurrentIndex(current_index)
 
         layout.addWidget(self._language_label)
@@ -329,7 +329,7 @@ class UserSettingsDialog(QDialog):
         Returns:
             List of tuples with (key_name, localized_label_text)
         """
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         return [
             ("ANTHROPIC_API_KEY", strings.anthropic_api_key),
             ("DEEPSEEK_API_KEY", strings.deepseek_api_key),
@@ -341,7 +341,7 @@ class UserSettingsDialog(QDialog):
 
     def _handle_language_changed(self) -> None:
         """Update all dialog texts with current language strings."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         self.setWindowTitle(strings.user_settings)
 
         # Update labels
@@ -433,7 +433,7 @@ class UserSettingsDialog(QDialog):
                 self._api_key_entries[key].setText(value)
 
         # Set initial language selection
-        current_index = self._language_combo.findData(self._language_manager.current_language)
+        current_index = self._language_combo.findData(self._language_manager.current_language())
         self._language_combo.setCurrentIndex(current_index)
 
         # Set font size

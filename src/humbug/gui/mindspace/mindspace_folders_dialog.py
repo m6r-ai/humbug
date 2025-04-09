@@ -25,7 +25,7 @@ class MindspaceFoldersDialog(QDialog):
         super().__init__(parent)
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.mindspace_folders_title)
         self.setMinimumWidth(500)
@@ -156,7 +156,7 @@ class MindspaceFoldersDialog(QDialog):
 
     def _handle_language_changed(self) -> None:
         """Update all dialog texts when language changes."""
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
         self.setWindowTitle(strings.mindspace_folders_title)
         self._path_label.setText(strings.mindspace_path)
 

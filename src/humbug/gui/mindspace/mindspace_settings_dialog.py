@@ -33,7 +33,7 @@ class MindspaceSettingsDialog(QDialog):
         """
         super().__init__(parent)
         self._language_manager = LanguageManager()
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.mindspace_settings)
         self.setMinimumWidth(500)
@@ -357,18 +357,19 @@ class MindspaceSettingsDialog(QDialog):
 
         # Get model's reasoning capabilities
         capabilities = AIConversationSettings.get_reasoning_capability(model)
+        strings = self._language_manager.strings()
 
         # Add NO_REASONING if supported
         if capabilities & ReasoningCapability.NO_REASONING:
-            self._reasoning_combo.addItem(self._language_manager.strings.settings_no_reasoning, ReasoningCapability.NO_REASONING)
+            self._reasoning_combo.addItem(strings.settings_no_reasoning, ReasoningCapability.NO_REASONING)
 
         # Add HIDDEN_REASONING if supported
         if capabilities & ReasoningCapability.HIDDEN_REASONING:
-            self._reasoning_combo.addItem(self._language_manager.strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING)
+            self._reasoning_combo.addItem(strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING)
 
         # Add VISIBLE_REASONING if supported
         if capabilities & ReasoningCapability.VISIBLE_REASONING:
-            self._reasoning_combo.addItem(self._language_manager.strings.settings_visible_reasoning, ReasoningCapability.VISIBLE_REASONING)
+            self._reasoning_combo.addItem(strings.settings_visible_reasoning, ReasoningCapability.VISIBLE_REASONING)
 
         # Set previous selection if possible
         if current_reasoning is not None:

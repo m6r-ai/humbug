@@ -513,7 +513,7 @@ class TerminalTab(TabBase):
         name = self._terminal_process.get_process_name()
         rows, columns = self._terminal_widget.get_terminal_size()
         message = StatusMessage(
-            self._language_manager.strings.terminal_status.format(
+            self._language_manager.strings().terminal_status.format(
                 name=name,
                 columns=columns,
                 rows=rows

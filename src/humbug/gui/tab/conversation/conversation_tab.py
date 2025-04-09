@@ -245,7 +245,7 @@ class ConversationTab(TabBase):
         if settings is None:
             return
 
-        strings = self._language_manager.strings
+        strings = self._language_manager.strings()
 
         # Temperature display depends on whether it's available
         if AIConversationSettings.supports_temperature(settings.model):
