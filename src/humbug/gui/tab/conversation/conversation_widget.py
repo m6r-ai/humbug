@@ -73,7 +73,7 @@ class ConversationWidgetEventFilter(QObject):
             self.widget_activated.emit(obj)
             return False  # Don't consume the event
 
-        elif event.type() == QEvent.Type.FocusOut:
+        if event.type() == QEvent.Type.FocusOut:
             # Emit a widget deactivated signal
             self.widget_deactivated.emit(obj)
             return False  # Don't consume the event
@@ -231,8 +231,8 @@ class ConversationWidget(QWidget):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
-        # Find functionality (integrated from ConversationFind)
-        self._matches: List[Tuple[ConversationMessage, List[Tuple[int, int, int]]]] = []  # List of (widget, [(section, start, end)])
+        # Find functionality
+        self._matches: List[Tuple[ConversationMessage, List[Tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
@@ -346,8 +346,7 @@ class ConversationWidget(QWidget):
         # This is a simple approach - in practice you'd want to associate message IDs with widgets
         for i, widget in enumerate(self._messages):
             if (i == len(self._messages) - 1 and
-                (message.source == AIMessageSource.AI or
-                 message.source == AIMessageSource.REASONING)):
+                    message.source in (AIMessageSource.AI, AIMessageSource.REASONING)):
                 widget.set_content(message.content, message.source, message.timestamp)
                 break
 
@@ -722,7 +721,10 @@ class ConversationWidget(QWidget):
 
     def can_navigate_previous_message(self) -> bool:
         """Check if navigation to previous message is possible."""
-        return self._input.hasFocus() or (0 <= self._focused_message_index < len(self._messages) and self._focused_message_index > 0)
+        return (
+            self._input.hasFocus() or
+            (0 <= self._focused_message_index < len(self._messages) and self._focused_message_index > 0)
+        )
 
     def _toggle_message_bookmark(self, message_widget: ConversationMessage) -> None:
         """Toggle bookmark status for a message."""
@@ -1102,6 +1104,9 @@ class ConversationWidget(QWidget):
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
         if not content:
+            return
+
+        if self._is_streaming:
             return
 
         self._input.clear()

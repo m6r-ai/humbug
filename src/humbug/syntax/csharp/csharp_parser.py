@@ -118,12 +118,13 @@ class CSharpParser(Parser):
                         generic_depth += 1
                         token.type = TokenType.GENERIC_START
                         self._tokens.append(token)
+
                     else:
                         # This is a less-than operator
                         self._tokens.append(token)
                     continue
 
-                elif operator_value == '>':
+                if operator_value == '>':
                     # Could be the end of a generic parameter list or a greater-than operator
                     if in_generic and generic_depth > 0:
                         generic_depth -= 1
@@ -137,7 +138,7 @@ class CSharpParser(Parser):
                         self._tokens.append(token)
                     continue
 
-                elif operator_value == '.':
+                if operator_value == '.':
                     # Property or field access (but not in using directives)
                     if not in_using:
                         in_element = True
@@ -145,7 +146,7 @@ class CSharpParser(Parser):
                     self._tokens.append(token)
                     continue
 
-                elif operator_value == '?.':
+                if operator_value == '?.':
                     # Null-conditional operator for property/field access
                     if not in_using:
                         in_element = True
@@ -178,10 +179,12 @@ class CSharpParser(Parser):
                         # Type parameter with constraints
                         token.type = TokenType.TYPE_PARAMETER
                         self._tokens.append(token)
+
                     else:
                         # Generic type parameter
                         token.type = TokenType.GENERIC_TYPE
                         self._tokens.append(token)
+
                     continue
 
                 # Check if this is a method call
@@ -194,7 +197,7 @@ class CSharpParser(Parser):
                 # Check if this is a generic method call
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '<':
                     # Look ahead to determine if this is a generic method
-                    is_generic_method = self._is_generic_method(token, lexer)
+                    is_generic_method = self._is_generic_method(lexer)
                     if is_generic_method:
                         token.type = TokenType.GENERIC_METHOD
                         self._tokens.append(token)
@@ -272,7 +275,7 @@ class CSharpParser(Parser):
 
         return False
 
-    def _is_generic_method(self, token: Token, lexer: CSharpLexer) -> bool:
+    def _is_generic_method(self, lexer: CSharpLexer) -> bool:
         """
         Determine if an identifier followed by '<' is a generic method call.
 

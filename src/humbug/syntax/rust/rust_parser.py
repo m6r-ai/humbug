@@ -77,18 +77,22 @@ class RustParser(Parser):
                         generic_depth += 1
                         self._tokens.append(token)
                         continue
+
                 elif token.value == '>':
                     if in_generic_params:
                         generic_depth -= 1
                         if generic_depth == 0:
                             in_generic_params = False
+
                         self._tokens.append(token)
                         continue
+
                 elif token.value == '::':
                     # Module path separator
                     in_element = True
                     self._tokens.append(token)
                     continue
+
                 elif token.value == '.':
                     # Method or field access
                     in_element = True
@@ -96,7 +100,7 @@ class RustParser(Parser):
                     continue
 
             if token.type == TokenType.IDENTIFIER:
-                self._handle_identifier(token, lexer, in_element)
+                self._handle_identifier(token, lexer)
                 continue
 
             # Reset element context for other token types
@@ -135,7 +139,7 @@ class RustParser(Parser):
 
         return True
 
-    def _handle_identifier(self, token: Token, lexer: RustLexer, in_element: bool) -> None:
+    def _handle_identifier(self, token: Token, lexer: RustLexer) -> None:
         """
         Process identifier tokens based on context.
 

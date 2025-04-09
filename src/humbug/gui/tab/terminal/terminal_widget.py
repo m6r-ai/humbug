@@ -411,13 +411,13 @@ class TerminalWidget(QAbstractScrollArea):
         # Handle Alt/Meta key combinations
         if modifiers & Qt.KeyboardModifier.AltModifier:
             # Alt + letter sends ESC + letter
-            if key >= Qt.Key.Key_A and key <= Qt.Key.Key_Z:
+            if Qt.Key.Key_A <= key <= Qt.Key.Key_Z:
                 self.data_ready.emit(b'\x1b' + chr(key).lower().encode())
                 event.accept()
                 return
 
             # Alt + number sends ESC + number
-            if key >= Qt.Key.Key_0 and key <= Qt.Key.Key_9:
+            if Qt.Key.Key_0 <= key <= Qt.Key.Key_9:
                 self.data_ready.emit(b'\x1b' + chr(key).encode())
                 event.accept()
                 return
@@ -513,7 +513,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle control key combinations
         if modifiers & Qt.KeyboardModifier.ControlModifier:
-            if key >= Qt.Key.Key_A and key <= Qt.Key.Key_Z:
+            if Qt.Key.Key_A <= key <= Qt.Key.Key_Z:
                 # Calculate control character (1-26)
                 ctrl_char = bytes([key - Qt.Key.Key_A + 1])
                 self.data_ready.emit(ctrl_char)

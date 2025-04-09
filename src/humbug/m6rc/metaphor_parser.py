@@ -176,7 +176,7 @@ class MetaphorParser:
                     seen_role_tree = True
                 elif token.type == TokenType.END_OF_FILE:
                     if self.parse_errors:
-                        raise(MetaphorParserError("parser error", self.parse_errors))
+                        raise MetaphorParserError("parser error", self.parse_errors)
 
                     return self.syntax_tree
                 else:
@@ -353,7 +353,7 @@ class MetaphorParser:
                 seen_token_type = TokenType.ACTION
                 continue
 
-            if token.type == TokenType.OUTDENT or token.type == TokenType.END_OF_FILE:
+            if token.type in (TokenType.OUTDENT, TokenType.END_OF_FILE):
                 return action_node
 
             self._record_syntax_error(
@@ -403,7 +403,7 @@ class MetaphorParser:
                 seen_token_type = TokenType.CONTEXT
                 continue
 
-            if token.type == TokenType.OUTDENT or token.type == TokenType.END_OF_FILE:
+            if token.type in (TokenType.OUTDENT, TokenType.END_OF_FILE):
                 return context_node
 
             self._record_syntax_error(
@@ -441,19 +441,19 @@ class MetaphorParser:
                 role_node.attach_child(self._parse_text(token))
                 continue
 
-            elif token.type == TokenType.CODE:
+            if token.type == TokenType.CODE:
                 if seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Code must come first in a 'Role' block")
 
                 role_node.attach_child(self._parse_code(token))
                 continue
 
-            elif token.type == TokenType.ROLE:
+            if token.type == TokenType.ROLE:
                 role_node.attach_child(self._parse_role(token))
                 seen_token_type = TokenType.ROLE
                 continue
 
-            elif token.type == TokenType.OUTDENT or token.type == TokenType.END_OF_FILE:
+            if token.type in (TokenType.OUTDENT, TokenType.END_OF_FILE):
                 return role_node
 
             self._record_syntax_error(

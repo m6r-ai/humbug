@@ -325,13 +325,15 @@ class RustLexer(Lexer):
                 self._read_type_suffix()
                 self._add_number_token(start)
                 return
-            elif prefix == 'o':  # Octal
+
+            if prefix == 'o':  # Octal
                 self._position += 2
                 self._read_digits(self._is_octal_digit)
                 self._read_type_suffix()
                 self._add_number_token(start)
                 return
-            elif prefix == 'b':  # Binary
+
+            if prefix == 'b':  # Binary
                 self._position += 2
                 self._read_digits(self._is_binary_digit)
                 self._read_type_suffix()

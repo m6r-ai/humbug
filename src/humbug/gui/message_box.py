@@ -126,7 +126,7 @@ class MessageBox(QDialog):
             # Set default and escape buttons appropriately
             if button in (MessageBoxButton.OK, MessageBoxButton.YES):
                 default_button = btn
- 
+
             elif button in (MessageBoxButton.CANCEL, MessageBoxButton.NO):
                 escape_button = btn
 

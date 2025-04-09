@@ -33,5 +33,3 @@ class JSONParser(Parser):
                 break
 
             self._tokens.append(token)
-
-        return None

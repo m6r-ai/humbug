@@ -48,7 +48,7 @@ class UTF8Buffer:
                 if byte & 0b10000000 == 0:  # ASCII byte
                     return i + 1
 
-                elif (byte & 0b11100000) == 0b11000000:  # 2-byte sequence
+                if (byte & 0b11100000) == 0b11000000:  # 2-byte sequence
                     if i + 2 <= len(self.buffer):
                         return i + 2
 

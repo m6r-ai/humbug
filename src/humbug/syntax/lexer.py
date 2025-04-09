@@ -63,6 +63,14 @@ class TokenType(IntEnum):
 
 @dataclass
 class Token:
+    """
+    Represents a token in the input stream.
+
+    Attributes:
+        type: The type of the token
+        value: The string value of the token
+        start: The starting position of the token in the input stream
+    """
     type: TokenType
     value: str
     start: int

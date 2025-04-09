@@ -196,9 +196,11 @@ class SwiftLexer(Lexer):
             if ch == '"':
                 self._position += 1
                 break
-            elif ch == '\\' and self._position + 1 < self._input_len:
+
+            if ch == '\\' and self._position + 1 < self._input_len:
                 # Skip escaped characters
                 self._position += 2
+
             else:
                 self._position += 1
 

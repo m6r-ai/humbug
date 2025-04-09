@@ -51,7 +51,7 @@ class FileTreeView(QTreeView):
         # Get the item under the mouse to work out tool tips.
         self.setToolTip(path if index.isValid() else "")
 
-        if not (event.buttons() & Qt.MouseButton.LeftButton):
+        if not event.buttons() & Qt.MouseButton.LeftButton:
             return
 
         if not self._drag_start_pos:

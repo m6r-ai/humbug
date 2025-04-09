@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, cast
+from typing import Callable
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -77,12 +77,14 @@ class JSONLexer(Lexer):
                 if next_ch in '"\\bfnrt/':  # Valid JSON escape sequences
                     self._position += 2
                     continue
-                elif next_ch == 'u':  # Unicode escape
+
+                if next_ch == 'u':  # Unicode escape
                     if self._position + 5 < self._input_len:
                         hex_digits = self._input[self._position + 2:self._position + 6]
                         if all(self._is_hex_digit(d) for d in hex_digits):
                             self._position += 6
                             continue
+
                     # Invalid unicode escape sequence
                     self._tokens.append(Token(
                         type=TokenType.ERROR,
@@ -170,6 +172,7 @@ class JSONLexer(Lexer):
             if (self._position < self._input_len and
                     self._input[self._position] in '+-'):
                 self._position += 1
+
             if not self._read_digits():
                 self._tokens.append(Token(
                     type=TokenType.ERROR,

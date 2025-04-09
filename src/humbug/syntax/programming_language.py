@@ -2,6 +2,7 @@ from enum import IntEnum, auto
 
 
 class ProgrammingLanguage(IntEnum):
+    """Programming language enum."""
     UNKNOWN = -1
     C = auto()
     CPP = auto()

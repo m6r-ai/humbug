@@ -40,7 +40,20 @@ excludes = ["build", "dist", "*.egg-info"]
 
 [tool.pylint]
 disable = [
-    "R0801"
+    "broad-exception-caught",
+    "duplicate-code",
+    "missing-module-docstring",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-lines",
+    "too-many-locals",
+    "too-many-nested-blocks",
+    "too-many-positional-arguments",
+    "too-many-public-methods",
+    "too-many-return-statements",
+    "too-many-statements"
 ]
 
 enable = [
@@ -49,7 +62,7 @@ enable = [
 
 # General configuration
 max-line-length = 132
-max-args = 5
+max-args = 8
 max-attributes = 12
 
 # Message control

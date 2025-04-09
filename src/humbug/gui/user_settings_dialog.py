@@ -378,19 +378,20 @@ class UserSettingsDialog(QDialog):
 
     def _handle_value_change(self) -> None:
         """Handle changes to any API key value."""
-        if not self._current_settings:
+        current_settings = self._current_settings
+        if not current_settings:
             return
 
         # Check if any value has changed from current settings
         api_keys_changed = False
         for key, line_edit in self._api_key_entries.items():
-            if line_edit.text() != self._current_settings.api_keys.get(key, ""):
+            if line_edit.text() != current_settings.api_keys.get(key, ""):
                 api_keys_changed = True
                 break
 
-        language_changed = self._language_combo.currentData() != self._current_settings.language
-        font_size_changed = self._font_size_spin.value() != (self._current_settings.font_size or self._style_manager.base_font_size)
-        theme_changed = self._theme_combo.currentData() != self._current_settings.theme
+        language_changed = self._language_combo.currentData() != current_settings.language
+        font_size_changed = self._font_size_spin.value() != (current_settings.font_size or self._style_manager.base_font_size)
+        theme_changed = self._theme_combo.currentData() != current_settings.theme
 
         self.apply_button.setEnabled(
             api_keys_changed or language_changed or font_size_changed or theme_changed

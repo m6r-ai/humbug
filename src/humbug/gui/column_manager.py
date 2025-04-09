@@ -866,6 +866,7 @@ class ColumnManager(QWidget):
             raise
 
     def can_fork_conversation(self) -> bool:
+        """Check if the current tab can be forked."""
         tab = self._get_current_tab()
         if not tab or not isinstance(tab, ConversationTab):
             return False
@@ -1192,12 +1193,15 @@ class ColumnManager(QWidget):
     def can_close_tab(self) -> bool:
         """Can we close the currently active tab?"""
         tab = self._get_current_tab()
-        return False if not tab else True
+        if tab is None:
+            return False
+
+        return tab.can_close_tab()
 
     def close_tab(self) -> None:
         """Close the currently active tab."""
         tab = self._get_current_tab()
-        if not tab:
+        if tab is None:
             return
 
         self._close_tab_by_id(tab.tab_id())
@@ -1205,32 +1209,42 @@ class ColumnManager(QWidget):
     def can_save_file(self) -> bool:
         """Check if the current file can be saved."""
         tab = self._get_current_tab()
-        return False if not tab else tab.can_save()
+        if tab is None:
+            return False
+
+        return tab.can_save()
 
     def save_file(self) -> None:
         """Save the current file."""
         current_tab = self._get_current_tab()
-        if isinstance(current_tab, EditorTab):
-            current_tab.save()
+        if not isinstance(current_tab, EditorTab):
+            return
+
+        current_tab.save()
 
     def can_save_file_as(self) -> bool:
         """Check if the current file can be saved as a new file."""
         tab = self._get_current_tab()
-        return False if not tab else tab.can_save_as()
+        if tab is None:
+            return False
+
+        return tab.can_save_as()
 
     def save_file_as(self) -> None:
         """Save the current file with a new name."""
         current_tab = self._get_current_tab()
-        if isinstance(current_tab, EditorTab):
-            current_tab.save_as()
+        if not isinstance(current_tab, EditorTab):
+            return
+
+        current_tab.save_as()
 
     def can_show_all_columns(self) -> bool:
         """Check if all columns can be shown."""
-        return False if len(self._tab_columns) == 0 else True
+        return len(self._tab_columns) != 0
 
     def show_all_columns(self) -> None:
         """Show all columns in the tab manager."""
-        if len(self._tab_columns) < 1:
+        if len(self._tab_columns) == 0:
             return
 
         num_columns = len(self._tab_columns)
@@ -1240,12 +1254,15 @@ class ColumnManager(QWidget):
     def can_submit_message(self) -> bool:
         """Check if the current tab can submit a message."""
         tab = self._get_current_tab()
-        return False if not tab else tab.can_submit()
+        if tab is None:
+            return False
+
+        return tab.can_submit()
 
     def submit_message(self) -> None:
         """Handle message submission."""
         tab = self._get_current_tab()
-        if not tab or not tab.can_submit():
+        if tab is None:
             return
 
         tab.submit()
@@ -1275,34 +1292,50 @@ class ColumnManager(QWidget):
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""
         tab = self._get_current_tab()
-        return isinstance(tab, ConversationTab) and tab.can_navigate_next_message()
+        if not isinstance(tab, ConversationTab):
+            return False
+
+        return tab.can_navigate_next_message()
 
     def navigate_next_message(self) -> None:
         """Navigate to next message in active conversation tab."""
         tab = self._get_current_tab()
-        if isinstance(tab, ConversationTab):
-            tab.navigate_next_message()
+        if not isinstance(tab, ConversationTab):
+            return
+
+        tab.navigate_next_message()
 
     def can_navigate_previous_message(self) -> bool:
         """Check if previous message navigation is possible."""
         tab = self._get_current_tab()
-        return isinstance(tab, ConversationTab) and tab.can_navigate_previous_message()
+        if not isinstance(tab, ConversationTab):
+            return False
+
+        return tab.can_navigate_previous_message()
 
     def navigate_previous_message(self) -> None:
         """Navigate to previous message in active conversation tab."""
         tab = self._get_current_tab()
-        if isinstance(tab, ConversationTab):
-            tab.navigate_previous_message()
+        if not isinstance(tab, ConversationTab):
+            return
+
+        tab.navigate_previous_message()
 
     def can_toggle_bookmark(self) -> bool:
         """Can we toggle a bookmark?"""
         tab = self._get_current_tab()
-        return isinstance(tab, ConversationTab) and tab.can_toggle_bookmark()
+        if not isinstance(tab, ConversationTab):
+            return False
+
+        return tab.can_toggle_bookmark()
 
     def is_checked_bookmark(self) -> bool:
         """Is the current bookmark set (checked)?"""
         tab = self._get_current_tab()
-        return isinstance(tab, ConversationTab) and tab.is_checked_bookmark()
+        if not isinstance(tab, ConversationTab):
+            return False
+
+        return tab.is_checked_bookmark()
 
     def toggle_bookmark(self) -> None:
         """Handle toggling a bookmark."""
@@ -1315,7 +1348,10 @@ class ColumnManager(QWidget):
     def can_navigate_next_bookmark(self) -> bool:
         """Can we move to the next bookmark?"""
         tab = self._get_current_tab()
-        return isinstance(tab, ConversationTab) and tab.can_navigate_next_bookmark()
+        if not isinstance(tab, ConversationTab):
+            return False
+
+        return tab.can_navigate_next_bookmark()
 
     def navigate_next_bookmark(self) -> None:
         """Handle navigating to the next bookmark."""
@@ -1328,7 +1364,10 @@ class ColumnManager(QWidget):
     def can_navigate_previous_bookmark(self) -> bool:
         """Can we move to the next bookmark?"""
         tab = self._get_current_tab()
-        return isinstance(tab, ConversationTab) and tab.can_navigate_previous_bookmark()
+        if not isinstance(tab, ConversationTab):
+            return False
+
+        return tab.can_navigate_previous_bookmark()
 
     def navigate_previous_bookmark(self) -> None:
         """Handle navigating to the next bookmark."""

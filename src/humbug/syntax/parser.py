@@ -16,6 +16,12 @@ class ParserState:
 
 
 class Parser(ABC):
+    """
+    Abstract base class for all parsers.
+
+    This class provides the basic functionality for parsing input strings
+    and managing the state of the parser.
+    """
     def __init__(self) -> None:
         self._lexer: Lexer | None = None
         self._tokens: List[Token] = []
@@ -31,7 +37,8 @@ class Parser(ABC):
         """
         Gets the next token from the input.
 
-        :return: The next Token available or None if there are no tokens left.
+        Returns:
+            The next Token available or None if there are no tokens left.
         """
         if self._next_token >= len(self._tokens):
             return None

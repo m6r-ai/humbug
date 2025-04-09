@@ -438,8 +438,7 @@ class MarkdownASTBuilder:
         # Calculate the actual content indentation for this specific marker
         marker_length = len(number) + 2  # +2 for the "." and space after number
         actual_content_indent = indent + marker_length
-        if actual_content_indent > list_node.content_indent:
-            list_node.content_indent = actual_content_indent
+        list_node.content_indent = max(list_node.content_indent, actual_content_indent)
 
         # Check if this list has blank lines, which means we need to use paragraphs for content
         if list_node in self._list_contains_blank_line:
@@ -485,8 +484,7 @@ class MarkdownASTBuilder:
         # Calculate the actual content indentation for this specific marker
         marker_length = len(marker) + 1  # +1 for the space after marker
         actual_content_indent = indent + marker_length
-        if actual_content_indent > list_node.content_indent:
-            list_node.content_indent = actual_content_indent
+        list_node.content_indent = max(list_node.content_indent, actual_content_indent)
 
         # Check if this list has blank lines, which means we need to use paragraphs for content
         if list_node in self._list_contains_blank_line:
@@ -652,7 +650,7 @@ class MarkdownASTBuilder:
             line_type, content = self.identify_line_type(line)
 
             # Reset paragraph tracking if not continuing text
-            if line_type != 'text' and line_type != 'blank':
+            if line_type not in ('text', 'blank'):
                 self._last_paragraph = None
 
             # Handle blank lines for list state
@@ -786,7 +784,7 @@ class MarkdownASTBuilder:
         parent_indent = -1
 
         for list_node, list_indent in self._active_lists:
-            if list_indent < indent and list_indent > parent_indent:
+            if parent_indent < list_indent < indent:
                 if list_node.children:
                     parent = list_node.children[-1]  # Last list item
                     parent_indent = list_indent

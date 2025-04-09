@@ -557,11 +557,11 @@ class EditorTab(TabBase):
             export_dialog.setDirectory(self._path)
 
         else:
-            dir = self._mindspace_manager.file_dialog_directory()
-            if not dir:
+            fd_dir = self._mindspace_manager.file_dialog_directory()
+            if not fd_dir:
                 return False
 
-            export_dialog.setDirectory(dir)
+            export_dialog.setDirectory(fd_dir)
 
         export_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         if export_dialog.exec_() != QFileDialog.DialogCode.Accepted:

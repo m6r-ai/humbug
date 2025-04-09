@@ -25,7 +25,6 @@ class MetaphorLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         self._inner_lex()
-        return None
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """

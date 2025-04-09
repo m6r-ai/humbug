@@ -6,6 +6,11 @@ from humbug.ai.ai_conversation_settings import AIConversationSettings, Reasoning
 
 @dataclass
 class MindspaceSettings:
+    """
+    Settings for the mindspace.
+
+    This class handles the loading and saving of settings to a JSON file.
+    """
     model: str = AIConversationSettings.get_default_model({})  # Will be overridden with actual backends
     temperature: float = 0.7  # Default temperature
     reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
@@ -16,6 +21,7 @@ class MindspaceSettings:
 
     @classmethod
     def load(cls, path: str) -> "MindspaceSettings":
+        """Load settings from a JSON file."""
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
             editor = data.get("editor", {})
@@ -38,6 +44,7 @@ class MindspaceSettings:
             )
 
     def save(self, path: str) -> None:
+        """Save settings to a JSON file."""
         data = {
             "conversation": {
                 "model": self.model,

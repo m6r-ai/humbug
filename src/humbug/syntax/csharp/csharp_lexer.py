@@ -171,11 +171,13 @@ class CSharpLexer(Lexer):
                 # @"string" - verbatim string
                 self._read_verbatim_string(2)
                 return
-            elif next_char == '$' and self._position + 1 < self._input_len and self._input[self._position + 1] == '"':
+
+            if next_char == '$' and self._position + 1 < self._input_len and self._input[self._position + 1] == '"':
                 # @$"string" - verbatim interpolated string
                 self._read_verbatim_string(3)
                 return
-            elif self._is_letter(next_char) or next_char == '_':
+
+            if self._is_letter(next_char) or next_char == '_':
                 # @identifier - verbatim identifier (allows using reserved keywords as identifiers)
                 self._position += 1
                 while (self._position < self._input_len and
@@ -240,11 +242,12 @@ class CSharpLexer(Lexer):
                     self._input[self._position + 1] == '"'):
                     self._position += 2  # Skip both quotes
                     continue
-                else:
-                    # End of verbatim string
-                    self._in_verbatim_string = False
-                    self._position += 1  # Include closing quote
-                    break
+
+                # End of verbatim string
+                self._in_verbatim_string = False
+                self._position += 1  # Include closing quote
+                break
+
             self._position += 1
 
         if self._in_verbatim_string:
@@ -329,6 +332,7 @@ class CSharpLexer(Lexer):
 
                 if ch == '[':
                     bracket_depth += 1
+
                 elif ch == ']':
                     bracket_depth -= 1
 
@@ -380,7 +384,7 @@ class CSharpLexer(Lexer):
                 ))
                 return
 
-            elif next_char == 'b':  # Binary
+            if next_char == 'b':  # Binary
                 self._position += 2
                 while (self._position < self._input_len and
                       (self._is_binary_digit(self._input[self._position]) or

@@ -6,7 +6,7 @@ from typing import cast
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy, QScrollArea, QWidget
 )
-from PySide6.QtCore import Qt, QSize, QTimer, Signal, Slot, QObject
+from PySide6.QtCore import Qt, QSize, QTimer, Signal, QObject
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
 )

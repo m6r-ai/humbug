@@ -12,17 +12,17 @@ _windows_terminal: Type[TerminalBase] | None = None
 
 def create_terminal() -> TerminalBase:
     """Create appropriate terminal implementation for current platform."""
-    global _unix_terminal, _windows_terminal
+    global _unix_terminal, _windows_terminal  # pylint: disable=global-statement
 
     if os.name == 'nt':
         if _windows_terminal is None:
-            from humbug.terminal.windows_terminal import WindowsTerminal
+            from humbug.terminal.windows_terminal import WindowsTerminal  # pylint: disable=import-outside-toplevel
             _windows_terminal = WindowsTerminal
 
         return _windows_terminal()
 
     if _unix_terminal is None:
-        from humbug.terminal.unix_terminal import UnixTerminal
+        from humbug.terminal.unix_terminal import UnixTerminal  # pylint: disable=import-outside-toplevel
         _unix_terminal = UnixTerminal
 
     return _unix_terminal()
