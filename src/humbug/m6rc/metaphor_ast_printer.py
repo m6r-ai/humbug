@@ -38,7 +38,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         """
         # Print node information
         node_class = node.__class__.__name__
-        print(f"{self._indent()}{node_class}: {node.value}")
+        print(f"{self._indent()}{node_class}: {node.value()}")
 
         # Visit children with increased indentation
         self.indent_level += 1
@@ -57,8 +57,9 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         Returns:
             The text content
         """
-        print(f"{self._indent()}Text: '{node.value}'")
-        return node.value
+        value = node.value()
+        print(f"{self._indent()}Text: '{value}'")
+        return value
 
     def visit_MetaphorCodeNode(self, node: MetaphorCodeNode) -> str:  # pylint: disable=invalid-name
         """
@@ -70,9 +71,10 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         Returns:
             The code content
         """
-        content_preview = node.value[:30] + "..." if len(node.value) > 30 else node.value
-        print(f"{self._indent()}Code: '{content_preview}' ({len(node.value)} chars)")
-        return node.value
+        value = node.value()
+        content_preview = value[:30] + "..." if len(value) > 30 else value
+        print(f"{self._indent()}Code: '{content_preview}' ({len(value)} chars)")
+        return value
 
     def visit_with_specific_types(self, node: MetaphorASTNode, types_to_show: List[Type[MetaphorASTNode]] | None = None) -> List[Any]:
         """
@@ -88,7 +90,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         # Check if we should display this node
         if types_to_show is None or any(isinstance(node, t) for t in types_to_show):
             node_class = node.__class__.__name__
-            print(f"{self._indent()}{node_class}: {node.value}")
+            print(f"{self._indent()}{node_class}: {node.value()}")
 
         # Visit children with increased indentation
         self.indent_level += 1

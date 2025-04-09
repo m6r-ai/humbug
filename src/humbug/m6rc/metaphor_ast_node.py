@@ -41,7 +41,7 @@ class MetaphorASTNode(ASTNode['MetaphorASTNode']):
 
         # Start with this node's information
         node_type_name = self.__class__.__name__
-        result = f"{indent_str}{node_type_name}: {self.value}"
+        result = f"{indent_str}{node_type_name}: {self._value}"
 
         # Add all children with increased indentation
         for child in self.children:
@@ -57,9 +57,8 @@ class MetaphorASTNode(ASTNode['MetaphorASTNode']):
             A string in format 'NodeType(value)[num_children]'
         """
         node_type_name = self.__class__.__name__
-        return f"{node_type_name}({self.value})[{len(self.children)}]"
+        return f"{node_type_name}({self._value})[{len(self.children)}]"
 
-    @property
     def value(self) -> str:
         """The raw text value of this node."""
         return self._value

@@ -44,8 +44,9 @@ def _format_node(node: MetaphorASTNode, depth: int, out: TextIO) -> None:
             out.write(f"{node.value}\n")
             return
 
+        value = node.value()
         if isinstance(node, MetaphorTextNode):
-            if node.value == "":
+            if value == "":
                 current_pos = out.tell()
                 if current_pos <= 1:
                     return
@@ -56,7 +57,7 @@ def _format_node(node: MetaphorASTNode, depth: int, out: TextIO) -> None:
                 if prev_char == '\n\n':
                     return
 
-            out.write(f"{node.value}\n")
+            out.write(f"{value}\n")
             return
 
         # If we don't have a blank line before this block heading then add one
@@ -71,8 +72,8 @@ def _format_node(node: MetaphorASTNode, depth: int, out: TextIO) -> None:
         indent = "#" * depth
         keyword = NODE_CLASS_MAP.get(node.__class__, "")
         out.write(f"{indent} {keyword}")
-        if node.value:
-            out.write(f" {node.value}")
+        if value:
+            out.write(f" {value}")
 
         out.write("\n\n")
 
