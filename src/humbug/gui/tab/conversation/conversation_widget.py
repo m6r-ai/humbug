@@ -101,7 +101,6 @@ class ConversationWidget(QWidget):
 
     def __init__(
         self,
-        conversation_id: str,
         path: str,
         timestamp: datetime,
         parent: QWidget | None = None,
@@ -111,7 +110,6 @@ class ConversationWidget(QWidget):
         Initialize the conversation widget.
 
         Args:
-            conversation_id: Unique identifier for this conversation
             path: Full path to transcript file
             timestamp: ISO format timestamp for the conversation
             parent: Optional parent widget
@@ -133,7 +131,6 @@ class ConversationWidget(QWidget):
         self._ai_conversation = None
         if not use_existing_ai_conversation:
             self._ai_conversation = AIConversation(
-                conversation_id,
                 self._user_manager.get_ai_backends()
             )
 
@@ -798,16 +795,12 @@ class ConversationWidget(QWidget):
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
-    def update_path(self, new_id: str, new_path: str) -> None:
+    def update_path(self, new_path: str) -> None:
         """Update the conversation file path.
 
         Args:
-            new_id: New conversation ID
             new_path: New path for the conversation file
         """
-# TODO: This is a mess!
-#        self._path = new_path
-#        self._conversation_id = new_id
         self._transcript_handler.update_path(new_path)
 
     def _handle_edit_page_scroll(self) -> None:

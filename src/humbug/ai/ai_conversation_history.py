@@ -9,9 +9,8 @@ from humbug.ai.ai_usage import AIUsage
 class AIConversationHistory:
     """Manages the conversation history and state."""
 
-    def __init__(self, conversation_id: str) -> None:
+    def __init__(self) -> None:
         """Initialize empty conversation history."""
-        self._conversation_id = conversation_id
         self._messages: List[AIMessage] = []
         self._last_response_tokens = {"input": 0, "output": 0}
 

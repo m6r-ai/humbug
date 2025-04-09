@@ -32,21 +32,18 @@ class AIConversation:
 
     def __init__(
         self,
-        conversation_id: str,
         ai_backends: Dict[str, Any]
     ) -> None:
         """Initialize the AIConversation.
 
         Args:
-            conversation_id: Unique identifier for this conversation
             ai_backends: Dictionary of available AI backends
         """
         self._logger = logging.getLogger("AIConversation")
-        self._conversation_id = conversation_id
         self._ai_backends = ai_backends
 
         self._settings = AIConversationSettings()
-        self._conversation = AIConversationHistory(conversation_id)
+        self._conversation = AIConversationHistory()
         self._current_tasks: List[asyncio.Task] = []
         self._current_ai_message: AIMessage | None = None
         self._current_reasoning_message: AIMessage | None = None

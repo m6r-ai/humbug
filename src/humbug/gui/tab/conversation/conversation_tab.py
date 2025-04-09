@@ -73,7 +73,7 @@ class ConversationTab(TabBase):
 
         # Create conversation widget
         self._conversation_widget = ConversationWidget(
-            tab_id, path, timestamp, self, use_existing_ai_conversation
+            path, timestamp, self, use_existing_ai_conversation
         )
         self._conversation_widget.forkRequested.connect(self.forkRequested)
         self._conversation_widget.status_updated.connect(self.update_status)
@@ -230,7 +230,7 @@ class ConversationTab(TabBase):
         """
         self._path = new_path
         self._tab_id = new_id
-        self._conversation_widget.update_path(new_id, new_path)
+        self._conversation_widget.update_path(new_path)
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
