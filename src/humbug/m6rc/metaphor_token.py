@@ -15,7 +15,8 @@
 from dataclasses import dataclass
 from enum import IntEnum, auto
 
-class TokenType(IntEnum):
+
+class MetaphorTokenType(IntEnum):
     """
     Enum-like class representing different types of tokens in the source file.
     """
@@ -37,7 +38,7 @@ class TokenType(IntEnum):
 
 
 @dataclass(frozen=True)
-class Token:
+class MetaphorToken:
     """
     Represents a token in the input stream.
 
@@ -49,7 +50,7 @@ class Token:
         line (int): The line number in the file where the token is located.
         column (int): The column number where the token starts.
     """
-    type: TokenType
+    type: MetaphorTokenType
     value: str
     input: str
     filename: str

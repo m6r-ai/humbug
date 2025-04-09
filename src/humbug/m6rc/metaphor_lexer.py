@@ -14,7 +14,8 @@
 
 from typing import Dict, List, Final
 
-from .metaphor_token import Token, TokenType
+from humbug.m6rc.metaphor_token import MetaphorToken, MetaphorTokenType
+
 
 class MetaphorLexer:
     """
@@ -33,12 +34,12 @@ class MetaphorLexer:
     INDENT_SPACES = 4
 
     # Mapping of keywords to their token types
-    KEYWORDS: Final[Dict[str, TokenType]] = {
-        "Action:": TokenType.ACTION,
-        "Context:": TokenType.CONTEXT,
-        "Embed:": TokenType.EMBED,
-        "Include:": TokenType.INCLUDE,
-        "Role:": TokenType.ROLE
+    KEYWORDS: Final[Dict[str, MetaphorTokenType]] = {
+        "Action:": MetaphorTokenType.ACTION,
+        "Context:": MetaphorTokenType.CONTEXT,
+        "Embed:": MetaphorTokenType.EMBED,
+        "Include:": MetaphorTokenType.INCLUDE,
+        "Role:": MetaphorTokenType.ROLE
     }
 
     def __init__(self, input_text: str, filename: str) -> None:
@@ -53,17 +54,17 @@ class MetaphorLexer:
         self.in_fenced_code: bool = False
         self.indent_column: int = 1
         self.filename: str = filename
-        self.tokens: List[Token] = []
+        self.tokens: List[MetaphorToken] = []
         self.current_line: int = 1
         self.input: str = input_text
         self._tokenize()
 
-    def get_next_token(self) -> Token:
+    def get_next_token(self) -> MetaphorToken:
         """Return the next token from the token list."""
         if self.tokens:
             return self.tokens.pop(0)
 
-        return Token(TokenType.END_OF_FILE, "", "", self.filename, self.current_line, 1)
+        return MetaphorToken(MetaphorTokenType.END_OF_FILE, "", "", self.filename, self.current_line, 1)
 
     def _tokenize(self) -> None:
         """
@@ -85,8 +86,8 @@ class MetaphorLexer:
         """Handle any remaining outdents needed at the end of file."""
         while self.indent_column > 1:
             self.tokens.append(
-                Token(
-                    type=TokenType.OUTDENT,
+                MetaphorToken(
+                    type=MetaphorTokenType.OUTDENT,
                     value="[Outdent]",
                     input="",
                     filename=self.filename,
@@ -150,8 +151,8 @@ class MetaphorLexer:
             column: The current column number
         """
         self.tokens.append(
-            Token(
-                type=TokenType.TAB,
+            MetaphorToken(
+                type=MetaphorTokenType.TAB,
                 value="[Tab]",
                 input=line,
                 filename=self.filename,
@@ -174,7 +175,7 @@ class MetaphorLexer:
 
         # Create keyword token
         self.tokens.append(
-            Token(
+            MetaphorToken(
                 type=self.KEYWORDS[keyword],
                 value=keyword,
                 input=line,
@@ -187,8 +188,8 @@ class MetaphorLexer:
         # Handle any text after the keyword
         if len(words) > 1:
             self.tokens.append(
-                Token(
-                    type=TokenType.KEYWORD_TEXT,
+                MetaphorToken(
+                    type=MetaphorTokenType.KEYWORD_TEXT,
                     value=words[1],
                     input=line,
                     filename=self.filename,
@@ -211,15 +212,17 @@ class MetaphorLexer:
         if self.in_text_block:
             if start_column > self.indent_column:
                 start_column = self.indent_column
+
             elif start_column < self.indent_column:
                 self._process_indentation(line, start_column)
+
         else:
             self._process_indentation(line, start_column)
 
         text_content = line[start_column - 1:]
-        token_type = TokenType.CODE if self.in_fenced_code else TokenType.TEXT
+        token_type = MetaphorTokenType.CODE if self.in_fenced_code else MetaphorTokenType.TEXT
         self.tokens.append(
-            Token(
+            MetaphorToken(
                 type=token_type,
                 value=text_content,
                 input=line,
@@ -231,9 +234,9 @@ class MetaphorLexer:
         self.in_text_block = True
 
     def _handle_blank_line(self, start_column: int) -> None:
-        token_type = TokenType.CODE if self.in_fenced_code else TokenType.TEXT
+        token_type = MetaphorTokenType.CODE if self.in_fenced_code else MetaphorTokenType.TEXT
         self.tokens.append(
-            Token(
+            MetaphorToken(
                 type=token_type,
                 value="",
                 input="",
@@ -255,6 +258,7 @@ class MetaphorLexer:
 
         if indent_offset > 0:
             self._handle_indent(line, start_column, indent_offset)
+
         elif indent_offset < 0:
             self._handle_outdent(line, start_column, indent_offset)
 
@@ -269,8 +273,8 @@ class MetaphorLexer:
         """
         if indent_offset % self.INDENT_SPACES != 0:
             self.tokens.append(
-                Token(
-                    type=TokenType.BAD_INDENT,
+                MetaphorToken(
+                    type=MetaphorTokenType.BAD_INDENT,
                     value="[Bad Indent]",
                     input=line,
                     filename=self.filename,
@@ -282,8 +286,8 @@ class MetaphorLexer:
 
         while indent_offset > 0:
             self.tokens.append(
-                Token(
-                    type=TokenType.INDENT,
+                MetaphorToken(
+                    type=MetaphorTokenType.INDENT,
                     value="[Indent]",
                     input=line,
                     filename=self.filename,
@@ -306,8 +310,8 @@ class MetaphorLexer:
         """
         if abs(indent_offset) % self.INDENT_SPACES != 0:
             self.tokens.append(
-                Token(
-                    type=TokenType.BAD_OUTDENT,
+                MetaphorToken(
+                    type=MetaphorTokenType.BAD_OUTDENT,
                     value="[Bad Outdent]",
                     input=line,
                     filename=self.filename,
@@ -319,8 +323,8 @@ class MetaphorLexer:
 
         while indent_offset < 0:
             self.tokens.append(
-                Token(
-                    type=TokenType.OUTDENT,
+                MetaphorToken(
+                    type=MetaphorTokenType.OUTDENT,
                     value="[Outdent]",
                     input=line,
                     filename=self.filename,
