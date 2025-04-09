@@ -150,7 +150,6 @@ class UserManager(QObject):
         except OSError as e:
             raise UserError(f"Failed to save user settings: {str(e)}") from e
 
-    @property
     def settings(self) -> UserSettings:
         """
         Get the current user settings.

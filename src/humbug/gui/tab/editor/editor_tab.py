@@ -41,7 +41,7 @@ class EditorTab(TabBase):
         self._path: str = ""
         self._untitled_number: int | None = None
         self._style_manager = StyleManager()
-        self._init_colour_mode = self._style_manager.color_mode
+        self._init_colour_mode = self._style_manager.color_mode()
         self._last_save_content = ""
         self._auto_backup_timer = QTimer(self)
         self._auto_backup_timer.timeout.connect(self._auto_backup)
@@ -83,8 +83,8 @@ class EditorTab(TabBase):
         self.update_status()
 
         # Update auto-backup based on current mindspace settings
-        if self._mindspace_manager.has_mindspace:
-            settings = self._mindspace_manager.settings
+        if self._mindspace_manager.has_mindspace():
+            settings = self._mindspace_manager.settings()
             if settings is not None:
                 self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
@@ -103,8 +103,8 @@ class EditorTab(TabBase):
 
     def _handle_mindspace_settings_changed(self) -> None:
         """Handle mindspace settings changes."""
-        if self._mindspace_manager.has_mindspace:
-            settings = cast(MindspaceSettings, self._mindspace_manager.settings)
+        if self._mindspace_manager.has_mindspace():
+            settings = cast(MindspaceSettings, self._mindspace_manager.settings())
             self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
     def update_auto_backup_settings(self, enabled: bool, interval: int) -> None:
@@ -267,8 +267,8 @@ class EditorTab(TabBase):
         self._editor_widget.update_line_number_area_width()
 
         # If we changed colour mode then re-highlight
-        if self._style_manager.color_mode != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode
+        if self._style_manager.color_mode() != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode()
             self._highlighter.rehighlight()
 
     def _update_programming_language(self, new_language: ProgrammingLanguage) -> None:
@@ -338,10 +338,10 @@ class EditorTab(TabBase):
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
 
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             return
 
-        settings = self._mindspace_manager.settings
+        settings = self._mindspace_manager.settings()
         if settings is None:
             return
 
@@ -383,7 +383,7 @@ class EditorTab(TabBase):
             return
 
         # All backups should now go in mindspace .humbug/backups
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             return  # No backups without a mindspace
 
         backup_dir = self._mindspace_manager.get_mindspace_path(os.path.join(".humbug", "backups"))
@@ -439,7 +439,7 @@ class EditorTab(TabBase):
 
     def _cleanup_backup_files(self) -> None:
         """Clean up any backup files for this editor."""
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             return
 
         if self._path:
@@ -557,7 +557,7 @@ class EditorTab(TabBase):
             export_dialog.setDirectory(self._path)
 
         else:
-            dir = self._mindspace_manager.file_dialog_directory
+            dir = self._mindspace_manager.file_dialog_directory()
             if not dir:
                 return False
 

@@ -60,7 +60,6 @@ class MindspaceManager(QObject):
             self._directory_tracker = DirectoryTracker()
             self._initialized = True
 
-    @property
     def mindspace_path(self) -> str:
         """
         Get the current mindspace path.
@@ -70,7 +69,6 @@ class MindspaceManager(QObject):
         """
         return self._mindspace_path
 
-    @property
     def settings(self) -> MindspaceSettings | None:
         """
         Get the current mindspace settings.
@@ -91,7 +89,7 @@ class MindspaceManager(QObject):
             MindspaceError: If settings cannot be saved
             MindspaceNotFoundError: If no mindspace is open
         """
-        if not self.has_mindspace:
+        if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
         # Save settings to file
@@ -108,7 +106,6 @@ class MindspaceManager(QObject):
         except OSError as e:
             raise MindspaceError(f"Failed to save mindspace settings: {str(e)}") from e
 
-    @property
     def has_mindspace(self) -> bool:
         """
         Check if a mindspace is currently open.
@@ -211,7 +208,7 @@ class MindspaceManager(QObject):
 
     def close_mindspace(self) -> None:
         """Close the current mindspace."""
-        if self.has_mindspace:
+        if self.has_mindspace():
             self._directory_tracker.save_tracking(self._mindspace_path)
             self._mindspace_path = ""
             self._settings = None
@@ -229,7 +226,7 @@ class MindspaceManager(QObject):
         Raises:
             MindspaceError: If saving state fails
         """
-        if not self.has_mindspace:
+        if not self.has_mindspace():
             raise MindspaceError("No mindspace is active")
 
         try:
@@ -265,7 +262,7 @@ class MindspaceManager(QObject):
         Raises:
             MindspaceError: If loading state fails
         """
-        if not self.has_mindspace:
+        if not self.has_mindspace():
             raise MindspaceError("No mindspace is active")
 
         try:
@@ -324,7 +321,7 @@ class MindspaceManager(QObject):
         Raises:
             MindspaceNotFoundError: If no mindspace is currently open.
         """
-        if not self.has_mindspace:
+        if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
         return os.path.join(self._mindspace_path, relative_path)
@@ -339,7 +336,7 @@ class MindspaceManager(QObject):
         Returns:
             Path relative to mindspace root, or None if path is outside mindspace.
         """
-        if not self.has_mindspace:
+        if not self.has_mindspace():
             return None
 
         try:
@@ -373,7 +370,7 @@ class MindspaceManager(QObject):
             MindspaceNotFoundError: If no mindspace is currently open.
             OSError: If directory cannot be created.
         """
-        if not self.has_mindspace:
+        if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
         abs_path = self.get_mindspace_path(dir_path)
@@ -397,22 +394,20 @@ class MindspaceManager(QObject):
 
     def update_file_dialog_directory(self, path: str) -> None:
         """Update the last used file dialog directory."""
-        if self.has_mindspace:
+        if self.has_mindspace():
             self._directory_tracker.update_file_dialog_directory(path)
             self._directory_tracker.save_tracking(self._mindspace_path)
 
     def update_conversations_directory(self, path: str) -> None:
         """Update the last used conversations directory."""
-        if self.has_mindspace:
+        if self.has_mindspace():
             self._directory_tracker.update_conversations_directory(path)
             self._directory_tracker.save_tracking(self._mindspace_path)
 
-    @property
     def file_dialog_directory(self) -> str:
         """Get the last used file dialog directory."""
-        return self._directory_tracker.file_dialog_directory
+        return self._directory_tracker.file_dialog_directory()
 
-    @property
     def conversations_directory(self) -> str:
         """Get the last used conversations directory."""
-        return self._directory_tracker.conversations_directory
+        return self._directory_tracker.conversations_directory()

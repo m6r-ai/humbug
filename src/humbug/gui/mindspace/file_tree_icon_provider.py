@@ -117,7 +117,7 @@ class FileTreeIconProvider(QFileIconProvider):
         Returns:
             Tuple of (base_color, accent_color) for the current theme
         """
-        if self._style_manager.color_mode == ColorMode.DARK:
+        if self._style_manager.color_mode() == ColorMode.DARK:
             base_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
         else:
             base_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
@@ -206,7 +206,7 @@ class FileTreeIconProvider(QFileIconProvider):
         icon_type, accent_color = self._extension_map.get(ext, ('file', None))
 
         # Create cache key from type, accent color, and theme mode
-        theme_suffix = 'dark' if self._style_manager.color_mode == ColorMode.DARK else 'light'
+        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
         cache_key = f"{icon_type}_{accent_color}_{theme_suffix}"
 
         # Create icon if not in cache

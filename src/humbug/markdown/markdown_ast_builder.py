@@ -59,7 +59,6 @@ class MarkdownASTBuilder:
         self._code_block_content: List[str] = []
         self._code_block_start_line = -1
 
-    @property
     def document(self) -> MarkdownDocumentNode:
         """
         Get the current document node.

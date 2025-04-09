@@ -130,7 +130,7 @@ class ConversationMessageSection(QFrame):
         self._mouse_left_button_pressed = False
 
         self._style_manager = StyleManager()
-        self._init_colour_mode = self._style_manager.color_mode
+        self._init_colour_mode = self._style_manager.color_mode()
 
         self._handle_language_changed()
 
@@ -513,7 +513,7 @@ class ConversationMessageSection(QFrame):
             self._save_as_button.setStyleSheet(button_style)
 
         # If we changed colour mode then re-highlight
-        if self._style_manager.color_mode != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode
+        if self._style_manager.color_mode() != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode()
             if self._highlighter:
                 self._highlighter.rehighlight()

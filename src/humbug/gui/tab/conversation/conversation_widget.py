@@ -201,7 +201,6 @@ class ConversationWidget(QWidget):
         self._search_highlights: Dict[ConversationMessage, List[Tuple[int, int, int]]] = {}
 
         self._style_manager = StyleManager()
-        self._init_colour_mode = self._style_manager.color_mode
 
         # Tracking for focused message
         self._focused_message_index = -1
@@ -869,7 +868,7 @@ class ConversationWidget(QWidget):
         """
         # Establish a baseline for conversation settings
         if not reuse_ai_conversation:
-            settings = self._mindspace_manager.settings
+            settings = self._mindspace_manager.settings()
             if settings is None:
                 self._logger.error("Failed to load conversation settings.")
                 return

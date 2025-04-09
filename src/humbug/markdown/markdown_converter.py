@@ -56,7 +56,7 @@ class MarkdownConverter:
             self.current_text = text
 
             # Extract content sections from the AST document
-            return self._extract_sections_from_ast(self.ast_builder.document)
+            return self._extract_sections_from_ast(self.ast_builder.document())
 
         except MarkdownParseError as e:
             self._logger.exception("Error converting markdown")

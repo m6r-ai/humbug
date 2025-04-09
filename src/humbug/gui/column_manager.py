@@ -831,7 +831,7 @@ class ColumnManager(QWidget):
         conversation_tab.forkRequested.connect(self._fork_conversation)
 
         # Set model based on mindspace settings
-        settings = cast(MindspaceSettings, self._mindspace_manager.settings)
+        settings = cast(MindspaceSettings, self._mindspace_manager.settings())
         conversation_settings = AIConversationSettings(
             model=settings.model,
             temperature=settings.temperature if AIConversationSettings.supports_temperature(settings.model) else None,

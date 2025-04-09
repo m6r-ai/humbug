@@ -343,11 +343,12 @@ class MainWindow(QMainWindow):
         self._handle_language_changed()
 
         self._user_manager = UserManager()
-        self._style_manager.set_user_font_size(self._user_manager.settings.font_size)
-        self._language_manager.set_language(self._user_manager.settings.language)
+        user_settings = self._user_manager.settings()
+        self._style_manager.set_user_font_size(user_settings.font_size)
+        self._language_manager.set_language(user_settings.language)
 
         # Set theme from user settings
-        self._style_manager.set_color_mode(self._user_manager.settings.theme)
+        self._style_manager.set_color_mode(user_settings.theme)
         self._update_theme_menu()
 
         self._mindspace_manager = MindspaceManager()
@@ -357,7 +358,7 @@ class MainWindow(QMainWindow):
     def _update_menu_state(self) -> None:
         """Update enabled/disabled state of menu items."""
         # Update mindspace-specific actions
-        has_mindspace = self._mindspace_manager.has_mindspace
+        has_mindspace = self._mindspace_manager.has_mindspace()
         self._close_mindspace_action.setEnabled(has_mindspace)
         self._new_conv_action.setEnabled(has_mindspace)
         self._new_metaphor_conv_action.setEnabled(has_mindspace)
@@ -506,7 +507,7 @@ class MainWindow(QMainWindow):
         # Add Light theme action
         light_action = QAction(strings.theme_light, self)
         light_action.setCheckable(True)
-        light_action.setChecked(self._style_manager.color_mode == ColorMode.LIGHT)
+        light_action.setChecked(self._style_manager.color_mode() == ColorMode.LIGHT)
         light_action.triggered.connect(lambda: self._handle_theme_change(ColorMode.LIGHT))
         theme_action_group.addAction(light_action)
         theme_menu.addAction(light_action)
@@ -515,7 +516,7 @@ class MainWindow(QMainWindow):
         # Add Dark theme action
         dark_action = QAction(strings.theme_dark, self)
         dark_action.setCheckable(True)
-        dark_action.setChecked(self._style_manager.color_mode == ColorMode.DARK)
+        dark_action.setChecked(self._style_manager.color_mode() == ColorMode.DARK)
         dark_action.triggered.connect(lambda: self._handle_theme_change(ColorMode.DARK))
         theme_action_group.addAction(dark_action)
         theme_menu.addAction(dark_action)
@@ -527,7 +528,7 @@ class MainWindow(QMainWindow):
         """Update the theme menu to reflect the current selected theme."""
         # Set the checked state for the appropriate theme action
         for theme, action in self._theme_actions.items():
-            action.setChecked(theme == self._style_manager.color_mode)
+            action.setChecked(theme == self._style_manager.color_mode())
 
     def _handle_theme_change(self, theme: ColorMode) -> None:
         """
@@ -625,7 +626,7 @@ class MainWindow(QMainWindow):
 
     def _open_mindspace_path(self, path: str) -> None:
         # If we're switching mindspaces, save the current one first
-        if self._mindspace_manager.has_mindspace:
+        if self._mindspace_manager.has_mindspace():
             self._save_mindspace_state()
             self._close_all_tabs()
             self._mindspace_manager.close_mindspace()
@@ -649,7 +650,7 @@ class MainWindow(QMainWindow):
         self._restore_mindspace_state()
 
     def _close_mindspace(self) -> None:
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             self._logger.error("No mindspace active, cannot close")
             return
 
@@ -660,7 +661,7 @@ class MainWindow(QMainWindow):
 
     def _save_mindspace_state(self) -> None:
         """Save current mindspace state."""
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             self._logger.error("No mindspace active, cannot save")
             return
 
@@ -726,14 +727,14 @@ class MainWindow(QMainWindow):
 
     def _new_terminal(self) -> None:
         """Create a new terminal tab."""
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             return
 
         self._column_manager.new_terminal()
 
     def _new_file(self) -> None:
         """Create a new empty editor tab."""
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             return
 
         self._column_manager.new_file()
@@ -772,7 +773,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             strings.file_dialog_open_file,
-            self._mindspace_manager.file_dialog_directory
+            self._mindspace_manager.file_dialog_directory()
         )
         self._menu_timer.start()
 
@@ -897,13 +898,13 @@ class MainWindow(QMainWindow):
 
     def _new_conversation(self) -> str | None:
         """Create new conversation tab."""
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             return None
 
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             return self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path
+                self._mindspace_manager.mindspace_path()
             )
 
         except MindspaceError as e:
@@ -924,7 +925,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             strings.file_dialog_open_metaphor,
-            self._mindspace_manager.file_dialog_directory,
+            self._mindspace_manager.file_dialog_directory(),
             f"{strings.file_filter_metaphor};;{strings.file_filter_all}"
         )
         self._menu_timer.start()
@@ -933,11 +934,11 @@ class MainWindow(QMainWindow):
             return
 
         self._mindspace_manager.update_file_dialog_directory(file_path)
-        search_paths = [self._mindspace_manager.mindspace_path]
+        search_paths = [self._mindspace_manager.mindspace_path()]
 
         metaphor_parser = MetaphorParser()
         try:
-            embed_path = self._mindspace_manager.mindspace_path
+            embed_path = self._mindspace_manager.mindspace_path()
             syntax_tree = metaphor_parser.parse_file(file_path, search_paths, embed_path)
             prompt = format_ast(syntax_tree)
 
@@ -965,7 +966,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             strings.file_dialog_open_conversation,
-            self._mindspace_manager.conversations_directory,
+            self._mindspace_manager.conversations_directory(),
             f"{strings.file_filter_conversation};;{strings.file_filter_all}"
         )
         self._menu_timer.start()
@@ -1041,7 +1042,7 @@ class MainWindow(QMainWindow):
     def _show_user_settings_dialog(self) -> None:
         """Show the user settings dialog."""
         dialog = UserSettingsDialog(self)
-        dialog.set_settings(self._user_manager.settings)
+        dialog.set_settings(self._user_manager.settings())
 
         def handle_settings_changed(new_settings: UserSettings) -> None:
             try:
@@ -1051,7 +1052,7 @@ class MainWindow(QMainWindow):
 
                 # Update theme from settings if it changed
                 new_theme = new_settings.theme
-                if new_theme != self._style_manager.color_mode:
+                if new_theme != self._style_manager.color_mode():
                     self._style_manager.set_color_mode(new_theme)
                     self._update_theme_menu()
 
@@ -1072,10 +1073,10 @@ class MainWindow(QMainWindow):
 
     def _show_mindspace_settings_dialog(self) -> None:
         """Show the mindspace settings dialog."""
-        if not self._mindspace_manager.has_mindspace:
+        if not self._mindspace_manager.has_mindspace():
             return
 
-        settings = cast(MindspaceSettings, self._mindspace_manager.settings)
+        settings = cast(MindspaceSettings, self._mindspace_manager.settings())
         dialog = MindspaceSettingsDialog(self)
         dialog.set_settings(settings)
 

@@ -404,11 +404,11 @@ class EditorWidget(QPlainTextEdit):
         if event.key() == Qt.Key.Key_Tab:
             cursor = self.textCursor()
             mindspace_manager = MindspaceManager()
-            if not mindspace_manager.has_mindspace:
+            if not mindspace_manager.has_mindspace():
                 super().keyPressEvent(event)
                 return
 
-            settings = cast(MindspaceSettings, mindspace_manager.settings)
+            settings = cast(MindspaceSettings, mindspace_manager.settings())
 
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
@@ -439,11 +439,11 @@ class EditorWidget(QPlainTextEdit):
         if event.key() == Qt.Key.Key_Backtab:  # Shift+Tab
             cursor = self.textCursor()
             mindspace_manager = MindspaceManager()
-            if not mindspace_manager.has_mindspace:
+            if not mindspace_manager.has_mindspace():
                 super().keyPressEvent(event)
                 return
 
-            settings = cast(MindspaceSettings, mindspace_manager.settings)
+            settings = cast(MindspaceSettings, mindspace_manager.settings())
 
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()

@@ -174,8 +174,8 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _update_scrollbar(self) -> None:
         """Update scrollbar range based on content size."""
-        terminal_rows = self._state.terminal_rows
-        history_lines = max(0, self._state.terminal_history_lines - terminal_rows)
+        terminal_rows = self._state.terminal_rows()
+        history_lines = max(0, self._state.terminal_history_lines() - terminal_rows)
 
         # Set range and update scroll position if needed
         vbar = self.verticalScrollBar()
@@ -222,12 +222,12 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Always update if cursor is visible and blinking
-        buffer = self._state.current_buffer
+        buffer = self._state.current_buffer()
         cursor = buffer.cursor
         if cursor.visible and cursor.blink:
             # Convert cursor position to viewport coordinates
-            history_lines = self._state.terminal_history_lines
-            terminal_rows = self._state.terminal_rows
+            history_lines = self._state.terminal_history_lines()
+            terminal_rows = self._state.terminal_rows()
             first_visible_line = self.verticalScrollBar().value()
 
             cursor_line = history_lines - terminal_rows + cursor.row
@@ -308,13 +308,13 @@ class TerminalWidget(QAbstractScrollArea):
             self.viewport().update()
 
         # Handle mouse tracking if enabled
-        if self._state.mouse_tracking.enabled:
+        if self._state.mouse_tracking().enabled:
             pos = event.position().toPoint()
             button = event.button()
             row, col = self._pixel_pos_to_text_pos(pos)
 
             # Construct mouse report based on mode
-            if self._state.mouse_tracking.sgr_mode:
+            if self._state.mouse_tracking().sgr_mode:
                 report = self._make_sgr_mouse_report(row, col, button, True)
             else:
                 report = self._make_normal_mouse_report(row, col, button)
@@ -330,12 +330,12 @@ class TerminalWidget(QAbstractScrollArea):
             self._selecting = False
 
         # Handle mouse tracking if enabled
-        if self._state.mouse_tracking.enabled:
+        if self._state.mouse_tracking().enabled:
             pos = event.position().toPoint()
             button = event.button()
             row, col = self._pixel_pos_to_text_pos(pos)
 
-            if self._state.mouse_tracking.sgr_mode:
+            if self._state.mouse_tracking().sgr_mode:
                 report = self._make_sgr_mouse_report(row, col, button, False)
                 if report:
                     self.data_ready.emit(report.encode())
@@ -355,14 +355,14 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle mouse tracking if enabled and in button event mode (1002) or any event mode (1003)
         if (
-            self._state.mouse_tracking.enabled and
-            self._state.mouse_tracking.mode in (1002, 1003)
+            self._state.mouse_tracking().enabled and
+            self._state.mouse_tracking().mode in (1002, 1003)
         ):
             row, col = self._pixel_pos_to_text_pos(event.position().toPoint())
             buttons = event.buttons()
 
             # For 1002 mode, only report if buttons are pressed
-            if self._state.mouse_tracking.mode == 1002 and not buttons:
+            if self._state.mouse_tracking().mode == 1002 and not buttons:
                 return
 
             btn_num = 32  # Default to button release
@@ -373,7 +373,7 @@ class TerminalWidget(QAbstractScrollArea):
             elif buttons & Qt.MouseButton.RightButton:
                 btn_num = 34
 
-            if self._state.mouse_tracking.sgr_mode:
+            if self._state.mouse_tracking().sgr_mode:
                 report = f"\x1b[<{btn_num};{col + 1};{row + 1}M"
             else:
                 cb = 32 + btn_num
@@ -423,7 +423,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
         # Handle keypad in application mode
-        if self._state.application_keypad_mode and not modifiers:
+        if self._state.application_keypad_mode() and not modifiers:
             keypad_map: Dict[int, bytes] = {
                 Qt.Key.Key_0: b'\x1bOp',
                 Qt.Key.Key_1: b'\x1bOq',
@@ -542,7 +542,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle cursor keys based on mode
         cursor_map: Dict[int, bytes] = {}
-        if self._state.application_cursor_mode:
+        if self._state.application_cursor_mode():
             cursor_map = {
                 Qt.Key.Key_Up: b'\x1bOA',
                 Qt.Key.Key_Down: b'\x1bOB',
@@ -608,11 +608,11 @@ class TerminalWidget(QAbstractScrollArea):
     def paintEvent(self, event: QPaintEvent) -> None:
         """Handle paint events efficiently with proper floating-point character metrics."""
         painter = QPainter(self.viewport())
-        buffer = self._state.current_buffer
+        buffer = self._state.current_buffer()
 
         # Pre-calculate dimensions
         terminal_rows, terminal_cols = self._state.get_terminal_size()
-        terminal_history_lines = self._state.terminal_history_lines
+        terminal_history_lines = self._state.terminal_history_lines()
         first_visible_line = self.verticalScrollBar().value()
 
         # Get clip region and calculate visible character range
@@ -775,7 +775,7 @@ class TerminalWidget(QAbstractScrollArea):
         if attrs & CharacterAttributes.INVERSE:
             fg, bg = bg, fg
 
-        if self._state.screen_reverse_mode:
+        if self._state.screen_reverse_mode():
             fg, bg = bg, fg
 
         # Handle hidden text
@@ -931,7 +931,7 @@ class TerminalWidget(QAbstractScrollArea):
                 painter.fillRect(selection_rect, selection_color)
                 line_index = first_visible_line + row
                 if line_index < terminal_history_lines:
-                    line = self._state.current_buffer.lines[line_index]
+                    line = self._state.current_buffer().lines[line_index]
                     painter.setPen(selection_text_color)
                     for col in range(row_start, row_end):
                         char, _attrs, _fg, _bg = line.get_character(col)
@@ -984,9 +984,9 @@ class TerminalWidget(QAbstractScrollArea):
         if not self.has_selection():
             return ""
 
-        buffer = self._state.current_buffer
-        terminal_cols = self._state.terminal_columns
-        terminal_history_lines = self._state.terminal_history_lines
+        buffer = self._state.current_buffer()
+        terminal_cols = self._state.terminal_columns()
+        terminal_history_lines = self._state.terminal_history_lines()
 
         # Get normalized selection
         selection = cast(TerminalSelection, self._selection).normalize()
@@ -1034,7 +1034,7 @@ class TerminalWidget(QAbstractScrollArea):
         text = QGuiApplication.clipboard().text()
         if text:
             # Handle bracketed paste mode
-            if self._state.bracketed_paste_mode:
+            if self._state.bracketed_paste_mode():
                 self.data_ready.emit(b'\x1b[200~')  # Start bracketed paste
                 self.data_ready.emit(text.encode())
                 self.data_ready.emit(b'\x1b[201~')  # End bracketed paste
@@ -1103,7 +1103,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def get_title(self) -> str:
         """Get current terminal title."""
-        return self._state.terminal_title
+        return self._state.terminal_title()
 
     def get_current_directory(self) -> str | None:
         """Get current working directory if known."""
@@ -1157,8 +1157,8 @@ class TerminalWidget(QAbstractScrollArea):
 
             # Find all matches
             if text:
-                buffer = self._state.current_buffer
-                rows = buffer.history_lines
+                buffer = self._state.current_buffer()
+                rows = buffer.history_lines()
 
                 # Search through all lines in buffer
                 for row in range(rows):

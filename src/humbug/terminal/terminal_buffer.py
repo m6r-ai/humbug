@@ -843,7 +843,6 @@ class TerminalBuffer:
                 else:
                     self.cursor.col += 1
 
-    @property
     def history_lines(self) -> int:
         """Get the number of lines of history including the current display buffer"""
         return len(self.lines)

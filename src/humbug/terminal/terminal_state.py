@@ -49,22 +49,18 @@ class TerminalState:
         # ANSI color mapping - will be populated by widget
         self._ansi_colors: dict = {}
 
-    @property
     def current_buffer(self) -> TerminalBuffer:
         """Get current terminal buffer."""
         return self._current_buffer
 
-    @property
     def mouse_tracking(self) -> MouseTrackingState:
         """Get mouse tracking state."""
         return self._mouse_tracking
 
-    @property
     def screen_reverse_mode(self) -> bool:
         """Get screen reverse mode state."""
         return self._screen_reverse_mode
 
-    @property
     def terminal_title(self) -> str:
         """Get terminal title."""
         return self._terminal_title
@@ -385,7 +381,7 @@ class TerminalState:
 
                     else:
                         self._handle_alternate_screen(False)
-                        self.current_buffer.restore_cursor()
+                        self._current_buffer.restore_cursor()
 
                 elif mode == 2004:  # Bracketed paste mode
                     buffer.modes.bracketed_paste = set_mode
@@ -688,32 +684,26 @@ class TerminalState:
         buffer = self._current_buffer
         return (buffer.rows, buffer.cols)
 
-    @property
     def terminal_rows(self) -> int:
         """Get the number of rows in the terminal display."""
         return self._current_buffer.rows
 
-    @property
     def terminal_columns(self) -> int:
         """Get the number of columns in the terminal display."""
         return self._current_buffer.cols
 
-    @property
     def terminal_history_lines(self) -> int:
         """Get the number of lines of history including the current display"""
-        return self._current_buffer.history_lines
+        return self._current_buffer.history_lines()
 
-    @property
     def application_cursor_mode(self) -> bool:
         """Get if terminal is in application cursor mode."""
         return self._current_buffer.modes.application_cursor
 
-    @property
     def application_keypad_mode(self) -> bool:
         """Get if terminal is in application keypad mode."""
         return self._current_buffer.modes.application_keypad
 
-    @property
     def bracketed_paste_mode(self) -> bool:
         """Get if terminal is in bracketed paste mode."""
         return self._current_buffer.modes.bracketed_paste
