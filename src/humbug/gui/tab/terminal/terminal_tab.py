@@ -213,16 +213,18 @@ class TerminalTab(TabBase):
                     except OSError as e:
                         if not self._running:
                             break
+
                         self._logger.exception("Error reading from terminal: %s", str(e))
                         break
 
                 except asyncio.CancelledError:
-                    # Task was cancelled, exit cleanly
-                    raise
+                    self._logger.debug("Read loop task cancelled")
+                    raise  # Re-raise to ensure proper task cancellation
 
                 except Exception as e:
                     if not self._running:
                         break
+
                     self._logger.exception("Error in read loop: %s", str(e))
                     break
 
@@ -362,6 +364,7 @@ class TerminalTab(TabBase):
 
         return tab
 
+    # pylint: disable=protected-access
     def _transfer_process_from(self, source_tab: 'TerminalTab') -> None:
         """
         Transfer terminal process state from another tab.

@@ -101,6 +101,7 @@ class ConversationTab(TabBase):
         # Update status bar
         self.update_status()
 
+    # pylint: disable=protected-access
     async def fork_conversation(self) -> 'ConversationTab':
         """Create a copy of this conversation with the same history."""
         # Generate new conversation ID using current time
