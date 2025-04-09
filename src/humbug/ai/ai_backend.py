@@ -24,8 +24,6 @@ class AIBackend(ABC):
 
     def __init__(self) -> None:
         """Initialize common attributes."""
-        self._conversation_settings: Dict[str, AIConversationSettings] = {}
-        self._default_settings = AIConversationSettings()
         self._uses_data = True  # Indicates that we default to normal SSE encoding
         self._max_retries = 3
         self._base_delay = 2
@@ -38,14 +36,6 @@ class AIBackend(ABC):
             cert_path = certifi.where()
 
         self._ssl_context = ssl.create_default_context(cafile=cert_path)
-
-    def update_conversation_settings(self, conversation_id: str, settings: AIConversationSettings) -> None:
-        """Update settings for a specific conversation."""
-        self._conversation_settings[conversation_id] = settings
-
-    def get_conversation_settings(self, conversation_id: str) -> AIConversationSettings:
-        """Get settings for a specific conversation."""
-        return self._conversation_settings.get(conversation_id, self._default_settings)
 
     @abstractmethod
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
@@ -66,12 +56,11 @@ class AIBackend(ABC):
     async def stream_message(
         self,
         conversation_history: List[Dict[str, str]],
-        conversation_id: str
+        conversation_settings: AIConversationSettings
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""
-        settings = self.get_conversation_settings(conversation_id) if conversation_id else self._default_settings
-        url = self._get_api_url(settings)
-        data = self._build_request_data(conversation_history, settings)
+        url = self._get_api_url(conversation_settings)
+        data = self._build_request_data(conversation_history, conversation_settings)
         headers = self._get_headers()
 
         attempt = 0

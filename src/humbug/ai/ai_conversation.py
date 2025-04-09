@@ -100,16 +100,12 @@ class AIConversation:
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """
-        Update conversation settings and associated backend.
+        Update conversation settings.
 
         Args:
             new_settings: New settings to apply
         """
         self._settings = new_settings
-        provider = AIConversationSettings.get_provider(new_settings.model)
-        backend = self._ai_backends.get(provider)
-        if backend:
-            backend.update_conversation_settings(self._conversation_id, new_settings)
 
     def get_settings(self) -> AIConversationSettings:
         """
@@ -214,7 +210,7 @@ class AIConversation:
 
             stream = backend.stream_message(
                 self._conversation.get_messages_for_context(),
-                self._conversation_id
+                self._settings
             )
 
             async for response in stream:
