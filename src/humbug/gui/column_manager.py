@@ -254,8 +254,7 @@ class ColumnManager(QWidget):
         source_index = source_column.indexOf(tab)
 
         # Don't process if dropped on itself
-        if (source_column == target_column and
-            (source_index == target_index or source_index == target_index - 1)):
+        if (source_column == target_column and (target_index - 1 <= source_index <= target_index)):
             return
 
         self._move_tab_between_columns(tab, source_column, target_column)

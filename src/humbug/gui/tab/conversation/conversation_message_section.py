@@ -134,6 +134,10 @@ class ConversationMessageSection(QFrame):
 
         self._handle_language_changed()
 
+    def text_area(self) -> ConversationTextEdit:
+        """Get the text area widget."""
+        return self._text_area
+
     def language(self) -> ProgrammingLanguage | None:
         """Provide the language in use by this section."""
         return self._language
