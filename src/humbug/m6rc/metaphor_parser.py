@@ -75,7 +75,7 @@ class MetaphorParser:
         self.current_token: Token | None = None
 
     def _insert_preamble_text(self, text: str) -> None:
-        self.syntax_tree.attach_child(MetaphorTextNode(text))
+        self.syntax_tree.add_child(MetaphorTextNode(text))
 
     def _generate_preamble(self) -> None:
         preamble: List[str] = [
@@ -160,27 +160,33 @@ class MetaphorParser:
                     if seen_action_tree:
                         self._record_syntax_error(token, "'Action' already defined")
 
-                    self.syntax_tree.attach_child(self._parse_action(token))
+                    self.syntax_tree.add_child(self._parse_action(token))
                     seen_action_tree = True
-                elif token.type == TokenType.CONTEXT:
+                    continue
+
+                if token.type == TokenType.CONTEXT:
                     if seen_context_tree:
                         self._record_syntax_error(token, "'Context' already defined")
 
-                    self.syntax_tree.attach_child(self._parse_context(token))
+                    self.syntax_tree.add_child(self._parse_context(token))
                     seen_context_tree = True
-                elif token.type == TokenType.ROLE:
+                    continue
+
+                if token.type == TokenType.ROLE:
                     if seen_role_tree:
                         self._record_syntax_error(token, "'Role' already defined")
 
-                    self.syntax_tree.attach_child(self._parse_role(token))
+                    self.syntax_tree.add_child(self._parse_role(token))
                     seen_role_tree = True
-                elif token.type == TokenType.END_OF_FILE:
+                    continue
+
+                if token.type == TokenType.END_OF_FILE:
                     if self.parse_errors:
                         raise MetaphorParserError("parser error", self.parse_errors)
 
                     return self.syntax_tree
-                else:
-                    self._record_syntax_error(token, f"Unexpected token: {token.value} at top level")
+
+                self._record_syntax_error(token, f"Unexpected token: {token.value} at top level")
 
         except FileNotFoundError as e:
             err_token = cast(Token, self.current_token)
@@ -338,18 +344,18 @@ class MetaphorParser:
                 if token.value != "" and seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Text must come first in an 'Action' block")
 
-                action_node.attach_child(self._parse_text(token))
+                action_node.add_child(self._parse_text(token))
                 continue
 
             if token.type == TokenType.CODE:
                 if seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Code must come first in an 'Action' block")
 
-                action_node.attach_child(self._parse_code(token))
+                action_node.add_child(self._parse_code(token))
                 continue
 
             if token.type == TokenType.ACTION:
-                action_node.attach_child(self._parse_action(token))
+                action_node.add_child(self._parse_action(token))
                 seen_token_type = TokenType.ACTION
                 continue
 
@@ -388,18 +394,18 @@ class MetaphorParser:
                 if token.value != "" and seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Text must come first in a 'Context' block")
 
-                context_node.attach_child(self._parse_text(token))
+                context_node.add_child(self._parse_text(token))
                 continue
 
             if token.type == TokenType.CODE:
                 if seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Code must come first in a 'Context' block")
 
-                context_node.attach_child(self._parse_code(token))
+                context_node.add_child(self._parse_code(token))
                 continue
 
             if token.type == TokenType.CONTEXT:
-                context_node.attach_child(self._parse_context(token))
+                context_node.add_child(self._parse_context(token))
                 seen_token_type = TokenType.CONTEXT
                 continue
 
@@ -438,18 +444,18 @@ class MetaphorParser:
                 if token.value != "" and seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Text must come first in a 'Role' block")
 
-                role_node.attach_child(self._parse_text(token))
+                role_node.add_child(self._parse_text(token))
                 continue
 
             if token.type == TokenType.CODE:
                 if seen_token_type != TokenType.NONE:
                     self._record_syntax_error(token, "Code must come first in a 'Role' block")
 
-                role_node.attach_child(self._parse_code(token))
+                role_node.add_child(self._parse_code(token))
                 continue
 
             if token.type == TokenType.ROLE:
-                role_node.attach_child(self._parse_role(token))
+                role_node.add_child(self._parse_role(token))
                 seen_token_type = TokenType.ROLE
                 continue
 

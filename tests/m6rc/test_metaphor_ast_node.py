@@ -19,10 +19,10 @@ def complex_tree():
     text2 = MetaphorTextNode("World")
     context = MetaphorContextNode("global")
 
-    root.attach_child(text1)
-    root.attach_child(role)
-    role.attach_child(text2)
-    role.attach_child(context)
+    root.add_child(text1)
+    root.add_child(role)
+    role.add_child(text2)
+    role.add_child(context)
 
     return root
 
@@ -30,33 +30,33 @@ def complex_tree():
 def test_metaphor_ast_node_creation(sample_node):
     """Test basic node creation"""
     node = MetaphorTextNode("hello")
-    assert node.value == "hello"
+    assert node.value() == "hello"
     assert node.parent is None
     assert len(node.children) == 0
 
 
-def test_metaphor_ast_node_attach_child(sample_node):
+def test_metaphor_ast_node_add_child(sample_node):
     """Test attaching child nodes"""
     child_node = MetaphorTextNode("child input")
 
-    sample_node.attach_child(child_node)
+    sample_node.add_child(child_node)
     assert len(sample_node.children) == 1
     assert child_node.parent == sample_node
     assert sample_node.children[0] == child_node
 
 
-def test_metaphor_ast_node_detach_child(sample_node):
+def test_metaphor_ast_node_remove_child(sample_node):
     """Test detaching a child node"""
     child1_node = MetaphorTextNode("child1")
     child2_node = MetaphorTextNode("child2")
 
-    sample_node.attach_child(child1_node)
-    sample_node.attach_child(child2_node)
+    sample_node.add_child(child1_node)
+    sample_node.add_child(child2_node)
     assert len(sample_node.children) == 2
 
-    sample_node.detach_child(child1_node)
+    sample_node.remove_child(child1_node)
     assert len(sample_node.children) == 1
-    assert sample_node.children[0].value == "child2"
+    assert sample_node.children[0].value() == "child2"
 
 
 def test_metaphor_ast_node_detach_unattached_child(sample_node):
@@ -64,11 +64,11 @@ def test_metaphor_ast_node_detach_unattached_child(sample_node):
     child1_node = MetaphorTextNode("child1")
     child2_node = MetaphorTextNode("child2")
 
-    sample_node.attach_child(child1_node)
+    sample_node.add_child(child1_node)
     assert len(sample_node.children) == 1
 
     with pytest.raises(ValueError) as exc_info:
-        sample_node.detach_child(child2_node)
+        sample_node.remove_child(child2_node)
 
     assert "Node is not a child of this node" in str(exc_info)
 
@@ -82,7 +82,7 @@ def test_str_with_child():
     """Test string representation of a parent node with one child"""
     parent = MetaphorRootNode()
     child = MetaphorTextNode("child")
-    parent.attach_child(child)
+    parent.add_child(child)
 
     expected = (
         "MetaphorRootNode: \n"
@@ -141,9 +141,9 @@ def test_get_children_of_type():
     text2 = MetaphorTextNode("Text 2")
     role = MetaphorRoleNode("user")
 
-    parent.attach_child(text1)
-    parent.attach_child(role)
-    parent.attach_child(text2)
+    parent.add_child(text1)
+    parent.add_child(role)
+    parent.add_child(text2)
 
     text_nodes = parent.get_children_of_type(MetaphorTextNode)
     assert len(text_nodes) == 2

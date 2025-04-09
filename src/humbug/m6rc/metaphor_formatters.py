@@ -41,7 +41,7 @@ def _format_node(node: MetaphorASTNode, depth: int, out: TextIO) -> None:
     """
     if not isinstance(node, MetaphorRootNode):
         if isinstance(node, MetaphorCodeNode):
-            out.write(f"{node.value}\n")
+            out.write(f"{node.value()}\n")
             return
 
         value = node.value()

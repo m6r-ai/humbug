@@ -121,7 +121,7 @@ def test_valid_keyword_parsing(parser):
     result = parser.parse(input_text, "test.txt", [])
     roles = [node for node in result.children if isinstance(node, MetaphorRoleNode)]
     assert len(roles) == 1
-    assert roles[0].value == "Test"
+    assert roles[0].value() == "Test"
 
 
 def test_invalid_keyword_error(parser):
@@ -160,7 +160,7 @@ def test_keyword_empty_value(parser):
 
     result = parser.parse(input_text, "test.txt", [])
     role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
-    assert role.value == ""
+    assert role.value() == ""
 
 
 def test_keyword_whitespace_value(parser):
@@ -172,7 +172,7 @@ def test_keyword_whitespace_value(parser):
 
     result = parser.parse(input_text, "test.txt", [])
     role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
-    assert role.value == ""
+    assert role.value() == ""
 
 
 def test_duplicate_role_error(parser):
@@ -232,7 +232,7 @@ def test_keyword_text_preservation(parser):
 
     result = parser.parse(input_text, "test.txt", [])
     role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
-    assert role.value == "Test Role Description"
+    assert role.value() == "Test Role Description"
 
 
 def test_text_content_preservation(parser):
@@ -247,8 +247,8 @@ def test_text_content_preservation(parser):
     role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
     texts = [node for node in role.children if isinstance(node, MetaphorTextNode)]
     assert len(texts) == 2
-    assert texts[0].value == "First line"
-    assert texts[1].value == "Second line"
+    assert texts[0].value() == "First line"
+    assert texts[1].value() == "Second line"
 
 
 def test_empty_input(parser):
@@ -328,8 +328,8 @@ def test_fenced_code_blocks_with_blanks(parser):
     code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
 
     # Convert text nodes to list of values for easier testing
-    text_values = [node.value for node in text_nodes]
-    code_values = [node.value for node in code_nodes]
+    text_values = [node.value() for node in text_nodes]
+    code_values = [node.value() for node in code_nodes]
     assert "Before code" in text_values
     assert "```python" in code_values
     assert "def hello():" in code_values
@@ -352,8 +352,8 @@ def test_empty_lines(parser):
     role = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
     text_nodes = [node for node in role.children if isinstance(node, MetaphorTextNode)]
     assert len(text_nodes) == 3
-    assert text_nodes[0].value == "Description"
-    assert text_nodes[2].value == "More text"
+    assert text_nodes[0].value() == "Description"
+    assert text_nodes[2].value() == "More text"
 
 
 def test_tab_characters(parser):
@@ -388,8 +388,8 @@ def test_comment_lines(parser):
 
     # Comments should be ignored
     assert len(text_nodes) == 2
-    assert text_nodes[0].value == "Actual content"
-    assert text_nodes[1].value == "More content"
+    assert text_nodes[0].value() == "Actual content"
+    assert text_nodes[1].value() == "More content"
 
 
 def test_mixed_spaces_and_tab(parser):
@@ -420,7 +420,7 @@ def test_tab_in_content_block(parser):
     role_node = [node for node in result.children if isinstance(node, MetaphorRoleNode)][0]
     text_nodes = [node for node in role_node.children if isinstance(node, MetaphorTextNode)]
     assert len(text_nodes) == 3
-    assert "\t" in text_nodes[1].value  # Tab preserved in content
+    assert "\t" in text_nodes[1].value()  # Tab preserved in content
 
 
 def test_commented_keywords(parser):
@@ -442,9 +442,9 @@ def test_commented_keywords(parser):
 # Should have three text lines
     text_nodes = [node for node in roles[0].children if isinstance(node, MetaphorTextNode)]
     assert len(text_nodes) == 3
-    assert text_nodes[0].value == "First line"
-    assert text_nodes[1].value == "Second line"
-    assert text_nodes[2].value == "Third line"
+    assert text_nodes[0].value() == "First line"
+    assert text_nodes[1].value() == "Second line"
+    assert text_nodes[2].value() == "Third line"
 
 
 def test_python_embedding(parser, setup_files):
@@ -460,7 +460,7 @@ def test_python_embedding(parser, setup_files):
     code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
 
     # Find the code block
-    code_text = "\n".join(node.value for node in code_nodes)
+    code_text = "\n".join(node.value() for node in code_nodes)
     assert "```python" in code_text
     assert "def hello():" in code_text
     assert "print('Hello, World!')" in code_text
@@ -600,8 +600,8 @@ def test_action_fenced_code_blocks(parser):
     code_nodes = [node for node in action.children if isinstance(node, MetaphorCodeNode)]
 
     # Convert text nodes to list of values for easier testing
-    text_values = [node.value for node in text_nodes]
-    code_values = [node.value for node in code_nodes]
+    text_values = [node.value() for node in text_nodes]
+    code_values = [node.value() for node in code_nodes]
     assert "Before code" in text_values
     assert "```python" in code_values
     assert "def hello():" in code_values
@@ -771,8 +771,8 @@ def test_context_fenced_code_blocks(parser):
     code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
 
     # Convert text nodes to list of values for easier testing
-    text_values = [node.value for node in text_nodes]
-    code_values = [node.value for node in code_nodes]
+    text_values = [node.value() for node in text_nodes]
+    code_values = [node.value() for node in code_nodes]
     assert "Before code" in text_values
     assert "```python" in code_values
     assert "def hello():" in code_values
@@ -904,8 +904,8 @@ def test_role_fenced_code_blocks(parser):
     code_nodes = [node for node in role.children if isinstance(node, MetaphorCodeNode)]
 
     # Convert text nodes to list of values for easier testing
-    text_values = [node.value for node in text_nodes]
-    code_values = [node.value for node in code_nodes]
+    text_values = [node.value() for node in text_nodes]
+    code_values = [node.value() for node in code_nodes]
     assert "Before code" in text_values
     assert "```python" in code_values
     assert "def hello():" in code_values
@@ -1057,7 +1057,7 @@ def test_include_rel_path(parser, tmp_path):
     assert len(context_nodes) == 1
 
     # The first child node should be the keyword text "Included"
-    assert any(node.value == "Content" for node in context_nodes[0].children)
+    assert any(node.value() == "Content" for node in context_nodes[0].children)
 
 
 def test_include_abs_path(parser, tmp_path):
@@ -1083,7 +1083,7 @@ def test_include_abs_path(parser, tmp_path):
     assert len(context_nodes) == 1
 
     # The first child node should be the keyword text "Included"
-    assert any(node.value == "Content" for node in context_nodes[0].children)
+    assert any(node.value() == "Content" for node in context_nodes[0].children)
 
 
 def test_recursive_includes(parser, tmp_path):
@@ -1266,7 +1266,7 @@ def test_embed_directive(parser, tmp_path):
         embedded_text = [
             node for node in context.children
             if isinstance(node, MetaphorTextNode) and
-            ("test.txt" in node.value or "plaintext" in node.value)
+            ("test.txt" in node.value() or "plaintext" in node.value())
         ]
         assert len(embedded_text) > 0
     finally:
@@ -1308,12 +1308,13 @@ def test_wildcard_embed(parser, tmp_path):
         ]
 
         # Should find both filenames
-        assert any("test1.txt" in node.value for node in embedded_text)
-        assert any("test2.txt" in node.value for node in embedded_text)
+        assert any("test1.txt" in node.value() for node in embedded_text)
+        assert any("test2.txt" in node.value() for node in embedded_text)
 
         # Should find both contents
-        assert any("Content 1" in node.value for node in embedded_code)
-        assert any("Content 2" in node.value for node in embedded_code)
+        assert any("Content 1" in node.value() for node in embedded_code)
+        assert any("Content 2" in node.value() for node in embedded_code)
+
     finally:
         os.chdir(current_dir)
 
@@ -1392,13 +1393,14 @@ def test_recursive_embed(tmp_path):
         ]
 
         # Should find all filenames
-        assert any("root.txt" in node.value for node in embedded_text)
-        assert any("level1.txt" in node.value for node in embedded_text)
-        assert any("level2.txt" in node.value for node in embedded_text)
+        assert any("root.txt" in node.value() for node in embedded_text)
+        assert any("level1.txt" in node.value() for node in embedded_text)
+        assert any("level2.txt" in node.value() for node in embedded_text)
 
         # Should find all contents
-        assert any("Root content" in node.value for node in embedded_code)
-        assert any("Level 1 content" in node.value for node in embedded_code)
-        assert any("Level 2 content" in node.value for node in embedded_code)
+        assert any("Root content" in node.value() for node in embedded_code)
+        assert any("Level 1 content" in node.value() for node in embedded_code)
+        assert any("Level 2 content" in node.value() for node in embedded_code)
+
     finally:
         os.chdir(current_dir)

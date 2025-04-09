@@ -5,7 +5,7 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
-from typing import Any, List
+from typing import Any
 
 from humbug.ast.ast import ASTNode, ASTVisitor
 
@@ -40,53 +40,35 @@ class MarkdownASTVisitor(ASTVisitor['MarkdownASTNode']):
 
 class MarkdownDocumentNode(MarkdownASTNode):
     """Root node representing an entire HTML document."""
-    def __init__(self) -> None:
-        """Initialize a document node."""
-        super().__init__()
 
 
 class MarkdownParagraphNode(MarkdownASTNode):
     """Node representing an HTML paragraph (<p>)."""
-    def __init__(self, children: List[MarkdownASTNode] = []) -> None:
-        """
-        Initialize a paragraph node.
-
-        Args:
-            children: Optional list of child nodes to add
-        """
-        super().__init__()
-        if children:
-            for child in children:
-                self.add_child(child)
 
 
 class MarkdownHeadingNode(MarkdownASTNode):
     """Node representing an HTML heading (<h1> through <h6>)."""
-    def __init__(self, level: int, children: List[MarkdownASTNode] = []) -> None:
+    def __init__(self, level: int) -> None:
         """
         Initialize a heading node.
 
         Args:
             level: The heading level (1-6)
-            children: Optional list of child nodes to add
         """
         super().__init__()
+
         # Level should be 1-6
         self.level = max(1, min(6, level))
-        if children:
-            for child in children:
-                self.add_child(child)
 
 
 class MarkdownOrderedListNode(MarkdownASTNode):
     """Node representing an HTML ordered list (<ol>)."""
-    def __init__(self, indent: int = 0, start: int = 1, children: List[MarkdownASTNode] = []) -> None:
+    def __init__(self, indent: int = 0, start: int = 1) -> None:
         """
         Initialize an ordered list node.
 
         Args:
             indent: The indentation level of this list
-            children: Optional list of child nodes to add
         """
         super().__init__()
         self.indent = indent
@@ -95,44 +77,27 @@ class MarkdownOrderedListNode(MarkdownASTNode):
         # Content indent is typically indent + marker (e.g., "1.") + space
         # For ordered lists, we use a default of 3 characters for the marker ("1. ")
         self.content_indent = indent + 3
-        if children:
-            for child in children:
-                self.add_child(child)
 
 
 class MarkdownUnorderedListNode(MarkdownASTNode):
     """Node representing an HTML unordered list (<ul>)."""
-    def __init__(self, indent: int = 0, children: List[MarkdownASTNode] = []) -> None:
+    def __init__(self, indent: int = 0) -> None:
         """
         Initialize an unordered list node.
 
         Args:
             indent: The indentation level of this list
-            children: Optional list of child nodes to add
         """
         super().__init__()
         self.indent = indent
+
         # Content indent is typically indent + marker (e.g., "-") + space
         # For unordered lists, we use 2 characters for the marker ("- ")
         self.content_indent = indent + 2
-        if children:
-            for child in children:
-                self.add_child(child)
 
 
 class MarkdownListItemNode(MarkdownASTNode):
     """Node representing an HTML list item (<li>)."""
-    def __init__(self, children: List[MarkdownASTNode] = []) -> None:
-        """
-        Initialize a list item node.
-
-        Args:
-            children: Optional list of child nodes to add
-        """
-        super().__init__()
-        if children:
-            for child in children:
-                self.add_child(child)
 
 
 class MarkdownTextNode(MarkdownASTNode):
@@ -150,32 +115,10 @@ class MarkdownTextNode(MarkdownASTNode):
 
 class MarkdownBoldNode(MarkdownASTNode):
     """Node representing bold text (<b> or <strong>)."""
-    def __init__(self, children: List[MarkdownASTNode] = []) -> None:
-        """
-        Initialize a bold node.
-
-        Args:
-            children: Optional list of child nodes to add
-        """
-        super().__init__()
-        if children:
-            for child in children:
-                self.add_child(child)
 
 
 class MarkdownEmphasisNode(MarkdownASTNode):
     """Node representing emphasized text (<em> or <i>)."""
-    def __init__(self, children: List[MarkdownASTNode] = []) -> None:
-        """
-        Initialize an emphasis node.
-
-        Args:
-            children: Optional list of child nodes to add
-        """
-        super().__init__()
-        if children:
-            for child in children:
-                self.add_child(child)
 
 
 class MarkdownInlineCodeNode(MarkdownASTNode):
@@ -208,9 +151,6 @@ class MarkdownCodeBlockNode(MarkdownASTNode):
 
 class MarkdownLineBreakNode(MarkdownASTNode):
     """Node representing a line break."""
-    def __init__(self) -> None:
-        """Initialize a line break node."""
-        super().__init__()
 
 
 class MarkdownParseError(Exception):

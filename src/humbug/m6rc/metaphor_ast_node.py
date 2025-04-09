@@ -63,22 +63,6 @@ class MetaphorASTNode(ASTNode['MetaphorASTNode']):
         """The raw text value of this node."""
         return self._value
 
-    def attach_child(self, child: 'MetaphorASTNode') -> None:
-        """Add a child node to this MetaphorASTNode."""
-        self.add_child(child)
-
-    def detach_child(self, child: 'MetaphorASTNode') -> None:
-        """
-        Detach a child node from this node in the AST.
-
-        Args:
-            child: The child node to detach
-
-        Raises:
-            ValueError: If the child is not a child of this node
-        """
-        self.remove_child(child)
-
     def get_children_of_type(self, node_class: type) -> List['MetaphorASTNode']:
         """
         Returns a list of all immediate children that are instances of the specified class.

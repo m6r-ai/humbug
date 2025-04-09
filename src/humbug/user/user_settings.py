@@ -53,26 +53,23 @@ class UserSettings:
         # Start with default settings
         settings = cls.create_default()
 
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                if "api_keys" in data:
-                    for key, value in data["api_keys"].items():
-                        settings.api_keys[key] = value
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if "api_keys" in data:
+                for key, value in data["api_keys"].items():
+                    settings.api_keys[key] = value
 
-                language_code = data.get("language", "EN")
-                settings.language = LanguageCode[language_code]
-                settings.font_size = data.get("fontSize", None)
+            language_code = data.get("language", "EN")
+            settings.language = LanguageCode[language_code]
+            settings.font_size = data.get("fontSize", None)
 
-                # Load theme if available, otherwise use default (dark mode)
-                theme_str = data.get("theme", "DARK")
-                try:
-                    settings.theme = ColorMode[theme_str]
-                except (KeyError, ValueError):
-                    settings.theme = ColorMode.DARK
+            # Load theme if available, otherwise use default (dark mode)
+            theme_str = data.get("theme", "DARK")
+            try:
+                settings.theme = ColorMode[theme_str]
 
-        except json.JSONDecodeError:
-            raise
+            except (KeyError, ValueError):
+                settings.theme = ColorMode.DARK
 
         return settings
 
@@ -93,15 +90,11 @@ class UserSettings:
         # Start with default settings
         settings = cls.create_default()
 
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                for key in settings.api_keys:
-                    if key in data:
-                        settings.api_keys[key] = data[key]
-
-        except json.JSONDecodeError:
-            raise
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            for key in settings.api_keys:
+                if key in data:
+                    settings.api_keys[key] = data[key]
 
         return settings
 

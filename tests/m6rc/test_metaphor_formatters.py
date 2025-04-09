@@ -21,7 +21,7 @@ def test_format_ast_single_text():
     """Test formatting a single text node."""
     root = MetaphorRootNode()
     text = MetaphorTextNode("Hello world")
-    root.attach_child(text)
+    root.add_child(text)
     assert format_ast(root) == "Hello world\n"
 
 
@@ -29,7 +29,7 @@ def test_format_ast_single_action():
     """Test formatting a single action node."""
     root = MetaphorRootNode()
     action = MetaphorActionNode("Test")
-    root.attach_child(action)
+    root.add_child(action)
     assert format_ast(root) == "# Action: Test\n\n"
 
 
@@ -41,10 +41,10 @@ def test_format_ast_nested_structure():
     nested_context = MetaphorContextNode("Nested")
     text2 = MetaphorTextNode("Nested text")
 
-    root.attach_child(context)
-    context.attach_child(text1)
-    context.attach_child(nested_context)
-    nested_context.attach_child(text2)
+    root.add_child(context)
+    context.add_child(text1)
+    context.add_child(nested_context)
+    nested_context.add_child(text2)
 
     expected = (
         "# Context: Main\n\n"
@@ -63,10 +63,10 @@ def test_format_ast_all_node_types():
     action = MetaphorActionNode("")
     text = MetaphorTextNode("Review")
 
-    action.attach_child(text)
-    root.attach_child(role)
-    root.attach_child(context)
-    root.attach_child(action)
+    action.add_child(text)
+    root.add_child(role)
+    root.add_child(context)
+    root.add_child(action)
 
     expected = (
         "# Role: Expert\n\n"
@@ -146,10 +146,10 @@ def test_format_ast_remove_blank_lines():
     text2 = MetaphorTextNode("")
     text3 = MetaphorTextNode("Context text")
 
-    root.attach_child(text1)
-    root.attach_child(context)
-    context.attach_child(text2)
-    context.attach_child(text3)
+    root.add_child(text1)
+    root.add_child(context)
+    context.add_child(text2)
+    context.add_child(text3)
 
     expected = (
         "# Context: Main\n\n"
@@ -165,9 +165,9 @@ def test_format_ast_with_code():
     text = MetaphorTextNode("Here's some code:")
     code = MetaphorCodeNode("```python\ndef hello():\n    print('Hello world')\n```")
 
-    root.attach_child(context)
-    context.attach_child(text)
-    context.attach_child(code)
+    root.add_child(context)
+    context.add_child(text)
+    context.add_child(code)
 
     expected = (
         "# Context: Code Example\n\n"
