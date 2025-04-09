@@ -1,7 +1,7 @@
 """Terminal buffer state management."""
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Set
+from typing import List, Tuple, Set
 
 from humbug.terminal.terminal_line import CharacterAttributes, TerminalLine
 
@@ -14,15 +14,15 @@ class CursorState:
     visible: bool = True
     blink: bool = True
     delayed_wrap: bool = False
-    saved_position: Optional[Tuple[int, int, bool, bool]] = None  # row, col, delayed_wrap, origin_mode
+    saved_position: Tuple[int, int, bool, bool] | None = None  # row, col, delayed_wrap, origin_mode
 
 
 @dataclass
 class AttributeState:
     """Character attribute state."""
     current: CharacterAttributes = CharacterAttributes.NONE
-    foreground: Optional[int] = None
-    background: Optional[int] = None
+    foreground: int | None = None
+    background: int | None = None
 
 
 @dataclass
@@ -100,7 +100,7 @@ class TabStopState:
         """Clear all custom tab stops."""
         self.custom_stops.clear()
 
-    def get_next_tab_stop(self, current_col: int) -> Optional[int]:
+    def get_next_tab_stop(self, current_col: int) -> int | None:
         """
         Get next tab stop position from current column.
 
@@ -119,12 +119,14 @@ class TabStopState:
             next_stops = [col for col in self.custom_stops if col > current_col]
             if next_stops:
                 return min(next_stops)
+
             return None
 
         # Using default tab stops every 8 chars
         next_stop = ((current_col // self.DEFAULT_TAB_WIDTH) + 1) * self.DEFAULT_TAB_WIDTH
         if next_stop >= self.cols:
             return None
+
         return next_stop
 
     def resize(self, new_cols: int) -> None:
@@ -683,12 +685,13 @@ class TerminalBuffer:
     def index(self) -> None:
         """Handle the index operation."""
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
-        if cursor_row != self.scroll_region.bottom - 1:
+        if cursor_row == self.scroll_region.bottom - 1:
+            self.scroll_up(1)
+
+        else:
             max_rows = self.rows if not self.modes.origin else self.scroll_region.rows
             self.cursor.row = min(self.cursor.row + 1, max_rows - 1)
             self.max_cursor_row = max(self.max_cursor_row, self.cursor.row)
-        else:
-            self.scroll_up(1)
 
         self.cursor.delayed_wrap = False
 
@@ -697,6 +700,7 @@ class TerminalBuffer:
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         if cursor_row != self.scroll_region.top:
             self.cursor.row = max(0, self.cursor.row - 1)
+
         else:
             self.scroll_down(1)
 

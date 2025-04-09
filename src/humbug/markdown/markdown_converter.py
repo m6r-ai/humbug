@@ -6,7 +6,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 """
 
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownParseError
 from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode
@@ -34,7 +34,7 @@ class MarkdownConverter:
         # Store builder state for preservation during reset
         self.builder_state = None
 
-    def extract_sections(self, text: str) -> List[Tuple[MarkdownASTNode, Optional[ProgrammingLanguage]]]:
+    def extract_sections(self, text: str) -> List[Tuple[MarkdownASTNode, ProgrammingLanguage | None]]:
         """
         Process markdown text and extract content sections from it.
 
@@ -65,7 +65,7 @@ class MarkdownConverter:
             error_node.add_child(MarkdownTextNode(f"Error converting markdown: {e}"))
             return [(error_node, None)]
 
-    def _extract_sections_from_ast(self, document: MarkdownASTNode) -> List[Tuple[MarkdownASTNode, Optional[ProgrammingLanguage]]]:
+    def _extract_sections_from_ast(self, document: MarkdownASTNode) -> List[Tuple[MarkdownASTNode, ProgrammingLanguage | None]]:
         """
         Extract content sections from the AST document.
 

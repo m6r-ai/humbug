@@ -1,13 +1,13 @@
 """Factory for creating platform-specific terminal instances."""
 
 import os
-from typing import Optional, Type
+from typing import Type
 
 from humbug.terminal.terminal_base import TerminalBase
 
 # Lazy imports to avoid loading unnecessary platform code
-_unix_terminal: Optional[Type[TerminalBase]] = None
-_windows_terminal: Optional[Type[TerminalBase]] = None
+_unix_terminal: Type[TerminalBase] | None = None
+_windows_terminal: Type[TerminalBase] | None = None
 
 
 def create_terminal() -> TerminalBase:

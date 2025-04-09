@@ -1,7 +1,6 @@
 """File tree view implementation for mindspace files."""
 
 import os
-from typing import Optional
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
@@ -89,7 +88,7 @@ class MindspaceFileTree(QWidget):
         self._handle_style_changed()
 
         # Track current mindspace
-        self._mindspace_path: Optional[str] = None
+        self._mindspace_path: str | None = None
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
         self._language_manager = LanguageManager()

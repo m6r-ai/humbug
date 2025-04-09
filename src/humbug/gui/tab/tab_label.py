@@ -1,7 +1,5 @@
 """Tab label management for the Humbug application."""
 
-from typing import Optional
-
 from PySide6.QtWidgets import (
     QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy, QApplication
 )
@@ -34,7 +32,7 @@ class TabLabel(QWidget):
         self._is_active_column = False
         self._is_hovered = False
         self._style_manager = StyleManager()
-        self._drag_start_pos: Optional[QPoint] = None
+        self._drag_start_pos: QPoint | None = None
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 

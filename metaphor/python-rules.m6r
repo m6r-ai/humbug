@@ -16,7 +16,7 @@ Context: Python implementation rules
     Context: Use type hints
         Type hints must be used for function arguments and return values.
 
-        As we're using Python 3.10 as a minimum we can use `T | None` instead of `Optional[T]`.
+        As we're using Python 3.10 as a minimum, use `T | None` instead of `Optional[T]`.
 
     Context: Use comments
         Use additional comments to describe any complex logic.

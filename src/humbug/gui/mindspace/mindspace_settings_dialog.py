@@ -5,8 +5,6 @@ This dialog allows users to configure mindspace settings such as tab behavior an
 Settings are persisted to the mindspace's settings.json file.
 """
 
-from typing import Optional
-
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QPushButton, QSpinBox, QCheckBox, QDoubleSpinBox, QListView, QWidget
@@ -41,8 +39,8 @@ class MindspaceSettingsDialog(QDialog):
         self.setMinimumWidth(500)
         self.setModal(True)
 
-        self._initial_settings: Optional[MindspaceSettings] = None
-        self._current_settings: Optional[MindspaceSettings] = None
+        self._initial_settings: MindspaceSettings | None = None
+        self._current_settings: MindspaceSettings | None = None
 
         self._style_manager = StyleManager()
 

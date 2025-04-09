@@ -1,7 +1,7 @@
 """Base class for AI backends."""
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict
 
 from humbug.ai.ai_usage import AIUsage
 
@@ -12,7 +12,7 @@ class AIError:
     code: str
     message: str
     retries_exhausted: bool = False
-    details: Optional[Dict] = None
+    details: Dict | None = None
 
 
 @dataclass
@@ -20,7 +20,7 @@ class AIResponse:
     """Response from an AI backend."""
     reasoning: str
     content: str
-    usage: Optional[AIUsage] = None
-    error: Optional[AIError] = None
-    model: Optional[str] = None
-    temperature: Optional[float] = None
+    usage: AIUsage | None = None
+    error: AIError | None = None
+    model: str | None = None
+    temperature: float | None = None

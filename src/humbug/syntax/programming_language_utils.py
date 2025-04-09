@@ -7,7 +7,7 @@ file extensions, and display names, eliminating code duplication across the appl
 
 import os
 import logging
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Tuple
 
 from humbug.syntax.programming_language import ProgrammingLanguage
 
@@ -186,7 +186,7 @@ class ProgrammingLanguageUtils:
         return cls._NAME_TO_LANGUAGE.get(normalized, ProgrammingLanguage.TEXT)
 
     @classmethod
-    def from_file_extension(cls, filename: Optional[str]) -> ProgrammingLanguage:
+    def from_file_extension(cls, filename: str | None) -> ProgrammingLanguage:
         """
         Detect programming language from file extension.
 
@@ -217,7 +217,7 @@ class ProgrammingLanguageUtils:
         return cls._LANGUAGE_TO_DISPLAY_NAME.get(language, "Code")
 
     @classmethod
-    def get_file_extension(cls, language: Optional[ProgrammingLanguage]) -> str:
+    def get_file_extension(cls, language: ProgrammingLanguage | None) -> str:
         """
         Get the file extension for a programming language.
 

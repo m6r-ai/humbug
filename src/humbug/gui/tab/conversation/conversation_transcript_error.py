@@ -1,10 +1,10 @@
-from typing import Dict, Optional
+from typing import Dict
 
 
 class ConversationTranscriptError(Exception):
     """Base exception class for transcript-related errors."""
 
-    def __init__(self, message: str, details: Optional[Dict] = None):
+    def __init__(self, message: str, details: Dict | None = None):
         """
         Initialize transcript error.
 

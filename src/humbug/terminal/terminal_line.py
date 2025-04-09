@@ -2,7 +2,7 @@
 
 import array
 from enum import Flag, auto
-from typing import Optional, Tuple
+from typing import Tuple
 
 
 class CharacterAttributes(Flag):
@@ -37,8 +37,8 @@ class TerminalLine:
         index: int,
         char: str,
         attributes: CharacterAttributes,
-        fg_color: Optional[int],
-        bg_color: Optional[int]
+        fg_color: int | None,
+        bg_color: int | None
     ) -> None:
         """Set character and attributes at position."""
         if 0 <= index < self.width:
@@ -48,7 +48,7 @@ class TerminalLine:
             self.data[base + 2] = fg_color if fg_color is not None else 0
             self.data[base + 3] = bg_color if bg_color is not None else 0
 
-    def get_character(self, index: int) -> Tuple[str, CharacterAttributes, Optional[int], Optional[int]]:
+    def get_character(self, index: int) -> Tuple[str, CharacterAttributes, int | None, int | None]:
         """Get character and attributes at position."""
         if 0 <= index < self.width:
             base = index * 4

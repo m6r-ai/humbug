@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, Callable
+from typing import Dict, Type, Callable
 
 from humbug.syntax.parser import Parser
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -56,7 +56,7 @@ class ParserRegistry:
         return decorator
 
     @classmethod
-    def create_parser(cls, language: ProgrammingLanguage) -> Optional[Parser]:
+    def create_parser(cls, language: ProgrammingLanguage) -> Parser | None:
         """
         Create and return a parser instance for the specified programming language.
 

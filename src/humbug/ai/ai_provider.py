@@ -1,6 +1,6 @@
 """Provider selection and initialization for AI backends."""
 
-from typing import Dict, Optional
+from typing import Dict
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.anthropic.anthropic_backend import AnthropicBackend
@@ -17,12 +17,12 @@ class AIProvider:
 
     @staticmethod
     def create_backends(
-        anthropic_key: Optional[str] = None,
-        deepseek_key: Optional[str] = None,
-        google_key: Optional[str] = None,
-        m6r_key: Optional[str] = None,
-        mistral_key: Optional[str] = None,
-        openai_key: Optional[str] = None
+        anthropic_key: str | None = None,
+        deepseek_key: str | None = None,
+        google_key: str | None = None,
+        m6r_key: str | None = None,
+        mistral_key: str | None = None,
+        openai_key: str | None = None
     ) -> Dict[str, AIBackend]:
         """Create AI backends based on available API keys.
 

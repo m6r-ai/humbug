@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import logging
 import time
-from typing import Dict, List, Optional, Tuple, Any, Set, cast
+from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
@@ -104,7 +104,7 @@ class ConversationWidget(QWidget):
         conversation_id: str,
         path: str,
         timestamp: datetime,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
         use_existing_ai_conversation: bool = False
     ) -> None:
         """
@@ -126,7 +126,7 @@ class ConversationWidget(QWidget):
         self._user_manager = UserManager()
 
         self._bookmarked_messages: Dict[ConversationMessage, BookmarkData] = {}
-        self._current_bookmark_index: Optional[int] = None
+        self._current_bookmark_index: int | None = None
 
         # Create transcript handler with provided filename
         self._transcript_handler = ConversationTranscriptHandler(path, timestamp)
@@ -153,7 +153,7 @@ class ConversationWidget(QWidget):
 
             # Widget tracking
         self._messages: List[ConversationMessage] = []
-        self._message_with_selection: Optional[ConversationMessage] = None
+        self._message_with_selection: ConversationMessage | None = None
         self._is_streaming = False
 
         # Initialize tracking variables

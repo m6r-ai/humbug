@@ -7,7 +7,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 from enum import Enum, auto
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
 from PySide6.QtGui import (
@@ -820,7 +820,7 @@ class StyleManager(QObject):
         """Get the base font size for the current system."""
         return self._user_font_size or self._base_font_size
 
-    def set_user_font_size(self, size: Optional[float]) -> None:
+    def set_user_font_size(self, size: float | None) -> None:
         """Set user-specific font size override."""
         if size != self._user_font_size:
             self._user_font_size = size

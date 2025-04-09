@@ -1,7 +1,7 @@
 """Custom message box dialog with consistent styling and scrollable content."""
 
 from enum import Enum, auto
-from typing import Optional, List
+from typing import List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QPlainTextEdit, QWidget
@@ -96,6 +96,7 @@ class MessageBox(QDialog):
             content_height = ((line_count + 3) * line_height) + margins.top() + margins.bottom()
             self._text_edit.setFixedHeight(content_height)
             self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         else:
             # For longer messages, set reasonable max height with scrollbar
             content_height = min(30 * line_height, int(self.screen().geometry().height() * 0.8))
@@ -125,6 +126,7 @@ class MessageBox(QDialog):
             # Set default and escape buttons appropriately
             if button in (MessageBoxButton.OK, MessageBoxButton.YES):
                 default_button = btn
+ 
             elif button in (MessageBoxButton.CANCEL, MessageBoxButton.NO):
                 escape_button = btn
 
@@ -151,7 +153,7 @@ class MessageBox(QDialog):
         # Store result
         self.result_button: MessageBoxButton = MessageBoxButton.OK
 
-    def _create_icon(self, msg_type: MessageBoxType) -> Optional[QPixmap]:
+    def _create_icon(self, msg_type: MessageBoxType) -> QPixmap | None:
         """Create appropriate icon for message type."""
         # Map message types to icon names
         icon_names = {

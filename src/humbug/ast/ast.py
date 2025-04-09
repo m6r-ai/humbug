@@ -5,7 +5,7 @@ This module provides shared infrastructure for different AST implementations,
 allowing for code reuse while maintaining separation between languages.
 """
 
-from typing import List, Optional, TypeVar, Generic, Any
+from typing import List, TypeVar, Generic, Any
 
 T = TypeVar('T', bound='ASTNode')
 
@@ -20,7 +20,7 @@ class ASTNode(Generic[T]):
 
     def __init__(self) -> None:
         """Initialize a base AST node with empty children list and no parent."""
-        self.parent: Optional[T] = None
+        self.parent: T | None = None
         self.children: List[T] = []
 
     def add_child(self, child: T) -> T:
@@ -60,7 +60,7 @@ class ASTNode(Generic[T]):
 
         self.children = []
 
-    def previous_sibling(self) -> Optional[T]:
+    def previous_sibling(self) -> T | None:
         """
         Get the previous sibling of this node, if any.
 
@@ -76,7 +76,7 @@ class ASTNode(Generic[T]):
 
         return None
 
-    def next_sibling(self) -> Optional[T]:
+    def next_sibling(self) -> T | None:
         """
         Get the next sibling of this node, if any.
 

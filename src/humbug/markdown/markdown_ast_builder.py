@@ -7,7 +7,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 
 import logging
 import re
-from typing import Dict, List, Tuple, Any, Set, Optional
+from typing import Dict, List, Tuple, Any, Set
 
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode, MarkdownLineBreakNode,
@@ -48,8 +48,8 @@ class MarkdownASTBuilder:
         self._list_contains_blank_line: Set[MarkdownASTNode] = set()  # Lists that have blank lines
 
         # Text continuation tracking
-        self._last_paragraph: Optional[MarkdownParagraphNode] = None
-        self._last_list_item: Optional[MarkdownListItemNode] = None
+        self._last_paragraph: MarkdownParagraphNode | None = None
+        self._last_list_item: MarkdownListItemNode | None = None
         self._last_processed_line_type: str = ""
         self._blank_line_count: int = 0
 
