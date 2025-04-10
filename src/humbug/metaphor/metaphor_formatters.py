@@ -3,12 +3,7 @@
 import io
 from typing import List
 
-from humbug.metaphor.metaphor_ast_node import MetaphorASTNode
 from humbug.metaphor.metaphor_parser import MetaphorParserSyntaxError
-
-
-# Import the new visitor
-from .metaphor_format_visitor import MetaphorFormatVisitor
 
 
 def format_errors(errors: List[MetaphorParserSyntaxError]) -> str:
