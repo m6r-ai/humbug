@@ -16,7 +16,7 @@ Context: Python implementation rules
     Context: Use type hints
         Type hints must be used for function arguments and return values.
 
-        As we're using Python 3.10 as a minimum, use `T | None` instead of `Optional[T]`.
+        As we're using Python 3.10 as a minimum, use union types.  E.g. use `T | None` instead of `Optional[T]`.
 
     Context: Use comments
         Comments must be used to describe any complex logic, or rationale that would not be obvious from
@@ -26,8 +26,9 @@ Context: Python implementation rules
     Context: PEP 8 imports
         The import list in any module should follow PEP 8 guidelines, including the ordering of imports.
 
-    Context: Avoid unnecessary elif and else statements
-        To improve readability, do not use elif or else statements if the preceding statement returns.
+    Context: Avoid unnecessary `elif` and `else` statements
+        To improve readability, do not use `elif` or `else` statements if the preceding `if` branch ends with
+        a `return`, `continue`, or `break`.
 
         For example, do this:
 
@@ -68,8 +69,8 @@ Context: Python implementation rules
 
             Preserve the exception chain using "raise ... from e" syntax.
 
-        Context: Avoid bare "except:" or "except Exception:" clauses.
-            We should avoid the use of bare "except:" or "except Exception:" clauses unless a function we are calling
+        Context: Avoid bare `except:` or `except Exception:` clauses.
+            We should avoid the use of bare `except:` or `except Exception:` clauses unless a function we are calling
             can only have exceptions handled this way.
 
             We should always catch specific exception types that could occur from an operation.
