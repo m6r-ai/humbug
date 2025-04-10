@@ -67,7 +67,7 @@ Context: Python implementation rules
 
             Include contextual information when wrapping exceptions.
 
-            Preserve the exception chain using "raise ... from e" syntax.
+            Preserve the exception chain using `raise ... from e` syntax.
 
         Context: Avoid bare `except:` or `except Exception:` clauses.
             We should avoid the use of bare `except:` or `except Exception:` clauses unless a function we are calling
