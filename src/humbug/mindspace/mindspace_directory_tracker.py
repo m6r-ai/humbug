@@ -5,10 +5,10 @@ import logging
 import os
 
 
-from humbug.mindspace.directory_tracking import DirectoryTracking
+from humbug.mindspace.mindspace_directory_tracking import MindspaceDirectoryTracking
 
 
-class DirectoryTracker:
+class MindspaceDirectoryTracker:
     """Tracks and persists last used directories per mindspace."""
 
     TRACKING_FILE = "directories.json"
@@ -16,7 +16,7 @@ class DirectoryTracker:
     def __init__(self) -> None:
         """Initialize the directory tracker."""
         self._logger = logging.getLogger("DirectoryTracker")
-        self._tracking: DirectoryTracking | None = None
+        self._tracking: MindspaceDirectoryTracking | None = None
 
     def _get_tracking_path(self, mindspace_path: str) -> str:
         """Get path to tracking file in mindspace."""
@@ -32,7 +32,7 @@ class DirectoryTracker:
                     data = json.load(f)
 
                 # Validate stored paths - fall back to defaults if invalid
-                self._tracking = DirectoryTracking.from_dict(data, mindspace_path)
+                self._tracking = MindspaceDirectoryTracking.from_dict(data, mindspace_path)
 
                 # Verify paths still exist, reset to defaults if not
                 if not os.path.exists(self._tracking.file_dialog):
@@ -42,11 +42,11 @@ class DirectoryTracker:
                     self._tracking.conversations = os.path.join(mindspace_path, "conversations")
 
             else:
-                self._tracking = DirectoryTracking.create_default(mindspace_path)
+                self._tracking = MindspaceDirectoryTracking.create_default(mindspace_path)
 
         except (json.JSONDecodeError, OSError) as e:
             self._logger.warning("Failed to load directory tracking: %s", str(e))
-            self._tracking = DirectoryTracking.create_default(mindspace_path)
+            self._tracking = MindspaceDirectoryTracking.create_default(mindspace_path)
 
     def save_tracking(self, mindspace_path: str) -> None:
         """Save current directory tracking to mindspace."""

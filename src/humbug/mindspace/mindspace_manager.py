@@ -13,7 +13,7 @@ from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal
 
-from humbug.mindspace.directory_tracker import DirectoryTracker
+from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 
@@ -57,7 +57,7 @@ class MindspaceManager(QObject):
             self._mindspace_path: str = ""
             self._settings: MindspaceSettings | None = None
             self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
-            self._directory_tracker = DirectoryTracker()
+            self._directory_tracker = MindspaceDirectoryTracker()
             self._initialized = True
 
     def mindspace_path(self) -> str:
