@@ -1195,10 +1195,7 @@ class ColumnManager(QWidget):
     def can_close_tab(self) -> bool:
         """Can we close the currently active tab?"""
         tab = self._get_current_tab()
-        if tab is None:
-            return False
-
-        return tab.can_close_tab()
+        return tab is not None
 
     def close_tab(self) -> None:
         """Close the currently active tab."""
