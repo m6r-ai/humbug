@@ -11,19 +11,6 @@ from humbug.metaphor.metaphor_parser import MetaphorParserSyntaxError
 from .metaphor_format_visitor import MetaphorFormatVisitor
 
 
-def format_ast(node: MetaphorASTNode) -> str:
-    """Format an AST node and its children as a string.
-
-    Args:
-        node: The root node to format
-
-    Returns:
-        Formatted string representation of the AST
-    """
-    formatter = MetaphorFormatVisitor()
-    return formatter.format(node)
-
-
 def format_errors(errors: List[MetaphorParserSyntaxError]) -> str:
     """Format a list of syntax errors as a string.
 

@@ -5,8 +5,7 @@ import pytest
 from humbug.metaphor import (
     MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
-    MetaphorParserSyntaxError,
-    format_ast,
+    MetaphorParserSyntaxError, MetaphorFormatVisitor,
     format_errors
 )
 
@@ -14,7 +13,8 @@ from humbug.metaphor import (
 def test_format_ast_empty_root():
     """Test formatting an empty root node."""
     root = MetaphorRootNode()
-    assert format_ast(root) == ""
+    formatter = MetaphorFormatVisitor()
+    assert formatter.format(root) == ""
 
 
 def test_format_ast_single_text():
@@ -22,7 +22,8 @@ def test_format_ast_single_text():
     root = MetaphorRootNode()
     text = MetaphorTextNode("Hello world")
     root.add_child(text)
-    assert format_ast(root) == "Hello world\n"
+    formatter = MetaphorFormatVisitor()
+    assert formatter.format(root) == "Hello world\n"
 
 
 def test_format_ast_single_action():
@@ -30,7 +31,8 @@ def test_format_ast_single_action():
     root = MetaphorRootNode()
     action = MetaphorActionNode("Test")
     root.add_child(action)
-    assert format_ast(root) == "# Action: Test\n\n"
+    formatter = MetaphorFormatVisitor()
+    assert formatter.format(root) == "# Action: Test\n\n"
 
 
 def test_format_ast_nested_structure():
@@ -52,7 +54,8 @@ def test_format_ast_nested_structure():
         "## Context: Nested\n\n"
         "Nested text\n"
     )
-    assert format_ast(root) == expected
+    formatter = MetaphorFormatVisitor()
+    assert formatter.format(root) == expected
 
 
 def test_format_ast_all_node_types():
@@ -74,7 +77,8 @@ def test_format_ast_all_node_types():
         "# Action:\n\n"
         "Review\n"
     )
-    assert format_ast(root) == expected
+    formatter = MetaphorFormatVisitor()
+    assert formatter.format(root) == expected
 
 
 def test_format_errors_single_error():
@@ -155,7 +159,8 @@ def test_format_ast_remove_blank_lines():
         "# Context: Main\n\n"
         "Context text\n"
     )
-    assert format_ast(root) == expected
+    formatter = MetaphorFormatVisitor()
+    assert formatter.format(root) == expected
 
 
 def test_format_ast_with_code():
@@ -177,4 +182,5 @@ def test_format_ast_with_code():
         "    print('Hello world')\n"
         "```\n"
     )
-    assert format_ast(root) == expected
+    formatter = MetaphorFormatVisitor()
+    assert formatter.format(root) == expected

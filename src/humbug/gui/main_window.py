@@ -25,7 +25,7 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
-from humbug.metaphor import MetaphorParser, MetaphorParserError, format_ast, format_errors
+from humbug.metaphor import MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, format_errors
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
@@ -940,7 +940,8 @@ class MainWindow(QMainWindow):
         try:
             embed_path = self._mindspace_manager.mindspace_path()
             syntax_tree = metaphor_parser.parse_file(file_path, search_paths, embed_path)
-            prompt = format_ast(syntax_tree)
+            formatter = MetaphorFormatVisitor()
+            prompt = formatter.format(syntax_tree)
 
             # Create conversation with prompt
             conversation_id = self._new_conversation()

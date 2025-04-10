@@ -7,9 +7,8 @@ import pytest
 from humbug.metaphor import (
     MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
-    MetaphorParser,
-    MetaphorParserError,
-    format_ast,
+    MetaphorParser, MetaphorFormatVisitor,
+    MetaphorParserError
 )
 
 
@@ -474,7 +473,8 @@ def test_multiple_file_embedding(parser, setup_files):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    formatted = format_ast(result)
+    formatter = MetaphorFormatVisitor()
+    formatted = formatter.format(result)
 
     assert "```javascript" in formatted
     assert "function hello()" in formatted
@@ -508,7 +508,8 @@ def test_language_detection(parser, setup_files):
         )
 
         result = parser.parse(input_text, "test.txt", [])
-        formatted = format_ast(result)
+        formatter = MetaphorFormatVisitor()
+        formatted = formatter.format(result)
         assert f"```{expected_lang}" in formatted
 
 
@@ -532,7 +533,8 @@ def test_recursive_embedding(tmp_path):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    formatted = format_ast(result)
+    formatter = MetaphorFormatVisitor()
+    formatted = formatter.format(result)
 
     assert "Root content" in formatted
     assert "Level 1 content" in formatted
@@ -551,7 +553,8 @@ def test_file_without_extension(parser, tmp_path):
     )
 
     result = parser.parse(input_text, "test.txt", [])
-    formatted = format_ast(result)
+    formatter = MetaphorFormatVisitor()
+    formatted = formatter.format(result)
 
     # Should use plaintext for files without extension
     assert "```plaintext" in formatted

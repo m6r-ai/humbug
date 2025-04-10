@@ -8,7 +8,7 @@ from .metaphor_ast_node import (
 )
 from .metaphor_parser import MetaphorParser, MetaphorParserError, MetaphorParserSyntaxError
 from .metaphor_format_visitor import MetaphorFormatVisitor
-from .metaphor_formatters import format_ast, format_errors
+from .metaphor_formatters import format_errors
 
 
 __all__ = [
@@ -24,6 +24,5 @@ __all__ = [
     "MetaphorParser",
     "MetaphorParserError",
     "MetaphorParserSyntaxError",
-    "format_ast",
     "format_errors"
 ]
