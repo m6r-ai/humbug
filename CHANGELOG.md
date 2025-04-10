@@ -6,14 +6,15 @@ New features:
 
 Internal structure changes:
 
-- The codebase is now fully type-checkable using mypy.
+- The codebase is now fully type-checkable using mypy (0 errors or warnings).
+- Implemented a set of pylint checker rules (0 errors or warnings).
 - Removed the use of @property.  The use of @property decorators made it hard to determine if code was
   making use of attributes or methods.  These are now much clearer, making it easier to ensure we don't
   inadvertently access attributes and risking side effects.
 
 Bug fixes:
 
-- Several small bugs were resolved when implementing mypy type checking.
+- Several small bugs were resolved when implementing mypy and pylint checking.
 
 ## v0.9 (2025-04-01)
 
