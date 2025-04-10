@@ -1,13 +1,10 @@
 """Functions for formatting Metaphor AST nodes and error messages."""
 
 import io
-from typing import List, Final, Type
+from typing import List
 
-from humbug.metaphor.metaphor_ast_node import (
-    MetaphorASTNode, MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
-    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
-)
-from .metaphor_parser import MetaphorParserSyntaxError
+from humbug.metaphor.metaphor_ast_node import MetaphorASTNode
+from humbug.metaphor.metaphor_parser import MetaphorParserSyntaxError
 
 
 # Import the new visitor
