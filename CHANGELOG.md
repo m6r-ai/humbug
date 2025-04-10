@@ -18,6 +18,7 @@ Bug fixes:
 - Several small bugs were resolved when implementing mypy and pylint checking.
 - If we had a markdown file embedded inside an AI response and that markdown file contained code inside
   a code fenced block then this would exit the code fenced region too soon.
+- The TERM environment variable is now set to xterm-256color on MacOS and Linux.
 
 ## v0.9 (2025-04-01)
 
