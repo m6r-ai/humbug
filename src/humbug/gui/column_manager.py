@@ -425,6 +425,7 @@ class ColumnManager(QWidget):
         # Disconnect any existing connections to avoid duplicates
         try:
             current_tab.status_message.disconnect()
+
         except RuntimeError:
             pass  # No existing connections
 
@@ -894,6 +895,7 @@ class ColumnManager(QWidget):
         async def fork_and_handle_errors() -> None:
             try:
                 await self.fork_conversation()
+
             except ConversationError as e:
                 strings = self._language_manager.strings()
                 MessageBox.show_message(
@@ -941,6 +943,7 @@ class ColumnManager(QWidget):
                 except Exception as e:
                     self._logger.exception("Failed to save tab manager state: %s", str(e))
                     continue
+
             tab_columns.append(tab_states)
 
         return {
