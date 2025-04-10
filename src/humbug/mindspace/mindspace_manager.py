@@ -153,7 +153,7 @@ class MindspaceManager(QObject):
             # Create empty session file
             session_path = os.path.join(mindspace_dir, self.SESSION_FILE)
             with open(session_path, 'w', encoding='utf-8') as f:
-                json.dump({"tabs": []}, f, indent=2)
+                json.dump({"tabs": []}, f, indent=4)
 
         except OSError as e:
             self._logger.error("Failed to create mindspace at %s: %s", path, str(e))
@@ -247,7 +247,7 @@ class MindspaceManager(QObject):
             # Write session file
             session_file = os.path.join(self._mindspace_path, self.MINDSPACE_DIR, self.SESSION_FILE)
             with open(session_file, 'w', encoding='utf-8') as f:
-                json.dump(state, f)
+                json.dump(state, f, indent=4)
 
         except OSError as e:
             raise MindspaceError(f"Failed to save mindspace state: {str(e)}") from e
@@ -386,7 +386,7 @@ class MindspaceManager(QObject):
         try:
             os.makedirs(os.path.dirname(self._home_config), exist_ok=True)
             with open(self._home_config, 'w', encoding='utf-8') as f:
-                json.dump({"lastMindspace": self._mindspace_path}, f, indent=2)
+                json.dump({"lastMindspace": self._mindspace_path}, f, indent=4)
 
         except OSError as e:
             self._logger.error("Failed to update home tracking: %s", str(e))
