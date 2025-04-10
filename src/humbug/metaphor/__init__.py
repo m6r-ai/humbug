@@ -7,6 +7,7 @@ from .metaphor_ast_node import (
     MetaphorASTVisitor
 )
 from .metaphor_parser import MetaphorParser, MetaphorParserError, MetaphorParserSyntaxError
+from .metaphor_format_visitor import MetaphorFormatVisitor
 from .metaphor_formatters import format_ast, format_errors
 
 
@@ -19,6 +20,7 @@ __all__ = [
     "MetaphorContextNode",
     "MetaphorActionNode",
     "MetaphorASTVisitor",
+    "MetaphorFormatVisitor",
     "MetaphorParser",
     "MetaphorParserError",
     "MetaphorParserSyntaxError",
