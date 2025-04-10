@@ -11,6 +11,7 @@ Internal structure changes:
 - Removed the use of @property.  The use of @property decorators made it hard to determine if code was
   making use of attributes or methods.  These are now much clearer, making it easier to ensure we don't
   inadvertently access attributes and risking side effects.
+- Renamed some files and classes to better reflect how they fit into the overall design.
 
 Bug fixes:
 
