@@ -59,6 +59,7 @@ class MarkdownParser:
         self._code_block_language = ""
         self._code_block_content: List[str] = []
         self._code_block_start_line = -1
+        self._code_block_nesting_level = 0
 
     def document(self) -> MarkdownDocumentNode:
         """
@@ -85,17 +86,28 @@ class MarkdownParser:
             None
         """
         # Handle code block state
+        stripped_line = line.strip()
         if self._in_code_block:
-            # Check for code block end
-            if line.strip() == '```':
-                return 'code_block_end', None
+            # Check for code fence.  If we have one then we're either closing
+            # this block or nesting another.
+            code_block_match = self._code_block_pattern.match(stripped_line)
+            if code_block_match:
+                language = code_block_match.group(1)
+                if language is not None:
+                    self._code_block_nesting_level += 1
+                    return 'code_block_content', line
+
+                self._code_block_nesting_level -= 1
+                if self._code_block_nesting_level == 0:
+                    return 'code_block_end', None
 
             return 'code_block_content', line
 
         # Check for code block start
-        code_block_match = self._code_block_pattern.match(line.strip())
+        code_block_match = self._code_block_pattern.match(stripped_line)
         if code_block_match:
             language = code_block_match.group(1) or ""
+            self._code_block_nesting_level = 1
             return 'code_block_start', language
 
         if not line.strip():
@@ -758,6 +770,7 @@ class MarkdownParser:
         self._code_block_language = ""
         self._code_block_content = []
         self._code_block_start_line = -1
+        self._code_block_nesting_level = 0
 
         lines = text.split('\n')
         for i, line in enumerate(lines):
