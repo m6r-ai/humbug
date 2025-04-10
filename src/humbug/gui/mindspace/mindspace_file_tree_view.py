@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint
 from PySide6.QtGui import QDrag, QMouseEvent
 
 
-class FileTreeView(QTreeView):
+class MindspaceFileTreeView(QTreeView):
     """Custom tree view with drag support."""
 
     def __init__(self, parent: QWidget | None = None):

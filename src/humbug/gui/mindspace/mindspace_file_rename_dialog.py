@@ -9,7 +9,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
 
-class FileRenameDialog(QDialog):
+class MindspaceFileRenameDialog(QDialog):
     """Dialog for renaming files."""
 
     def __init__(self, old_name: str, parent: QWidget | None = None):

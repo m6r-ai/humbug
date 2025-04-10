@@ -11,11 +11,11 @@ from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.gui.mindspace.conversation_rename_dialog import ConversationRenameDialog
-from humbug.gui.mindspace.file_rename_dialog import FileRenameDialog
-from humbug.gui.mindspace.file_tree_icon_provider import FileTreeIconProvider
-from humbug.gui.mindspace.file_tree_view import FileTreeView
 from humbug.gui.mindspace.mindspace_file_model import MindspaceFileModel
+from humbug.gui.mindspace.mindspace_file_rename_dialog import MindspaceFileRenameDialog
+from humbug.gui.mindspace.mindspace_file_tree_icon_provider import MindspaceFileTreeIconProvider
 from humbug.gui.mindspace.mindspace_file_tree_style import MindspaceFileTreeStyle
+from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
@@ -58,13 +58,13 @@ class MindspaceFileTree(QWidget):
         layout.addWidget(header_widget)
 
         # Create tree view
-        self._tree_view = FileTreeView()
+        self._tree_view = MindspaceFileTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
         self._tree_style = MindspaceFileTreeStyle()
         self._tree_view.setStyle(self._tree_style)
 
         # Create file system model
-        self._icon_provider = FileTreeIconProvider()
+        self._icon_provider = MindspaceFileTreeIconProvider()
         self._fs_model = QFileSystemModel()
         self._fs_model.setReadOnly(True)
 
@@ -160,7 +160,7 @@ class MindspaceFileTree(QWidget):
         """Prompt user to rename a file and handle renaming."""
         strings = self._language_manager.strings()
         old_name = os.path.basename(path)
-        dialog = FileRenameDialog(old_name, self)
+        dialog = MindspaceFileRenameDialog(old_name, self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
