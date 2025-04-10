@@ -4,6 +4,10 @@
 
 New features:
 
+- On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column
+  that was active when saved is also restored as the active column.  This means you no longer have to
+  reset the focus of tabs.
+
 Internal structure changes:
 
 - The codebase is now fully type-checkable using mypy (0 errors or warnings).
@@ -15,7 +19,8 @@ Internal structure changes:
 
 Bug fixes:
 
-- Several small bugs were resolved when implementing mypy and pylint checking.
+- Several small bugs were resolved when implementing mypy and pylint checking.  In a few instances the
+  type hints had been incorrect, although type hints have no impact on the execution of python code.
 - If we had a markdown file embedded inside an AI response and that markdown file contained code inside
   a code fenced block then this would exit the code fenced region too soon.
 - The TERM environment variable is now set to xterm-256color on MacOS and Linux.

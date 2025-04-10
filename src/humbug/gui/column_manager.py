@@ -6,7 +6,7 @@ from typing import Dict, List, cast
 import uuid
 
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, QTimer
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.color_role import ColorRole
@@ -929,10 +929,20 @@ class ColumnManager(QWidget):
         return terminal
 
     def save_state(self) -> Dict:
-        """Get current state of all tabs."""
+        """Get current state of all tabs and columns."""
         tab_columns = []
+        active_column_index = self._tab_columns.index(self._active_column)
+
         for column in self._tab_columns:
             tab_states = []
+            active_tab_id = None
+
+            # Get active tab ID for this column
+            current_index = column.currentIndex()
+            if current_index != -1:
+                current_tab = cast(TabBase, column.widget(current_index))
+                active_tab_id = current_tab.tab_id()
+
             for index in range(column.count()):
                 tab = cast(TabBase, column.widget(index))
                 try:
@@ -944,24 +954,46 @@ class ColumnManager(QWidget):
                     self._logger.exception("Failed to save tab manager state: %s", str(e))
                     continue
 
-            tab_columns.append(tab_states)
+            tab_columns.append({
+                'tabs': tab_states,
+                'active_tab_id': active_tab_id
+            })
 
         return {
             'columns': tab_columns,
+            'active_column_index': active_column_index
         }
 
     def restore_state(self, saved_state: Dict) -> None:
-        """Restore tabs from saved state."""
+        """Restore tabs and active states from saved state."""
         saved_columns = saved_state.get('columns', [])
+        active_column_index = saved_state.get('active_column_index', 0)
 
+        # Create necessary columns
         num_columns = len(saved_columns)
         for index in range(1, num_columns):
             self._create_column(index)
 
-        for column_index, tab_state in enumerate(saved_columns):
-            self._restore_column_state(column_index, tab_state)
+        # First pass: restore all tabs in all columns
+        for column_index, column_state in enumerate(saved_columns):
+            tab_states = column_state.get('tabs', [])
+            self._restore_column_state(column_index, tab_states)
 
+        # Second pass: set active tabs in each column
+        active_tab_ids = []
+        for column_index, column_state in enumerate(saved_columns):
+            active_tab_id = column_state.get('active_tab_id')
+            if active_tab_id and active_tab_id in self._tabs:
+                column = self._tab_columns[column_index]
+                tab = self._tabs[active_tab_id]
+                column.setCurrentWidget(tab)
+                active_tab_ids.append(active_tab_id)
+
+        # Show all columns with appropriate sizes
         self.show_all_columns()
+
+        # Defer setting the active column to ensure it's not overridden by other UI operations
+        QTimer.singleShot(0, lambda: self._deferred_set_active_column(active_column_index, active_tab_ids))
 
     def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
         """Restore state for a single column of tabs."""
@@ -1000,6 +1032,28 @@ class ColumnManager(QWidget):
             return TerminalTab.restore_from_state(state, self)
 
         return None
+
+    def _deferred_set_active_column(self, active_column_index: int, active_tab_ids: List[str]) -> None:
+        """
+        Set the active column and tab after UI has settled.
+
+        Args:
+            active_column_index: Index of the column to make active
+            active_tab_ids: List of active tab IDs for each column
+        """
+        # Set the active column
+        if 0 <= active_column_index < len(self._tab_columns):
+            self._active_column = self._tab_columns[active_column_index]
+
+            # If there's an active tab in this column, ensure it has focus
+            if active_tab_ids and active_column_index < len(active_tab_ids):
+                active_tab_id = active_tab_ids[active_column_index]
+                if active_tab_id in self._tabs:
+                    tab = self._tabs[active_tab_id]
+                    tab.setFocus()
+
+        # Update tab states to show correct active highlighting
+        self._update_tabs()
 
     def _connect_editor_signals(self, editor: EditorTab) -> None:
         """Connect standard editor tab signals."""

@@ -75,9 +75,11 @@ Context: Capabilities
             Context: Column persistence
                 The column layout is persisted with the mindspace.
 
-                Each tab's column position is restored when reopening a mindspace.
+                On restoring (reopening) a mindspace:
 
-                Column sizes are preserved between sessions.
+                - Each column's position is restored in the same order as they were when stored.
+                - Within each column the active tab in the column is also restored.
+                - The column that was active when stored is also made the active column when restored.
 
         Context: File tree view
             The file tree displays the contents of the current mindspace:
