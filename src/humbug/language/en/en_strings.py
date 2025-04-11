@@ -66,9 +66,9 @@ def get_english_strings() -> LanguageStrings:
 
         # Message roles
         role_you="You",
-        role_assistant="Assistant Response",
-        role_reasoning="Assistant Reasoning",
-        role_system="System Message",
+        role_assistant="{model} response",
+        role_reasoning="{model} reasoning",
+        role_system="System message",
 
         # Message labels
         highlighting="Highlighting: {language}",

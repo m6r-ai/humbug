@@ -66,8 +66,8 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Message roles
         role_you="أنت",
-        role_assistant="رد المساعد",
-        role_reasoning="تفكير المساعد",
+        role_assistant="رد {model}",
+        role_reasoning="تفكير {model}",
         role_system="رسالة النظام",
 
         # Message labels
@@ -102,7 +102,7 @@ def get_arabic_strings() -> LanguageStrings:
         m6r_api_key="مفتاح واجهة برمجة تطبيقات M6R",
         mistral_api_key="مفتاح واجهة برمجة تطبيقات ميسترال",
         openai_api_key="مفتاح واجهة برمجة تطبيقات أوبن إيه آي",
-        xai_api_key="مفتاح واجهة برمجة تطبيقات xAI", 
+        xai_api_key="مفتاح واجهة برمجة تطبيقات xAI",
         select_language="اللغة",
         font_size="حجم الخط",
         theme_dark="داكن",

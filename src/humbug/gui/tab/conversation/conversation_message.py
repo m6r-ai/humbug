@@ -44,6 +44,7 @@ class ConversationMessage(QFrame):
         self._message_source: AIMessageSource | None = None
         self._message_timestamp: datetime | None = None
         self._message_content = ""
+        self._message_model = ""
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -150,12 +151,18 @@ class ConversationMessage(QFrame):
             return
 
         strings = self._language_manager.strings()
-        role_text = {
-            AIMessageSource.USER: strings.role_you,
-            AIMessageSource.AI: strings.role_assistant,
-            AIMessageSource.REASONING: strings.role_reasoning,
-            AIMessageSource.SYSTEM: strings.role_system
-        }.get(self._message_source, "Unknown")
+        match self._message_source:
+            case AIMessageSource.USER:
+                role_text = strings.role_you
+
+            case AIMessageSource.AI:
+                role_text = strings.role_assistant.format(model=self._message_model)
+
+            case AIMessageSource.REASONING:
+                role_text = strings.role_reasoning.format(model=self._message_model)
+
+            case AIMessageSource.SYSTEM:
+                role_text = strings.role_system
 
         # Format with timestamp
         if self._message_timestamp is not None:
@@ -202,7 +209,7 @@ class ConversationMessage(QFrame):
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, style: AIMessageSource, timestamp: datetime) -> None:
+    def set_content(self, text: str, style: AIMessageSource, timestamp: datetime, model: str) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
 
@@ -214,6 +221,7 @@ class ConversationMessage(QFrame):
         self._message_source = style
         self._message_timestamp = timestamp
         self._message_content = text
+        self._message_model = model
 
         # Check if style changed - if so, we need to recreate all sections
         if style != self._current_style:

@@ -255,7 +255,7 @@ class ConversationWidget(QWidget):
         # Add bookmark-specific signal
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
-        msg_widget.set_content(message.content, message.source, message.timestamp)
+        msg_widget.set_content(message.content, message.source, message.timestamp, message.model)
 
         # Add widget before input
         self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
@@ -344,7 +344,7 @@ class ConversationWidget(QWidget):
         for i, widget in enumerate(self._messages):
             if (i == len(self._messages) - 1 and
                     message.source in (AIMessageSource.AI, AIMessageSource.REASONING)):
-                widget.set_content(message.content, message.source, message.timestamp)
+                widget.set_content(message.content, message.source, message.timestamp, message.model)
                 break
 
         # Scroll to bottom if auto-scrolling is enabled
