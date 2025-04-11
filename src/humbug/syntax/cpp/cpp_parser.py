@@ -1,3 +1,8 @@
+"""
+C++ parser
+
+This module implements a parser for C++ code, extending the functionality of the C parser.
+"""
 from dataclasses import dataclass
 from typing import cast
 

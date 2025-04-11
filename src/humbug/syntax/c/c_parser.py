@@ -1,3 +1,9 @@
+"""
+C parser
+
+This module implements a parser for C code, extending the functionality of the base parser.
+"""
+
 from dataclasses import dataclass
 
 from humbug.syntax.c.c_lexer import CLexer

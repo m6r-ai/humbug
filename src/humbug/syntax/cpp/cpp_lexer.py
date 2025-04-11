@@ -1,3 +1,8 @@
+"""
+C++ Lexer
+
+This module implements a lexer for C++ code, extending the functionality of the C lexer.
+"""
 from humbug.syntax.c.c_lexer import CLexer
 from humbug.syntax.lexer import Lexer
 
