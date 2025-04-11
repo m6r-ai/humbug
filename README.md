@@ -57,7 +57,7 @@ explore interactively, update the context and iterate.  We can go further than n
 have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
 can be used to refine the Metaphor context.
 
-## What's new in v0.9
+## What's new in v0.10
 
 v0.10 is primarily changing details behinds the scenes so there are only a few user-visible differences.
 
