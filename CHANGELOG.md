@@ -7,6 +7,7 @@ New features:
 - On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column
   that was active when saved is also restored as the active column.  This means you no longer have to
   reset the focus of tabs.
+- Supports xAI's Grok-3 beta models.
 
 Internal structure changes:
 
