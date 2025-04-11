@@ -81,7 +81,7 @@ Compatible with MacOS X, Linux, and Windows 10/11.
 
 - Real-time streaming of AI responses.
 - Configurable AI model settings per conversation.
-- Supports Anthropic, DeepSeek, Google, Mistral, Ollama, and OpenAI models (Ollama currently assumes local installs only).
+- Supports Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI models (Ollama currently assumes local installs only).
 - Configurable temperature settings for supported models.
 - Handles reasoning outputs for models that support them.
 - Error handling and retry mechanisms for API requests.
