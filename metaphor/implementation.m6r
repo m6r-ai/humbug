@@ -425,6 +425,10 @@ Context: Implementation
             In this message, the content is what should be captured as the AI response, but capture the usage information
             in the JSON transcript.
 
+        Context: xAI REST endpoint
+            The xAI REST endpoint has the same form as the OpenAI REST endpoint, except for the endpoint
+            URL: "https://api.x.ai/v1/chat/completions".
+
     Context: Terminal
         Context: Custom widget
             For performance reasons the terminal emulator window is implemented with a custom widget.

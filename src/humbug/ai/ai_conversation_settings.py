@@ -206,6 +206,40 @@ class AIConversationSettings:
             max_output_tokens=16384,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+
+        # xAI models
+        "grok-3-beta": AIModel(
+            name="grok-3-beta",
+            provider="xai",
+            context_window=131072,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "grok-3-fast-beta": AIModel(
+            name="grok-3-beta",
+            provider="xai",
+            context_window=131072,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "grok-3-mini-beta": AIModel(
+            name="grok-3-mini-beta",
+            provider="xai",
+            context_window=131072,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING
+        ),
+        "grok-3-mini-fast-beta": AIModel(
+            name="grok-3-mini-beta",
+            provider="xai",
+            context_window=131072,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING
         )
     }
 

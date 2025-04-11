@@ -119,7 +119,8 @@ class UserManager(QObject):
             google_key=api_keys.get("GOOGLE_API_KEY"),
             m6r_key=api_keys.get("M6R_API_KEY"),
             mistral_key=api_keys.get("MISTRAL_API_KEY"),
-            openai_key=api_keys.get("OPENAI_API_KEY")
+            openai_key=api_keys.get("OPENAI_API_KEY"),
+            xai_key=api_keys.get("XAI_API_KEY")
         )
 
         self._logger.info("Initialized AI backends with available API keys")
@@ -187,7 +188,8 @@ class UserManager(QObject):
                 "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
                 "M6R_API_KEY": os.environ.get("M6R_API_KEY"),
                 "MISTRAL_API_KEY": os.environ.get("MISTRAL_API_KEY"),
-                "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY")
+                "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
+                "XAI_API_KEY": os.environ.get("XAI_API_KEY")
             }
 
             # Only override if environment variable is not None

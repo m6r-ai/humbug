@@ -29,7 +29,8 @@ class UserSettings:
                 "GOOGLE_API_KEY": "",
                 "M6R_API_KEY": "",
                 "MISTRAL_API_KEY": "",
-                "OPENAI_API_KEY": ""
+                "OPENAI_API_KEY": "",
+                "XAI_API_KEY": ""
             },
             language=LanguageCode.EN,
             font_size=None,

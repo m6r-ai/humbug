@@ -637,7 +637,8 @@ Context: Capabilities
                         "GOOGLE_API_KEY": "",
                         "M6R_API_KEY": "",
                         "MISTRAL_API_KEY": "",
-                        "OPENAI_API_KEY": ""
+                        "OPENAI_API_KEY": "",
+                        "XAI_API_KEY": ""
                     }
                 }
                 ```
@@ -661,6 +662,7 @@ Context: Capabilities
                     - M6R_API_KEY for M6R models
                     - MISTRAL_API_KEY for M6R models
                     - OPENAI_API_KEY for OpenAI models
+                    - XAI_API_KEY for OpenAI models
 
                 Context: File permissions
                     For security:
@@ -1486,10 +1488,10 @@ Context: Capabilities
             - M6R models: "tessa"
             - Mistral models: "codestral-latest", "mistral-large-latest", "mistral-small-latest"
             - Ollama models: "llama3.2", "phi4"
-            - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1", "o3-mini"
+            - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1", "o3-mini", "gpt-4.5-preview"
+            - xAI models: "grok-3-beta", "grok-3-fast-beta", "grok-3-mini-beta", "grok-3-mini-fast-beta"
 
-            The AI model is configurable via the settings dialog.  If Google's model is available then we default
-            to it, then to Anthropic, and finally OpenAI.
+            The AI model is configurable via the settings dialog.
 
             For each provider, the default model is the first one in each list.
 
@@ -1522,6 +1524,11 @@ Context: Capabilities
         - o1-mini: No temperature setting
         - o1: No temperature setting
         - o3-mini: No temperature setting
+        - gpt-4.5-preview: Supports temperature 0.0-1.0
+        - grok-3-beta: Supports temperature 0.0-1.0
+        - grok-3-fast-beta: Supports temperature 0.0-1.0
+        - grok-3-mini-beta: Supports temperature 0.0-1.0
+        - grok-3-mini-fast-beta: Supports temperature 0.0-1.0
 
         Where adjustable, the AI temperature for an AI model will be configurable via the settings dialog.
 
@@ -1606,9 +1613,9 @@ Context: Capabilities
                 If the user's request fails restore the failed message so they can try it again.
 
             Context: Retry strategy
-                Maximum 3 retries for recoverable errors.
+                Maximum 6 retries for recoverable errors.
 
-                Exponential backoff: 2, 4, 8 seconds.
+                Exponential backoff: 2, 4, 8, 16, 32, 64 seconds.
 
                 Preserve conversation context between retries.
 

@@ -102,6 +102,7 @@ def get_english_strings() -> LanguageStrings:
         m6r_api_key="M6R API Key",
         mistral_api_key="Mistral API Key",
         openai_api_key="OpenAI API Key",
+        xai_api_key="xAI API Key",
         select_language="Language",
         font_size="Font Size",
         theme_dark="Dark",

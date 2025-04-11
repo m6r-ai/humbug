@@ -102,6 +102,7 @@ def get_arabic_strings() -> LanguageStrings:
         m6r_api_key="مفتاح واجهة برمجة تطبيقات M6R",
         mistral_api_key="مفتاح واجهة برمجة تطبيقات ميسترال",
         openai_api_key="مفتاح واجهة برمجة تطبيقات أوبن إيه آي",
+        xai_api_key="مفتاح واجهة برمجة تطبيقات xAI", 
         select_language="اللغة",
         font_size="حجم الخط",
         theme_dark="داكن",

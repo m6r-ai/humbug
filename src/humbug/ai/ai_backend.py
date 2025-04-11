@@ -25,7 +25,7 @@ class AIBackend(ABC):
     def __init__(self) -> None:
         """Initialize common attributes."""
         self._uses_data = True  # Indicates that we default to normal SSE encoding
-        self._max_retries = 3
+        self._max_retries = 6
         self._base_delay = 2
         self._rate_limiter = AIRateLimiter()
         self._logger = logging.getLogger(self.__class__.__name__) # Logger based on class name

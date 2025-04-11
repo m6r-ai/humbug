@@ -112,48 +112,29 @@ class MindspaceFileTree(QWidget):
             source_index = self._filter_model.mapToSource(index)
             path = self._fs_model.filePath(source_index)
             is_dir = os.path.isdir(path)
+            is_conv = path.lower().endswith('.conv')
 
             # Rename action
             rename_action = menu.addAction(
-                strings.rename_conversation if not is_dir and path.lower().endswith('.conv')
-                else strings.rename
+                strings.rename_conversation if not is_dir and is_conv else strings.rename
             )
 
             # Delete action
             delete_action = menu.addAction(strings.delete)
-            menu.addSeparator()
-
-            # New file/folder submenu
-            new_menu = menu.addMenu(strings.new)
-
-            # File type options
-            file_types = [
-                ("Text File", ".txt"),
-                ("Python File", ".py"),
-                ("Markdown File", ".md"),
-                ("JSON File", ".json"),
-                ("HTML File", ".html"),
-                ("CSS File", ".css"),
-                ("JavaScript File", ".js")
-            ]
-
-            for name, ext in file_types:
-                new_file_action = new_menu.addAction(name)
-                new_file_action.triggered.connect(lambda checked, extension=ext:
-                                                self._create_new_file(extension))
 
             # Execute the menu
             action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
             if action:
                 if action == rename_action:
-                    if not is_dir and path.lower().endswith('.conv'):
+                    if not is_dir and is_conv:
                         self._handle_rename_conversation(path)
+                        return
 
-                    else:
-                        self._handle_rename_file(path)
+                    self._handle_rename_file(path)
+                    return
 
-                elif action == delete_action:
+                if action == delete_action:
                     self._handle_delete_file(path)
 
     def _handle_rename_file(self, path: str) -> None:
@@ -194,38 +175,6 @@ class MindspaceFileTree(QWidget):
                     strings.rename_error_title,
                     strings.rename_error_generic.format(str(e))
                 )
-
-    def _create_new_file(self, extension: str) -> None:
-        """Create a new file with the specified extension."""
-        strings = self._language_manager.strings()
-
-        # Determine the current directory
-        current_path = self._mindspace_path or self._fs_model.rootPath()
-
-        # Generate a unique filename
-        base_name = f"new_file{extension}"
-        counter = 1
-        while os.path.exists(os.path.join(current_path, base_name)):
-            base_name = f"new_file_{counter}{extension}"
-            counter += 1
-
-        new_file_path = os.path.join(current_path, base_name)
-
-        try:
-            # Create an empty file
-            with open(new_file_path, 'w', encoding='utf-8') as _f:
-                pass
-
-            # Emit signal to open the newly created file
-            self.file_activated.emit(new_file_path)
-
-        except OSError as e:
-            MessageBox.show_message(
-                self,
-                MessageBoxType.WARNING,
-                strings.file_creation_error_title,
-                strings.file_creation_error.format(str(e))
-            )
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.

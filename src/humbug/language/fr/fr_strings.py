@@ -102,6 +102,7 @@ def get_french_strings() -> LanguageStrings:
         m6r_api_key="Clé API M6R",
         mistral_api_key="Clé API Mistral",
         openai_api_key="Clé API OpenAI",
+        xai_api_key="Clé API xAI",
         select_language="Langue",
         font_size="Taille de police",
         theme_dark="Sombre",

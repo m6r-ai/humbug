@@ -10,6 +10,7 @@ from humbug.ai.m6r.m6r_backend import M6RBackend
 from humbug.ai.mistral.mistral_backend import MistralBackend
 from humbug.ai.ollama.ollama_backend import OllamaBackend
 from humbug.ai.openai.openai_backend import OpenAIBackend
+from humbug.ai.xai.xai_backend import XAIBackend
 
 
 class AIProvider:
@@ -22,7 +23,8 @@ class AIProvider:
         google_key: str | None = None,
         m6r_key: str | None = None,
         mistral_key: str | None = None,
-        openai_key: str | None = None
+        openai_key: str | None = None,
+        xai_key: str | None = None
     ) -> Dict[str, AIBackend]:
         """Create AI backends based on available API keys.
 
@@ -32,6 +34,7 @@ class AIProvider:
             google_key: Optional Google API key
             m6r_key: Optional M6R API key
             openai_key: Optional OpenAI API key
+            xai_key: Optional OpenAI API key
 
         Returns:
             Dictionary mapping provider names to backend instances
@@ -54,6 +57,9 @@ class AIProvider:
 
         if openai_key:
             backends["openai"] = OpenAIBackend(openai_key)
+
+        if xai_key:
+            backends["xai"] = XAIBackend(xai_key)
 
         backends["ollama"] = OllamaBackend()
 

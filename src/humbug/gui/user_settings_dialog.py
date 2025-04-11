@@ -336,7 +336,8 @@ class UserSettingsDialog(QDialog):
             ("GOOGLE_API_KEY", strings.google_api_key),
             ("M6R_API_KEY", strings.m6r_api_key),
             ("MISTRAL_API_KEY", strings.mistral_api_key),
-            ("OPENAI_API_KEY", strings.openai_api_key)
+            ("OPENAI_API_KEY", strings.openai_api_key),
+            ("XAI_API_KEY", strings.xai_api_key)
         ]
 
     def _handle_language_changed(self) -> None:

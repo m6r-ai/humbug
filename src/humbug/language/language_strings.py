@@ -97,6 +97,7 @@ class LanguageStrings:
     m6r_api_key: str
     mistral_api_key: str
     openai_api_key: str
+    xai_api_key: str
     select_language: str
     font_size: str
     theme_dark: str
