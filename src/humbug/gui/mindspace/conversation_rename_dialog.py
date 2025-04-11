@@ -47,6 +47,9 @@ class ConversationRenameDialog(QDialog):
         button_box.rejected.connect(self.reject)
         button_box.setCenterButtons(True)
 
+        # We need to know which is the OK button so we can enable/disable it based in input validation
+        self._ok_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
+
         # Style buttons
         for button in button_box.buttons():
             button.setMinimumSize(90, 40)
@@ -63,17 +66,16 @@ class ConversationRenameDialog(QDialog):
         self._name_input.selectAll()
 
     def _validate_input(self) -> None:
-        """Validate the input and enable/disable OK button."""
+        """
+        Validate the input and enable/disable OK button.
+
+        Ensures the filename doesn't contain invalid characters for a file system.
+        """
         text = self._name_input.text().strip()
         valid = bool(text and not any(c in r'\/:*?"<>|' for c in text))
 
-        # Find OK button and set enabled state
-        button: QPushButton
-        for button in self.findChildren(QPushButton):
-            found_button = cast(QPushButton, button)
-            if found_button.text() == "OK":
-                found_button.setEnabled(valid)
-                break
+        # Enable/disable the OK button based on validation
+        self._ok_button.setEnabled(valid)
 
     def _apply_styling(self) -> None:
         """Apply consistent styling to the dialog."""
