@@ -8,6 +8,7 @@ New features:
   that was active when saved is also restored as the active column.  This means you no longer have to
   reset the focus of tabs.
 - Supports xAI's Grok-3 beta models.
+- AI assistant response messages now show which AI model generated the message.
 
 Internal structure changes:
 
