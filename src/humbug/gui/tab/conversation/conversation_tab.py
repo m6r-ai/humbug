@@ -451,3 +451,4 @@ class ConversationTab(TabBase):
                 return
 
             loop.create_task(self._conversation_widget.add_message(message))
+            loop.create_task(self._conversation_widget.write_transcript(message))

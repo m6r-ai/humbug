@@ -309,7 +309,7 @@ class ConversationWidget(QWidget):
             message: The error that occurred
         """
         await self.add_message(message)
-        await self._write_transcript(message)
+        await self.write_transcript(message)
 
         if retries_exhausted:
             self._is_streaming = False
@@ -410,7 +410,7 @@ class ConversationWidget(QWidget):
 
         # Update with the completed message immediately
         await self._update_message(message)
-        await self._write_transcript(message)
+        await self.write_transcript(message)
 
     async def _on_request_completed(self) -> None:
         """
@@ -435,7 +435,7 @@ class ConversationWidget(QWidget):
         # Emit signal for status update
         self.status_updated.emit()
 
-    async def _write_transcript(self, message: AIMessage) -> None:
+    async def write_transcript(self, message: AIMessage) -> None:
         """
         Write messages to transcript file.
 
@@ -1120,7 +1120,7 @@ class ConversationWidget(QWidget):
         loop.create_task(self.add_message(message))
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop.create_task(ai_conversation.submit_message(message))
-        loop.create_task(self._write_transcript(message))
+        loop.create_task(self.write_transcript(message))
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""
