@@ -59,12 +59,15 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.10
 
-v0.10 is primarily changing details behinds the scenes so there are only a few user-visible differences:
+v0.10 is mainly changing details behind the scenes, but there are some important user-visible differences:
 
+- If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the
+  details in a new conversation view rather than in a dialog box.  This makes them much easier to read.
+- Humbug now supports xAI's Grok-3 models.
 - When restoring a mindspace the active tabs and any columns are now restored too, but the first time you do this
   they will not be restored from a v0.9 (or earlier) saved state.
-- Humbug now supports xAI's Grok-3 models.
 - AI assistant response messages now tell you which AI model generated the message.
+- The "system" responses are now tagged as being from Humbug.
 
 The major changes in v0.10 are that the codebase is now thoroughly type-checked using `mypy`, while other issues
 are now thoroughly checked using `pylint`.  In both cases the code is running with zero errors or warnings.

@@ -4,11 +4,14 @@
 
 New features:
 
+- If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the
+  details in a new conversation view rather than in a dialog box.  This makes them much easier to read.
+- Supports xAI's Grok-3 beta models.
 - On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column
   that was active when saved is also restored as the active column.  This means you no longer have to
   reset the focus of tabs.
-- Supports xAI's Grok-3 beta models.
 - AI assistant response messages now show which AI model generated the message.
+- The "system" responses are now tagged as being from Humbug.
 
 Internal structure changes:
 
