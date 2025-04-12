@@ -25,7 +25,6 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
-from humbug.metaphor import MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, format_errors
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
@@ -934,31 +933,18 @@ class MainWindow(QMainWindow):
             return
 
         self._mindspace_manager.update_file_dialog_directory(file_path)
-        search_paths = [self._mindspace_manager.mindspace_path()]
+        search_path = self._mindspace_manager.mindspace_path()
 
-        metaphor_parser = MetaphorParser()
-        try:
-            embed_path = self._mindspace_manager.mindspace_path()
-            syntax_tree = metaphor_parser.parse_file(file_path, search_paths, embed_path)
-            formatter = MetaphorFormatVisitor()
-            prompt = formatter.format(syntax_tree)
+        conversation_id = self._new_conversation()
+        if conversation_id is None:
+            return
 
-            # Create conversation with prompt
-            conversation_id = self._new_conversation()
-            if conversation_id:
-                # Get the tab and set input text
-                conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
-                if conversation_tab:
-                    conversation_tab.set_input_text(prompt)
+        # Get the tab and set input text
+        conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
+        if conversation_tab is None:
+            return
 
-        except MetaphorParserError as e:
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.metaphor_error_title,
-                strings.error_processing_metaphor.format(format_errors(e.errors))
-            )
+        conversation_tab.new_metaphor_conversation(file_path, search_path)
 
     def _open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""

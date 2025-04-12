@@ -241,7 +241,7 @@ class ConversationWidget(QWidget):
         self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
         self._install_activation_tracking(self._input)
 
-    async def _add_message(self, message: AIMessage) -> None:
+    async def add_message(self, message: AIMessage) -> None:
         """
         Add a new message to the conversation view.
 
@@ -308,7 +308,7 @@ class ConversationWidget(QWidget):
         Args:
             message: The error that occurred
         """
-        await self._add_message(message)
+        await self.add_message(message)
         await self._write_transcript(message)
 
         if retries_exhausted:
@@ -332,7 +332,7 @@ class ConversationWidget(QWidget):
         Args:
             message: The message that was added
         """
-        await self._add_message(message)
+        await self.add_message(message)
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
@@ -886,7 +886,7 @@ class ConversationWidget(QWidget):
         # Add messages to this widget.
         loop = asyncio.get_event_loop()
         for message in messages:
-            loop.create_task(self._add_message(message))
+            loop.create_task(self.add_message(message))
 
         # If we have everything loaded we can update the display with final state
         if not reuse_ai_conversation:
@@ -1117,7 +1117,7 @@ class ConversationWidget(QWidget):
         if not loop.is_running():
             return
 
-        loop.create_task(self._add_message(message))
+        loop.create_task(self.add_message(message))
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop.create_task(ai_conversation.submit_message(message))
         loop.create_task(self._write_transcript(message))
