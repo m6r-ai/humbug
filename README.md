@@ -68,6 +68,9 @@ v0.10 is mainly changing details behind the scenes, but there are some important
   they will not be restored from a v0.9 (or earlier) saved state.
 - AI assistant response messages now tell you which AI model generated the message.
 - The "system" responses are now tagged as being from Humbug.
+- If you close a conversation and there are no messages from the AI in it then the conversation
+  transcript is now automatically deleted.  This avoid cluttering the conversations directory with
+  empty files.
 
 The major changes in v0.10 are that the codebase is now thoroughly type-checked using `mypy`, while other issues
 are now thoroughly checked using `pylint`.  In both cases the code is running with zero errors or warnings.

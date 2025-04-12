@@ -12,6 +12,9 @@ New features:
   reset the focus of tabs.
 - AI assistant response messages now show which AI model generated the message.
 - The "system" responses are now tagged as being from Humbug.
+- If you close a conversation and there are no messages from the AI in it then the conversation
+  transcript is now automatically deleted.  This avoid cluttering the conversations directory with
+  empty files.
 
 Internal structure changes:
 

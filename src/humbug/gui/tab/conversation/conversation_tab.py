@@ -271,12 +271,47 @@ class ConversationTab(TabBase):
         self.status_message.emit(StatusMessage(status))
 
     def can_close_tab(self) -> bool:
-        """Check if terminal can be closed."""
+        """Check if conversation can be closed."""
         return True
 
+    async def _delete_empty_transcript_file(self) -> None:
+        """
+        Delete the transcript file if the conversation doesn't have any AI messages.
+
+        A conversation is considered empty if it has no messages with source AI or REASONING.
+
+        Raises:
+            OSError: If the file cannot be deleted
+        """
+        try:
+            # Get all messages from the conversation
+            messages = self._conversation_widget.get_conversation_history().get_messages()
+
+            # Check if there are any AI or REASONING messages
+            has_ai_messages = any(
+                msg.source in (AIMessageSource.AI, AIMessageSource.REASONING)
+                for msg in messages
+            )
+
+            # If there are no AI messages and the file exists, delete it
+            if not has_ai_messages and os.path.exists(self._path):
+                self._logger.info("Deleting empty conversation transcript: %s", self._path)
+                os.remove(self._path)
+
+        except Exception as e:
+            self._logger.exception("Failed to delete empty conversation transcript: %s", e)
+
     def close_tab(self) -> None:
-        """Close the terminal."""
+        """Close the conversation."""
         self.cancel_current_tasks()
+
+        # Check if this is an empty conversation (no AI responses) and delete the file if so
+        loop = asyncio.get_event_loop()
+        if not loop.is_running():
+            self._logger.warning("Could not check/delete transcript file: No running event loop")
+            return
+
+        loop.create_task(self._delete_empty_transcript_file())
 
     def can_save(self) -> bool:
         """Check if conversation can be saved (not applicable)."""
