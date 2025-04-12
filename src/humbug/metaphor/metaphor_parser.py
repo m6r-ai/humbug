@@ -229,11 +229,14 @@ class MetaphorParser:
             self.current_token = token
 
             if token.type == MetaphorTokenType.INCLUDE:
-                self._parse_include()
+                self._parse_include(token)
+
             elif token.type == MetaphorTokenType.EMBED:
-                self._parse_embed()
+                self._parse_embed(token)
+
             elif token.type == MetaphorTokenType.END_OF_FILE:
                 self.lexers.pop()
+
             else:
                 return token
 
@@ -320,7 +323,7 @@ class MetaphorParser:
                 )
 
         elif init_token.type != MetaphorTokenType.INDENT:
-            self._record_syntax_error(token, "Expected description or indent for 'Action' block")
+            self._record_syntax_error(token, "Expected description or indent after 'Action' keyword")
 
         action_node = MetaphorActionNode(label_name)
 
@@ -370,7 +373,7 @@ class MetaphorParser:
                 )
 
         elif init_token.type != MetaphorTokenType.INDENT:
-            self._record_syntax_error(token, "Expected description or indent for 'Context' block")
+            self._record_syntax_error(token, "Expected description or indent after 'Context' keyword")
 
         context_node = MetaphorContextNode(label_name)
 
@@ -420,7 +423,7 @@ class MetaphorParser:
                 )
 
         elif init_token.type != MetaphorTokenType.INDENT:
-            self._record_syntax_error(token, "Expected description or indent for 'Role' block")
+            self._record_syntax_error(token, "Expected description or indent after 'Role' keyword")
 
         role_node = MetaphorRoleNode(label_name)
 
@@ -453,11 +456,11 @@ class MetaphorParser:
                 f"Unexpected token: {token.value} in 'Role' block"
             )
 
-    def _parse_include(self) -> None:
+    def _parse_include(self, token: MetaphorToken) -> None:
         """Parse an Include block and load the included file."""
         token_next = self.get_next_token()
         if token_next.type != MetaphorTokenType.KEYWORD_TEXT:
-            self._record_syntax_error(token_next, "Expected file name for 'Include'")
+            self._record_syntax_error(token, "Expected file name after 'Include' keyword")
             return
 
         filename = token_next.value
@@ -466,11 +469,11 @@ class MetaphorParser:
         input_text = self._read_file(try_file)
         self.lexers.append(MetaphorLexer(input_text, try_file))
 
-    def _parse_embed(self) -> None:
+    def _parse_embed(self, token: MetaphorToken) -> None:
         """Parse an Embed block and load the embedded file."""
         token_next = self.get_next_token()
         if token_next.type != MetaphorTokenType.KEYWORD_TEXT:
-            self._record_syntax_error(token_next, "Expected file name or wildcard match for 'Embed'")
+            self._record_syntax_error(token, "Expected file name or wildcard match after 'Embed' keyword")
             return
 
         recurse = False
