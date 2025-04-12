@@ -68,7 +68,7 @@ def get_arabic_strings() -> LanguageStrings:
         role_you="أنت",
         role_assistant="رد {model}",
         role_reasoning="تفكير {model}",
-        role_system="رسالة النظام",
+        role_system="هامبج",
 
         # Message labels
         highlighting="تمييز: {language}",

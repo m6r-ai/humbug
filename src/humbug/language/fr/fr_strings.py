@@ -68,7 +68,7 @@ def get_french_strings() -> LanguageStrings:
         role_you="Vous",
         role_assistant="Réponse de {model}",
         role_reasoning="Raisonnement de {model}",
-        role_system="Message système",
+        role_system="Humbug",
 
         # Message labels
         highlighting="Mise en évidence : {language}",
