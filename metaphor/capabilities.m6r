@@ -1105,9 +1105,10 @@ Context: Capabilities
         seconds respectively).
 
         Transcript files will be written to a "conversations" directory of the current mindspace directory.  If this
-        does not exist then the application should create it.
+        does not exist then the application must create it.
 
-        On closing a conversation tab the matching file must be fully closed.
+        On closing a conversation tab the matching file must be fully closed.  If, on closing, the transcript does
+        not contain any messages from the AI then the transcript file is automatically deleted.
 
         Context: Transcript JSON schema
             Use the following JSON schema:
