@@ -45,6 +45,7 @@ class SystemMessage(QFrame):
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
         # Will store the actual message source
+        self._message_id: str | None = None
         self._message_source: SystemMessageSource | None = None
         self._message_timestamp: datetime | None = None
         self._message_content = ""
@@ -154,7 +155,7 @@ class SystemMessage(QFrame):
 
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, source: SystemMessageSource, timestamp: datetime) -> None:
+    def set_content(self, text: str, source: SystemMessageSource, timestamp: datetime, message_id: str) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
 
@@ -163,6 +164,7 @@ class SystemMessage(QFrame):
             source: The source of the message
             timestamp: datetime object for the message timestamp
         """
+        self._message_id = message_id
         self._message_source = source
         self._message_timestamp = timestamp
         self._message_content = text

@@ -178,26 +178,77 @@ class SystemWidget(QWidget):
             self.load_system_interactions()
 
     def load_system_interactions(self) -> None:
-        """Load all system interaction messages from mindspace."""
+        """
+        Load system interaction messages from mindspace, optimizing to only remove
+        early messages and add new messages at the end.
+
+        This optimized implementation assumes messages are only ever removed from the beginning
+        of the list or added to the end of the list, and are never reordered.
+        """
         if not self._mindspace_manager.has_mindspace():
             return
-
-        # Clear existing messages
-        for msg in self._messages:
-            self._messages_layout.removeWidget(msg)
-            msg.deleteLater()
-        self._messages.clear()
 
         # Get system messages from mindspace manager
         system_messages = self._mindspace_manager.get_system_interactions()
 
-        # Add each message to the UI
-        for message in system_messages:
-            self._add_system_message(message)
+        # Handle empty cases
+        if not system_messages:
+            # Clear all existing messages if there are none from the system
+            for msg in self._messages:
+                self._messages_layout.removeWidget(msg)
+                msg.deleteLater()
 
-        # Scroll to the latest message
-        self._auto_scroll = True
-        self._scroll_to_bottom()
+            self._messages.clear()
+
+            # Update status and return
+            self.status_updated.emit()
+            return
+
+        # Handle case where we don't have any messages yet
+        if not self._messages:
+            # Simply add all messages
+            for message in system_messages:
+                self._add_system_message(message)
+
+            # Scroll and update status
+            self._auto_scroll = True
+            self._scroll_to_bottom()
+            self.status_updated.emit()
+            return
+
+        # Find matching messages between existing UI messages and new system messages
+        # First, check if first system message exists in our UI message list
+        first_system_msg_id = system_messages[0].message_id
+
+        # Look for the first matching message ID in our existing messages
+        first_match_index = -1
+        for i, msg in enumerate(self._messages):
+            if msg._message_id == first_system_msg_id:
+                first_match_index = i
+                break
+
+        # If found, remove any UI messages before this match (older messages removed from system)
+        if first_match_index > 0:
+            # Remove messages that are no longer at the beginning of the system interactions
+            for i in range(first_match_index):
+                msg = self._messages[0]  # Always remove the first message
+                self._messages_layout.removeWidget(msg)
+                msg.deleteLater()
+                self._messages.pop(0)  # Remove from list
+
+        # Find how many existing messages we have that match system messages
+        matching_count = min(len(self._messages), len(system_messages))
+
+        # Check if we need to add new messages at the end
+        if len(system_messages) > matching_count:
+            # Add only the new messages that don't exist yet (at the end)
+            for message in system_messages[matching_count:]:
+                self._add_system_message(message)
+
+        # Scroll to the latest message if we added new ones
+        if len(system_messages) > matching_count:
+            self._auto_scroll = True
+            self._scroll_to_bottom()
 
         # Update status
         self.status_updated.emit()
@@ -215,7 +266,8 @@ class SystemWidget(QWidget):
         msg_widget.set_content(
             message.content,
             message.source,
-            message.timestamp
+            message.timestamp,
+            message.message_id
         )
 
         # Add widget before input and stretch
