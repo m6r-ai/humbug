@@ -108,7 +108,6 @@ class SystemTab(TabBase):
 
     def close_tab(self) -> None:
         """Handle tab closing."""
-        pass
 
     def can_save(self) -> bool:
         """Check if the tab can be saved."""
@@ -132,7 +131,6 @@ class SystemTab(TabBase):
 
     def undo(self) -> None:
         """Undo not applicable for system tab."""
-        pass
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
@@ -140,7 +138,6 @@ class SystemTab(TabBase):
 
     def redo(self) -> None:
         """Redo not applicable for system tab."""
-        pass
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
@@ -148,7 +145,6 @@ class SystemTab(TabBase):
 
     def cut(self) -> None:
         """Cut not applicable for system tab."""
-        pass
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
@@ -156,7 +152,6 @@ class SystemTab(TabBase):
 
     def copy(self) -> None:
         """Copy not applicable for system tab."""
-        pass
 
     def can_paste(self) -> bool:
         """Check if paste is available."""
@@ -164,11 +159,9 @@ class SystemTab(TabBase):
 
     def paste(self) -> None:
         """Paste not applicable for system tab."""
-        pass
 
     def show_find(self) -> None:
         """Show find not applicable for system tab."""
-        pass
 
     def can_submit(self) -> bool:
         """Check if submit is available."""
@@ -176,7 +169,6 @@ class SystemTab(TabBase):
 
     def submit(self) -> None:
         """Submit not applicable for system tab."""
-        pass
 
     def update_status(self) -> None:
         """Update status bar with system tab information."""
