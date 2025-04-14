@@ -1,7 +1,7 @@
 """
 System tab implementation for Humbug application.
 
-This tab provides a system-level overview and functionality.
+This tab provides a system-level overview and functionality for viewing system interactions.
 """
 
 import logging
@@ -17,18 +17,20 @@ from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class SystemTab(TabBase):
     """
-    System tab for Humbug application.
+    System tab for Humbug application showing system interaction history.
 
-    This tab provides a system-level overview and functionality.
+    This tab provides a way to view and interact with the system-level messages
+    and notifications that are tracked by the MindspaceManager.
     """
 
     def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
         """
-        Initialize the unified system tab.
+        Initialize the system tab.
 
         Args:
             tab_id: Unique identifier for this tab
@@ -36,6 +38,7 @@ class SystemTab(TabBase):
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("SystemTab")
+        self._mindspace_manager = MindspaceManager()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -66,6 +69,10 @@ class SystemTab(TabBase):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+    def refresh(self) -> None:
+        """Refresh system interaction history display."""
+        self._system_widget.load_system_interactions()
+
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
@@ -87,14 +94,16 @@ class SystemTab(TabBase):
         Returns:
             TabState object containing serializable state
         """
+        metadata = self._system_widget.create_state_metadata(temp_state)
+
         return TabState(
             type=TabType.SYSTEM,
             tab_id=self._tab_id,
-            path="",
+            path="",  # System tab doesn't have a file path
             cursor_position=None,
             horizontal_scroll=None,
             vertical_scroll=None,
-            metadata=None
+            metadata=metadata
         )
 
     @classmethod
@@ -109,7 +118,12 @@ class SystemTab(TabBase):
         Returns:
             Restored SystemTab instance
         """
-        return cls(state.tab_id, parent)
+        tab = cls(state.tab_id, parent)
+
+        if state.metadata:
+            tab._system_widget.restore_from_metadata(state.metadata)
+
+        return tab
 
     def can_close_tab(self) -> bool:
         """Check if system can be closed."""
@@ -139,14 +153,14 @@ class SystemTab(TabBase):
         return False
 
     def undo(self) -> None:
-        """Undo not supported for systems."""
+        """Undo not supported for system."""
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
         return False
 
     def redo(self) -> None:
-        """Redo not supported for systems."""
+        """Redo not supported for system."""
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
@@ -179,6 +193,8 @@ class SystemTab(TabBase):
     def submit(self) -> None:
         """Submit the current message."""
         self._system_widget.submit()
+        # After submission, update status
+        self.update_status()
 
     def show_find(self) -> None:
         """Show the find widget."""
@@ -196,7 +212,7 @@ class SystemTab(TabBase):
     def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._system_widget.clear_find()
+        self._system_widget.clear_highlights()
 
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
@@ -212,10 +228,6 @@ class SystemTab(TabBase):
                 border-top: 2px solid {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
         """)
-
-    def cancel_current_tasks(self) -> None:
-        """Cancel any ongoing AI response tasks."""
-        self._system_widget.cancel_current_tasks()
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""

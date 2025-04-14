@@ -21,7 +21,6 @@ class SystemInput(SystemMessage):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the system input widget."""
-        self._is_streaming = False
         super().__init__(parent, is_input=True)
 
         # Connect text cursor signals
@@ -33,15 +32,11 @@ class SystemInput(SystemMessage):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
+        self._message_source = "user"  # Set default source for styling
         self._update_header_text()
 
     def _handle_language_changed(self) -> None:
         """Handle language change event."""
-        self._update_header_text()
-
-    def set_streaming(self, streaming: bool) -> None:
-        """Update the streaming state and header text."""
-        self._is_streaming = streaming
         self._update_header_text()
 
     def _get_submit_key_text(self) -> str:
@@ -54,18 +49,16 @@ class SystemInput(SystemMessage):
     def _update_header_text(self) -> None:
         """Update the header text based on current state."""
         strings = self._language_manager.strings()
-        if self._is_streaming:
-            self._role_label.setText(strings.processing_message)
 
-        else:
-            submit_key = self._get_submit_key_text()
-            self._role_label.setText(strings.input_prompt.format(key=submit_key))
+        # Set input prompt with submit key
+        submit_key = self._get_submit_key_text()
+        self._role_label.setText(strings.input_prompt.format(key=submit_key))
 
         self._set_role_style()
 
     def _set_role_style(self) -> None:
         """Set the role label color."""
-        colour = ColorRole.TEXT_DISABLED if self._is_streaming else ColorRole.MESSAGE_USER
+        colour = ColorRole.MESSAGE_USER
 
         # WARNING: This needs to stay in sync with SystemMessage
         self._role_label.setStyleSheet(f"""
@@ -86,11 +79,9 @@ class SystemInput(SystemMessage):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle special key events."""
         if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            if not self._is_streaming:
-                text = self._text_area.toPlainText().strip()
-                if text:
-                    self.clear()
-
+            text = self._text_area.toPlainText().strip()
+            if text:
+                self.clear()
                 return
 
         super().keyPressEvent(event)

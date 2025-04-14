@@ -1,3 +1,5 @@
+"""Widget for displaying a single message in the system history with header."""
+
 from datetime import datetime
 import logging
 from typing import Dict, List, Tuple
@@ -8,7 +10,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, QPoint
 from PySide6.QtGui import QResizeEvent, QColor
 
-from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.system.system_message_section import SystemMessageSection
@@ -38,7 +39,9 @@ class SystemMessage(QFrame):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
-        self._message_source: AIMessageSource | None = None
+
+        # Will store the actual message source
+        self._message_source: str | None = None
         self._message_timestamp: datetime | None = None
         self._message_content = ""
         self._message_model = ""
@@ -70,15 +73,16 @@ class SystemMessage(QFrame):
         self._sections_layout.setSpacing(15)
         self._layout.addWidget(self._sections_container)
 
-        # Track sections
-        self._section: SystemMessageSection = self._create_section_widget()
+        # Create single section for content
+        self._section = self._create_section_widget()
+        self._sections = [self._section]  # Keep track of all sections
         self._section_with_selection: SystemMessageSection | None = None
         self._sections_layout.addWidget(self._section)
 
         self._is_focused = False
 
         # Track current message style
-        self._current_style: AIMessageSource | None = None
+        self._current_style: str | None = None
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -112,18 +116,15 @@ class SystemMessage(QFrame):
             return
 
         strings = self._language_manager.strings()
-        match self._message_source:
-            case AIMessageSource.USER:
-                role_text = strings.role_you
 
-            case AIMessageSource.AI:
-                role_text = strings.role_assistant.format(model=self._message_model)
-
-            case AIMessageSource.REASONING:
-                role_text = strings.role_reasoning.format(model=self._message_model)
-
-            case AIMessageSource.SYSTEM:
-                role_text = strings.role_system
+        # Map from message source to display text
+        if self._message_source == "user":
+            role_text = strings.role_you
+        elif self._message_source == "system":
+            role_text = strings.role_system
+        else:
+            # Default case - should not happen
+            role_text = self._message_source.capitalize()
 
         # Format with timestamp
         if self._message_timestamp is not None:
@@ -136,13 +137,10 @@ class SystemMessage(QFrame):
         """
         Create a new section widget.
 
-        Args:
-            language: Optional programming language for the section
-
         Returns:
             A new SystemMessageSection instance
         """
-        section = SystemMessageSection(self._is_input, None, self._sections_container)
+        section = SystemMessageSection(self._is_input, self._sections_container)
         section.selectionChanged.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
@@ -170,21 +168,48 @@ class SystemMessage(QFrame):
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, style: AIMessageSource, timestamp: datetime, model: str) -> None:
+    def set_content(self, text: str, source: str, timestamp: datetime, model: str) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
 
         Args:
             text: The message text content
-            style: The style type ('user', 'ai', 'system', or 'error')
+            source: The source of the message ("user", "system", etc.)
             timestamp: datetime object for the message timestamp
+            model: Model name if applicable (can be empty for system messages)
         """
-        self._message_source = style
+        self._message_source = source
         self._message_timestamp = timestamp
         self._message_content = text
         self._message_model = model
 
+        # Set the content in the section
         self._section.set_content(text)
+
+        # Update the header
+        self._update_role_text()
+        self._set_role_style()
+
+    def _set_role_style(self) -> None:
+        """Set the role label color based on message source."""
+        # Map message source to color role
+        if self._message_source == "user":
+            colour = ColorRole.MESSAGE_USER
+        elif self._message_source == "system":
+            colour = ColorRole.MESSAGE_SYSTEM
+        else:
+            # Default case
+            colour = ColorRole.TEXT_PRIMARY
+
+        # Warning: This needs to stay in sync with SystemMessage
+        self._role_label.setStyleSheet(f"""
+            QLabel {{
+                color: {self._style_manager.get_color_str(colour)};
+                margin: 0;
+                padding: 0;
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+        """)
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -227,13 +252,11 @@ class SystemMessage(QFrame):
 
         # Map message types to role colors
         role_colours = {
-            AIMessageSource.USER: ColorRole.MESSAGE_USER,
-            AIMessageSource.AI: ColorRole.MESSAGE_AI,
-            AIMessageSource.REASONING: ColorRole.MESSAGE_REASONING,
-            AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM
+            "user": ColorRole.MESSAGE_USER,
+            "system": ColorRole.MESSAGE_SYSTEM
         }
 
-        current_style = self._message_source or AIMessageSource.USER
+        current_style = self._message_source or "user"
         role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
         background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
@@ -262,10 +285,7 @@ class SystemMessage(QFrame):
         """)
 
         # Apply styling to all sections
-        for section in self._sections:
-            language = section.language()
-            color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
-            section.apply_style(text_color, color, font)
+        self._section.apply_style(text_color, background_color, font)
 
         # Determine border color based on state
         border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
@@ -326,19 +346,18 @@ class SystemMessage(QFrame):
             return
 
         # Group matches by section
-        section_matches: Dict[SystemMessageSection, List[Tuple[int, int, int]]] = {}
-        for section in self._sections:
-            section_matches[section] = []
+        section_matches: Dict[int, List[Tuple[int, int, int]]] = {}
+        for i in range(len(self._sections)):
+            section_matches[i] = []
 
         # Distribute matches to their respective sections
         for i, match in enumerate(matches):
             section_num, start, end = match
-            section = self._sections[section_num]
-            if section in section_matches:
-                section_matches[section].append((start, end, i))
+            if section_num in section_matches:
+                section_matches[section_num].append((start, end, i))
 
         # Highlight matches in each section
-        for section, section_matches_list in section_matches.items():
+        for section_num, section_matches_list in section_matches.items():
             if not section_matches_list:
                 continue
 
@@ -353,12 +372,13 @@ class SystemMessage(QFrame):
                     break
 
             # Highlight this section's matches
-            section.highlight_matches(
-                positions,
-                section_current_idx,
-                highlight_color,
-                dim_highlight_color
-            )
+            if section_num < len(self._sections):
+                self._sections[section_num].highlight_matches(
+                    positions,
+                    section_current_idx,
+                    highlight_color,
+                    dim_highlight_color
+                )
 
     def clear_highlights(self) -> None:
         """Clear all highlights from the message."""

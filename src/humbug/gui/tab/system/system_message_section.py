@@ -1,26 +1,17 @@
 """Widget for displaying a section of a message."""
 
 import logging
-from typing import List, Tuple, cast
+from typing import List, Tuple
 
-from PySide6.QtWidgets import (
-    QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
-    QToolButton, QFileDialog, QWidget
-)
-from PySide6.QtCore import Signal, Qt, QPoint, QSize
+from PySide6.QtWidgets import QVBoxLayout, QFrame, QTextEdit, QWidget
+from PySide6.QtCore import Signal, Qt, QPoint
 from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor, QFont
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
 )
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.message_box import MessageBox, MessageBoxType
-from humbug.gui.tab.system.system_markdown_renderer import SystemMarkdownRenderer
 from humbug.gui.tab.system.system_text_edit import SystemTextEdit
-from humbug.language.language_manager import LanguageManager
-from humbug.markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class SystemMessageSection(QFrame):
@@ -33,7 +24,6 @@ class SystemMessageSection(QFrame):
     def __init__(
         self,
         is_input: bool,
-        language: ProgrammingLanguage | None = None,
         parent: QWidget | None = None
     ) -> None:
         """
@@ -54,19 +44,11 @@ class SystemMessageSection(QFrame):
         self._layout.setSpacing(10)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
-        # Create language header if needed
-        self._language = language
-        self._language_header = None
-        self._header_container = None
-
         self._is_input = is_input
-
-        # Determine if this section should use markdown (only AI responses without language)
-        self._use_markdown = not is_input and language is None
 
         # Create text area
         self._text_area = SystemTextEdit()
-        self._text_area.setAcceptRichText(self._use_markdown)
+        self._text_area.setAcceptRichText(False)
         self._text_area.setReadOnly(not is_input)
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -75,12 +57,6 @@ class SystemMessageSection(QFrame):
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
         self._layout.addWidget(self._text_area)
-
-        self._content_node: MarkdownASTNode | None = None
-
-        # Render directly to the document
-        document = self._text_area.document()
-        self._renderer = SystemMarkdownRenderer(document)
 
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
@@ -92,15 +68,9 @@ class SystemMessageSection(QFrame):
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode()
 
-        self._handle_language_changed()
-
     def text_area(self) -> SystemTextEdit:
         """Get the text area widget."""
         return self._text_area
-
-    def language(self) -> ProgrammingLanguage | None:
-        """Provide the language in use by this section."""
-        return self._language
 
     def _on_mouse_pressed(self, event: QMouseEvent) -> None:
         """Handle mouse press from text area."""
@@ -312,44 +282,3 @@ class SystemMessageSection(QFrame):
                 border: 0;
             }}
         """)
-
-        # Style the language header container if present
-        if self._header_container:
-            self._header_container.setStyleSheet(f"""
-                QWidget {{
-                    background-color: {background_color};
-                    margin: 0;
-                    padding: 0;
-                }}
-            """)
-
-        # Style the language header if present, or the inline code style if it's not
-        if self._language_header:
-            label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
-            self._language_header.setFont(font)
-            self._language_header.setStyleSheet(f"""
-                QLabel {{
-                    color: {label_color};
-                    background-color: {background_color};
-                    margin: 0;
-                    padding: 0;
-                }}
-            """)
-        else:
-            if self._content_node:
-                self._renderer.visit(self._content_node)
-
-        button_style = f"""
-            QToolButton {{
-                background-color: {background_color};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                padding: 0px;
-            }}
-            QToolButton:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            QToolButton:pressed {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-        """

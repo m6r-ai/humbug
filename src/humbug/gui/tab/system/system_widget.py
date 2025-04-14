@@ -1,7 +1,6 @@
-"""System widget implementation."""
+"""System widget implementation for displaying system interaction history."""
 
 import logging
-import time
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
@@ -16,7 +15,8 @@ from humbug.gui.tab.system.system_input import SystemInput
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.user.user_manager import UserManager
+from humbug.mindspace.system.system_message import SystemMessage as SystemMessageModel
+from humbug.mindspace.system.system_message_source import SystemMessageSource
 
 
 class SystemWidgetEventFilter(QObject):
@@ -73,28 +73,16 @@ class SystemWidget(QWidget):
         Initialize the system widget.
 
         Args:
-            path: Full path to transcript file
-            timestamp: ISO format timestamp for the system
             parent: Optional parent widget
-            use_existing_ai_system: Will we use an existing AI system?
         """
         super().__init__(parent)
         self._logger = logging.getLogger("SystemWidget")
 
-        self._user_manager = UserManager()
-
         self._mindspace_manager = MindspaceManager()
 
-        self._last_update_time: float = 0  # Timestamp of last UI update
-        self._update_timer = QTimer(self)  # Timer for throttled updates
-        self._update_timer.setSingleShot(True)
-        self._update_timer.timeout.connect(self._process_pending_update)
-        self._pending_message = None  # Store the most recent pending message
-
-            # Widget tracking
+        # Widget tracking
         self._messages: List[SystemMessage] = []
         self._message_with_selection: SystemMessage | None = None
-        self._is_streaming = False
 
         # Initialize tracking variables
         self._auto_scroll = True
@@ -184,151 +172,89 @@ class SystemWidget(QWidget):
         self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
         self._install_activation_tracking(self._input)
 
-    async def add_message(self, message: AIMessage) -> None:
-        """
-        Add a new message to the system view.
+        # Load system interactions when initialized
+        if self._mindspace_manager.has_mindspace():
+            self.load_system_interactions()
 
-        Args:
-            message: The message that was added
-        """
+    def load_system_interactions(self) -> None:
+        """Load all system interaction messages from mindspace."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        # Clear existing messages
+        for msg in self._messages:
+            self._messages_layout.removeWidget(msg)
+            msg.deleteLater()
+        self._messages.clear()
+
+        # Get system messages from mindspace manager
+        system_messages = self._mindspace_manager.get_system_interactions()
+
+        # Add each message to the UI
+        for message in system_messages:
+            self._add_system_message(message)
+
+        # Scroll to the latest message
+        self._auto_scroll = True
+        self._scroll_to_bottom()
+
+        # Update status
+        self.status_updated.emit()
+
+    def _add_system_message(self, message: SystemMessageModel) -> None:
+        """Add a message from the system message history."""
         msg_widget = SystemMessage(self)
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
-        # Add bookmark-specific signal
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
-        msg_widget.set_content(message.content, message.source, message.timestamp, message.model)
 
-        # Add widget before input
-        self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
+        # Map the SystemMessageSource to an appropriate AIMessageSource for display
+        source_mapping = {
+            SystemMessageSource.USER: "user",
+            SystemMessageSource.SYSTEM: "system"
+        }
+        # Get the mapped source or default to "system"
+        source = source_mapping.get(message.source, "system")
+
+        # Set content using fields from SystemMessage model
+        msg_widget.set_content(
+            message.content,
+            source,
+            message.timestamp,
+            ""  # No model for system messages
+        )
+
+        # Add widget before input and stretch
+        count = self._messages_layout.count()
+        self._messages_layout.insertWidget(count - 2, msg_widget)  # Insert before stretch and input
         self._messages.append(msg_widget)
 
         self._install_activation_tracking(msg_widget)
 
-    async def _on_request_error(self, retries_exhausted: bool, message: AIMessage) -> None:
-        """
-        Handle errors in AI responses.
-
-        Args:
-            message: The error that occurred
-        """
-        await self.add_message(message)
-
-        if retries_exhausted:
-            self._is_streaming = False
-            self._input.set_streaming(False)
-            self.status_updated.emit()
-
-        # When we call this we should always scroll to the bottom and restore auto-scrolling
-        self._auto_scroll = True
-        self._scroll_to_bottom()
-
-    async def _on_message_added(self, message: AIMessage) -> None:
-        """
-        Handle a new message being added to the system.
-
-        Args:
-            message: The message that was added
-        """
-        await self.add_message(message)
-
-        # When we call this we should always scroll to the bottom and restore auto-scrolling
-        self._auto_scroll = True
-        self._scroll_to_bottom()
-
-    async def _update_message(self, message: AIMessage) -> None:
-        # Find the message widget that corresponds to the updated message
-        # This is a simple approach - in practice you'd want to associate message IDs with widgets
-        for i, widget in enumerate(self._messages):
-            if (i == len(self._messages) - 1 and
-                    message.source in (AIMessageSource.AI, AIMessageSource.REASONING)):
-                widget.set_content(message.content, message.source, message.timestamp, message.model)
-                break
-
-        # Scroll to bottom if auto-scrolling is enabled
-        if self._auto_scroll:
-            self._scroll_to_bottom()
-
-    async def _process_pending_update(self) -> None:
-        """Process any pending message update."""
-        if not self._pending_message:
+    def submit(self) -> None:
+        """Submit current input text as a user system message."""
+        content = self._input.to_plain_text().strip()
+        if not content:
             return
 
-        await self._update_message(self._pending_message)
-        self._pending_message = None
-        self._last_update_time = time.time() * 1000
+        # Add user message directly to system interactions
+        self._mindspace_manager.add_system_interaction(
+            SystemMessageSource.USER,
+            content
+        )
 
-    async def _on_message_updated(self, message: AIMessage) -> None:
-        """
-        Handle a message being updated with throttling.
+        # Clear input
+        self._input.clear()
 
-        The first update is processed immediately, subsequent updates
-        are throttled to once every 100ms.
-
-        Args:
-            message: The message that was updated
-        """
-        # Make a deep copy of the message to prevent any reference issues
-        message_copy = message.copy()
-
-        # If no pending message exists, process immediately
-        if self._pending_message is None:
-            await self._update_message(message_copy)
-            self._last_update_time = time.time() * 1000  # Current time in ms
-            return
-
-        # Store the pending message (overwrite any existing pending message)
-        self._pending_message = message_copy
-
-        # If the timer is not active, start it
-        if not self._update_timer.isActive():
-            # Calculate time until next update (aim for 100ms between updates)
-            current_time = time.time() * 1000
-            elapsed = current_time - self._last_update_time
-            delay = max(0, 100 - elapsed)
-
-            self._update_timer.start(int(delay))
-
-    async def _on_message_completed(self, message: AIMessage) -> None:
-        """
-        Handle a message being completed.
-
-        This cancels any pending updates and immediately updates with
-        the completed message.
-
-        Args:
-            message: The message that was completed
-        """
-        # Cancel any pending update
-        if self._update_timer.isActive():
-            self._update_timer.stop()
-
-        # Clear the pending message state
-        self._pending_message = None
-
-        # Update with the completed message immediately
-        await self._update_message(message)
-
-    async def _on_request_completed(self) -> None:
-        """
-        Handle completed AI request.
-        """
-        # Update status bar with token counts
-        self._is_streaming = False
-        self._input.set_streaming(False)
-
-        # Reset message update throttling state
-        self._pending_message = None
-        if self._update_timer.isActive():
-            self._update_timer.stop()
-
-        self.status_updated.emit()
+        # Refresh the messages display
+        self.load_system_interactions()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
-        # Update input widget streaming state text
-        self._input.set_streaming(self._is_streaming)
+        # Update input widget text
+        self._input.set_streaming(False)
 
         # Emit signal for status update
         self.status_updated.emit()
@@ -774,25 +700,9 @@ class SystemWidget(QWidget):
     def can_submit(self) -> bool:
         """Check if the current input can be submitted."""
         has_text = bool(self._input.to_plain_text())
-        return has_text and not self._is_streaming
+        return has_text and self._mindspace_manager.has_mindspace()
 
-    def submit(self) -> None:
-        """Submit current input text."""
-        content = self._input.to_plain_text().strip()
-        if not content:
-            return
-
-        if self._is_streaming:
-            return
-
-        self._input.clear()
-        self._input.set_streaming(True)
-        self._is_streaming = True
-        self.status_updated.emit()
-
-        message = AIMessage.create(AIMessageSource.USER, content)
-
-    def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
+    def create_state_metadata(self, _temp_state: bool) -> Dict[str, Any]:
         """
         Create metadata dictionary capturing current widget state.
 
@@ -824,6 +734,10 @@ class SystemWidget(QWidget):
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])
 
+        # Refresh messages if we have a mindspace
+        if self._mindspace_manager.has_mindspace():
+            self.load_system_interactions()
+
         # Update our status
         self.status_updated.emit()
 
@@ -845,18 +759,6 @@ class SystemWidget(QWidget):
             Dictionary with 'line' and 'column' keys
         """
         return self._input.get_cursor_position()
-
-    def get_token_counts(self) -> Dict[str, int] | None:
-        """
-        Get the current token counts for status display.
-
-        Returns:
-            Dictionary with token count information
-        """
-        if self._ai_system is None:
-            return None
-
-        return self._ai_system.get_token_counts()
 
     def get_selected_text(self) -> str:
         """
@@ -945,85 +847,3 @@ class SystemWidget(QWidget):
                         self._current_widget_index = len(self._matches) - 1
 
                     self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
-
-        # Highlight all matches
-        self._highlight_matches()
-
-        # Scroll to current match
-        self._scroll_to_current_match()
-
-        # Return current match status
-        return self.get_match_status()
-
-    def _highlight_matches(self) -> None:
-        """Update the highlighting of all matches."""
-        self._clear_highlights()
-
-        if not self._matches:
-            return
-
-        # Get colors from style manager
-        highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND)
-        dim_highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
-
-        # Highlight matches in each widget
-        for widget_idx, (widget, matches) in enumerate(self._matches):
-            # Set current_match_index to highlight the current match
-            current_match_idx = self._current_match_index if widget_idx == self._current_widget_index else -1
-
-            # Highlight matches in this widget
-            widget.highlight_matches(
-                matches,
-                current_match_idx,
-                highlight_color,
-                dim_highlight_color
-            )
-
-            # Track highlighted widgets
-            self._highlighted_widgets.add(widget)
-
-    def _scroll_to_current_match(self) -> None:
-        """Request scroll to ensure the current match is visible."""
-        if not self._matches:
-            return
-
-        widget, matches = self._matches[self._current_widget_index]
-        section_num, start, _ = matches[self._current_match_index]
-
-        # Trigger scrolling to this position
-        self.handle_find_scroll(widget, section_num, start)
-
-    def _clear_highlights(self) -> None:
-        """Clear all search highlights."""
-        # Clear highlights from all tracked widgets
-        for widget in self._highlighted_widgets:
-            widget.clear_highlights()
-
-        self._highlighted_widgets.clear()
-
-    def get_match_status(self) -> Tuple[int, int]:
-        """
-        Get the current match status.
-
-        Returns:
-            Tuple of (current_match, total_matches)
-        """
-        if not self._matches:
-            return 0, 0
-
-        total_matches = sum(len(matches) for _, matches in self._matches)
-        if self._current_widget_index == -1:
-            return 0, total_matches
-
-        current_match = sum(len(matches) for _, matches in self._matches[:self._current_widget_index])
-        current_match += self._current_match_index + 1
-
-        return current_match, total_matches
-
-    def clear_find(self) -> None:
-        """Clear all find state."""
-        self._clear_highlights()
-        self._matches = []
-        self._current_widget_index = -1
-        self._current_match_index = -1
-        self._last_search = ""

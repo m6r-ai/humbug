@@ -13,7 +13,7 @@ class SystemMessage:
     source: SystemMessageSource
     content: str
     timestamp: datetime
-    
+
     @classmethod
     def create(
         cls,
@@ -24,14 +24,14 @@ class SystemMessage:
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
             timestamp = datetime.utcnow()
-            
+
         return cls(
             id=str(uuid.uuid4()),
             source=source,
             content=content,
             timestamp=timestamp
         )
-        
+
     def to_dict(self) -> Dict:
         """Convert message to dictionary for storage."""
         return {
@@ -40,7 +40,7 @@ class SystemMessage:
             "content": self.content,
             "timestamp": self.timestamp.isoformat()
         }
-        
+
     @classmethod
     def from_dict(cls, data: Dict) -> 'SystemMessage':
         """Create a SystemMessage instance from dictionary."""
