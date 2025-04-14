@@ -2,7 +2,7 @@
 
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QTextEdit
@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, QPoint, Qt
 from PySide6.QtGui import (
     QResizeEvent, QColor, QCursor, QMouseEvent, QTextCursor,
-    QTextCharFormat, QFont
+    QTextCharFormat
 )
 
 from humbug.gui.color_role import ColorRole
@@ -279,7 +279,6 @@ class SystemMessage(QFrame):
         """)
 
         # Apply styling to text area
-        self._text_area.setFont(font)
         self._text_area.setStyleSheet(f"""
             QTextEdit {{
                 color: {text_color};
@@ -395,12 +394,11 @@ class SystemMessage(QFrame):
         """Clear all highlights from the message."""
         self._text_area.setExtraSelections([])
 
-    def select_and_scroll_to_position(self, section_num: int, position: int) -> QPoint:
+    def select_and_scroll_to_position(self, position: int) -> QPoint:
         """
         Select text at a specific position and return the cursor position relative to this widget.
 
         Args:
-            section_num: Ignored (kept for backward compatibility)
             position: Text position to scroll to
 
         Returns:
@@ -421,7 +419,3 @@ class SystemMessage(QFrame):
     def text_area(self) -> SystemTextEdit:
         """Get the text area widget."""
         return self._text_area
-
-    def has_code_block(self) -> bool:
-        """Check if this section contains a code block."""
-        return self._text_area.has_code_block()

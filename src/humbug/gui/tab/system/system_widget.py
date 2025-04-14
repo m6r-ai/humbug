@@ -578,7 +578,7 @@ class SystemWidget(QWidget):
             position: Text position within the section
         """
         # Get position relative to the message widget
-        pos_in_message = widget.select_and_scroll_to_position(section_num, position)
+        pos_in_message = widget.select_and_scroll_to_position(position)
         if pos_in_message == QPoint(0, 0) and section_num > 0:
             # Handle case where position wasn't found
             return
@@ -860,7 +860,7 @@ class SystemWidget(QWidget):
         current_global_match = sum(len(m[1]) for m in self._matches[:self._current_widget_index]) + self._current_match_index + 1
 
         # Scroll to the current match
-        widget.select_and_scroll_to_position(0, start)
+        widget.select_and_scroll_to_position(start)
 
         # Highlight the matches in each widget
         for w_idx, (widget, widget_matches) in enumerate(self._matches):

@@ -26,17 +26,22 @@ class SystemTextEdit(QTextEdit):
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
         self.document().setDocumentMargin(0)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
         # Force the widget to always use the width of its container
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        # Set word wrap mode to adjust to widget width
-        self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
+
+        self._style_manager = StyleManager()
+
+        font = self.font()
+        font.setFamilies(self._style_manager.monospace_font_families())
+        font.setFixedPitch(True)
+        self.setFont(font)
 
         # Calculate tab stops
-        self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
@@ -49,9 +54,6 @@ class SystemTextEdit(QTextEdit):
 
         # Track current content length for incremental updates
         self._current_length = 0
-
-        # Track code block state
-        self._has_code_block = False
 
         self._logger = logging.getLogger("SystemTextEdit")
 
@@ -73,31 +75,10 @@ class SystemTextEdit(QTextEdit):
         super().mouseReleaseEvent(event)
         self.mouseReleased.emit(event)
 
-    def set_has_code_block(self, has_code: bool) -> None:
-        """Update word wrap mode based on whether content contains code blocks."""
-        if has_code == self._has_code_block:
-            return
-
-        self._has_code_block = has_code
-        if has_code:
-            self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
-        else:
-            self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        # Force layout update
-        self._on_content_changed()
-
-    def has_code_block(self) -> bool:
-        """Check if content contains code blocks."""
-        return self._has_code_block
-
     def wheelEvent(self, event: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""
-        # If this is a code block, handle horizontal scrolling for compatible mice
-        if self._has_code_block and event.angleDelta().x() != 0:
+        # Handle horizontal scrolling for compatible mice
+        if event.angleDelta().x() != 0:
             # Get the horizontal scrollbar
             hbar = self.horizontalScrollBar()
             if hbar:
@@ -119,15 +100,17 @@ class SystemTextEdit(QTextEdit):
         # leaving it to the parent to handle them.
         if self.isReadOnly():
             # Handle horizontal scrolling
-            if self._has_code_block and event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            if event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
                 hbar = self.horizontalScrollBar()
                 if hbar and hbar.isVisible():
                     current = hbar.value()
                     step = 50  # Adjust scroll step size as needed
                     if event.key() == Qt.Key.Key_Left:
                         hbar.setValue(max(hbar.minimum(), current - step))
+
                     else:
                         hbar.setValue(min(hbar.maximum(), current + step))
+
                     event.accept()
                     return
 
@@ -223,7 +206,7 @@ class SystemTextEdit(QTextEdit):
 
     def _height(self) -> int:
         height = int(self.document().size().height())
-        if self._has_code_block and self.horizontalScrollBar().isVisible():
+        if self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14
 
