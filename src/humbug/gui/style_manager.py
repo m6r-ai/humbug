@@ -181,12 +181,12 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#7a8694"
             },
             ColorRole.MESSAGE_USER: {
-                ColorMode.DARK: "#a0a050",
-                ColorMode.LIGHT: "#808040"
-            },
-            ColorRole.MESSAGE_AI: {
                 ColorMode.DARK: "#8080c0",
                 ColorMode.LIGHT: "#4040a0"
+            },
+            ColorRole.MESSAGE_AI: {
+                ColorMode.DARK: "#80c080",
+                ColorMode.LIGHT: "#40a040"
             },
             ColorRole.MESSAGE_REASONING: {
                 ColorMode.DARK: "#c080c0",
@@ -201,8 +201,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#40a040"
             },
             ColorRole.MESSAGE_LANGUAGE: {
-                ColorMode.DARK: "#d08020",
-                ColorMode.LIGHT: "#a05010"
+                ColorMode.DARK: "#a07850",
+                ColorMode.LIGHT: "#806040"
             },
             ColorRole.MESSAGE_BOOKMARK: {
                 ColorMode.DARK: "#ffdf00",
