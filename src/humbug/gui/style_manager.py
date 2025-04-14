@@ -182,7 +182,7 @@ class StyleManager(QObject):
             },
             ColorRole.MESSAGE_USER: {
                 ColorMode.DARK: "#8080c0",
-                ColorMode.LIGHT: "#4040a0"
+                ColorMode.LIGHT: "#6060a0"
             },
             ColorRole.MESSAGE_AI: {
                 ColorMode.DARK: "#80c080",
@@ -207,6 +207,10 @@ class StyleManager(QObject):
             ColorRole.MESSAGE_BOOKMARK: {
                 ColorMode.DARK: "#ffdf00",
                 ColorMode.LIGHT: "#806000"
+            },
+            ColorRole.MESSAGE_STREAMING: {
+                ColorMode.DARK: "#c0a080",
+                ColorMode.LIGHT: "#a07050"
             },
 
             # Status bar elements

@@ -65,7 +65,7 @@ class ConversationInput(ConversationMessage):
 
     def _set_role_style(self) -> None:
         """Set the role label color."""
-        colour = ColorRole.TEXT_DISABLED if self._is_streaming else ColorRole.MESSAGE_USER
+        colour = ColorRole.MESSAGE_STREAMING if self._is_streaming else ColorRole.MESSAGE_USER
 
         # WARNING: This needs to stay in sync with ConversationMessage
         self._role_label.setStyleSheet(f"""
