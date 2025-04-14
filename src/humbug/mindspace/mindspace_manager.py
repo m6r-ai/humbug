@@ -13,6 +13,9 @@ from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal
 
+from humbug.mindspace.system.system_interactions import SystemInteractions
+from humbug.mindspace.system.system_message import SystemMessage
+from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
 from humbug.mindspace.mindspace_settings import MindspaceSettings
@@ -39,6 +42,7 @@ class MindspaceManager(QObject):
     MINDSPACE_DIR = ".humbug"
     SETTINGS_FILE = "settings.json"
     SESSION_FILE = "session.json"
+    SYSTEM_INTERACTIONS_FILE = "system.json"
 
     _instance = None
     _logger = logging.getLogger("MindspaceManager")
@@ -58,6 +62,7 @@ class MindspaceManager(QObject):
             self._settings: MindspaceSettings | None = None
             self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
             self._directory_tracker = MindspaceDirectoryTracker()
+            self._system_interactions = SystemInteractions()
             self._initialized = True
 
     def mindspace_path(self) -> str:
@@ -200,6 +205,7 @@ class MindspaceManager(QObject):
             self._settings = settings
             self._directory_tracker.load_tracking(path)
             self._update_home_tracking()
+            self._load_system_interactions()
             self.settings_changed.emit()
 
         except Exception as e:
@@ -212,6 +218,7 @@ class MindspaceManager(QObject):
             self._directory_tracker.save_tracking(self._mindspace_path)
             self._mindspace_path = ""
             self._settings = None
+            self._system_interactions.clear()
             self._directory_tracker.clear_tracking()
             self._update_home_tracking()
             self.settings_changed.emit()
@@ -411,3 +418,75 @@ class MindspaceManager(QObject):
     def conversations_directory(self) -> str:
         """Get the last used conversations directory."""
         return self._directory_tracker.conversations_directory()
+
+    def add_system_interaction(self, source: SystemMessageSource, content: str) -> SystemMessage:
+        """
+        Add a new system interaction message.
+
+        Args:
+            source: Source of the message (user or system)
+            content: Content of the message
+
+        Returns:
+            The created SystemMessage
+
+        Raises:
+            MindspaceNotFoundError: If no mindspace is open
+        """
+        if not self.has_mindspace():
+            raise MindspaceNotFoundError("No mindspace is currently open")
+
+        message = SystemMessage.create(source, content)
+        self._system_interactions.add_message(message)
+        self._save_system_interactions()
+        return message
+
+    def get_system_interactions(self) -> List[SystemMessage]:
+        """
+        Get all system interaction messages.
+
+        Returns:
+            List of SystemMessage objects
+
+        Raises:
+            MindspaceNotFoundError: If no mindspace is open
+        """
+        if not self.has_mindspace():
+            raise MindspaceNotFoundError("No mindspace is currently open")
+
+        return self._system_interactions.get_messages()
+
+    def _save_system_interactions(self) -> None:
+        """Save system interactions to disk."""
+        if not self.has_mindspace():
+            return
+
+        try:
+            # Ensure .humbug directory exists
+            mindspace_dir = os.path.join(self._mindspace_path, self.MINDSPACE_DIR)
+            os.makedirs(mindspace_dir, exist_ok=True)
+
+            # Save interactions
+            interactions_path = os.path.join(mindspace_dir, self.SYSTEM_INTERACTIONS_FILE)
+            self._system_interactions.save(interactions_path)
+
+        except OSError as e:
+            # Non-critical error, don't raise any exceptions
+            self._logger.error("Failed to save system interactions: %s", str(e))
+
+    def _load_system_interactions(self) -> None:
+        """Load system interactions from disk."""
+        if not self.has_mindspace():
+            return
+
+        try:
+            interactions_path = os.path.join(
+                self._mindspace_path,
+                self.MINDSPACE_DIR,
+                self.SYSTEM_INTERACTIONS_FILE
+            )
+            self._system_interactions.load(interactions_path)
+
+        except Exception as e:
+            # Non-critical error, don't raise any exceptions
+            self._logger.info("Failed to load system interactions: %s", str(e))
