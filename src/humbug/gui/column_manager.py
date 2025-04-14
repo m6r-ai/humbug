@@ -18,6 +18,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.tab.editor.editor_tab import EditorTab
+from humbug.gui.tab.system.system_tab import SystemTab
 from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_label import TabLabel
 from humbug.gui.tab.tab_state import TabState
@@ -785,6 +786,25 @@ class ColumnManager(QWidget):
 
         return None
 
+    def show_system(self) -> SystemTab:
+        """
+            Show the system tab.
+
+        Returns:
+            The system tab
+        """
+        for tab in self._tabs.values():
+            if isinstance(tab, SystemTab):
+                self._set_current_tab(tab.tab_id())
+                return tab
+
+        tab_id = str(uuid.uuid4())
+        system_tab = SystemTab(tab_id, self)
+
+        # Use language strings for the tab title
+        self.add_tab(system_tab, "System")
+        return system_tab
+
     def new_file(self) -> EditorTab:
         """Create a new empty editor tab."""
         self._untitled_count += 1
@@ -1028,6 +1048,9 @@ class ColumnManager(QWidget):
             self._connect_editor_signals(editor_tab)
             return editor_tab
 
+        if state.type == TabType.SYSTEM:
+            return SystemTab.restore_from_state(state, self)
+
         if state.type == TabType.TERMINAL:
             return TerminalTab.restore_from_state(state, self)
 
@@ -1064,6 +1087,9 @@ class ColumnManager(QWidget):
         """Get appropriate title for tab type."""
         if isinstance(tab, ConversationTab):
             return f"Conv: {tab.tab_id()}"
+
+        if isinstance(tab, SystemTab):
+            return "System"
 
         if isinstance(tab, TerminalTab):
             if state.metadata and "command" in state.metadata:

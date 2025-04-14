@@ -166,6 +166,10 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
+        self._show_system_action = QAction(strings.show_system, self)
+        self._show_system_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
+        self._show_system_action.triggered.connect(self._show_system)
+
         self._show_all_columns_action = QAction(strings.show_all_columns, self)
         self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
         self._show_all_columns_action.triggered.connect(self._show_all_columns)
@@ -258,12 +262,14 @@ class MainWindow(QMainWindow):
 
         # View menu
         self._view_menu = self._menu_bar.addMenu(strings.view_menu)
-        # Theme menu will be added when language changes
 
+        # Theme menu will be added when language changes
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._zoom_in_action)
         self._view_menu.addAction(self._zoom_out_action)
         self._view_menu.addAction(self._reset_zoom_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._show_system_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_all_columns_action)
         self._view_menu.addAction(self._split_column_left_action)
@@ -281,7 +287,7 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._previous_bookmark_action)
 
         self.setWindowTitle("Humbug")
-        self.setMinimumSize(1024, 600)
+        self.setMinimumSize(1280, 800)
 
         # Main widget and layout
         main_widget = QWidget()
@@ -387,6 +393,7 @@ class MainWindow(QMainWindow):
         left_to_right = self._language_manager.left_to_right()
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
+        self._show_system_action.setEnabled(has_mindspace)
         self._show_all_columns_action.setEnabled(column_manager.can_show_all_columns())
         self._split_column_left_action.setEnabled(column_manager.can_split_column())
         self._split_column_right_action.setEnabled(column_manager.can_split_column())
@@ -454,6 +461,7 @@ class MainWindow(QMainWindow):
         self._zoom_in_action.setText(strings.zoom_in)
         self._zoom_out_action.setText(strings.zoom_out)
         self._reset_zoom_action.setText(strings.reset_zoom)
+        self._show_system_action.setText(strings.show_system)
         self._show_all_columns_action.setText(strings.show_all_columns)
         self._split_column_left_action.setText(strings.split_column_left)
         self._split_column_right_action.setText(strings.split_column_right)
@@ -803,6 +811,10 @@ class MainWindow(QMainWindow):
     def _save_file_as(self) -> None:
         """Save the current file with a new name."""
         self._column_manager.save_file_as()
+
+    def _show_system(self) -> None:
+        """Show the system tab."""
+        self._column_manager.show_system()
 
     def _show_all_columns(self) -> None:
         """Show all columns equally."""

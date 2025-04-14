@@ -54,6 +54,7 @@ def get_english_strings() -> LanguageStrings:
         zoom_in="Zoom In",
         zoom_out="Zoom Out",
         reset_zoom="Reset Zoom",
+        show_system="Show System",
         show_all_columns="Show All Columns",
         split_column_left="Split Column Left",
         split_column_right="Split Column Right",
@@ -194,6 +195,7 @@ def get_english_strings() -> LanguageStrings:
         conversation_status_temperature="Temp: {temperature:.1f}",
         conversation_status_no_temperature="Temp: N/A",
         terminal_status="Terminal: {name} ({columns}x{rows})",
+        system_status="System",
 
         # Bookmark-related strings
         bookmark_section="Toggle Bookmark",

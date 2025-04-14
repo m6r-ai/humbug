@@ -54,6 +54,7 @@ def get_arabic_strings() -> LanguageStrings:
         zoom_in="تكبير",
         zoom_out="تصغير",
         reset_zoom="إعادة تعيين التكبير",
+        show_system="عرض النظام",
         show_all_columns="عرض كل الأعمدة",
         split_column_left="تقسيم العمود لليسار",
         split_column_right="تقسيم العمود لليمين",
@@ -194,6 +195,7 @@ def get_arabic_strings() -> LanguageStrings:
         conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
         conversation_status_no_temperature="درجة الحرارة: غير متوفر",
         terminal_status="طرفية: {name} ({columns}x{rows})",
+        system_status="نظام",
 
         # Bookmark
         bookmark_section="تبديل الإشارة",

@@ -49,6 +49,7 @@ class LanguageStrings:
     zoom_in: str
     zoom_out: str
     reset_zoom: str
+    show_system: str
     show_all_columns: str
     split_column_left: str
     split_column_right: str
@@ -186,6 +187,7 @@ class LanguageStrings:
     conversation_status_temperature: str
     conversation_status_no_temperature: str
     terminal_status: str
+    system_status: str
 
     # Bookmark-related strings
     bookmark_section: str

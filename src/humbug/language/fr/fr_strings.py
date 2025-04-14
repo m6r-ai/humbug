@@ -54,6 +54,7 @@ def get_french_strings() -> LanguageStrings:
         zoom_in="Zoom avant",
         zoom_out="Zoom arrière",
         reset_zoom="Réinitialiser le zoom",
+        show_system="Afficher le système",
         show_all_columns="Afficher toutes les colonnes",
         split_column_left="Diviser la colonne à gauche",
         split_column_right="Diviser la colonne à droite",
@@ -194,6 +195,7 @@ def get_french_strings() -> LanguageStrings:
         conversation_status_temperature="Temp : {temperature:.1f}",
         conversation_status_no_temperature="Temp : N/D",
         terminal_status="Terminal : {name} ({columns}x{rows})",
+        system_status="Statut du système",
 
         # Bookmark Actions
         bookmark_section="Marquer/Démarquer",
