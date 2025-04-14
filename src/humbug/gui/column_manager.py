@@ -1398,7 +1398,7 @@ class ColumnManager(QWidget):
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab | SystemTab):
             return False
 
         return tab.can_navigate_next_message()
@@ -1406,7 +1406,7 @@ class ColumnManager(QWidget):
     def navigate_next_message(self) -> None:
         """Navigate to next message in active conversation tab."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab | SystemTab):
             return
 
         tab.navigate_next_message()
@@ -1414,7 +1414,7 @@ class ColumnManager(QWidget):
     def can_navigate_previous_message(self) -> bool:
         """Check if previous message navigation is possible."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab | SystemTab):
             return False
 
         return tab.can_navigate_previous_message()
@@ -1422,7 +1422,7 @@ class ColumnManager(QWidget):
     def navigate_previous_message(self) -> None:
         """Navigate to previous message in active conversation tab."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab):
+        if not isinstance(tab, ConversationTab | SystemTab):
             return
 
         tab.navigate_previous_message()
