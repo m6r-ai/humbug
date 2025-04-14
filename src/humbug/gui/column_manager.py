@@ -912,14 +912,14 @@ class ColumnManager(QWidget):
             # Add new tab to manager
             self.add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.SYSTEM,
+                SystemMessageSource.SUCCESS,
                 f"Forked: {conversation_tab.tab_id()} to {new_tab.tab_id()}"
             )
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.SYSTEM,
+                SystemMessageSource.ERROR,
                 f"Failed to fork: {conversation_tab.tab_id()}"
             )
             raise
@@ -966,7 +966,7 @@ class ColumnManager(QWidget):
 
         self.add_tab(terminal, title)
         self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.SYSTEM,
+            SystemMessageSource.SUCCESS,
             "Terminal started"
         )
 

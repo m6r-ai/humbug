@@ -187,8 +187,13 @@ class SystemMessage(QFrame):
         # Map message source to color role
         if self._message_source == "user":
             colour = ColorRole.MESSAGE_USER
-        elif self._message_source == "system":
-            colour = ColorRole.MESSAGE_SYSTEM
+
+        elif self._message_source == "error":
+            colour = ColorRole.MESSAGE_SYSTEM_ERROR
+
+        elif self._message_source == "success":
+            colour = ColorRole.MESSAGE_SYSTEM_SUCCESS
+
         else:
             # Default case
             colour = ColorRole.TEXT_PRIMARY
@@ -247,7 +252,8 @@ class SystemMessage(QFrame):
         # Map message types to role colors
         role_colours = {
             "user": ColorRole.MESSAGE_USER,
-            "system": ColorRole.MESSAGE_SYSTEM
+            "error": ColorRole.MESSAGE_SYSTEM_ERROR,
+            "success": ColorRole.MESSAGE_SYSTEM_SUCCESS
         }
 
         current_style = self._message_source or "user"

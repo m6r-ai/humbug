@@ -213,10 +213,11 @@ class SystemWidget(QWidget):
         # Map the SystemMessageSource to an appropriate AIMessageSource for display
         source_mapping = {
             SystemMessageSource.USER: "user",
-            SystemMessageSource.SYSTEM: "system"
+            SystemMessageSource.ERROR: "error",
+            SystemMessageSource.SUCCESS: "success"
         }
-        # Get the mapped source or default to "system"
-        source = source_mapping.get(message.source, "system")
+        # Get the mapped source or default to "success"
+        source = source_mapping.get(message.source, "success")
 
         # Set content using fields from SystemMessage model
         msg_widget.set_content(

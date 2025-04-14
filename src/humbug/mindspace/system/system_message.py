@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-import uuid
 from typing import Dict
 
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -9,7 +8,6 @@ from humbug.mindspace.system.system_message_source import SystemMessageSource
 @dataclass
 class SystemMessage:
     """Represents a single system message in the interaction history."""
-    id: str
     source: SystemMessageSource
     content: str
     timestamp: datetime
@@ -26,7 +24,6 @@ class SystemMessage:
             timestamp = datetime.utcnow()
 
         return cls(
-            id=str(uuid.uuid4()),
             source=source,
             content=content,
             timestamp=timestamp
@@ -35,7 +32,6 @@ class SystemMessage:
     def to_dict(self) -> Dict:
         """Convert message to dictionary for storage."""
         return {
-            "id": self.id,
             "source": self.source.value,
             "content": self.content,
             "timestamp": self.timestamp.isoformat()
@@ -45,7 +41,6 @@ class SystemMessage:
     def from_dict(cls, data: Dict) -> 'SystemMessage':
         """Create a SystemMessage instance from dictionary."""
         return cls(
-            id=data["id"],
             source=SystemMessageSource(data["source"]),
             content=data["content"],
             timestamp=datetime.fromisoformat(data["timestamp"])

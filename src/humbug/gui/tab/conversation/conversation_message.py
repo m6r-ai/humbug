@@ -365,7 +365,7 @@ class ConversationMessage(QFrame):
             AIMessageSource.USER: ColorRole.MESSAGE_USER,
             AIMessageSource.AI: ColorRole.MESSAGE_AI,
             AIMessageSource.REASONING: ColorRole.MESSAGE_REASONING,
-            AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM
+            AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM_ERROR
         }
 
         current_style = self._message_source or AIMessageSource.USER
