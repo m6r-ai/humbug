@@ -248,7 +248,6 @@ class SystemMessage(QFrame):
             SystemMessageSource.SUCCESS: ColorRole.MESSAGE_SYSTEM_SUCCESS
         }
 
-        print(f"{self}: {self._message_source}")
         current_style = self._message_source or SystemMessageSource.USER
         role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)

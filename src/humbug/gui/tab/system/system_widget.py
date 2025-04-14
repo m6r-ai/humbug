@@ -556,20 +556,16 @@ class SystemWidget(QWidget):
             50
         )
 
-    def handle_find_scroll(self, widget: SystemMessage, section_num: int, position: int) -> None:
+    def handle_find_scroll(self, widget: SystemMessage, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
         Args:
             widget: Widget to scroll to
-            section_num: Section number within the widget (ignored in refactored version)
             position: Text position within the section
         """
         # Get position relative to the message widget
         pos_in_message = widget.select_and_scroll_to_position(position)
-        if pos_in_message == QPoint(0, 0) and section_num > 0:
-            # Handle case where position wasn't found
-            return
 
         # Map position from message widget to the scroll area's coordinate system
         # This is safe because we know the relationship between these widgets
@@ -836,27 +832,43 @@ class SystemWidget(QWidget):
 
                     self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
 
-        # Get current match
-        widget, matches = self._matches[self._current_widget_index]
-        start, _end = matches[self._current_match_index]
-
         # Highlight all matches
-        self._clear_highlights()
+        self._highlight_matches()
 
-        for w_idx, (widget, widget_matches) in enumerate(self._matches):
-            # Determine which match is the current one
-            current_idx = -1
-            if w_idx == self._current_widget_index:
-                current_idx = self._current_match_index
-
-            widget.highlight_matches(widget_matches, current_idx)
-            self._highlighted_widgets.add(widget)
-
-        # Scroll to the current match
-        widget.select_and_scroll_to_position(start)
+        # Scroll to current match
+        self._scroll_to_current_match()
 
         # Return current match status
         return self.get_match_status()
+
+    def _highlight_matches(self) -> None:
+        """Update the highlighting of all matches."""
+        self._clear_highlights()
+
+        if not self._matches:
+            return
+
+        # Highlight matches in each widget
+        for widget_idx, (widget, matches) in enumerate(self._matches):
+            # Set current_match_index to highlight the current match
+            current_match_idx = self._current_match_index if widget_idx == self._current_widget_index else -1
+
+            # Highlight matches in this widget
+            widget.highlight_matches(matches, current_match_idx)
+
+            # Track highlighted widgets
+            self._highlighted_widgets.add(widget)
+
+    def _scroll_to_current_match(self) -> None:
+        """Request scroll to ensure the current match is visible."""
+        if not self._matches:
+            return
+
+        widget, matches = self._matches[self._current_widget_index]
+        start, _ = matches[self._current_match_index]
+
+        # Trigger scrolling to this position
+        self.handle_find_scroll(widget, start)
 
     def _clear_highlights(self) -> None:
         """Clear all highlights from all widgets."""
