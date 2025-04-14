@@ -1,7 +1,5 @@
-from typing import cast
-
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QDialogButtonBox, QWidget
+    QDialog, QVBoxLayout, QLabel, QLineEdit, QDialogButtonBox, QWidget
 )
 
 from humbug.gui.color_role import ColorRole

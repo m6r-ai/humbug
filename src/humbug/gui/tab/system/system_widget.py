@@ -244,9 +244,6 @@ class SystemWidget(QWidget):
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
-        # Update input widget text
-        self._input.set_streaming(False)
-
         # Emit signal for status update
         self.status_updated.emit()
 
