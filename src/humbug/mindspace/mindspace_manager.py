@@ -39,6 +39,9 @@ class MindspaceManager(QObject):
     # Signal emitted when mindspace settings change
     settings_changed = Signal()
 
+    # Signal emitted when system interactions are updated
+    system_interactions_updated = Signal()
+
     MINDSPACE_DIR = ".humbug"
     SETTINGS_FILE = "settings.json"
     SESSION_FILE = "session.json"
@@ -439,6 +442,7 @@ class MindspaceManager(QObject):
         message = SystemMessage.create(source, content)
         self._system_interactions.add_message(message)
         self._save_system_interactions()
+        self.system_interactions_updated.emit()
         return message
 
     def get_system_interactions(self) -> List[SystemMessage]:

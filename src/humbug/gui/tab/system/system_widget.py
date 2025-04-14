@@ -79,6 +79,7 @@ class SystemWidget(QWidget):
         self._logger = logging.getLogger("SystemWidget")
 
         self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager.system_interactions_updated.connect(self.load_system_interactions)
 
         # Widget tracking
         self._messages: List[SystemMessage] = []
