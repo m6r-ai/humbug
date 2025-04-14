@@ -7,7 +7,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
 
-class ConversationRenameDialog(QDialog):
+class MindspaceConversationRenameDialog(QDialog):
     """Dialog for renaming conversations."""
 
     def __init__(self, old_name: str, parent: QWidget | None = None):

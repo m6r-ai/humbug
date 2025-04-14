@@ -10,7 +10,7 @@ from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
-from humbug.gui.mindspace.conversation_rename_dialog import ConversationRenameDialog
+from humbug.gui.mindspace.mindspace_conversation_rename_dialog import MindspaceConversationRenameDialog
 from humbug.gui.mindspace.mindspace_file_model import MindspaceFileModel
 from humbug.gui.mindspace.mindspace_file_rename_dialog import MindspaceFileRenameDialog
 from humbug.gui.mindspace.mindspace_file_tree_icon_provider import MindspaceFileTreeIconProvider
@@ -218,7 +218,7 @@ class MindspaceFileTree(QWidget):
         """
         # Show dialog to get new name
         old_name = os.path.splitext(os.path.basename(path))[0]
-        dialog = ConversationRenameDialog(old_name, self)
+        dialog = MindspaceConversationRenameDialog(old_name, self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
