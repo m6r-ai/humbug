@@ -24,8 +24,6 @@ class SystemInput(SystemMessage):
         super().__init__(parent, is_input=True)
 
         # Connect text cursor signals
-        self._text_area = self._sections[0].text_area()
-
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
         self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
@@ -55,20 +53,6 @@ class SystemInput(SystemMessage):
         self._role_label.setText(strings.input_prompt.format(key=submit_key))
 
         self._set_role_style()
-
-    def _set_role_style(self) -> None:
-        """Set the role label color."""
-        colour = ColorRole.MESSAGE_USER
-
-        # WARNING: This needs to stay in sync with SystemMessage
-        self._role_label.setStyleSheet(f"""
-            QLabel {{
-                color: {self._style_manager.get_color_str(colour)};
-                margin: 0;
-                padding: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-        """)
 
     def _insert_from_mime_data(self, source: QMimeData) -> None:
         """Override default paste behavior to insert only plain text."""

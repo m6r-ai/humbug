@@ -129,7 +129,7 @@ class SystemWidget(QWidget):
         system_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[SystemMessage, List[Tuple[int, int, int]]] = {}
+        self._search_highlights: Dict[SystemMessage, List[Tuple[int, int]]] = {}
 
         self._style_manager = StyleManager()
 
@@ -160,7 +160,7 @@ class SystemWidget(QWidget):
         self._handle_style_changed()
 
         # Find functionality
-        self._matches: List[Tuple[SystemMessage, List[Tuple[int, int, int]]]] = []
+        self._matches: List[Tuple[SystemMessage, List[Tuple[int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
@@ -574,7 +574,7 @@ class SystemWidget(QWidget):
 
         Args:
             widget: Widget to scroll to
-            section_num: Section number within the widget
+            section_num: Section number within the widget (ignored in refactored version)
             position: Text position within the section
         """
         # Get position relative to the message widget
@@ -847,3 +847,65 @@ class SystemWidget(QWidget):
                         self._current_widget_index = len(self._matches) - 1
 
                     self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
+
+        # Get current match
+        widget, matches = self._matches[self._current_widget_index]
+        start, end = matches[self._current_match_index]
+
+        # Clear all previous highlights and highlight all matches in all widgets
+        self._clear_highlights()
+
+        # Highlight all matches
+        total_matches = sum(len(m[1]) for m in self._matches)
+        current_global_match = sum(len(m[1]) for m in self._matches[:self._current_widget_index]) + self._current_match_index + 1
+
+        # Scroll to the current match
+        widget.select_and_scroll_to_position(0, start)
+
+        # Highlight the matches in each widget
+        for w_idx, (widget, widget_matches) in enumerate(self._matches):
+            # Determine which match is the current one
+            current_idx = -1
+            if w_idx == self._current_widget_index:
+                current_idx = self._current_match_index
+
+            widget.highlight_matches(widget_matches, current_idx)
+            self._highlighted_widgets.add(widget)
+
+        return current_global_match, total_matches
+
+    def _clear_highlights(self) -> None:
+        """Clear all highlights from all widgets."""
+        for widget in self._highlighted_widgets:
+            widget.clear_highlights()
+
+        self._highlighted_widgets.clear()
+
+    def clear_highlights(self) -> None:
+        """Public method to clear highlights."""
+        self._clear_highlights()
+        self._matches = []
+        self._current_widget_index = -1
+        self._current_match_index = -1
+        self._last_search = ""
+
+    def get_match_status(self) -> Tuple[int, int]:
+        """
+        Get current match status.
+
+        Returns:
+            Tuple of (current_match, total_matches)
+        """
+        if not self._matches:
+            return 0, 0
+
+        # Calculate total matches
+        total_matches = sum(len(m[1]) for m in self._matches)
+
+        # Calculate current match
+        if self._current_widget_index == -1 or self._current_match_index == -1:
+            return 0, total_matches
+
+        current_global_match = sum(len(m[1]) for m in self._matches[:self._current_widget_index]) + self._current_match_index + 1
+
+        return current_global_match, total_matches
