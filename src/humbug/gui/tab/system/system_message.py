@@ -17,6 +17,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.system.system_text_edit import SystemTextEdit
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.system.system_message_source import SystemMessageSource
 
 
 class SystemMessage(QFrame):
@@ -44,10 +45,9 @@ class SystemMessage(QFrame):
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
         # Will store the actual message source
-        self._message_source: str | None = None
+        self._message_source: SystemMessageSource | None = None
         self._message_timestamp: datetime | None = None
         self._message_content = ""
-        self._message_model = ""
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -87,7 +87,6 @@ class SystemMessage(QFrame):
         self._layout.addWidget(self._text_area)
 
         self._is_focused = False
-        self._current_style: str | None = None
         self._mouse_left_button_pressed = False
 
         self._style_manager = StyleManager()
@@ -118,19 +117,14 @@ class SystemMessage(QFrame):
 
     def _update_role_text(self) -> None:
         """Update the role text based on current language."""
-        if not self._message_source:
-            return
-
         strings = self._language_manager.strings()
 
         # Map from message source to display text
-        if self._message_source == "user":
+        if self._message_source == SystemMessageSource.USER:
             role_text = strings.role_you
-        elif self._message_source == "system":
-            role_text = strings.role_system
+
         else:
-            # Default case - should not happen
-            role_text = self._message_source.capitalize()
+            role_text = strings.role_system
 
         # Format with timestamp
         if self._message_timestamp is not None:
@@ -160,20 +154,18 @@ class SystemMessage(QFrame):
 
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, source: str, timestamp: datetime, model: str) -> None:
+    def set_content(self, text: str, source: SystemMessageSource, timestamp: datetime) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
 
         Args:
             text: The message text content
-            source: The source of the message ("user", "system", etc.)
+            source: The source of the message
             timestamp: datetime object for the message timestamp
-            model: Model name if applicable (can be empty for system messages)
         """
         self._message_source = source
         self._message_timestamp = timestamp
         self._message_content = text
-        self._message_model = model
 
         # Set the content in the text area
         self._text_area.set_text(text)
@@ -181,22 +173,22 @@ class SystemMessage(QFrame):
         # Update the header
         self._update_role_text()
         self._set_role_style()
+        self._handle_style_changed()
 
     def _set_role_style(self) -> None:
         """Set the role label color based on message source."""
         # Map message source to color role
-        if self._message_source == "user":
+        if self._message_source == SystemMessageSource.USER:
             colour = ColorRole.MESSAGE_USER
+            background_colour = ColorRole.MESSAGE_USER_BACKGROUND
 
-        elif self._message_source == "error":
+        elif self._message_source == SystemMessageSource.ERROR:
             colour = ColorRole.MESSAGE_SYSTEM_ERROR
-
-        elif self._message_source == "success":
-            colour = ColorRole.MESSAGE_SYSTEM_SUCCESS
+            background_colour = ColorRole.MESSAGE_BACKGROUND
 
         else:
-            # Default case
-            colour = ColorRole.TEXT_PRIMARY
+            colour = ColorRole.MESSAGE_SYSTEM_SUCCESS
+            background_colour = ColorRole.MESSAGE_BACKGROUND
 
         # Warning: This needs to stay in sync with SystemInput
         self._role_label.setStyleSheet(f"""
@@ -204,7 +196,7 @@ class SystemMessage(QFrame):
                 color: {self._style_manager.get_color_str(colour)};
                 margin: 0;
                 padding: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                background-color: {self._style_manager.get_color_str(background_colour)};
             }}
         """)
 
@@ -251,15 +243,18 @@ class SystemMessage(QFrame):
 
         # Map message types to role colors
         role_colours = {
-            "user": ColorRole.MESSAGE_USER,
-            "error": ColorRole.MESSAGE_SYSTEM_ERROR,
-            "success": ColorRole.MESSAGE_SYSTEM_SUCCESS
+            SystemMessageSource.USER: ColorRole.MESSAGE_USER,
+            SystemMessageSource.ERROR: ColorRole.MESSAGE_SYSTEM_ERROR,
+            SystemMessageSource.SUCCESS: ColorRole.MESSAGE_SYSTEM_SUCCESS
         }
 
-        current_style = self._message_source or "user"
+        print(f"{self}: {self._message_source}")
+        current_style = self._message_source or SystemMessageSource.USER
         role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
-        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+        background_color = self._style_manager.get_color_str(
+            ColorRole.MESSAGE_USER_BACKGROUND if current_style == SystemMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+        )
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
 
         # Role label styling (bold)
@@ -313,7 +308,7 @@ class SystemMessage(QFrame):
 
         # Determine border color based on state
         border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
-                ColorRole.MESSAGE_BACKGROUND
+                 ColorRole.MESSAGE_USER_BACKGROUND if current_style == SystemMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
 
         self.setStyleSheet(f"""
             QWidget {{

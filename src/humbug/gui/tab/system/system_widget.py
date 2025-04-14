@@ -210,21 +210,11 @@ class SystemWidget(QWidget):
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
 
-        # Map the SystemMessageSource to an appropriate AIMessageSource for display
-        source_mapping = {
-            SystemMessageSource.USER: "user",
-            SystemMessageSource.ERROR: "error",
-            SystemMessageSource.SUCCESS: "success"
-        }
-        # Get the mapped source or default to "success"
-        source = source_mapping.get(message.source, "success")
-
         # Set content using fields from SystemMessage model
         msg_widget.set_content(
             message.content,
-            source,
-            message.timestamp,
-            ""  # No model for system messages
+            message.source,
+            message.timestamp
         )
 
         # Add widget before input and stretch
@@ -853,17 +843,9 @@ class SystemWidget(QWidget):
         widget, matches = self._matches[self._current_widget_index]
         start, _end = matches[self._current_match_index]
 
-        # Clear all previous highlights and highlight all matches in all widgets
+        # Highlight all matches
         self._clear_highlights()
 
-        # Highlight all matches
-        total_matches = sum(len(m[1]) for m in self._matches)
-        current_global_match = sum(len(m[1]) for m in self._matches[:self._current_widget_index]) + self._current_match_index + 1
-
-        # Scroll to the current match
-        widget.select_and_scroll_to_position(start)
-
-        # Highlight the matches in each widget
         for w_idx, (widget, widget_matches) in enumerate(self._matches):
             # Determine which match is the current one
             current_idx = -1
@@ -873,7 +855,11 @@ class SystemWidget(QWidget):
             widget.highlight_matches(widget_matches, current_idx)
             self._highlighted_widgets.add(widget)
 
-        return current_global_match, total_matches
+        # Scroll to the current match
+        widget.select_and_scroll_to_position(start)
+
+        # Return current match status
+        return self.get_match_status()
 
     def _clear_highlights(self) -> None:
         """Clear all highlights from all widgets."""

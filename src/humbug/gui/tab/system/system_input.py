@@ -7,9 +7,9 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
-from humbug.gui.color_role import ColorRole
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.system.system_message_source import SystemMessageSource
 
 
 class SystemInput(SystemMessage):
@@ -30,7 +30,7 @@ class SystemInput(SystemMessage):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
-        self._message_source = "user"  # Set default source for styling
+        self._message_source = SystemMessageSource.USER  # Set default source for styling
         self._update_header_text()
 
     def _handle_language_changed(self) -> None:

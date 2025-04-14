@@ -73,7 +73,7 @@ class ConversationInput(ConversationMessage):
                 color: {self._style_manager.get_color_str(colour)};
                 margin: 0;
                 padding: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
         """)
 

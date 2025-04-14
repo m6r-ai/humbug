@@ -257,7 +257,9 @@ class ConversationMessage(QFrame):
                 self._sections_layout.addWidget(section)
 
                 text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-                background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+                background_color = self._style_manager.get_color_str(
+                    ColorRole.MESSAGE_USER_BACKGROUND if style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+                )
                 color = (
                     self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None
                     else background_color
@@ -371,7 +373,9 @@ class ConversationMessage(QFrame):
         current_style = self._message_source or AIMessageSource.USER
         role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
-        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+        background_color = self._style_manager.get_color_str(
+            ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+        )
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
 
         # Role label styling (bold)
@@ -440,7 +444,7 @@ class ConversationMessage(QFrame):
         # Determine border color based on state (focused takes precedence over bookmarked)
         border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
                  ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else \
-                 ColorRole.MESSAGE_BACKGROUND
+                 ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
 
         self.setStyleSheet(f"""
             QWidget {{
