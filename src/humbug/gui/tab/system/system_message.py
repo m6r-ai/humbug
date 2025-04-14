@@ -75,15 +75,15 @@ class SystemMessage(QFrame):
         self._text_area.setReadOnly(not is_input)
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        
+
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-        
+
         # Connect signals from text area
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mousePressed.connect(self._on_mouse_pressed)
         self._text_area.mouseReleased.connect(self._on_mouse_released)
-        
+
         self._layout.addWidget(self._text_area)
 
         self._is_focused = False

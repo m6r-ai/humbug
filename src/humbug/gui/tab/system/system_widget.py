@@ -850,7 +850,7 @@ class SystemWidget(QWidget):
 
         # Get current match
         widget, matches = self._matches[self._current_widget_index]
-        start, end = matches[self._current_match_index]
+        start, _end = matches[self._current_match_index]
 
         # Clear all previous highlights and highlight all matches in all widgets
         self._clear_highlights()
