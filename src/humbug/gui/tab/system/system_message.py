@@ -1,0 +1,387 @@
+from datetime import datetime
+import logging
+from typing import Dict, List, Tuple
+
+from PySide6.QtWidgets import (
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
+)
+from PySide6.QtCore import Signal, QPoint
+from PySide6.QtGui import QResizeEvent, QColor
+
+from humbug.ai.ai_message_source import AIMessageSource
+from humbug.gui.color_role import ColorRole
+from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.system.system_message_section import SystemMessageSection
+from humbug.language.language_manager import LanguageManager
+
+
+class SystemMessage(QFrame):
+    """Widget for displaying a single message in the system history with header."""
+
+    selectionChanged = Signal(bool)
+    scrollRequested = Signal(QPoint)
+    mouseReleased = Signal()
+
+    def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
+        """
+        Initialize the message widget.
+
+        Args:
+            parent: Optional parent widget
+            is_input: Whether this is an input widget (affects styling)
+        """
+        super().__init__(parent)
+        self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
+        self._is_input = is_input
+
+        self._logger = logging.getLogger("SystemMessage")
+
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._message_source: AIMessageSource | None = None
+        self._message_timestamp: datetime | None = None
+        self._message_content = ""
+        self._message_model = ""
+
+        # Create layout
+        self._layout = QVBoxLayout(self)
+        self.setLayout(self._layout)
+        self._layout.setSpacing(10)
+        self._layout.setContentsMargins(10, 10, 10, 10)
+
+        # Create header area with horizontal layout
+        self._header = QWidget(self)
+        self._header_layout = QHBoxLayout(self._header)
+        self._header_layout.setContentsMargins(0, 0, 0, 0)
+        self._header_layout.setSpacing(4)
+
+        # Create role and timestamp labels
+        self._role_label = QLabel(self)
+        self._header_layout.addWidget(self._role_label)
+        self._header_layout.addStretch()
+
+        # Add header widget to main layout
+        self._layout.addWidget(self._header)
+
+        # Container for message sections
+        self._sections_container = QWidget(self)
+        self._sections_layout = QVBoxLayout(self._sections_container)
+        self._sections_layout.setContentsMargins(0, 0, 0, 0)
+        self._sections_layout.setSpacing(15)
+        self._layout.addWidget(self._sections_container)
+
+        # Track sections
+        self._section: SystemMessageSection = self._create_section_widget()
+        self._section_with_selection: SystemMessageSection | None = None
+        self._sections_layout.addWidget(self._section)
+
+        self._is_focused = False
+
+        # Track current message style
+        self._current_style: AIMessageSource | None = None
+
+        self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_style_changed()
+        self._handle_language_changed()
+
+    def is_focused(self) -> bool:
+        """Check if this message is focused."""
+        return self._is_focused
+
+    def set_focused(self, focused: bool) -> None:
+        """Set the focused state of this message."""
+        if self._is_focused == focused:
+            return
+
+        self._is_focused = focused
+        if focused:
+            self.setFocus()
+
+        self._handle_style_changed()
+
+    def _handle_language_changed(self) -> None:
+        """Update text when language changes."""
+        if not self._is_input:
+            # Don't update input widget headers
+            self._update_role_text()
+
+    def _update_role_text(self) -> None:
+        """Update the role text based on current language."""
+        if not self._message_source:
+            return
+
+        strings = self._language_manager.strings()
+        match self._message_source:
+            case AIMessageSource.USER:
+                role_text = strings.role_you
+
+            case AIMessageSource.AI:
+                role_text = strings.role_assistant.format(model=self._message_model)
+
+            case AIMessageSource.REASONING:
+                role_text = strings.role_reasoning.format(model=self._message_model)
+
+            case AIMessageSource.SYSTEM:
+                role_text = strings.role_system
+
+        # Format with timestamp
+        if self._message_timestamp is not None:
+            timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            self._role_label.setText(f"{role_text} @ {timestamp_str}")
+        else:
+            self._role_label.setText(role_text)
+
+    def _create_section_widget(self) -> SystemMessageSection:
+        """
+        Create a new section widget.
+
+        Args:
+            language: Optional programming language for the section
+
+        Returns:
+            A new SystemMessageSection instance
+        """
+        section = SystemMessageSection(self._is_input, None, self._sections_container)
+        section.selectionChanged.connect(
+            lambda has_selection: self._handle_section_selection_changed(section, has_selection)
+        )
+        section.scrollRequested.connect(self.scrollRequested)
+        section.mouseReleased.connect(self.mouseReleased)
+        return section
+
+    def _handle_section_selection_changed(self, section: SystemMessageSection, has_selection: bool) -> None:
+        """
+        Handle selection changes in a section widget.
+
+        Args:
+            section: The section widget where selection changed
+            has_selection: Whether there is a selection
+        """
+        if not has_selection:
+            if self._section_with_selection == section:
+                self._section_with_selection = None
+            return
+
+        # Clear selection in other sections
+        if self._section_with_selection and self._section_with_selection != section:
+            self._section_with_selection.clear_selection()
+
+        self._section_with_selection = section
+        self.selectionChanged.emit(has_selection)
+
+    def set_content(self, text: str, style: AIMessageSource, timestamp: datetime, model: str) -> None:
+        """
+        Set content with style, handling incremental updates for AI responses.
+
+        Args:
+            text: The message text content
+            style: The style type ('user', 'ai', 'system', or 'error')
+            timestamp: datetime object for the message timestamp
+        """
+        self._message_source = style
+        self._message_timestamp = timestamp
+        self._message_content = text
+        self._message_model = model
+
+        self._section.set_content(text)
+
+    def has_selection(self) -> bool:
+        """Check if any section has selected text."""
+        return self._section_with_selection is not None and self._section_with_selection.has_selection()
+
+    def get_selected_text(self) -> str:
+        """
+        Get any selected text in this message.
+
+        Returns:
+            Currently selected text or empty string
+        """
+        if self._section_with_selection:
+            return self._section_with_selection.get_selected_text()
+
+        return ""
+
+    def copy_selection(self) -> None:
+        """Copy selected text to clipboard."""
+        if self._section_with_selection:
+            self._section_with_selection.copy_selection()
+
+    def clear_selection(self) -> None:
+        """Clear any text selection in this message."""
+        if self._section_with_selection:
+            self._section_with_selection.clear_selection()
+            self._section_with_selection = None
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """Handle resize events."""
+        super().resizeEvent(event)
+
+    def _handle_style_changed(self) -> None:
+        """Handle the style changing"""
+        factor = self._style_manager.zoom_factor()
+        font = self.font()
+        base_font_size = self._style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * factor)
+        self.setFont(font)
+
+        # Map message types to role colors
+        role_colours = {
+            AIMessageSource.USER: ColorRole.MESSAGE_USER,
+            AIMessageSource.AI: ColorRole.MESSAGE_AI,
+            AIMessageSource.REASONING: ColorRole.MESSAGE_REASONING,
+            AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM
+        }
+
+        current_style = self._message_source or AIMessageSource.USER
+        role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
+        label_color = self._style_manager.get_color_str(role)
+        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+
+        # Role label styling (bold)
+        self._role_label.setFont(font)
+        self._role_label.setStyleSheet(f"""
+            QLabel {{
+                color: {label_color};
+                margin: 0;
+                padding: 0;
+                background-color: {background_color};
+            }}
+        """)
+
+        # Header widget styling
+        self._header.setStyleSheet(f"""
+            QWidget {{
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: {background_color};
+            }}
+        """)
+
+        # Apply styling to all sections
+        for section in self._sections:
+            language = section.language()
+            color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
+            section.apply_style(text_color, color, font)
+
+        # Determine border color based on state
+        border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
+                 ColorRole.MESSAGE_BACKGROUND
+
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {background_color};
+            }}
+            QFrame {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: 8px;
+                border: 2px solid {self._style_manager.get_color_str(border)}
+            }}
+        """)
+
+    def find_text(self, text: str) -> List[Tuple[int, int, int]]:
+        """
+        Find all instances of text in this message.
+
+        Args:
+            text: Text to search for
+
+        Returns:
+            List of (section, start_position, end_position) tuples for each match
+        """
+        all_matches: List[Tuple[int, int, int]] = []
+        for i, section in enumerate(self._sections):
+            section_matches = section.find_text(text)
+            if section_matches:
+                # Include the section with each match
+                for match in section_matches:
+                    all_matches.append((i, match[0], match[1]))
+
+        return all_matches
+
+    def highlight_matches(
+        self,
+        matches: List[Tuple[int, int, int]],
+        current_match_index: int = -1,
+        highlight_color: QColor | None = None,
+        dim_highlight_color: QColor | None = None
+    ) -> None:
+        """
+        Highlight matches in this message.
+
+        Args:
+            matches: List of (section, start_position, end_position) tuples to highlight
+            current_match_index: Index of current match to highlight differently, or -1 for none
+            highlight_color: QColor for current match, defaults to system highlight color
+            dim_highlight_color: QColor for other matches, defaults to dimmer highlight color
+        """
+        # First clear all highlights
+        self.clear_highlights()
+
+        if not matches:
+            return
+
+        # Group matches by section
+        section_matches: Dict[SystemMessageSection, List[Tuple[int, int, int]]] = {}
+        for section in self._sections:
+            section_matches[section] = []
+
+        # Distribute matches to their respective sections
+        for i, match in enumerate(matches):
+            section_num, start, end = match
+            section = self._sections[section_num]
+            if section in section_matches:
+                section_matches[section].append((start, end, i))
+
+        # Highlight matches in each section
+        for section, section_matches_list in section_matches.items():
+            if not section_matches_list:
+                continue
+
+            # Extract position tuples (without the index)
+            positions = [(start, end) for start, end, _ in section_matches_list]
+
+            # Find if current match is in this section
+            section_current_idx = -1
+            for i, (_, _, idx) in enumerate(section_matches_list):
+                if idx == current_match_index:
+                    section_current_idx = i
+                    break
+
+            # Highlight this section's matches
+            section.highlight_matches(
+                positions,
+                section_current_idx,
+                highlight_color,
+                dim_highlight_color
+            )
+
+    def clear_highlights(self) -> None:
+        """Clear all highlights from the message."""
+        for section in self._sections:
+            section.clear_highlights()
+
+    def select_and_scroll_to_position(self, section_num: int, position: int) -> QPoint:
+        """
+        Select text and get position for scrolling.
+
+        Args:
+            section_num: Section number to scroll to
+            position: Text position to scroll to
+
+        Returns:
+            QPoint: Position to scroll to, relative to this widget
+        """
+        if 0 <= section_num < len(self._sections):
+            section = self._sections[section_num]
+            # Get position relative to the section
+            pos_in_section = section.select_and_scroll_to_position(position)
+
+            # Map from section to this widget's coordinates
+            return section.mapTo(self, pos_in_section)
+
+        return QPoint(0, 0)
