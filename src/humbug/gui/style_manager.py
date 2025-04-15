@@ -193,8 +193,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#40a040"
             },
             ColorRole.MESSAGE_REASONING: {
-                ColorMode.DARK: "#c080c0",
-                ColorMode.LIGHT: "#a040a0"
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#808080"
             },
             ColorRole.MESSAGE_SYSTEM_ERROR: {
                 ColorMode.DARK: "#c08080",
