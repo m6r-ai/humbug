@@ -1181,9 +1181,17 @@ class MainWindow(QMainWindow):
             formatter = MetaphorFormatVisitor()
             prompt = formatter.format(syntax_tree)
 
+        except FileNotFoundError:
+            error = f"File not found: {file_path}"
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                error
+            )
+            return
+
         except MetaphorParserError as e:
             strings = self._language_manager.strings()
-            error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
+            error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 error

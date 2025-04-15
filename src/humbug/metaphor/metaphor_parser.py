@@ -216,7 +216,7 @@ class MetaphorParser:
             self.parse_errors.append(MetaphorParserSyntaxError(
                 f"{e}", "", 0, 0, ""
             ))
-            raise(MetaphorParserError("parser error", self.parse_errors)) from e
+            raise
 
         except MetaphorParserError as e:
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
