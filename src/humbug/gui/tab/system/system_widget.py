@@ -120,10 +120,11 @@ class SystemWidget(QWidget):
         self._input.pageScrollRequested.connect(self._handle_edit_page_scroll)
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
-        
+
         # Connect input to command handling
         self._input.command_submitted.connect(self._process_command)
-        
+        self._input.tab_completion_requested.connect(self._handle_tab_completion)
+
         # Create command processor
         self._command_processor = SystemCommandProcessor(self)
 
@@ -185,6 +186,51 @@ class SystemWidget(QWidget):
         if self._mindspace_manager.has_mindspace():
             self.load_system_interactions()
 
+    def _handle_tab_completion(self, current_text: str) -> None:
+        """
+        Handle tab completion request for the current input.
+
+        Args:
+            current_text: Current input text
+        """
+        # Ask command processor for completion
+        success, completion = self._command_processor.handle_tab_completion(current_text)
+
+        if success and completion:
+            # Apply the completion
+            self._input.apply_completion(completion)
+
+    def _update_command_history(self) -> None:
+        """
+        Update command history from system messages.
+
+        Extracts all user messages from system history and adds them
+        to the command input history for up/down arrow navigation.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        # Get all system messages
+        system_messages = self._mindspace_manager.get_system_interactions()
+
+        # Extract user commands from messages (newest first)
+        user_commands = []
+
+        # Process messages from newest to oldest
+        for message in reversed(system_messages):
+            if message.source == SystemMessageSource.USER:
+                # Add user message content if not already in list
+                content = message.content.strip()
+                if content and content not in user_commands:
+                    user_commands.append(content)
+
+        # Limit to a reasonable size (e.g., 50 items)
+        if len(user_commands) > 50:
+            user_commands = user_commands[:50]
+
+        # Set the command history in the input widget
+        self._input.set_command_history(user_commands)
+
     def load_system_interactions(self) -> None:
         """
         Load system interaction messages from mindspace, optimizing to only remove
@@ -222,6 +268,9 @@ class SystemWidget(QWidget):
             self._auto_scroll = True
             self._scroll_to_bottom()
             self.status_updated.emit()
+
+            # Update command history
+            self._update_command_history()
             return
 
         # Find matching messages between existing UI messages and new system messages
@@ -261,6 +310,9 @@ class SystemWidget(QWidget):
         # Update status
         self.status_updated.emit()
 
+        # Update command history after loading messages
+        self._update_command_history()
+
     def _add_system_message(self, message: SystemMessageModel) -> None:
         """Add a message from the system message history."""
         msg_widget = SystemMessage(self)
@@ -288,7 +340,7 @@ class SystemWidget(QWidget):
     def _process_command(self, command_text: str) -> None:
         """
         Process a command entered by the user.
-        
+
         Args:
             command_text: The command text to process
         """
@@ -297,17 +349,17 @@ class SystemWidget(QWidget):
             SystemMessageSource.USER,
             command_text
         )
-        
+
         # Process the command
         result = self._command_processor.process_command(command_text)
-        
+
         # If command was not recognized, add error message
         if not result:
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 f"Unknown command: {command_text}\nType '?' or 'help' for available commands."
             )
-        
+
         # Refresh the messages display
         self.load_system_interactions()
 
@@ -316,7 +368,7 @@ class SystemWidget(QWidget):
         content = self._input.to_plain_text().strip()
         if not content:
             return
-            
+
         # Process as a command instead of simply adding to system interactions
         self._process_command(content)
 

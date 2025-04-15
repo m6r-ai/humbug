@@ -1,14 +1,15 @@
 """Input widget that matches history message styling and acts as a command line."""
 
 import sys
-from typing import Dict, List
+from typing import Dict, List, cast
 
-from PySide6.QtCore import Signal, Qt, QMimeData, QRect
+from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent, QObject
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.system.system_message import SystemMessage as SystemMessageModel
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 
 
@@ -19,8 +20,9 @@ class SystemInput(SystemMessage):
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
 
-    # New signal to emit when a command is submitted
+    # New signals
     command_submitted = Signal(str)
+    tab_completion_requested = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the system input widget."""
@@ -35,11 +37,72 @@ class SystemInput(SystemMessage):
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
         self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
+        # Install event filter on text area to intercept key events
+        self._text_area.installEventFilter(self)
+
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
         self._message_source = SystemMessageSource.USER  # Set default source for styling
         self._update_header_text()
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        """
+        Filter events to intercept key presses in the text area.
+
+        Args:
+            obj: Object that received the event
+            event: The event
+
+        Returns:
+            True if the event was handled, False to pass to the text area
+        """
+        if obj == self._text_area and event.type() == QEvent.Type.KeyPress:
+            # Cast to QKeyEvent
+            key_event = cast(QKeyEvent, event)
+
+            # Handle Enter key for command submission
+            if key_event.key() == Qt.Key.Key_Return and not (key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+                text = self._text_area.toPlainText().strip()
+                if text:
+                    self.command_submitted.emit(text)
+                    self._add_to_history(text)
+                    self.clear()
+                return True  # Event handled
+
+            # Handle Tab key for command completion
+            if key_event.key() == Qt.Key.Key_Tab and not key_event.modifiers():
+                # Emit signal requesting tab completion
+                current_text = self._text_area.toPlainText().strip()
+                self.tab_completion_requested.emit(current_text)
+                return True  # Event handled
+
+            # Handle Up key for history navigation
+            if key_event.key() == Qt.Key.Key_Up:
+                self._navigate_history_up()
+                return True  # Event handled
+
+            # Handle Down key for history navigation
+            if key_event.key() == Qt.Key.Key_Down:
+                self._navigate_history_down()
+                return True  # Event handled
+
+            # Handle PageUp key to move to start of input
+            if key_event.key() == Qt.Key.Key_PageUp:
+                cursor = self._text_area.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.Start)
+                self._text_area.setTextCursor(cursor)
+                return True  # Event handled
+
+            # Handle PageDown key to move to end of input
+            if key_event.key() == Qt.Key.Key_PageDown:
+                cursor = self._text_area.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                self._text_area.setTextCursor(cursor)
+                return True  # Event handled
+
+        # Let the event continue to the target
+        return super().eventFilter(obj, event)
 
     def _handle_language_changed(self) -> None:
         """Handle language change event."""
@@ -74,16 +137,12 @@ class SystemInput(SystemMessage):
             cursor.insertText(source.text())
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        """Handle special key events for terminal-like behavior."""
-        # Handle Enter key for command submission
-        if event.key() == Qt.Key.Key_Return and not (event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
-            text = self._text_area.toPlainText().strip()
-            if text:
-                self.command_submitted.emit(text)
-                self._add_to_history(text)
-                self.clear()
-                return
+        """
+        Handle special key events for terminal-like behavior.
 
+        This only handles keys that bubble up to the SystemInput,
+        most keys are handled by the eventFilter.
+        """
         # Handle Ctrl+J or Cmd+J for command submission (original behavior)
         if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             text = self._text_area.toPlainText().strip()
@@ -92,34 +151,6 @@ class SystemInput(SystemMessage):
                 self._add_to_history(text)
                 self.clear()
                 return
-
-        # Handle Up key for history navigation
-        if event.key() == Qt.Key.Key_Up:
-            self._navigate_history_up()
-            event.accept()
-            return
-
-        # Handle Down key for history navigation
-        if event.key() == Qt.Key.Key_Down:
-            self._navigate_history_down()
-            event.accept()
-            return
-
-        # Handle PageUp key to move to start of input
-        if event.key() == Qt.Key.Key_PageUp:
-            cursor = self._text_area.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.Start)
-            self._text_area.setTextCursor(cursor)
-            event.accept()
-            return
-
-        # Handle PageDown key to move to end of input
-        if event.key() == Qt.Key.Key_PageDown:
-            cursor = self._text_area.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            self._text_area.setTextCursor(cursor)
-            event.accept()
-            return
 
         super().keyPressEvent(event)
 
@@ -177,6 +208,40 @@ class SystemInput(SystemMessage):
         # Reset history position
         self._history_position = -1
         self._current_command = ""
+
+    def set_command_history(self, commands: List[str]) -> None:
+        """
+        Set the command history from a list of commands.
+
+        Args:
+            commands: List of command strings, newest first
+        """
+        self._command_history = commands.copy()
+        self._history_position = -1
+        self._current_command = ""
+
+    def get_command_history(self) -> List[str]:
+        """
+        Get the current command history.
+
+        Returns:
+            List of command strings, newest first
+        """
+        return self._command_history.copy()
+
+    def apply_completion(self, completion: str) -> None:
+        """
+        Apply a tab completion to the input area.
+
+        Args:
+            completion: The completed text to apply
+        """
+        self._text_area.setPlainText(completion)
+
+        # Move cursor to end of text
+        cursor = self._text_area.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self._text_area.setTextCursor(cursor)
 
     def clear(self) -> None:
         """Clear the input area."""
