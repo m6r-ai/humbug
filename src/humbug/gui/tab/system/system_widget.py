@@ -351,14 +351,7 @@ class SystemWidget(QWidget):
         )
 
         # Process the command
-        result = self._command_processor.process_command(command_text)
-
-        # If command was not recognized, add error message
-        if not result:
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                f"Unknown command: {command_text}\nType '?' or 'help' for available commands."
-            )
+        self._command_processor.process_command(command_text)
 
         # Refresh the messages display
         self.load_system_interactions()

@@ -46,29 +46,26 @@ class SystemCommandProcessor:
         # If we can't find the main window, raise an error
         raise RuntimeError("Could not find MainWindow in parent hierarchy")
 
-    def process_command(self, command_text: str) -> bool:
+    def process_command(self, command_text: str) -> None:
         """
         Process a command string and execute appropriate action.
 
         Args:
             command_text: The command text to process
-
-        Returns:
-            True if command was successfully processed, False otherwise
         """
         command_text = command_text.strip()
         if not command_text:
-            return False
+            return
 
         parts = command_text.split(maxsplit=1)
         cmd = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""
 
         if cmd not in self._commands:
-            return False
+            return
 
         try:
-            return self._commands[cmd](args)
+            self._commands[cmd](args)
 
         except Exception as e:
             self._logger.error("Error executing command '%s': %s", cmd, str(e))
@@ -76,7 +73,6 @@ class SystemCommandProcessor:
                 SystemMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
-            return False
 
     def _cmd_terminal(self, _args: str) -> bool:
         """
@@ -84,13 +80,9 @@ class SystemCommandProcessor:
 
         Args:
             args: Command arguments (unused)
-
-        Returns:
-            True on success
         """
         main_window = self._get_main_window()
         main_window.create_terminal_tab()
-        return True
 
     def _cmd_m6rc(self, args: str) -> bool:
         """
@@ -107,7 +99,7 @@ class SystemCommandProcessor:
                 SystemMessageSource.ERROR,
                 "Missing file path. Usage: m6rc <metaphor_file_path>"
             )
-            return False
+            return
 
         file_path = args.strip()
         if not os.path.exists(file_path):
@@ -115,11 +107,10 @@ class SystemCommandProcessor:
                 SystemMessageSource.ERROR,
                 f"File not found: {file_path}"
             )
-            return False
+            return
 
         main_window = self._get_main_window()
         main_window.create_metaphor_conversation(file_path)
-        return True
 
     def _cmd_help(self, _args: str) -> bool:
         """
@@ -127,9 +118,6 @@ class SystemCommandProcessor:
 
         Args:
             args: Command arguments (unused)
-
-        Returns:
-            True on success
         """
         # Format and display the list of available commands
         help_text = "Available commands:\n"
@@ -145,7 +133,6 @@ class SystemCommandProcessor:
             SystemMessageSource.SUCCESS,
             help_text
         )
-        return True
 
     def get_available_commands(self) -> List[str]:
         """
