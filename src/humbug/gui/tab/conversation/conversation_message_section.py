@@ -53,9 +53,12 @@ class ConversationMessageSection(QFrame):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
+        self._style_manager = StyleManager()
+
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        self._layout.setSpacing(10)
+        spacing = int(self._style_manager.message_bubble_spacing())
+        self._layout.setSpacing(spacing)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
         # Create language header if needed
@@ -66,7 +69,7 @@ class ConversationMessageSection(QFrame):
         self._save_as_button = None
 
         if language is not None:
-            self._layout.setContentsMargins(10, 10, 10, 10)
+            self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
             # Create a container for header (language label + buttons)
             self._header_container = QWidget()
@@ -129,7 +132,6 @@ class ConversationMessageSection(QFrame):
 
         self._mouse_left_button_pressed = False
 
-        self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode()
 
         self._handle_language_changed()
@@ -452,7 +454,7 @@ class ConversationMessageSection(QFrame):
             QFrame {{
                 background-color: {background_color};
                 margin: 0;
-                border-radius: 8px;
+                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
                 border: 0;
             }}
         """)

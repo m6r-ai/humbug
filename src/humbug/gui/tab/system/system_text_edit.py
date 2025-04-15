@@ -36,11 +36,6 @@ class SystemTextEdit(QTextEdit):
 
         self._style_manager = StyleManager()
 
-        font = self.font()
-        font.setFamilies(self._style_manager.monospace_font_families())
-        font.setFixedPitch(True)
-        self.setFont(font)
-
         # Calculate tab stops
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
@@ -63,6 +58,12 @@ class SystemTextEdit(QTextEdit):
         self.setPalette(palette)
 
     def _handle_style_changed(self) -> None:
+        font = self.font()
+        font.setFamilies(self._style_manager.monospace_font_families())
+        font.setFixedPitch(True)
+        font.setPointSizeF(self._style_manager.base_font_size() * self._style_manager.zoom_factor())
+        self.setFont(font)
+
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:

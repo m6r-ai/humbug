@@ -81,6 +81,8 @@ class SystemWidget(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._mindspace_manager.system_interactions_updated.connect(self.load_system_interactions)
 
+        self._style_manager = StyleManager()
+
         # Widget tracking
         self._messages: List[SystemMessage] = []
         self._message_with_selection: SystemMessage | None = None
@@ -118,8 +120,9 @@ class SystemWidget(QWidget):
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
 
-        self._messages_layout.setSpacing(10)
-        self._messages_layout.setContentsMargins(10, 10, 10, 10)
+        spacing = int(self._style_manager.message_bubble_spacing())
+        self._messages_layout.setSpacing(spacing)
+        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_layout.addStretch()
         self._messages_layout.addWidget(self._input)
 
@@ -131,8 +134,6 @@ class SystemWidget(QWidget):
 
         # Setup signals for search highlights
         self._search_highlights: Dict[SystemMessage, List[Tuple[int, int]]] = {}
-
-        self._style_manager = StyleManager()
 
         # Tracking for focused message
         self._focused_message_index = -1

@@ -72,7 +72,7 @@ class TabLabel(QWidget):
 
     def _create_invisible_close_icon(self) -> QIcon:
         """Create a transparent icon for the inactive state."""
-        size = int(self._style_manager.get_scaled_size(16))
+        size = int(16 * self._style_manager.zoom_factor())
         transparent_pixmap = QPixmap(size, size)
         transparent_pixmap.fill(Qt.GlobalColor.transparent)
         return QIcon(transparent_pixmap)
@@ -117,7 +117,7 @@ class TabLabel(QWidget):
         """Update the label font size based on current zoom factor."""
         font = self._label.font()
         base_size = self._style_manager.base_font_size()
-        scaled_size = self._style_manager.get_scaled_size(base_size)
+        scaled_size = base_size * self._style_manager.zoom_factor()
         font.setPointSizeF(scaled_size)
         self._label.setFont(font)
 

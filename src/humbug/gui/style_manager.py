@@ -730,7 +730,7 @@ class StyleManager(QObject):
             Scaled QPixmap of the icon
         """
         pixmap = QPixmap(icon_path)
-        scaled_size = int(self.get_scaled_size(target_size))
+        scaled_size = int(target_size * self._zoom_factor)
         return pixmap.scaled(
             scaled_size,
             scaled_size,
@@ -872,18 +872,6 @@ class StyleManager(QObject):
             self._zoom_factor = new_factor
             self.style_changed.emit()
 
-    def get_scaled_size(self, base_size: float) -> float:
-        """
-        Calculate scaled size based on current zoom factor.
-
-        Args:
-            base_size: Original size to scale
-
-        Returns:
-            Scaled size adjusted for current zoom factor
-        """
-        return base_size * self._zoom_factor
-
     def get_space_width(self) -> float:
         """Get the width of a space character"""
         font = QFont(self._code_font_families)
@@ -895,3 +883,7 @@ class StyleManager(QObject):
     def monospace_font_families(self) -> List[str]:
         """Get the standard monospace font family fallback sequence."""
         return self._code_font_families
+
+    def message_bubble_spacing(self) -> float:
+        """Get the number of pixels to use in message bubble spacing."""
+        return 8.0

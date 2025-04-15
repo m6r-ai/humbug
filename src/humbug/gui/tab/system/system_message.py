@@ -44,6 +44,8 @@ class SystemMessage(QFrame):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
+        self._style_manager = StyleManager()
+
         # Will store the actual message source
         self._message_id: str | None = None
         self._message_source: SystemMessageSource | None = None
@@ -53,8 +55,9 @@ class SystemMessage(QFrame):
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        self._layout.setSpacing(10)
-        self._layout.setContentsMargins(10, 10, 10, 10)
+        spacing = int(self._style_manager.message_bubble_spacing())
+        self._layout.setSpacing(spacing)
+        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         # Create header area with horizontal layout
         self._header = QWidget(self)
@@ -90,7 +93,6 @@ class SystemMessage(QFrame):
         self._is_focused = False
         self._mouse_left_button_pressed = False
 
-        self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
         self._handle_language_changed()
@@ -322,7 +324,7 @@ class SystemMessage(QFrame):
             QFrame {{
                 background-color: {background_color};
                 margin: 0;
-                border-radius: 8px;
+                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
                 border: 2px solid {self._style_manager.get_color_str(border)}
             }}
         """)
