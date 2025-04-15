@@ -11,6 +11,7 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.system.system_command_processor import SystemCommandProcessor
 from humbug.gui.tab.system.system_input import SystemInput
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
@@ -119,6 +120,12 @@ class SystemWidget(QWidget):
         self._input.pageScrollRequested.connect(self._handle_edit_page_scroll)
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
+        
+        # Connect input to command handling
+        self._input.command_submitted.connect(self._process_command)
+        
+        # Create command processor
+        self._command_processor = SystemCommandProcessor(self)
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
@@ -278,23 +285,40 @@ class SystemWidget(QWidget):
 
         self._install_activation_tracking(msg_widget)
 
+    def _process_command(self, command_text: str) -> None:
+        """
+        Process a command entered by the user.
+        
+        Args:
+            command_text: The command text to process
+        """
+        # Add user message to system interactions
+        self._mindspace_manager.add_system_interaction(
+            SystemMessageSource.USER,
+            command_text
+        )
+        
+        # Process the command
+        result = self._command_processor.process_command(command_text)
+        
+        # If command was not recognized, add error message
+        if not result:
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                f"Unknown command: {command_text}\nType '?' or 'help' for available commands."
+            )
+        
+        # Refresh the messages display
+        self.load_system_interactions()
+
     def submit(self) -> None:
-        """Submit current input text as a user system message."""
+        """Submit current input text as a user system command."""
         content = self._input.to_plain_text().strip()
         if not content:
             return
-
-        # Add user message directly to system interactions
-        self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.USER,
-            content
-        )
-
-        # Clear input
-        self._input.clear()
-
-        # Refresh the messages display
-        self.load_system_interactions()
+            
+        # Process as a command instead of simply adding to system interactions
+        self._process_command(content)
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""

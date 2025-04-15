@@ -1,7 +1,7 @@
-"""Input widget that matches history message styling."""
+"""Input widget that matches history message styling and acts as a command line."""
 
 import sys
-from typing import Dict
+from typing import Dict, List
 
 from PySide6.QtCore import Signal, Qt, QMimeData, QRect
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
@@ -13,15 +13,23 @@ from humbug.mindspace.system.system_message_source import SystemMessageSource
 
 
 class SystemInput(SystemMessage):
-    """Widget for system message input that matches history message styling."""
+    """Widget for system message input that matches history styling and behaves like a terminal."""
 
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
 
+    # New signal to emit when a command is submitted
+    command_submitted = Signal(str)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the system input widget."""
         super().__init__(parent, is_input=True)
+
+        # Command history tracking
+        self._command_history: List[str] = []
+        self._history_position: int = -1
+        self._current_command: str = ""
 
         # Connect text cursor signals
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
@@ -48,9 +56,14 @@ class SystemInput(SystemMessage):
         """Update the header text based on current state."""
         strings = self._language_manager.strings()
 
-        # Set input prompt with submit key
+        # Set command prompt with submit key hint
         submit_key = self._get_submit_key_text()
-        self._role_label.setText(strings.input_prompt.format(key=submit_key))
+
+        # Check if command_prompt exists in strings, otherwise fall back to input_prompt
+        if hasattr(strings, 'command_prompt'):
+            self._role_label.setText(f"{strings.command_prompt} ({submit_key} or Enter)")
+        else:
+            self._role_label.setText(f"{strings.input_prompt.format(key=submit_key)} or Enter")
 
         self._set_role_style()
 
@@ -61,14 +74,109 @@ class SystemInput(SystemMessage):
             cursor.insertText(source.text())
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        """Handle special key events."""
-        if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        """Handle special key events for terminal-like behavior."""
+        # Handle Enter key for command submission
+        if event.key() == Qt.Key.Key_Return and not (event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
             text = self._text_area.toPlainText().strip()
             if text:
+                self.command_submitted.emit(text)
+                self._add_to_history(text)
                 self.clear()
                 return
 
+        # Handle Ctrl+J or Cmd+J for command submission (original behavior)
+        if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            text = self._text_area.toPlainText().strip()
+            if text:
+                self.command_submitted.emit(text)
+                self._add_to_history(text)
+                self.clear()
+                return
+
+        # Handle Up key for history navigation
+        if event.key() == Qt.Key.Key_Up:
+            self._navigate_history_up()
+            event.accept()
+            return
+
+        # Handle Down key for history navigation
+        if event.key() == Qt.Key.Key_Down:
+            self._navigate_history_down()
+            event.accept()
+            return
+
+        # Handle PageUp key to move to start of input
+        if event.key() == Qt.Key.Key_PageUp:
+            cursor = self._text_area.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.Start)
+            self._text_area.setTextCursor(cursor)
+            event.accept()
+            return
+
+        # Handle PageDown key to move to end of input
+        if event.key() == Qt.Key.Key_PageDown:
+            cursor = self._text_area.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            self._text_area.setTextCursor(cursor)
+            event.accept()
+            return
+
         super().keyPressEvent(event)
+
+    def _navigate_history_up(self) -> None:
+        """Navigate up through command history."""
+        if not self._command_history:
+            return
+
+        # Save current command if we're at the end of history
+        if self._history_position == -1:
+            self._current_command = self._text_area.toPlainText()
+
+        # Move up in history if possible
+        if self._history_position < len(self._command_history) - 1:
+            self._history_position += 1
+            self._text_area.setPlainText(self._command_history[self._history_position])
+            # Move cursor to end of text
+            cursor = self._text_area.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            self._text_area.setTextCursor(cursor)
+
+    def _navigate_history_down(self) -> None:
+        """Navigate down through command history."""
+        if self._history_position > 0:
+            # Move down in history
+            self._history_position -= 1
+            self._text_area.setPlainText(self._command_history[self._history_position])
+        elif self._history_position == 0:
+            # Return to current command being edited
+            self._history_position = -1
+            self._text_area.setPlainText(self._current_command)
+
+        # Move cursor to end of text
+        cursor = self._text_area.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self._text_area.setTextCursor(cursor)
+
+    def _add_to_history(self, command: str) -> None:
+        """Add command to history, avoiding duplicates at the front."""
+        # Don't add empty commands
+        if not command.strip():
+            return
+
+        # Remove command if it already exists to avoid duplicates
+        if command in self._command_history:
+            self._command_history.remove(command)
+
+        # Add at the beginning (most recent first)
+        self._command_history.insert(0, command)
+
+        # Limit history size (e.g., to 50 commands)
+        if len(self._command_history) > 50:
+            self._command_history = self._command_history[:50]
+
+        # Reset history position
+        self._history_position = -1
+        self._current_command = ""
 
     def clear(self) -> None:
         """Clear the input area."""

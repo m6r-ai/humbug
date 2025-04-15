@@ -100,6 +100,13 @@ class SystemTextEdit(QTextEdit):
         # Is this a read-only widget?  If it is then we don't want to process certain key events,
         # leaving it to the parent to handle them.
         if self.isReadOnly():
+            # Let parent handle terminal navigation keys even in read-only mode
+            if event.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down,
+                             Qt.Key.Key_PageUp, Qt.Key.Key_PageDown,
+                             Qt.Key.Key_Return):
+                event.ignore()
+                return
+
             # Handle horizontal scrolling
             if event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
                 hbar = self.horizontalScrollBar()
@@ -108,16 +115,17 @@ class SystemTextEdit(QTextEdit):
                     step = 50  # Adjust scroll step size as needed
                     if event.key() == Qt.Key.Key_Left:
                         hbar.setValue(max(hbar.minimum(), current - step))
-
                     else:
                         hbar.setValue(min(hbar.maximum(), current + step))
-
                     event.accept()
                     return
 
-            if event.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown, Qt.Key.Key_Up, Qt.Key.Key_Down):
-                event.ignore()
+            return
 
+        # For editable widgets, we need special handling for certain keys
+        if event.key() == Qt.Key.Key_Return and not (event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+            # Let parent handle Enter key for command submission
+            event.ignore()
             return
 
         if event.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown):
@@ -190,14 +198,6 @@ class SystemTextEdit(QTextEdit):
             return
 
         self.setText(text)
-
-    def set_html(self, text: str) -> None:
-        """Update HTML content if we have anything new."""
-        if len(text) == self._current_length:
-            # No new content
-            return
-
-        self.setHtml(text)
 
     def clear(self) -> None:
         """Override clear to reset current length."""

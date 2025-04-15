@@ -476,14 +476,6 @@ class ConversationTextEdit(QTextEdit):
 
         self.setText(text)
 
-    def set_html(self, text: str) -> None:
-        """Update HTML content if we have anything new."""
-        if len(text) == self._current_length:
-            # No new content
-            return
-
-        self.setHtml(text)
-
     def clear(self) -> None:
         """Override clear to reset current length."""
         super().clear()
