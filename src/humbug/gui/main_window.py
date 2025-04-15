@@ -16,6 +16,9 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
+from humbug.gui.commands.help_command import HelpCommand
+from humbug.gui.commands.m6rc_command import M6rcCommand
+from humbug.gui.commands.terminal_command import TerminalCommand
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.gui.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
@@ -29,6 +32,7 @@ from humbug.metaphor import MetaphorParser, MetaphorParserError, MetaphorFormatV
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
+from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
@@ -359,6 +363,20 @@ class MainWindow(QMainWindow):
         self._update_theme_menu()
 
         self._mindspace_manager = MindspaceManager()
+
+        # Initialize command registry and register commands
+        self._command_registry = SystemCommandRegistry()
+
+        # Create and register commands
+        terminal_command = TerminalCommand(self.create_terminal_tab)
+        self._command_registry.register_command(terminal_command)
+
+        metaphor_command = M6rcCommand(self.create_metaphor_conversation)
+        self._command_registry.register_command(metaphor_command)
+
+        # Register help command last so it can see all other commands
+        help_command = HelpCommand(self._command_registry)
+        self._command_registry.register_command(help_command)
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 
@@ -949,6 +967,22 @@ class MainWindow(QMainWindow):
         self._mindspace_manager.update_file_dialog_directory(file_path)
         search_path = self._mindspace_manager.mindspace_path()
 
+        metaphor_parser = MetaphorParser()
+        try:
+            syntax_tree = metaphor_parser.parse_file(file_path, [search_path], search_path)
+            formatter = MetaphorFormatVisitor()
+            prompt = formatter.format(syntax_tree)
+
+        except MetaphorParserError as e:
+# TODO: If the system tab is not open then we need to open it here!
+            strings = self._language_manager.strings()
+            error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                error
+            )
+            return
+
         conversation_id = self._new_conversation()
         if conversation_id is None:
             return
@@ -958,7 +992,7 @@ class MainWindow(QMainWindow):
         if conversation_tab is None:
             return
 
-        conversation_tab.new_metaphor_conversation(file_path, search_path)
+        conversation_tab.set_input_text(prompt)
 
     def _open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""

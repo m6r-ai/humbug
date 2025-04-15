@@ -126,7 +126,7 @@ class SystemWidget(QWidget):
         self._input.tab_completion_requested.connect(self._handle_tab_completion)
 
         # Create command processor
-        self._command_processor = SystemCommandProcessor(self)
+        self._command_processor = SystemCommandProcessor()
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
