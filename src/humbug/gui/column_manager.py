@@ -477,6 +477,45 @@ class ColumnManager(QWidget):
         self._active_column = column
         self._update_tabs()
 
+    def is_system_tab_active(self) -> bool:
+        """Check if the currently active tab is a system tab."""
+        tab = self._get_current_tab()
+        return isinstance(tab, SystemTab)
+
+    def _get_target_column_for_new_tab(self) -> ColumnWidget:
+        """
+        Determine which column should receive a new tab.
+
+        If the current active tab is a system tab, try to use an adjacent column.
+        Otherwise, use the currently active column.
+
+        Returns:
+            The column widget where the new tab should be added
+        """
+        # If not a system tab, use normal behavior
+        if not self.is_system_tab_active():
+            return self._active_column
+
+        # Get the current column index
+        current_column_number = self._tab_columns.index(self._active_column)
+
+        # If there's only one column, create a new one to the right
+        if len(self._tab_columns) == 1:
+            new_column = self._create_column(1)
+
+            # Set column sizes
+            width = self.width()
+            self._column_splitter.setSizes([width // 2, width // 2])
+
+            return new_column
+
+        # Try to use the column to the right if possible
+        if current_column_number < len(self._tab_columns) - 1:
+            return self._tab_columns[current_column_number + 1]
+
+        # Otherwise use the column to the left
+        return self._tab_columns[current_column_number - 1]
+
     def add_tab(self, tab: TabBase, title: str) -> None:
         """
         Add a new tab to the manager.
@@ -486,7 +525,10 @@ class ColumnManager(QWidget):
             title: Initial title for the tab
         """
         tab_data = self._create_tab_data(tab, title)
-        self._add_tab_to_column(tab_data, self._active_column)
+
+        # Determine target column
+        target_column = self._get_target_column_for_new_tab()
+        self._add_tab_to_column(tab_data, target_column)
 
         # Set initial state
         if len(self._tabs) == 1:  # If this is the first tab
