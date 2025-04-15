@@ -25,9 +25,11 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
+from humbug.metaphor import MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, format_errors
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
+from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
@@ -1126,3 +1128,44 @@ class MainWindow(QMainWindow):
         self._save_mindspace_state()
         self._close_all_tabs()
         event.accept()
+
+    def create_terminal_tab(self) -> None:
+        """Public method to create a new terminal tab."""
+        self._new_terminal()
+        self._mindspace_manager.add_system_interaction(
+            SystemMessageSource.SUCCESS,
+            "New terminal tab created"
+        )
+
+    def create_metaphor_conversation(self, file_path: str) -> None:
+        """Public method to create a new conversation with a Metaphor file."""
+        search_path = self._mindspace_manager.mindspace_path()
+
+        metaphor_parser = MetaphorParser()
+        try:
+            syntax_tree = metaphor_parser.parse_file(file_path, [search_path], search_path)
+            formatter = MetaphorFormatVisitor()
+            prompt = formatter.format(syntax_tree)
+
+        except MetaphorParserError as e:
+            strings = self._language_manager.strings()
+            error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                error
+            )
+            return
+
+        conversation_id = self._new_conversation()
+        if conversation_id is None:
+            return
+
+        conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
+        if conversation_tab is None:
+            return
+
+        conversation_tab.set_input_text(prompt)
+        self._mindspace_manager.add_system_interaction(
+            SystemMessageSource.SUCCESS,
+            f"New Metaphor conversation started from {file_path}"
+        )

@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
-from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
@@ -29,7 +28,6 @@ from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
 from humbug.language.language_manager import LanguageManager
-from humbug.metaphor import MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, format_errors
 
 
 class ConversationTab(TabBase):
@@ -467,23 +465,3 @@ class ConversationTab(TabBase):
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._conversation_widget.set_input_text(text)
-
-    def new_metaphor_conversation(self, file_path: str, search_path: str) -> None:
-        """Create a new metaphor conversation from a file."""
-        metaphor_parser = MetaphorParser()
-        try:
-            syntax_tree = metaphor_parser.parse_file(file_path, [search_path], search_path)
-            formatter = MetaphorFormatVisitor()
-            prompt = formatter.format(syntax_tree)
-            self.set_input_text(prompt)
-
-        except MetaphorParserError as e:
-            strings = self._language_manager.strings()
-            error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
-            message = AIMessage.create(AIMessageSource.SYSTEM, error)
-            loop = asyncio.get_event_loop()
-            if not loop.is_running():
-                return
-
-            loop.create_task(self._conversation_widget.add_message(message))
-            loop.create_task(self._conversation_widget.write_transcript(message))

@@ -965,11 +965,6 @@ class ColumnManager(QWidget):
             title = "Terminal"
 
         self.add_tab(terminal, title)
-        self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.SUCCESS,
-            "Terminal started"
-        )
-
         return terminal
 
     def save_state(self) -> Dict:
