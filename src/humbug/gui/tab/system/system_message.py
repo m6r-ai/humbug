@@ -95,6 +95,10 @@ class SystemMessage(QFrame):
         self._handle_style_changed()
         self._handle_language_changed()
 
+    def message_id(self) -> str | None:
+        """Get the message ID."""
+        return self._message_id
+
     def is_focused(self) -> bool:
         """Check if this message is focused."""
         return self._is_focused

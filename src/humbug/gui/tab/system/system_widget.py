@@ -223,7 +223,7 @@ class SystemWidget(QWidget):
         # Look for the first matching message ID in our existing messages
         first_match_index = -1
         for i, msg in enumerate(self._messages):
-            if msg._message_id == first_system_msg_id:
+            if msg.message_id() == first_system_msg_id:
                 first_match_index = i
                 break
 
