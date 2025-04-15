@@ -82,6 +82,7 @@ def get_french_strings() -> LanguageStrings:
         # Input widget
         processing_message="Traitement de votre requête (Échap pour annuler)",
         input_prompt="Ajoutez votre message... ({key} pour envoyer)",
+        command_prompt="Commande... (Entrée ou {key} pour envoyer)",
 
         # File tree messages
         rename_conversation="Renommer la conversation",

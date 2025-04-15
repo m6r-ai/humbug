@@ -77,6 +77,7 @@ class LanguageStrings:
     # Input widget
     processing_message: str
     input_prompt: str  # Format: "Add your next message... ({key} to submit)"
+    command_prompt: str  # Format: "Command... (Enter or {key} to submit)"
 
     # File tree messages
     rename_conversation: str

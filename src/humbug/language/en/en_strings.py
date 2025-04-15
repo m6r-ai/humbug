@@ -82,6 +82,7 @@ def get_english_strings() -> LanguageStrings:
         # Input widget
         processing_message="Processing your request (Esc to cancel)",
         input_prompt="Add your next message... ({key} to submit)",
+        command_prompt="Command... (Enter or {key} to submit)",
 
         # File tree messages
         rename_conversation="Rename Conversation",

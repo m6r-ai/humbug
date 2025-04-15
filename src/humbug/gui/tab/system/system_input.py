@@ -123,11 +123,7 @@ class SystemInput(SystemMessage):
         submit_key = self._get_submit_key_text()
 
         # Check if command_prompt exists in strings, otherwise fall back to input_prompt
-        if hasattr(strings, 'command_prompt'):
-            self._role_label.setText(f"{strings.command_prompt} ({submit_key} or Enter)")
-        else:
-            self._role_label.setText(f"{strings.input_prompt.format(key=submit_key)} or Enter")
-
+        self._role_label.setText(strings.command_prompt.format(key=submit_key))
         self._set_role_style()
 
     def _insert_from_mime_data(self, source: QMimeData) -> None:
