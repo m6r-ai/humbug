@@ -29,7 +29,7 @@ class SystemCommandRegistry(QObject):
     def register_command(self, command: SystemCommand) -> None:
         """
         Register a command with the registry.
-        
+
         Args:
             command: The command to register
         """
