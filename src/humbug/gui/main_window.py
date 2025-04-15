@@ -1207,6 +1207,7 @@ class MainWindow(QMainWindow):
             return
 
         conversation_tab.set_input_text(prompt)
+        conversation_tab.submit()
         self._mindspace_manager.add_system_interaction(
             SystemMessageSource.SUCCESS,
             f"New Metaphor conversation started from {file_path}"
