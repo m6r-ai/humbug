@@ -21,18 +21,22 @@ class SystemTextEdit(QTextEdit):
     mouseReleased = Signal(QMouseEvent)
     pageScrollRequested = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, is_input: bool, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
         self.document().setDocumentMargin(0)
+        self.setAcceptRichText(False)
+        self.setReadOnly(not is_input)
+        self.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff if is_input else Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
         # Force the widget to always use the width of its container
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
+        self.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere if is_input else QTextOption.WrapMode.NoWrap)
 
         self._style_manager = StyleManager()
 

@@ -74,11 +74,7 @@ class SystemMessage(QFrame):
         self._layout.addWidget(self._header)
 
         # Create text area
-        self._text_area = SystemTextEdit()
-        self._text_area.setAcceptRichText(False)
-        self._text_area.setReadOnly(not is_input)
-        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._text_area = SystemTextEdit(is_input, self)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
