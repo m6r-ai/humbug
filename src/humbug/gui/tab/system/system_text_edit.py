@@ -101,9 +101,10 @@ class SystemTextEdit(QTextEdit):
         # leaving it to the parent to handle them.
         if self.isReadOnly():
             # Let parent handle terminal navigation keys even in read-only mode
-            if event.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down,
-                             Qt.Key.Key_PageUp, Qt.Key.Key_PageDown,
-                             Qt.Key.Key_Return):
+            if event.key() in (
+                Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_PageUp, Qt.Key.Key_PageDown,
+                Qt.Key.Key_Return
+            ):
                 event.ignore()
                 return
 
@@ -117,6 +118,7 @@ class SystemTextEdit(QTextEdit):
                         hbar.setValue(max(hbar.minimum(), current - step))
                     else:
                         hbar.setValue(min(hbar.maximum(), current + step))
+
                     event.accept()
                     return
 
@@ -224,7 +226,8 @@ class SystemTextEdit(QTextEdit):
         return QSize(width, self._height())
 
     def find_text(self, text: str) -> bool:
-        """Find text in the widget.
+        """
+        Find text in the widget.
 
         Args:
             text: Text to search for
