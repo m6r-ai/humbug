@@ -33,6 +33,8 @@ Bug fixes:
 - If we had a markdown file embedded inside an AI response and that markdown file contained code inside
   a code fenced block then this would exit the code fenced region too soon.
 - The TERM environment variable is now set to xterm-256color on MacOS and Linux.
+- The system status bar messages could sometimes be overwritten by status from the wrong tab.  This is
+  now resolved.
 
 ## v0.9 (2025-04-01)
 
