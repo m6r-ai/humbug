@@ -26,7 +26,6 @@ from humbug.gui.tab.tab_type import TabType
 from humbug.gui.tab.terminal.terminal_tab import TerminalTab
 from humbug.gui.welcome_widget import WelcomeWidget
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 
@@ -938,11 +937,6 @@ class ColumnManager(QWidget):
 
     async def fork_conversation(self) -> None:
         """Fork an existing conversation into a new tab."""
-        self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.USER,
-            "fork"
-        )
-
         conversation_tab = self._get_current_tab()
         if not isinstance(conversation_tab, ConversationTab):
             return
@@ -953,17 +947,9 @@ class ColumnManager(QWidget):
 
             # Add new tab to manager
             self.add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.SUCCESS,
-                f"Forked: {conversation_tab.tab_id()} to {new_tab.tab_id()}"
-            )
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                f"Failed to fork: {conversation_tab.tab_id()}"
-            )
             raise
 
     def _fork_conversation(self) -> None:
@@ -993,11 +979,6 @@ class ColumnManager(QWidget):
         Returns:
             Created terminal tab
         """
-        self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.USER,
-            "terminal"
-        )
-
         tab_id = str(uuid.uuid4())
         terminal = TerminalTab(tab_id, command, self)
 
