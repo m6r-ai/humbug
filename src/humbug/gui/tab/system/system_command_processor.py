@@ -14,6 +14,11 @@ class SystemCommandProcessor:
         self._mindspace_manager = MindspaceManager()
         self._command_registry = SystemCommandRegistry()
 
+        # Tab completion state tracking
+        self._tab_completions: List[str] = []
+        self._current_completion_index: int = -1
+        self._last_completion_text: str = ""
+
     def process_command(self, command_text: str) -> None:
         """
         Process a command string and execute appropriate action.
@@ -24,6 +29,9 @@ class SystemCommandProcessor:
         command_text = command_text.strip()
         if not command_text:
             return
+
+        # Reset tab completion state when processing a command
+        self.reset_tab_completion()
 
         try:
             # Split only the first token to get the command name
@@ -63,7 +71,13 @@ class SystemCommandProcessor:
         """
         return self._command_registry.get_command_names()
 
-    def handle_tab_completion(self, current_text: str) -> Tuple[bool, Optional[str]]:
+    def reset_tab_completion(self) -> None:
+        """Reset tab completion state."""
+        self._tab_completions = []
+        self._current_completion_index = -1
+        self._last_completion_text = ""
+
+    def handle_tab_completion(self, current_text: str) -> Tuple[bool, Optional[str], bool]:
         """
         Handle tab completion for the current input text.
 
@@ -71,63 +85,94 @@ class SystemCommandProcessor:
             current_text: Current input text
 
         Returns:
-            Tuple of (success, completion) where completion is the suggested
-            completion if success is True, or None if no completion is available
+            Tuple of (success, completion, add_space) where:
+                - success: Whether completion was successful
+                - completion: The suggested completion if success is True, or None if no completion is available
+                - add_space: Whether a space should be added after completion
         """
         current_text = current_text.strip()
 
         # If empty text, nothing to complete
         if not current_text:
-            return False, None
+            return False, None, False
 
+        # If we're already cycling through completions and the current text matches our last
+        # completion (minus any trailing space), continue cycling
+        if (self._tab_completions and
+                current_text == self._last_completion_text.rstrip()):
+            # Move to next completion in the list
+            self._current_completion_index = (self._current_completion_index + 1) % len(self._tab_completions)
+            completion = self._tab_completions[self._current_completion_index]
+            self._last_completion_text = completion
+            # Don't add space when cycling between multiple options
+            return True, completion, False
+
+        # Otherwise, this is a new tab completion request
+        self._tab_completions = []
+        self._current_completion_index = -1
+
+        # Parse the input to separate command and args
         parts = current_text.split(maxsplit=1)
         cmd_name = parts[0].lower()
 
-        # If we only have a partial command with no args, try to complete the command name
+        # Complete command name if needed
         if len(parts) == 1 and not current_text.endswith(' '):
             command_names = self._command_registry.get_command_names()
-            completions = [name for name in command_names if name.startswith(cmd_name)]
+            self._tab_completions = [name for name in command_names if name.startswith(cmd_name)]
 
-            if not completions:
-                # No completions available
-                return False, None
+            if not self._tab_completions:
+                return False, None, False
 
-            if len(completions) == 1:
-                # Single completion - return the full command with trailing space
-                return True, f"{completions[0]} "
+            if len(self._tab_completions) == 1:
+                # Single completion - return with trailing space
+                completion = f"{self._tab_completions[0]}"
+                self._last_completion_text = completion
+                return True, completion, True
 
-            # Multiple completions - find common prefix
-            common_prefix = completions[0]
-            for completion in completions[1:]:
-                i = 0
-                while i < len(common_prefix) and i < len(completion) and common_prefix[i] == completion[i]:
-                    i += 1
-                common_prefix = common_prefix[:i]
+            # Multiple completions - start cycling
+            self._current_completion_index = 0
+            completion = self._tab_completions[0]
+            self._last_completion_text = completion
+            return True, completion, False
 
-            if len(common_prefix) > len(cmd_name):
-                return True, common_prefix
+        # Handle command option completion
+        if current_text.endswith(' '):
+            # We're just after a space, so this is likely a new token
+            # Not much to complete here yet
+            return False, None, False
 
-            # No common prefix longer than current command
-            return False, None
-
-        # We have a command and potentially args, get command for completion
+        # Get the command for completion
         command = self._command_registry.get_command(cmd_name)
         if not command:
-            return False, None
+            return False, None, False
 
         # Get args for completion
         args = parts[1] if len(parts) > 1 else ""
 
-        # Check if we're dealing with an option value
+        # Check if we're potentially completing an option
+        if args.startswith('-'):
+            # Try to get option completions
+            options = command.setup_options()
+            option_completions = options.get_option_completions(args)
+
+            if option_completions:
+                # Format full completions
+                self._tab_completions = [f"{cmd_name} {opt}" for opt in option_completions]
+
+                if len(self._tab_completions) == 1:
+                    # Single completion
+                    completion = self._tab_completions[0]
+                    self._last_completion_text = completion
+                    return True, completion, True
+
+                # Multiple completions - start cycling
+                self._current_completion_index = 0
+                completion = self._tab_completions[0]
+                self._last_completion_text = completion
+                return True, completion, False
+
+        # Check if we're completing an option value
         args_tokens = self._tokenize_args(args)
-
-        # Get completions from the command
-        completions = command.get_completions(args)
-
-        if not completions:
-            return False, None
-
-        # Check if we're completing an option value rather than a new option
         is_option_value = False
         prefix_to_preserve = ""
 
@@ -142,44 +187,42 @@ class SystemCommandProcessor:
             if option and option.takes_value:
                 is_option_value = True
 
-                # Calculate the prefix to preserve (everything up to the last token)
+                # Calculate the prefix to preserve
                 last_token_pos = args.rfind(args_tokens[-1])
                 if last_token_pos > 0:
                     prefix_to_preserve = f"{cmd_name} {args[:last_token_pos]}"
                 else:
-                    # If we can't find the last token position, preserve everything except the last token
                     prefix_to_preserve = f"{cmd_name} {' '.join(args_tokens[:-1])} "
 
-        if len(completions) == 1:
-            completion = completions[0]
-            # If completion doesn't end with space and isn't a directory (ending with /)
-            # append a space for convenience
-            if not completion.endswith(' ') and not completion.endswith('/'):
-                completion += ' '
+        # Get completions from the command
+        completions = command.get_completions(args)
+        if not completions:
+            return False, None, False
 
+        # Format full completions
+        full_completions = []
+        for comp in completions:
             if is_option_value and prefix_to_preserve:
-                return True, f"{prefix_to_preserve}{completion}"
+                full_completion = f"{prefix_to_preserve}{comp}"
             else:
-                return True, f"{cmd_name} {completion}"
+                full_completion = f"{cmd_name} {comp}"
 
-        # Multiple completions - find common prefix
-        common_prefix = completions[0]
-        for completion in completions[1:]:
-            i = 0
-            while i < len(common_prefix) and i < len(completion) and common_prefix[i] == completion[i]:
-                i += 1
-            common_prefix = common_prefix[:i]
+            full_completions.append(full_completion)
 
-        # Check if common prefix is longer than what's already typed
-        current_partial = args_tokens[-1] if args_tokens else ""
-        if common_prefix and len(common_prefix) > len(current_partial):
-            if is_option_value and prefix_to_preserve:
-                return True, f"{prefix_to_preserve}{common_prefix}"
-            else:
-                return True, f"{cmd_name} {common_prefix}"
+        self._tab_completions = full_completions
 
-        # No common prefix longer than current args
-        return False, None
+        if len(self._tab_completions) == 1:
+            # Single completion - return with trailing space if not a directory
+            completion = self._tab_completions[0]
+            add_space = not completion.endswith('/')
+            self._last_completion_text = completion
+            return True, completion, add_space
+
+        # Multiple completions - start cycling
+        self._current_completion_index = 0
+        completion = self._tab_completions[0]
+        self._last_completion_text = completion
+        return True, completion, False
 
     def _tokenize_args(self, args_string: str) -> List[str]:
         """

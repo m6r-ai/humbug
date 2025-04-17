@@ -225,19 +225,26 @@ class SystemInput(SystemMessage):
         """
         return self._command_history.copy()
 
-    def apply_completion(self, completion: str) -> None:
+    def apply_completion(self, completion: str, add_space: bool = False) -> None:
         """
         Apply a tab completion to the input area.
 
         Args:
             completion: The completed text to apply
+            add_space: Whether to add a space after the completion
         """
         self._text_area.setPlainText(completion)
 
-        # Move cursor to end of text
-        cursor = self._text_area.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        self._text_area.setTextCursor(cursor)
+        # Add space if requested and not already present
+        if add_space and not completion.endswith(' '):
+            cursor = self._text_area.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            cursor.insertText(' ')
+        else:
+            # Move cursor to end of text
+            cursor = self._text_area.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            self._text_area.setTextCursor(cursor)
 
     def clear(self) -> None:
         """Clear the input area."""
