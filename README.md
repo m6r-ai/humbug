@@ -43,7 +43,7 @@ evolve very fast but with very little technical debt.
 
 One fun aspect of using Metaphor is we can use Humbug to become an expert on its own design.  If you use the
 Metaphor script `humbug-expert.m6r` and run this with a model that has a very large context window (e.g. Gemini)
-then you can ask the AI anything about the design or implementation of the software!
+then you can ask the AI about the design or implementation of the software!
 
 ## Engineering over vibes!
 
@@ -59,22 +59,30 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.10
 
-v0.10 is mainly changing details behind the scenes, but there are some important user-visible differences:
+v0.10 has a number of new capabilities.  The biggest change is the introduction of the "system shell".  This is a
+command line interface that lets you interact with Humbug features.  Initial commands let you open conversations,
+files, and terminals.  Most importantl, however, is you can also run the Metaphor compiler and run code reviews
+from within the shell.  This is the start of adding more AI-powered tools.
+
+Other features:
 
 - If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the
-  details in a new conversation view rather than in a dialog box.  This makes them much easier to read.
+  details in the system tab rather than in a dialog box.  This makes them much easier to read.
 - A number of error messages from the Metaphor compiler have been improved to make them easier to understand.
-- Humbug now supports xAI's Grok-3 models.
-- When restoring a mindspace the active tabs and any columns are now restored too, but the first time you do this
-  they will not be restored from a v0.9 (or earlier) saved state.
-- AI assistant response messages now tell you which AI model generated the message.
+- Supports xAI's Grok-3 beta models.
+- On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column
+  that was active when saved is also restored as the active column.  This means you no longer have to
+  reset the focus of tabs.
+- AI assistant response messages now show which AI model generated the message.
 - The "system" responses are now tagged as being from Humbug.
 - If you close a conversation and there are no messages from the AI in it then the conversation
   transcript is now automatically deleted.  This avoid cluttering the conversations directory with
   empty files.
 
-The major changes in v0.10 are that the codebase is now thoroughly type-checked using `mypy`, while other issues
-are now thoroughly checked using `pylint`.  In both cases the code is running with zero errors or warnings.
+While not visible to the user, another major change behind the scenes it to support type checking using
+`mypy`, and linting using `pylint`.  Both now run with no errors or warnings.
+
+In addition to these, there are a number of bug fixes.
 
 Please see the `CHANGELOG.md` file for full details.
 
@@ -104,6 +112,14 @@ Compatible with MacOS X, Linux, and Windows 10/11.
 - Syntax highlighting for various languages and file formats, including nested systax highlighting where code for
   one language appears inside a different one.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
   JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
+
+### System shell
+
+- Command line interface, giving access to a variety of features within Humbug.
+- Using the `m6rc` command withinn the shell will automatically start a conversation if the Metaphor prompt compiles
+  successfully.
+- Shell commands support context-aware command line completions using the tab key.
+- For more information, open select "Show System Shell" from the View menu and enter the command `help`.
 
 ### File editing
 
@@ -195,10 +211,11 @@ Project structure:
 ```
 src/humbug/
 ├── ai/            # AI backend and conversation implementations
+├── ast/           # Abstract syntax tree implementation
 ├── gui/           # GUI components
 ├── language/      # I18n management and strings
-├── m6rc/          # Metaphor compiler
 ├── markdown/      # Markdown parser
+├── metaphor/      # Metaphor parser and compiler
 ├── mindspace/     # Mindspace management
 ├── syntax/        # Syntax highlighting and parsing
 ├── terminal/      # Terminal emulation

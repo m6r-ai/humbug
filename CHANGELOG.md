@@ -4,8 +4,11 @@
 
 New features:
 
+- There is a new type of tab, called the "system shell".  This is a command line interface that lets you
+  interact with Humbug features.  Initial commands let you open conversations, files, and terminals.  You
+  can also run the Metaphor compiler and run code reviews.
 - If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the
-  details in a new conversation view rather than in a dialog box.  This makes them much easier to read.
+  details in the system tab rather than in a dialog box.  This makes them much easier to read.
 - A number of error messages from the Metaphor compiler have been improved to make them easier to understand.
 - Supports xAI's Grok-3 beta models.
 - On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column
