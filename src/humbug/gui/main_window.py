@@ -16,6 +16,8 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
+from humbug.gui.commands.conversation_command import ConversationCommand
+from humbug.gui.commands.edit_command import EditCommand
 from humbug.gui.commands.help_command import HelpCommand
 from humbug.gui.commands.m6rc_command import M6rcCommand
 from humbug.gui.commands.terminal_command import TerminalCommand
@@ -368,11 +370,17 @@ class MainWindow(QMainWindow):
         self._command_registry = SystemCommandRegistry()
 
         # Create and register commands
+        conversation_command = ConversationCommand(self._new_conversation)
+        self._command_registry.register_command(conversation_command)
+
+        edit_command = EditCommand(self._column_manager.open_file, self._column_manager.new_file)
+        self._command_registry.register_command(edit_command)
+
+        m6rc_command = M6rcCommand(self.create_metaphor_conversation)
+        self._command_registry.register_command(m6rc_command)
+
         terminal_command = TerminalCommand(self.create_terminal_tab)
         self._command_registry.register_command(terminal_command)
-
-        metaphor_command = M6rcCommand(self.create_metaphor_conversation)
-        self._command_registry.register_command(metaphor_command)
 
         # Register help command last so it can see all other commands
         help_command = HelpCommand(self._command_registry)
