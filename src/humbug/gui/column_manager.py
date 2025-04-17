@@ -849,7 +849,7 @@ class ColumnManager(QWidget):
         system_tab = SystemTab(tab_id, self)
 
         # Use language strings for the tab title
-        self.add_tab(system_tab, "System")
+        self.add_tab(system_tab, "System Shell")
         return system_tab
 
     def new_file(self) -> EditorTab:
@@ -1136,7 +1136,7 @@ class ColumnManager(QWidget):
             return f"Conv: {tab.tab_id()}"
 
         if isinstance(tab, SystemTab):
-            return "System"
+            return "System Shell"
 
         if isinstance(tab, TerminalTab):
             if state.metadata and "command" in state.metadata:

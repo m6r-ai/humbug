@@ -49,7 +49,7 @@ class LanguageStrings:
     zoom_in: str
     zoom_out: str
     reset_zoom: str
-    show_system: str
+    show_system_shell: str
     show_all_columns: str
     split_column_left: str
     split_column_right: str

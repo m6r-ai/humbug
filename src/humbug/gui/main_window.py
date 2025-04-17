@@ -174,9 +174,9 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
-        self._show_system_action = QAction(strings.show_system, self)
-        self._show_system_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
-        self._show_system_action.triggered.connect(self._show_system)
+        self._show_system_shell_action = QAction(strings.show_system_shell, self)
+        self._show_system_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
+        self._show_system_shell_action.triggered.connect(self._show_system_shell)
 
         self._show_all_columns_action = QAction(strings.show_all_columns, self)
         self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
@@ -277,7 +277,7 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._zoom_out_action)
         self._view_menu.addAction(self._reset_zoom_action)
         self._view_menu.addSeparator()
-        self._view_menu.addAction(self._show_system_action)
+        self._view_menu.addAction(self._show_system_shell_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_all_columns_action)
         self._view_menu.addAction(self._split_column_left_action)
@@ -421,7 +421,7 @@ class MainWindow(QMainWindow):
         left_to_right = self._language_manager.left_to_right()
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
-        self._show_system_action.setEnabled(has_mindspace)
+        self._show_system_shell_action.setEnabled(has_mindspace)
         self._show_all_columns_action.setEnabled(column_manager.can_show_all_columns())
         self._split_column_left_action.setEnabled(column_manager.can_split_column())
         self._split_column_right_action.setEnabled(column_manager.can_split_column())
@@ -489,7 +489,7 @@ class MainWindow(QMainWindow):
         self._zoom_in_action.setText(strings.zoom_in)
         self._zoom_out_action.setText(strings.zoom_out)
         self._reset_zoom_action.setText(strings.reset_zoom)
-        self._show_system_action.setText(strings.show_system)
+        self._show_system_shell_action.setText(strings.show_system_shell)
         self._show_all_columns_action.setText(strings.show_all_columns)
         self._split_column_left_action.setText(strings.split_column_left)
         self._split_column_right_action.setText(strings.split_column_right)
@@ -840,7 +840,7 @@ class MainWindow(QMainWindow):
         """Save the current file with a new name."""
         self._column_manager.save_file_as()
 
-    def _show_system(self) -> None:
+    def _show_system_shell(self) -> None:
         """Show the system tab."""
         self._column_manager.show_system()
 
