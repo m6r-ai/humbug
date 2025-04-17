@@ -5,7 +5,7 @@ This module provides classes for defining, parsing, and completing command optio
 """
 
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set
 
 
 @dataclass
@@ -95,6 +95,7 @@ class CommandOptionsRegistry:
 
         return []
 
+
     def get_option_completions(self, partial_option: str) -> List[str]:
         """
         Get completions for a partial option.
@@ -128,12 +129,17 @@ class CommandOptionsRegistry:
             # Extract the option name without leading -
             partial_name = partial_option[1:]
 
-            # For short options, we only complete if exact match or empty
+            # For single dash with no additional text, return both short and long options
             if not partial_name:
                 # Return all short options
                 for opt_name, descriptor in self._options.items():
                     if len(opt_name) == 1:
                         completions.append(f"-{opt_name}")
+
+                # Also return all long options for better tab completion
+                for opt_name, descriptor in self._options.items():
+                    if len(opt_name) > 1:
+                        completions.append(f"--{opt_name}")
 
             else:
                 # Check if any short option matches exactly
