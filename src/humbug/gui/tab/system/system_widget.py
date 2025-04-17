@@ -147,7 +147,6 @@ class SystemWidget(QWidget):
         self._focused_message_index = -1
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
 
         # Create timer for smooth scrolling
         self._scroll_timer = QTimer(self)
@@ -253,9 +252,6 @@ class SystemWidget(QWidget):
                 msg.deleteLater()
 
             self._messages.clear()
-
-            # Update status and return
-            self.status_updated.emit()
             return
 
         # Handle case where we don't have any messages yet
@@ -264,10 +260,8 @@ class SystemWidget(QWidget):
             for message in system_messages:
                 self._add_system_message(message)
 
-            # Scroll and update status
             self._auto_scroll = True
             self._scroll_to_bottom()
-            self.status_updated.emit()
 
             # Update command history
             self._update_command_history()
@@ -306,9 +300,6 @@ class SystemWidget(QWidget):
         if len(system_messages) > matching_count:
             self._auto_scroll = True
             self._scroll_to_bottom()
-
-        # Update status
-        self.status_updated.emit()
 
         # Update command history after loading messages
         self._update_command_history()
@@ -364,11 +355,6 @@ class SystemWidget(QWidget):
 
         # Process as a command instead of simply adding to system interactions
         self._process_command(content)
-
-    def _handle_language_changed(self) -> None:
-        """Update language-specific elements when language changes."""
-        # Emit signal for status update
-        self.status_updated.emit()
 
     def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
@@ -844,9 +830,6 @@ class SystemWidget(QWidget):
         # Refresh messages if we have a mindspace
         if self._mindspace_manager.has_mindspace():
             self.load_system_interactions()
-
-        # Update our status
-        self.status_updated.emit()
 
     def _set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position in input area.

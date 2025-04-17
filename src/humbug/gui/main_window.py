@@ -982,7 +982,7 @@ class MainWindow(QMainWindow):
             prompt = formatter.format(syntax_tree)
 
         except MetaphorParserError as e:
-# TODO: If the system tab is not open then we need to open it here!
+            self._column_manager.show_system()
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
             self._mindspace_manager.add_system_interaction(
