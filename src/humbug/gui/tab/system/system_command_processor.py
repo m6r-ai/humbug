@@ -25,20 +25,21 @@ class SystemCommandProcessor:
         if not command_text:
             return
 
-        parts = command_text.split(maxsplit=1)
-        cmd = parts[0].lower()
-        args = parts[1] if len(parts) > 1 else ""
-
-        command = self._command_registry.get_command(cmd)
-        if not command:
-            # Command not found
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                f"Unknown command: {cmd}. Type 'help' for a list of available commands."
-            )
-            return
-
         try:
+            # Split only the first token to get the command name
+            parts = command_text.split(maxsplit=1)
+            cmd = parts[0].lower()
+            args = parts[1] if len(parts) > 1 else ""
+
+            command = self._command_registry.get_command(cmd)
+            if not command:
+                # Command not found
+                self._mindspace_manager.add_system_interaction(
+                    SystemMessageSource.ERROR,
+                    f"Unknown command: {cmd}. Type 'help' for a list of available commands."
+                )
+                return
+
             success = command.execute(args)
             if not success:
                 self._mindspace_manager.add_system_interaction(
@@ -47,7 +48,7 @@ class SystemCommandProcessor:
                 )
 
         except Exception as e:
-            self._logger.error("Error executing command '%s': %s", cmd, str(e))
+            self._logger.error("Error executing command '%s': %s", command_text, str(e))
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
@@ -73,21 +74,27 @@ class SystemCommandProcessor:
             Tuple of (success, completion) where completion is the suggested
             completion if success is True, or None if no completion is available
         """
-        parts = current_text.strip().split(maxsplit=1)
-        cmd = parts[0] if parts else ""
+        current_text = current_text.strip()
 
-        # If we have a partial command with no args, try to complete it
-        if cmd and (len(parts) == 1):
+        # If empty text, nothing to complete
+        if not current_text:
+            return False, None
+
+        parts = current_text.split(maxsplit=1)
+        cmd_name = parts[0].lower()
+
+        # If we only have a partial command with no args, try to complete the command name
+        if len(parts) == 1 and not current_text.endswith(' '):
             command_names = self._command_registry.get_command_names()
-            completions = [name for name in command_names if name.startswith(cmd.lower())]
+            completions = [name for name in command_names if name.startswith(cmd_name)]
 
             if not completions:
-                # No completions
+                # No completions available
                 return False, None
 
             if len(completions) == 1:
-                # Single completion - return the full command
-                return True, completions[0]
+                # Single completion - return the full command with trailing space
+                return True, f"{completions[0]} "
 
             # Multiple completions - find common prefix
             common_prefix = completions[0]
@@ -95,26 +102,47 @@ class SystemCommandProcessor:
                 i = 0
                 while i < len(common_prefix) and i < len(completion) and common_prefix[i] == completion[i]:
                     i += 1
-
                 common_prefix = common_prefix[:i]
 
-            if len(common_prefix) > len(cmd):
+            if len(common_prefix) > len(cmd_name):
                 return True, common_prefix
 
             # No common prefix longer than current command
             return False, None
 
-        # Check for argument completions if command exists
-        if len(parts) > 1:
-            command = self._command_registry.get_command(cmd.lower())
-            if command:
-                args = parts[1] if len(parts) > 1 else ""
-                arg_completions = command.get_completions(args)
+        # We have a command and potentially args, get command for completion
+        command = self._command_registry.get_command(cmd_name)
+        if not command:
+            return False, None
 
-                if arg_completions and len(arg_completions) == 1:
-                    return True, f"{cmd} {arg_completions[0]}"
+        # Get args for completion
+        args = parts[1] if len(parts) > 1 else ""
 
-                # Could implement more sophisticated argument completion here
+        # Get completions from the command
+        completions = command.get_completions(args)
 
-        # No completions available
+        if not completions:
+            return False, None
+
+        if len(completions) == 1:
+            # Replace the args part with the completion
+            completion = completions[0]
+            # If completion doesn't end with space and isn't a directory (ending with /)
+            # append a space for convenience
+            if not completion.endswith(' ') and not completion.endswith('/'):
+                completion += ' '
+            return True, f"{cmd_name} {completion}"
+
+        # Multiple completions - find common prefix
+        common_prefix = completions[0]
+        for completion in completions[1:]:
+            i = 0
+            while i < len(common_prefix) and i < len(completion) and common_prefix[i] == completion[i]:
+                i += 1
+            common_prefix = common_prefix[:i]
+
+        if common_prefix and len(common_prefix) > len(args):
+            return True, f"{cmd_name} {common_prefix}"
+
+        # No common prefix longer than current args
         return False, None

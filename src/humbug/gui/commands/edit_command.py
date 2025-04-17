@@ -4,6 +4,7 @@ import logging
 import os
 from typing import List, Callable
 
+from humbug.gui.command_options import CommandOptionParser
 from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
@@ -41,28 +42,29 @@ class EditCommand(SystemCommand):
         """Get the help text for the command."""
         return "Opens a file for editing. Creates the file if it doesn't exist. Usage: edit <filename>"
 
-    def execute(self, args: str) -> bool:
+    def _execute_command(self, parser: CommandOptionParser, args: str) -> bool:
         """
-        Execute the command with the given arguments.
+        Execute the command with parsed options.
 
         Args:
-            args: Command arguments as a string
+            parser: The option parser with parsed options
+            args: Remaining arguments after option parsing
 
         Returns:
             True if command executed successfully, False otherwise
         """
-        if not self._mindspace_manager.has_mindspace():
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                "Cannot edit file: no mindspace is open."
-            )
-            return False
-
         filename = args.strip()
         if not filename:
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 "No filename specified. Usage: edit <filename>"
+            )
+            return False
+
+        if not self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                "Cannot edit file: no mindspace is open."
             )
             return False
 
@@ -133,6 +135,11 @@ class EditCommand(SystemCommand):
         Returns:
             List of possible completions
         """
+        # First check for option completions using the base implementation
+        option_completions = super().get_completions(partial_args)
+        if option_completions:
+            return option_completions
+
         if not self._mindspace_manager.has_mindspace():
             return []
 

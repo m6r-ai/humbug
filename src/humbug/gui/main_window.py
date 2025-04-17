@@ -370,16 +370,16 @@ class MainWindow(QMainWindow):
         self._command_registry = SystemCommandRegistry()
 
         # Create and register commands
-        conversation_command = ConversationCommand(self._new_conversation)
+        conversation_command = ConversationCommand(self._process_command_conversation)
         self._command_registry.register_command(conversation_command)
 
         edit_command = EditCommand(self._column_manager.open_file, self._column_manager.new_file)
         self._command_registry.register_command(edit_command)
 
-        m6rc_command = M6rcCommand(self.create_metaphor_conversation)
+        m6rc_command = M6rcCommand(self._process_m6rc_command)
         self._command_registry.register_command(m6rc_command)
 
-        terminal_command = TerminalCommand(self.create_terminal_tab)
+        terminal_command = TerminalCommand(self._process_command_terminal)
         self._command_registry.register_command(terminal_command)
 
         # Register help command last so it can see all other commands
@@ -1171,15 +1171,15 @@ class MainWindow(QMainWindow):
         self._close_all_tabs()
         event.accept()
 
-    def create_terminal_tab(self) -> None:
-        """Public method to create a new terminal tab."""
-        self._new_terminal()
+    def _process_command_conversation(self, model: str | None) -> None:
+        """Public method to process the conversation command."""
+        self._new_conversation()
         self._mindspace_manager.add_system_interaction(
             SystemMessageSource.SUCCESS,
-            "New terminal tab created"
+            "New conversation tab created"
         )
 
-    def create_metaphor_conversation(self, file_path: str) -> None:
+    def _process_m6rc_command(self, file_path: str, model: str | None) -> None:
         """Public method to create a new conversation with a Metaphor file."""
         search_path = self._mindspace_manager.mindspace_path()
 
@@ -1219,4 +1219,12 @@ class MainWindow(QMainWindow):
         self._mindspace_manager.add_system_interaction(
             SystemMessageSource.SUCCESS,
             f"New Metaphor conversation started from {file_path}"
+        )
+
+    def _process_command_terminal(self) -> None:
+        """Public method to process the terminal command."""
+        self._new_terminal()
+        self._mindspace_manager.add_system_interaction(
+            SystemMessageSource.SUCCESS,
+            "New terminal tab created"
         )

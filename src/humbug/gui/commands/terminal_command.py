@@ -1,5 +1,6 @@
 from typing import Callable
 
+from humbug.gui.command_options import CommandOptionParser
 from humbug.mindspace.system.system_command import SystemCommand
 
 
@@ -23,6 +24,16 @@ class TerminalCommand(SystemCommand):
     def help_text(self) -> str:
         return "Open a new terminal tab"
 
-    def execute(self, args: str) -> bool:
+    def _execute_command(self, parser: CommandOptionParser, args: str) -> bool:
+        """
+        Execute the command with parsed options.
+
+        Args:
+            parser: The option parser with parsed options
+            args: Remaining arguments after option parsing
+
+        Returns:
+            True if command executed successfully, False otherwise
+        """
         self._create_terminal()
         return True
