@@ -106,6 +106,8 @@ class ColumnManager(QWidget):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
+        self._current_status_tab: TabBase | None = None
+
         self._handle_style_changed()
 
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
@@ -418,19 +420,22 @@ class ColumnManager(QWidget):
         # Force style refresh to show active state
         self._handle_style_changed()
 
-        # Emit our new signal with current tab
-        current_tab = self._get_current_tab()
-        if not current_tab:
-            return
-
         # Disconnect any existing connections to avoid duplicates
         try:
-            current_tab.status_message.disconnect()
+            if self._current_status_tab is not None:
+                self._current_status_tab.status_message.disconnect()
+                self._current_status_tab = None
 
         except RuntimeError:
             pass  # No existing connections
 
+        # Connect the current tab to the status message signal
+        current_tab = self._get_current_tab()
+        if not current_tab:
+            return
+
         current_tab.status_message.connect(self.status_message)
+        self._current_status_tab = current_tab
         current_tab.update_status()
         current_tab.setFocus()
 
