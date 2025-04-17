@@ -56,13 +56,11 @@ class M6rcCommand(SystemCommand):
             List of matching model names
         """
         ai_backends = self._user_manager.get_ai_backends()
-        print(f"AI backends: {ai_backends}")
         models = []
         for model in AIConversationSettings.iter_models_by_backends(ai_backends):
             if not partial_value or model.startswith(partial_value):
                 models.append(model)
 
-        print(f"Model completions: {models}")
         return models
 
     def _execute_command(self, parser: CommandOptionParser, args: str) -> bool:
@@ -96,10 +94,29 @@ class M6rcCommand(SystemCommand):
             List of possible completions
         """
         # First check for option completions using the base implementation
-        print(f"Partial args: {partial_args}")
         option_completions = super().get_completions(partial_args)
         if option_completions:
             return option_completions
 
-        # Could implement file path completion here for the Metaphor file
-        return []
+        # If we have a -m or --model option, we need to skip that part
+        parts = self._tokenize_args(partial_args)
+        if len(parts) >= 2 and parts[-2] in ["-m", "--model"]:
+            # We're completing a model name, not a file path
+            return []
+
+        # Extract just the file path part from args
+        file_part = partial_args.strip()
+
+        # If there's a space after an option, get the part after it
+        for option in ["-m ", "--model "]:
+            if option in file_part:
+                option_index = file_part.find(option) + len(option)
+                next_space = file_part.find(" ", option_index)
+                if next_space >= 0:
+                    file_part = file_part[next_space+1:].strip()
+                else:
+                    # We're still completing the option value
+                    return []
+
+        # Complete file paths with .m6r extension
+        return self._get_mindspace_path_completions(file_part, file_extension=".m6r")

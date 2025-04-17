@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List
+import logging
+import os
+from typing import List, Optional
 
 from humbug.gui.command_options import CommandOptionsRegistry, CommandOptionParser, CommandOptionDescriptor
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -178,3 +180,84 @@ class SystemCommand(ABC):
             tokens.append(current)
 
         return tokens
+
+    def _get_path_completions(
+        self,
+        base_dir: str,
+        partial_path: str,
+        file_extension: Optional[str] = None
+    ) -> List[str]:
+        """
+        Get file path completions for a partial path.
+
+        Args:
+            base_dir: Base directory to search from
+            partial_path: Partial path to complete
+            file_extension: Optional file extension to filter by (e.g., '.m6r')
+
+        Returns:
+            List of matching path completions
+        """
+        try:
+            # Handle absolute paths
+            if os.path.isabs(partial_path):
+                base_dir = os.path.dirname(partial_path) or os.path.dirname(os.path.abspath(partial_path))
+                partial_file = os.path.basename(partial_path)
+            else:
+                # Handle relative paths with directories
+                if os.path.dirname(partial_path):
+                    base_dir = os.path.join(base_dir, os.path.dirname(partial_path))
+                    partial_file = os.path.basename(partial_path)
+                else:
+                    partial_file = partial_path
+
+            # Ensure the base directory exists
+            if not os.path.exists(base_dir):
+                return []
+
+            # List files and directories that match the partial path
+            matches = []
+            for item in os.listdir(base_dir):
+                # Skip hidden files
+                if item.startswith('.'):
+                    continue
+
+                full_item_path = os.path.join(base_dir, item)
+
+                # If partial file is empty or item starts with it
+                if not partial_file or item.startswith(partial_file):
+                    if os.path.isdir(full_item_path):
+                        # Add directory indicator
+                        rel_path = os.path.join(os.path.dirname(partial_path), item)
+                        matches.append(f"{rel_path}/")
+                    elif file_extension is None or item.endswith(file_extension):
+                        # Add file if it matches the extension filter (or no filter)
+                        matches.append(os.path.join(os.path.dirname(partial_path), item))
+
+            return matches
+
+        except Exception as e:
+            logging.getLogger(self.__class__.__name__).error("Error generating path completions: %s", str(e))
+            return []
+
+    def _get_mindspace_path_completions(
+        self,
+        partial_path: str,
+        file_extension: Optional[str] = None
+    ) -> List[str]:
+        """
+        Get file path completions relative to the current mindspace.
+
+        Args:
+            partial_path: Partial path to complete
+            file_extension: Optional file extension to filter by
+
+        Returns:
+            List of matching path completions
+        """
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return []
+
+        base_dir = mindspace_manager.mindspace_path()
+        return self._get_path_completions(base_dir, partial_path, file_extension)

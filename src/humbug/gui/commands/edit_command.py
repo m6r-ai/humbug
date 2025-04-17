@@ -140,50 +140,5 @@ class EditCommand(SystemCommand):
         if option_completions:
             return option_completions
 
-        if not self._mindspace_manager.has_mindspace():
-            return []
-
-        try:
-            # Get base directory and partial filename
-            base_dir = self._mindspace_manager.mindspace_path()
-            partial_path = partial_args.strip()
-
-            # Handle absolute paths
-            if os.path.isabs(partial_path):
-                base_dir = os.path.dirname(partial_path)
-                partial_file = os.path.basename(partial_path)
-            else:
-                # Handle relative paths with directories
-                if os.path.dirname(partial_path):
-                    base_dir = os.path.join(base_dir, os.path.dirname(partial_path))
-                    partial_file = os.path.basename(partial_path)
-                else:
-                    partial_file = partial_path
-
-            # Ensure the base directory exists
-            if not os.path.exists(base_dir):
-                return []
-
-            # List files and directories that match the partial path
-            matches = []
-            for item in os.listdir(base_dir):
-                # Skip hidden files
-                if item.startswith('.'):
-                    continue
-
-                full_item_path = os.path.join(base_dir, item)
-
-                # If partial file is empty or item starts with it, add it
-                if not partial_file or item.startswith(partial_file):
-                    # Add directory indicator
-                    if os.path.isdir(full_item_path):
-                        rel_path = os.path.join(os.path.dirname(partial_path), item)
-                        matches.append(f"{rel_path}/")
-                    else:
-                        matches.append(os.path.join(os.path.dirname(partial_path), item))
-
-            return matches
-
-        except Exception as e:
-            self._logger.error("Error generating completions: %s", str(e))
-            return []
+        # Complete file paths without extension filtering
+        return self._get_mindspace_path_completions(partial_args.strip())
