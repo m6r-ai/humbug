@@ -9,7 +9,6 @@ from PySide6.QtWidgets import QWidget
 
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.system.system_message import SystemMessage as SystemMessageModel
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 
 
@@ -62,44 +61,45 @@ class SystemInput(SystemMessage):
             key_event = cast(QKeyEvent, event)
 
             # Handle Enter key for command submission
-            if key_event.key() == Qt.Key.Key_Return and not (key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+            if key_event.key() == Qt.Key.Key_Return and not key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 text = self._text_area.toPlainText().strip()
                 if text:
                     self.command_submitted.emit(text)
                     self._add_to_history(text)
                     self.clear()
-                return True  # Event handled
+
+                return True
 
             # Handle Tab key for command completion
             if key_event.key() == Qt.Key.Key_Tab and not key_event.modifiers():
                 # Emit signal requesting tab completion
                 current_text = self._text_area.toPlainText().strip()
                 self.tab_completion_requested.emit(current_text)
-                return True  # Event handled
+                return True
 
             # Handle Up key for history navigation
             if key_event.key() == Qt.Key.Key_Up:
                 self._navigate_history_up()
-                return True  # Event handled
+                return True
 
             # Handle Down key for history navigation
             if key_event.key() == Qt.Key.Key_Down:
                 self._navigate_history_down()
-                return True  # Event handled
+                return True
 
             # Handle PageUp key to move to start of input
             if key_event.key() == Qt.Key.Key_PageUp:
                 cursor = self._text_area.textCursor()
                 cursor.movePosition(QTextCursor.MoveOperation.Start)
                 self._text_area.setTextCursor(cursor)
-                return True  # Event handled
+                return True
 
             # Handle PageDown key to move to end of input
             if key_event.key() == Qt.Key.Key_PageDown:
                 cursor = self._text_area.textCursor()
                 cursor.movePosition(QTextCursor.MoveOperation.End)
                 self._text_area.setTextCursor(cursor)
-                return True  # Event handled
+                return True
 
         # Let the event continue to the target
         return super().eventFilter(obj, event)

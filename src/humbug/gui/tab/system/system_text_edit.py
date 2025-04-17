@@ -123,7 +123,7 @@ class SystemTextEdit(QTextEdit):
             return
 
         # For editable widgets, we need special handling for certain keys
-        if event.key() == Qt.Key.Key_Return and not (event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+        if event.key() == Qt.Key.Key_Return and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             # Let parent handle Enter key for command submission
             event.ignore()
             return
