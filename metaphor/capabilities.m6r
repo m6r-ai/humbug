@@ -165,10 +165,11 @@ Context: Capabilities
             The welcome message is automatically hidden when tabs are created and reappears when all tabs are closed.
 
             Context: Tab types
-                There are 3 distinct types of tabs:
+                There are 4 distinct types of tabs:
 
                 - Conversation tabs: For AI interactions
                 - Editor tabs: For file editing
+                - System tab: For interacting with Humbug system command line tools
                 - Terminal tabs: For interacting with local command line tools
 
                 Each type has its own distinct visual appearance and behavior.
@@ -178,6 +179,7 @@ Context: Capabilities
 
                 Include: metaphor/tab-conversation.m6r
                 Include: metaphor/tab-editor.m6r
+                Include: metaphor/tab-system.m6r
                 Include: metaphor/tab-terminal.m6r
 
             Context: Syntax highlighting
@@ -820,6 +822,14 @@ Context: Capabilities
                 of 0.5
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+0" for Windows).
+
+            Context: Separator
+                There will be a horizontal Separator
+
+            Context: Show System
+                The "Show System" menu item will show the system tab.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+Y" for Windows).
 
             Context: Separator
                 There will be a horizontal Separator
