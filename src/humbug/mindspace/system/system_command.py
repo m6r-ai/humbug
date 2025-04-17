@@ -58,16 +58,16 @@ class SystemCommand(ABC):
     def execute(self, args: str) -> bool:
         """
         Parse options and execute the command.
-        
+
         Args:
             args: Command arguments as a string
-            
+
         Returns:
             True if command executed successfully, False otherwise
         """
         parser = CommandOptionParser(args)
 
-        # Check for help flag
+        # Check for help flag - check both short and long forms
         if parser.has_flag("help") or parser.has_flag("?"):
             self._show_detailed_help()
             return True
@@ -97,10 +97,10 @@ class SystemCommand(ABC):
     def get_completions(self, partial_args: str) -> List[str]:
         """
         Get completions for partial arguments, including options.
-        
+
         Args:
             partial_args: Partial command arguments
-            
+
         Returns:
             List of possible completions
         """
@@ -111,54 +111,70 @@ class SystemCommand(ABC):
         options = self.setup_options()
         partial_args = partial_args.lstrip()
 
-        # Check if we're completing an option
+        # Split into tokens (preserving quoted strings)
+        tokens = self._tokenize_args(partial_args)
+
+        # If we have at least two tokens and the second-to-last token is an option
+        if len(tokens) >= 2 and tokens[-2].startswith('-') and not tokens[-1].startswith('-'):
+            option_token = tokens[-2]
+
+            # Extract option name without dashes
+            option_name = ""
+            if option_token.startswith('--'):
+                option_name = option_token[2:]
+
+            elif option_token.startswith('-'):
+                option_name = option_token[1:]
+
+            # Find the option descriptor
+            option = options.find_option(option_name)
+            if option and option.takes_value:
+                partial_value = tokens[-1]
+                return options.get_value_completions(option_name, partial_value)
+
+        # Check if we're completing an option name
         if partial_args.startswith('-'):
-            # Check if we're completing an option value
-            # Split into tokens (preserving quoted strings)
-            tokens = []
-            current = ''
-            in_quotes = False
-            quote_char = None
-
-            for char in partial_args:
-                if char in ('"', "'"):
-                    if not in_quotes:
-                        in_quotes = True
-                        quote_char = char
-
-                    elif char == quote_char:
-                        in_quotes = False
-                        quote_char = None
-
-                    current += char
-
-                elif char.isspace() and not in_quotes:
-                    if current:
-                        tokens.append(current)
-                        current = ''
-
-                else:
-                    current += char
-
-            if current:
-                tokens.append(current)
-
-            print(f"Tokens: {tokens}")
-
-            # Check if last token is a partial option value
-            if len(tokens) >= 2 and tokens[-2].startswith('-'):
-                option_token = tokens[-2]
-                option_name = option_token[2:] if option_token.startswith('--') else option_token[1:]
-
-                # Find the option descriptor
-                option = options.find_option(option_name)
-                if option and option.takes_value:
-                    partial_value = tokens[-1]
-                    print(f"Partial value: {partial_value}")
-                    return options.get_value_completions(option_name, partial_value)
-
-            # We're completing an option name
             return options.get_option_completions(partial_args)
 
         # Default behavior - delegate to subclass if nothing else matches
         return []
+
+    def _tokenize_args(self, args_string: str) -> List[str]:
+        """
+        Tokenize arguments string, preserving quoted strings.
+
+        Args:
+            args_string: Arguments string to tokenize
+
+        Returns:
+            List of tokens
+        """
+        tokens = []
+        current = ''
+        in_quotes = False
+        quote_char = None
+
+        for char in args_string:
+            if char in ('"', "'"):
+                if not in_quotes:
+                    in_quotes = True
+                    quote_char = char
+
+                elif char == quote_char:
+                    in_quotes = False
+                    quote_char = None
+
+                current += char
+
+            elif char.isspace() and not in_quotes:
+                if current:
+                    tokens.append(current)
+                    current = ''
+
+            else:
+                current += char
+
+        if current:
+            tokens.append(current)
+
+        return tokens

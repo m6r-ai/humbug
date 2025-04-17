@@ -118,20 +118,49 @@ class SystemCommandProcessor:
         # Get args for completion
         args = parts[1] if len(parts) > 1 else ""
 
+        # Check if we're dealing with an option value
+        args_tokens = self._tokenize_args(args)
+
         # Get completions from the command
         completions = command.get_completions(args)
 
         if not completions:
             return False, None
 
+        # Check if we're completing an option value rather than a new option
+        is_option_value = False
+        prefix_to_preserve = ""
+
+        if len(args_tokens) >= 2 and args_tokens[-2].startswith('-'):
+            # We might be completing a value for the previous option
+            option_token = args_tokens[-2]
+            option_name = option_token[2:] if option_token.startswith('--') else option_token[1:]
+
+            # Check if this option takes a value
+            options = command.setup_options()
+            option = options.find_option(option_name)
+            if option and option.takes_value:
+                is_option_value = True
+
+                # Calculate the prefix to preserve (everything up to the last token)
+                last_token_pos = args.rfind(args_tokens[-1])
+                if last_token_pos > 0:
+                    prefix_to_preserve = f"{cmd_name} {args[:last_token_pos]}"
+                else:
+                    # If we can't find the last token position, preserve everything except the last token
+                    prefix_to_preserve = f"{cmd_name} {' '.join(args_tokens[:-1])} "
+
         if len(completions) == 1:
-            # Replace the args part with the completion
             completion = completions[0]
             # If completion doesn't end with space and isn't a directory (ending with /)
             # append a space for convenience
             if not completion.endswith(' ') and not completion.endswith('/'):
                 completion += ' '
-            return True, f"{cmd_name} {completion}"
+
+            if is_option_value and prefix_to_preserve:
+                return True, f"{prefix_to_preserve}{completion}"
+            else:
+                return True, f"{cmd_name} {completion}"
 
         # Multiple completions - find common prefix
         common_prefix = completions[0]
@@ -141,8 +170,49 @@ class SystemCommandProcessor:
                 i += 1
             common_prefix = common_prefix[:i]
 
-        if common_prefix and len(common_prefix) > len(args):
-            return True, f"{cmd_name} {common_prefix}"
+        # Check if common prefix is longer than what's already typed
+        current_partial = args_tokens[-1] if args_tokens else ""
+        if common_prefix and len(common_prefix) > len(current_partial):
+            if is_option_value and prefix_to_preserve:
+                return True, f"{prefix_to_preserve}{common_prefix}"
+            else:
+                return True, f"{cmd_name} {common_prefix}"
 
         # No common prefix longer than current args
         return False, None
+
+    def _tokenize_args(self, args_string: str) -> List[str]:
+        """
+        Tokenize arguments string, preserving quoted strings.
+
+        Args:
+            args_string: Arguments string to tokenize
+
+        Returns:
+            List of tokens
+        """
+        tokens = []
+        current = ''
+        in_quotes = False
+        quote_char = None
+
+        for char in args_string:
+            if char in ('"', "'"):
+                if not in_quotes:
+                    in_quotes = True
+                    quote_char = char
+                elif char == quote_char:
+                    in_quotes = False
+                    quote_char = None
+                current += char
+            elif char.isspace() and not in_quotes:
+                if current:
+                    tokens.append(current)
+                    current = ''
+            else:
+                current += char
+
+        if current:
+            tokens.append(current)
+
+        return tokens
