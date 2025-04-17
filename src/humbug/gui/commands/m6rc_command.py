@@ -104,19 +104,20 @@ class M6rcCommand(SystemCommand):
             # We're completing a model name, not a file path
             return []
 
-        # Extract just the file path part from args
-        file_part = partial_args.strip()
+        # Process the args to extract options and file path
+        parser = CommandOptionParser(partial_args)
+        remaining_args = parser.remaining_args()
 
-        # If there's a space after an option, get the part after it
-        for option in ["-m ", "--model "]:
-            if option in file_part:
-                option_index = file_part.find(option) + len(option)
-                next_space = file_part.find(" ", option_index)
-                if next_space >= 0:
-                    file_part = file_part[next_space+1:].strip()
-                else:
-                    # We're still completing the option value
-                    return []
+        # Get path completions for the remaining args
+        completions = self._get_mindspace_path_completions(remaining_args, file_extension=".m6r")
 
-        # Complete file paths with .m6r extension
-        return self._get_mindspace_path_completions(file_part, file_extension=".m6r")
+        # If we have completions, we need to preserve the options
+        if completions:
+            # Extract the options part (everything before the remaining args)
+            options_part = partial_args[:partial_args.find(remaining_args)].strip()
+
+            # If we have options, we need to add them to completions
+            if options_part:
+                return [f"{options_part} {completion}" for completion in completions]
+
+        return completions
