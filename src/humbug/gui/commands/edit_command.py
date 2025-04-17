@@ -2,8 +2,9 @@
 
 import logging
 import os
-from typing import List
+from typing import List, Callable
 
+from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -12,7 +13,7 @@ from humbug.mindspace.system.system_message_source import SystemMessageSource
 class EditCommand(SystemCommand):
     """Command to open or create a file in an editor tab."""
 
-    def __init__(self, open_file_callback, new_file_callback) -> None:
+    def __init__(self, open_file_callback: Callable[[str], EditorTab], new_file_callback: Callable[[], EditorTab]) -> None:
         """
         Initialize edit command.
 

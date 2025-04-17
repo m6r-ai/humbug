@@ -863,11 +863,11 @@ class ColumnManager(QWidget):
         self.add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
 
-    def open_file(self, path: str) -> EditorTab | None:
+    def open_file(self, path: str) -> EditorTab:
         """Open a file in a new or existing editor tab."""
         # Check if file is already open
         existing_tab = self.find_editor_tab_by_filename(path)
-        if existing_tab:
+        if existing_tab is not None:
             self._set_current_tab(existing_tab.tab_id())
             return existing_tab
 

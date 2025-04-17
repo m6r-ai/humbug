@@ -1,7 +1,7 @@
 """Command for creating a new conversation tab from the system terminal."""
 
 import logging
-from typing import List
+from typing import List, Callable
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
@@ -11,7 +11,7 @@ from humbug.mindspace.system.system_message_source import SystemMessageSource
 class ConversationCommand(SystemCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(self, create_conversation_callback) -> None:
+    def __init__(self, create_conversation_callback: Callable[[], str | None]) -> None:
         """
         Initialize conversation command.
 
