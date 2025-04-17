@@ -70,6 +70,7 @@ Other features:
   details in the system tab rather than in a dialog box.  This makes them much easier to read.
 - A number of error messages from the Metaphor compiler have been improved to make them easier to understand.
 - Supports xAI's Grok-3 beta models.
+- Supports OpenAI o3, o4-mini, gpt-4.1, gpt-4.1-mini, and gpt-4.1-nano models.
 - On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column
   that was active when saved is also restored as the active column.  This means you no longer have to
   reset the focus of tabs.

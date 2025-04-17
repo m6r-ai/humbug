@@ -175,6 +175,46 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
+        "gpt-4.1": AIModel(
+            name="gpt-4.1",
+            provider="openai",
+            context_window=200000,
+            max_output_tokens=16384,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "gpt-4.1-mini": AIModel(
+            name="gpt-4.1-mini",
+            provider="openai",
+            context_window=200000,
+            max_output_tokens=16384,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "gpt-4.1-nano": AIModel(
+            name="gpt-4.1-nano",
+            provider="openai",
+            context_window=200000,
+            max_output_tokens=16384,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "gpt-4.5-preview": AIModel(
+            name="gpt-4.5-preview",
+            provider="openai",
+            context_window=128000,
+            max_output_tokens=16384,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "o1": AIModel(
+            name="o1",
+            provider="openai",
+            context_window=200000,
+            max_output_tokens=100000,
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
+        ),
         "o1-mini": AIModel(
             name="o1-mini",
             provider="openai",
@@ -183,8 +223,8 @@ class AIConversationSettings:
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         ),
-        "o1": AIModel(
-            name="o1",
+        "o3": AIModel(
+            name="o3-mini",
             provider="openai",
             context_window=200000,
             max_output_tokens=100000,
@@ -199,13 +239,13 @@ class AIConversationSettings:
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         ),
-        "gpt-4.5-preview": AIModel(
-            name="gpt-4.5-preview",
+        "o4-mini": AIModel(
+            name="o3-mini",
             provider="openai",
-            context_window=128000,
-            max_output_tokens=16384,
-            supports_temperature=True,
-            reasoning_capabilities=ReasoningCapability.NO_REASONING
+            context_window=200000,
+            max_output_tokens=100000,
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         ),
 
         # xAI models

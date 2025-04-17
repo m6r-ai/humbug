@@ -1231,7 +1231,8 @@ Context: Capabilities
             - M6R models: "tessa"
             - Mistral models: "codestral-latest", "mistral-large-latest", "mistral-small-latest"
             - Ollama models: "llama3.2", "phi4"
-            - OpenAI models: "gpt-4o-mini", "gpt-4o", "o1-mini", "o1", "o3-mini", "gpt-4.5-preview"
+            - OpenAI models: "gpt-4o-mini", "gpt-4o", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4.5-preview",
+              "o1-mini", "o1", "o3-mini", "o3", "o4-mini"
             - xAI models: "grok-3-beta", "grok-3-fast-beta", "grok-3-mini-beta", "grok-3-mini-fast-beta"
 
             The AI model is configurable via the settings dialog.
@@ -1264,10 +1265,15 @@ Context: Capabilities
         - phi4: Supports temperature 0.0-1.0
         - gpt-4o-mini: Supports temperature 0.0-1.0
         - gpt-4o: Supports temperature 0.0-1.0
+        - gpt-4.1: Supports temperature 0.0-1.0
+        - gpt-4.1-mini: Supports temperature 0.0-1.0
+        - gpt-4.1-nano: Supports temperature 0.0-1.0
+        - gpt-4.5-preview: Supports temperature 0.0-1.0
         - o1-mini: No temperature setting
         - o1: No temperature setting
         - o3-mini: No temperature setting
-        - gpt-4.5-preview: Supports temperature 0.0-1.0
+        - o3: No temperature setting
+        - o4-mini: No temperature setting
         - grok-3-beta: Supports temperature 0.0-1.0
         - grok-3-fast-beta: Supports temperature 0.0-1.0
         - grok-3-mini-beta: Supports temperature 0.0-1.0
