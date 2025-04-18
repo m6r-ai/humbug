@@ -1,7 +1,7 @@
 """Processes system commands and handles tab completion."""
 
 import logging
-from typing import List, Optional, Tuple
+from typing import List
 
 from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -43,8 +43,11 @@ class SystemCommandProcessor:
             lexer = CommandLexer()
             lexer.lex(None, command_text)
 
+            # Collect all tokens
+            tokens = self._collect_tokens(lexer)
+
             # Get the command name (first token)
-            cmd = self._get_command_name(lexer)
+            cmd = self._get_command_name(tokens)
             if not cmd:
                 # No command name found
                 self._mindspace_manager.add_system_interaction(
@@ -78,6 +81,24 @@ class SystemCommandProcessor:
                 SystemMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
+
+    def _collect_tokens(self, lexer: CommandLexer) -> List[Token]:
+        """
+        Collect all tokens from a lexer into a list.
+
+        Args:
+            lexer: The lexer to collect tokens from
+
+        Returns:
+            List of all tokens
+        """
+        tokens = []
+        token = lexer.get_next_token()
+        while token:
+            tokens.append(token)
+            token = lexer.get_next_token()
+
+        return tokens
 
     def get_available_commands(self) -> List[str]:
         """
@@ -135,17 +156,18 @@ class SystemCommandProcessor:
         # Tokenize the input
         lexer = CommandLexer()
         lexer.lex(None, current_text)
+        tokens = self._collect_tokens(lexer)
 
         # Get the position of the cursor (end of text for tab completion)
         cursor_position = len(current_text)
 
         # Get the token at the cursor position
-        current_token = self._get_token_at_position(lexer, cursor_position - 1) if cursor_position > 0 else None
+        current_token = self._get_token_at_position(tokens, cursor_position - 1) if cursor_position > 0 else None
 
         # If no token at cursor, we're at whitespace at the end - prepare to add a new token
         if not current_token or cursor_position > (current_token.start + len(current_token.value)):
             # Check if we have a command yet
-            command_name = self._get_command_name(lexer)
+            command_name = self._get_command_name(tokens)
 
             # If no command, offer command completions
             if not command_name:
@@ -157,7 +179,7 @@ class SystemCommandProcessor:
                 return CompletionResult(success=False)
 
             # Get the last token to see what we might be completing
-            last_token = lexer.peek_next_token(-1)
+            last_token = tokens[-1] if tokens else None
 
             # If the last token was an option, we might be starting an option value
             if last_token and last_token.type == TokenType.OPTION:
@@ -184,7 +206,7 @@ class SystemCommandProcessor:
 
         if current_token.type == TokenType.OPTION:
             # Completing an option
-            command_name = self._get_command_name(lexer)
+            command_name = self._get_command_name(tokens)
             if not command_name:
                 return CompletionResult(success=False)
 
@@ -198,7 +220,7 @@ class SystemCommandProcessor:
         if current_token.type == TokenType.ARGUMENT:
             # This could be either an option value or a regular argument
             # We need to check the context
-            command_name = self._get_command_name(lexer)
+            command_name = self._get_command_name(tokens)
             if not command_name:
                 return CompletionResult(success=False)
 
@@ -208,7 +230,7 @@ class SystemCommandProcessor:
 
             # Try to find if this argument is an option value
             # by looking at the previous token
-            previous_token = self._get_token_before(lexer, current_token)
+            previous_token = self._get_token_before(tokens, current_token)
 
             if previous_token and previous_token.type == TokenType.OPTION:
                 # This argument might be a value for the previous option
@@ -271,130 +293,55 @@ class SystemCommandProcessor:
                 add_space=False
             )
 
-    def _get_token_at_position(self, lexer: CommandLexer, position: int) -> Token | None:
+    def _get_token_at_position(self, tokens: List[Token], position: int) -> Token | None:
         """
         Get the token at the specified character position in the input.
 
         Args:
-            lexer: The lexer containing the tokens
+            tokens: List of tokens to search
             position: The character position to find a token for
 
         Returns:
             The token at the position, or None if no token is at that position
         """
-        # Save current token position
-        current_position = lexer._next_token
-
-        # Reset to beginning
-        lexer._next_token = 0
-
-        # Scan through tokens to find one at the right position
-        token = lexer.get_next_token()
-        while token:
+        for token in tokens:
             token_end = token.start + len(token.value)
             if token.start <= position < token_end:
-                # Restore position
-                lexer._next_token = current_position
                 return token
-
-            token = lexer.get_next_token()
-
-        # Restore position
-        lexer._next_token = current_position
         return None
 
-    def _get_token_before(self, lexer: CommandLexer, target_token: Token) -> Token | None:
+    def _get_token_before(self, tokens: List[Token], target_token: Token) -> Token | None:
         """
         Get the token that comes before the specified token.
 
         Args:
-            lexer: The lexer containing the tokens
+            tokens: List of tokens to search
             target_token: The token to find the predecessor for
 
         Returns:
             The token before the target token, or None if no such token exists
         """
-        # Save current token position
-        current_position = lexer._next_token
-
-        # Reset to beginning
-        lexer._next_token = 0
-
         previous_token = None
-        token = lexer.get_next_token()
-
-        while token:
+        for token in tokens:
             if token.start == target_token.start and token.value == target_token.value:
-                # Found target token, return the previous one
-                lexer._next_token = current_position
                 return previous_token
-
             previous_token = token
-            token = lexer.get_next_token()
-
-        # Restore position
-        lexer._next_token = current_position
         return None
 
-    def _get_command_name(self, lexer: CommandLexer) -> str | None:
+    def _get_command_name(self, tokens: List[Token]) -> str | None:
         """
         Get the command name from the tokens.
 
         Args:
-            lexer: The lexer containing the tokens
+            tokens: List of tokens to search
 
         Returns:
             The command name if found, None otherwise
         """
-        # Save current token position
-        current_position = lexer._next_token
-
-        # Reset to beginning
-        lexer._next_token = 0
-
-        # Find first token of type COMMAND
-        token = lexer.get_next_token()
-        while token:
+        for token in tokens:
             if token.type == TokenType.COMMAND:
-                # Restore position
-                lexer._next_token = current_position
                 return token.value
-
-            token = lexer.get_next_token()
-
-        # Restore position
-        lexer._next_token = current_position
         return None
-
-    def _get_tokens_by_type(self, lexer: CommandLexer, token_type: TokenType) -> List[Token]:
-        """
-        Get all tokens of a specific type.
-
-        Args:
-            lexer: The lexer containing the tokens
-            token_type: The type of tokens to retrieve
-
-        Returns:
-            A list of tokens matching the requested type
-        """
-        # Save current token position
-        current_position = lexer._next_token
-
-        # Reset to beginning
-        lexer._next_token = 0
-
-        # Collect all tokens of the specified type
-        matching_tokens = []
-        token = lexer.get_next_token()
-        while token:
-            if token.type == token_type:
-                matching_tokens.append(token)
-
-            token = lexer.get_next_token()
-
-        # Restore position
-        lexer._next_token = current_position
-        return matching_tokens
 
     def _complete_command_name(self, current_text: str, partial_command: str) -> CompletionResult:
         """
