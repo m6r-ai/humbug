@@ -5,7 +5,7 @@ This lexer handles command syntax including command names, options, and argument
 """
 
 from dataclasses import dataclass
-from typing import Callable, List, Set
+from typing import Callable, Set
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -165,9 +165,7 @@ class CommandLexer(Lexer):
         self._position += 1  # Skip the initial dash
 
         # Check for long option (double dash)
-        is_long_option = False
         if self._position < self._input_len and self._input[self._position] == '-':
-            is_long_option = True
             self._position += 1
 
         # Read option name
