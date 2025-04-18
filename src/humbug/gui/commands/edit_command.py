@@ -141,4 +141,5 @@ class EditCommand(SystemCommand):
             return option_completions
 
         # Complete file paths without extension filtering
+        # Return raw path completions - the command processor will handle context preservation
         return self._get_mindspace_path_completions(partial_args.strip())

@@ -1,6 +1,8 @@
 import logging
+import re
 from typing import Tuple, Optional, List
 
+from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
@@ -77,7 +79,7 @@ class SystemCommandProcessor:
         self._current_completion_index = -1
         self._last_completion_text = ""
 
-    def handle_tab_completion(self, current_text: str) -> Tuple[bool, Optional[str], bool]:
+    def handle_tab_completion(self, current_text: str) -> CompletionResult:
         """
         Handle tab completion for the current input text.
 
@@ -85,18 +87,19 @@ class SystemCommandProcessor:
             current_text: Current input text
 
         Returns:
-            Tuple of (success, completion, add_space) where:
-                - success: Whether completion was successful
-                - completion: The suggested completion if success is True, or None if no completion is available
-                - add_space: Whether a space should be added after completion
+            CompletionResult with information about what to replace
         """
         current_text = current_text.strip()
 
         # If empty text, nothing to complete
         if not current_text:
-            return False, None, False
+            return CompletionResult(success=False)
 
-        # If we're already cycling through completions and the current text matches our last
+        # Tokenize the input text to find token boundaries
+        tokens = self._tokenize_args(current_text)
+        token_positions = self._find_token_positions(current_text, tokens)
+
+        # If we're cycling through completions and the current text matches our last
         # completion (minus any trailing space), continue cycling
         if (self._tab_completions and
                 current_text == self._last_completion_text.rstrip()):
@@ -104,8 +107,15 @@ class SystemCommandProcessor:
             self._current_completion_index = (self._current_completion_index + 1) % len(self._tab_completions)
             completion = self._tab_completions[self._current_completion_index]
             self._last_completion_text = completion
-            # Don't add space when cycling between multiple options
-            return True, completion, False
+
+            # For cycling, we usually replace the entire text
+            return CompletionResult(
+                success=True,
+                replacement=completion,
+                start_pos=0,
+                end_pos=len(current_text),
+                add_space=False
+            )
 
         # Otherwise, this is a new tab completion request
         self._tab_completions = []
@@ -114,68 +124,91 @@ class SystemCommandProcessor:
         # Parse the input to separate command and args
         parts = current_text.split(maxsplit=1)
         cmd_name = parts[0].lower()
+        args = parts[1] if len(parts) > 1 else ""
 
         # Complete command name if needed
         if len(parts) == 1 and not current_text.endswith(' '):
             command_names = self._command_registry.get_command_names()
-            self._tab_completions = [name for name in command_names if name.startswith(cmd_name)]
+            matches = [name for name in command_names if name.startswith(cmd_name)]
 
-            if not self._tab_completions:
-                return False, None, False
+            if not matches:
+                return CompletionResult(success=False)
 
-            if len(self._tab_completions) == 1:
+            self._tab_completions = matches
+
+            if len(matches) == 1:
                 # Single completion - return with trailing space
-                completion = f"{self._tab_completions[0]}"
+                completion = matches[0]
                 self._last_completion_text = completion
-                return True, completion, True
+                return CompletionResult(
+                    success=True,
+                    replacement=completion,
+                    start_pos=0,  # Replace the entire command
+                    end_pos=len(cmd_name),
+                    add_space=True
+                )
 
             # Multiple completions - start cycling
             self._current_completion_index = 0
-            completion = self._tab_completions[0]
+            completion = matches[0]
             self._last_completion_text = completion
-            return True, completion, False
-
-        # Handle command option completion
-        if current_text.endswith(' '):
-            # We're just after a space, so this is likely a new token
-            # Not much to complete here yet
-            return False, None, False
+            return CompletionResult(
+                success=True,
+                replacement=completion,
+                start_pos=0,
+                end_pos=len(cmd_name),
+                add_space=False
+            )
 
         # Get the command for completion
         command = self._command_registry.get_command(cmd_name)
         if not command:
-            return False, None, False
+            return CompletionResult(success=False)
 
-        # Get args for completion
-        args = parts[1] if len(parts) > 1 else ""
+        # Handle option completion
+        if args.endswith(' '):
+            # We're just after a space, so this is likely a new token
+            # Not much to complete here yet
+            return CompletionResult(success=False)
 
-        # Check if we're potentially completing an option
+        # Handle command option completion
         if args.startswith('-'):
             # Try to get option completions
             options = command.setup_options()
             option_completions = options.get_option_completions(args)
 
             if option_completions:
-                # Format full completions
-                self._tab_completions = [f"{cmd_name} {opt}" for opt in option_completions]
+                # Format full completions - replace just the option part
+                self._tab_completions = option_completions
 
-                if len(self._tab_completions) == 1:
+                if len(option_completions) == 1:
                     # Single completion
-                    completion = self._tab_completions[0]
-                    self._last_completion_text = completion
-                    return True, completion, True
+                    completion = option_completions[0]
+                    self._last_completion_text = f"{cmd_name} {completion}"
+                    start_pos = len(cmd_name) + 1  # After command name and space
+                    end_pos = len(current_text)  # To the end of the text
+                    return CompletionResult(
+                        success=True,
+                        replacement=completion,
+                        start_pos=start_pos,
+                        end_pos=end_pos,
+                        add_space=True
+                    )
 
-                # Multiple completions - start cycling
+                # Multiple completions - start cycling (replace whole text for simplicity)
                 self._current_completion_index = 0
-                completion = self._tab_completions[0]
+                completion = f"{cmd_name} {option_completions[0]}"
                 self._last_completion_text = completion
-                return True, completion, False
+                return CompletionResult(
+                    success=True,
+                    replacement=completion,
+                    start_pos=0,
+                    end_pos=len(current_text),
+                    add_space=False
+                )
 
         # Check if we're completing an option value
         args_tokens = self._tokenize_args(args)
-        is_option_value = False
-        prefix_to_preserve = ""
-
         if len(args_tokens) >= 2 and args_tokens[-2].startswith('-'):
             # We might be completing a value for the previous option
             option_token = args_tokens[-2]
@@ -185,44 +218,109 @@ class SystemCommandProcessor:
             options = command.setup_options()
             option = options.find_option(option_name)
             if option and option.takes_value:
-                is_option_value = True
+                # We're completing a value for this option
+                current_value = args_tokens[-1]
+                option_completions = options.get_value_completions(option_name, current_value)
 
-                # Calculate the prefix to preserve
-                last_token_pos = args.rfind(args_tokens[-1])
-                if last_token_pos > 0:
-                    prefix_to_preserve = f"{cmd_name} {args[:last_token_pos]}"
-                else:
-                    prefix_to_preserve = f"{cmd_name} {' '.join(args_tokens[:-1])} "
+                if option_completions:
+                    # Get the position of the value token we're completing
+                    args_token_positions = self._find_token_positions(args, args_tokens)
+                    value_start_pos = args_token_positions[-1][0]
+                    value_end_pos = args_token_positions[-1][1]
+
+                    # Adjust to account for the command name and space
+                    value_start_pos += len(cmd_name) + 1
+                    value_end_pos += len(cmd_name) + 1
+
+                    self._tab_completions = option_completions
+
+                    if len(option_completions) == 1:
+                        # Single completion - replace just the value
+                        completion = option_completions[0]
+                        self._last_completion_text = f"{cmd_name} {args[:value_start_pos-len(cmd_name)-1]}{completion}"
+                        return CompletionResult(
+                            success=True,
+                            replacement=completion,
+                            start_pos=value_start_pos,
+                            end_pos=value_end_pos,
+                            add_space=True
+                        )
+
+                    # Multiple completions - start cycling (replace the value token)
+                    self._current_completion_index = 0
+                    completion = option_completions[0]
+                    full_text = f"{cmd_name} {args[:value_start_pos-len(cmd_name)-1]}{completion}"
+                    self._last_completion_text = full_text
+                    return CompletionResult(
+                        success=True,
+                        replacement=completion,
+                        start_pos=value_start_pos,
+                        end_pos=value_end_pos,
+                        add_space=False
+                    )
 
         # Get completions from the command
         completions = command.get_completions(args)
-        if not completions:
-            return False, None, False
+        if completions:
+            self._tab_completions = completions
 
-        # Format full completions
-        full_completions = []
-        for comp in completions:
-            if is_option_value and prefix_to_preserve:
-                full_completion = f"{prefix_to_preserve}{comp}"
-            else:
-                full_completion = f"{cmd_name} {comp}"
+            # For file completions, we typically replace the last token
+            if len(tokens) > 1:
+                last_token_idx = len(tokens) - 1
+                last_token_start = token_positions[last_token_idx][0]
+                last_token_end = token_positions[last_token_idx][1]
 
-            full_completions.append(full_completion)
+                if len(completions) == 1:
+                    # Single completion - replace just the last token
+                    completion = completions[0]
+                    add_space = not completion.endswith('/')
+                    self._last_completion_text = f"{current_text[:last_token_start]}{completion}"
+                    return CompletionResult(
+                        success=True,
+                        replacement=completion,
+                        start_pos=last_token_start,
+                        end_pos=last_token_end,
+                        add_space=add_space
+                    )
 
-        self._tab_completions = full_completions
+                # Multiple completions - start cycling
+                self._current_completion_index = 0
+                completion = completions[0]
+                self._last_completion_text = f"{current_text[:last_token_start]}{completion}"
+                return CompletionResult(
+                    success=True,
+                    replacement=completion,
+                    start_pos=last_token_start,
+                    end_pos=last_token_end,
+                    add_space=False
+                )
 
-        if len(self._tab_completions) == 1:
-            # Single completion - return with trailing space if not a directory
-            completion = self._tab_completions[0]
-            add_space = not completion.endswith('/')
-            self._last_completion_text = completion
-            return True, completion, add_space
+            # Fallback to full text replacement if we can't determine token boundaries
+            if len(completions) == 1:
+                # Single completion
+                full_text = f"{cmd_name} {completions[0]}"
+                self._last_completion_text = full_text
+                return CompletionResult(
+                    success=True,
+                    replacement=full_text,
+                    start_pos=0,
+                    end_pos=len(current_text),
+                    add_space=not completions[0].endswith('/')
+                )
 
-        # Multiple completions - start cycling
-        self._current_completion_index = 0
-        completion = self._tab_completions[0]
-        self._last_completion_text = completion
-        return True, completion, False
+            # Multiple completions
+            self._current_completion_index = 0
+            full_text = f"{cmd_name} {completions[0]}"
+            self._last_completion_text = full_text
+            return CompletionResult(
+                success=True,
+                replacement=full_text,
+                start_pos=0,
+                end_pos=len(current_text),
+                add_space=False
+            )
+
+        return CompletionResult(success=False)
 
     def _tokenize_args(self, args_string: str) -> List[str]:
         """
@@ -259,3 +357,64 @@ class SystemCommandProcessor:
             tokens.append(current)
 
         return tokens
+
+    def _find_token_positions(self, text: str, tokens: List[str]) -> List[Tuple[int, int]]:
+        """
+        Find the start and end positions of each token in the text.
+
+        Args:
+            text: The full text
+            tokens: The tokenized text
+
+        Returns:
+            List of (start_pos, end_pos) tuples for each token
+        """
+        positions = []
+        search_start = 0
+
+        for token in tokens:
+            # Handle quoted tokens specially
+            if (token.startswith('"') and token.endswith('"')) or \
+            (token.startswith("'") and token.endswith("'")):
+                # Look for the exact token including quotes
+                pos = text.find(token, search_start)
+            else:
+                # For unquoted tokens, find the next occurrence after search_start
+                pos = text.find(token, search_start)
+
+                # Verify it's a whole word by checking boundaries
+                if pos != -1:
+                    is_word_start = pos == 0 or text[pos-1].isspace()
+                    is_word_end = pos + len(token) >= len(text) or text[pos + len(token)].isspace()
+
+                    # If not a whole word, try to find the next occurrence
+                    if not (is_word_start and is_word_end):
+                        # Look for token with space before/after or at start/end of string
+                        pos = -1
+                        i = search_start
+                        while i < len(text):
+                            i = text.find(token, i)
+                            if i == -1:
+                                break
+
+                            is_word_start = i == 0 or text[i-1].isspace()
+                            is_word_end = i + len(token) >= len(text) or text[i + len(token)].isspace()
+
+                            if is_word_start and is_word_end:
+                                pos = i
+                                break
+
+                            i += 1
+
+            if pos != -1:
+                start_pos = pos
+                end_pos = pos + len(token)
+                positions.append((start_pos, end_pos))
+                search_start = end_pos
+            else:
+                # This should not happen with proper tokenization, but fall back to
+                # appending token at the current search position
+                positions.append((search_start, search_start + len(token)))
+                search_start += len(token)
+
+        return positions

@@ -193,11 +193,11 @@ class SystemWidget(QWidget):
             current_text: Current input text
         """
         # Ask command processor for completion
-        success, completion, add_space = self._command_processor.handle_tab_completion(current_text)
+        result = self._command_processor.handle_tab_completion(current_text)
 
-        if success and completion:
+        if result.success and result.replacement is not None:
             # Apply the completion
-            self._input.apply_completion(completion, add_space)
+            self._input.apply_completion(result)
 
     def _update_command_history(self) -> None:
         """

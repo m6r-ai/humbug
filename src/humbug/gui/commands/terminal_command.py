@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, List
 
 from humbug.gui.command_options import CommandOptionParser
 from humbug.mindspace.system.system_command import SystemCommand
@@ -37,3 +37,16 @@ class TerminalCommand(SystemCommand):
         """
         self._create_terminal()
         return True
+
+    def get_completions(self, partial_args: str) -> List[str]:
+        """
+        Get completions for partial arguments.
+
+        Args:
+            partial_args: Partial command arguments
+
+        Returns:
+            List of possible completions
+        """
+        # Terminal command doesn't take any arguments, so no completions
+        return []

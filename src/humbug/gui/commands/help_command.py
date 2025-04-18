@@ -77,3 +77,24 @@ class HelpCommand(SystemCommand):
         )
 
         return True
+
+    def get_completions(self, partial_args: str) -> List[str]:
+        """
+        Get completions for partial arguments.
+
+        Args:
+            partial_args: Partial command arguments
+
+        Returns:
+            List of possible completions
+        """
+        # For help command, we complete with command names
+        partial_args = partial_args.strip()
+
+        # If empty, return all command names
+        if not partial_args:
+            return sorted(self._registry.get_command_names())
+
+        # Otherwise, return matching command names
+        command_names = self._registry.get_command_names()
+        return [cmd for cmd in command_names if cmd.startswith(partial_args)]

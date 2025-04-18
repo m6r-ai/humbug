@@ -7,6 +7,7 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent, QObject
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
+from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -225,26 +226,39 @@ class SystemInput(SystemMessage):
         """
         return self._command_history.copy()
 
-    def apply_completion(self, completion: str, add_space: bool = False) -> None:
+    def apply_completion(self, result: CompletionResult) -> None:
         """
         Apply a tab completion to the input area.
 
         Args:
-            completion: The completed text to apply
-            add_space: Whether to add a space after the completion
+            result: The completion result to apply
         """
-        self._text_area.setPlainText(completion)
+        if not result.success or result.replacement is None:
+            return
 
-        # Add space if requested and not already present
-        if add_space and not completion.endswith(' '):
+        # Get the current text
+        current_text = self._text_area.toPlainText()
+
+        # Create the new text by replacing only the specified part
+        new_text = current_text[:result.start_pos] + result.replacement + current_text[result.end_pos:]
+
+        # Calculate where the cursor should end up
+        new_cursor_pos = result.start_pos + len(result.replacement)
+
+        # Apply the new text
+        self._text_area.setPlainText(new_text)
+
+        # Add space if requested
+        if result.add_space and not new_text.endswith(' '):
             cursor = self._text_area.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
+            cursor.setPosition(new_cursor_pos)
             cursor.insertText(' ')
-        else:
-            # Move cursor to end of text
-            cursor = self._text_area.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            self._text_area.setTextCursor(cursor)
+            new_cursor_pos += 1
+
+        # Set the cursor to the proper position
+        cursor = self._text_area.textCursor()
+        cursor.setPosition(new_cursor_pos)
+        self._text_area.setTextCursor(cursor)
 
     def clear(self) -> None:
         """Clear the input area."""

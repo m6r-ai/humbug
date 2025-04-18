@@ -122,3 +122,28 @@ class ConversationCommand(SystemCommand):
                 f"Failed to create conversation: {str(e)}"
             )
             return False
+
+    def get_completions(self, partial_args: str) -> List[str]:
+        """
+        Get completions for partial arguments.
+
+        Args:
+            partial_args: Partial command arguments
+
+        Returns:
+            List of possible completions
+        """
+        # First check for option completions using the base implementation
+        option_completions = super().get_completions(partial_args)
+        if option_completions:
+            return option_completions
+
+        # If we have a -m or --model option, we need to check if we're completing a model name
+        parts = self._tokenize_args(partial_args)
+        if len(parts) >= 2 and parts[-2] in ["-m", "--model"]:
+            # We're completing a model name
+            current_value = parts[-1] if len(parts) > 2 else ""
+            return self._complete_model_names(current_value)
+
+        # No special completions for this command
+        return []

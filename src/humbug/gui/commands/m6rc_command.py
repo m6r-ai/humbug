@@ -111,13 +111,5 @@ class M6rcCommand(SystemCommand):
         # Get path completions for the remaining args
         completions = self._get_mindspace_path_completions(remaining_args, file_extension=".m6r")
 
-        # If we have completions, we need to preserve the options
-        if completions:
-            # Extract the options part (everything before the remaining args)
-            options_part = partial_args[:partial_args.find(remaining_args)].strip()
-
-            # If we have options, we need to add them to completions
-            if options_part:
-                return [f"{options_part} {completion}" for completion in completions]
-
+        # Return the raw completions - the command processor will handle context preservation
         return completions
