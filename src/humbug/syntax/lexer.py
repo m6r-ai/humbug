@@ -8,6 +8,7 @@ class TokenType(IntEnum):
     """Type of lexical token."""
     ADDRESS = auto()
     ANNOTATION = auto()
+    ARGUMENT = auto()
     ATTRIBUTE = auto()
     BACKTICK = auto()
     BLOCKQUOTE = auto()
@@ -15,6 +16,7 @@ class TokenType(IntEnum):
     BOOLEAN = auto()
     CHARACTER = auto()
     CODE = auto()
+    COMMAND = auto()
     COMMENT = auto()
     CSS_AT_RULE = auto()
     DIMENSION = auto()
@@ -47,6 +49,7 @@ class TokenType(IntEnum):
     METHOD_REFERENCE_OPERATOR = auto()
     NUMBER = auto()
     OPERATOR = auto()
+    OPTION = auto()
     PREPROCESSOR = auto()
     REGEXP = auto()
     RPAREN = auto()

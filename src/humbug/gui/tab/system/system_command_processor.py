@@ -1,11 +1,14 @@
+"""Processes system commands and handles tab completion."""
+
 import logging
-import re
-from typing import Tuple, Optional, List
+from typing import List, Optional, Tuple
 
 from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
+from humbug.syntax.command.command_lexer import CommandLexer, TokenType, Token
+
 
 class SystemCommandProcessor:
     """Processes system commands using the command registry."""
@@ -36,10 +39,22 @@ class SystemCommandProcessor:
         self.reset_tab_completion()
 
         try:
-            # Split only the first token to get the command name
-            parts = command_text.split(maxsplit=1)
-            cmd = parts[0].lower()
-            args = parts[1] if len(parts) > 1 else ""
+            # Lex the command text to get tokens
+            lexer = CommandLexer()
+            lexer.lex(None, command_text)
+
+            # Get the command name (first token)
+            cmd = self._get_command_name(lexer)
+            if not cmd:
+                # No command name found
+                self._mindspace_manager.add_system_interaction(
+                    SystemMessageSource.ERROR,
+                    "Invalid command format. Type 'help' for a list of available commands."
+                )
+                return
+
+            # Get the remaining arguments (everything after the command name)
+            args = command_text[len(cmd):].lstrip() if len(cmd) < len(command_text) else ""
 
             command = self._command_registry.get_command(cmd)
             if not command:
@@ -95,10 +110,6 @@ class SystemCommandProcessor:
         if not current_text:
             return CompletionResult(success=False)
 
-        # Tokenize the input text to find token boundaries
-        tokens = self._tokenize_args(current_text)
-        token_positions = self._find_token_positions(current_text, tokens)
-
         # If we're cycling through completions and the current text matches our last
         # completion (minus any trailing space), continue cycling
         if (self._tab_completions and
@@ -121,15 +132,112 @@ class SystemCommandProcessor:
         self._tab_completions = []
         self._current_completion_index = -1
 
-        # Parse the input to separate command and args
-        parts = current_text.split(maxsplit=1)
-        cmd_name = parts[0].lower()
-        args = parts[1] if len(parts) > 1 else ""
+        # Tokenize the input
+        lexer = CommandLexer()
+        lexer.lex(None, current_text)
 
-        # Complete command name if needed
-        if len(parts) == 1 and not current_text.endswith(' '):
-            command_names = self._command_registry.get_command_names()
-            matches = [name for name in command_names if name.startswith(cmd_name)]
+        # Get the position of the cursor (end of text for tab completion)
+        cursor_position = len(current_text)
+
+        # Get the token at the cursor position
+        current_token = self._get_token_at_position(lexer, cursor_position - 1) if cursor_position > 0 else None
+
+        # If no token at cursor, we're at whitespace at the end - prepare to add a new token
+        if not current_token or cursor_position > (current_token.start + len(current_token.value)):
+            # Check if we have a command yet
+            command_name = self._get_command_name(lexer)
+
+            # If no command, offer command completions
+            if not command_name:
+                return self._complete_command_name(current_text, "")
+
+            # If we have a command but cursor is after a space, we could be starting an option or argument
+            command = self._command_registry.get_command(command_name)
+            if not command:
+                return CompletionResult(success=False)
+
+            # Get the last token to see what we might be completing
+            last_token = lexer.peek_next_token(-1)
+
+            # If the last token was an option, we might be starting an option value
+            if last_token and last_token.type == TokenType.OPTION:
+                # Convert option name to proper format (-s -> s, --long -> long)
+                option_name = last_token.value[2:] if last_token.value.startswith('--') else last_token.value[1:]
+
+                # Check if this option takes a value
+                options = command.setup_options()
+                option = options.find_option(option_name)
+
+                if option and option.takes_value:
+                    # We're completing a value for this option
+                    return self._complete_option_value(command, option_name, "", current_text)
+
+            # Otherwise suggest new options or arguments based on command context
+            # We'll prioritize options first
+            return self._complete_option(command, "", current_text)
+
+        # We have a token at cursor position - what kind is it?
+        if current_token.type == TokenType.COMMAND:
+            # Completing the command name
+            partial_command = current_token.value
+            return self._complete_command_name(current_text, partial_command)
+
+        if current_token.type == TokenType.OPTION:
+            # Completing an option
+            command_name = self._get_command_name(lexer)
+            if not command_name:
+                return CompletionResult(success=False)
+
+            command = self._command_registry.get_command(command_name)
+            if not command:
+                return CompletionResult(success=False)
+
+            partial_option = current_token.value
+            return self._complete_option(command, partial_option, current_text)
+
+        if current_token.type == TokenType.ARGUMENT:
+            # This could be either an option value or a regular argument
+            # We need to check the context
+            command_name = self._get_command_name(lexer)
+            if not command_name:
+                return CompletionResult(success=False)
+
+            command = self._command_registry.get_command(command_name)
+            if not command:
+                return CompletionResult(success=False)
+
+            # Try to find if this argument is an option value
+            # by looking at the previous token
+            previous_token = self._get_token_before(lexer, current_token)
+
+            if previous_token and previous_token.type == TokenType.OPTION:
+                # This argument might be a value for the previous option
+                option_name = previous_token.value[2:] if previous_token.value.startswith('--') else previous_token.value[1:]
+
+                # Check if this option takes a value
+                options = command.setup_options()
+                option = options.find_option(option_name)
+
+                if option and option.takes_value:
+                    # We're completing a value for this option
+                    partial_value = current_token.value
+                    return self._complete_option_value(command, option_name, partial_value, current_text)
+
+            # If we get here, it's a regular argument (or we couldn't determine it's an option value)
+            # Calculate the parts of the text to keep/replace
+            start_pos = current_token.start
+            end_pos = current_token.start + len(current_token.value)
+
+            # Get completions from the command
+            remaining_text = current_text[len(command_name):].lstrip()
+            completions = command.get_completions(remaining_text)
+
+            if not completions:
+                return CompletionResult(success=False)
+
+            # Filter completions based on the partial argument
+            partial_argument = current_token.value
+            matches = [comp for comp in completions if comp.startswith(partial_argument)]
 
             if not matches:
                 return CompletionResult(success=False)
@@ -137,284 +245,314 @@ class SystemCommandProcessor:
             self._tab_completions = matches
 
             if len(matches) == 1:
-                # Single completion - return with trailing space
+                # Single completion - replace just the argument
                 completion = matches[0]
-                self._last_completion_text = completion
+                add_space = not completion.endswith('/')
+                self._last_completion_text = current_text[:start_pos] + completion + (" " if add_space else "")
+
                 return CompletionResult(
                     success=True,
                     replacement=completion,
-                    start_pos=0,  # Replace the entire command
-                    end_pos=len(cmd_name),
-                    add_space=True
+                    start_pos=start_pos,
+                    end_pos=end_pos,
+                    add_space=add_space
                 )
 
             # Multiple completions - start cycling
             self._current_completion_index = 0
             completion = matches[0]
-            self._last_completion_text = completion
+            self._last_completion_text = current_text[:start_pos] + completion
+
+            return CompletionResult(
+                success=True,
+                replacement=completion,
+                start_pos=start_pos,
+                end_pos=end_pos,
+                add_space=False
+            )
+
+    def _get_token_at_position(self, lexer: CommandLexer, position: int) -> Token | None:
+        """
+        Get the token at the specified character position in the input.
+
+        Args:
+            lexer: The lexer containing the tokens
+            position: The character position to find a token for
+
+        Returns:
+            The token at the position, or None if no token is at that position
+        """
+        # Save current token position
+        current_position = lexer._next_token
+
+        # Reset to beginning
+        lexer._next_token = 0
+
+        # Scan through tokens to find one at the right position
+        token = lexer.get_next_token()
+        while token:
+            token_end = token.start + len(token.value)
+            if token.start <= position < token_end:
+                # Restore position
+                lexer._next_token = current_position
+                return token
+
+            token = lexer.get_next_token()
+
+        # Restore position
+        lexer._next_token = current_position
+        return None
+
+    def _get_token_before(self, lexer: CommandLexer, target_token: Token) -> Token | None:
+        """
+        Get the token that comes before the specified token.
+
+        Args:
+            lexer: The lexer containing the tokens
+            target_token: The token to find the predecessor for
+
+        Returns:
+            The token before the target token, or None if no such token exists
+        """
+        # Save current token position
+        current_position = lexer._next_token
+
+        # Reset to beginning
+        lexer._next_token = 0
+
+        previous_token = None
+        token = lexer.get_next_token()
+
+        while token:
+            if token.start == target_token.start and token.value == target_token.value:
+                # Found target token, return the previous one
+                lexer._next_token = current_position
+                return previous_token
+
+            previous_token = token
+            token = lexer.get_next_token()
+
+        # Restore position
+        lexer._next_token = current_position
+        return None
+
+    def _get_command_name(self, lexer: CommandLexer) -> str | None:
+        """
+        Get the command name from the tokens.
+
+        Args:
+            lexer: The lexer containing the tokens
+
+        Returns:
+            The command name if found, None otherwise
+        """
+        # Save current token position
+        current_position = lexer._next_token
+
+        # Reset to beginning
+        lexer._next_token = 0
+
+        # Find first token of type COMMAND
+        token = lexer.get_next_token()
+        while token:
+            if token.type == TokenType.COMMAND:
+                # Restore position
+                lexer._next_token = current_position
+                return token.value
+
+            token = lexer.get_next_token()
+
+        # Restore position
+        lexer._next_token = current_position
+        return None
+
+    def _get_tokens_by_type(self, lexer: CommandLexer, token_type: TokenType) -> List[Token]:
+        """
+        Get all tokens of a specific type.
+
+        Args:
+            lexer: The lexer containing the tokens
+            token_type: The type of tokens to retrieve
+
+        Returns:
+            A list of tokens matching the requested type
+        """
+        # Save current token position
+        current_position = lexer._next_token
+
+        # Reset to beginning
+        lexer._next_token = 0
+
+        # Collect all tokens of the specified type
+        matching_tokens = []
+        token = lexer.get_next_token()
+        while token:
+            if token.type == token_type:
+                matching_tokens.append(token)
+
+            token = lexer.get_next_token()
+
+        # Restore position
+        lexer._next_token = current_position
+        return matching_tokens
+
+    def _complete_command_name(self, current_text: str, partial_command: str) -> CompletionResult:
+        """
+        Complete a command name.
+
+        Args:
+            current_text: The full current text
+            partial_command: The partial command name to complete
+
+        Returns:
+            CompletionResult with command name completion
+        """
+        command_names = self.get_available_commands()
+        matches = [name for name in command_names if name.startswith(partial_command)]
+
+        if not matches:
+            return CompletionResult(success=False)
+
+        self._tab_completions = matches
+
+        if len(matches) == 1:
+            # Single completion - return with trailing space
+            completion = matches[0]
+            self._last_completion_text = completion + " "
+
             return CompletionResult(
                 success=True,
                 replacement=completion,
                 start_pos=0,
-                end_pos=len(cmd_name),
-                add_space=False
+                end_pos=len(partial_command),
+                add_space=True
             )
 
-        # Get the command for completion
-        command = self._command_registry.get_command(cmd_name)
-        if not command:
+        # Multiple completions - start cycling
+        self._current_completion_index = 0
+        completion = matches[0]
+        self._last_completion_text = completion
+
+        return CompletionResult(
+            success=True,
+            replacement=completion,
+            start_pos=0,
+            end_pos=len(partial_command),
+            add_space=False
+        )
+
+    def _complete_option(self, command, partial_option: str, current_text: str) -> CompletionResult:
+        """
+        Complete a command option.
+
+        Args:
+            command: The command object
+            partial_option: The partial option to complete
+            current_text: The full current text
+
+        Returns:
+            CompletionResult with option completion
+        """
+        options = command.setup_options()
+        option_completions = options.get_option_completions(partial_option)
+
+        if not option_completions:
             return CompletionResult(success=False)
 
-        # Handle option completion
-        if args.endswith(' '):
-            # We're just after a space, so this is likely a new token
-            # Not much to complete here yet
-            return CompletionResult(success=False)
+        self._tab_completions = option_completions
 
-        # Handle command option completion
-        if args.startswith('-'):
-            # Try to get option completions
-            options = command.setup_options()
-            option_completions = options.get_option_completions(args)
+        # Find token position
+        start_pos = current_text.find(partial_option)
+        if start_pos == -1:
+            start_pos = len(current_text)
 
-            if option_completions:
-                # Format full completions - replace just the option part
-                self._tab_completions = option_completions
+        end_pos = start_pos + len(partial_option)
 
-                if len(option_completions) == 1:
-                    # Single completion
-                    completion = option_completions[0]
-                    self._last_completion_text = f"{cmd_name} {completion}"
-                    start_pos = len(cmd_name) + 1  # After command name and space
-                    end_pos = len(current_text)  # To the end of the text
-                    return CompletionResult(
-                        success=True,
-                        replacement=completion,
-                        start_pos=start_pos,
-                        end_pos=end_pos,
-                        add_space=True
-                    )
+        if len(option_completions) == 1:
+            # Single completion
+            completion = option_completions[0]
+            self._last_completion_text = current_text[:start_pos] + completion + " "
 
-                # Multiple completions - start cycling (replace whole text for simplicity)
-                self._current_completion_index = 0
-                completion = f"{cmd_name} {option_completions[0]}"
-                self._last_completion_text = completion
-                return CompletionResult(
-                    success=True,
-                    replacement=completion,
-                    start_pos=0,
-                    end_pos=len(current_text),
-                    add_space=False
-                )
-
-        # Check if we're completing an option value
-        args_tokens = self._tokenize_args(args)
-        if len(args_tokens) >= 2 and args_tokens[-2].startswith('-'):
-            # We might be completing a value for the previous option
-            option_token = args_tokens[-2]
-            option_name = option_token[2:] if option_token.startswith('--') else option_token[1:]
-
-            # Check if this option takes a value
-            options = command.setup_options()
-            option = options.find_option(option_name)
-            if option and option.takes_value:
-                # We're completing a value for this option
-                current_value = args_tokens[-1]
-                option_completions = options.get_value_completions(option_name, current_value)
-
-                if option_completions:
-                    # Get the position of the value token we're completing
-                    args_token_positions = self._find_token_positions(args, args_tokens)
-                    value_start_pos = args_token_positions[-1][0]
-                    value_end_pos = args_token_positions[-1][1]
-
-                    # Adjust to account for the command name and space
-                    value_start_pos += len(cmd_name) + 1
-                    value_end_pos += len(cmd_name) + 1
-
-                    self._tab_completions = option_completions
-
-                    if len(option_completions) == 1:
-                        # Single completion - replace just the value
-                        completion = option_completions[0]
-                        self._last_completion_text = f"{cmd_name} {args[:value_start_pos-len(cmd_name)-1]}{completion}"
-                        return CompletionResult(
-                            success=True,
-                            replacement=completion,
-                            start_pos=value_start_pos,
-                            end_pos=value_end_pos,
-                            add_space=True
-                        )
-
-                    # Multiple completions - start cycling (replace the value token)
-                    self._current_completion_index = 0
-                    completion = option_completions[0]
-                    full_text = f"{cmd_name} {args[:value_start_pos-len(cmd_name)-1]}{completion}"
-                    self._last_completion_text = full_text
-                    return CompletionResult(
-                        success=True,
-                        replacement=completion,
-                        start_pos=value_start_pos,
-                        end_pos=value_end_pos,
-                        add_space=False
-                    )
-
-        # Get completions from the command
-        completions = command.get_completions(args)
-        if completions:
-            self._tab_completions = completions
-
-            # For file completions, we typically replace the last token
-            if len(tokens) > 1:
-                last_token_idx = len(tokens) - 1
-                last_token_start = token_positions[last_token_idx][0]
-                last_token_end = token_positions[last_token_idx][1]
-
-                if len(completions) == 1:
-                    # Single completion - replace just the last token
-                    completion = completions[0]
-                    add_space = not completion.endswith('/')
-                    self._last_completion_text = f"{current_text[:last_token_start]}{completion}"
-                    return CompletionResult(
-                        success=True,
-                        replacement=completion,
-                        start_pos=last_token_start,
-                        end_pos=last_token_end,
-                        add_space=add_space
-                    )
-
-                # Multiple completions - start cycling
-                self._current_completion_index = 0
-                completion = completions[0]
-                self._last_completion_text = f"{current_text[:last_token_start]}{completion}"
-                return CompletionResult(
-                    success=True,
-                    replacement=completion,
-                    start_pos=last_token_start,
-                    end_pos=last_token_end,
-                    add_space=False
-                )
-
-            # Fallback to full text replacement if we can't determine token boundaries
-            if len(completions) == 1:
-                # Single completion
-                full_text = f"{cmd_name} {completions[0]}"
-                self._last_completion_text = full_text
-                return CompletionResult(
-                    success=True,
-                    replacement=full_text,
-                    start_pos=0,
-                    end_pos=len(current_text),
-                    add_space=not completions[0].endswith('/')
-                )
-
-            # Multiple completions
-            self._current_completion_index = 0
-            full_text = f"{cmd_name} {completions[0]}"
-            self._last_completion_text = full_text
             return CompletionResult(
                 success=True,
-                replacement=full_text,
-                start_pos=0,
-                end_pos=len(current_text),
-                add_space=False
+                replacement=completion,
+                start_pos=start_pos,
+                end_pos=end_pos,
+                add_space=True
             )
 
-        return CompletionResult(success=False)
+        # Multiple completions - start cycling
+        self._current_completion_index = 0
+        completion = option_completions[0]
+        self._last_completion_text = current_text[:start_pos] + completion
 
-    def _tokenize_args(self, args_string: str) -> List[str]:
+        return CompletionResult(
+            success=True,
+            replacement=completion,
+            start_pos=start_pos,
+            end_pos=end_pos,
+            add_space=False
+        )
+
+    def _complete_option_value(self, command, option_name: str, partial_value: str, current_text: str) -> CompletionResult:
         """
-        Tokenize arguments string, preserving quoted strings.
+        Complete a value for an option.
 
         Args:
-            args_string: Arguments string to tokenize
+            command: The command object
+            option_name: The option name (without dashes)
+            partial_value: The partial value to complete
+            current_text: The full current text
 
         Returns:
-            List of tokens
+            CompletionResult with option value completion
         """
-        tokens = []
-        current = ''
-        in_quotes = False
-        quote_char = None
+        options = command.setup_options()
 
-        for char in args_string:
-            if char in ('"', "'"):
-                if not in_quotes:
-                    in_quotes = True
-                    quote_char = char
-                elif char == quote_char:
-                    in_quotes = False
-                    quote_char = None
-                current += char
-            elif char.isspace() and not in_quotes:
-                if current:
-                    tokens.append(current)
-                    current = ''
-            else:
-                current += char
+        # Check if this option exists and takes a value
+        option = options.find_option(option_name)
+        if not option or not option.takes_value:
+            return CompletionResult(success=False)
 
-        if current:
-            tokens.append(current)
+        # Get value completions for this option
+        value_completions = options.get_value_completions(option_name, partial_value)
 
-        return tokens
+        if not value_completions:
+            return CompletionResult(success=False)
 
-    def _find_token_positions(self, text: str, tokens: List[str]) -> List[Tuple[int, int]]:
-        """
-        Find the start and end positions of each token in the text.
+        # Find token position
+        start_pos = current_text.rfind(partial_value)
+        if start_pos == -1:
+            # If not found, assume it's at the end
+            start_pos = len(current_text)
 
-        Args:
-            text: The full text
-            tokens: The tokenized text
+        end_pos = start_pos + len(partial_value)
 
-        Returns:
-            List of (start_pos, end_pos) tuples for each token
-        """
-        positions = []
-        search_start = 0
+        self._tab_completions = value_completions
 
-        for token in tokens:
-            # Handle quoted tokens specially
-            if (token.startswith('"') and token.endswith('"')) or \
-            (token.startswith("'") and token.endswith("'")):
-                # Look for the exact token including quotes
-                pos = text.find(token, search_start)
-            else:
-                # For unquoted tokens, find the next occurrence after search_start
-                pos = text.find(token, search_start)
+        if len(value_completions) == 1:
+            # Single completion
+            completion = value_completions[0]
+            is_path = completion.endswith('/')
+            self._last_completion_text = current_text[:start_pos] + completion + ("" if is_path else " ")
 
-                # Verify it's a whole word by checking boundaries
-                if pos != -1:
-                    is_word_start = pos == 0 or text[pos-1].isspace()
-                    is_word_end = pos + len(token) >= len(text) or text[pos + len(token)].isspace()
+            return CompletionResult(
+                success=True,
+                replacement=completion,
+                start_pos=start_pos,
+                end_pos=end_pos,
+                add_space=not is_path
+            )
 
-                    # If not a whole word, try to find the next occurrence
-                    if not (is_word_start and is_word_end):
-                        # Look for token with space before/after or at start/end of string
-                        pos = -1
-                        i = search_start
-                        while i < len(text):
-                            i = text.find(token, i)
-                            if i == -1:
-                                break
+        # Multiple completions - start cycling
+        self._current_completion_index = 0
+        completion = value_completions[0]
+        self._last_completion_text = current_text[:start_pos] + completion
 
-                            is_word_start = i == 0 or text[i-1].isspace()
-                            is_word_end = i + len(token) >= len(text) or text[i + len(token)].isspace()
-
-                            if is_word_start and is_word_end:
-                                pos = i
-                                break
-
-                            i += 1
-
-            if pos != -1:
-                start_pos = pos
-                end_pos = pos + len(token)
-                positions.append((start_pos, end_pos))
-                search_start = end_pos
-            else:
-                # This should not happen with proper tokenization, but fall back to
-                # appending token at the current search position
-                positions.append((search_start, search_start + len(token)))
-                search_start += len(token)
-
-        return positions
+        return CompletionResult(
+            success=True,
+            replacement=completion,
+            start_pos=start_pos,
+            end_pos=end_pos,
+            add_space=False
+        )
