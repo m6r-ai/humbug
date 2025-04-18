@@ -22,7 +22,9 @@ class SystemCommandProcessor:
         # Tab completion state tracking
         self._tab_completions: List[str] = []
         self._current_completion_index: int = -1
-        self._last_completion_text: str = ""
+        self._completion_start_pos: int = 0  # Start position never changes
+        self._current_completion_text: str = ""  # Current completion text
+        self._tab_completion_active: bool = False
 
         # Token tracking for current command
         self._current_text: str = ""
@@ -155,7 +157,9 @@ class SystemCommandProcessor:
         """Reset tab completion state."""
         self._tab_completions = []
         self._current_completion_index = -1
-        self._last_completion_text = ""
+        self._completion_start_pos = 0
+        self._current_completion_text = ""
+        self._tab_completion_active = False
         self._current_tokens = []
         self._cursor_token_index = -1
         self._cursor_position = 0
@@ -222,25 +226,34 @@ class SystemCommandProcessor:
         if not current_text:
             return CompletionResult(success=False)
 
-        # If we're cycling through completions and this is a continuation
-        if is_continuation and self._tab_completions:
+        # Handle continuation of existing tab completion
+        if is_continuation and self._tab_completion_active and self._tab_completions:
             # Move to next completion in the list
             self._current_completion_index = (self._current_completion_index + 1) % len(self._tab_completions)
-            completion = self._tab_completions[self._current_completion_index]
-            self._last_completion_text = completion
+            new_completion = self._tab_completions[self._current_completion_index]
 
-            # For cycling, we usually replace the entire text
-            return CompletionResult(
+            # Calculate end position based on current completion text
+            end_pos = self._completion_start_pos + len(self._current_completion_text)
+
+            # Create result with dynamic end position
+            result = CompletionResult(
                 success=True,
-                replacement=completion,
-                start_pos=0,
-                end_pos=len(current_text),
-                add_space=False
+                replacement=new_completion,
+                start_pos=self._completion_start_pos,
+                end_pos=end_pos,
+                add_space=not new_completion.endswith('/')
             )
+
+            # Update the current completion text for next cycle
+            self._current_completion_text = new_completion
+
+            return result
 
         # Otherwise, this is a new tab completion request
         self._tab_completions = []
         self._current_completion_index = -1
+        self._tab_completion_active = False
+        self._current_completion_text = ""
 
         # Parse the command line once
         self._parse_command_line(current_text, cursor_position)
@@ -248,26 +261,36 @@ class SystemCommandProcessor:
         # Determine what to complete based on token context
         token = self._get_token_at_cursor()
 
+        # Store start position for future continuations
+        if token:
+            self._completion_start_pos = token.start
+        else:
+            # If no token at cursor, we're completing at whitespace
+            self._completion_start_pos = cursor_position
+
+        # Generate completions based on token type and context
         if not token or self._is_cursor_at_whitespace():
             # Complete new token based on context
-            return self._complete_new_token(current_text)
-
-        # Complete existing token
-        if token.type == TokenType.COMMAND:
-            return self._complete_command_name(token.value, token.start, token.start + len(token.value))
-
-        if token.type == TokenType.OPTION:
+            result = self._complete_new_token(current_text)
+        elif token.type == TokenType.COMMAND:
+            result = self._complete_command_name(token.value, token.start, token.start + len(token.value))
+        elif token.type == TokenType.OPTION:
             # Get the command
             command = self._command_registry.get_command(self._current_command_name)
             if not command:
                 return CompletionResult(success=False)
+            result = self._complete_option(command, token.value, token.start, token.start + len(token.value))
+        elif token.type == TokenType.ARGUMENT:
+            result = self._complete_argument(token, current_text)
+        else:
+            return CompletionResult(success=False)
 
-            return self._complete_option(command, token.value, token.start, token.start + len(token.value))
+        if result.success and result.replacement is not None:
+            self._tab_completion_active = True
+            # Store the current completion text for next cycle
+            self._current_completion_text = result.replacement
 
-        if token.type == TokenType.ARGUMENT:
-            return self._complete_argument(token, current_text)
-
-        return CompletionResult(success=False)
+        return result
 
     def _complete_new_token(self, current_text: str) -> CompletionResult:
         """
@@ -344,7 +367,7 @@ class SystemCommandProcessor:
         if len(matches) == 1:
             # Single completion - return with trailing space
             completion = matches[0]
-            self._last_completion_text = completion + " "
+            self._current_completion_index = 0
 
             return CompletionResult(
                 success=True,
@@ -357,7 +380,6 @@ class SystemCommandProcessor:
         # Multiple completions - start cycling
         self._current_completion_index = 0
         completion = matches[0]
-        self._last_completion_text = completion
 
         return CompletionResult(
             success=True,
@@ -380,7 +402,6 @@ class SystemCommandProcessor:
         Returns:
             CompletionResult with option completion
         """
-        print("Completing option:", partial_option)
         options = command.setup_options()
         option_completions = options.get_option_completions(partial_option)
 
@@ -403,13 +424,12 @@ class SystemCommandProcessor:
                 return CompletionResult(success=False)
 
             self._tab_completions = matches
-            print("Matches:", matches)
 
             if len(matches) == 1:
                 # Single completion
                 completion = matches[0]
                 is_path = completion.endswith('/')
-                self._last_completion_text = completion + ("" if is_path else " ")
+                self._current_completion_index = 0
 
                 return CompletionResult(
                     success=True,
@@ -422,7 +442,6 @@ class SystemCommandProcessor:
             # Multiple completions - start cycling
             self._current_completion_index = 0
             completion = matches[0]
-            self._last_completion_text = completion
 
             return CompletionResult(
                 success=True,
@@ -435,10 +454,9 @@ class SystemCommandProcessor:
         self._tab_completions = option_completions
 
         if len(option_completions) == 1:
-            print("Single option completion:", option_completions[0])
             # Single completion
             completion = option_completions[0]
-            self._last_completion_text = completion + " "
+            self._current_completion_index = 0
 
             return CompletionResult(
                 success=True,
@@ -449,10 +467,8 @@ class SystemCommandProcessor:
             )
 
         # Multiple completions - start cycling
-        print("Multiple option completions:", option_completions)
         self._current_completion_index = 0
         completion = option_completions[0]
-        self._last_completion_text = completion
 
         return CompletionResult(
             success=True,
@@ -538,7 +554,7 @@ class SystemCommandProcessor:
             # Single completion - replace just the argument
             completion = matches[0]
             add_space = not completion.endswith('/')
-            self._last_completion_text = current_text[:start_pos] + completion + (" " if add_space else "")
+            self._current_completion_index = 0
 
             return CompletionResult(
                 success=True,
@@ -551,7 +567,6 @@ class SystemCommandProcessor:
         # Multiple completions - start cycling
         self._current_completion_index = 0
         completion = matches[0]
-        self._last_completion_text = current_text[:start_pos] + completion
 
         return CompletionResult(
             success=True,
@@ -601,7 +616,7 @@ class SystemCommandProcessor:
             # Single completion
             completion = value_completions[0]
             is_path = completion.endswith('/')
-            self._last_completion_text = completion + ("" if is_path else " ")
+            self._current_completion_index = 0
 
             return CompletionResult(
                 success=True,
@@ -614,7 +629,6 @@ class SystemCommandProcessor:
         # Multiple completions - start cycling
         self._current_completion_index = 0
         completion = value_completions[0]
-        self._last_completion_text = completion
 
         return CompletionResult(
             success=True,
