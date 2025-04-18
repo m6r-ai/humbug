@@ -25,6 +25,7 @@ class SystemCommandProcessor:
         self._last_completion_text: str = ""
 
         # Token tracking for current command
+        self._current_text: str = ""
         self._current_tokens: List[Token] = []
         self._cursor_token_index: int = -1
         self._cursor_position: int = 0
@@ -102,6 +103,8 @@ class SystemCommandProcessor:
             current_text: The current command text
             cursor_position: The position of the cursor in the text
         """
+        self._current_text = current_text
+
         # Tokenize the input
         lexer = CommandLexer()
         lexer.lex(None, current_text)
@@ -220,7 +223,7 @@ class SystemCommandProcessor:
 
         # If we're cycling through completions and the current text matches our last
         # completion (minus any trailing space), continue cycling
-        if (self._tab_completions and current_text == self._last_completion_text.rstrip()):
+        if self._tab_completions and current_text == self._last_completion_text.rstrip():
             # Move to next completion in the list
             self._current_completion_index = (self._current_completion_index + 1) % len(self._tab_completions)
             completion = self._tab_completions[self._current_completion_index]
@@ -287,8 +290,8 @@ class SystemCommandProcessor:
 
         # Check if the previous token was an option that might take a value
         if self._cursor_token_index > 0:
-            prev_token = self._current_tokens[self._cursor_token_index - 1]
-            if prev_token.type == TokenType.OPTION:
+            prev_token = self._get_previous_token(self._cursor_token_index)
+            if prev_token and prev_token.type == TokenType.OPTION:
                 # Convert option name to proper format (-s -> s, --long -> long)
                 option_name = prev_token.value[2:] if prev_token.value.startswith('--') else prev_token.value[1:]
 
@@ -377,6 +380,7 @@ class SystemCommandProcessor:
         Returns:
             CompletionResult with option completion
         """
+        print("Completing option:", partial_option)
         options = command.setup_options()
         option_completions = options.get_option_completions(partial_option)
 
@@ -385,6 +389,9 @@ class SystemCommandProcessor:
             remaining_text = ""
             for token in self._current_tokens:
                 if token.type == TokenType.COMMAND:
+                    command_token = token
+                    command_end = command_token.start + len(command_token.value)
+                    remaining_text = self._current_text[command_end:].lstrip()
                     break
 
             completions = command.get_completions(remaining_text)
@@ -396,6 +403,7 @@ class SystemCommandProcessor:
                 return CompletionResult(success=False)
 
             self._tab_completions = matches
+            print("Matches:", matches)
 
             if len(matches) == 1:
                 # Single completion
@@ -427,6 +435,7 @@ class SystemCommandProcessor:
         self._tab_completions = option_completions
 
         if len(option_completions) == 1:
+            print("Single option completion:", option_completions[0])
             # Single completion
             completion = option_completions[0]
             self._last_completion_text = completion + " "
@@ -440,6 +449,7 @@ class SystemCommandProcessor:
             )
 
         # Multiple completions - start cycling
+        print("Multiple option completions:", option_completions)
         self._current_completion_index = 0
         completion = option_completions[0]
         self._last_completion_text = completion

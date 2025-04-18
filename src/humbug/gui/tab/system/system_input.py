@@ -235,6 +235,7 @@ class SystemInput(SystemMessage):
         """
         if not result.success or result.replacement is None:
             return
+        print(f"Applying completion: {result}")
 
         # Get the current text
         current_text = self._text_area.toPlainText()
