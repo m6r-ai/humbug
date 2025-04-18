@@ -1,3 +1,5 @@
+# Updated system_command_processor.py
+
 """Processes system commands and handles tab completion."""
 
 import logging
@@ -33,6 +35,50 @@ class SystemCommandProcessor:
         self._cursor_position: int = 0
         self._current_command_name: str | None = None
 
+    def _escape_text(self, text: str) -> str:
+        """
+        Escape text, converging spaces to an escaped form.
+
+        Args:
+            text: The text to escape
+
+        Returns:
+            Escaped completion string
+        """
+        # Escape spaces with backslashes
+        escaped = ""
+        for char in text:
+            if char == ' ':
+                escaped += '\\ '
+                continue
+
+            escaped += char
+
+        return escaped
+
+    def _unescape_text(self, text: str) -> str:
+        """
+        Unescape text, converting escaped spaces to their original form.
+
+        Args:
+            text: The text to unescape
+
+        Returns:
+            Unescaped command string
+        """
+        unescaped = ""
+        i = 0
+        while i < len(text):
+            if text[i] == '\\' and i + 1 < len(text):
+                unescaped += text[i + 1]
+                i += 2
+                continue
+
+            unescaped += text[i]
+            i += 1
+
+        return unescaped
+
     def process_command(self, command_text: str) -> None:
         """
         Process a command string and execute appropriate action.
@@ -48,8 +94,11 @@ class SystemCommandProcessor:
         self.reset_tab_completion()
 
         try:
+            # Unescape the command text
+            unescaped_command = self._unescape_text(command_text)
+
             # Parse the command line
-            self._parse_command_line(command_text, len(command_text))
+            self._parse_command_line(unescaped_command, len(unescaped_command))
 
             # Get the command name
             cmd = self._current_command_name
@@ -72,7 +121,7 @@ class SystemCommandProcessor:
             args = ""
             if command_token:
                 command_end = command_token.start + len(command_token.value)
-                args = command_text[command_end:].lstrip()
+                args = unescaped_command[command_end:].lstrip()
 
             command = self._command_registry.get_command(cmd)
             if not command:
@@ -112,7 +161,14 @@ class SystemCommandProcessor:
         lexer.lex(None, current_text)
 
         # Store tokens
-        self._current_tokens = self._collect_tokens(lexer)
+        self._current_tokens = []
+        token = lexer.get_next_token()
+        while token is not None:
+            self._current_tokens.append(token)
+            token = lexer.get_next_token()
+
+        print("Tokens:", self._current_tokens)
+
         self._cursor_position = cursor_position
 
         # Find the token at cursor position
@@ -125,24 +181,6 @@ class SystemCommandProcessor:
 
         # Extract command name
         self._current_command_name = self._get_command_name(self._current_tokens)
-
-    def _collect_tokens(self, lexer: CommandLexer) -> List[Token]:
-        """
-        Collect all tokens from a lexer into a list.
-
-        Args:
-            lexer: The lexer to collect tokens from
-
-        Returns:
-            List of all tokens
-        """
-        tokens = []
-        token = lexer.get_next_token()
-        while token:
-            tokens.append(token)
-            token = lexer.get_next_token()
-
-        return tokens
 
     def get_available_commands(self) -> List[str]:
         """
@@ -434,11 +472,13 @@ class SystemCommandProcessor:
             if not matches:
                 return CompletionResult(success=False)
 
-            self._tab_completions = matches
+            # Escape spaces in completions
+            escaped_matches = [self._escape_text(match) for match in matches]
+            self._tab_completions = escaped_matches
 
             if len(matches) == 1:
                 # Single completion
-                completion = matches[0]
+                completion = escaped_matches[0]
                 is_path = completion.endswith('/')
                 self._current_completion_index = 0
 
@@ -452,7 +492,7 @@ class SystemCommandProcessor:
 
             # Multiple completions - start cycling
             self._current_completion_index = 0
-            completion = matches[0]
+            completion = escaped_matches[0]
 
             return CompletionResult(
                 success=True,
@@ -554,16 +594,20 @@ class SystemCommandProcessor:
 
         # Filter completions based on the partial argument
         partial_argument = token.value
-        matches = [comp for comp in completions if comp.startswith(partial_argument)]
+        # Unescape the partial argument for matching against completions
+        unescaped_partial = self._unescape_text(partial_argument)
+        matches = [comp for comp in completions if comp.startswith(unescaped_partial)]
 
         if not matches:
             return CompletionResult(success=False)
 
-        self._tab_completions = matches
+        # Escape spaces in completions
+        escaped_matches = [self._escape_text(match) for match in matches]
+        self._tab_completions = escaped_matches
 
         if len(matches) == 1:
             # Single completion - replace just the argument
-            completion = matches[0]
+            completion = escaped_matches[0]
             add_space = not completion.endswith('/')
             self._current_completion_index = 0
 
@@ -577,7 +621,7 @@ class SystemCommandProcessor:
 
         # Multiple completions - start cycling
         self._current_completion_index = 0
-        completion = matches[0]
+        completion = escaped_matches[0]
 
         return CompletionResult(
             success=True,
@@ -616,16 +660,20 @@ class SystemCommandProcessor:
             return CompletionResult(success=False)
 
         # Get value completions for this option
-        value_completions = options.get_value_completions(option_name, partial_value)
+        # Unescape the partial value for matching
+        unescaped_partial = self._unescape_text(partial_value)
+        value_completions = options.get_value_completions(option_name, unescaped_partial)
 
         if not value_completions:
             return CompletionResult(success=False)
 
-        self._tab_completions = value_completions
+        # Escape spaces in completions
+        escaped_completions = [self._escape_text(comp) for comp in value_completions]
+        self._tab_completions = escaped_completions
 
         if len(value_completions) == 1:
             # Single completion
-            completion = value_completions[0]
+            completion = escaped_completions[0]
             is_path = completion.endswith('/')
             self._current_completion_index = 0
 
@@ -639,7 +687,7 @@ class SystemCommandProcessor:
 
         # Multiple completions - start cycling
         self._current_completion_index = 0
-        completion = value_completions[0]
+        completion = escaped_completions[0]
 
         return CompletionResult(
             success=True,

@@ -99,13 +99,6 @@ class CommandLexer(Lexer):
 
         return self._read_word
 
-    def _read_whitespace(self) -> None:
-        """
-        Read and skip whitespace characters.
-        """
-        start = self._position
-        super()._read_whitespace()
-
     def _start_quoted_text(self) -> None:
         """
         Start reading a quoted text segment.
@@ -215,10 +208,17 @@ class CommandLexer(Lexer):
         """
         start = self._position
 
-        while (self._position < self._input_len and
-               not self._is_whitespace(self._input[self._position]) and
-               self._input[self._position] not in self._OPTION_PREFIX_CHARS and
-               self._input[self._position] not in {'"', "'"}):
+        while self._position < self._input_len:
+            # Check for escape sequence
+            if self._input[self._position] == '\\' and self._position + 1 < self._input_len:
+                # Move past the backslash and the escaped character
+                self._position += 2
+                continue
+
+            # Check for end of token
+            if self._is_whitespace(self._input[self._position]):
+                break
+
             self._position += 1
 
         if self._position > start:
