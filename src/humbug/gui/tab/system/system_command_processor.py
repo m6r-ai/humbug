@@ -174,6 +174,7 @@ class SystemCommandProcessor:
         """
         if 0 <= self._cursor_token_index < len(self._current_tokens):
             return self._current_tokens[self._cursor_token_index]
+
         return None
 
     def _get_previous_token(self, token_index: int) -> Token | None:
@@ -188,6 +189,7 @@ class SystemCommandProcessor:
         """
         if 0 <= token_index - 1 < len(self._current_tokens):
             return self._current_tokens[token_index - 1]
+
         return None
 
     def _is_cursor_at_whitespace(self) -> bool:
@@ -204,7 +206,12 @@ class SystemCommandProcessor:
         # If cursor is at the end of a token, it's effectively at whitespace
         return self._cursor_position > (token.start + len(token.value))
 
-    def handle_tab_completion(self, current_text: str, is_continuation: bool = False, cursor_position: int = None) -> CompletionResult:
+    def handle_tab_completion(
+        self,
+        current_text: str,
+        is_continuation: bool = False,
+        cursor_position: int = None
+    ) -> CompletionResult:
         """
         Handle tab completion for the current input text.
 
@@ -264,6 +271,7 @@ class SystemCommandProcessor:
         # Store start position for future continuations
         if token:
             self._completion_start_pos = token.start
+
         else:
             # If no token at cursor, we're completing at whitespace
             self._completion_start_pos = cursor_position
@@ -271,17 +279,22 @@ class SystemCommandProcessor:
         # Generate completions based on token type and context
         if not token or self._is_cursor_at_whitespace():
             # Complete new token based on context
-            result = self._complete_new_token(current_text)
+            result = self._complete_new_token()
+
         elif token.type == TokenType.COMMAND:
             result = self._complete_command_name(token.value, token.start, token.start + len(token.value))
+
         elif token.type == TokenType.OPTION:
             # Get the command
             command = self._command_registry.get_command(self._current_command_name)
             if not command:
                 return CompletionResult(success=False)
+
             result = self._complete_option(command, token.value, token.start, token.start + len(token.value))
+
         elif token.type == TokenType.ARGUMENT:
             result = self._complete_argument(token, current_text)
+
         else:
             return CompletionResult(success=False)
 
@@ -292,12 +305,9 @@ class SystemCommandProcessor:
 
         return result
 
-    def _complete_new_token(self, current_text: str) -> CompletionResult:
+    def _complete_new_token(self) -> CompletionResult:
         """
         Complete a new token based on the current context.
-
-        Args:
-            current_text: The current command text
 
         Returns:
             CompletionResult with completion information
@@ -342,6 +352,7 @@ class SystemCommandProcessor:
         for token in tokens:
             if token.type == TokenType.COMMAND:
                 return token.value
+
         return None
 
     def _complete_command_name(self, partial_command: str, start_pos: int, end_pos: int) -> CompletionResult:
