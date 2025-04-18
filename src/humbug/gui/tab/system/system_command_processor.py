@@ -167,8 +167,6 @@ class SystemCommandProcessor:
             self._current_tokens.append(token)
             token = lexer.get_next_token()
 
-        print("Tokens:", self._current_tokens)
-
         self._cursor_position = cursor_position
 
         # Find the token at cursor position
@@ -584,11 +582,11 @@ class SystemCommandProcessor:
         if command_token:
             command_end = command_token.start + len(command_token.value)
             remaining_text = current_text[command_end:].lstrip()
+
         else:
             remaining_text = ""
 
         completions = command.get_completions(remaining_text)
-
         if not completions:
             return CompletionResult(success=False)
 

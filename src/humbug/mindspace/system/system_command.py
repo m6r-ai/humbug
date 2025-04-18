@@ -203,11 +203,13 @@ class SystemCommand(ABC):
             if os.path.isabs(partial_path):
                 base_dir = os.path.dirname(partial_path) or os.path.dirname(os.path.abspath(partial_path))
                 partial_file = os.path.basename(partial_path)
+
             else:
                 # Handle relative paths with directories
                 if os.path.dirname(partial_path):
                     base_dir = os.path.join(base_dir, os.path.dirname(partial_path))
                     partial_file = os.path.basename(partial_path)
+
                 else:
                     partial_file = partial_path
 
@@ -230,6 +232,7 @@ class SystemCommand(ABC):
                         # Add directory indicator
                         rel_path = os.path.join(os.path.dirname(partial_path), item)
                         matches.append(f"{rel_path}/")
+
                     elif file_extension is None or item.endswith(file_extension):
                         # Add file if it matches the extension filter (or no filter)
                         matches.append(os.path.join(os.path.dirname(partial_path), item))
