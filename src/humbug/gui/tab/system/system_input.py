@@ -22,7 +22,7 @@ class SystemInput(SystemMessage):
 
     # New signals
     command_submitted = Signal(str)
-    tab_completion_requested = Signal(str)
+    tab_completion_requested = Signal(str, bool)  # text, is_continuation
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the system input widget."""
@@ -32,6 +32,8 @@ class SystemInput(SystemMessage):
         self._command_history: List[str] = []
         self._history_position: int = -1
         self._current_command: str = ""
+
+        self._tab_completion_active: bool = False
 
         # Connect text cursor signals
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
@@ -61,6 +63,16 @@ class SystemInput(SystemMessage):
             # Cast to QKeyEvent
             key_event = cast(QKeyEvent, event)
 
+            # Handle Tab key for command completion
+            if key_event.key() == Qt.Key.Key_Tab and not key_event.modifiers():
+                # Emit signal requesting tab completion
+                current_text = self._text_area.toPlainText().strip()
+                self.tab_completion_requested.emit(current_text, self._tab_completion_active)
+                self._tab_completion_active = True
+                return True
+
+            self._tab_completion_active = False
+
             # Handle Enter key for command submission
             if key_event.key() == Qt.Key.Key_Return and not key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 text = self._text_area.toPlainText().strip()
@@ -69,13 +81,6 @@ class SystemInput(SystemMessage):
                     self._add_to_history(text)
                     self.clear()
 
-                return True
-
-            # Handle Tab key for command completion
-            if key_event.key() == Qt.Key.Key_Tab and not key_event.modifiers():
-                # Emit signal requesting tab completion
-                current_text = self._text_area.toPlainText().strip()
-                self.tab_completion_requested.emit(current_text)
                 return True
 
             # Handle Up key for history navigation

@@ -185,15 +185,16 @@ class SystemWidget(QWidget):
         if self._mindspace_manager.has_mindspace():
             self.load_system_interactions()
 
-    def _handle_tab_completion(self, current_text: str) -> None:
+    def _handle_tab_completion(self, current_text: str, is_continuation: bool) -> None:
         """
         Handle tab completion request for the current input.
 
         Args:
             current_text: Current input text
+            is_continuation: Whether this is a continuation of previous tab presses
         """
         # Ask command processor for completion
-        result = self._command_processor.handle_tab_completion(current_text)
+        result = self._command_processor.handle_tab_completion(current_text, is_continuation)
 
         if result.success and result.replacement is not None:
             # Apply the completion

@@ -200,12 +200,13 @@ class SystemCommandProcessor:
         # If cursor is at the end of a token, it's effectively at whitespace
         return self._cursor_position > (token.start + len(token.value))
 
-    def handle_tab_completion(self, current_text: str, cursor_position: int = None) -> CompletionResult:
+    def handle_tab_completion(self, current_text: str, is_continuation: bool = False, cursor_position: int = None) -> CompletionResult:
         """
         Handle tab completion for the current input text.
 
         Args:
             current_text: Current input text
+            is_continuation: Whether this is a continuation of previous tab presses
             cursor_position: Position of cursor in text (defaults to end of text)
 
         Returns:
@@ -221,9 +222,8 @@ class SystemCommandProcessor:
         if not current_text:
             return CompletionResult(success=False)
 
-        # If we're cycling through completions and the current text matches our last
-        # completion (minus any trailing space), continue cycling
-        if self._tab_completions and current_text == self._last_completion_text.rstrip():
+        # If we're cycling through completions and this is a continuation
+        if is_continuation and self._tab_completions:
             # Move to next completion in the list
             self._current_completion_index = (self._current_completion_index + 1) % len(self._tab_completions)
             completion = self._tab_completions[self._current_completion_index]
