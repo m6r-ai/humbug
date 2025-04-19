@@ -1,8 +1,7 @@
 """Command for displaying help information in the system terminal."""
 
-from typing import List
+from typing import Dict, List
 
-from humbug.gui.command_options import CommandOptionParser
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
@@ -36,13 +35,18 @@ class HelpCommand(SystemCommand):
     def help_text(self) -> str:
         return "Show help for available commands"
 
-    def _execute_command(self, parser: CommandOptionParser, args: str) -> bool:
+    def get_options_help(self) -> Dict[str, str]:
+        """Get help text for supported options."""
+        # Help command doesn't have any special options beyond the base ones
+        return super().get_options_help()
+
+    def _execute_command(self, tokens: List[Token], args: str) -> bool:
         """
-        Execute the command with parsed options.
+        Execute the command with parsed tokens.
 
         Args:
-            parser: The option parser with parsed options
-            args: Remaining arguments after option parsing
+            tokens: List of tokens from command lexer
+            args: Remaining arguments as a string (everything after command name)
 
         Returns:
             True if command executed successfully, False otherwise
@@ -101,8 +105,7 @@ class HelpCommand(SystemCommand):
         """
         # If the current token is an option, get option completions
         if current_token.type == TokenType.OPTION:
-            options = self.setup_options()
-            return options.get_option_completions(current_token.value)
+            return self._get_option_completions(current_token.value)
 
         # For the help command, we complete with command names if this is an argument token
         if current_token.type == TokenType.ARGUMENT:

@@ -2,9 +2,8 @@
 
 import logging
 import os
-from typing import List, Callable, Optional
+from typing import List, Callable, Dict, Optional
 
-from humbug.gui.command_options import CommandOptionParser
 from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
@@ -44,13 +43,13 @@ class EditCommand(SystemCommand):
         """Get the help text for the command."""
         return "Opens a file for editing. Creates the file if it doesn't exist. Usage: edit <filename>"
 
-    def _execute_command(self, parser: CommandOptionParser, args: str) -> bool:
+    def _execute_command(self, tokens: List[Token], args: str) -> bool:
         """
-        Execute the command with parsed options.
+        Execute the command with parsed tokens.
 
         Args:
-            parser: The option parser with parsed options
-            args: Remaining arguments after option parsing
+            tokens: List of tokens from command lexer
+            args: Remaining arguments as a string
 
         Returns:
             True if command executed successfully, False otherwise
@@ -149,8 +148,7 @@ class EditCommand(SystemCommand):
         # For the edit command, we're primarily interested in completing file paths
         # Only handle options if we're explicitly looking at an option token
         if current_token.type == TokenType.OPTION:
-            options = self.setup_options()
-            return options.get_option_completions(current_token.value)
+            return self._get_option_completions(current_token.value)
 
         # For arguments, complete file paths (with no extension filter)
         return self._get_mindspace_path_completions(current_token.value)

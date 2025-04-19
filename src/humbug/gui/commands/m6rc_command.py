@@ -1,10 +1,9 @@
 """Command to create a new conversation with a Metaphor file."""
 
 import os
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
-from humbug.gui.command_options import CommandOptionDescriptor, CommandOptionsRegistry, CommandOptionParser
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -35,49 +34,19 @@ class M6rcCommand(SystemCommand):
     def help_text(self) -> str:
         return "Create a new conversation from a Metaphor file"
 
-    def setup_options(self) -> CommandOptionsRegistry:
-        """Set up command options."""
-        options = super().setup_options()
-
-        # Add model option
-        options.add_option(CommandOptionDescriptor(
-            short_name="m",
-            long_name="model",
-            help_text="Specify the AI model to use",
-            takes_value=True,
-            value_description="MODEL"
-        ))
-
-        # Add model name completer
-        options.add_value_completer("model", self._complete_model_names)
-
+    def get_options_help(self) -> Dict[str, str]:
+        """Get help text for supported options."""
+        options = super().get_options_help()
+        options["-m, --model"] = "Specify the AI model to use"
         return options
 
-    def _complete_model_names(self, partial_value: str) -> List[str]:
+    def _execute_command(self, tokens: List[Token], args: str) -> bool:
         """
-        Complete model names for -m/--model option.
+        Execute the command with parsed tokens.
 
         Args:
-            partial_value: Partial model name
-
-        Returns:
-            List of matching model names
-        """
-        ai_backends = self._user_manager.get_ai_backends()
-        models = []
-        for model in AIConversationSettings.iter_models_by_backends(ai_backends):
-            if not partial_value or model.startswith(partial_value):
-                models.append(model)
-
-        return models
-
-    def _execute_command(self, parser: CommandOptionParser, args: str) -> bool:
-        """
-        Execute the command with parsed options.
-
-        Args:
-            parser: The option parser with parsed options
-            args: Remaining arguments after option parsing
+            tokens: List of tokens from command lexer
+            args: Remaining arguments as a string
 
         Returns:
             True if command executed successfully, False otherwise
@@ -90,7 +59,7 @@ class M6rcCommand(SystemCommand):
             return False
 
         # Get model if specified
-        model = parser.get_option("model")
+        model = self._get_option_value(tokens, "model")
 
         try:
             # Check if the path exists
@@ -118,6 +87,24 @@ class M6rcCommand(SystemCommand):
             )
             return False
 
+    def _complete_model_names(self, partial_value: str) -> List[str]:
+        """
+        Complete model names for -m/--model option.
+
+        Args:
+            partial_value: Partial model name
+
+        Returns:
+            List of matching model names
+        """
+        ai_backends = self._user_manager.get_ai_backends()
+        models = []
+        for model in AIConversationSettings.iter_models_by_backends(ai_backends):
+            if not partial_value or model.startswith(partial_value):
+                models.append(model)
+
+        return models
+
     def get_token_completions(
         self,
         current_token: Token,
@@ -139,9 +126,7 @@ class M6rcCommand(SystemCommand):
         """
         # Handle option completions
         if current_token.type == TokenType.OPTION:
-            # Get option completions from the options registry
-            options = self.setup_options()
-            return options.get_option_completions(current_token.value)
+            return self._get_option_completions(current_token.value)
 
         # Check if we're completing a model name for -m/--model option
         if current_token.type == TokenType.ARGUMENT and cursor_token_index > 0:
@@ -153,5 +138,4 @@ class M6rcCommand(SystemCommand):
                     return self._complete_model_names(current_token.value)
 
         # For regular arguments, complete file paths with .m6r extension
-        print(f"path completion: {current_token.value}")
         return self._get_mindspace_path_completions(current_token.value, file_extension=".m6r")

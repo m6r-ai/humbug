@@ -2,7 +2,6 @@
 
 from typing import Callable, List
 
-from humbug.gui.command_options import CommandOptionParser
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.syntax.command.command_lexer import Token, TokenType
 
@@ -32,13 +31,13 @@ class TerminalCommand(SystemCommand):
     def help_text(self) -> str:
         return "Open a new terminal tab"
 
-    def _execute_command(self, parser: CommandOptionParser, args: str) -> bool:
+    def _execute_command(self, tokens: List[Token], args: str) -> bool:
         """
-        Execute the command with parsed options.
+        Execute the command with parsed tokens.
 
         Args:
-            parser: The option parser with parsed options
-            args: Remaining arguments after option parsing
+            tokens: List of tokens from command lexer
+            args: Remaining arguments as a string
 
         Returns:
             True if command executed successfully, False otherwise
@@ -67,8 +66,7 @@ class TerminalCommand(SystemCommand):
         """
         # If the current token is an option, get option completions
         if current_token.type == TokenType.OPTION:
-            options = self.setup_options()
-            return options.get_option_completions(current_token.value)
+            return self._get_option_completions(current_token.value)
 
         # Terminal command doesn't take any arguments, so no completions for arguments
         return []

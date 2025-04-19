@@ -4,7 +4,6 @@ import logging
 import os
 from typing import Dict, List, Optional, Tuple
 
-from humbug.gui.command_options import CommandOptionParser, CommandOptionsRegistry, CommandOptionDescriptor
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
@@ -46,50 +45,44 @@ class SystemCommand:
         """
         return ""
 
-    def setup_options(self) -> CommandOptionsRegistry:
+    def get_options_help(self) -> Dict[str, str]:
         """
-        Set up command options.
+        Get help text for all supported command options.
 
         Returns:
-            CommandOptionsRegistry with registered options
+            Dictionary mapping option names (with dashes) to help text
         """
-        # Create options registry
-        options = CommandOptionsRegistry()
+        # Default implementation includes help flag
+        return {
+            "-h, --help": "Show detailed help for this command"
+        }
 
-        # Add help option by default
-        options.add_option(CommandOptionDescriptor(
-            short_name="h",
-            long_name="help",
-            help_text="Show detailed help for this command",
-            takes_value=False
-        ))
-
-        return options
-
-    def execute(self, args: str) -> bool:
+    def execute(self, tokens: List[Token], full_text: str) -> bool:
         """
-        Execute the command with the given arguments.
+        Execute the command with the given tokens.
 
         Args:
-            args: Command arguments as a string
+            tokens: List of tokens from command lexer
+            full_text: Original full command text
 
         Returns:
             True if command executed successfully, False otherwise
         """
         try:
-            # Create the option parser - this parses immediately
-            parser = CommandOptionParser(args)
-
-            # Get our option registry (used for help text and completions only)
-            options = self.setup_options()
-
             # Check for help flag
-            if parser.has_flag("h") or parser.has_flag("help"):
+            if self._has_flag(tokens, "h") or self._has_flag(tokens, "help"):
                 self._show_detailed_help()
                 return True
 
-            # Execute the command with parsed options
-            return self._execute_command(parser, parser.remaining_args())
+            # Extract remaining args (everything after the command token)
+            command_token = self._find_command_token(tokens)
+            remaining_args = ""
+            if command_token:
+                command_end = command_token.start + len(command_token.value)
+                remaining_args = full_text[command_end:].lstrip()
+
+            # Execute the command with tokens and remaining args
+            return self._execute_command(tokens, remaining_args)
 
         except Exception as e:
             self._logger.error("Error executing command: %s", str(e), exc_info=True)
@@ -99,13 +92,66 @@ class SystemCommand:
             )
             return False
 
-    def _execute_command(self, parser: CommandOptionParser, args: str) -> bool:
+    def _has_flag(self, tokens: List[Token], flag_name: str) -> bool:
         """
-        Execute the command with parsed options.
+        Check if a flag is present in the tokens.
 
         Args:
-            parser: The option parser with parsed options
-            args: Remaining arguments after option parsing
+            tokens: List of command tokens
+            flag_name: Flag name without dashes
+
+        Returns:
+            True if flag is present, False otherwise
+        """
+        for token in tokens:
+            if token.type == TokenType.OPTION:
+                if token.value == f"-{flag_name}" or token.value == f"--{flag_name}":
+                    return True
+        return False
+
+    def _get_option_value(self, tokens: List[Token], option_name: str) -> Optional[str]:
+        """
+        Get the value for an option if present.
+
+        Args:
+            tokens: List of command tokens
+            option_name: Option name without dashes
+
+        Returns:
+            Option value if found, None otherwise
+        """
+        for i, token in enumerate(tokens):
+            if token.type == TokenType.OPTION:
+                # Check if this is our option
+                if token.value == f"-{option_name}" or token.value == f"--{option_name}":
+                    # Check if there's a value token after this option
+                    if i + 1 < len(tokens) and tokens[i + 1].type == TokenType.ARGUMENT:
+                        return tokens[i + 1].value
+                    return ""  # Option exists but has no value
+        return None
+
+    def _find_command_token(self, tokens: List[Token]) -> Optional[Token]:
+        """
+        Find the command token in the token list.
+
+        Args:
+            tokens: List of tokens to search
+
+        Returns:
+            Command token if found, None otherwise
+        """
+        for token in tokens:
+            if token.type == TokenType.COMMAND:
+                return token
+        return None
+
+    def _execute_command(self, tokens: List[Token], args: str) -> bool:
+        """
+        Execute the command with parsed tokens.
+
+        Args:
+            tokens: List of tokens from command lexer
+            args: Remaining arguments as a string (everything after command name)
 
         Returns:
             True if command executed successfully, False otherwise
@@ -122,44 +168,17 @@ class SystemCommand:
             help_text += f"Aliases: {', '.join(self.aliases)}\n\n"
 
         # Add options help
-        options = self.setup_options()
-        options_help = options.get_help_text()
+        options_help = self.get_options_help()
         if options_help:
             help_text += "Options:\n"
-            help_text += options_help
+            for option, description in options_help.items():
+                help_text += f"  {option}\n    {description}\n"
 
         # Display help
         self._mindspace_manager.add_system_interaction(
             SystemMessageSource.SUCCESS,
             help_text
         )
-
-    def get_completions(self, partial_args: str) -> List[str]:
-        """
-        Get completions for partial arguments (legacy method).
-
-        Args:
-            partial_args: Partial command arguments
-
-        Returns:
-            List of possible completions
-        """
-        # By default, delegate to the token-based implementation when called with a string
-        # This provides backward compatibility
-        parser = CommandOptionParser(partial_args)
-        options = self.setup_options()
-        parser.setup_registry(options)
-
-        # Get option completions
-        if partial_args and partial_args.strip() and (partial_args.strip()[0] == '-'):
-            partial_option = partial_args.strip().split()[-1]
-            completions = options.get_option_completions(partial_option)
-            if completions:
-                return completions
-
-        # Use the implementation in subclasses
-        # The default implementation below simply returns empty completions
-        return []
 
     def get_token_completions(
         self,
@@ -180,22 +199,32 @@ class SystemCommand:
         Returns:
             List of possible completions
         """
-        # Default implementation calls the string-based method for compatibility
-        # Subclasses should override this for efficient token-based completion
-
-        # Extract argument portion based on token types
-        command_token = None
-        for token in tokens:
-            if token.type == TokenType.COMMAND:
-                command_token = token
-                break
-
-        if command_token:
-            command_end = command_token.start + len(command_token.value)
-            args_text = full_text[command_end:].lstrip()
-            return self.get_completions(args_text)
-
+        # Base implementation handles option completions
+        if current_token.type == TokenType.OPTION:
+            return self._get_option_completions(current_token.value)
         return []
+
+    def _get_option_completions(self, partial_option: str) -> List[str]:
+        """
+        Get completions for a partial option.
+
+        Args:
+            partial_option: Partial option text (with dashes)
+
+        Returns:
+            List of matching option completions
+        """
+        options = []
+
+        # Get all options from help text
+        for option_text in self.get_options_help().keys():
+            # Split combined options like "-h, --help"
+            for option in option_text.split(','):
+                option = option.strip()
+                if option.startswith(partial_option):
+                    options.append(option)
+
+        return options
 
     def _get_mindspace_path_completions(self, partial_path: str, file_extension: Optional[str] = None) -> List[str]:
         """
