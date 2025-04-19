@@ -1,7 +1,7 @@
 """Command to create a new conversation with a Metaphor file."""
 
 import os
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -14,7 +14,7 @@ from humbug.user.user_manager import UserManager
 class M6rcCommand(SystemCommand):
     """Command to create a new conversation with a Metaphor file."""
 
-    def __init__(self, create_metaphor_conversation_callback: Callable[[str, Optional[str]], None]) -> None:
+    def __init__(self, create_metaphor_conversation_callback: Callable[[str, str | None], None]) -> None:
         """
         Initialize the command.
 

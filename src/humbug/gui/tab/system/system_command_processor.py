@@ -1,7 +1,7 @@
 """Processes system commands and handles tab completion."""
 
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -30,7 +30,7 @@ class SystemCommandProcessor:
         self._current_tokens: List[Token] = []
         self._cursor_token_index: int = -1
         self._cursor_position: int = 0
-        self._current_command_name: Optional[str] = None
+        self._current_command_name: str | None = None
         self._token_map: Dict[TokenType, List[Token]] = {}
 
     def _escape_text(self, text: str) -> str:
@@ -194,7 +194,7 @@ class SystemCommandProcessor:
         self._current_command_name = None
         self._token_map.clear()
 
-    def _get_token_at_cursor(self) -> Optional[Token]:
+    def _get_token_at_cursor(self) -> Token | None:
         """
         Get the token at the cursor position.
 
@@ -206,7 +206,7 @@ class SystemCommandProcessor:
 
         return None
 
-    def _get_previous_token(self, token_index: int) -> Optional[Token]:
+    def _get_previous_token(self, token_index: int) -> Token | None:
         """
         Get the token before the specified token index.
 
@@ -235,7 +235,7 @@ class SystemCommandProcessor:
         # If cursor is at the end of a token, it's effectively at whitespace
         return self._cursor_position > (token.start + len(token.value))
 
-    def _get_command_name(self, tokens: List[Token]) -> Optional[str]:
+    def _get_command_name(self, tokens: List[Token]) -> str | None:
         """
         Get the command name from the tokens.
 
@@ -255,7 +255,7 @@ class SystemCommandProcessor:
         self,
         current_text: str,
         is_continuation: bool = False,
-        cursor_position: Optional[int] = None
+        cursor_position: int | None = None
     ) -> CompletionResult:
         """
         Handle tab completion for the current input text.

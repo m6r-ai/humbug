@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import List, Callable, Dict, Optional
+from typing import List, Callable
 
 from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.mindspace.mindspace_manager import MindspaceManager

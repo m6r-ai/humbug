@@ -5,7 +5,7 @@ This module provides classes for defining, parsing, and completing command optio
 """
 
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Set
 
 
 @dataclass
@@ -66,7 +66,7 @@ class CommandOptionsRegistry:
             # If option isn't registered yet, just store for the provided name
             self._value_completers[option_name] = completer
 
-    def find_option(self, name: str) -> Optional[CommandOptionDescriptor]:
+    def find_option(self, name: str) -> CommandOptionDescriptor | None:
         """
         Find an option by name.
 

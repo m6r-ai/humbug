@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from PySide6.QtCore import QObject
 
@@ -39,7 +39,7 @@ class SystemCommandRegistry(QObject):
         for alias in command.aliases:
             self._aliases[alias] = command.name
 
-    def get_command(self, name: str) -> Optional[SystemCommand]:
+    def get_command(self, name: str) -> SystemCommand | None:
         """
         Get a command by name or alias.
 

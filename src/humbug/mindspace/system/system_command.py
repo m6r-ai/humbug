@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -109,7 +109,7 @@ class SystemCommand:
                     return True
         return False
 
-    def _get_option_value(self, tokens: List[Token], option_name: str) -> Optional[str]:
+    def _get_option_value(self, tokens: List[Token], option_name: str) -> str | None:
         """
         Get the value for an option if present.
 
@@ -130,7 +130,7 @@ class SystemCommand:
                     return ""  # Option exists but has no value
         return None
 
-    def _find_command_token(self, tokens: List[Token]) -> Optional[Token]:
+    def _find_command_token(self, tokens: List[Token]) -> Token | None:
         """
         Find the command token in the token list.
 
@@ -183,8 +183,8 @@ class SystemCommand:
     def get_token_completions(
         self,
         current_token: Token,
-        tokens: List[Token],
-        cursor_token_index: int
+        _tokens: List[Token],
+        _cursor_token_index: int
     ) -> List[str]:
         """
         Get completions for the current token based on token information.
@@ -225,7 +225,7 @@ class SystemCommand:
 
         return options
 
-    def _get_mindspace_path_completions(self, partial_path: str, file_extension: Optional[str] = None) -> List[str]:
+    def _get_mindspace_path_completions(self, partial_path: str, file_extension: str | None = None) -> List[str]:
         """
         Get path completions within the current mindspace.
 
@@ -287,7 +287,7 @@ class SystemCommand:
             self._logger.warning("Error completing path: %s", str(e))
             return []
 
-    def _list_directory(self, dir_path: str, file_extension: Optional[str] = None) -> List[str]:
+    def _list_directory(self, dir_path: str, file_extension: str | None = None) -> List[str]:
         """
         List contents of a directory in mindspace.
 

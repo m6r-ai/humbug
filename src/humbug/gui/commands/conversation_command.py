@@ -1,7 +1,7 @@
 """Command for creating a new conversation tab from the system terminal."""
 
 import logging
-from typing import List, Callable, Dict, Optional
+from typing import List, Callable, Dict
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -14,7 +14,7 @@ from humbug.user.user_manager import UserManager
 class ConversationCommand(SystemCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(self, create_conversation_callback: Callable[[Optional[str]], Optional[str]]) -> None:
+    def __init__(self, create_conversation_callback: Callable[[str | None], str | None]) -> None:
         """
         Initialize conversation command.
 
