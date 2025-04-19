@@ -2,7 +2,6 @@
 
 import logging
 import os
-import shlex
 from typing import Dict, List, Optional, Tuple
 
 from humbug.gui.command_options import CommandOptionParser, CommandOptionsRegistry, CommandOptionDescriptor
@@ -197,22 +196,6 @@ class SystemCommand:
             return self.get_completions(args_text)
 
         return []
-
-    def _tokenize_args(self, args: str) -> List[str]:
-        """
-        Split command line arguments into tokens, preserving quotes.
-
-        Args:
-            args: Command line arguments
-
-        Returns:
-            List of argument tokens
-        """
-        try:
-            return shlex.split(args)
-        except ValueError:
-            # Handle unclosed quotes or other parsing errors
-            return args.split()
 
     def _get_mindspace_path_completions(self, partial_path: str, file_extension: Optional[str] = None) -> List[str]:
         """

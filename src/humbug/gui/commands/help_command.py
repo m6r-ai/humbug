@@ -1,3 +1,5 @@
+"""Command for displaying help information in the system terminal."""
+
 from typing import List
 
 from humbug.gui.command_options import CommandOptionParser
@@ -5,6 +7,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
 from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.syntax.command.command_lexer import Token, TokenType
 
 
 class HelpCommand(SystemCommand):
@@ -17,6 +20,7 @@ class HelpCommand(SystemCommand):
         Args:
             registry: The command registry
         """
+        super().__init__()
         self._mindspace_manager = MindspaceManager()
         self._registry = registry
 
@@ -50,7 +54,6 @@ class HelpCommand(SystemCommand):
             if command:
                 # Use the command's detailed help method
                 command._show_detailed_help()
-
             else:
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,
@@ -65,7 +68,6 @@ class HelpCommand(SystemCommand):
         for name, cmd in sorted(commands.items()):
             if cmd.help_text:
                 help_text += f"  {name} - {cmd.help_text}\n"
-
             else:
                 help_text += f"  {name}\n"
 
@@ -78,23 +80,38 @@ class HelpCommand(SystemCommand):
 
         return True
 
-    def get_completions(self, partial_args: str) -> List[str]:
+    def get_token_completions(
+        self,
+        current_token: Token,
+        tokens: List[Token],
+        cursor_token_index: int,
+        full_text: str
+    ) -> List[str]:
         """
-        Get completions for partial arguments.
+        Get completions for the current token based on token information.
 
         Args:
-            partial_args: Partial command arguments
+            current_token: The token at cursor position
+            tokens: All tokens in the command line
+            cursor_token_index: Index of current_token in tokens list
+            full_text: Full command line text
 
         Returns:
             List of possible completions
         """
-        # For help command, we complete with command names
-        partial_args = partial_args.strip()
+        # If the current token is an option, get option completions
+        if current_token.type == TokenType.OPTION:
+            options = self.setup_options()
+            return options.get_option_completions(current_token.value)
 
-        # If empty, return all command names
-        if not partial_args:
+        # For the help command, we complete with command names if this is an argument token
+        if current_token.type == TokenType.ARGUMENT:
+            partial_arg = current_token.value.strip()
+            return [cmd for cmd in self._registry.get_command_names() if cmd.startswith(partial_arg)]
+
+        # Return command names if completing a new argument
+        if current_token.type == TokenType.COMMAND and len(tokens) == 1:
+            # No arguments yet, return all command names
             return sorted(self._registry.get_command_names())
 
-        # Otherwise, return matching command names
-        command_names = self._registry.get_command_names()
-        return [cmd for cmd in command_names if cmd.startswith(partial_args)]
+        return []
