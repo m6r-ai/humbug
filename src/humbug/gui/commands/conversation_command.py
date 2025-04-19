@@ -1,26 +1,28 @@
 """Command for creating a new conversation tab from the system terminal."""
 
 import logging
-from typing import List, Callable
+from typing import List, Callable, Optional
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.command_options import CommandOptionDescriptor, CommandOptionsRegistry, CommandOptionParser
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.syntax.command.command_lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
 
 class ConversationCommand(SystemCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(self, create_conversation_callback: Callable[[str | None], str | None]) -> None:
+    def __init__(self, create_conversation_callback: Callable[[Optional[str]], Optional[str]]) -> None:
         """
         Initialize conversation command.
 
         Args:
             create_conversation_callback: Callback to create a new conversation with optional model
         """
+        super().__init__()
         self._create_conversation = create_conversation_callback
         self._mindspace_manager = MindspaceManager()
         self._user_manager = UserManager()
@@ -113,6 +115,11 @@ class ConversationCommand(SystemCommand):
                 )
                 return True
 
+            # Creation failed for some reason
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                "Failed to create new conversation"
+            )
             return False
 
         except Exception as e:
@@ -123,27 +130,38 @@ class ConversationCommand(SystemCommand):
             )
             return False
 
-    def get_completions(self, partial_args: str) -> List[str]:
+    def get_token_completions(
+        self,
+        current_token: Token,
+        tokens: List[Token],
+        cursor_token_index: int,
+        full_text: str
+    ) -> List[str]:
         """
-        Get completions for partial arguments.
+        Get completions for the current token based on token information.
 
         Args:
-            partial_args: Partial command arguments
+            current_token: The token at cursor position
+            tokens: All tokens in the command line
+            cursor_token_index: Index of current_token in tokens list
+            full_text: Full command line text
 
         Returns:
             List of possible completions
         """
-        # First check for option completions using the base implementation
-        option_completions = super().get_completions(partial_args)
-        if option_completions:
-            return option_completions
+        # Handle option completions
+        if current_token.type == TokenType.OPTION:
+            options = self.setup_options()
+            return options.get_option_completions(current_token.value)
 
-        # If we have a -m or --model option, we need to check if we're completing a model name
-        parts = self._tokenize_args(partial_args)
-        if len(parts) >= 2 and parts[-2] in ["-m", "--model"]:
-            # We're completing a model name
-            current_value = parts[-1] if len(parts) > 2 else ""
-            return self._complete_model_names(current_value)
+        # Check if we're completing a model name for -m/--model option
+        if current_token.type == TokenType.ARGUMENT and cursor_token_index > 0:
+            prev_token = tokens[cursor_token_index - 1]
+            if prev_token.type == TokenType.OPTION:
+                # Check if this is the -m/--model option
+                option_name = prev_token.value
+                if option_name in ["-m", "--model"]:
+                    return self._complete_model_names(current_token.value)
 
-        # No special completions for this command
+        # No completions for other arguments
         return []

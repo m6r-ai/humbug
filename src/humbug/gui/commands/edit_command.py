@@ -2,13 +2,14 @@
 
 import logging
 import os
-from typing import List, Callable
+from typing import List, Callable, Optional
 
 from humbug.gui.command_options import CommandOptionParser
 from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.syntax.command.command_lexer import Token, TokenType
 
 
 class EditCommand(SystemCommand):
@@ -22,6 +23,7 @@ class EditCommand(SystemCommand):
             open_file_callback: Callback to open an existing file
             new_file_callback: Callback to create a new file
         """
+        super().__init__()
         self._open_file = open_file_callback
         self._new_file = new_file_callback
         self._mindspace_manager = MindspaceManager()
@@ -125,21 +127,30 @@ class EditCommand(SystemCommand):
             )
             return False
 
-    def get_completions(self, partial_args: str) -> List[str]:
+    def get_token_completions(
+        self,
+        current_token: Token,
+        tokens: List[Token],
+        cursor_token_index: int,
+        full_text: str
+    ) -> List[str]:
         """
-        Get completions for partial arguments.
+        Get completions for the current token based on token information.
 
         Args:
-            partial_args: Partial command arguments
+            current_token: The token at cursor position
+            tokens: All tokens in the command line
+            cursor_token_index: Index of current_token in tokens list
+            full_text: Full command line text
 
         Returns:
             List of possible completions
         """
-        # First check for option completions using the base implementation
-        option_completions = super().get_completions(partial_args)
-        if option_completions:
-            return option_completions
+        # For the edit command, we're primarily interested in completing file paths
+        # Only handle options if we're explicitly looking at an option token
+        if current_token.type == TokenType.OPTION:
+            options = self.setup_options()
+            return options.get_option_completions(current_token.value)
 
-        # Complete file paths without extension filtering
-        # Return raw path completions - the command processor will handle context preservation
-        return self._get_mindspace_path_completions(partial_args.strip())
+        # For arguments, complete file paths (with no extension filter)
+        return self._get_mindspace_path_completions(current_token.value)

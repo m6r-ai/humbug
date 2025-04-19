@@ -1,23 +1,31 @@
-from typing import Callable, List
+"""Command to create a new conversation with a Metaphor file."""
+
+import os
+from typing import Callable, Dict, List, Optional
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.command_options import CommandOptionDescriptor, CommandOptionsRegistry, CommandOptionParser
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
+from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.syntax.command.command_lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
 
 class M6rcCommand(SystemCommand):
     """Command to create a new conversation with a Metaphor file."""
 
-    def __init__(self, create_metaphor_conversation_callback: Callable[[str, str | None], None]) -> None:
+    def __init__(self, create_metaphor_conversation_callback: Callable[[str, Optional[str]], None]) -> None:
         """
         Initialize the command.
 
         Args:
             create_metaphor_conversation_callback: Callback to create conversation with file path and optional model
         """
+        super().__init__()
         self._create_metaphor_conversation = create_metaphor_conversation_callback
         self._user_manager = UserManager()
+        self._mindspace_manager = MindspaceManager()
 
     @property
     def name(self) -> str:
@@ -75,41 +83,75 @@ class M6rcCommand(SystemCommand):
             True if command executed successfully, False otherwise
         """
         if not args.strip():
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                "No file path provided. Usage: m6rc [options] <path/to/file.m6r>"
+            )
             return False
 
         # Get model if specified
         model = parser.get_option("model")
 
-        self._create_metaphor_conversation(args.strip(), model)
-        return True
+        try:
+            # Check if the path exists
+            file_path = args.strip()
 
-    def get_completions(self, partial_args: str) -> List[str]:
+            # Convert to absolute path if it's relative
+            if not os.path.isabs(file_path):
+                file_path = self._mindspace_manager.get_mindspace_path(file_path)
+
+            if not os.path.exists(file_path):
+                self._mindspace_manager.add_system_interaction(
+                    SystemMessageSource.ERROR,
+                    f"File not found: {args.strip()}"
+                )
+                return False
+
+            self._create_metaphor_conversation(file_path, model)
+            return True
+
+        except Exception as e:
+            self._logger.error("Failed to create Metaphor conversation: %s", str(e), exc_info=True)
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                f"Failed to create Metaphor conversation: {str(e)}"
+            )
+            return False
+
+    def get_token_completions(
+        self,
+        current_token: Token,
+        tokens: List[Token],
+        cursor_token_index: int,
+        full_text: str
+    ) -> List[str]:
         """
-        Get completions for partial arguments.
+        Get completions for the current token based on token information.
 
         Args:
-            partial_args: Partial command arguments
+            current_token: The token at cursor position
+            tokens: All tokens in the command line
+            cursor_token_index: Index of current_token in tokens list
+            full_text: Full command line text
 
         Returns:
             List of possible completions
         """
-        # First check for option completions using the base implementation
-        option_completions = super().get_completions(partial_args)
-        if option_completions:
-            return option_completions
+        # Handle option completions
+        if current_token.type == TokenType.OPTION:
+            # Get option completions from the options registry
+            options = self.setup_options()
+            return options.get_option_completions(current_token.value)
 
-        # If we have a -m or --model option, we need to skip that part
-        parts = self._tokenize_args(partial_args)
-        if len(parts) >= 2 and parts[-2] in ["-m", "--model"]:
-            # We're completing a model name, not a file path
-            return []
+        # Check if we're completing a model name for -m/--model option
+        if current_token.type == TokenType.ARGUMENT and cursor_token_index > 0:
+            prev_token = tokens[cursor_token_index - 1]
+            if prev_token.type == TokenType.OPTION:
+                # Check if this is the -m/--model option
+                option_name = prev_token.value
+                if option_name in ["-m", "--model"]:
+                    return self._complete_model_names(current_token.value)
 
-        # Process the args to extract options and file path
-        parser = CommandOptionParser(partial_args)
-        remaining_args = parser.remaining_args()
-
-        # Get path completions for the remaining args
-        completions = self._get_mindspace_path_completions(remaining_args, file_extension=".m6r")
-
-        # Return the raw completions - the command processor will handle context preservation
-        return completions
+        # For regular arguments, complete file paths with .m6r extension
+        print(f"path completion: {current_token.value}")
+        return self._get_mindspace_path_completions(current_token.value, file_extension=".m6r")

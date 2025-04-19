@@ -1,14 +1,14 @@
-# Updated system_command_processor.py
-
 """Processes system commands and handles tab completion."""
 
 import logging
-from typing import List
+from typing import List, Dict, Optional, Tuple
 
+from humbug.gui.command_options import CommandOptionParser
 from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
+from humbug.mindspace.system.system_command import SystemCommand
 from humbug.syntax.command.command_lexer import CommandLexer, TokenType, Token
 
 
@@ -24,8 +24,8 @@ class SystemCommandProcessor:
         # Tab completion state tracking
         self._tab_completions: List[str] = []
         self._current_completion_index: int = -1
-        self._completion_start_pos: int = 0  # Start position never changes
-        self._current_completion_text: str = ""  # Current completion text
+        self._completion_start_pos: int = 0
+        self._current_completion_text: str = ""
         self._tab_completion_active: bool = False
 
         # Token tracking for current command
@@ -33,7 +33,8 @@ class SystemCommandProcessor:
         self._current_tokens: List[Token] = []
         self._cursor_token_index: int = -1
         self._cursor_position: int = 0
-        self._current_command_name: str | None = None
+        self._current_command_name: Optional[str] = None
+        self._token_map: Dict[TokenType, List[Token]] = {}
 
     def _escape_text(self, text: str) -> str:
         """
@@ -140,7 +141,7 @@ class SystemCommandProcessor:
                 )
 
         except Exception as e:
-            self._logger.error("Error executing command '%s': %s", command_text, str(e))
+            self._logger.error("Error executing command '%s': %s", command_text, str(e), exc_info=True)
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
@@ -155,6 +156,7 @@ class SystemCommandProcessor:
             cursor_position: The position of the cursor in the text
         """
         self._current_text = current_text
+        self._token_map.clear()
 
         # Tokenize the input
         lexer = CommandLexer()
@@ -165,6 +167,12 @@ class SystemCommandProcessor:
         token = lexer.get_next_token()
         while token is not None:
             self._current_tokens.append(token)
+
+            # Add to token map by type for quick lookup
+            if token.type not in self._token_map:
+                self._token_map[token.type] = []
+            self._token_map[token.type].append(token)
+
             token = lexer.get_next_token()
 
         self._cursor_position = cursor_position
@@ -200,8 +208,9 @@ class SystemCommandProcessor:
         self._cursor_token_index = -1
         self._cursor_position = 0
         self._current_command_name = None
+        self._token_map.clear()
 
-    def _get_token_at_cursor(self) -> Token | None:
+    def _get_token_at_cursor(self) -> Optional[Token]:
         """
         Get the token at the cursor position.
 
@@ -213,7 +222,7 @@ class SystemCommandProcessor:
 
         return None
 
-    def _get_previous_token(self, token_index: int) -> Token | None:
+    def _get_previous_token(self, token_index: int) -> Optional[Token]:
         """
         Get the token before the specified token index.
 
@@ -246,7 +255,7 @@ class SystemCommandProcessor:
         self,
         current_text: str,
         is_continuation: bool = False,
-        cursor_position: int = None
+        cursor_position: Optional[int] = None
     ) -> CompletionResult:
         """
         Handle tab completion for the current input text.
@@ -307,7 +316,6 @@ class SystemCommandProcessor:
         # Store start position for future continuations
         if token:
             self._completion_start_pos = token.start
-
         else:
             # If no token at cursor, we're completing at whitespace
             self._completion_start_pos = cursor_position
@@ -316,21 +324,17 @@ class SystemCommandProcessor:
         if not token or self._is_cursor_at_whitespace():
             # Complete new token based on context
             result = self._complete_new_token()
-
         elif token.type == TokenType.COMMAND:
-            result = self._complete_command_name(token.value, token.start, token.start + len(token.value))
-
+            result = self._complete_command_name(token)
         elif token.type == TokenType.OPTION:
             # Get the command
             command = self._command_registry.get_command(self._current_command_name)
             if not command:
                 return CompletionResult(success=False)
 
-            result = self._complete_option(command, token.value, token.start, token.start + len(token.value))
-
+            result = self._complete_option(command, token)
         elif token.type == TokenType.ARGUMENT:
-            result = self._complete_argument(token, current_text)
-
+            result = self._complete_argument(token)
         else:
             return CompletionResult(success=False)
 
@@ -350,7 +354,8 @@ class SystemCommandProcessor:
         """
         # If no command yet, suggest commands
         if not self._current_command_name:
-            return self._complete_command_name("", self._cursor_position, self._cursor_position)
+            empty_token = Token(TokenType.COMMAND, "", self._cursor_position)
+            return self._complete_command_name(empty_token)
 
         # We have a command, get it
         command = self._command_registry.get_command(self._current_command_name)
@@ -370,12 +375,14 @@ class SystemCommandProcessor:
 
                 if option and option.takes_value:
                     # We're completing a value for this option
-                    return self._complete_option_value(command, option_name, "", self._cursor_position, self._cursor_position)
+                    empty_value_token = Token(TokenType.ARGUMENT, "", self._cursor_position)
+                    return self._complete_option_value(command, option_name, empty_value_token)
 
         # Otherwise suggest new options
-        return self._complete_option(command, "", self._cursor_position, self._cursor_position)
+        empty_option_token = Token(TokenType.OPTION, "", self._cursor_position)
+        return self._complete_option(command, empty_option_token)
 
-    def _get_command_name(self, tokens: List[Token]) -> str | None:
+    def _get_command_name(self, tokens: List[Token]) -> Optional[str]:
         """
         Get the command name from the tokens.
 
@@ -391,18 +398,20 @@ class SystemCommandProcessor:
 
         return None
 
-    def _complete_command_name(self, partial_command: str, start_pos: int, end_pos: int) -> CompletionResult:
+    def _complete_command_name(self, token: Token) -> CompletionResult:
         """
         Complete a command name.
 
         Args:
-            partial_command: The partial command name to complete
-            start_pos: Start position of the token to replace
-            end_pos: End position of the token to replace
+            token: The command token to complete
 
         Returns:
             CompletionResult with command name completion
         """
+        partial_command = token.value
+        start_pos = token.start
+        end_pos = token.start + len(partial_command)
+
         command_names = self.get_available_commands()
         matches = [name for name in command_names if name.startswith(partial_command)]
 
@@ -436,33 +445,29 @@ class SystemCommandProcessor:
             add_space=False
         )
 
-    def _complete_option(self, command, partial_option: str, start_pos: int, end_pos: int) -> CompletionResult:
+    def _complete_option(self, command, token: Token) -> CompletionResult:
         """
         Complete a command option.
 
         Args:
             command: The command object
-            partial_option: The partial option to complete
-            start_pos: Start position of the token to replace
-            end_pos: End position of the token to replace
+            token: The option token to complete
 
         Returns:
             CompletionResult with option completion
         """
+        partial_option = token.value
+        start_pos = token.start
+        end_pos = token.start + len(partial_option)
+
         options = command.setup_options()
         option_completions = options.get_option_completions(partial_option)
 
         if not option_completions:
             # If no option matches, try completing an argument
-            remaining_text = ""
-            for token in self._current_tokens:
-                if token.type == TokenType.COMMAND:
-                    command_token = token
-                    command_end = command_token.start + len(command_token.value)
-                    remaining_text = self._current_text[command_end:].lstrip()
-                    break
+            # Instead of passing raw text, pass the current tokens to the command
+            completions = self._get_command_completions(command)
 
-            completions = command.get_completions(remaining_text)
             if not completions:
                 return CompletionResult(success=False)
 
@@ -527,13 +532,12 @@ class SystemCommandProcessor:
             add_space=False
         )
 
-    def _complete_argument(self, token: Token, current_text: str) -> CompletionResult:
+    def _complete_argument(self, token: Token) -> CompletionResult:
         """
         Complete an argument token.
 
         Args:
             token: The argument token to complete
-            current_text: The current command text
 
         Returns:
             CompletionResult with argument completion
@@ -559,34 +563,15 @@ class SystemCommandProcessor:
 
             if option and option.takes_value:
                 # We're completing a value for this option
-                return self._complete_option_value(
-                    command,
-                    option_name,
-                    token.value,
-                    token.start,
-                    token.start + len(token.value)
-                )
+                return self._complete_option_value(command, option_name, token)
 
         # If we get here, it's a regular argument
         start_pos = token.start
         end_pos = token.start + len(token.value)
 
         # Get completions from the command
-        # Calculate the command line without the command name
-        command_token = None
-        for t in self._current_tokens:
-            if t.type == TokenType.COMMAND:
-                command_token = t
-                break
+        completions = self._get_command_completions(command)
 
-        if command_token:
-            command_end = command_token.start + len(command_token.value)
-            remaining_text = current_text[command_end:].lstrip()
-
-        else:
-            remaining_text = ""
-
-        completions = command.get_completions(remaining_text)
         if not completions:
             return CompletionResult(success=False)
 
@@ -629,13 +614,35 @@ class SystemCommandProcessor:
             add_space=False
         )
 
+    def _get_command_completions(self, command: SystemCommand) -> List[str]:
+        """
+        Get completions from a command using tokenized information.
+
+        Args:
+            command: The command object
+
+        Returns:
+            List of completions
+        """
+        if self._cursor_token_index >= 0 and self._cursor_token_index < len(self._current_tokens):
+            current_token = self._current_tokens[self._cursor_token_index]
+        else:
+            # Create an empty token for completion at whitespace
+            current_token = Token(TokenType.ARGUMENT, "", self._cursor_position)
+
+        # Use the new token-based completion method
+        return command.get_token_completions(
+            current_token,
+            self._current_tokens,
+            self._cursor_token_index,
+            self._current_text
+        )
+
     def _complete_option_value(
         self,
         command,
         option_name: str,
-        partial_value: str,
-        start_pos: int,
-        end_pos: int
+        token: Token
     ) -> CompletionResult:
         """
         Complete a value for an option.
@@ -643,13 +650,15 @@ class SystemCommandProcessor:
         Args:
             command: The command object
             option_name: The option name (without dashes)
-            partial_value: The partial value to complete
-            start_pos: Start position of the token to replace
-            end_pos: End position of the token to replace
+            token: The token containing the partial value
 
         Returns:
             CompletionResult with option value completion
         """
+        partial_value = token.value
+        start_pos = token.start
+        end_pos = token.start + len(partial_value)
+
         options = command.setup_options()
 
         # Check if this option exists and takes a value
