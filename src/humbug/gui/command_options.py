@@ -159,10 +159,18 @@ class CommandOptionsRegistry:
         """
         help_text = "Options:\n"
 
-        # Collect unique options (short and long forms point to same descriptor)
-        unique_options: Set[CommandOptionDescriptor] = set(self._options.values())
+        # Track unique options by their long name
+        unique_options = {}
 
-        for option in sorted(unique_options, key=lambda o: o.long_name):
+        # Collect unique options (long and short forms point to same descriptor)
+        for option_name, descriptor in self._options.items():
+            # Use long_name as the key for uniqueness
+            unique_options[descriptor.long_name] = descriptor
+
+        # Sort by long name for consistent ordering
+        for long_name in sorted(unique_options.keys()):
+            option = unique_options[long_name]
+
             # Format as -s, --long
             option_format = f"  -{option.short_name}, --{option.long_name}"
 
