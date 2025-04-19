@@ -1,7 +1,7 @@
 """Command to create a new conversation with a Metaphor file."""
 
 import os
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.gui.command_options import CommandOptionDescriptor, CommandOptionsRegistry, CommandOptionParser

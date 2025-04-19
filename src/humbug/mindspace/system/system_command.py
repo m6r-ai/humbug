@@ -78,19 +78,14 @@ class SystemCommand:
             True if command executed successfully, False otherwise
         """
         try:
-            # Create the option parser
+            # Create the option parser - this parses immediately
             parser = CommandOptionParser(args)
 
-            # Configure with our options
+            # Get our option registry (used for help text and completions only)
             options = self.setup_options()
-            parser.setup_registry(options)
-
-            # Parse the command line
-            if not parser.parse():
-                return False
 
             # Check for help flag
-            if parser.help_requested():
+            if parser.has_flag("h") or parser.has_flag("help"):
                 self._show_detailed_help()
                 return True
 
