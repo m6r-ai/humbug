@@ -88,8 +88,7 @@ class HelpCommand(SystemCommand):
         self,
         current_token: Token,
         tokens: List[Token],
-        cursor_token_index: int,
-        full_text: str
+        cursor_token_index: int
     ) -> List[str]:
         """
         Get completions for the current token based on token information.
@@ -98,7 +97,6 @@ class HelpCommand(SystemCommand):
             current_token: The token at cursor position
             tokens: All tokens in the command line
             cursor_token_index: Index of current_token in tokens list
-            full_text: Full command line text
 
         Returns:
             List of possible completions

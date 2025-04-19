@@ -1,13 +1,12 @@
 """Processes system commands and handles tab completion."""
 
 import logging
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 
 from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
-from humbug.mindspace.system.system_command import SystemCommand
 from humbug.syntax.command.command_lexer import CommandLexer, TokenType, Token
 
 
@@ -28,7 +27,6 @@ class SystemCommandProcessor:
         self._tab_completion_active: bool = False
 
         # Token tracking for current command
-        self._current_text: str = ""
         self._current_tokens: List[Token] = []
         self._cursor_token_index: int = -1
         self._cursor_position: int = 0
@@ -142,7 +140,6 @@ class SystemCommandProcessor:
             current_text: The current command text
             cursor_position: The position of the cursor in the text
         """
-        self._current_text = current_text
         self._token_map.clear()
 
         # Tokenize the input
@@ -447,8 +444,7 @@ class SystemCommandProcessor:
             completions = command.get_token_completions(
                 token,
                 self._current_tokens,
-                self._cursor_token_index,
-                self._current_text
+                self._cursor_token_index
             )
 
             if not completions:
@@ -540,8 +536,7 @@ class SystemCommandProcessor:
         completions = command.get_token_completions(
             token,
             self._current_tokens,
-            self._cursor_token_index,
-            self._current_text
+            self._cursor_token_index
         )
 
         if not completions:
@@ -617,8 +612,7 @@ class SystemCommandProcessor:
         completions = command.get_token_completions(
             token,
             self._current_tokens,
-            self._cursor_token_index,
-            self._current_text
+            self._cursor_token_index
         )
 
         if not completions:
