@@ -28,7 +28,6 @@ class SystemCommandProcessor:
 
         # Token tracking for current command
         self._current_tokens: List[Token] = []
-        self._current_command_name: str | None = None
 
     def _escape_text(self, text: str) -> str:
         """
@@ -87,11 +86,8 @@ class SystemCommandProcessor:
 
         self._completion_start_pos = 0
 
-        # Parse the command line
-        self._parse_command_line(command_text, len(command_text))
-
-        # Get the command name
-        cmd = self._current_command_name
+        self._parse_command_line(command_text)
+        cmd = self._get_command_name(self._current_tokens)
         if not cmd:
             # No command name found
             self._mindspace_manager.add_system_interaction(
@@ -119,7 +115,7 @@ class SystemCommandProcessor:
                 f"Error executing command: {str(e)}"
             )
 
-    def _parse_command_line(self, current_text: str, cursor_position: int) -> int:
+    def _parse_command_line(self, current_text: str) -> None:
         """
         Parse the command line text and update token information.
 
@@ -145,18 +141,6 @@ class SystemCommandProcessor:
         while token is not None:
             self._current_tokens.append(token)
             token = lexer.get_next_token()
-
-        # Find the token at cursor position
-        cursor_token_index = -1
-        for i, token in enumerate(self._current_tokens):
-            token_end = token.start + len(token.value)
-            if token.start <= cursor_position <= token_end:
-                cursor_token_index = i
-                break
-
-        # Extract command name
-        self._current_command_name = self._get_command_name(self._current_tokens)
-        return cursor_token_index
 
     def _get_previous_token(self, token_index: int) -> Token | None:
         """
@@ -234,9 +218,18 @@ class SystemCommandProcessor:
 
             return result
 
-        # Otherwise, this is a new tab completion request
-        # Parse the command line
-        cursor_token_index = self._parse_command_line(current_text, cursor_position)
+        # This is a new tab completion request
+        self._parse_command_line(current_text)
+        cmd = self._get_command_name(self._current_tokens)
+
+        # Find the token at cursor position
+        cursor_token_index = -1
+        for i, token in enumerate(self._current_tokens):
+            token_end = token.start + len(token.value)
+            if token.start <= cursor_position <= token_end:
+                cursor_token_index = i
+                break
+
         if cursor_token_index >= 0:
             token = self._current_tokens[cursor_token_index]
             self._completion_start_pos = token.start
@@ -244,7 +237,7 @@ class SystemCommandProcessor:
         else:
             # If no token at cursor, we're completing at whitespace
             self._completion_start_pos = cursor_position
-            if not self._current_command_name:
+            if not cmd:
                 token = Token(TokenType.COMMAND, "", cursor_position)
 
             else:
@@ -256,10 +249,10 @@ class SystemCommandProcessor:
 
         else:
             # Get the command
-            if not self._current_command_name:
+            if not cmd:
                 return CompletionResult(success=False)
 
-            command = self._command_registry.get_command(self._current_command_name)
+            command = self._command_registry.get_command(cmd)
             if not command:
                 return CompletionResult(success=False)
 
