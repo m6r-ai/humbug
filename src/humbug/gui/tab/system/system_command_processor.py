@@ -301,17 +301,16 @@ class SystemCommandProcessor:
         else:
             # If no token at cursor, we're completing at whitespace
             self._completion_start_pos = cursor_position
+            if not self._current_command_name:
+                token = Token(TokenType.COMMAND, "", cursor_position)
 
-        # Generate completions based on token type and context
-        if not token or self._is_cursor_at_whitespace():
-            # Complete new token based on context
-            print(f"Completing new token {token}")
-            result = self._complete_new_token()
+            else:
+                token = Token(TokenType.ARGUMENT, "", cursor_position)
 
-        elif token.type == TokenType.COMMAND:
+        if token.type == TokenType.COMMAND:
             result = self._complete_command_name(token)
 
-        elif token.type in (TokenType.OPTION, TokenType.ARGUMENT):
+        else:
             # Get the command
             if not self._current_command_name:
                 return CompletionResult(success=False)
@@ -322,37 +321,12 @@ class SystemCommandProcessor:
 
             result = self._complete_argument(command, token)
 
-        else:
-            return CompletionResult(success=False)
-
         if result.success and result.replacement is not None:
             self._tab_completion_active = True
             # Store the current completion text for next cycle
             self._current_completion_text = result.replacement
 
         return result
-
-    def _complete_new_token(self) -> CompletionResult:
-        """
-        Complete a new token based on the current context.
-
-        Returns:
-            CompletionResult with completion information
-        """
-        # If no command yet, suggest commands
-        if not self._current_command_name:
-            empty_token = Token(TokenType.COMMAND, "", self._cursor_position)
-            return self._complete_command_name(empty_token)
-
-        # We have a command, get it
-        command = self._command_registry.get_command(self._current_command_name)
-        if not command:
-            return CompletionResult(success=False)
-
-        print(f"{self._cursor_token_index}, {self._current_tokens}")
-
-        empty_option_token = Token(TokenType.ARGUMENT, "", self._cursor_position)
-        return self._complete_argument(command, empty_option_token)
 
     def _complete_command_name(self, token: Token) -> CompletionResult:
         """
