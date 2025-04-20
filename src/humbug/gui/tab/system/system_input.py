@@ -22,7 +22,7 @@ class SystemInput(SystemMessage):
 
     # New signals
     command_submitted = Signal(str)
-    tab_completion_requested = Signal(str, bool, int)  # text, is_continuation, cursor_position
+    tab_completion_requested = Signal(str, bool, bool, int)  # text, is_continuation, move_forward, cursor_position
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the system input widget."""
@@ -63,13 +63,29 @@ class SystemInput(SystemMessage):
             # Cast to QKeyEvent
             key_event = cast(QKeyEvent, event)
 
+            print(f"Key pressed: {key_event.key()} {key_event.modifiers()}")
+
             # Handle Tab key for command completion
-            if key_event.key() == Qt.Key.Key_Tab and not key_event.modifiers():
+            if key_event.key() == Qt.Key.Key_Tab:
+                print("Tab key pressed")
                 # Emit signal requesting tab completion
                 current_text = self._text_area.toPlainText()
                 cursor = self._text_area.textCursor()
-                self.tab_completion_requested.emit(current_text, self._tab_completion_active, cursor.position())
+                self.tab_completion_requested.emit(current_text, self._tab_completion_active, True, cursor.position())
                 self._tab_completion_active = True
+                return True
+
+            if key_event.key() == Qt.Key.Key_Backtab:
+                print("Shift+Tab key pressed")
+                # Handle Shift+Tab for reverse tab completion
+                current_text = self._text_area.toPlainText()
+                cursor = self._text_area.textCursor()
+                self.tab_completion_requested.emit(current_text, self._tab_completion_active, False, cursor.position())
+                self._tab_completion_active = True
+                return True
+
+            if key_event.key() == Qt.Key.Key_Shift:
+                # Ignore Shift key press
                 return True
 
             self._tab_completion_active = False

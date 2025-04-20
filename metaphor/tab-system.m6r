@@ -17,7 +17,10 @@ Context: System tab
             - End key or Page Down: Moves cursor to end of current line
             - Up: Selet the previous item in the command history
             - Down: Select the next item in the command history
-            - Tab: Where supported, the tab key will attempt context-aware command line completions
+            - Tab: Where supported, the tab key will attempt context-aware command line completions,
+              cycling between possible options
+            - Shift+Tab: Where supported, the shift+tab key combination will attempt context-aware
+              command line completions, but cycling between possible options in the reverse order
 
     Context: History buffer
         The system tab maintains a history of the last 50 commands that were entered, allowing the user to

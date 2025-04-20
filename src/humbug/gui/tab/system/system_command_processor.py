@@ -162,6 +162,7 @@ class SystemCommandProcessor:
         self,
         current_text: str,
         is_continuation: bool,
+        move_forward: bool,
         cursor_position: int
     ) -> CompletionResult:
         """
@@ -170,6 +171,7 @@ class SystemCommandProcessor:
         Args:
             current_text: Current input text
             is_continuation: Whether this is a continuation of previous tab presses
+            move_forward: Whether to move forward or backward in completions
             cursor_position: Position of cursor in text
 
         Returns:
@@ -182,7 +184,8 @@ class SystemCommandProcessor:
         # Handle continuation of existing tab completion
         if is_continuation and self._tab_completion_active and self._tab_completions:
             # Move to next completion in the list
-            self._current_completion_index = (self._current_completion_index + 1) % len(self._tab_completions)
+            offset = 1 if move_forward else -1
+            self._current_completion_index = (self._current_completion_index + offset) % len(self._tab_completions)
             new_completion = self._tab_completions[self._current_completion_index]
 
             # Calculate end position based on current completion text
