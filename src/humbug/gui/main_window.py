@@ -1177,7 +1177,7 @@ class MainWindow(QMainWindow):
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path()
+                self._mindspace_manager.mindspace_path(), model
             )
 
         except MindspaceError as e:
@@ -1228,7 +1228,7 @@ class MainWindow(QMainWindow):
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             conversation_id = self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path()
+                self._mindspace_manager.mindspace_path(), model
             )
 
         except MindspaceError as e:

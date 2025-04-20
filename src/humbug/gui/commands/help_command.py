@@ -1,6 +1,6 @@
 """Command for displaying help information in the system terminal."""
 
-from typing import Dict, List
+from typing import List
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
@@ -32,11 +32,6 @@ class HelpCommand(SystemCommand):
     def help_text(self) -> str:
         return "Show help for available commands"
 
-    def get_options_help(self) -> Dict[str, str]:
-        """Get help text for supported options."""
-        # Help command doesn't have any special options beyond the base ones
-        return super().get_options_help()
-
     def _execute_command(self, tokens: List[Token]) -> bool:
         """
         Execute the command with parsed tokens.
@@ -56,7 +51,7 @@ class HelpCommand(SystemCommand):
             command = self._registry.get_command(command_name)
             if command:
                 # Use the command's detailed help method
-                command._show_detailed_help()
+                command.show_detailed_help()
                 return True
 
             self._mindspace_manager.add_system_interaction(

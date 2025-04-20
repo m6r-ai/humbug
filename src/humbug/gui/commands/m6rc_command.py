@@ -64,7 +64,9 @@ class M6rcCommand(SystemCommand):
         options = self._get_options(tokens)
 
         # Get model if specified
-        model = options.get("model")
+        model = options.get("--model")
+        if model is None:
+            model = options.get("-m")
 
         try:
             # Check if the path exists

@@ -67,8 +67,8 @@ class SystemCommand:
         """
         try:
             # Check for help flag
-            if self._has_flag(tokens, "h") or self._has_flag(tokens, "help"):
-                self._show_detailed_help()
+            if self._has_flag(tokens, "-h") or self._has_flag(tokens, "--help"):
+                self.show_detailed_help()
                 return True
 
             # Execute the command with tokens only
@@ -95,7 +95,7 @@ class SystemCommand:
         """
         for token in tokens:
             if token.type == TokenType.OPTION:
-                if token.value in (f"-{flag_name}", f"--{flag_name}"):
+                if token.value == flag_name:
                     return True
 
         return False
@@ -114,18 +114,16 @@ class SystemCommand:
         i = 0
         while i < len(tokens):
             token = tokens[i]
+            print(f"Token: {token}")
             if token.type == TokenType.OPTION:
-                # Normalize option name (remove leading dashes)
-                option_name = token.value.lstrip('-')
-
                 # Check if next token is an argument (option value)
                 if i + 1 < len(tokens) and tokens[i + 1].type == TokenType.ARGUMENT:
-                    options[option_name] = tokens[i + 1].value
+                    options[token.value] = tokens[i + 1].value
                     i += 2  # Skip both option and value
 
                 else:
                     # Flag option without value
-                    options[option_name] = None
+                    options[token.value] = None
                     i += 1
 
             else:
@@ -199,7 +197,7 @@ class SystemCommand:
         """
         raise NotImplementedError("Subclasses must implement _execute_command")
 
-    def _show_detailed_help(self) -> None:
+    def show_detailed_help(self) -> None:
         """Show detailed help for this command."""
         # Start with basic info
         help_text = f"{self.name()} - {self.help_text()}\n\n"

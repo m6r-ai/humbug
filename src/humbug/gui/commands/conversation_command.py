@@ -59,7 +59,9 @@ class ConversationCommand(SystemCommand):
         options = self._get_options(tokens)
 
         # Get model if specified
-        model = options.get("model")
+        model = options.get("--model")
+        if model is None:
+            model = options.get("-m")
 
         try:
             # Create new conversation with model if specified
