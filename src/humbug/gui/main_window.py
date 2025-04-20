@@ -1224,7 +1224,19 @@ class MainWindow(QMainWindow):
             return False
 
         self._column_manager.protect_system_tab(True)
-        conversation_id = self._new_conversation()
+        conversation_id: str | None = None
+        try:
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            conversation_id = self._column_manager.new_conversation(
+                self._mindspace_manager.mindspace_path()
+            )
+
+        except MindspaceError as e:
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
+            )
+            return False
+
         self._column_manager.protect_system_tab(False)
         if conversation_id is None:
             return False
