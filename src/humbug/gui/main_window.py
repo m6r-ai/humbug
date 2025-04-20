@@ -1171,13 +1171,13 @@ class MainWindow(QMainWindow):
         self._close_all_tabs()
         event.accept()
 
-    def _process_command_conversation(self, model: str | None) -> bool:
+    def _process_command_conversation(self, model: str | None, temperature: float | None) -> bool:
         """Public method to process the conversation command."""
         self._column_manager.protect_system_tab(True)
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path(), model
+                self._mindspace_manager.mindspace_path(), model, temperature
             )
 
         except MindspaceError as e:
@@ -1198,7 +1198,7 @@ class MainWindow(QMainWindow):
         self._column_manager.protect_system_tab(False)
         return True
 
-    def _process_command_m6rc(self, file_path: str, model: str | None) -> bool:
+    def _process_command_m6rc(self, file_path: str, model: str | None, temperature: float | None) -> bool:
         """Public method to create a new conversation with a Metaphor file."""
         search_path = self._mindspace_manager.mindspace_path()
 
@@ -1228,7 +1228,7 @@ class MainWindow(QMainWindow):
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             conversation_id = self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path(), model
+                self._mindspace_manager.mindspace_path(), model, temperature
             )
 
         except MindspaceError as e:

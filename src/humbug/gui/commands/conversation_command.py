@@ -14,7 +14,7 @@ from humbug.user.user_manager import UserManager
 class ConversationCommand(SystemCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(self, create_conversation_callback: Callable[[str | None], bool]) -> None:
+    def __init__(self, create_conversation_callback: Callable[[str | None, float | None], bool]) -> None:
         """
         Initialize conversation command.
 
@@ -42,7 +42,8 @@ class ConversationCommand(SystemCommand):
     def get_options_help(self) -> Dict[str, str]:
         """Get help text for supported options."""
         options = super().get_options_help()
-        options["-m, --model"] = "Specify the AI model to use"
+        options["-m, --model"] = "AI model to use"
+        options["-t, --temperature"] = "Temperature for the model (0.0 to 1.0)"
         return options
 
     def _execute_command(self, tokens: List[Token]) -> bool:
@@ -63,9 +64,23 @@ class ConversationCommand(SystemCommand):
         if model is None:
             model = options.get("-m")
 
+        temperature = options.get("--temperature")
+        if temperature is None:
+            temperature = options.get("-t")
+
+        temperature_val = None
+        if temperature is not None:
+            temperature_val = float(temperature)
+            if temperature_val < 0.0 or temperature_val > 1.0:
+                self._mindspace_manager.add_system_interaction(
+                    SystemMessageSource.ERROR,
+                    "Temperature must be between 0.0 and 1.0"
+                )
+                return False
+
         try:
             # Create new conversation with model if specified
-            if not self._create_conversation(model):
+            if not self._create_conversation(model, temperature_val):
                 return False
 
             # Success message would include model info if specified
@@ -130,10 +145,16 @@ class ConversationCommand(SystemCommand):
         if current_token.type == TokenType.ARGUMENT and cursor_token_index > 0:
             prev_token = tokens[cursor_token_index - 1]
             if prev_token.type == TokenType.OPTION:
-                # Check if this is the -m/--model option
                 option_name = prev_token.value
+
+                # Check if this is the -m/--model option
                 if option_name in ["-m", "--model"]:
                     return self._complete_model_names(current_token.value)
+
+                # Check if we're completing a temperature value for -t/--temperature option
+                if option_name in ["-t", "--temperature"]:
+                    # Temperature should be a float between 0.0 and 1.0
+                    return [str(i / 10) for i in range(11) if str(i / 10).startswith(current_token.value)]
 
         # No completions for other arguments
         return []

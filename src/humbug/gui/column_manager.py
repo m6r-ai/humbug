@@ -890,7 +890,12 @@ class ColumnManager(QWidget):
         self.add_tab(editor, os.path.basename(path))
         return editor
 
-    def new_conversation(self, mindspace_path: str, model: str | None = None) -> str:
+    def new_conversation(
+        self,
+        mindspace_path: str,
+        model: str | None = None,
+        temperature: float | None = None
+    ) -> str:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
         timestamp = datetime.utcnow()
@@ -913,9 +918,12 @@ class ColumnManager(QWidget):
         if model is None:
             model = settings.model
 
+        if temperature is None:
+            temperature = settings.temperature
+
         conversation_settings = AIConversationSettings(
             model=model,
-            temperature=settings.temperature if AIConversationSettings.supports_temperature(model) else None,
+            temperature=temperature if AIConversationSettings.supports_temperature(model) else None,
             reasoning=settings.reasoning
         )
         conversation_tab.update_conversation_settings(conversation_settings)
