@@ -7,7 +7,7 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent, QObject
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
-from humbug.gui.tab.system.completion_result import CompletionResult
+from humbug.gui.tab.system.system_command_completion_result import SystemCommandCompletionResult
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -244,7 +244,7 @@ class SystemInput(SystemMessage):
         """
         return self._command_history.copy()
 
-    def apply_completion(self, result: CompletionResult) -> None:
+    def apply_completion(self, result: SystemCommandCompletionResult) -> None:
         """
         Apply a tab completion to the input area.
 

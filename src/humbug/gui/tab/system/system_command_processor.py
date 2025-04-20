@@ -3,7 +3,7 @@
 import logging
 from typing import List
 
-from humbug.gui.tab.system.completion_result import CompletionResult
+from humbug.gui.tab.system.system_command_completion_result import SystemCommandCompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -164,7 +164,7 @@ class SystemCommandProcessor:
         is_continuation: bool,
         move_forward: bool,
         cursor_position: int
-    ) -> CompletionResult:
+    ) -> SystemCommandCompletionResult:
         """
         Handle tab completion for the current input text.
 
@@ -175,11 +175,11 @@ class SystemCommandProcessor:
             cursor_position: Position of cursor in text
 
         Returns:
-            CompletionResult with information about what to replace
+            SystemCommandCompletionResult with information about what to replace
         """
         # If empty text, nothing to complete
         if not current_text:
-            return CompletionResult(success=False)
+            return SystemCommandCompletionResult(success=False)
 
         # Handle continuation of existing tab completion
         if is_continuation and self._tab_completion_active and self._tab_completions:
@@ -192,7 +192,7 @@ class SystemCommandProcessor:
             end_pos = self._completion_start_pos + len(self._current_completion_text)
 
             # Create result with dynamic end position
-            result = CompletionResult(
+            result = SystemCommandCompletionResult(
                 success=True,
                 replacement=new_completion,
                 start_pos=self._completion_start_pos,
@@ -246,11 +246,11 @@ class SystemCommandProcessor:
         else:
             # Get the command
             if not cmd:
-                return CompletionResult(success=False)
+                return SystemCommandCompletionResult(success=False)
 
             command = self._command_registry.get_command(cmd)
             if not command:
-                return CompletionResult(success=False)
+                return SystemCommandCompletionResult(success=False)
 
             # Get completions from the command
             arguments = command.get_token_completions(
@@ -265,7 +265,7 @@ class SystemCommandProcessor:
             completions = [self._escape_text(match) for match in matches]
 
         if not completions:
-            return CompletionResult(success=False)
+            return SystemCommandCompletionResult(success=False)
 
         self._tab_completions = completions
         self._tab_completion_active = True
@@ -280,7 +280,7 @@ class SystemCommandProcessor:
             add_space = not completion.endswith('/')
             self._current_completion_index = 0
 
-            return CompletionResult(
+            return SystemCommandCompletionResult(
                 success=True,
                 replacement=completion,
                 start_pos=start_pos,
@@ -293,7 +293,7 @@ class SystemCommandProcessor:
         completion = completions[0]
         self._current_completion_text = completion
 
-        return CompletionResult(
+        return SystemCommandCompletionResult(
             success=True,
             replacement=completion,
             start_pos=start_pos,
