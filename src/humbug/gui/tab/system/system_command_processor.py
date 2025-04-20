@@ -142,21 +142,6 @@ class SystemCommandProcessor:
             self._current_tokens.append(token)
             token = lexer.get_next_token()
 
-    def _get_previous_token(self, token_index: int) -> Token | None:
-        """
-        Get the token before the specified token index.
-
-        Args:
-            token_index: The index of the token to get the previous token for
-
-        Returns:
-            The previous token, or None if not found
-        """
-        if 0 <= token_index - 1 < len(self._current_tokens):
-            return self._current_tokens[token_index - 1]
-
-        return None
-
     def _get_command_name(self, tokens: List[Token]) -> str | None:
         """
         Get the command name from the tokens.
@@ -238,8 +223,8 @@ class SystemCommandProcessor:
             self._completion_start_pos = token.start
 
         else:
-            # If no token at cursor, we're completing at whitespace.  We create an empty token
-            # at the cursor position.
+            # If there's no token at the cursor, we're completing at whitespace.  We create an
+            # empty token at the cursor position and insert it in our token list.
             self._completion_start_pos = cursor_position
             if not cmd:
                 token = Token(TokenType.COMMAND, "", cursor_position)
