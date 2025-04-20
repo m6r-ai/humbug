@@ -1,7 +1,7 @@
 """Processes system commands and handles tab completion."""
 
 import logging
-from typing import List, Dict
+from typing import List
 
 from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -32,7 +32,6 @@ class SystemCommandProcessor:
         self._cursor_token_index: int = -1
         self._cursor_position: int = 0
         self._current_command_name: str | None = None
-        self._token_map: Dict[TokenType, List[Token]] = {}
 
     def _escape_text(self, text: str) -> str:
         """
@@ -132,8 +131,6 @@ class SystemCommandProcessor:
             current_text: The current command text
             cursor_position: The position of the cursor in the text
         """
-        self._token_map.clear()
-
         # Tokenize the input
         lexer = CommandLexer()
         lexer.lex(None, current_text)
@@ -143,13 +140,13 @@ class SystemCommandProcessor:
         token = lexer.get_next_token()
         while token is not None:
             self._current_tokens.append(token)
-
-            # Add to token map by type for quick lookup
-            if token.type not in self._token_map:
-                self._token_map[token.type] = []
-            self._token_map[token.type].append(token)
-
             token = lexer.get_next_token()
+
+        # Did our command line end with a space?  If yes, add an empty token.  This will make it possible
+        # to tab-complete a new token at the end of the command line.
+        if current_text and current_text[-1] == ' ':
+            empty_token = Token(TokenType.ARGUMENT, "", cursor_position)
+            self._current_tokens.append(empty_token)
 
         self._cursor_position = cursor_position
 
@@ -184,7 +181,6 @@ class SystemCommandProcessor:
         self._cursor_token_index = -1
         self._cursor_position = 0
         self._current_command_name = None
-        self._token_map.clear()
 
     def _get_token_at_cursor(self) -> Token | None:
         """
@@ -260,8 +256,7 @@ class SystemCommandProcessor:
         Returns:
             CompletionResult with information about what to replace
         """
-        current_text = current_text.strip()
-
+        print(f"Tab completion requested: '{current_text}', continuation: {is_continuation}, cursor_position: {cursor_position}")
         # If cursor_position is not provided, assume it's at the end
         if cursor_position is None:
             cursor_position = len(current_text)
@@ -316,6 +311,7 @@ class SystemCommandProcessor:
         # Generate completions based on token type and context
         if not token or self._is_cursor_at_whitespace():
             # Complete new token based on context
+            print("Completing new token")
             result = self._complete_new_token()
 
         elif token.type == TokenType.COMMAND:
@@ -438,7 +434,6 @@ class SystemCommandProcessor:
 
         # Get option completions from the command
         option_completions = command._get_option_completions(partial_option)
-
         if not option_completions:
             # If no option matches, try completing an argument
             completions = command.get_token_completions(

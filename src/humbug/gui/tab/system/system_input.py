@@ -22,7 +22,7 @@ class SystemInput(SystemMessage):
 
     # New signals
     command_submitted = Signal(str)
-    tab_completion_requested = Signal(str, bool)  # text, is_continuation
+    tab_completion_requested = Signal(str, bool, int)  # text, is_continuation, cursor_position
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the system input widget."""
@@ -66,8 +66,9 @@ class SystemInput(SystemMessage):
             # Handle Tab key for command completion
             if key_event.key() == Qt.Key.Key_Tab and not key_event.modifiers():
                 # Emit signal requesting tab completion
-                current_text = self._text_area.toPlainText().strip()
-                self.tab_completion_requested.emit(current_text, self._tab_completion_active)
+                current_text = self._text_area.toPlainText()
+                cursor = self._text_area.textCursor()
+                self.tab_completion_requested.emit(current_text, self._tab_completion_active, cursor.position())
                 self._tab_completion_active = True
                 return True
 
@@ -253,15 +254,20 @@ class SystemInput(SystemMessage):
         # Apply the new text
         self._text_area.setPlainText(new_text)
 
+        cursor = self._text_area.textCursor()
+
         # Add space if requested
-        if result.add_space and not new_text.endswith(' '):
-            cursor = self._text_area.textCursor()
+        if result.add_space:
             cursor.setPosition(new_cursor_pos)
-            cursor.insertText(' ')
+            cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+            selected_char = cursor.selectedText()
+            if selected_char != ' ':
+                cursor.setPosition(new_cursor_pos)
+                cursor.insertText(' ')
+
             new_cursor_pos += 1
 
         # Set the cursor to the proper position
-        cursor = self._text_area.textCursor()
         cursor.setPosition(new_cursor_pos)
         self._text_area.setTextCursor(cursor)
 
