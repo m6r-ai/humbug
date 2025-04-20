@@ -31,13 +31,12 @@ class TerminalCommand(SystemCommand):
     def help_text(self) -> str:
         return "Open a new terminal tab"
 
-    def _execute_command(self, tokens: List[Token], args: str) -> bool:
+    def _execute_command(self, tokens: List[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
         Args:
             tokens: List of tokens from command lexer
-            args: Remaining arguments as a string
 
         Returns:
             True if command executed successfully, False otherwise
@@ -48,8 +47,8 @@ class TerminalCommand(SystemCommand):
     def get_token_completions(
         self,
         current_token: Token,
-        tokens: List[Token],
-        cursor_token_index: int
+        _tokens: List[Token],
+        _cursor_token_index: int
     ) -> List[str]:
         """
         Get completions for the current token based on token information.

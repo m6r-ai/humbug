@@ -57,13 +57,13 @@ class SystemCommand:
             "-h, --help": "Show detailed help for this command"
         }
 
-    def execute(self, tokens: List[Token], full_text: str) -> bool:
+    def execute(self, tokens: List[Token], _full_text: str) -> bool:
         """
         Execute the command with the given tokens.
 
         Args:
             tokens: List of tokens from command lexer
-            full_text: Original full command text
+            _full_text: Original full command text (deprecated)
 
         Returns:
             True if command executed successfully, False otherwise
@@ -74,15 +74,8 @@ class SystemCommand:
                 self._show_detailed_help()
                 return True
 
-            # Extract remaining args (everything after the command token)
-            command_token = self._find_command_token(tokens)
-            remaining_args = ""
-            if command_token:
-                command_end = command_token.start + len(command_token.value)
-                remaining_args = full_text[command_end:].lstrip()
-
-            # Execute the command with tokens and remaining args
-            return self._execute_command(tokens, remaining_args)
+            # Execute the command with tokens only
+            return self._execute_command(tokens)
 
         except Exception as e:
             self._logger.error("Error executing command: %s", str(e), exc_info=True)
@@ -109,28 +102,79 @@ class SystemCommand:
                     return True
         return False
 
-    def _get_option_value(self, tokens: List[Token], option_name: str) -> str | None:
+    def _get_options(self, tokens: List[Token]) -> Dict[str, str | None]:
         """
-        Get the value for an option if present.
+        Get dictionary of options and their values.
 
         Args:
-            tokens: List of command tokens
-            option_name: Option name without dashes
+            tokens: List of tokens
 
         Returns:
-            Option value if found, None otherwise
+            Dictionary mapping option names to their values
         """
-        for i, token in enumerate(tokens):
+        options = {}
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
             if token.type == TokenType.OPTION:
-                # Check if this is our option
-                if token.value == f"-{option_name}" or token.value == f"--{option_name}":
-                    # Check if there's a value token after this option
-                    if i + 1 < len(tokens) and tokens[i + 1].type == TokenType.ARGUMENT:
-                        return tokens[i + 1].value
-                    return ""  # Option exists but has no value
-        return None
+                # Normalize option name (remove leading dashes)
+                option_name = token.value.lstrip('-')
 
-    def _find_command_token(self, tokens: List[Token]) -> Token | None:
+                # Check if next token is an argument (option value)
+                if i + 1 < len(tokens) and tokens[i + 1].type == TokenType.ARGUMENT:
+                    options[option_name] = tokens[i + 1].value
+                    i += 2  # Skip both option and value
+
+                else:
+                    # Flag option without value
+                    options[option_name] = None
+                    i += 1
+
+            else:
+                i += 1
+
+        return options
+
+    def _get_positional_arguments(self, tokens: List[Token]) -> List[str]:
+        """
+        Get list of positional arguments (not associated with options).
+
+        Args:
+            tokens: List of tokens
+
+        Returns:
+            List of positional argument values in order
+        """
+        args = []
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token.type == TokenType.COMMAND:
+                i += 1
+
+            elif token.type == TokenType.OPTION:
+                # Skip option and its potential value
+                if i + 1 < len(tokens) and tokens[i + 1].type == TokenType.ARGUMENT:
+                    i += 2
+
+                else:
+                    i += 1
+
+            elif token.type == TokenType.ARGUMENT:
+                # Make sure this argument isn't a value for a preceding option
+                if i > 0 and tokens[i-1].type == TokenType.OPTION:
+                    i += 1
+
+                else:
+                    args.append(token.value)
+                    i += 1
+
+            else:
+                i += 1
+
+        return args
+
+    def _get_command_token(self, tokens: List[Token]) -> Token | None:
         """
         Find the command token in the token list.
 
@@ -145,13 +189,12 @@ class SystemCommand:
                 return token
         return None
 
-    def _execute_command(self, tokens: List[Token], args: str) -> bool:
+    def _execute_command(self, tokens: List[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
         Args:
             tokens: List of tokens from command lexer
-            args: Remaining arguments as a string (everything after command name)
 
         Returns:
             True if command executed successfully, False otherwise

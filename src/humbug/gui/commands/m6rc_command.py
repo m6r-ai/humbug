@@ -40,31 +40,37 @@ class M6rcCommand(SystemCommand):
         options["-m, --model"] = "Specify the AI model to use"
         return options
 
-    def _execute_command(self, tokens: List[Token], args: str) -> bool:
+    def _execute_command(self, tokens: List[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
         Args:
             tokens: List of tokens from command lexer
-            args: Remaining arguments as a string
 
         Returns:
             True if command executed successfully, False otherwise
         """
-        if not args.strip():
+        # Get positional arguments
+        args = self._get_positional_arguments(tokens)
+
+        if not args:
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 "No file path provided. Usage: m6rc [options] <path/to/file.m6r>"
             )
             return False
 
+        # Get file path from first positional argument
+        file_path = args[0]
+
+        # Get options
+        options = self._get_options(tokens)
+
         # Get model if specified
-        model = self._get_option_value(tokens, "model")
+        model = options.get("model")
 
         try:
             # Check if the path exists
-            file_path = args.strip()
-
             # Convert to absolute path if it's relative
             if not os.path.isabs(file_path):
                 file_path = self._mindspace_manager.get_mindspace_path(file_path)
@@ -72,7 +78,7 @@ class M6rcCommand(SystemCommand):
             if not os.path.exists(file_path):
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,
-                    f"File not found: {args.strip()}"
+                    f"File not found: {file_path}"
                 )
                 return False
 

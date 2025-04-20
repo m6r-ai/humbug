@@ -48,13 +48,12 @@ class ConversationCommand(SystemCommand):
         options["-m, --model"] = "Specify the AI model to use"
         return options
 
-    def _execute_command(self, tokens: List[Token], args: str) -> bool:
+    def _execute_command(self, tokens: List[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
         Args:
             tokens: List of tokens from command lexer
-            args: Remaining arguments as a string
 
         Returns:
             True if command executed successfully, False otherwise
@@ -66,8 +65,11 @@ class ConversationCommand(SystemCommand):
             )
             return False
 
+        # Get options
+        options = self._get_options(tokens)
+
         # Get model if specified
-        model = self._get_option_value(tokens, "model")
+        model = options.get("model")
 
         try:
             # Create new conversation with model if specified

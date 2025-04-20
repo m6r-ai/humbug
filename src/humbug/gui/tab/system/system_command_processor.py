@@ -92,11 +92,8 @@ class SystemCommandProcessor:
         self.reset_tab_completion()
 
         try:
-            # Unescape the command text
-            unescaped_command = self._unescape_text(command_text)
-
             # Parse the command line
-            self._parse_command_line(unescaped_command, len(unescaped_command))
+            self._parse_command_line(command_text, len(command_text))
 
             # Get the command name
             cmd = self._current_command_name
@@ -117,8 +114,8 @@ class SystemCommandProcessor:
                 )
                 return
 
-            # Pass the tokens and full text to the command
-            success = command.execute(self._current_tokens, unescaped_command)
+            # Pass the tokens to the command
+            success = command.execute(self._current_tokens, command_text)
             if not success:
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,

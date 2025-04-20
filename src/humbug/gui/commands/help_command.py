@@ -40,31 +40,31 @@ class HelpCommand(SystemCommand):
         # Help command doesn't have any special options beyond the base ones
         return super().get_options_help()
 
-    def _execute_command(self, tokens: List[Token], args: str) -> bool:
+    def _execute_command(self, tokens: List[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
         Args:
             tokens: List of tokens from command lexer
-            args: Remaining arguments as a string (everything after command name)
 
         Returns:
             True if command executed successfully, False otherwise
         """
+        # Get positional arguments
+        args = self._get_positional_arguments(tokens)
+
         # If a specific command is given, show help for that command
-        command_name = args.strip()
-        if command_name:
+        if args:
+            command_name = args[0]
             command = self._registry.get_command(command_name)
             if command:
                 # Use the command's detailed help method
                 command._show_detailed_help()
-
             else:
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,
                     f"Unknown command: {command_name}"
                 )
-
             return True
 
         # Otherwise show general help for all commands

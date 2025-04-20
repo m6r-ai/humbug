@@ -43,24 +43,27 @@ class EditCommand(SystemCommand):
         """Get the help text for the command."""
         return "Opens a file for editing. Creates the file if it doesn't exist. Usage: edit <filename>"
 
-    def _execute_command(self, tokens: List[Token], args: str) -> bool:
+    def _execute_command(self, tokens: List[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
         Args:
             tokens: List of tokens from command lexer
-            args: Remaining arguments as a string
 
         Returns:
             True if command executed successfully, False otherwise
         """
-        filename = args.strip()
-        if not filename:
+        # Get positional arguments
+        args = self._get_positional_arguments(tokens)
+
+        if not args:
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 "No filename specified. Usage: edit <filename>"
             )
             return False
+
+        filename = args[0]
 
         if not self._mindspace_manager.has_mindspace():
             self._mindspace_manager.add_system_interaction(
