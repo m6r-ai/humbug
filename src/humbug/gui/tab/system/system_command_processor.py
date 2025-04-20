@@ -28,7 +28,6 @@ class SystemCommandProcessor:
 
         # Token tracking for current command
         self._current_tokens: List[Token] = []
-        self._cursor_token_index: int = -1
         self._current_command_name: str | None = None
 
     def _escape_text(self, text: str) -> str:
@@ -86,32 +85,31 @@ class SystemCommandProcessor:
         if not command_text:
             return
 
-        # Reset tab completion state when processing a command
-        self.reset_tab_completion()
+        self._completion_start_pos = 0
+
+        # Parse the command line
+        self._parse_command_line(command_text, len(command_text))
+
+        # Get the command name
+        cmd = self._current_command_name
+        if not cmd:
+            # No command name found
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                "Invalid command format. Type 'help' for a list of available commands."
+            )
+            return
+
+        command = self._command_registry.get_command(cmd)
+        if not command:
+            # Command not found
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                f"Unknown command: {cmd}. Type 'help' for a list of available commands."
+            )
+            return
 
         try:
-            # Parse the command line
-            self._parse_command_line(command_text, len(command_text))
-
-            # Get the command name
-            cmd = self._current_command_name
-            if not cmd:
-                # No command name found
-                self._mindspace_manager.add_system_interaction(
-                    SystemMessageSource.ERROR,
-                    "Invalid command format. Type 'help' for a list of available commands."
-                )
-                return
-
-            command = self._command_registry.get_command(cmd)
-            if not command:
-                # Command not found
-                self._mindspace_manager.add_system_interaction(
-                    SystemMessageSource.ERROR,
-                    f"Unknown command: {cmd}. Type 'help' for a list of available commands."
-                )
-                return
-
             command.execute(self._current_tokens, command_text)
 
         except Exception as e:
@@ -121,14 +119,22 @@ class SystemCommandProcessor:
                 f"Error executing command: {str(e)}"
             )
 
-    def _parse_command_line(self, current_text: str, cursor_position: int) -> None:
+    def _parse_command_line(self, current_text: str, cursor_position: int) -> int:
         """
         Parse the command line text and update token information.
 
         Args:
             current_text: The current command text
             cursor_position: The position of the cursor in the text
+
+        Returns:
+            The index of the token at the cursor position, or -1 if not found
         """
+        self._tab_completions = []
+        self._current_completion_index = -1
+        self._tab_completion_active = False
+        self._current_completion_text = ""
+
         # Tokenize the input
         lexer = CommandLexer()
         lexer.lex(None, current_text)
@@ -141,47 +147,16 @@ class SystemCommandProcessor:
             token = lexer.get_next_token()
 
         # Find the token at cursor position
-        self._cursor_token_index = -1
+        cursor_token_index = -1
         for i, token in enumerate(self._current_tokens):
             token_end = token.start + len(token.value)
             if token.start <= cursor_position <= token_end:
-                self._cursor_token_index = i
+                cursor_token_index = i
                 break
 
         # Extract command name
         self._current_command_name = self._get_command_name(self._current_tokens)
-
-    def get_available_commands(self) -> List[str]:
-        """
-        Return list of available command names.
-
-        Returns:
-            List of command names
-        """
-        return self._command_registry.get_command_names()
-
-    def reset_tab_completion(self) -> None:
-        """Reset tab completion state."""
-        self._tab_completions = []
-        self._current_completion_index = -1
-        self._completion_start_pos = 0
-        self._current_completion_text = ""
-        self._tab_completion_active = False
-        self._current_tokens = []
-        self._cursor_token_index = -1
-        self._current_command_name = None
-
-    def _get_token_at_cursor(self) -> Token | None:
-        """
-        Get the token at the cursor position.
-
-        Returns:
-            The token at the cursor position, or None if not found
-        """
-        if 0 <= self._cursor_token_index < len(self._current_tokens):
-            return self._current_tokens[self._cursor_token_index]
-
-        return None
+        return cursor_token_index
 
     def _get_previous_token(self, token_index: int) -> Token | None:
         """
@@ -260,19 +235,10 @@ class SystemCommandProcessor:
             return result
 
         # Otherwise, this is a new tab completion request
-        self._tab_completions = []
-        self._current_completion_index = -1
-        self._tab_completion_active = False
-        self._current_completion_text = ""
-
-        # Parse the command line once
-        self._parse_command_line(current_text, cursor_position)
-
-        # Determine what to complete based on token context
-        token = self._get_token_at_cursor()
-
-        # Store start position for future continuations
-        if token:
+        # Parse the command line
+        cursor_token_index = self._parse_command_line(current_text, cursor_position)
+        if cursor_token_index >= 0:
+            token = self._current_tokens[cursor_token_index]
             self._completion_start_pos = token.start
 
         else:
@@ -285,7 +251,7 @@ class SystemCommandProcessor:
                 token = Token(TokenType.ARGUMENT, "", cursor_position)
 
         if token.type == TokenType.COMMAND:
-            command_names = self.get_available_commands()
+            command_names = self._command_registry.get_command_names()
             completions = [name for name in command_names if name.startswith(token.value)]
 
         else:
@@ -301,7 +267,7 @@ class SystemCommandProcessor:
             arguments = command.get_token_completions(
                 token,
                 self._current_tokens,
-                self._cursor_token_index
+                cursor_token_index
             )
 
             # Filter completions based on the partial argument
