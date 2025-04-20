@@ -14,7 +14,7 @@ from humbug.user.user_manager import UserManager
 class M6rcCommand(SystemCommand):
     """Command to create a new conversation with a Metaphor file."""
 
-    def __init__(self, create_metaphor_conversation_callback: Callable[[str, str | None], None]) -> None:
+    def __init__(self, create_m6rc_conversation_callback: Callable[[str, str | None], None]) -> None:
         """
         Initialize the command.
 
@@ -22,7 +22,7 @@ class M6rcCommand(SystemCommand):
             create_metaphor_conversation_callback: Callback to create conversation with file path and optional model
         """
         super().__init__()
-        self._create_metaphor_conversation = create_metaphor_conversation_callback
+        self._create_m6rc_conversation = create_m6rc_conversation_callback
         self._user_manager = UserManager()
         self._mindspace_manager = MindspaceManager()
 
@@ -52,7 +52,6 @@ class M6rcCommand(SystemCommand):
         """
         # Get positional arguments
         args = self._get_positional_arguments(tokens)
-
         if not args:
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
@@ -82,7 +81,13 @@ class M6rcCommand(SystemCommand):
                 )
                 return False
 
-            self._create_metaphor_conversation(file_path, model)
+            if not self._create_m6rc_conversation(file_path, model):
+                return False
+
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.SUCCESS,
+                f"New Metaphor conversation started from {file_path}"
+            )
             return True
 
         except Exception as e:
@@ -128,6 +133,7 @@ class M6rcCommand(SystemCommand):
         Returns:
             List of possible completions
         """
+        print("Current token:", current_token)
         # Handle option completions
         if current_token.type == TokenType.OPTION:
             return self._get_option_completions(current_token.value)

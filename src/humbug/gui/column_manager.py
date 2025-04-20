@@ -103,12 +103,19 @@ class ColumnManager(QWidget):
         self._tabs: Dict[str, TabBase] = {}
         self._tab_labels: Dict[str, TabLabel] = {}
 
+        # Are we protecting the system tab against being ovewrwritten?
+        self._protect_system_tab = False
+
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
         self._current_status_tab: TabBase | None = None
 
         self._handle_style_changed()
+
+    def protect_system_tab(self, protect: bool) -> None:
+        """Set whether to protect the system tab from being overwritten."""
+        self._protect_system_tab = protect
 
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
@@ -481,7 +488,7 @@ class ColumnManager(QWidget):
         self._active_column = column
         self._update_tabs()
 
-    def is_system_tab_active(self) -> bool:
+    def _is_system_tab_active(self) -> bool:
         """Check if the currently active tab is a system tab."""
         tab = self._get_current_tab()
         return isinstance(tab, SystemTab)
@@ -496,8 +503,12 @@ class ColumnManager(QWidget):
         Returns:
             The column widget where the new tab should be added
         """
+        # If the system tab in not protected, we can use the normal behavior
+        if not self._protect_system_tab:
+            return self._active_column
+
         # If not a system tab, use normal behavior
-        if not self.is_system_tab_active():
+        if not self._is_system_tab_active():
             return self._active_column
 
         # Get the current column index

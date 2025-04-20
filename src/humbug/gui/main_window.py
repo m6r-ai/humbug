@@ -373,10 +373,10 @@ class MainWindow(QMainWindow):
         conversation_command = ConversationCommand(self._process_command_conversation)
         self._command_registry.register_command(conversation_command)
 
-        edit_command = EditCommand(self._column_manager.open_file, self._column_manager.new_file)
+        edit_command = EditCommand(self._process_command_edit)
         self._command_registry.register_command(edit_command)
 
-        m6rc_command = M6rcCommand(self._process_m6rc_command)
+        m6rc_command = M6rcCommand(self._process_command_m6rc)
         self._command_registry.register_command(m6rc_command)
 
         terminal_command = TerminalCommand(self._process_command_terminal)
@@ -1171,15 +1171,34 @@ class MainWindow(QMainWindow):
         self._close_all_tabs()
         event.accept()
 
-    def _process_command_conversation(self, model: str | None) -> None:
+    def _process_command_conversation(self, model: str | None) -> bool:
         """Public method to process the conversation command."""
-        self._new_conversation()
-        self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.SUCCESS,
-            "New conversation tab created"
-        )
+        self._column_manager.protect_system_tab(True)
+        try:
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            self._column_manager.new_conversation(
+                self._mindspace_manager.mindspace_path()
+            )
 
-    def _process_m6rc_command(self, file_path: str, model: str | None) -> None:
+        except MindspaceError as e:
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
+            )
+            return False
+
+        finally:
+            self._column_manager.protect_system_tab(False)
+
+        return True
+
+    def _process_command_edit(self, file_path: str) -> bool:
+        """Public method to process the edit command."""
+        self._column_manager.protect_system_tab(True)
+        self._column_manager.open_file(file_path)
+        self._column_manager.protect_system_tab(False)
+        return True
+
+    def _process_command_m6rc(self, file_path: str, model: str | None) -> bool:
         """Public method to create a new conversation with a Metaphor file."""
         search_path = self._mindspace_manager.mindspace_path()
 
@@ -1192,39 +1211,35 @@ class MainWindow(QMainWindow):
         except FileNotFoundError:
             error = f"File not found: {file_path}"
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                error
+                SystemMessageSource.ERROR, error
             )
-            return
+            return False
 
         except MetaphorParserError as e:
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                error
+                SystemMessageSource.ERROR, error
             )
-            return
+            return False
 
+        self._column_manager.protect_system_tab(True)
         conversation_id = self._new_conversation()
+        self._column_manager.protect_system_tab(False)
         if conversation_id is None:
-            return
+            return False
 
         conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
         if conversation_tab is None:
-            return
+            return False
 
         conversation_tab.set_input_text(prompt)
         conversation_tab.submit()
-        self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.SUCCESS,
-            f"New Metaphor conversation started from {file_path}"
-        )
+        return True
 
-    def _process_command_terminal(self) -> None:
+    def _process_command_terminal(self) -> bool:
         """Public method to process the terminal command."""
-        self._new_terminal()
-        self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.SUCCESS,
-            "New terminal tab created"
-        )
+        self._column_manager.protect_system_tab(True)
+        self._column_manager.new_terminal()
+        self._column_manager.protect_system_tab(False)
+        return True

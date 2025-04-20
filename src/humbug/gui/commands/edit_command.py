@@ -4,7 +4,6 @@ import logging
 import os
 from typing import List, Callable
 
-from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -14,17 +13,15 @@ from humbug.syntax.command.command_lexer import Token, TokenType
 class EditCommand(SystemCommand):
     """Command to open or create a file in an editor tab."""
 
-    def __init__(self, open_file_callback: Callable[[str], EditorTab], new_file_callback: Callable[[], EditorTab]) -> None:
+    def __init__(self, edit_file_callback: Callable[[str], None]) -> None:
         """
         Initialize edit command.
 
         Args:
             open_file_callback: Callback to open an existing file
-            new_file_callback: Callback to create a new file
         """
         super().__init__()
-        self._open_file = open_file_callback
-        self._new_file = new_file_callback
+        self._edit_file = edit_file_callback
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("EditCommand")
 
@@ -55,7 +52,6 @@ class EditCommand(SystemCommand):
         """
         # Get positional arguments
         args = self._get_positional_arguments(tokens)
-
         if not args:
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
@@ -63,14 +59,7 @@ class EditCommand(SystemCommand):
             )
             return False
 
-        filename = args[0]
-
-        if not self._mindspace_manager.has_mindspace():
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                "Cannot edit file: no mindspace is open."
-            )
-            return False
+        filename = args[0] if args else ""
 
         try:
             # Convert relative path to absolute path within mindspace
@@ -79,22 +68,13 @@ class EditCommand(SystemCommand):
             else:
                 full_path = filename
 
-            # Check if file exists
-            if os.path.exists(full_path):
-                # Open existing file
-                editor = self._open_file(full_path)
-                if editor:
-                    self._mindspace_manager.add_system_interaction(
-                        SystemMessageSource.SUCCESS,
-                        f"Opened file: {filename}"
-                    )
-                    return True
-            else:
+            if not os.path.exists(full_path):
                 # Create directory if needed
                 directory = os.path.dirname(full_path)
                 if directory and not os.path.exists(directory):
                     try:
                         os.makedirs(directory, exist_ok=True)
+
                     except OSError as e:
                         self._mindspace_manager.add_system_interaction(
                             SystemMessageSource.ERROR,
@@ -102,24 +82,18 @@ class EditCommand(SystemCommand):
                         )
                         return False
 
-                # Create new file
-                editor = self._new_file()
-                if editor:
-                    # Set filename and save to create the file
-                    editor.set_filename(full_path)
-                    if editor.save():
-                        self._mindspace_manager.add_system_interaction(
-                            SystemMessageSource.SUCCESS,
-                            f"Created and opened file: {filename}"
-                        )
-                        return True
+            if not self._edit_file(full_path):
+                self._mindspace_manager.add_system_interaction(
+                    SystemMessageSource.ERROR,
+                    f"Failed to edit file: {filename}"
+                )
+                return False
 
-            # If we get here, something went wrong
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                f"Failed to open or create file: {filename}"
+                SystemMessageSource.SUCCESS,
+                f"Editing file: {filename}"
             )
-            return False
+            return True
 
         except Exception as e:
             self._logger.exception("Error processing file: %s", str(e))

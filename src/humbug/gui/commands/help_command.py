@@ -60,12 +60,13 @@ class HelpCommand(SystemCommand):
             if command:
                 # Use the command's detailed help method
                 command._show_detailed_help()
-            else:
-                self._mindspace_manager.add_system_interaction(
-                    SystemMessageSource.ERROR,
-                    f"Unknown command: {command_name}"
-                )
-            return True
+                return True
+
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR,
+                f"Unknown command: {command_name}"
+            )
+            return False
 
         # Otherwise show general help for all commands
         commands = self._registry.get_all_commands()

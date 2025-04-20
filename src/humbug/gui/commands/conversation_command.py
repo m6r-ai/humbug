@@ -58,13 +58,6 @@ class ConversationCommand(SystemCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        if not self._mindspace_manager.has_mindspace():
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                "Cannot create conversation: no mindspace is open."
-            )
-            return False
-
         # Get options
         options = self._get_options(tokens)
 

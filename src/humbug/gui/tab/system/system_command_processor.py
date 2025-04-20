@@ -114,13 +114,7 @@ class SystemCommandProcessor:
                 )
                 return
 
-            # Pass the tokens to the command
-            success = command.execute(self._current_tokens, command_text)
-            if not success:
-                self._mindspace_manager.add_system_interaction(
-                    SystemMessageSource.ERROR,
-                    f"Error executing command '{cmd}'. Check arguments and try again."
-                )
+            command.execute(self._current_tokens, command_text)
 
         except Exception as e:
             self._logger.error("Error executing command '%s': %s", command_text, str(e), exc_info=True)

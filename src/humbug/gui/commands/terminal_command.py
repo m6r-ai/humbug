@@ -3,6 +3,7 @@
 from typing import Callable, List
 
 from humbug.mindspace.system.system_command import SystemCommand
+from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
@@ -42,6 +43,10 @@ class TerminalCommand(SystemCommand):
             True if command executed successfully, False otherwise
         """
         self._create_terminal()
+        self._mindspace_manager.add_system_interaction(
+            SystemMessageSource.SUCCESS,
+            "New terminal tab created"
+        )
         return True
 
     def get_token_completions(
