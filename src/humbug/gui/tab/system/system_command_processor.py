@@ -5,7 +5,6 @@ from typing import List
 
 from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.syntax.command.command_lexer import CommandLexer, TokenType, Token
@@ -290,7 +289,9 @@ class SystemCommandProcessor:
                 token = Token(TokenType.ARGUMENT, "", cursor_position)
 
         if token.type == TokenType.COMMAND:
-            result = self._complete_command_name(token)
+            command_names = self.get_available_commands()
+            matches = [name for name in command_names if name.startswith(token.value)]
+            result = self._complete(matches, token)
 
         else:
             # Get the command
@@ -301,7 +302,18 @@ class SystemCommandProcessor:
             if not command:
                 return CompletionResult(success=False)
 
-            result = self._complete_argument(command, token)
+            # Get completions from the command
+            completions = command.get_token_completions(
+                token,
+                self._current_tokens,
+                self._cursor_token_index
+            )
+
+            # Filter completions based on the partial argument
+            unescaped_partial = self._unescape_text(token.value)
+            matches = [comp for comp in completions if comp.startswith(unescaped_partial)]
+            escaped_matches = [self._escape_text(match) for match in matches]
+            result = self._complete(escaped_matches, token)
 
         if result.success and result.replacement is not None:
             self._tab_completion_active = True
@@ -309,44 +321,6 @@ class SystemCommandProcessor:
             self._current_completion_text = result.replacement
 
         return result
-
-    def _complete_command_name(self, token: Token) -> CompletionResult:
-        """
-        Complete a command name.
-
-        Args:
-            token: The command token to complete
-
-        Returns:
-            CompletionResult with command name completion
-        """
-        command_names = self.get_available_commands()
-        matches = [name for name in command_names if name.startswith(token.value)]
-        return self._complete(matches, token)
-
-    def _complete_argument(self, command: SystemCommand, token: Token) -> CompletionResult:
-        """
-        Complete an argument token.
-
-        Args:
-            command: The command to complete the argument for
-            token: The argument token to complete
-
-        Returns:
-            CompletionResult with argument completion
-        """
-        # Get completions from the command
-        completions = command.get_token_completions(
-            token,
-            self._current_tokens,
-            self._cursor_token_index
-        )
-
-        # Filter completions based on the partial argument
-        unescaped_partial = self._unescape_text(token.value)
-        matches = [comp for comp in completions if comp.startswith(unescaped_partial)]
-        escaped_matches = [self._escape_text(match) for match in matches]
-        return self._complete(escaped_matches, token)
 
     def _complete(self, completions: List[str], token: Token) -> CompletionResult:
         """
