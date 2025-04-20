@@ -222,26 +222,35 @@ class SystemCommandProcessor:
         self._parse_command_line(current_text)
         cmd = self._get_command_name(self._current_tokens)
 
-        # Find the token at cursor position
+        # Find the token at cursor position, and the token before it
         cursor_token_index = -1
+        prev_token_index = -1
         for i, token in enumerate(self._current_tokens):
             token_end = token.start + len(token.value)
             if token.start <= cursor_position <= token_end:
                 cursor_token_index = i
                 break
 
+            if token_end < cursor_position:
+                prev_token_index = i
+
         if cursor_token_index >= 0:
             token = self._current_tokens[cursor_token_index]
             self._completion_start_pos = token.start
 
         else:
-            # If no token at cursor, we're completing at whitespace
+            # If no token at cursor, we're completing at whitespace.  We create an empty token
+            # at the cursor position.
             self._completion_start_pos = cursor_position
             if not cmd:
                 token = Token(TokenType.COMMAND, "", cursor_position)
 
             else:
                 token = Token(TokenType.ARGUMENT, "", cursor_position)
+
+            token.start = cursor_position
+            cursor_token_index = prev_token_index + 1
+            self._current_tokens.insert(cursor_token_index, token)
 
         if token.type == TokenType.COMMAND:
             command_names = self._command_registry.get_command_names()
