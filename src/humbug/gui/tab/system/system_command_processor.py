@@ -30,7 +30,6 @@ class SystemCommandProcessor:
         # Token tracking for current command
         self._current_tokens: List[Token] = []
         self._cursor_token_index: int = -1
-        self._cursor_position: int = 0
         self._current_command_name: str | None = None
 
     def _escape_text(self, text: str) -> str:
@@ -142,8 +141,6 @@ class SystemCommandProcessor:
             self._current_tokens.append(token)
             token = lexer.get_next_token()
 
-        self._cursor_position = cursor_position
-
         # Find the token at cursor position
         self._cursor_token_index = -1
         for i, token in enumerate(self._current_tokens):
@@ -173,7 +170,6 @@ class SystemCommandProcessor:
         self._tab_completion_active = False
         self._current_tokens = []
         self._cursor_token_index = -1
-        self._cursor_position = 0
         self._current_command_name = None
 
     def _get_token_at_cursor(self) -> Token | None:
@@ -202,20 +198,6 @@ class SystemCommandProcessor:
             return self._current_tokens[token_index - 1]
 
         return None
-
-    def _is_cursor_at_whitespace(self) -> bool:
-        """
-        Check if cursor is at whitespace between tokens.
-
-        Returns:
-            True if cursor is at whitespace, False otherwise
-        """
-        token = self._get_token_at_cursor()
-        if not token:
-            return True
-
-        # If cursor is at the end of a token, it's effectively at whitespace
-        return self._cursor_position > (token.start + len(token.value))
 
     def _get_command_name(self, tokens: List[Token]) -> str | None:
         """
@@ -338,42 +320,9 @@ class SystemCommandProcessor:
         Returns:
             CompletionResult with command name completion
         """
-        partial_command = token.value
-        start_pos = token.start
-        end_pos = token.start + len(partial_command)
-
         command_names = self.get_available_commands()
-        matches = [name for name in command_names if name.startswith(partial_command)]
-
-        if not matches:
-            return CompletionResult(success=False)
-
-        self._tab_completions = matches
-
-        if len(matches) == 1:
-            # Single completion - return with trailing space
-            completion = matches[0]
-            self._current_completion_index = 0
-
-            return CompletionResult(
-                success=True,
-                replacement=completion,
-                start_pos=start_pos,
-                end_pos=end_pos,
-                add_space=True
-            )
-
-        # Multiple completions - start cycling
-        self._current_completion_index = 0
-        completion = matches[0]
-
-        return CompletionResult(
-            success=True,
-            replacement=completion,
-            start_pos=start_pos,
-            end_pos=end_pos,
-            add_space=False
-        )
+        matches = [name for name in command_names if name.startswith(token.value)]
+        return self._complete(matches, token)
 
     def _complete_argument(self, command: SystemCommand, token: Token) -> CompletionResult:
         """
@@ -386,10 +335,6 @@ class SystemCommandProcessor:
         Returns:
             CompletionResult with argument completion
         """
-        # If we get here, it's a regular argument
-        start_pos = token.start
-        end_pos = token.start + len(token.value)
-
         # Get completions from the command
         completions = command.get_token_completions(
             token,
@@ -397,23 +342,35 @@ class SystemCommandProcessor:
             self._cursor_token_index
         )
 
+        # Filter completions based on the partial argument
+        unescaped_partial = self._unescape_text(token.value)
+        matches = [comp for comp in completions if comp.startswith(unescaped_partial)]
+        escaped_matches = [self._escape_text(match) for match in matches]
+        return self._complete(escaped_matches, token)
+
+    def _complete(self, completions: List[str], token: Token) -> CompletionResult:
+        """
+        Complete an argument token.
+
+        Args:
+            completions: The list of completions
+            token: The argument token to complete
+
+        Returns:
+            CompletionResult with argument completion
+        """
         if not completions:
             return CompletionResult(success=False)
 
-        # Filter completions based on the partial argument
-        partial_argument = token.value
-        unescaped_partial = self._unescape_text(partial_argument)
-        matches = [comp for comp in completions if comp.startswith(unescaped_partial)]
-        if not matches:
-            return CompletionResult(success=False)
-
         # Escape spaces in completions
-        escaped_matches = [self._escape_text(match) for match in matches]
-        self._tab_completions = escaped_matches
+        self._tab_completions = completions
 
-        if len(matches) == 1:
+        start_pos = token.start
+        end_pos = token.start + len(token.value)
+
+        if len(completions) == 1:
             # Single completion - replace just the argument
-            completion = escaped_matches[0]
+            completion = completions[0]
             add_space = not completion.endswith('/')
             self._current_completion_index = 0
 
@@ -427,7 +384,7 @@ class SystemCommandProcessor:
 
         # Multiple completions - start cycling
         self._current_completion_index = 0
-        completion = escaped_matches[0]
+        completion = completions[0]
 
         return CompletionResult(
             success=True,
