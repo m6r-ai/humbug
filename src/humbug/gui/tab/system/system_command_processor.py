@@ -217,8 +217,8 @@ class SystemCommandProcessor:
     def handle_tab_completion(
         self,
         current_text: str,
-        is_continuation: bool = False,
-        cursor_position: int | None = None
+        is_continuation: bool,
+        cursor_position: int
     ) -> CompletionResult:
         """
         Handle tab completion for the current input text.
@@ -226,16 +226,12 @@ class SystemCommandProcessor:
         Args:
             current_text: Current input text
             is_continuation: Whether this is a continuation of previous tab presses
-            cursor_position: Position of cursor in text (defaults to end of text)
+            cursor_position: Position of cursor in text
 
         Returns:
             CompletionResult with information about what to replace
         """
         print(f"Tab completion requested: '{current_text}', continuation: {is_continuation}, cursor_position: {cursor_position}")
-        # If cursor_position is not provided, assume it's at the end
-        if cursor_position is None:
-            cursor_position = len(current_text)
-
         # If empty text, nothing to complete
         if not current_text:
             return CompletionResult(success=False)
@@ -290,8 +286,7 @@ class SystemCommandProcessor:
 
         if token.type == TokenType.COMMAND:
             command_names = self.get_available_commands()
-            matches = [name for name in command_names if name.startswith(token.value)]
-            result = self._complete(matches, token)
+            completions = [name for name in command_names if name.startswith(token.value)]
 
         else:
             # Get the command
@@ -303,7 +298,7 @@ class SystemCommandProcessor:
                 return CompletionResult(success=False)
 
             # Get completions from the command
-            completions = command.get_token_completions(
+            arguments = command.get_token_completions(
                 token,
                 self._current_tokens,
                 self._cursor_token_index
@@ -311,33 +306,14 @@ class SystemCommandProcessor:
 
             # Filter completions based on the partial argument
             unescaped_partial = self._unescape_text(token.value)
-            matches = [comp for comp in completions if comp.startswith(unescaped_partial)]
-            escaped_matches = [self._escape_text(match) for match in matches]
-            result = self._complete(escaped_matches, token)
+            matches = [arg for arg in arguments if arg.startswith(unescaped_partial)]
+            completions = [self._escape_text(match) for match in matches]
 
-        if result.success and result.replacement is not None:
-            self._tab_completion_active = True
-            # Store the current completion text for next cycle
-            self._current_completion_text = result.replacement
-
-        return result
-
-    def _complete(self, completions: List[str], token: Token) -> CompletionResult:
-        """
-        Complete an argument token.
-
-        Args:
-            completions: The list of completions
-            token: The argument token to complete
-
-        Returns:
-            CompletionResult with argument completion
-        """
         if not completions:
             return CompletionResult(success=False)
 
-        # Escape spaces in completions
         self._tab_completions = completions
+        self._tab_completion_active = True
 
         start_pos = token.start
         end_pos = token.start + len(token.value)
@@ -345,6 +321,7 @@ class SystemCommandProcessor:
         if len(completions) == 1:
             # Single completion - replace just the argument
             completion = completions[0]
+            self._current_completion_text = completion
             add_space = not completion.endswith('/')
             self._current_completion_index = 0
 
@@ -359,6 +336,7 @@ class SystemCommandProcessor:
         # Multiple completions - start cycling
         self._current_completion_index = 0
         completion = completions[0]
+        self._current_completion_text = completion
 
         return CompletionResult(
             success=True,
