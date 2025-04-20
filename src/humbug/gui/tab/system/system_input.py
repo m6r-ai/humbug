@@ -63,11 +63,8 @@ class SystemInput(SystemMessage):
             # Cast to QKeyEvent
             key_event = cast(QKeyEvent, event)
 
-            print(f"Key pressed: {key_event.key()} {key_event.modifiers()}")
-
             # Handle Tab key for command completion
             if key_event.key() == Qt.Key.Key_Tab:
-                print("Tab key pressed")
                 # Emit signal requesting tab completion
                 current_text = self._text_area.toPlainText()
                 cursor = self._text_area.textCursor()
@@ -76,7 +73,6 @@ class SystemInput(SystemMessage):
                 return True
 
             if key_event.key() == Qt.Key.Key_Backtab:
-                print("Shift+Tab key pressed")
                 # Handle Shift+Tab for reverse tab completion
                 current_text = self._text_area.toPlainText()
                 cursor = self._text_area.textCursor()
