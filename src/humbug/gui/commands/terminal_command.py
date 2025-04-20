@@ -20,15 +20,12 @@ class TerminalCommand(SystemCommand):
         super().__init__()
         self._create_terminal = create_terminal_callback
 
-    @property
     def name(self) -> str:
         return "terminal"
 
-    @property
     def aliases(self) -> List[str]:
         return ["term"]
 
-    @property
     def help_text(self) -> str:
         return "Open a new terminal tab"
 

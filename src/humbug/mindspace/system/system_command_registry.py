@@ -33,11 +33,12 @@ class SystemCommandRegistry(QObject):
         Args:
             command: The command to register
         """
-        self._commands[command.name] = command
+        command_name = command.name()
+        self._commands[command_name] = command
 
         # Register aliases
-        for alias in command.aliases:
-            self._aliases[alias] = command.name
+        for alias in command.aliases():
+            self._aliases[alias] = command_name
 
     def get_command(self, name: str) -> SystemCommand | None:
         """

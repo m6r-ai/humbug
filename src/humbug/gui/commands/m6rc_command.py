@@ -26,11 +26,9 @@ class M6rcCommand(SystemCommand):
         self._user_manager = UserManager()
         self._mindspace_manager = MindspaceManager()
 
-    @property
     def name(self) -> str:
         return "m6rc"
 
-    @property
     def help_text(self) -> str:
         return "Create a new conversation from a Metaphor file"
 

@@ -5,7 +5,7 @@ This module provides classes for defining, parsing, and completing command optio
 """
 
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Set
+from typing import Callable, Dict, List
 
 
 @dataclass
@@ -120,7 +120,7 @@ class CommandOptionsRegistry:
             partial_name = partial_option[2:]
 
             # Find all long options that start with this partial name
-            for opt_name, descriptor in self._options.items():
+            for opt_name, _descriptor in self._options.items():
                 if len(opt_name) > 1 and opt_name.startswith(partial_name):
                     # Only check long names (more than 1 character)
                     completions.append(f"--{opt_name}")
@@ -132,18 +132,18 @@ class CommandOptionsRegistry:
             # For single dash with no additional text, return both short and long options
             if not partial_name:
                 # Return all short options
-                for opt_name, descriptor in self._options.items():
+                for opt_name, _descriptor in self._options.items():
                     if len(opt_name) == 1:
                         completions.append(f"-{opt_name}")
 
                 # Also return all long options for better tab completion
-                for opt_name, descriptor in self._options.items():
+                for opt_name, _descriptor in self._options.items():
                     if len(opt_name) > 1:
                         completions.append(f"--{opt_name}")
 
             else:
                 # Check if any short option matches exactly
-                for opt_name, descriptor in self._options.items():
+                for opt_name, _descriptor in self._options.items():
                     if len(opt_name) == 1 and opt_name == partial_name:
                         completions.append(f"-{opt_name}")
                         break
@@ -163,7 +163,7 @@ class CommandOptionsRegistry:
         unique_options = {}
 
         # Collect unique options (long and short forms point to same descriptor)
-        for option_name, descriptor in self._options.items():
+        for _option_name, descriptor in self._options.items():
             # Use long_name as the key for uniqueness
             unique_options[descriptor.long_name] = descriptor
 

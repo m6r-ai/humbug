@@ -23,15 +23,12 @@ class HelpCommand(SystemCommand):
         self._mindspace_manager = MindspaceManager()
         self._registry = registry
 
-    @property
     def name(self) -> str:
         return "help"
 
-    @property
     def aliases(self) -> List[str]:
         return ["?"]
 
-    @property
     def help_text(self) -> str:
         return "Show help for available commands"
 
@@ -73,8 +70,9 @@ class HelpCommand(SystemCommand):
 
         help_text = "Available commands:\n"
         for name, cmd in sorted(commands.items()):
-            if cmd.help_text:
-                help_text += f"  {name} - {cmd.help_text}\n"
+            this_help_text = cmd.help_text()
+            if this_help_text:
+                help_text += f"  {name} - {this_help_text}\n"
             else:
                 help_text += f"  {name}\n"
 

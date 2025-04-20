@@ -27,17 +27,14 @@ class ConversationCommand(SystemCommand):
         self._user_manager = UserManager()
         self._logger = logging.getLogger("ConversationCommand")
 
-    @property
     def name(self) -> str:
         """Get the name of the command."""
         return "conversation"
 
-    @property
     def aliases(self) -> List[str]:
         """Get alternate names for the command."""
         return ["conv", "chat"]
 
-    @property
     def help_text(self) -> str:
         """Get the help text for the command."""
         return "Creates a new conversation tab."

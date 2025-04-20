@@ -25,17 +25,14 @@ class EditCommand(SystemCommand):
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("EditCommand")
 
-    @property
     def name(self) -> str:
         """Get the name of the command."""
         return "edit"
 
-    @property
     def aliases(self) -> List[str]:
         """Get alternate names for the command."""
         return ["open"]
 
-    @property
     def help_text(self) -> str:
         """Get the help text for the command."""
         return "Opens a file for editing. Creates the file if it doesn't exist. Usage: edit <filename>"

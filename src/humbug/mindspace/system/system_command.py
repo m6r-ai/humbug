@@ -17,7 +17,6 @@ class SystemCommand:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._mindspace_manager = MindspaceManager()
 
-    @property
     def name(self) -> str:
         """
         Get the name of the command.
@@ -26,7 +25,6 @@ class SystemCommand:
         """
         raise NotImplementedError("Subclasses must implement name property")
 
-    @property
     def aliases(self) -> List[str]:
         """
         Get alternate names for the command.
@@ -36,7 +34,6 @@ class SystemCommand:
         """
         return []
 
-    @property
     def help_text(self) -> str:
         """
         Get the help text for the command.
@@ -98,8 +95,9 @@ class SystemCommand:
         """
         for token in tokens:
             if token.type == TokenType.OPTION:
-                if token.value == f"-{flag_name}" or token.value == f"--{flag_name}":
+                if token.value in (f"-{flag_name}", f"--{flag_name}"):
                     return True
+
         return False
 
     def _get_options(self, tokens: List[Token]) -> Dict[str, str | None]:
@@ -204,11 +202,12 @@ class SystemCommand:
     def _show_detailed_help(self) -> None:
         """Show detailed help for this command."""
         # Start with basic info
-        help_text = f"{self.name} - {self.help_text}\n\n"
+        help_text = f"{self.name()} - {self.help_text()}\n\n"
 
         # Add aliases if any
-        if self.aliases:
-            help_text += f"Aliases: {', '.join(self.aliases)}\n\n"
+        aliases = self.aliases()
+        if aliases:
+            help_text += f"Aliases: {', '.join(aliases)}\n\n"
 
         # Add options help
         options_help = self.get_options_help()
