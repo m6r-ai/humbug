@@ -259,7 +259,7 @@ class SystemCommand:
         options = []
 
         # Get all options from help text
-        for option_text in self.get_options_help().keys():
+        for option_text in self.get_options_help():
             # Split combined options like "-h, --help"
             for option in option_text.split(','):
                 option = option.strip()
@@ -288,11 +288,10 @@ class SystemCommand:
 
         # Split into directory and filename parts
         dir_path, filename = os.path.split(partial_path)
-        if not dir_path:
-            dir_path = "."
 
-        # Check if dir_path exists in mindspace
-        mindspace_dir = self._mindspace_manager.get_mindspace_path(dir_path)
+        # Check if dir_path exists in mindspace.  Note if the dir_path is empty we pass an
+        # empty string because it will be appended to the mindspace path
+        mindspace_dir = self._mindspace_manager.get_mindspace_path(dir_path or "")
         if not os.path.exists(mindspace_dir) or not os.path.isdir(mindspace_dir):
             return []
 

@@ -132,8 +132,8 @@ class EditCommand(SystemCommand):
     def get_token_completions(
         self,
         current_token: Token,
-        tokens: List[Token],
-        cursor_token_index: int
+        _tokens: List[Token],
+        _cursor_token_index: int
     ) -> List[str]:
         """
         Get completions for the current token based on token information.
