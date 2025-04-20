@@ -284,7 +284,7 @@ class SystemCommand:
         # Handle empty path
         if not partial_path:
             print("No path provided, listing current directory")
-            return self._list_directory(".", file_extension)
+            return self._list_directory("", file_extension)
 
         # Split into directory and filename parts
         dir_path, filename = os.path.split(partial_path)
