@@ -14,7 +14,7 @@ from humbug.user.user_manager import UserManager
 class ConversationCommand(SystemCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(self, create_conversation_callback: Callable[[str | None], str | None]) -> None:
+    def __init__(self, create_conversation_callback: Callable[[str | None], bool]) -> None:
         """
         Initialize conversation command.
 
@@ -66,25 +66,19 @@ class ConversationCommand(SystemCommand):
 
         try:
             # Create new conversation with model if specified
-            conversation_id = self._create_conversation(model)
-            if conversation_id:
-                # Success message would include model info if specified
-                msg = f"Created new conversation: {conversation_id}"
-                if model:
-                    msg += f" with model {model}"
+            if not self._create_conversation(model):
+                return False
 
-                self._mindspace_manager.add_system_interaction(
-                    SystemMessageSource.SUCCESS,
-                    msg
-                )
-                return True
+            # Success message would include model info if specified
+            msg = "Created new conversation"
+            if model:
+                msg += f" with model {model}"
 
-            # Creation failed for some reason
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
-                "Failed to create new conversation"
+                SystemMessageSource.SUCCESS,
+                msg
             )
-            return False
+            return True
 
         except Exception as e:
             self._logger.exception("Failed to create conversation: %s", str(e))

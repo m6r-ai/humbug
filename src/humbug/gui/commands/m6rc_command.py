@@ -14,7 +14,7 @@ from humbug.user.user_manager import UserManager
 class M6rcCommand(SystemCommand):
     """Command to create a new conversation with a Metaphor file."""
 
-    def __init__(self, create_m6rc_conversation_callback: Callable[[str, str | None], None]) -> None:
+    def __init__(self, create_m6rc_conversation_callback: Callable[[str, str | None], bool]) -> None:
         """
         Initialize the command.
 

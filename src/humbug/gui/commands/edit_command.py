@@ -13,7 +13,7 @@ from humbug.syntax.command.command_lexer import Token, TokenType
 class EditCommand(SystemCommand):
     """Command to open or create a file in an editor tab."""
 
-    def __init__(self, edit_file_callback: Callable[[str], None]) -> None:
+    def __init__(self, edit_file_callback: Callable[[str], bool]) -> None:
         """
         Initialize edit command.
 

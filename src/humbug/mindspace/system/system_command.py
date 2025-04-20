@@ -112,7 +112,7 @@ class SystemCommand:
         Returns:
             Dictionary mapping option names to their values
         """
-        options = {}
+        options: Dict[str, str | None] = {}
         i = 0
         while i < len(tokens):
             token = tokens[i]

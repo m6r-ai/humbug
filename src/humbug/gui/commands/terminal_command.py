@@ -10,7 +10,7 @@ from humbug.syntax.command.command_lexer import Token, TokenType
 class TerminalCommand(SystemCommand):
     """Command to create a new terminal tab."""
 
-    def __init__(self, create_terminal_callback: Callable[[], None]) -> None:
+    def __init__(self, create_terminal_callback: Callable[[], bool]) -> None:
         """
         Initialize the command.
 

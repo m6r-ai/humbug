@@ -5,8 +5,9 @@ from typing import List, Dict
 
 from humbug.gui.tab.system.completion_result import CompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
+from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.syntax.command.command_lexer import CommandLexer, TokenType, Token
 
 
@@ -307,6 +308,7 @@ class SystemCommandProcessor:
         # Store start position for future continuations
         if token:
             self._completion_start_pos = token.start
+
         else:
             # If no token at cursor, we're completing at whitespace
             self._completion_start_pos = cursor_position
@@ -315,17 +317,24 @@ class SystemCommandProcessor:
         if not token or self._is_cursor_at_whitespace():
             # Complete new token based on context
             result = self._complete_new_token()
+
         elif token.type == TokenType.COMMAND:
             result = self._complete_command_name(token)
+
         elif token.type == TokenType.OPTION:
+            if not self._current_command_name:
+                return CompletionResult(success=False)
+
             # Get the command
             command = self._command_registry.get_command(self._current_command_name)
             if not command:
                 return CompletionResult(success=False)
 
             result = self._complete_option(command, token)
+
         elif token.type == TokenType.ARGUMENT:
             result = self._complete_argument(token)
+
         else:
             return CompletionResult(success=False)
 
@@ -412,7 +421,7 @@ class SystemCommandProcessor:
             add_space=False
         )
 
-    def _complete_option(self, command, token: Token) -> CompletionResult:
+    def _complete_option(self, command: SystemCommand, token: Token) -> CompletionResult:
         """
         Complete a command option.
 
@@ -504,7 +513,7 @@ class SystemCommandProcessor:
 
     def _complete_option_value(
         self,
-        command,
+        command: SystemCommand,
         option_name: str,
         token: Token
     ) -> CompletionResult:
