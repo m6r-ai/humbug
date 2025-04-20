@@ -131,23 +131,18 @@ class M6rcCommand(SystemCommand):
         Returns:
             List of possible completions
         """
-        print("m6rc Current token:", current_token)
         # Handle option completions
         if current_token.type == TokenType.OPTION:
-            print("- m6rc Option token:", current_token)
             return self._get_option_completions(current_token.value)
 
         # Check if we're completing a model name for -m/--model option
         if current_token.type == TokenType.ARGUMENT and cursor_token_index > 0:
-            print("- m6rc Argument token:", current_token)
             prev_token = tokens[cursor_token_index - 1]
             if prev_token.type == TokenType.OPTION:
-                print("- m6rc Previous token:", prev_token)
                 # Check if this is the -m/--model option
                 option_name = prev_token.value
                 if option_name in ["-m", "--model"]:
                     return self._complete_model_names(current_token.value)
 
         # For regular arguments, complete file paths with .m6r extension
-        print("- m6rc Regular token:", current_token)
         return self._get_mindspace_path_completions(current_token.value, file_extension=".m6r")

@@ -190,7 +190,6 @@ class SystemCommandProcessor:
         Returns:
             CompletionResult with information about what to replace
         """
-        print(f"Tab completion requested: '{current_text}', continuation: {is_continuation}, cursor_position: {cursor_position}")
         # If empty text, nothing to complete
         if not current_text:
             return CompletionResult(success=False)
