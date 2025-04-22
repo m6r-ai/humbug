@@ -7,7 +7,7 @@ from humbug.metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
 from humbug.metaphor.metaphor_embed_lexer import MetaphorEmbedLexer
 from humbug.metaphor.metaphor_lexer import MetaphorLexer
 from humbug.metaphor.metaphor_ast_node import (
-    MetaphorASTNode, MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
+    MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
 )
 
@@ -103,7 +103,14 @@ class MetaphorParser:
 
         return any(self._has_action_node(child) for child in node.children)
 
-    def parse(self, parent_node: MetaphorASTNode, input_text: str, filename: str, search_paths: List[str], embed_path: str = "") -> None:
+    def parse(
+        self,
+        parent_node: MetaphorASTNode,
+        input_text: str,
+        filename: str,
+        search_paths: List[str],
+        embed_path: str = ""
+    ) -> None:
         """
         Parse an input string and add the resulting nodes to the provided parent node.
 
@@ -178,7 +185,13 @@ class MetaphorParser:
             ))
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
 
-    def parse_file(self, parent_node: MetaphorASTNode, filename: str, search_paths: List[str], embed_path: str = "") -> None:
+    def parse_file(
+        self,
+        parent_node: MetaphorASTNode,
+        filename: str,
+        search_paths: List[str],
+        embed_path: str = ""
+    ) -> None:
         """
         Parse a file and add the resulting nodes to the provided parent node.
 

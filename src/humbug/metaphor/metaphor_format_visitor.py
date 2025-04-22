@@ -3,7 +3,7 @@ Format visitor implementation for Metaphor AST.
 """
 
 import io
-from typing import Any, Dict, Final, TextIO, Type, List
+from typing import Any, Dict, Final, TextIO, Type
 
 from humbug.metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorASTVisitor, MetaphorActionNode, MetaphorCodeNode,

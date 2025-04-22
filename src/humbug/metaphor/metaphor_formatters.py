@@ -7,6 +7,12 @@ from humbug.metaphor.metaphor_parser import MetaphorParserSyntaxError
 
 
 def format_preamble() -> str:
+    """
+    Format the preamble for the Metaphor language.
+
+    Returns:
+        Formatted preamble string
+    """
     preamble: List[str] = [
         "The following preamble describes some elements of a language called Metaphor.  Please pay",
         "extremely close attention to the details as they will affect the way you interpret",
