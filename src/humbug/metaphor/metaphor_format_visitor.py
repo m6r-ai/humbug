@@ -3,7 +3,7 @@ Format visitor implementation for Metaphor AST.
 """
 
 import io
-from typing import Any, Dict, Final, TextIO, Type
+from typing import Any, Dict, Final, TextIO, Type, List
 
 from humbug.metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorASTVisitor, MetaphorActionNode, MetaphorCodeNode,
@@ -62,6 +62,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
             results.append(self.visit(child))
 
         return results
+
 
     def visit_MetaphorRootNode(self, node: MetaphorRootNode) -> Any:  # pylint: disable=invalid-name
         """

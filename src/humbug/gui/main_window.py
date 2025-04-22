@@ -30,7 +30,10 @@ from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
-from humbug.metaphor import MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, format_errors
+from humbug.metaphor import (
+    MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, MetaphorRootNode,
+    format_errors, format_preamble
+)
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
@@ -977,9 +980,10 @@ class MainWindow(QMainWindow):
 
         metaphor_parser = MetaphorParser()
         try:
-            syntax_tree = metaphor_parser.parse_file(file_path, [search_path], search_path)
+            syntax_tree = MetaphorRootNode()
+            metaphor_parser.parse_file(syntax_tree, file_path, [search_path], search_path)
             formatter = MetaphorFormatVisitor()
-            prompt = formatter.format(syntax_tree)
+            prompt = format_preamble() + formatter.format(syntax_tree)
 
         except MetaphorParserError as e:
             self._column_manager.show_system()
@@ -1204,9 +1208,10 @@ class MainWindow(QMainWindow):
 
         metaphor_parser = MetaphorParser()
         try:
-            syntax_tree = metaphor_parser.parse_file(file_path, [search_path], search_path)
+            syntax_tree = MetaphorRootNode()
+            metaphor_parser.parse_file(syntax_tree, file_path, [search_path], search_path)
             formatter = MetaphorFormatVisitor()
-            prompt = formatter.format(syntax_tree)
+            prompt = format_preamble() + formatter.format(syntax_tree)
 
         except FileNotFoundError:
             error = f"File not found: {file_path}"

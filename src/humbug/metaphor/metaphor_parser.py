@@ -7,7 +7,7 @@ from humbug.metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
 from humbug.metaphor.metaphor_embed_lexer import MetaphorEmbedLexer
 from humbug.metaphor.metaphor_lexer import MetaphorLexer
 from humbug.metaphor.metaphor_ast_node import (
-    MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
+    MetaphorASTNode, MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
 )
 
@@ -43,7 +43,6 @@ class MetaphorParser:
     Parser class to process tokens and build an Abstract Syntax Tree (AST).
 
     Attributes:
-        syntax_tree (MetaphorRootNode): The root node of the AST.
         parse_errors (List[MetaphorParserSyntaxError]): List of syntax errors encountered during parsing.
         lexers (List[MetaphorLexer | MetaphorEmbedLexer]): Stack of lexers used for parsing multiple files.
         previously_seen_files (Set[str]): Set of canonical filenames already processed.
@@ -52,7 +51,6 @@ class MetaphorParser:
         current_token (MetaphorToken | None): The current token being processed.
     """
     def __init__(self) -> None:
-        self.syntax_tree: MetaphorRootNode = MetaphorRootNode()
         self.parse_errors: List[MetaphorParserSyntaxError] = []
         self.lexers: List[MetaphorLexer | MetaphorEmbedLexer] = []
         self.previously_seen_files: Set[str] = set()
@@ -60,85 +58,74 @@ class MetaphorParser:
         self.embed_path: str = ""
         self.current_token: MetaphorToken | None = None
 
-    def _insert_preamble_text(self, text: str) -> None:
-        self.syntax_tree.add_child(MetaphorTextNode(text))
-
-    def _generate_preamble(self) -> None:
-        preamble: List[str] = [
-            "The following preamble describes some elements of a language called Metaphor.  Please pay",
-            "extremely close attention to the details as they will affect the way you interpret",
-            "everything that follows after \"BEGIN DESCRIPTION IN METAPHOR:\"",
-            "",
-            "Metaphor is a structured natural language prompt creation language.  It is designed to",
-            "let a user convey their requirements to a large language model AI.",
-            "",
-            "Metaphor has the structure of a document tree with branches and leaves being prefixed ",
-            "by new sections containing the keywords \"Role:\", \"Context:\" or \"Action:\".  Each of",
-            "these indicates the start of a new block of information.  Blocks are introduced using",
-            "Markdown-style headings (using hash symbols).  The number of hashes gives an indication",
-            "of the nesting depth and the parent/child relationship.",
-            "",
-            "Block keywords have an optional name that will immediately follow them on the same line.",
-            "If this is missing then the block name is not defined.",
-            "",
-            "After a block heading there may be one or more lines of text that will describe the purpose",
-            "of that block.  A block may also include one or more optional child blocks inside them and",
-            "that further clarify their parent block.",
-            "",
-            "Within the text of a block, you may be presented with code or document fragments inside a",
-            "block delimited by 3 backticks.  Please pay close attention to the indentation level of the",
-            "opening 3 backticks.  The identation of such code or document fragments is relative to this,",
-            "not relative to the block in which the code or document fragment occurs.",
-            "",
-            "If \"Role:\" block exists then this contains details about the role you should fulfil.  This",
-            "may also describe specific skills you have, knowledge you should apply, and the",
-            "approach you take to apply these."
-            "",
-            "\"Context:\" blocks provide context necessary to understand what you will be asked to do.",
-            "",
-            "\"Action:\" blocks describes the task, or tasks, you should do.",
-            "",
-            "If you are asked to offer any opinions on the Metaphor prompt then always provide the full",
-            "set of parent headings leading up to any block you want to talk about.  This will allow",
-            "the user to understand which part of the Metaphor prompt is being discussed.",
-            "",
-            "When you process the actions please carefully ensure you do all of them accurately and",
-            "complete all the elements requested.  Unless otherwise instructed, do not include any",
-            "placeholders in your responses.",
-            "",
-            "BEGIN DESCRIPTION IN METAPHOR:"
-        ]
-
-        for text in preamble:
-            self._insert_preamble_text(text)
-
-    def parse(self, input_text: str, filename: str, search_paths: List[str], embed_path: str = "") -> MetaphorRootNode:
+    def _has_role_node(self, node: MetaphorASTNode) -> bool:
         """
-        Parse an input string and construct the AST.
+        Check if the node tree contains any Role nodes.
 
         Args:
+            node: The node to check
+
+        Returns:
+            True if the node or any of its descendants is a Role node
+        """
+        if isinstance(node, MetaphorRoleNode):
+            return True
+
+        return any(self._has_role_node(child) for child in node.children)
+
+    def _has_context_node(self, node: MetaphorASTNode) -> bool:
+        """
+        Check if the node tree contains any Context nodes.
+
+        Args:
+            node: The node to check
+
+        Returns:
+            True if the node or any of its descendants is a Context node
+        """
+        if isinstance(node, MetaphorContextNode):
+            return True
+
+        return any(self._has_context_node(child) for child in node.children)
+
+    def _has_action_node(self, node: MetaphorASTNode) -> bool:
+        """
+        Check if the node tree contains any Action nodes.
+
+        Args:
+            node: The node to check
+
+        Returns:
+            True if the node or any of its descendants is an Action node
+        """
+        if isinstance(node, MetaphorActionNode):
+            return True
+
+        return any(self._has_action_node(child) for child in node.children)
+
+    def parse(self, parent_node: MetaphorASTNode, input_text: str, filename: str, search_paths: List[str], embed_path: str = "") -> None:
+        """
+        Parse an input string and add the resulting nodes to the provided parent node.
+
+        Args:
+            parent_node (MetaphorASTNode): The node to which parsed content will be added.
             input_text (str): The text to be parsed.
             filename (str): The name of the file being parsed.
             search_paths (List[str]): List of paths to search for included files.
             embed_path: Path used to search for embedded files (uses CWD if None).
 
-        Returns:
-            MetaphorRootNode: The root node of the AST.
-
         Raises:
             MetaphorParserError: If there are syntax errors during parsing.
-            FileNotFoundError: If a required file cannot be found.
         """
         self.search_paths = search_paths
         self.embed_path = embed_path if embed_path else os.getcwd()
 
         try:
             self.lexers.append(MetaphorLexer(input_text, filename))
-            self._generate_preamble()
 
-            seen_action_tree: bool = False
-            seen_context_tree: bool = False
-            seen_role_tree: bool = False
+            seen_action_tree: bool = self._has_action_node(parent_node)
+            seen_context_tree: bool = self._has_context_node(parent_node)
+            seen_role_tree: bool = self._has_role_node(parent_node)
 
             while True:
                 token = self.get_next_non_blank_token()
@@ -146,7 +133,7 @@ class MetaphorParser:
                     if seen_action_tree:
                         self._record_syntax_error(token, "'Action' already defined")
 
-                    self.syntax_tree.add_child(self._parse_action(token))
+                    parent_node.add_child(self._parse_action(token))
                     seen_action_tree = True
                     continue
 
@@ -154,7 +141,7 @@ class MetaphorParser:
                     if seen_context_tree:
                         self._record_syntax_error(token, "'Context' already defined")
 
-                    self.syntax_tree.add_child(self._parse_context(token))
+                    parent_node.add_child(self._parse_context(token))
                     seen_context_tree = True
                     continue
 
@@ -162,7 +149,7 @@ class MetaphorParser:
                     if seen_role_tree:
                         self._record_syntax_error(token, "'Role' already defined")
 
-                    self.syntax_tree.add_child(self._parse_role(token))
+                    parent_node.add_child(self._parse_role(token))
                     seen_role_tree = True
                     continue
 
@@ -170,7 +157,7 @@ class MetaphorParser:
                     if self.parse_errors:
                         raise MetaphorParserError("parser error", self.parse_errors)
 
-                    return self.syntax_tree
+                    return  # No return value needed
 
                 self._record_syntax_error(token, f"Unexpected token: {token.value} at top level")
 
@@ -191,32 +178,29 @@ class MetaphorParser:
             ))
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
 
-    def parse_file(self, filename: str, search_paths: List[str], embed_path: str = "") -> MetaphorRootNode:
+    def parse_file(self, parent_node: MetaphorASTNode, filename: str, search_paths: List[str], embed_path: str = "") -> None:
         """
-        Parse a file and construct the AST.
+        Parse a file and add the resulting nodes to the provided parent node.
 
         Args:
+            parent_node (MetaphorASTNode): The node to which parsed content will be added.
             filename (str): The path to the file to be parsed.
             search_paths (List[str]): List of paths to search for included files.
             embed_path: Path used to search for embedded files (uses CWD if None).
 
-        Returns:
-            MetaphorRootNode: The root node of the AST.
-
         Raises:
             MetaphorParserError: If there are syntax errors during parsing.
-            FileNotFoundError: If the file cannot be found.
         """
         try:
             self._check_file_not_loaded(filename)
             input_text = self._read_file(filename)
-            return self.parse(input_text, filename, search_paths, embed_path)
+            self.parse(parent_node, input_text, filename, search_paths, embed_path)
 
         except FileNotFoundError as e:
             self.parse_errors.append(MetaphorParserSyntaxError(
                 f"{e}", "", 0, 0, ""
             ))
-            raise
+            raise(MetaphorParserError("parser error", self.parse_errors)) from e
 
         except MetaphorParserError as e:
             raise(MetaphorParserError("parser error", self.parse_errors)) from e
