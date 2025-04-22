@@ -12,6 +12,7 @@ from PySide6.QtGui import (
 )
 
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.system.system_command_highlighter import SystemCommandHighlighter
 
 
 class SystemTextEdit(QTextEdit):
@@ -53,6 +54,8 @@ class SystemTextEdit(QTextEdit):
 
         # Track current content length for incremental updates
         self._current_length = 0
+
+        self._highlighter: SystemCommandHighlighter | None = None
 
         self._logger = logging.getLogger("SystemTextEdit")
 
@@ -196,6 +199,10 @@ class SystemTextEdit(QTextEdit):
         # Ensure parent SystemMessage updates as well
         if self.parent():
             cast(QWidget, self.parent()).updateGeometry()
+
+    def enable_highlighter(self) -> None:
+        """Enable syntax highlightint for system commands."""
+        self._highlighter = SystemCommandHighlighter(self.document())
 
     def set_text(self, text: str) -> None:
         """Update text content if we have anything new."""

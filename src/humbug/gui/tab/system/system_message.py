@@ -173,6 +173,8 @@ class SystemMessage(QFrame):
 
         # Set the content in the text area
         self._text_area.set_text(text)
+        if source == SystemMessageSource.USER:
+            self._text_area.enable_highlighter()
 
         # Update the header
         self._update_role_text()

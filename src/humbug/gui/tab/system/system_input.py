@@ -39,6 +39,8 @@ class SystemInput(SystemMessage):
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
         self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
 
+        self._text_area.enable_highlighter()
+
         # Install event filter on text area to intercept key events
         self._text_area.installEventFilter(self)
 
