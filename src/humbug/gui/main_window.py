@@ -1211,17 +1211,21 @@ class MainWindow(QMainWindow):
             embed_parser.parse(action_node, embed_lines, "", [], "")
             action_text_node2 = MetaphorTextNode(
                 "I would like you to summarise how the software works.\n" +
-                "I would also like you to review each file individually and comment on how it might be improved, " +
-                "based on the guidelines I have provided.  When you do this, you should tell me the name of the file " +
-                "you believe may want to be modified, the modification you believe should happen, and which of the " +
-                "guidelines the change would align with.  If any change you envisage might conflict with a guideline " +
+                "\n" +
+                "I would also like you to review each file individually and comment on how it might be improved,\n" +
+                "based on the guidelines I have provided.  When you do this, you should tell me the name of the file\n" +
+                "you believe may want to be modified, the modification you believe should happen, and which of the\n" +
+                "guidelines the change would align with.  If any change you envisage might conflict with a guideline\n" +
                 "then please highlight this and the guideline that might be impacted.\n" +
-                "The review guidelines include generic guidance that should be applied to all file types, and " +
-                "guidance that should only be applied to a specific language type.  In some cases the specific " +
-                "guidance may not be relevant to the files you are asked to review, and if that's the case you need " +
-                "not mention it.  If, however, there is no specific guideline file for the language in which a file " +
+                "\n" +
+                "The review guidelines include generic guidance that should be applied to all file types, and\n" +
+                "guidance that should only be applied to a specific language type.  In some cases the specific\n" +
+                "guidance may not be relevant to the files you are asked to review, and if that's the case you need\n" +
+                "not mention it.  If, however, there is no specific guideline file for the language in which a file\n" +
                 "is written then please note that the file has not been reviewed against a detailed guideline.\n" +
-                "Where useful, I would like you to write new software to show me how any modifications should look."
+                "\n" +
+                "Where useful, I would like you to write new software to show me how any modifications should look.\n" +
+                "\n"
             )
             action_node.add_child(action_text_node2)
             syntax_tree.add_child(action_node)
