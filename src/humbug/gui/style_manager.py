@@ -419,6 +419,7 @@ class StyleManager(QObject):
             TokenType.DIRECTIVE: ColorRole.SYNTAX_PREPROCESSOR,
             TokenType.ELEMENT: ColorRole.SYNTAX_ELEMENT,
             TokenType.ERROR: ColorRole.SYNTAX_ERROR,
+            TokenType.FENCE: ColorRole.SYNTAX_LANGUAGE,
             TokenType.FENCE_START: ColorRole.SYNTAX_LANGUAGE,
             TokenType.FENCE_END: ColorRole.SYNTAX_LANGUAGE,
             TokenType.FUNCTION_OR_METHOD: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
@@ -468,6 +469,7 @@ class StyleManager(QObject):
         # Mapping from token type to colour
         colour_mapping = {
             TokenType.BLOCKQUOTE: ColorRole.SYNTAX_KEYWORD,
+            TokenType.FENCE: ColorRole.SYNTAX_LANGUAGE,
             TokenType.HEADING: ColorRole.SYNTAX_HEADING,
             TokenType.LIST_MARKER: ColorRole.SYNTAX_LIST_MARKER,
             TokenType.TEXT: ColorRole.SYNTAX_TEXT
