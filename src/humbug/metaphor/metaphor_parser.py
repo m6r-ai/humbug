@@ -167,8 +167,18 @@ class MetaphorParser:
                     return  # No return value needed
 
                 if token.type == MetaphorTokenType.TEXT or token.type == MetaphorTokenType.CODE:
-                    parent_node.add_child(self._parse_text(token))
-                    continue
+                    # If our parent is processing text or code then we can add more text or code
+                    if (parent_node.children and
+                            isinstance(parent_node.children[-1], MetaphorTextNode | MetaphorCodeNode)):
+                        parent_node.add_child(self._parse_text(token))
+                        continue
+
+                    # If ouo parent is an action, context or role node and has no children
+                    # then we can add text or code to it.
+                    if (not parent_node.children and
+                            isinstance(parent_node, MetaphorActionNode | MetaphorContextNode | MetaphorRoleNode)):
+                        parent_node.add_child(self._parse_text(token))
+                        continue
 
                 self._record_syntax_error(token, f"Unexpected token: {token.value} at top level")
 
