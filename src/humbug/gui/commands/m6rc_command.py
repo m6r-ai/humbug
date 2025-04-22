@@ -30,7 +30,7 @@ class M6rcCommand(SystemCommand):
         return "m6rc"
 
     def help_text(self) -> str:
-        return "Create a new conversation from a Metaphor file"
+        return "Starts a new Metaphor conversation"
 
     def get_options_help(self) -> Dict[str, str]:
         """Get help text for supported options."""
@@ -101,7 +101,7 @@ class M6rcCommand(SystemCommand):
 
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.SUCCESS,
-                f"New Metaphor conversation started from {file_path}"
+                f"Started Metaphor conversation from {file_path}"
             )
             return True
 

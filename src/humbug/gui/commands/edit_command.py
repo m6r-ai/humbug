@@ -35,7 +35,7 @@ class EditCommand(SystemCommand):
 
     def help_text(self) -> str:
         """Get the help text for the command."""
-        return "Opens a file for editing. Creates the file if it doesn't exist. Usage: edit <filename>"
+        return "Opens a file for editing"
 
     def _execute_command(self, tokens: List[Token]) -> bool:
         """

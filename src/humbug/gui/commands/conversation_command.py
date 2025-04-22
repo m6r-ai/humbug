@@ -37,7 +37,7 @@ class ConversationCommand(SystemCommand):
 
     def help_text(self) -> str:
         """Get the help text for the command."""
-        return "Creates a new conversation tab."
+        return "Starts a new conversation"
 
     def get_options_help(self) -> Dict[str, str]:
         """Get help text for supported options."""
@@ -84,9 +84,7 @@ class ConversationCommand(SystemCommand):
                 return False
 
             # Success message would include model info if specified
-            msg = "Created new conversation"
-            if model:
-                msg += f" with model {model}"
+            msg = "Started new conversation"
 
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.SUCCESS,

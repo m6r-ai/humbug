@@ -27,7 +27,7 @@ class TerminalCommand(SystemCommand):
         return ["term"]
 
     def help_text(self) -> str:
-        return "Open a new terminal tab"
+        return "Starts a new terminal"
 
     def _execute_command(self, tokens: List[Token]) -> bool:
         """
@@ -42,7 +42,7 @@ class TerminalCommand(SystemCommand):
         self._create_terminal()
         self._mindspace_manager.add_system_interaction(
             SystemMessageSource.SUCCESS,
-            "New terminal tab created"
+            "Started new terminal"
         )
         return True
 
