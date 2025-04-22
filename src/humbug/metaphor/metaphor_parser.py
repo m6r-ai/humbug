@@ -137,7 +137,7 @@ class MetaphorParser:
             while True:
                 token = self.get_next_non_blank_token()
                 if token.type == MetaphorTokenType.ACTION:
-                    if seen_action_tree:
+                    if seen_action_tree and not isinstance(parent_node, MetaphorActionNode):
                         self._record_syntax_error(token, "'Action' already defined")
 
                     parent_node.add_child(self._parse_action(token))
@@ -145,7 +145,7 @@ class MetaphorParser:
                     continue
 
                 if token.type == MetaphorTokenType.CONTEXT:
-                    if seen_context_tree:
+                    if seen_context_tree and not isinstance(parent_node, MetaphorContextNode):
                         self._record_syntax_error(token, "'Context' already defined")
 
                     parent_node.add_child(self._parse_context(token))
@@ -153,7 +153,7 @@ class MetaphorParser:
                     continue
 
                 if token.type == MetaphorTokenType.ROLE:
-                    if seen_role_tree:
+                    if seen_role_tree and not isinstance(parent_node, MetaphorRoleNode):
                         self._record_syntax_error(token, "'Role' already defined")
 
                     parent_node.add_child(self._parse_role(token))
@@ -165,6 +165,10 @@ class MetaphorParser:
                         raise MetaphorParserError("parser error", self.parse_errors)
 
                     return  # No return value needed
+
+                if token.type == MetaphorTokenType.TEXT or token.type == MetaphorTokenType.CODE:
+                    parent_node.add_child(self._parse_text(token))
+                    continue
 
                 self._record_syntax_error(token, f"Unexpected token: {token.value} at top level")
 

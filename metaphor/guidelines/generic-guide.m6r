@@ -1,0 +1,88 @@
+Context: Generic code review guidelines
+    Here are a series of guidelines I would like you to consider when you're reviewing software.
+
+    Context: Architecture and design
+        The software should follow SOLID principles:
+
+        - Single Responsibility Principle: Each class/function does one thing well.
+        - Open/Closed Principle: Open for extension, closed for modification.
+        - Liskov Substitution Principle: Derived classes must be substitutable for base classes.
+        - Interface Segregation: Keep interfaces small and focused.
+        - Dependency Inversion: Depend on abstractions, not concrete implementations.
+
+        In addition, the software should:
+
+        - Use composition over inheritance when possible.
+        - Keep coupling low between modules
+        - Make dependencies explicit (avoid hidden side effects)
+        - Use dependency injection for better testing and flexibility
+        - DRY (Don't Repeat Yourself): Eliminate code duplication by abstracting common functionality.
+        - KISS (Keep It Simple, Stupid): Strive for simplicity in design and implementation.
+        - YAGNI (You Aren't Gonna Need It): Avoid adding functionality until it is necessary.
+
+    Context: Security Best Practices
+        The software should:
+
+        - Sanitize all user inputs.
+        - Use secure defaults.
+        - Never store sensitive data in code.
+        - Use environment variables or command line parameters for configuration.
+        - Implement proper error handling and logging.
+        - Use latest versions of dependencies.
+        - Follow principle of least privilege.
+        - Validate all external data.
+        - Implement proper authentication and authorization mechanisms.
+        - Review dependencies to address known vulnerabilities.
+        - Encrypt sensitive data at rest and in transit.
+        - Apply input validation on both client and server sides.
+
+    Context: Error handling
+        The software handles error conditions well:
+
+        - Detect and handle all exception or failure conditions.
+        - Provide meaningful error messages.
+        - Log errors appropriately.
+        - Handle resources properly.
+        - Fail fast and explicitly.
+        - Return early pattern for guard clauses.
+        - Ensure error messages do not expose sensitive information.
+        - Implement retry logic for transient failures.
+        - Use circuit breakers to handle repeated failures gracefully.
+        - Document known error codes and their handling procedures.
+
+    Context: Code organization
+        The software should be organized in a clear and logical way:
+
+        - Separate concerns (business logic, data access, presentation).
+        - Keep related code together.
+        - Use appropriate abstraction levels.
+        - Implement clear interfaces between modules.
+        - Maintain consistent naming conventions across the codebase.
+        - Separate configuration files from code.
+
+    Context: Code Smells to Watch For
+        The software should avoid "code smells" that make it difficult to maintain.  Examples are:
+
+        - Duplicate code.
+        - Long parameter lists.
+        - Large classes/functions.
+        - Deep nesting.
+        - Complex boolean logic.
+        - Magic numbers/strings.
+        - Tight coupling.
+        - Inconsistent abstraction levels.
+        - Primitive obsession (overuse of primitive data types instead of small objects).
+        - Speculative generality (adding code for future requirements that may never come.
+        - Lazy class (classes that do too little and could be consolidated).
+        - Data clumps (groups of variables that are always used together should be encapsulated).
+
+    Context: Extra questions to consider during the review
+        In addition to other considerations, also seek to answer the following:
+
+        - Is the code easy to understand?
+        - Would another developer be able to maintain this?
+        - Is the error handling comprehensive?
+        - Could it be simplified?
+        - Are there any potential scalability issues?
+        - Are there sufficient comments explaining complex logic?
+        - Is the code compliant with relevant regulations or standards?

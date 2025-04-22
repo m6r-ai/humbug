@@ -16,6 +16,7 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
+from humbug.gui.commands.code_review_command import CodeReviewCommand
 from humbug.gui.commands.conversation_command import ConversationCommand
 from humbug.gui.commands.edit_command import EditCommand
 from humbug.gui.commands.help_command import HelpCommand
@@ -32,6 +33,7 @@ from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
     MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, MetaphorRootNode,
+    MetaphorRoleNode, MetaphorTextNode, MetaphorContextNode, MetaphorActionNode,
     format_errors, format_preamble
 )
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -373,16 +375,19 @@ class MainWindow(QMainWindow):
         self._command_registry = SystemCommandRegistry()
 
         # Create and register commands
-        conversation_command = ConversationCommand(self._process_command_conversation)
+        code_review_command = CodeReviewCommand(self._process_code_review_command)
+        self._command_registry.register_command(code_review_command)
+
+        conversation_command = ConversationCommand(self._process_conversation_command)
         self._command_registry.register_command(conversation_command)
 
-        edit_command = EditCommand(self._process_command_edit)
+        edit_command = EditCommand(self._process_edit_command)
         self._command_registry.register_command(edit_command)
 
-        m6rc_command = M6rcCommand(self._process_command_m6rc)
+        m6rc_command = M6rcCommand(self._process_m6rc_command)
         self._command_registry.register_command(m6rc_command)
 
-        terminal_command = TerminalCommand(self._process_command_terminal)
+        terminal_command = TerminalCommand(self._process_terminal_command)
         self._command_registry.register_command(terminal_command)
 
         # Register help command last so it can see all other commands
@@ -1175,8 +1180,98 @@ class MainWindow(QMainWindow):
         self._close_all_tabs()
         event.accept()
 
-    def _process_command_conversation(self, model: str | None, temperature: float | None) -> bool:
-        """Public method to process the conversation command."""
+    def _process_code_review_command(self, file_path: str, model: str | None, temperature: float | None) -> bool:
+        """Process the code review command."""
+        try:
+            syntax_tree = MetaphorRootNode()
+            guidelines = [self._mindspace_manager.get_mindspace_path("metaphor/guidelines/generic-guide.m6r")]
+
+            role_node = MetaphorRoleNode()
+            role_text_node = MetaphorTextNode(
+                "You are an expert software reviewer, highly skilled in reviewing code written by other " +
+                "engineers.  You are able to provide insightful and useful feedback on how their software " +
+                "might be improved."
+            )
+            role_node.add_child(role_text_node)
+            syntax_tree.add_child(role_node)
+
+            context_node = MetaphorContextNode("Review guidelines")
+            include_parser = MetaphorParser()
+            include_lines = '\n'.join(f'Include: {g}' for g in guidelines)
+            include_parser.parse(context_node, include_lines, "", [], "")
+            syntax_tree.add_child(context_node)
+
+            action_node = MetaphorActionNode("Review code")
+            action_text_node1 = MetaphorTextNode(
+                "Please review the software described in the files provided here:\n"
+            )
+            action_node.add_child(action_text_node1)
+            embed_parser = MetaphorParser()
+            embed_lines = f'Embed: {file_path}'
+            embed_parser.parse(action_node, embed_lines, "", [], "")
+            action_text_node2 = MetaphorTextNode(
+                "I would like you to summarise how the software works.\n" +
+                "I would also like you to review each file individually and comment on how it might be improved, " +
+                "based on the guidelines I have provided.  When you do this, you should tell me the name of the file " +
+                "you believe may want to be modified, the modification you believe should happen, and which of the " +
+                "guidelines the change would align with.  If any change you envisage might conflict with a guideline " +
+                "then please highlight this and the guideline that might be impacted.\n" +
+                "The review guidelines include generic guidance that should be applied to all file types, and " +
+                "guidance that should only be applied to a specific language type.  In some cases the specific " +
+                "guidance may not be relevant to the files you are asked to review, and if that's the case you need " +
+                "not mention it.  If, however, there is no specific guideline file for the language in which a file " +
+                "is written then please note that the file has not been reviewed against a detailed guideline.\n" +
+                "Where useful, I would like you to write new software to show me how any modifications should look."
+            )
+            action_node.add_child(action_text_node2)
+            syntax_tree.add_child(action_node)
+
+            formatter = MetaphorFormatVisitor()
+            prompt = format_preamble() + formatter.format(syntax_tree)
+
+        except FileNotFoundError:
+            error = f"File not found: {file_path}"
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR, error
+            )
+            return False
+
+        except MetaphorParserError as e:
+            strings = self._language_manager.strings()
+            error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR, error
+            )
+            return False
+
+        self._column_manager.protect_system_tab(True)
+        conversation_id: str | None = None
+        try:
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            conversation_id = self._column_manager.new_conversation(
+                self._mindspace_manager.mindspace_path(), model, temperature
+            )
+
+        except MindspaceError as e:
+            self._mindspace_manager.add_system_interaction(
+                SystemMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
+            )
+            return False
+
+        self._column_manager.protect_system_tab(False)
+        if conversation_id is None:
+            return False
+
+        conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
+        if conversation_tab is None:
+            return False
+
+        conversation_tab.set_input_text(prompt)
+#        conversation_tab.submit()
+        return True
+
+    def _process_conversation_command(self, model: str | None, temperature: float | None) -> bool:
+        """Process the conversation command."""
         self._column_manager.protect_system_tab(True)
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
@@ -1195,15 +1290,15 @@ class MainWindow(QMainWindow):
 
         return True
 
-    def _process_command_edit(self, file_path: str) -> bool:
-        """Public method to process the edit command."""
+    def _process_edit_command(self, file_path: str) -> bool:
+        """Process the edit command."""
         self._column_manager.protect_system_tab(True)
         self._column_manager.open_file(file_path)
         self._column_manager.protect_system_tab(False)
         return True
 
-    def _process_command_m6rc(self, file_path: str, model: str | None, temperature: float | None) -> bool:
-        """Public method to create a new conversation with a Metaphor file."""
+    def _process_m6rc_command(self, file_path: str, model: str | None, temperature: float | None) -> bool:
+        """Process the m6rc command."""
         search_path = self._mindspace_manager.mindspace_path()
 
         metaphor_parser = MetaphorParser()
@@ -1254,8 +1349,8 @@ class MainWindow(QMainWindow):
         conversation_tab.submit()
         return True
 
-    def _process_command_terminal(self) -> bool:
-        """Public method to process the terminal command."""
+    def _process_terminal_command(self) -> bool:
+        """Process the terminal command."""
         self._column_manager.protect_system_tab(True)
         self._column_manager.new_terminal()
         self._column_manager.protect_system_tab(False)

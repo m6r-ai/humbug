@@ -1,0 +1,74 @@
+Context: TypeScript code review guidelines
+    Here are a series of guidelines to consider when reviewing code written in TypeScript.
+
+    Context: Type System Usage
+        The software should:
+
+        - Avoid using 'any' type unless absolutely necessary.
+        - Leverage union types over enum when representing a fixed set of string literals.
+        - Use interface for object types that will be extended/implemented.
+        - Use type for complex types or unions that won't be extended.
+        - Implement proper generics to create reusable, type-safe components.
+        - Use readonly modifier for immutable properties.
+        - Leverage mapped types and utility types (Partial, Pick, Record, etc.).
+        - Define explicit return types for public API functions.
+        - Use unknown instead of any for values of unknown type.
+        - Implement proper type guards for runtime type checking.
+        - Use const assertions for literal types when appropriate.
+
+    Context: Modern TypeScript Features
+        The software should utilize modern TypeScript features appropriately:
+
+        - Use optional chaining (?.) for nullable property access.
+        - Implement nullish coalescing (??) over OR (||) when appropriate.
+        - Use template literal types for string manipulation at type level.
+        - Leverage discriminated unions for type-safe state management.
+        - Implement proper index signatures when needed.
+        - Use type predicates for custom type guards.
+        - Leverage conditional types for complex type relationships.
+        - Use assertion functions when appropriate.
+        - Implement proper method and property decorators when beneficial.
+
+    Context: Code Style and Organization
+        The software should:
+
+        - Follow consistent naming conventions (PascalCase for types/interfaces, camelCase for variables/functions).
+        - Use ambient declarations (.d.ts files) for external module types.
+        - Organize imports with type imports separate from value imports.
+        - Keep related types and implementations close together.
+        - Use barrel exports (index.ts) appropriately.
+        - Implement proper module augmentation when needed.
+        - Use namespaces sparingly, prefer modules.
+        - Keep type declarations focused and well-documented.
+        - Use JSDoc comments for public API documentation.
+        - Implement proper access modifiers (public, private, protected).
+
+    Context: Async Patterns
+        The software should:
+
+        - Use async/await over raw promises when possible.
+        - Implement proper error handling for async operations.
+        - Use Promise.all/Promise.race appropriately for concurrent operations.
+        - Define proper return types for async functions (Promise<T>).
+        - Handle promise rejection properly with try/catch.
+        - Use proper typing for async event handlers.
+        - Implement cancellation patterns when appropriate.
+
+    Context: Performance Considerations
+        The software should:
+
+        - Use proper type inference to avoid redundant type declarations.
+        - Implement proper types for performance-critical code paths.
+        - Use proper typing for large data structures.
+        - Avoid excessive type computation complexity.
+        - Use proper typing for memorized functions and values.
+        - Implement proper type caching for complex type computations.
+
+    Context: Testing Considerations
+        The software should:
+
+        - Implement proper type testing using dtslint or similar tools.
+        - Use proper typing for test fixtures and mocks.
+        - Implement proper type coverage testing.
+        - Use proper typing for test utilities and helpers.
+        - Define proper types for test assertion functions.

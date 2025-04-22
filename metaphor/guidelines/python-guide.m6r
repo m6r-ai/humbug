@@ -1,0 +1,43 @@
+Context: Python code review guidelines
+    Here are a series of guidelines I would like you to consider when you're reviewing code written in python.
+
+    Context: Code style and readability
+        The software should:
+
+        - Follow PEP 8 style guide consistently.
+        - Use meaningful variable and function names (descriptive_name vs x).
+        - Keep functions focused and under 50 lines when possible.
+        - Use type hints for function arguments and return values.
+        - Break complex expressions into well-named variables.
+        - Limit line length to less than 132 characters.
+        - Use consistent indentation (4 spaces, not tabs).
+        - Have docstrings for modules, classes, and functions.
+        - Include examples in docstrings for complex functionality.
+        - Prefer using `enumerate()` over `range(len())` for loops.
+        - Use context managers (`with` statements) for resource management.
+        - Avoid using mutable default arguments in function definitions.
+
+    Context: Security Best Practices
+        - Use parameterized queries to prevent SQL injection attacks.
+
+    Context: Error handling
+        - Use specific exceptions instead of bare except.
+        - Use context managers where possible to simplify resource management.
+
+    Context: Performance considerations
+        The software should:
+
+        - Use appropriate data structures (dict for lookups, set for uniqueness).
+        - Avoid unnecessary list/dict comprehensions inside loops.
+        - Be cautious with global variables.
+        - Use generators for large datasets.
+        - Consider memory usage patterns.
+        - Use built-in functions when possible (map, filter, reduce).
+        - Leverage standard library tools before custom solutions.
+        - Be mindful of the time complexity of operations on large datasets.
+
+    Context: Code organization
+        The software should be organized in a clear and logical way:
+
+        - Follow a clear module/package structure.
+        - Use init.py appropriately.

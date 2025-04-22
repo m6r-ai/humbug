@@ -11,8 +11,8 @@ from humbug.syntax.command.command_lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
 
-class M6rcCommand(SystemCommand):
-    """Command to create a new conversation with a Metaphor file."""
+class CodeReviewCommand(SystemCommand):
+    """Command to review a file."""
 
     def __init__(self, create_m6rc_conversation_callback: Callable[[str, str | None, float | None], bool]) -> None:
         """
@@ -27,10 +27,10 @@ class M6rcCommand(SystemCommand):
         self._mindspace_manager = MindspaceManager()
 
     def name(self) -> str:
-        return "m6rc"
+        return "code-review"
 
     def help_text(self) -> str:
-        return "Starts a new Metaphor conversation"
+        return "Review source code"
 
     def get_options_help(self) -> Dict[str, str]:
         """Get help text for supported options."""
@@ -101,15 +101,15 @@ class M6rcCommand(SystemCommand):
 
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.SUCCESS,
-                f"Started Metaphor conversation from {file_path}"
+                f"Started code review conversation for {file_path}"
             )
             return True
 
         except Exception as e:
-            self._logger.error("Failed to create Metaphor conversation: %s", str(e), exc_info=True)
+            self._logger.error("Failed to start code review conversation: %s", str(e), exc_info=True)
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
-                f"Failed to create Metaphor conversation: {str(e)}"
+                f"Failed to start code review conversation: {str(e)}"
             )
             return False
 
@@ -168,4 +168,4 @@ class M6rcCommand(SystemCommand):
                     return [str(i / 10) for i in range(11) if str(i / 10).startswith(current_token.value)]
 
         # For regular arguments, complete file paths with .m6r extension
-        return self._get_mindspace_path_completions(current_token.value, file_extension=".m6r")
+        return self._get_mindspace_path_completions(current_token.value)
