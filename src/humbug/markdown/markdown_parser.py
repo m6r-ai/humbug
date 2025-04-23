@@ -60,6 +60,7 @@ class MarkdownParser:
         self._code_block_content: List[str] = []
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
+        self._code_block_indents = []
 
     def document(self) -> MarkdownDocumentNode:
         """
@@ -86,17 +87,23 @@ class MarkdownParser:
             None
         """
         # Handle code block state
-        stripped_line = line.strip()
+        stripped_line = line.lstrip()
+        indent = len(line) - len(stripped_line)
+
         if self._in_code_block:
             # Check for code fence.  If we have one then we're either closing
             # this block or nesting another.
             code_block_match = self._code_block_pattern.match(stripped_line)
             if code_block_match:
                 language = code_block_match.group(1)
-                if language is not None:
+                print(f"in_code_block: {self._code_block_nesting_level}, indent: {indent}, {self._code_block_indents[-1]}")
+                print(f"line: {stripped_line}")
+                if language is not None or indent > self._code_block_indents[-1]:
                     self._code_block_nesting_level += 1
+                    self._code_block_indents.append(indent)
                     return 'code_block_content', line
 
+                self._code_block_indents.pop()
                 self._code_block_nesting_level -= 1
                 if self._code_block_nesting_level == 0:
                     return 'code_block_end', None
@@ -108,6 +115,7 @@ class MarkdownParser:
         if code_block_match:
             language = code_block_match.group(1) or ""
             self._code_block_nesting_level = 1
+            self._code_block_indents.append(indent)
             return 'code_block_start', language
 
         if not line.strip():
@@ -771,6 +779,7 @@ class MarkdownParser:
         self._code_block_content = []
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
+        self._code_block_indents = []
 
         lines = text.split('\n')
         for i, line in enumerate(lines):
