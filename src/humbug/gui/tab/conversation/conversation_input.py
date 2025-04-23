@@ -51,6 +51,11 @@ class ConversationInput(ConversationMessage):
 
         return "Ctrl+J"
 
+    def _handle_style_changed(self) -> None:
+        """Handle the style changing."""
+        super()._handle_style_changed()
+        self._set_role_style()
+
     def _update_header_text(self) -> None:
         """Update the header text based on current state."""
         strings = self._language_manager.strings()

@@ -357,7 +357,7 @@ class ConversationMessage(QFrame):
         super().resizeEvent(event)
 
     def _handle_style_changed(self) -> None:
-        """Handle the style changing"""
+        """Handle the style changing."""
         factor = self._style_manager.zoom_factor()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
