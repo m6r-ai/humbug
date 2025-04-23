@@ -92,9 +92,9 @@ class SystemInput(SystemMessage):
             if key_event.key() == Qt.Key.Key_Return and not key_event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 text = self._text_area.toPlainText().strip()
                 if text:
-                    self.command_submitted.emit(text)
                     self._add_to_history(text)
                     self.clear()
+                    self.command_submitted.emit(text)
 
                 return True
 
@@ -164,9 +164,9 @@ class SystemInput(SystemMessage):
         if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             text = self._text_area.toPlainText().strip()
             if text:
-                self.command_submitted.emit(text)
                 self._add_to_history(text)
                 self.clear()
+                self.command_submitted.emit(text)
                 return
 
         super().keyPressEvent(event)
@@ -195,6 +195,7 @@ class SystemInput(SystemMessage):
             # Move down in history
             self._history_position -= 1
             self._text_area.setPlainText(self._command_history[self._history_position])
+
         elif self._history_position == 0:
             # Return to current command being edited
             self._history_position = -1
@@ -245,6 +246,12 @@ class SystemInput(SystemMessage):
             List of command strings, newest first
         """
         return self._command_history.copy()
+
+    def clear_command_history(self) -> None:
+        """Clear the command history."""
+        self._command_history = []
+        self._history_position = -1
+        self._current_command = ""
 
     def apply_completion(self, result: SystemCommandCompletionResult) -> None:
         """

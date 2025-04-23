@@ -863,6 +863,13 @@ class ColumnManager(QWidget):
         self.add_tab(system_tab, "System Shell")
         return system_tab
 
+    def clear_system_interactions(self) -> None:
+        """Clear the system tab interactions."""
+        for tab in self._tabs.values():
+            if isinstance(tab, SystemTab):
+                tab.clear_system_interactions()
+                return
+
     def new_file(self) -> EditorTab:
         """Create a new empty editor tab."""
         self._untitled_count += 1

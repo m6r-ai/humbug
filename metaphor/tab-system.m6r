@@ -41,6 +41,9 @@ Context: System tab
 
         The following commands are available:
 
+        Context: "clear" command
+            The clear command clears the system shell history.
+
         Context: "conversation" command
             The conversation command opens a new conversation.
 

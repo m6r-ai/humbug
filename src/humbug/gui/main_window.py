@@ -16,6 +16,7 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
+from humbug.gui.commands.clear_command import ClearCommand
 from humbug.gui.commands.conversation_command import ConversationCommand
 from humbug.gui.commands.edit_command import EditCommand
 from humbug.gui.commands.help_command import HelpCommand
@@ -373,6 +374,9 @@ class MainWindow(QMainWindow):
         self._command_registry = SystemCommandRegistry()
 
         # Create and register commands
+        clear_command = ClearCommand(self._process_clear_command)
+        self._command_registry.register_command(clear_command)
+
         conversation_command = ConversationCommand(self._process_conversation_command)
         self._command_registry.register_command(conversation_command)
 
@@ -1174,6 +1178,17 @@ class MainWindow(QMainWindow):
         self._save_mindspace_state()
         self._close_all_tabs()
         event.accept()
+
+    def _process_clear_command(self) -> bool:
+        """
+        Process the clear command by clearing system history.
+
+        Returns:
+            True if command processed successfully, False otherwise
+        """
+        self._column_manager.clear_system_interactions()
+        self._mindspace_manager.clear_system_interactions()
+        return True
 
     def _process_conversation_command(self, model: str | None, temperature: float | None) -> bool:
         """Process the conversation command."""

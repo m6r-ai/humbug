@@ -312,6 +312,19 @@ class SystemWidget(QWidget):
         # Update command history after loading messages
         self._update_command_history()
 
+    def clear_system_interactions(self) -> None:
+        """Clear both the message display and command input history."""
+        # Clear command history in input widget
+        self._input.clear_command_history()
+
+        # Clear message display (message widgets will be cleared when
+        # load_system_interactions is called with empty interactions)
+        for msg in self._messages:
+            self._messages_layout.removeWidget(msg)
+            msg.deleteLater()
+
+        self._messages.clear()
+
     def _add_system_message(self, message: SystemMessageModel) -> None:
         """Add a message from the system message history."""
         msg_widget = SystemMessage(self)

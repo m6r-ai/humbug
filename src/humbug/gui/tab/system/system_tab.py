@@ -254,3 +254,7 @@ class SystemTab(TabBase):
         strings = self._language_manager.strings()
         message = StatusMessage(strings.system_status)
         self.status_message.emit(message)
+
+    def clear_system_interactions(self) -> None:
+        """Clear the system history including command history."""
+        self._system_widget.clear_system_interactions()

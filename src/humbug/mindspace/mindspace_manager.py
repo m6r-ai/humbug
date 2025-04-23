@@ -460,6 +460,20 @@ class MindspaceManager(QObject):
 
         return self._system_interactions.get_messages()
 
+    def clear_system_interactions(self) -> None:
+        """
+        Clear all system interaction messages.
+
+        Raises:
+            MindspaceNotFoundError: If no mindspace is open
+        """
+        if not self.has_mindspace():
+            raise MindspaceNotFoundError("No mindspace is currently open")
+
+        self._system_interactions.clear()
+        self._save_system_interactions()
+        self.system_interactions_updated.emit()
+
     def _save_system_interactions(self) -> None:
         """Save system interactions to disk."""
         if not self.has_mindspace():
