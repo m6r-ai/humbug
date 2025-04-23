@@ -14,7 +14,7 @@ from humbug.user.user_manager import UserManager
 class M6rcCommand(SystemCommand):
     """Command to create a new conversation with a Metaphor file."""
 
-    def __init__(self, create_m6rc_conversation_callback: Callable[[str, str | None, float | None], bool]) -> None:
+    def __init__(self, create_m6rc_conversation_callback: Callable[[str, List[str], str | None, float | None], bool]) -> None:
         """
         Initialize the command.
 
@@ -58,9 +58,6 @@ class M6rcCommand(SystemCommand):
             )
             return False
 
-        # Get file path from first positional argument
-        file_path = args[0]
-
         # Get options
         options = self._get_options(tokens)
 
@@ -84,8 +81,8 @@ class M6rcCommand(SystemCommand):
                 return False
 
         try:
-            # Check if the path exists
-            # Convert to absolute path if it's relative
+            # Check if the path exists.  Convert to absolute path if it's relative
+            file_path = args[0]
             if not os.path.isabs(file_path):
                 file_path = self._mindspace_manager.get_mindspace_path(file_path)
 
@@ -96,7 +93,7 @@ class M6rcCommand(SystemCommand):
                 )
                 return False
 
-            if not self._create_m6rc_conversation(file_path, model, temperature_val):
+            if not self._create_m6rc_conversation(file_path, args, model, temperature_val):
                 return False
 
             self._mindspace_manager.add_system_interaction(

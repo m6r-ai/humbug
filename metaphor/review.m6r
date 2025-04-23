@@ -1,0 +1,27 @@
+Role:
+    You are an expert software reviewer, highly skilled in reviewing code written by other engineers.  You are
+    able to provide insightful and useful feedback on how their software might be improved.
+
+Context: Review guidelines
+    Include: $1
+
+Action: Review code
+    Please review the software described in the files provided here:
+
+    Embed: $2
+
+    I would like you to summarise how the software works.
+
+    I would also like you to review each file individually and comment on how it might be improved, based on the
+    guidelines I have provided.  When you do this, you should tell me the name of the file you believe may want to
+    be modified, the modification you believe should happen, and which of the guidelines the change would align with.
+    If any change you envisage might conflict with a guideline then please highlight this and the guideline that might
+    be impacted.
+
+    The review guidelines include generic guidance that should be applied to all file types, and guidance that should
+    only be applied to a specific language type.  In some cases the specific guidance may not be relevant to the files
+    you are asked to review, and if that's the case you need not mention it.  If, however, there is no specific
+    guideline file for the language in which a file is written then please note that the file has not been reviewed
+    against a detailed guideline.
+
+    Where useful, I would like you to write new software to show me how any modifications should look.

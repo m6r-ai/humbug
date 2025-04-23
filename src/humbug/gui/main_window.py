@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import cast, Dict
+from typing import cast, Dict, List
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
@@ -981,7 +981,7 @@ class MainWindow(QMainWindow):
         metaphor_parser = MetaphorParser()
         try:
             syntax_tree = MetaphorRootNode()
-            metaphor_parser.parse_file(syntax_tree, file_path, [search_path], search_path)
+            metaphor_parser.parse_file(syntax_tree, file_path, [search_path], search_path, [file_path])
             formatter = MetaphorFormatVisitor()
             prompt = format_preamble() + formatter.format(syntax_tree)
 
@@ -1202,14 +1202,14 @@ class MainWindow(QMainWindow):
         self._column_manager.protect_system_tab(False)
         return True
 
-    def _process_m6rc_command(self, file_path: str, model: str | None, temperature: float | None) -> bool:
+    def _process_m6rc_command(self, file_path: str, args: List[str], model: str | None, temperature: float | None) -> bool:
         """Process the m6rc command."""
         search_path = self._mindspace_manager.mindspace_path()
 
         metaphor_parser = MetaphorParser()
         try:
             syntax_tree = MetaphorRootNode()
-            metaphor_parser.parse_file(syntax_tree, file_path, [search_path], search_path)
+            metaphor_parser.parse_file(syntax_tree, file_path, [search_path], search_path, args)
             formatter = MetaphorFormatVisitor()
             prompt = format_preamble() + formatter.format(syntax_tree)
 

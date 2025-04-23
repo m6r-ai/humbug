@@ -57,6 +57,7 @@ class MetaphorParser:
         self.search_paths: List[str] = []
         self.embed_path: str = ""
         self.current_token: MetaphorToken | None = None
+        self.arguments: List[str] | None = None
 
     def _has_role_node(self, node: MetaphorASTNode) -> bool:
         """
@@ -109,7 +110,8 @@ class MetaphorParser:
         input_text: str,
         filename: str,
         search_paths: List[str],
-        embed_path: str = ""
+        embed_path: str = "",
+        arguments: List[str] | None = None
     ) -> None:
         """
         Parse an input string and add the resulting nodes to the provided parent node.
@@ -120,12 +122,14 @@ class MetaphorParser:
             filename (str): The name of the file being parsed.
             search_paths (List[str]): List of paths to search for included files.
             embed_path: Path used to search for embedded files (uses CWD if None).
+            arguments (List[str] | None): List of command line arguments.
 
         Raises:
             MetaphorParserError: If there are syntax errors during parsing.
         """
         self.search_paths = search_paths
         self.embed_path = embed_path if embed_path else os.getcwd()
+        self.arguments = arguments if arguments else []
 
         try:
             self.lexers.append(MetaphorLexer(input_text, filename))
@@ -206,7 +210,8 @@ class MetaphorParser:
         parent_node: MetaphorASTNode,
         filename: str,
         search_paths: List[str],
-        embed_path: str = ""
+        embed_path: str = "",
+        arguments: List[str] | None = None
     ) -> None:
         """
         Parse a file and add the resulting nodes to the provided parent node.
@@ -216,6 +221,7 @@ class MetaphorParser:
             filename (str): The path to the file to be parsed.
             search_paths (List[str]): List of paths to search for included files.
             embed_path: Path used to search for embedded files (uses CWD if None).
+            arguments (List[str] | None): List of command line arguments.
 
         Raises:
             MetaphorParserError: If there are syntax errors during parsing.
@@ -223,7 +229,7 @@ class MetaphorParser:
         try:
             self._check_file_not_loaded(filename)
             input_text = self._read_file(filename)
-            self.parse(parent_node, input_text, filename, search_paths, embed_path)
+            self.parse(parent_node, input_text, filename, search_paths, embed_path, arguments)
 
         except FileNotFoundError as e:
             self.parse_errors.append(MetaphorParserSyntaxError(
@@ -364,10 +370,7 @@ class MetaphorParser:
             if token.type in (MetaphorTokenType.OUTDENT, MetaphorTokenType.END_OF_FILE):
                 return action_node
 
-            self._record_syntax_error(
-                token,
-                f"Unexpected token: {token.value} in 'Action' block"
-            )
+            self._record_syntax_error(token, f"Unexpected token: {token.value} in 'Action' block")
 
     def _parse_context(self, token: MetaphorToken) -> MetaphorContextNode:
         """Parse a Context block."""
@@ -414,10 +417,7 @@ class MetaphorParser:
             if token.type in (MetaphorTokenType.OUTDENT, MetaphorTokenType.END_OF_FILE):
                 return context_node
 
-            self._record_syntax_error(
-                token,
-                f"Unexpected token: {token.value} in 'Context' block"
-            )
+            self._record_syntax_error(token, f"Unexpected token: {token.value} in 'Context' block")
 
     def _parse_role(self, token: MetaphorToken) -> MetaphorRoleNode:
         """Parse a Role block."""
@@ -464,10 +464,28 @@ class MetaphorParser:
             if token.type in (MetaphorTokenType.OUTDENT, MetaphorTokenType.END_OF_FILE):
                 return role_node
 
-            self._record_syntax_error(
-                token,
-                f"Unexpected token: {token.value} in 'Role' block"
-            )
+            self._record_syntax_error(token, f"Unexpected token: {token.value} in 'Role' block")
+
+    def _parse_argument(self, token: MetaphorToken) -> str | None:
+        """
+        Parse a $ argument token.
+
+        Args:
+            token: The token to parse.
+
+        Returns:
+            The parsed argument as a string or None if we could not determine the string.
+        """
+        numeric_part = token.value[1:]
+        if not numeric_part.isdigit():
+            self._record_syntax_error(token, "After '$', the string must contain only digits")
+
+        arg_index = int(numeric_part)
+        if arg_index < 0 or arg_index >= len(self.arguments):
+            self._record_syntax_error(token, f"Argument index {arg_index} is out of range")
+            return None
+
+        return self.arguments[arg_index]
 
     def _parse_include(self, token: MetaphorToken) -> None:
         """Parse an Include block and load the included file."""
@@ -476,7 +494,14 @@ class MetaphorParser:
             self._record_syntax_error(token, "Expected file name after 'Include' keyword")
             return
 
-        filename = token_next.value
+        if token_next.value[0] == "$":
+            filename = self._parse_argument(token_next)
+            if filename is None:
+                return
+
+        else:
+            filename = token_next.value
+
         self._check_file_not_loaded(filename)
         try_file = self._find_file_path(filename)
         input_text = self._read_file(try_file)
@@ -489,12 +514,16 @@ class MetaphorParser:
             self._record_syntax_error(token, "Expected file name or wildcard match after 'Embed' keyword")
             return
 
-        recurse = False
-        match = token_next.value
-        if "**/" in match:
-            recurse = True
+        if token_next.value[0] == "$":
+            match = self._parse_argument(token_next)
+            if match is None:
+                return
+
+        else:
+            match = token_next.value
 
         path = os.path.join(self.embed_path, match)
+        recurse = True if "**/" in match else False
         files = glob.glob(path, recursive=recurse)
         if not files:
             self._record_syntax_error(token_next, f"{match} does not match any files for 'Embed' in {self.embed_path}")
