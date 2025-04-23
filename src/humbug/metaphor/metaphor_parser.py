@@ -57,7 +57,7 @@ class MetaphorParser:
         self.search_paths: List[str] = []
         self.embed_path: str = ""
         self.current_token: MetaphorToken | None = None
-        self.arguments: List[str] | None = None
+        self.arguments: List[str] = []
 
     def _has_role_node(self, node: MetaphorASTNode) -> bool:
         """
@@ -170,7 +170,7 @@ class MetaphorParser:
 
                     return  # No return value needed
 
-                if token.type == MetaphorTokenType.TEXT or token.type == MetaphorTokenType.CODE:
+                if token.type in (MetaphorTokenType.TEXT, MetaphorTokenType.CODE):
                     if parent_node.children:
                         # If our parent is processing text or code then we can add more text or code
                         if isinstance(parent_node.children[-1], MetaphorTextNode | MetaphorCodeNode):
@@ -523,7 +523,7 @@ class MetaphorParser:
             match = token_next.value
 
         path = os.path.join(self.embed_path, match)
-        recurse = True if "**/" in match else False
+        recurse = "**/" in match
         files = glob.glob(path, recursive=recurse)
         if not files:
             self._record_syntax_error(token_next, f"{match} does not match any files for 'Embed' in {self.embed_path}")

@@ -60,7 +60,7 @@ class MarkdownParser:
         self._code_block_content: List[str] = []
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
-        self._code_block_indents = []
+        self._code_block_indents: List[int] = []
 
     def document(self) -> MarkdownDocumentNode:
         """
