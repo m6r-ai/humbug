@@ -96,8 +96,6 @@ class MarkdownParser:
             code_block_match = self._code_block_pattern.match(stripped_line)
             if code_block_match:
                 language = code_block_match.group(1)
-                print(f"in_code_block: {self._code_block_nesting_level}, indent: {indent}, {self._code_block_indents[-1]}")
-                print(f"line: {stripped_line}")
                 if language is not None or indent > self._code_block_indents[-1]:
                     self._code_block_nesting_level += 1
                     self._code_block_indents.append(indent)

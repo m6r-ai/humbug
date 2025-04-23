@@ -23,7 +23,7 @@ Context: System tab
               command line completions, but cycling between possible options in the reverse order
 
     Context: History buffer
-        The system tab maintains a history of the last 50 commands that were entered, allowing the user to
+        The system tab maintains a history of the last 100 commands that were entered, allowing the user to
         navigate and reuse previous commands.
 
     Context: Commands

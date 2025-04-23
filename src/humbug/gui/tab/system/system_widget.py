@@ -231,9 +231,9 @@ class SystemWidget(QWidget):
                 if content and content not in user_commands:
                     user_commands.append(content)
 
-        # Limit to a reasonable size (e.g., 50 items)
-        if len(user_commands) > 50:
-            user_commands = user_commands[:50]
+        # Limit to a reasonable size (e.g., 100 items)
+        if len(user_commands) > 100:
+            user_commands = user_commands[:100]
 
         # Set the command history in the input widget
         self._input.set_command_history(user_commands)

@@ -114,7 +114,6 @@ class SystemCommand:
         i = 0
         while i < len(tokens):
             token = tokens[i]
-            print(f"Token: {token}")
             if token.type == TokenType.OPTION:
                 # Check if next token is an argument (option value)
                 if i + 1 < len(tokens) and tokens[i + 1].type == TokenType.ARGUMENT:
@@ -281,7 +280,6 @@ class SystemCommand:
 
         # Handle empty path
         if not partial_path:
-            print("No path provided, listing current directory")
             return self._list_directory("", file_extension)
 
         # Split into directory and filename parts

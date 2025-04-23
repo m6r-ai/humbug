@@ -218,9 +218,9 @@ class SystemInput(SystemMessage):
         # Add at the beginning (most recent first)
         self._command_history.insert(0, command)
 
-        # Limit history size (e.g., to 50 commands)
-        if len(self._command_history) > 50:
-            self._command_history = self._command_history[:50]
+        # Limit history size (e.g., to 100 commands)
+        if len(self._command_history) > 100:
+            self._command_history = self._command_history[:100]
 
         # Reset history position
         self._history_position = -1
