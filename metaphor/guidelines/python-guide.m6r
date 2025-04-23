@@ -1,3 +1,5 @@
+Include: metaphor/guidelines/generic-guide.m6r
+
 Context: Python code review guidelines
     Here are a series of guidelines I would like you to consider when you're reviewing code written in python.
 

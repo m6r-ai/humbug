@@ -1,5 +1,6 @@
 Context: Generic code review guidelines
-    Here are a series of guidelines I would like you to consider when you're reviewing software.
+    Here are a series of guidelines I would like you to consider when you're reviewing software in any
+    language.
 
     Context: Architecture and design
         The software should follow SOLID principles:
@@ -72,7 +73,7 @@ Context: Generic code review guidelines
         - Tight coupling.
         - Inconsistent abstraction levels.
         - Primitive obsession (overuse of primitive data types instead of small objects).
-        - Speculative generality (adding code for future requirements that may never come.
+        - Speculative generality (adding code for future requirements that may never come).
         - Lazy class (classes that do too little and could be consolidated).
         - Data clumps (groups of variables that are always used together should be encapsulated).
 
