@@ -201,8 +201,10 @@ class SystemTextEdit(QTextEdit):
             cast(QWidget, self.parent()).updateGeometry()
 
     def enable_highlighter(self) -> None:
-        """Enable syntax highlightint for system commands."""
+        """Enable syntax highlighting for system commands."""
         self._highlighter = SystemCommandHighlighter(self.document())
+        self.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere)
+
 
     def set_text(self, text: str) -> None:
         """Update text content if we have anything new."""
