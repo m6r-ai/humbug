@@ -18,6 +18,8 @@ Context: Python implementation rules
 
         As we're using Python 3.10 as a minimum, use union types.  E.g. use `T | None` instead of `Optional[T]`.
 
+        `self` parameters do not need to have type hints.
+
     Context: Use comments
         Comments must be used to describe any complex logic, or rationale that would not be obvious from
         simply reading the code.  This ensures that anyone reading the code for the first time will be able
