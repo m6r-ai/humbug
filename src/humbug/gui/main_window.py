@@ -16,7 +16,6 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
-from humbug.gui.commands.code_review_command import CodeReviewCommand
 from humbug.gui.commands.conversation_command import ConversationCommand
 from humbug.gui.commands.edit_command import EditCommand
 from humbug.gui.commands.help_command import HelpCommand
@@ -33,7 +32,6 @@ from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
     MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, MetaphorRootNode,
-    MetaphorRoleNode, MetaphorTextNode, MetaphorContextNode, MetaphorActionNode,
     format_errors, format_preamble
 )
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -375,9 +373,6 @@ class MainWindow(QMainWindow):
         self._command_registry = SystemCommandRegistry()
 
         # Create and register commands
-        code_review_command = CodeReviewCommand(self._process_code_review_command)
-        self._command_registry.register_command(code_review_command)
-
         conversation_command = ConversationCommand(self._process_conversation_command)
         self._command_registry.register_command(conversation_command)
 
@@ -1179,100 +1174,6 @@ class MainWindow(QMainWindow):
         self._save_mindspace_state()
         self._close_all_tabs()
         event.accept()
-
-    def _process_code_review_command(self, file_path: str, model: str | None, temperature: float | None) -> bool:
-        """Process the code review command."""
-        try:
-            syntax_tree = MetaphorRootNode()
-            guidelines = [self._mindspace_manager.get_mindspace_path("metaphor/guidelines/generic-guide.m6r")]
-
-            role_node = MetaphorRoleNode()
-            role_text_node = MetaphorTextNode(
-                "You are an expert software reviewer, highly skilled in reviewing code written by other " +
-                "engineers.  You are able to provide insightful and useful feedback on how their software " +
-                "might be improved."
-            )
-            role_node.add_child(role_text_node)
-            syntax_tree.add_child(role_node)
-
-            context_node = MetaphorContextNode("Review guidelines")
-            include_parser = MetaphorParser()
-            include_lines = '\n'.join(f'Include: {g}' for g in guidelines)
-            include_parser.parse(context_node, include_lines, "", [], "")
-            syntax_tree.add_child(context_node)
-
-            action_node = MetaphorActionNode("Review code")
-            action_text_node1 = MetaphorTextNode(
-                "Please review the software described in the files provided here:\n"
-            )
-            action_node.add_child(action_text_node1)
-            embed_parser = MetaphorParser()
-            embed_lines = f'Embed: {file_path}'
-            embed_parser.parse(action_node, embed_lines, "", [], "")
-            action_text_node2 = MetaphorTextNode(
-                "I would like you to summarise how the software works.\n" +
-                "\n" +
-                "I would also like you to review each file individually and comment on how it might be improved,\n" +
-                "based on the guidelines I have provided.  When you do this, you should tell me the name of the file\n" +
-                "you believe may want to be modified, the modification you believe should happen, and which of the\n" +
-                "guidelines the change would align with.  If any change you envisage might conflict with a guideline\n" +
-                "then please highlight this and the guideline that might be impacted.\n" +
-                "\n" +
-                "The review guidelines include generic guidance that should be applied to all file types, and\n" +
-                "guidance that should only be applied to a specific language type.  In some cases the specific\n" +
-                "guidance may not be relevant to the files you are asked to review, and if that's the case you need\n" +
-                "not mention it.  If, however, there is no specific guideline file for the language in which a file\n" +
-                "is written then please note that the file has not been reviewed against a detailed guideline.\n" +
-                "\n" +
-                "Where useful, I would like you to write new software to show me how any modifications should look.\n" +
-                "\n"
-            )
-            action_node.add_child(action_text_node2)
-            syntax_tree.add_child(action_node)
-
-            formatter = MetaphorFormatVisitor()
-            prompt = format_preamble() + formatter.format(syntax_tree)
-
-        except FileNotFoundError:
-            error = f"File not found: {file_path}"
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR, error
-            )
-            return False
-
-        except MetaphorParserError as e:
-            strings = self._language_manager.strings()
-            error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR, error
-            )
-            return False
-
-        self._column_manager.protect_system_tab(True)
-        conversation_id: str | None = None
-        try:
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
-            conversation_id = self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path(), model, temperature
-            )
-
-        except MindspaceError as e:
-            self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
-            )
-            return False
-
-        self._column_manager.protect_system_tab(False)
-        if conversation_id is None:
-            return False
-
-        conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
-        if conversation_tab is None:
-            return False
-
-        conversation_tab.set_input_text(prompt)
-#        conversation_tab.submit()
-        return True
 
     def _process_conversation_command(self, model: str | None, temperature: float | None) -> bool:
         """Process the conversation command."""
