@@ -61,13 +61,26 @@ can be used to refine the Metaphor context.
 
 v0.10 has a number of new capabilities.  The biggest change is the introduction of the "system shell".  This is a
 command line interface that lets you interact with Humbug features.  Initial commands let you open conversations,
-files, and terminals.  Most importantl, however, is you can also run the Metaphor compiler and run code reviews
-from within the shell.  This is the start of adding more AI-powered tools.
+files, and terminals.  Most important, however, is you can also run the Metaphor compiler and run code reviews
+from within the shell.  This makes it easy to add new AI-powered tools.
 
-Other features:
+The `m6rc` and `conversation` commands have command line options to specify the AI model and temperature
+you would like to use, if you don't want to use the mindspace defaults.
 
+The Metaphor language also gets a new capability that allows parameters passed on the command line to be expanded
+when the Metaphor prompt is compiled.  For an example of this, please look at the `metaphor/review.m6r` file which
+implements the functionality that was previously implemented in the `commit-critic` tool.
+
+Full set of new features:
+
+- There is a new type of tab, called the "system shell".  This is a command line interface that lets you
+  interact with Humbug features.  Initial commands let you open conversations, files, and terminals.  You
+  can also run the Metaphor compiler and run code reviews.
 - If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the
   details in the system tab rather than in a dialog box.  This makes them much easier to read.
+- The Metaphor compiler now supports command line parameters for use in `Include` and `Embed` blocks.  This
+  means it's now possible to create template Metaphor files and fill in the blanks at runtime.  One such
+  example is the new `review.m6r` file.
 - A number of error messages from the Metaphor compiler have been improved to make them easier to understand.
 - Supports xAI's Grok-3 beta models.
 - Supports OpenAI o3, o4-mini, gpt-4.1, gpt-4.1-mini, and gpt-4.1-nano models.

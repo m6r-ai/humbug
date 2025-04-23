@@ -1,12 +1,15 @@
 # Changelog for Humbug
 
-## v0.10 (2025-04-xx)
+## v0.10 (2025-04-23)
 
 New features:
 
 - There is a new type of tab, called the "system shell".  This is a command line interface that lets you
   interact with Humbug features.  Initial commands let you open conversations, files, and terminals.  You
   can also run the Metaphor compiler and run code reviews.
+- The Metaphor compiler now supports command line parameters for use in "Include" and "Embed" blocks.  This
+  means it's now possible to create template Metaphor files and fill in the blanks at runtime.  One such
+  example is the new "review.m6r" file.
 - If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the
   details in the system tab rather than in a dialog box.  This makes them much easier to read.
 - A number of error messages from the Metaphor compiler have been improved to make them easier to understand.
