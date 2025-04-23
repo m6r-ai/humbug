@@ -164,5 +164,5 @@ class M6rcCommand(SystemCommand):
                     # Temperature should be a float between 0.0 and 1.0
                     return [str(i / 10) for i in range(11) if str(i / 10).startswith(current_token.value)]
 
-        # For regular arguments, complete file paths with .m6r extension
-        return self._get_mindspace_path_completions(current_token.value, file_extension=".m6r")
+        # For regular arguments, complete file paths
+        return self._get_mindspace_path_completions(current_token.value)

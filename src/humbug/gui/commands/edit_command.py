@@ -122,5 +122,5 @@ class EditCommand(SystemCommand):
         if current_token.type == TokenType.OPTION:
             return self._get_option_completions(current_token.value)
 
-        # For arguments, complete file paths (with no extension filter)
+        # For arguments, complete file paths
         return self._get_mindspace_path_completions(current_token.value)
