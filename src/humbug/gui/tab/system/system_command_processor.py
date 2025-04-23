@@ -267,15 +267,13 @@ class SystemCommandProcessor:
         if not completions:
             return SystemCommandCompletionResult(success=False)
 
-        self._tab_completions = completions
-        self._tab_completion_active = True
-
         start_pos = token.start
         end_pos = token.start + len(token.value)
 
         if len(completions) == 1:
             # Single completion - replace just the argument
             completion = completions[0]
+            self._tab_completion_active = False
             self._current_completion_text = completion
             add_space = not completion.endswith('/')
             self._current_completion_index = 0
@@ -289,6 +287,8 @@ class SystemCommandProcessor:
             )
 
         # Multiple completions - start cycling
+        self._tab_completions = completions
+        self._tab_completion_active = True
         self._current_completion_index = 0
         completion = completions[0]
         self._current_completion_text = completion

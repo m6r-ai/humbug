@@ -71,6 +71,9 @@ The Metaphor language also gets a new capability that allows parameters passed o
 when the Metaphor prompt is compiled.  For an example of this, please look at the `metaphor/review.m6r` file which
 implements the functionality that was previously implemented in the `commit-critic` tool.
 
+The system tab features tab completions so hitting Tab or Shift+Tab will cycle through many potential commands
+and options in a context-aware way.
+
 Full set of new features:
 
 - There is a new type of tab, called the "system shell".  This is a command line interface that lets you
