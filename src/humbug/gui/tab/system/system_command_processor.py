@@ -63,7 +63,7 @@ class SystemCommandProcessor:
         unescaped = ""
         i = 0
         while i < len(text):
-            if text[i] == '\\' and i + 1 < len(text):
+            if text[i] == '\\' and i + 1 < len(text) and text[i + 1] == ' ':
                 unescaped += text[i + 1]
                 i += 2
                 continue
