@@ -1,6 +1,7 @@
 """Processes system commands and handles tab completion."""
 
 import logging
+import os
 from typing import List
 
 from humbug.gui.tab.system.system_command_completion_result import SystemCommandCompletionResult
@@ -43,10 +44,6 @@ class SystemCommandProcessor:
         for char in text:
             if char == ' ':
                 escaped += '\\ '
-                continue
-
-            if char == '\\':
-                escaped += '\\\\'
                 continue
 
             escaped += char
@@ -200,7 +197,7 @@ class SystemCommandProcessor:
                 replacement=new_completion,
                 start_pos=self._completion_start_pos,
                 end_pos=end_pos,
-                add_space=not new_completion.endswith('/')
+                add_space=not new_completion.endswith(os.path.sep)
             )
 
             # Update the current completion text for next cycle
@@ -278,7 +275,7 @@ class SystemCommandProcessor:
             completion = completions[0]
             self._tab_completion_active = False
             self._current_completion_text = completion
-            add_space = not completion.endswith('/')
+            add_space = not completion.endswith(os.path.sep)
             self._current_completion_index = 0
 
             return SystemCommandCompletionResult(
