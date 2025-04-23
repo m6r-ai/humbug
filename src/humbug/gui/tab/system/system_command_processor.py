@@ -31,7 +31,7 @@ class SystemCommandProcessor:
 
     def _escape_text(self, text: str) -> str:
         """
-        Escape text, converging spaces to an escaped form.
+        Escape text, converting characters to their escaped form.
 
         Args:
             text: The text to escape
@@ -39,11 +39,14 @@ class SystemCommandProcessor:
         Returns:
             Escaped completion string
         """
-        # Escape spaces with backslashes
         escaped = ""
         for char in text:
             if char == ' ':
                 escaped += '\\ '
+                continue
+
+            if char == '\\':
+                escaped += '\\\\'
                 continue
 
             escaped += char
@@ -52,7 +55,7 @@ class SystemCommandProcessor:
 
     def _unescape_text(self, text: str) -> str:
         """
-        Unescape text, converting escaped spaces to their original form.
+        Unescape text, converting escaped characters to their original form.
 
         Args:
             text: The text to unescape

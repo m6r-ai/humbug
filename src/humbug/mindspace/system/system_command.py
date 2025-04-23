@@ -315,6 +315,7 @@ class SystemCommand:
                         escaped_path = parts[0]
                         for part in parts[1:]:
                             escaped_path += "\\ " + part
+
                         full_path = escaped_path
 
                     completions.append(full_path)
