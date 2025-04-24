@@ -2,6 +2,10 @@
 
 ## v0.11 (2025-xx-xx)
 
+Bug fixes:
+
+- The system shell now keeps messages adjacent to the command prompt (like conversations do).
+
 ## v0.10 (2025-04-23)
 
 New features:
