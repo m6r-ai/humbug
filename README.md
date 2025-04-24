@@ -1,4 +1,4 @@
-# Humbug v0.10
+# Humbug v0.11
 
 Humbug is an extensible open-source tool designed to help you build and maintain software using AI.
 
@@ -59,51 +59,9 @@ explore interactively, update the context and iterate.  We can go further than n
 have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
 can be used to refine the Metaphor context.
 
-## What's new in v0.10
+## What's new in v0.11
 
-v0.10 has a number of new capabilities.  The biggest change is the introduction of the "system shell".  This is a
-command line interface that lets you interact with Humbug features.  Initial commands let you open conversations,
-files, and terminals.  Most important, however, is you can also run the Metaphor compiler and run code reviews
-from within the shell.  This makes it easy to add new AI-powered tools.
-
-The `m6rc` and `conversation` commands have command line options to specify the AI model and temperature
-you would like to use, if you don't want to use the mindspace defaults.
-
-The Metaphor language also gets a new capability that allows parameters passed on the command line to be expanded
-when the Metaphor prompt is compiled.  For an example of this, please look at the `metaphor/review.m6r` file which
-implements the functionality that was previously implemented in the `commit-critic` tool.
-
-The system tab features tab completions so hitting Tab or Shift+Tab will cycle through many potential commands
-and options in a context-aware way.
-
-Full set of new features:
-
-- There is a new type of tab, called the "system shell".  This is a command line interface that lets you
-  interact with Humbug features.  Initial commands let you open conversations, files, and terminals.  You
-  can also run the Metaphor compiler and run code reviews.
-- If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the
-  details in the system tab rather than in a dialog box.  This makes them much easier to read.
-- The Metaphor compiler now supports command line parameters for use in `Include` and `Embed` blocks.  This
-  means it's now possible to create template Metaphor files and fill in the blanks at runtime.  One such
-  example is the new `review.m6r` file.
-- A number of error messages from the Metaphor compiler have been improved to make them easier to understand.
-- Supports xAI's Grok-3 beta models.
-- Supports OpenAI o3, o4-mini, gpt-4.1, gpt-4.1-mini, and gpt-4.1-nano models.
-- On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column
-  that was active when saved is also restored as the active column.  This means you no longer have to
-  reset the focus of tabs.
-- AI assistant response messages now show which AI model generated the message.
-- The "system" responses are now tagged as being from Humbug.
-- If you close a conversation and there are no messages from the AI in it then the conversation
-  transcript is now automatically deleted.  This avoid cluttering the conversations directory with
-  empty files.
-
-While not visible to the user, another major change behind the scenes it to support type checking using
-`mypy`, and linting using `pylint`.  Both now run with no errors or warnings.
-
-In addition to these, there are a number of bug fixes.
-
-Please see the `CHANGELOG.md` file for full details.
+TBD
 
 ## Features
 
