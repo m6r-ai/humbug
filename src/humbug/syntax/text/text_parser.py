@@ -17,9 +17,6 @@ class TextParser(Parser):
         Args:
             prev_parser_state: Optional previous parser state
             input_str: The input string to parse
-
-        Returns:
-            The updated parser state after parsing
         """
         self._tokens.append(Token(
             type=TokenType.CODE,
