@@ -50,6 +50,7 @@ class TokenType(IntEnum):
     NUMBER = auto()
     OPERATOR = auto()
     OPTION = auto()
+    OPTION_VALUE = auto()
     PREPROCESSOR = auto()
     REGEXP = auto()
     RPAREN = auto()

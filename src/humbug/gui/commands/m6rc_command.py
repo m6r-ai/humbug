@@ -39,6 +39,23 @@ class M6rcCommand(SystemCommand):
         options["-t, --temperature"] = "Temperature for the model (0.0 to 1.0)"
         return options
 
+    def get_option_value_count(self, option_name: str) -> int:
+        """Determine how many values each option takes."""
+        # Get base class handling for common options
+        result = super().get_option_value_count(option_name)
+        if result != 0:
+            return result
+
+        # Handle command-specific options
+        if option_name in ("-m", "--model"):
+            return 1  # Takes exactly one value
+
+        if option_name in ("-t", "--temperature"):
+            return 1  # Takes exactly one value
+
+        # Default for unknown options
+        return 0
+
     def _execute_command(self, tokens: List[Token]) -> bool:
         """
         Execute the command with parsed tokens.
@@ -62,21 +79,28 @@ class M6rcCommand(SystemCommand):
         options = self._get_options(tokens)
 
         # Get model if specified
-        model = options.get("--model")
-        if model is None:
-            model = options.get("-m")
+        model = None
+        model_values = options.get("--model", []) or options.get("-m", [])
+        if model_values:
+            model = model_values[0]
 
-        temperature = options.get("--temperature")
-        if temperature is None:
-            temperature = options.get("-t")
-
+        # Get temperature if specified
         temperature_val = None
-        if temperature is not None:
-            temperature_val = float(temperature)
-            if temperature_val < 0.0 or temperature_val > 1.0:
+        temp_values = options.get("--temperature", []) or options.get("-t", [])
+        if temp_values:
+            try:
+                temperature_val = float(temp_values[0])
+                if temperature_val < 0.0 or temperature_val > 1.0:
+                    self._mindspace_manager.add_system_interaction(
+                        SystemMessageSource.ERROR,
+                        "Temperature must be between 0.0 and 1.0"
+                    )
+                    return False
+
+            except ValueError:
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,
-                    "Temperature must be between 0.0 and 1.0"
+                    "Temperature must be a valid number"
                 )
                 return False
 

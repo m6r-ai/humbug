@@ -441,6 +441,7 @@ class StyleManager(QObject):
             TokenType.NUMBER: ColorRole.SYNTAX_NUMBER,
             TokenType.OPERATOR: ColorRole.SYNTAX_OPERATOR,
             TokenType.OPTION: ColorRole.SYNTAX_HTML_TAG,
+            TokenType.OPTION_VALUE: ColorRole.SYNTAX_STRING,
             TokenType.PREPROCESSOR: ColorRole.SYNTAX_PREPROCESSOR,
             TokenType.REGEXP: ColorRole.SYNTAX_REGEXP,
             TokenType.RPAREN: ColorRole.SYNTAX_OPERATOR,

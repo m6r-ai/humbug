@@ -4,23 +4,9 @@ Command line lexer for tokenizing system command input.
 This lexer handles command syntax including command names, options, and arguments.
 """
 
-from dataclasses import dataclass
 from typing import Callable, Set
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
-
-
-@dataclass
-class CommandLexerState(LexerState):
-    """
-    State information for the Command lexer.
-
-    Attributes:
-        in_quotes: Indicates if we're currently parsing a quoted string
-        quote_char: The character used for quoting (single or double quote)
-    """
-    in_quotes: bool = False
-    quote_char: str = ""
 
 
 class CommandLexer(Lexer):
@@ -42,16 +28,12 @@ class CommandLexer(Lexer):
         self._current_token_start = 0
         self._is_first_token = True
 
-    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> CommandLexerState:
+    def lex(self, _prev_lexer_state: LexerState | None, input_str: str) -> None:
         """
         Lex the command line input.
 
         Args:
-            prev_lexer_state: Optional previous lexer state
             input_str: The input string to parse
-
-        Returns:
-            The updated lexer state after processing
         """
         self._input = input_str
         self._input_len = len(input_str)
@@ -60,20 +42,7 @@ class CommandLexer(Lexer):
         self._next_token = 0
         self._is_first_token = True
 
-        if prev_lexer_state and isinstance(prev_lexer_state, CommandLexerState):
-            self._in_quotes = prev_lexer_state.in_quotes
-            self._quote_char = prev_lexer_state.quote_char
-        else:
-            self._in_quotes = False
-            self._quote_char = ""
-
         self._inner_lex()
-
-        lexer_state = CommandLexerState()
-        lexer_state.in_quotes = self._in_quotes
-        lexer_state.quote_char = self._quote_char
-
-        return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """

@@ -54,6 +54,28 @@ class SystemCommand:
             "-h, --help": "Show detailed help for this command"
         }
 
+    def get_option_value_count(self, option_name: str) -> int:
+        """
+        Get the number of values that follow a specific option.
+
+        Args:
+            option_name: The option flag (e.g., "--model" or "-m")
+
+        Returns:
+            Number of values to consume after this option:
+            - 0: Flag option with no values
+            - 1: Single-value option
+            - >1: Multi-value option (specific count)
+            - -1: Variable values (consume all until next option)
+        """
+        # Most options don't have values by default
+        # Help flag is always 0
+        if option_name in ("-h", "--help"):
+            return 0
+
+        # Default case - subclasses should override for their options
+        return 0
+
     def execute(self, tokens: List[Token], _full_text: str) -> bool:
         """
         Execute the command with the given tokens.
@@ -100,7 +122,7 @@ class SystemCommand:
 
         return False
 
-    def _get_options(self, tokens: List[Token]) -> Dict[str, str | None]:
+    def _get_options(self, tokens: List[Token]) -> Dict[str, List[str]]:
         """
         Get dictionary of options and their values.
 
@@ -108,25 +130,23 @@ class SystemCommand:
             tokens: List of tokens
 
         Returns:
-            Dictionary mapping option names to their values
+            Dictionary mapping option names to their values as lists:
+            - Empty list for flag options without values
+            - List with one item for single-value options
+            - List with multiple items for multi-value options
         """
-        options: Dict[str, str | None] = {}
-        i = 0
-        while i < len(tokens):
-            token = tokens[i]
+        options: Dict[str, List[str]] = {}
+        current_option = None
+
+        for token in tokens:
             if token.type == TokenType.OPTION:
-                # Check if next token is an argument (option value)
-                if i + 1 < len(tokens) and tokens[i + 1].type == TokenType.ARGUMENT:
-                    options[token.value] = tokens[i + 1].value
-                    i += 2  # Skip both option and value
+                current_option = token.value
+                # Initialize with empty list
+                options[current_option] = []
 
-                else:
-                    # Flag option without value
-                    options[token.value] = None
-                    i += 1
-
-            else:
-                i += 1
+            elif token.type == TokenType.OPTION_VALUE and current_option is not None:
+                # Simply append to the list
+                options[current_option].append(token.value)
 
         return options
 
@@ -141,31 +161,9 @@ class SystemCommand:
             List of positional argument values in order
         """
         args = []
-        i = 0
-        while i < len(tokens):
-            token = tokens[i]
-            if token.type == TokenType.COMMAND:
-                i += 1
-
-            elif token.type == TokenType.OPTION:
-                # Skip option and its potential value
-                if i + 1 < len(tokens) and tokens[i + 1].type == TokenType.ARGUMENT:
-                    i += 2
-
-                else:
-                    i += 1
-
-            elif token.type == TokenType.ARGUMENT:
-                # Make sure this argument isn't a value for a preceding option
-                if i > 0 and tokens[i-1].type == TokenType.OPTION:
-                    i += 1
-
-                else:
-                    args.append(token.value)
-                    i += 1
-
-            else:
-                i += 1
+        for token in tokens:
+            if token.type == TokenType.ARGUMENT:
+                args.append(token.value)
 
         return args
 

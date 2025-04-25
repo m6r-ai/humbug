@@ -2,6 +2,11 @@
 
 ## v0.11 (2025-xx-xx)
 
+New features:
+
+- The system shell syntax highlighting now recognizes the difference between option values and positional
+  arguments, using different colours for each.
+
 Bug fixes:
 
 - The system shell now keeps messages adjacent to the command prompt (like conversations do).

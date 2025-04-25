@@ -61,7 +61,8 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.11
 
-TBD
+- The system shell syntax highlighting now recognizes the difference between option values and positional
+  arguments, using different colours for each.
 
 ## Features
 

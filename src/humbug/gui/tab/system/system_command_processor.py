@@ -8,7 +8,8 @@ from humbug.gui.tab.system.system_command_completion_result import SystemCommand
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
 from humbug.mindspace.system.system_message_source import SystemMessageSource
-from humbug.syntax.command.command_lexer import CommandLexer, TokenType, Token
+from humbug.syntax.command.command_lexer import TokenType, Token
+from humbug.syntax.command.command_parser import CommandParser
 
 
 class SystemCommandProcessor:
@@ -89,7 +90,6 @@ class SystemCommandProcessor:
         self._parse_command_line(command_text)
         cmd = self._get_command_name(self._current_tokens)
         if not cmd:
-            # No command name found
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 "Invalid command format. Type 'help' for a list of available commands."
@@ -98,7 +98,6 @@ class SystemCommandProcessor:
 
         command = self._command_registry.get_command(cmd)
         if not command:
-            # Command not found
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
                 f"Unknown command: {cmd}. Type 'help' for a list of available commands."
@@ -131,16 +130,16 @@ class SystemCommandProcessor:
         self._tab_completion_active = False
         self._current_completion_text = ""
 
-        # Tokenize the input
-        lexer = CommandLexer()
-        lexer.lex(None, current_text)
+        # Parse the input
+        parser = CommandParser()
+        parser.parse(None, current_text)
 
         # Store tokens
         self._current_tokens = []
-        token = lexer.get_next_token()
+        token = parser.get_next_token()
         while token is not None:
             self._current_tokens.append(token)
-            token = lexer.get_next_token()
+            token = parser.get_next_token()
 
     def _get_command_name(self, tokens: List[Token]) -> str | None:
         """

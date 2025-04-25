@@ -4,7 +4,7 @@ import logging
 
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.command.command_lexer import CommandLexer
+from humbug.syntax.command.command_parser import CommandParser
 
 
 class SystemCommandHighlighter(QSyntaxHighlighter):
@@ -21,13 +21,13 @@ class SystemCommandHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
         try:
-            # Tokenize the input
-            lexer = CommandLexer()
-            lexer.lex(None, text)
+            # Parse the input
+            parser = CommandParser()
+            parser.parse(None, text)
 
             # Apply syntax highlighting based on token types
             while True:
-                token = lexer.get_next_token()
+                token = parser.get_next_token()
                 if token is None:
                     break
 
