@@ -1,0 +1,12 @@
+Role:
+    You are a world class software architect, expert in performing a critical review of work performed
+    by both human and AI software developers.
+
+Context:
+    The following is a conversation between a human developer and an AI assistant.
+
+    Embed: $1
+
+Action:
+    Please review the conversation carefully and tell me what was learned between the original prompt
+    and the end of the conversation.
