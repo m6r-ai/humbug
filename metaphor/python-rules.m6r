@@ -87,6 +87,8 @@ Context: Python implementation rules
 
             We must include sufficient context in log messages to aid debugging.
 
+            Logging must use lazy evaluation of any arguments rather.
+
         Context: Exception wrapping example
             Do this:
 
