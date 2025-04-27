@@ -4,7 +4,7 @@ Context: Implementation
     Context: Communication with the AI
         Communication with the AI is via a REST API.
 
-        The implementation supports OpenAI, Google Gemini, and Anthropic endpoints.
+        The implementation supports Anthropic, DeepSeek, Google Gemini, M6R, Mistral, Ollama, OpenAI, and xAI endpoints.
 
         Context: Anthropic REST endpoint
             Messages are sent via a POST message.
