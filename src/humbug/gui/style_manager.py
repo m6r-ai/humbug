@@ -403,7 +403,7 @@ class StyleManager(QObject):
         colour_mapping = {
             TokenType.ADDRESS: ColorRole.SYNTAX_ADDRESS,
             TokenType.ANNOTATION: ColorRole.SYNTAX_HEADING,
-            TokenType.ARGUMENT: ColorRole.SYNTAX_HTML_ATTRIBUTE,
+            TokenType.ARGUMENT: ColorRole.SYNTAX_IDENTIFIER,
             TokenType.ATTRIBUTE: ColorRole.SYNTAX_HEADING,
             TokenType.BACKTICK: ColorRole.SYNTAX_INLINE_CODE,
             TokenType.BOOLEAN: ColorRole.SYNTAX_NUMBER,
@@ -441,7 +441,7 @@ class StyleManager(QObject):
             TokenType.NUMBER: ColorRole.SYNTAX_NUMBER,
             TokenType.OPERATOR: ColorRole.SYNTAX_OPERATOR,
             TokenType.OPTION: ColorRole.SYNTAX_HTML_TAG,
-            TokenType.OPTION_VALUE: ColorRole.SYNTAX_STRING,
+            TokenType.OPTION_VALUE: ColorRole.SYNTAX_HEADING,
             TokenType.PREPROCESSOR: ColorRole.SYNTAX_PREPROCESSOR,
             TokenType.REGEXP: ColorRole.SYNTAX_REGEXP,
             TokenType.RPAREN: ColorRole.SYNTAX_OPERATOR,
@@ -698,6 +698,13 @@ class StyleManager(QObject):
                     <rect x="22" y="10" width="32" height="32" stroke="{color}" stroke-width="6" fill="none"/>
                     <path stroke="{color}" stroke-width="6" fill="none"
                         d="M22,22, L10,22 L10,54 L42,54 L42,42"/>
+                </svg>
+            ''')
+
+            write_icon(f'fork-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M32,8 L32,32 M32,32 L8,56 L8,40 M8,56 L24,56 M32,32 L56,56 L56,40 M56,56 L40,56"/>
                 </svg>
             ''')
 

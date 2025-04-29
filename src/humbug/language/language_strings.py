@@ -213,3 +213,4 @@ class LanguageStrings:
     tooltip_save_contents: str
     tooltip_copy_message: str
     tooltip_save_message: str
+    tooltip_fork_message: str

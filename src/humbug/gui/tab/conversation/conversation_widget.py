@@ -87,8 +87,9 @@ class ConversationWidget(QWidget):
     # Signal to notify tab of status changes
     status_updated = Signal()
 
-    # Signal for tab to handle forking a conversation
-    forkRequested = Signal()
+    # Signals for tab to handle forking a conversation
+    forkRequested = Signal()  # Signal to fork the conversation
+    forkFromIndexRequested = Signal(int)  # Signal to fork from a specific message index
 
     # Signal for bookmark navigation
     bookmarkNavigationRequested = Signal(bool)  # True for next, False for previous
@@ -184,6 +185,7 @@ class ConversationWidget(QWidget):
         self._input.pageScrollRequested.connect(self._handle_edit_page_scroll)
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
+        self._input.forkRequested.connect(self._fork_at_message)
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
@@ -256,6 +258,7 @@ class ConversationWidget(QWidget):
         # Add bookmark-specific signal
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
+        msg_widget.forkRequested.connect(self._fork_at_message)
         msg_widget.set_content(message.content, message.source, message.timestamp, message.model or "")
 
         # Add widget before input
@@ -984,6 +987,26 @@ class ConversationWidget(QWidget):
 
         # Show menu at click position
         menu.exec_(self.mapToGlobal(pos))
+
+    def _fork_at_message(self) -> None:
+        """
+        Fork the conversation at the specified message.
+        
+        Args:
+            message: The message where the fork should occur
+        """
+        # Find the index of the message in our list
+        print("fork at message")
+        message = self.sender()
+        if message not in self._messages:
+            # For the input widget, fork at current position
+            self.forkRequested.emit()
+            return
+
+        message_index = self._messages.index(message)
+
+        # Emit signal with the message index
+        self.forkFromIndexRequested.emit(message_index)
 
     def can_toggle_bookmark(self) -> bool:
         """Can we toggle bookmarks?"""

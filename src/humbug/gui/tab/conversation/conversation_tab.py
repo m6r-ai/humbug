@@ -34,6 +34,7 @@ class ConversationTab(TabBase):
     """Unified conversation tab."""
 
     forkRequested = Signal()
+    forkFromIndexRequested = Signal(int)
     bookmarkNavigationRequested = Signal(bool)  # True for next, False for previous
 
     def __init__(
@@ -77,6 +78,7 @@ class ConversationTab(TabBase):
             path, timestamp, self, use_existing_ai_conversation
         )
         self._conversation_widget.forkRequested.connect(self.forkRequested)
+        self._conversation_widget.forkFromIndexRequested.connect(self.forkFromIndexRequested)
         self._conversation_widget.status_updated.connect(self.update_status)
         self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
         layout.addWidget(self._conversation_widget)
@@ -101,6 +103,46 @@ class ConversationTab(TabBase):
 
         # Update status bar
         self.update_status()
+
+    # pylint: disable=protected-access
+    async def fork_conversation_from_index(self, message_index: int) -> 'ConversationTab':
+        """
+        Create a copy of this conversation with history up to the specified message.
+
+        Args:
+            message_index: Index of the message to fork at
+
+        Returns:
+            New ConversationTab with forked history
+        """
+        # Generate new conversation ID using current time
+        timestamp = datetime.utcnow()
+        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+
+        # Create new file in same directory as current conversation
+        base_dir = os.path.dirname(self._path)
+        new_path = os.path.join(base_dir, f"{conversation_id}.conv")
+
+        # Create new tab using same history
+        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, cast(QWidget, self.parent()))
+
+        # Get messages up to the specified index (inclusive)
+        all_messages = self._conversation_widget.get_conversation_history().get_messages()
+        forked_messages = all_messages[:message_index + 1]
+        transcript_messages = [msg.to_transcript_dict() for msg in forked_messages]
+
+        try:
+            # Write history to new transcript file
+            handler = ConversationTranscriptHandler(new_path, timestamp)
+            await handler.write(transcript_messages)
+
+            # Load messages into the new tab
+            forked_tab._conversation_widget.load_message_history(forked_messages, False)
+
+            return forked_tab
+
+        except Exception as e:
+            raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
     # pylint: disable=protected-access
     async def fork_conversation(self) -> 'ConversationTab':

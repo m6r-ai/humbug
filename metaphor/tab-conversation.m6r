@@ -47,7 +47,7 @@ Context: Conversation tabs
             +------------------------------------------+
                             ↕ 10px
             +------------------------------------------+
-            | Assistant Response                   c s |
+            | Assistant Response                 c s f |
             |                                          |
             | This is an AI response that also wraps   |
             | across multiple lines as needed.         |
@@ -77,6 +77,10 @@ Context: Conversation tabs
             Each message also has icons, marked here as "c" and "s" that implement "copy" and "save-as".
             These capture the entire contents of the message in Markdown format and either copy them to
             the clipboard, or invoke a save-as dialog to allow the message to be saved as a file.
+
+            AI response messages also have an icon shown here as "f" that allows the conversation to be
+            forked immediately after this message.  The newly forked conversation will be identical to
+            the original but will not have any of the subsequent messages in it.
 
             Context: Code blocks
                 Embedded within the messages can be code blocks.  These have a distinct visual

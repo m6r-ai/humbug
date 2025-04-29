@@ -919,6 +919,7 @@ class ColumnManager(QWidget):
             self
         )
         conversation_tab.forkRequested.connect(self._fork_conversation)
+        conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
         # Set model based on mindspace settings
         settings = cast(MindspaceSettings, self._mindspace_manager.settings())
@@ -954,6 +955,7 @@ class ColumnManager(QWidget):
                 self
             )
             conversation_tab.forkRequested.connect(self._fork_conversation)
+            conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             self.add_tab(conversation_tab, f"Conv: {conversation_id}")
             return conversation_tab
 
@@ -978,6 +980,8 @@ class ColumnManager(QWidget):
         try:
             # Fork the conversation
             new_tab = await conversation_tab.fork_conversation()
+            new_tab.forkRequested.connect(self._fork_conversation)
+            new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
             # Add new tab to manager
             self.add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
@@ -988,6 +992,7 @@ class ColumnManager(QWidget):
 
     def _fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
+        print("fork")
         async def fork_and_handle_errors() -> None:
             try:
                 await self.fork_conversation()
@@ -1003,6 +1008,44 @@ class ColumnManager(QWidget):
 
         # Create task to fork conversation
         asyncio.create_task(fork_and_handle_errors())
+
+    async def fork_conversation_from_index(self, message_index: int) -> None:
+        """Fork an existing conversation with partial history into a new tab."""
+        print(f"Forking conversation from index {message_index}")
+        conversation_tab = self._get_current_tab()
+        if not isinstance(conversation_tab, ConversationTab):
+            return
+
+        try:
+            # Fork the conversation
+            new_tab = await conversation_tab.fork_conversation_from_index(message_index)
+            new_tab.forkRequested.connect(self._fork_conversation)
+            new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
+
+            # Add new tab to manager
+            self.add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
+
+        except ConversationError as e:
+            self._logger.exception("Failed to fork conversation: %s", str(e))
+            raise
+
+    def _fork_conversation_from_index(self, message_index: int) -> None:
+        """Create a new conversation tab with the history from an index in the current conversation."""
+        async def fork_from_index_and_handle_errors() -> None:
+            try:
+                await self.fork_conversation_from_index(message_index)
+
+            except ConversationError as e:
+                strings = self._language_manager.strings()
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.conversation_error_title,
+                    strings.error_forking_conversation.format(str(e))
+                )
+
+        # Create task to fork conversation
+        asyncio.create_task(fork_from_index_and_handle_errors())
 
     def new_terminal(self, command: str | None = None) -> TerminalTab:
         """Create new terminal tab.
@@ -1117,6 +1160,7 @@ class ColumnManager(QWidget):
         if state.type == TabType.CONVERSATION:
             conversation_tab = ConversationTab.restore_from_state(state, self)
             conversation_tab.forkRequested.connect(self._fork_conversation)
+            conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             return conversation_tab
 
         if state.type == TabType.EDITOR:

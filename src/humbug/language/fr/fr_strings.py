@@ -220,5 +220,6 @@ def get_french_strings() -> LanguageStrings:
         tooltip_copy_contents="Copier tout le contenu",
         tooltip_save_contents="Enregistrer le contenu dans un fichier",
         tooltip_copy_message="Copier le message dans le presse-papiers",
-        tooltip_save_message="Enregistrer le message au format markdown"
+        tooltip_save_message="Enregistrer le message au format markdown",
+        tooltip_fork_message="Créer une nouvelle conversation après ce message"
     )

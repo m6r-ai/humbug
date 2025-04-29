@@ -24,6 +24,7 @@ class ConversationMessage(QFrame):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
+    forkRequested = Signal()
 
     def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
         """
@@ -68,6 +69,8 @@ class ConversationMessage(QFrame):
 
         self._copy_message_button = None
         self._save_message_button = None
+        self._fork_message_button = None
+
         if not is_input:
             self._copy_message_button = QToolButton(self)
             self._copy_message_button.clicked.connect(self._copy_message)
@@ -136,16 +139,18 @@ class ConversationMessage(QFrame):
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
+        strings = self._language_manager.strings()
         if not self._is_input:
-            # Don't update input widget headers
             self._update_role_text()
 
-            strings = self._language_manager.strings()
             if self._copy_message_button:
                 self._copy_message_button.setToolTip(strings.tooltip_copy_message)
 
             if self._save_message_button:
                 self._save_message_button.setToolTip(strings.tooltip_save_message)
+
+            if self._fork_message_button:
+                self._fork_message_button.setToolTip(strings.tooltip_fork_message)
 
     def _update_role_text(self) -> None:
         """Update the role text based on current language."""
@@ -227,6 +232,13 @@ class ConversationMessage(QFrame):
 
         # Check if style changed - if so, we need to recreate all sections
         if style != self._current_style:
+            if style == AIMessageSource.AI:
+                strings = self._language_manager.strings()
+                self._fork_message_button = QToolButton(self)
+                self._fork_message_button.clicked.connect(self._fork_message)
+                self._fork_message_button.setToolTip(strings.tooltip_fork_message)
+                self._header_layout.addWidget(self._fork_message_button)
+
             # Update header text with proper role
             self._update_role_text()
             self._current_style = style
@@ -324,6 +336,11 @@ class ConversationMessage(QFrame):
                 strings.could_not_save.format(filename, str(e))
             )
             return False
+
+    def _fork_message(self) -> None:
+        """Fork the conversation at this message."""
+        # Emit signal that will be caught by ConversationWidget
+        self.forkRequested.emit()
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -425,6 +442,13 @@ class ConversationMessage(QFrame):
             )))
             self._save_message_button.setIconSize(icon_size)
             self._save_message_button.setStyleSheet(button_style)
+
+        if self._fork_message_button:
+            self._fork_message_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("fork"), icon_base_size
+            )))
+            self._fork_message_button.setIconSize(icon_size)
+            self._fork_message_button.setStyleSheet(button_style)
 
         # Header widget styling
         self._header.setStyleSheet(f"""
