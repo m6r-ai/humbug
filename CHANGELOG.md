@@ -6,6 +6,10 @@ New features:
 
 - The system shell syntax highlighting now recognizes the difference between option values and positional
   arguments, using different colours for each.
+- When forking conversations, the new conversation now appears in an adjacent column so the old and new
+  conversations appear side-by-side.
+- Add a button to the AI response messages allowing a conversation to be forked immediately after that
+  message.
 
 Bug fixes:
 
