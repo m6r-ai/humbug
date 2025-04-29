@@ -1192,7 +1192,7 @@ class MainWindow(QMainWindow):
 
     def _process_conversation_command(self, model: str | None, temperature: float | None) -> bool:
         """Process the conversation command."""
-        self._column_manager.protect_system_tab(True)
+        self._column_manager.protect_current_tab(True)
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             self._column_manager.new_conversation(
@@ -1206,15 +1206,14 @@ class MainWindow(QMainWindow):
             return False
 
         finally:
-            self._column_manager.protect_system_tab(False)
-
+            self._column_manager.protect_current_tab(False)
         return True
 
     def _process_edit_command(self, file_path: str) -> bool:
         """Process the edit command."""
-        self._column_manager.protect_system_tab(True)
+        self._column_manager.protect_current_tab(True)
         self._column_manager.open_file(file_path)
-        self._column_manager.protect_system_tab(False)
+        self._column_manager.protect_current_tab(False)
         return True
 
     def _process_m6rc_command(self, file_path: str, args: List[str], model: str | None, temperature: float | None) -> bool:
@@ -1243,7 +1242,7 @@ class MainWindow(QMainWindow):
             )
             return False
 
-        self._column_manager.protect_system_tab(True)
+        self._column_manager.protect_current_tab(True)
         conversation_id: str | None = None
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
@@ -1257,7 +1256,7 @@ class MainWindow(QMainWindow):
             )
             return False
 
-        self._column_manager.protect_system_tab(False)
+        self._column_manager.protect_current_tab(False)
         if conversation_id is None:
             return False
 
@@ -1271,7 +1270,7 @@ class MainWindow(QMainWindow):
 
     def _process_terminal_command(self) -> bool:
         """Process the terminal command."""
-        self._column_manager.protect_system_tab(True)
+        self._column_manager.protect_current_tab(True)
         self._column_manager.new_terminal()
-        self._column_manager.protect_system_tab(False)
+        self._column_manager.protect_current_tab(False)
         return True

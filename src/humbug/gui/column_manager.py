@@ -103,8 +103,8 @@ class ColumnManager(QWidget):
         self._tabs: Dict[str, TabBase] = {}
         self._tab_labels: Dict[str, TabLabel] = {}
 
-        # Are we protecting the system tab against being ovewrwritten?
-        self._protect_system_tab = False
+        # Are we protecting the current tab against being ovewrwritten?
+        self._protect_current_tab = False
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -113,9 +113,9 @@ class ColumnManager(QWidget):
 
         self._handle_style_changed()
 
-    def protect_system_tab(self, protect: bool) -> None:
-        """Set whether to protect the system tab from being overwritten."""
-        self._protect_system_tab = protect
+    def protect_current_tab(self, protect: bool) -> None:
+        """Set whether to protect the current tab from being overwritten."""
+        self._protect_current_tab = protect
 
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
@@ -497,18 +497,13 @@ class ColumnManager(QWidget):
         """
         Determine which column should receive a new tab.
 
-        If the current active tab is a system tab, try to use an adjacent column.
-        Otherwise, use the currently active column.
+        If the current active tab is protected, use an adjacent column.
 
         Returns:
             The column widget where the new tab should be added
         """
-        # If the system tab in not protected, we can use the normal behavior
-        if not self._protect_system_tab:
-            return self._active_column
-
-        # If not a system tab, use normal behavior
-        if not self._is_system_tab_active():
+        # If the current tab in not protected, we can use the normal behavior
+        if not self._protect_current_tab:
             return self._active_column
 
         # Get the current column index
@@ -979,6 +974,7 @@ class ColumnManager(QWidget):
 
         try:
             # Fork the conversation
+            print(f"protection: {self._protect_current_tab}")
             new_tab = await conversation_tab.fork_conversation()
             new_tab.forkRequested.connect(self._fork_conversation)
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
@@ -992,10 +988,11 @@ class ColumnManager(QWidget):
 
     def _fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
-        print("fork")
         async def fork_and_handle_errors() -> None:
             try:
+                self.protect_current_tab(True)
                 await self.fork_conversation()
+                self.protect_current_tab(False)
 
             except ConversationError as e:
                 strings = self._language_manager.strings()
@@ -1011,7 +1008,6 @@ class ColumnManager(QWidget):
 
     async def fork_conversation_from_index(self, message_index: int) -> None:
         """Fork an existing conversation with partial history into a new tab."""
-        print(f"Forking conversation from index {message_index}")
         conversation_tab = self._get_current_tab()
         if not isinstance(conversation_tab, ConversationTab):
             return
@@ -1033,7 +1029,9 @@ class ColumnManager(QWidget):
         """Create a new conversation tab with the history from an index in the current conversation."""
         async def fork_from_index_and_handle_errors() -> None:
             try:
+                self.protect_current_tab(True)
                 await self.fork_conversation_from_index(message_index)
+                self.protect_current_tab(False)
 
             except ConversationError as e:
                 strings = self._language_manager.strings()
