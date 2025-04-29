@@ -58,7 +58,6 @@ class CommandParser(Parser):
             if token.type == TokenType.OPTION:
                 # Ask the command how many values this option takes
                 value_count = command.get_option_value_count(token.value)
-                print(f"Option: {token.value}, Value count: {value_count}")
 
                 # Process option values
                 values_processed = 0
