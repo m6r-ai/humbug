@@ -708,6 +708,14 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            write_icon(f'delete-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="24" stroke="{color}" stroke-width="6" fill="none"/>
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M8,8 L56,56 M8,56 L56,8"/>
+                </svg>
+            ''')
+
         # Create the standard application icon for about dialog
         write_icon('app-icon.svg', self._create_app_icon_svg('#4040c0', '#ffffff'))
 

@@ -212,3 +212,59 @@ class ConversationTranscriptHandler:
                 f"Failed to write transcript: {str(e)}",
                 details={"backup_created": os.path.exists(f"{self._filename}.backup")}
             ) from e
+
+    async def replace_messages(self, messages: List[Dict]) -> None:
+        """
+        Replace all messages in the transcript file with the provided list.
+
+        Unlike write(), which appends messages, this method completely replaces
+        the conversation array while preserving metadata.
+
+        Args:
+            messages: List of message dictionaries to replace existing messages
+
+        Raises:
+            ConversationTranscriptFormatError: If transcript format is invalid
+            ConversationTranscriptIOError: If file operations fail
+        """
+        try:
+            # Read current content to preserve metadata
+            with open(self._filename, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # Validate the basic structure
+            if "metadata" not in data or "conversation" not in data:
+                raise ConversationTranscriptFormatError("Missing required fields in transcript")
+
+            # Replace the entire conversation array
+            data["conversation"] = messages
+
+            # Write to temp file then rename for atomic operation
+            temp_file = f"{self._filename}.tmp"
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, cls=FloatOneDecimalEncoder)
+
+            # Atomic replace
+            os.replace(temp_file, self._filename)
+
+        except json.JSONDecodeError as e:
+            raise ConversationTranscriptFormatError(f"Invalid JSON in transcript: {str(e)}") from e
+
+        except Exception as e:
+            # Create backup of current file if possible
+            try:
+                if os.path.exists(self._filename):
+                    backup = f"{self._filename}.backup"
+                    os.replace(self._filename, backup)
+                    self._logger.info("Created transcript backup: %s", backup)
+
+            except Exception as backup_error:
+                self._logger.error(
+                    "Failed to create backup file: %s",
+                    str(backup_error)
+                )
+
+            raise ConversationTranscriptIOError(
+                f"Failed to replace messages in transcript: {str(e)}",
+                details={"backup_created": os.path.exists(f"{self._filename}.backup")}
+            ) from e

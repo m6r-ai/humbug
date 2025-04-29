@@ -12,7 +12,7 @@ from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
-from humbug.gui.message_box import MessageBox, MessageBoxType
+from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_converter import MarkdownConverter, MarkdownDocumentNode, MarkdownTextNode
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -25,6 +25,7 @@ class ConversationMessage(QFrame):
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
     forkRequested = Signal()
+    deleteRequested = Signal()
 
     def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
         """
@@ -70,6 +71,7 @@ class ConversationMessage(QFrame):
         self._copy_message_button = None
         self._save_message_button = None
         self._fork_message_button = None
+        self._delete_message_button = None
 
         if not is_input:
             self._copy_message_button = QToolButton(self)
@@ -139,18 +141,23 @@ class ConversationMessage(QFrame):
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
+        if self._is_input:
+            return
+
+        self._update_role_text()
+
         strings = self._language_manager.strings()
-        if not self._is_input:
-            self._update_role_text()
+        if self._copy_message_button:
+            self._copy_message_button.setToolTip(strings.tooltip_copy_message)
 
-            if self._copy_message_button:
-                self._copy_message_button.setToolTip(strings.tooltip_copy_message)
+        if self._save_message_button:
+            self._save_message_button.setToolTip(strings.tooltip_save_message)
 
-            if self._save_message_button:
-                self._save_message_button.setToolTip(strings.tooltip_save_message)
+        if self._fork_message_button:
+            self._fork_message_button.setToolTip(strings.tooltip_fork_message)
 
-            if self._fork_message_button:
-                self._fork_message_button.setToolTip(strings.tooltip_fork_message)
+        if self._delete_message_button:
+            self._delete_message_button.setToolTip(strings.tooltip_delete_from_here)
 
     def _update_role_text(self) -> None:
         """Update the role text based on current language."""
@@ -238,6 +245,14 @@ class ConversationMessage(QFrame):
                 self._fork_message_button.clicked.connect(self._fork_message)
                 self._fork_message_button.setToolTip(strings.tooltip_fork_message)
                 self._header_layout.addWidget(self._fork_message_button)
+
+            # Add delete button only for user messages
+            elif style == AIMessageSource.USER and not self._is_input:
+                strings = self._language_manager.strings()
+                self._delete_message_button = QToolButton(self)
+                self._delete_message_button.clicked.connect(self._delete_message)
+                self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
+                self._header_layout.addWidget(self._delete_message_button)
 
             # Update header text with proper role
             self._update_role_text()
@@ -339,8 +354,25 @@ class ConversationMessage(QFrame):
 
     def _fork_message(self) -> None:
         """Fork the conversation at this message."""
-        # Emit signal that will be caught by ConversationWidget
         self.forkRequested.emit()
+
+    def _delete_message(self) -> None:
+        """Delete the conversation from this message."""
+        strings = self._language_manager.strings()
+
+        # Show confirmation dialog using the application's MessageBox class
+        result = MessageBox.show_message(
+            self,  # parent widget
+            MessageBoxType.QUESTION,
+            strings.delete_from_here_title,
+            strings.delete_from_here_message,
+            [MessageBoxButton.YES, MessageBoxButton.NO]
+        )
+
+        if result != MessageBoxButton.YES:
+            return
+
+        self.deleteRequested.emit()
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -449,6 +481,13 @@ class ConversationMessage(QFrame):
             )))
             self._fork_message_button.setIconSize(icon_size)
             self._fork_message_button.setStyleSheet(button_style)
+
+        if self._delete_message_button:
+            self._delete_message_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("delete"), icon_base_size
+            )))
+            self._delete_message_button.setIconSize(icon_size)
+            self._delete_message_button.setStyleSheet(button_style)
 
         # Header widget styling
         self._header.setStyleSheet(f"""

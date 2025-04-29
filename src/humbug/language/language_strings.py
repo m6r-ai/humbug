@@ -214,3 +214,7 @@ class LanguageStrings:
     tooltip_copy_message: str
     tooltip_save_message: str
     tooltip_fork_message: str
+    tooltip_delete_from_message: str
+
+    delete_from_here_title: str
+    delete_from_here_message: str

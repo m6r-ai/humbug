@@ -19,6 +19,7 @@ from humbug.ai.ai_conversation_settings import AIConversationSettings, Reasoning
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.gui.color_role import ColorRole
+from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_input import ConversationInput
 from humbug.gui.tab.conversation.conversation_message import ConversationMessage
@@ -185,7 +186,7 @@ class ConversationWidget(QWidget):
         self._input.pageScrollRequested.connect(self._handle_edit_page_scroll)
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
-        self._input.forkRequested.connect(self._fork_at_message)
+        self._input.forkRequested.connect(self._fork_from_message)
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
@@ -258,7 +259,8 @@ class ConversationWidget(QWidget):
         # Add bookmark-specific signal
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
-        msg_widget.forkRequested.connect(self._fork_at_message)
+        msg_widget.forkRequested.connect(self._fork_from_message)
+        msg_widget.deleteRequested.connect(self._delete_from_message)
         msg_widget.set_content(message.content, message.source, message.timestamp, message.model or "")
 
         # Add widget before input
@@ -448,6 +450,7 @@ class ConversationWidget(QWidget):
         """
         try:
             await self._transcript_handler.write([message.to_transcript_dict()])
+
         except ConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
 
@@ -988,9 +991,9 @@ class ConversationWidget(QWidget):
         # Show menu at click position
         menu.exec_(self.mapToGlobal(pos))
 
-    def _fork_at_message(self) -> None:
+    def _fork_from_message(self) -> None:
         """
-        Fork the conversation at the specified message.
+        Fork the conversation from the specified message.
         
         Args:
             message: The message where the fork should occur
@@ -1007,6 +1010,82 @@ class ConversationWidget(QWidget):
 
         # Emit signal with the message index
         self.forkFromIndexRequested.emit(message_index)
+
+    def _delete_from_message(self) -> None:
+        """Handle request to delete conversation from a message onwards."""
+        # Identify which message widget triggered the request
+        sender = self.sender()
+        if not isinstance(sender, ConversationMessage):
+            return
+
+        # Find the index of the message in our list
+        if sender in self._messages:
+            index = self._messages.index(sender)
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self.delete_messages_from_index(index))
+
+    async def delete_messages_from_index(self, index: int) -> None:
+        """
+        Delete the message at the specified index and all subsequent messages.
+
+        Args:
+            index: Index of the first message to delete
+        """
+        if index < 0 or index >= len(self._messages):
+            return
+
+        # Store all messages up to but not including the specified index
+        preserved_messages = self._messages[:index]
+
+        # Remove message widgets from the layout and delete them
+        for i in range(len(self._messages) - 1, index - 1, -1):
+            message_widget = self._messages[i]
+            self._messages_layout.removeWidget(message_widget)
+            message_widget.deleteLater()
+
+        # Update the _messages list to only include preserved messages
+        self._messages = preserved_messages
+
+        # Update the underlying AI conversation history
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        history = ai_conversation.get_conversation_history()
+
+        # Get all messages from history
+        all_messages = history.get_messages()
+
+        # Keep only the messages up to the specified index
+        preserved_history_messages = all_messages[:index]
+
+        # Update the AI conversation history
+        ai_conversation.load_message_history(preserved_history_messages)
+
+        # Update the transcript file by rewriting it with only the preserved messages
+        transcript_messages = [msg.to_transcript_dict() for msg in preserved_history_messages]
+
+        try:
+            await self._transcript_handler.replace_messages(transcript_messages)
+
+            # Reset bookmarks and selection state
+            self._bookmarked_messages = {}
+            self._current_bookmark_index = None
+            self._message_with_selection = None
+
+            # Emit status update
+            self.status_updated.emit()
+
+            # Scroll to bottom
+            self._auto_scroll = True
+            self._scroll_to_bottom()
+
+        except Exception as e:
+            self._logger.error("Failed to update transcript after deletion: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                self._language_manager.strings().error_title_rename,
+                f"Failed to update transcript after deletion: {str(e)}"
+            )
 
     def can_toggle_bookmark(self) -> bool:
         """Can we toggle bookmarks?"""

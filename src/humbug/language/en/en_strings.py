@@ -221,5 +221,11 @@ def get_english_strings() -> LanguageStrings:
         tooltip_save_contents="Save contents to a file",
         tooltip_copy_message="Copy message to clipboard",
         tooltip_save_message="Save message as markdown",
-        tooltip_fork_message="Fork conversation after this message"
+        tooltip_fork_message="Fork conversation after this message",
+        tooltip_delete_from_message="Delete conversation from this point",
+
+        delete_from_here_title="Delete Messages",
+        delete_from_here_message=(
+            "Are you sure you want to delete this message and all subsequent messages? This action cannot be undone."
+        )
     )

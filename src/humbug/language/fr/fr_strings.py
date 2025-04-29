@@ -221,5 +221,11 @@ def get_french_strings() -> LanguageStrings:
         tooltip_save_contents="Enregistrer le contenu dans un fichier",
         tooltip_copy_message="Copier le message dans le presse-papiers",
         tooltip_save_message="Enregistrer le message au format markdown",
-        tooltip_fork_message="Créer une nouvelle conversation après ce message"
+        tooltip_fork_message="Créer une nouvelle conversation après ce message",
+        tooltip_delete_from_message="Supprimer la conversation à partir d'ici",
+
+        delete_from_here_title="Supprimer les messages",
+        delete_from_here_message=(
+            "Êtes-vous sûr de vouloir supprimer ce message et tous les messages suivants ? Cette action ne peut pas être annulée."
+        )
     )
