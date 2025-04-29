@@ -1046,7 +1046,9 @@ class MainWindow(QMainWindow):
     async def _fork_conversation_async(self) -> None:
         """Async helper for forking."""
         try:
+            self._column_manager.protect_current_tab(True)
             await self._column_manager.fork_conversation()
+            self._column_manager.protect_current_tab(False)
 
         except ConversationError as e:
             strings = self._language_manager.strings()
