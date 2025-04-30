@@ -40,6 +40,7 @@ class SystemTextEdit(QTextEdit):
         self.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere if is_input else QTextOption.WrapMode.NoWrap)
 
         self._style_manager = StyleManager()
+        self._init_colour_mode = self._style_manager.color_mode()
 
         # Calculate tab stops
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -72,6 +73,13 @@ class SystemTextEdit(QTextEdit):
         self.setFont(font)
 
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
+
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode() != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode()
+            if self._highlighter:
+                self._highlighter.rehighlight()
+
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
