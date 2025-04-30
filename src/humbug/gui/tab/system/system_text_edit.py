@@ -80,7 +80,6 @@ class SystemTextEdit(QTextEdit):
             if self._highlighter:
                 self._highlighter.rehighlight()
 
-
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
         super().mousePressEvent(event)
