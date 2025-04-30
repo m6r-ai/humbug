@@ -68,10 +68,10 @@ class ConversationMessage(QFrame):
         self._header_layout.addWidget(self._role_label)
         self._header_layout.addStretch()
 
-        self._copy_message_button = None
-        self._save_message_button = None
-        self._fork_message_button = None
-        self._delete_message_button = None
+        self._copy_message_button: QToolButton | None = None
+        self._save_message_button: QToolButton | None = None
+        self._fork_message_button: QToolButton | None = None
+        self._delete_message_button: QToolButton | None = None
 
         if not is_input:
             self._copy_message_button = QToolButton(self)
@@ -157,7 +157,7 @@ class ConversationMessage(QFrame):
             self._fork_message_button.setToolTip(strings.tooltip_fork_message)
 
         if self._delete_message_button:
-            self._delete_message_button.setToolTip(strings.tooltip_delete_from_here)
+            self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
 
     def _update_role_text(self) -> None:
         """Update the role text based on current language."""

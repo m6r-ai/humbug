@@ -999,8 +999,10 @@ class ConversationWidget(QWidget):
             message: The message where the fork should occur
         """
         # Find the index of the message in our list
-        print("fork at message")
         message = self.sender()
+        if not isinstance(message, ConversationMessage):
+            return
+
         if message not in self._messages:
             # For the input widget, fork at current position
             self.forkRequested.emit()
