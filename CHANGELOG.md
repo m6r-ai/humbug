@@ -14,6 +14,7 @@ New features:
 Bug fixes:
 
 - The system shell now keeps messages adjacent to the command prompt (like conversations do).
+- When changing between light and dark mode, the system shell now changes text colours correctly.
 
 ## v0.10 (2025-04-23)
 
