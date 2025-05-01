@@ -164,7 +164,7 @@ class ConversationCommand(SystemCommand):
             return self._get_option_completions(current_token.value)
 
         # Check if we're completing a model name for -m/--model option
-        if current_token.type == TokenType.ARGUMENT and cursor_token_index > 0:
+        if current_token.type in (TokenType.ARGUMENT, TokenType.OPTION_VALUE) and cursor_token_index > 0:
             prev_token = tokens[cursor_token_index - 1]
             if prev_token.type == TokenType.OPTION:
                 option_name = prev_token.value
