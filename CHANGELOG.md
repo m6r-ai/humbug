@@ -13,6 +13,9 @@ New features:
 - Added a button to the user messages allowing all messages from that message onwards to be deleted
   from the conversation history.
 - The preferred action button in all dialog boxes is now blue, matching conventions elsewhere.
+- The `m6rc` system shell command now takes a `-j` or `--submit` flag.  Without either of these,
+  Metaphor prompts are compiled, but not submitted, matching the behaviour of "New Metaphor Conversation".
+  Pass `-j` or `--submit` to have the compiled prompt be automatically submitted.
 
 Bug fixes:
 

@@ -1218,7 +1218,14 @@ class MainWindow(QMainWindow):
         self._column_manager.protect_current_tab(False)
         return True
 
-    def _process_m6rc_command(self, file_path: str, args: List[str], model: str | None, temperature: float | None) -> bool:
+    def _process_m6rc_command(
+        self,
+        file_path: str,
+        args: List[str],
+        model: str | None,
+        temperature: float | None,
+        should_submit: bool
+    ) -> bool:
         """Process the m6rc command."""
         search_path = self._mindspace_manager.mindspace_path()
 
@@ -1267,7 +1274,10 @@ class MainWindow(QMainWindow):
             return False
 
         conversation_tab.set_input_text(prompt)
-        conversation_tab.submit()
+
+        if should_submit:
+            conversation_tab.submit()
+
         return True
 
     def _process_terminal_command(self) -> bool:

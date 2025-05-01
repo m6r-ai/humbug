@@ -14,7 +14,10 @@ from humbug.user.user_manager import UserManager
 class M6rcCommand(SystemCommand):
     """Command to create a new conversation with a Metaphor file."""
 
-    def __init__(self, create_m6rc_conversation_callback: Callable[[str, List[str], str | None, float | None], bool]) -> None:
+    def __init__(
+        self,
+        create_m6rc_conversation_callback: Callable[[str, List[str], str | None, float | None, bool], bool]
+    ) -> None:
         """
         Initialize the command.
 
@@ -37,6 +40,7 @@ class M6rcCommand(SystemCommand):
         options = super().get_options_help()
         options["-m, --model"] = "AI model to use"
         options["-t, --temperature"] = "Temperature for the model (0.0 to 1.0)"
+        options["-j, --submit"] = "Automatically submit the metaphor prompt"
         return options
 
     def get_option_value_count(self, option_name: str) -> int:
@@ -52,6 +56,9 @@ class M6rcCommand(SystemCommand):
 
         if option_name in ("-t", "--temperature"):
             return 1  # Takes exactly one value
+
+        if option_name in ("-j", "--submit"):
+            return 0  # Flag with no values
 
         # Default for unknown options
         return 0
@@ -104,6 +111,9 @@ class M6rcCommand(SystemCommand):
                 )
                 return False
 
+        # Check if should auto-submit
+        should_submit = "--submit" in options or "-j" in options
+
         try:
             # Check if the path exists.  Convert to absolute path if it's relative
             file_path = args[0]
@@ -117,7 +127,7 @@ class M6rcCommand(SystemCommand):
                 )
                 return False
 
-            if not self._create_m6rc_conversation(file_path, args, model, temperature_val):
+            if not self._create_m6rc_conversation(file_path, args, model, temperature_val, should_submit):
                 return False
 
             self._mindspace_manager.add_system_interaction(
