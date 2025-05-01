@@ -98,7 +98,7 @@ class AboutDialog(QDialog):
                 text-decoration: underline;
             }}
             QPushButton {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
@@ -106,13 +106,9 @@ class AboutDialog(QDialog):
                 min-width: 80px;
             }}
             QPushButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
             }}
             QPushButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-            QPushButton:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
             }}
         """)

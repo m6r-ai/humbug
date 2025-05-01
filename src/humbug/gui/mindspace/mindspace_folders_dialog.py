@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QPushButton, QWidget, QSizePolicy
 )
 
-from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
@@ -114,24 +113,25 @@ class MindspaceFoldersDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)
 
-        self.ok_button = QPushButton(strings.ok)
-        self.cancel_button = QPushButton(strings.cancel)
+        self._ok_button = QPushButton(strings.ok)
+        self._ok_button.clicked.connect(self.accept)
+        self._ok_button.setProperty("recommended", True)
 
-        self.ok_button.clicked.connect(self.accept)
-        self.cancel_button.clicked.connect(self.reject)
+        self._cancel_button = QPushButton(strings.cancel)
+        self._cancel_button.clicked.connect(self.reject)
 
         # Set minimum button sizes
         min_button_width = 90
         min_button_height = 40
-        for button in [self.ok_button, self.cancel_button]:
+        for button in [self._ok_button, self._cancel_button]:
             button.setMinimumWidth(min_button_width)
             button.setMinimumHeight(min_button_height)
             button.setContentsMargins(8, 8, 8, 8)
 
         # Center the buttons
         button_layout.addStretch()
-        button_layout.addWidget(self.ok_button)
-        button_layout.addWidget(self.cancel_button)
+        button_layout.addWidget(self._ok_button)
+        button_layout.addWidget(self._cancel_button)
         button_layout.addStretch()
 
         layout.addLayout(button_layout)
@@ -180,8 +180,8 @@ class MindspaceFoldersDialog(QDialog):
 
             label_widget.setText(label)
 
-        self.ok_button.setText(strings.ok)
-        self.cancel_button.setText(strings.cancel)
+        self._ok_button.setText(strings.ok)
+        self._cancel_button.setText(strings.cancel)
 
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
@@ -194,57 +194,4 @@ class MindspaceFoldersDialog(QDialog):
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
 
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-            }}
-            QLabel {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-            }}
-            QWidget#path_widget, QWidget#path_widget > QWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-            }}
-            QCheckBox {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                spacing: 8px;
-            }}
-            QCheckBox::indicator {{
-                width: 18px;
-                height: 18px;
-                border: none;
-                border-radius: 4px;
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-            }}
-            QCheckBox::indicator:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-            }}
-            QCheckBox::indicator:checked {{
-                image: url({style_manager.get_icon_path('check')});
-            }}
-            QCheckBox:disabled {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-            QPushButton {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-            }}
-            QPushButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            QPushButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-            QPushButton:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-        """)
+        self.setStyleSheet(self._style_manager.get_dialog_stylesheet())

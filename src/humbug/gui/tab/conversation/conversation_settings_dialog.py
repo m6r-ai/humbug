@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
-from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 from humbug.user.user_manager import UserManager
@@ -122,11 +121,13 @@ class ConversationSettingsDialog(QDialog):
         button_layout.setSpacing(8)
 
         self.ok_button = QPushButton(strings.ok)
-        self.cancel_button = QPushButton(strings.cancel)
-        self.apply_button = QPushButton(strings.apply)
-
         self.ok_button.clicked.connect(self._handle_ok)
+        self.ok_button.setProperty("recommended", True)
+
+        self.cancel_button = QPushButton(strings.cancel)
         self.cancel_button.clicked.connect(self.reject)
+
+        self.apply_button = QPushButton(strings.apply)
         self.apply_button.clicked.connect(self._handle_apply)
 
         # Set minimum button widths and heights
@@ -141,118 +142,8 @@ class ConversationSettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-        zoom_factor = style_manager.zoom_factor()
-        base_font_size = style_manager.base_font_size()
-
         # Apply consistent dialog styling
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QLabel {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                border: none;
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QComboBox {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QComboBox:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                width: 20px;
-            }}
-            QComboBox::down-arrow {{
-                image: url({style_manager.get_icon_path("arrow-down")});
-                width: 12px;
-                height: 12px;
-            }}
-            QComboBox::down-arrow:on {{
-                image: url({style_manager.get_icon_path('arrow-up')});
-                width: 12px;
-                height: 12px;
-            }}
-            QComboBox::down-arrow:disabled {{
-                image: none;
-            }}
-            QComboBox QAbstractItemView::item:selected {{
-                border: none;
-                background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-            }}
-            QComboBox QListView {{
-                border: none;
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-            }}
-            QDoubleSpinBox {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QDoubleSpinBox:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
-                border: none;
-                width: 20px;
-            }}
-            QDoubleSpinBox::up-arrow {{
-                image: url({style_manager.get_icon_path('arrow-up')});
-                width: 12px;
-                height: 12px;
-            }}
-            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
-                image: none;
-            }}
-            QDoubleSpinBox::down-arrow {{
-                image: url({style_manager.get_icon_path('arrow-down')});
-                width: 12px;
-                height: 12px;
-            }}
-            QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
-                image: none;
-            }}
-            QLabel[valueDisplay="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-            }}
-            QPushButton {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QPushButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            QPushButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-            QPushButton:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-        """)
+        self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
     def _update_reasoning_combo(self, model: str) -> None:
         """Update the reasoning combo box based on the current model's capabilities.

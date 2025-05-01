@@ -925,3 +925,175 @@ class StyleManager(QObject):
     def message_bubble_spacing(self) -> float:
         """Get the number of pixels to use in message bubble spacing."""
         return 8.0
+
+    def get_dialog_stylesheet(self) -> str:
+        """
+        Get a complete stylesheet for dialog windows.
+
+        Returns:
+            A stylesheet string with styling for all common dialog components
+        """
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
+
+        return f"""
+            QDialog {{
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+
+            /* Labels */
+            QLabel {{
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                border: none;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+
+            /* Text inputs */
+            QLineEdit {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QLineEdit:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+
+            /* Checkboxes */
+            QCheckBox {{
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                spacing: 8px;
+            }}
+            QCheckBox::indicator {{
+                width: 18px;
+                height: 18px;
+                border: none;
+                border-radius: 4px;
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+            }}
+            QCheckBox::indicator:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+            }}
+            QCheckBox::indicator:checked {{
+                image: url({self.get_icon_path('check')});
+            }}
+            QCheckBox:disabled {{
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+
+            /* Combo boxes */
+            QComboBox {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QComboBox:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: url({self.get_icon_path("arrow-down")});
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox::down-arrow:on {{
+                image: url({self.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox::down-arrow:disabled {{
+                image: none;
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                border: none;
+                background-color: {self.get_color_str(ColorRole.TEXT_SELECTED)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QComboBox QListView {{
+                border: none;
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+
+            /* Spin boxes */
+            QSpinBox, QDoubleSpinBox {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QSpinBox:disabled, QDoubleSpinBox:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QSpinBox::up-button, QSpinBox::down-button,
+            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
+                border: none;
+                width: 20px;
+            }}
+            QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+                image: url({self.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            QSpinBox::up-arrow:disabled, QSpinBox::up-arrow:off,
+            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
+                image: none;
+            }}
+            QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+                image: url({self.get_icon_path('arrow-down')});
+                width: 12px;
+                height: 12px;
+            }}
+            QSpinBox::down-arrow:disabled, QSpinBox::down-arrow:off,
+            QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
+                image: none;
+            }}
+
+            /* Buttons */
+            QPushButton {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QPushButton:hover {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QPushButton:pressed {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+            QPushButton:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+
+            /* Recommended (primary) buttons */
+            QPushButton[recommended="true"] {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+            }}
+            QPushButton[recommended="true"]:hover {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+            }}
+            QPushButton[recommended="true"]:pressed {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+            }}
+        """

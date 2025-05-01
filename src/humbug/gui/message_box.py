@@ -251,45 +251,7 @@ class MessageBox(QDialog):
         """)
 
         # Apply consistent dialog styling
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QLabel {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QPushButton {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QPushButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            QPushButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-            QPushButton:disabled {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-            QPushButton[recommended="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-            }}
-            QPushButton[recommended="true"]:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
-            }}
-            QPushButton[recommended="true"]:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
-            }}
-        """)
+        self.setStyleSheet(self._style_manager.get_dialog_stylesheet())
 
     @classmethod
     def show_message(
