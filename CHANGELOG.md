@@ -17,6 +17,7 @@ Bug fixes:
 
 - The system shell now keeps messages adjacent to the command prompt (like conversations do).
 - When changing between light and dark mode, the system shell now changes text colours correctly.
+- When moving terminal tabs the terminal would become unresponsive due to a mistake introduced in v0.10.
 
 ## v0.10 (2025-04-23)
 
