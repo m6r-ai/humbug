@@ -69,6 +69,7 @@ can be used to refine the Metaphor context.
   message.
 - Added a button to the user messages allowing all messages from that message onwards to be deleted
   from the conversation history.
+- The preferred action button in all dialog boxes is now blue, matching conventions elsewhere.
 
 ## Features
 
