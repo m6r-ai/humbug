@@ -104,6 +104,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#583838",
                 ColorMode.LIGHT: "#f4d8d8"
             },
+            ColorRole.TEXT_RECOMMENDED: {
+                ColorMode.DARK: "#ffffff",
+                ColorMode.LIGHT: "#ffffff"
+            },
 
             # Tab colours
             ColorRole.TAB_BACKGROUND_ACTIVE: {
@@ -132,10 +136,6 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#0c0c0c",
                 ColorMode.LIGHT: "#e8e8e8"
             },
-            ColorRole.BUTTON_BACKGROUND_DISABLED: {
-                ColorMode.DARK: "#2c2c2c",
-                ColorMode.LIGHT: "#d8d8d8"
-            },
             ColorRole.BUTTON_BACKGROUND_PRESSED: {
                 ColorMode.DARK: "#505050",
                 ColorMode.LIGHT: "#b0b0b0"
@@ -143,6 +143,22 @@ class StyleManager(QObject):
             ColorRole.BUTTON_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#404040",
                 ColorMode.LIGHT: "#c0c0c0"
+            },
+            ColorRole.BUTTON_BACKGROUND_RECOMMENDED: {
+                ColorMode.DARK: "#2050c0",
+                ColorMode.LIGHT: "#3060d0"
+            },
+            ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED: {
+                ColorMode.DARK: "#4070e0",
+                ColorMode.LIGHT: "#1040b0"
+            },
+            ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER: {
+                ColorMode.DARK: "#3060d0",
+                ColorMode.LIGHT: "#2050c0"
+            },
+            ColorRole.BUTTON_BACKGROUND_DISABLED: {
+                ColorMode.DARK: "#2c2c2c",
+                ColorMode.LIGHT: "#d8d8d8"
             },
 
             # Menu elements

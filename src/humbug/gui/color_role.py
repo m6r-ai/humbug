@@ -16,6 +16,7 @@ class ColorRole(Enum):
     TEXT_SELECTED = auto()              # Selected text background
     TEXT_FOUND = auto()                 # Found text background
     TEXT_FOUND_DIM = auto()             # Dimmed found text background
+    TEXT_RECOMMENDED = auto()           # Recommended text color
 
     # Tab colours
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background
@@ -26,10 +27,16 @@ class ColorRole(Enum):
 
     # Button colours
     BUTTON_BACKGROUND = auto()          # Push button background
-    BUTTON_BACKGROUND_DISABLED = auto()
-                                        # Disabled push button background
     BUTTON_BACKGROUND_PRESSED = auto()  # Pressed push button background
     BUTTON_BACKGROUND_HOVER = auto()    # Hover state push button background
+    BUTTON_BACKGROUND_RECOMMENDED = auto()
+                                        # Recommended primary action button
+    BUTTON_BACKGROUND_RECOMMENDED_PRESSED = auto()
+                                        # Recommended primary action button pressed
+    BUTTON_BACKGROUND_RECOMMENDED_HOVER = auto()
+                                        # Recommended primary action button hover
+    BUTTON_BACKGROUND_DISABLED = auto()
+                                        # Disabled push button background
 
     # Menu elements
     MENU_BACKGROUND = auto()            # Menu background

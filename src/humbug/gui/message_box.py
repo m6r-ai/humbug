@@ -114,6 +114,17 @@ class MessageBox(QDialog):
         self._button_results = {}
         default_button = None
         escape_button = None
+        recommended_button = None
+
+        # Determine which button should be recommended (primary action)
+        recommended_buttons = [MessageBoxButton.OK, MessageBoxButton.YES, MessageBoxButton.SAVE]
+
+        # If we have multiple options, use the first recommended one that appears
+        if len(buttons) > 1:
+            for button in buttons:
+                if button in recommended_buttons:
+                    recommended_button = button
+                    break
 
         for button in buttons:
             btn = QPushButton(self._get_button_text(button))
@@ -121,6 +132,11 @@ class MessageBox(QDialog):
             btn.setContentsMargins(8, 8, 8, 8)
             self._button_results[btn] = button
             btn.clicked.connect(self._handle_button)
+
+            # Apply recommended styling if this is our primary action button
+            if button == recommended_button:
+                btn.setProperty("recommended", True)
+
             button_layout.addWidget(btn)
 
             # Set default and escape buttons appropriately
@@ -262,6 +278,16 @@ class MessageBox(QDialog):
             QPushButton:disabled {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QPushButton[recommended="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+            }}
+            QPushButton[recommended="true"]:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+            }}
+            QPushButton[recommended="true"]:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
             }}
         """)
 
