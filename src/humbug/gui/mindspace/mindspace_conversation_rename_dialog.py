@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QLineEdit, QDialogButtonBox, QWidget
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 )
 
 from humbug.gui.style_manager import StyleManager
@@ -36,26 +36,31 @@ class MindspaceConversationRenameDialog(QDialog):
         layout.addWidget(name_label)
         layout.addWidget(self._name_input)
 
-        # Add buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        button_box.setCenterButtons(True)
+        # Add spacing before buttons
+        layout.addSpacing(24)
 
-        # We need to know which is the OK button so we can enable/disable it based in input validation
-        self._ok_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
+        # Button row
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(8)
+
+        # Create OK and Cancel buttons
+        self._ok_button = QPushButton(strings.ok)
+        self._ok_button.clicked.connect(self.accept)
         self._ok_button.setProperty("recommended", True)
 
-        # Style buttons
-        for button in button_box.buttons():
-            button.setMinimumSize(90, 40)
+        cancel_button = QPushButton(strings.cancel)
+        cancel_button.clicked.connect(self.reject)
+
+        # Set minimum button sizes
+        min_button_width = 90
+        min_button_height = 40
+        for button in [self._ok_button, cancel_button]:
+            button.setMinimumWidth(min_button_width)
+            button.setMinimumHeight(min_button_height)
             button.setContentsMargins(8, 8, 8, 8)
+            button_layout.addWidget(button)
 
-        layout.addSpacing(24)
-        layout.addWidget(button_box)
-
+        layout.addLayout(button_layout)
         self.setLayout(layout)
         self._apply_styling()
         self._validate_input()
