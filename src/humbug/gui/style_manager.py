@@ -710,9 +710,10 @@ class StyleManager(QObject):
 
             write_icon(f'delete-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="24" stroke="{color}" stroke-width="6" fill="none"/>
                     <path stroke="{color}" stroke-width="6" fill="none"
-                        d="M8,8 L56,56 M8,56 L56,8"/>
+                        d="M12.5,20 L12.5,56 L51.5,56 L51.5,20 M4,20 L60,20 M18,20 L24,8 L40,8 L46,20"/>
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M25.5,28 L25.5,46 M38.5,28 L38.5,46"/>
                 </svg>
             ''')
 
