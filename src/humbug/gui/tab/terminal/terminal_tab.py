@@ -200,6 +200,10 @@ class TerminalTab(TabBase):
                         # Call read_data directly without wait_for since it's already async
                         data = await self._terminal_process.read_data(8192)
 
+                        # Check we didn't stop running
+                        if not self._running:
+                            break
+
                         if data:
                             complete_data = utf8_buffer.add_data(data)
                             if complete_data:
@@ -376,7 +380,7 @@ class TerminalTab(TabBase):
         Args:
             source_tab: Source terminal tab to transfer from
         """
-        if source_tab._terminal_process is not None:
+        if source_tab._terminal_process is None:
             return
 
         # Mark source tab as transferring to prevent completion message
