@@ -27,6 +27,7 @@ class AboutDialog(QDialog):
 
         style_manager = StyleManager()
         base_font_size = style_manager.base_font_size()
+        zoom_factor = style_manager.zoom_factor()
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
@@ -37,7 +38,7 @@ class AboutDialog(QDialog):
         icon_label = QLabel()
         icon_path = os.path.expanduser("~/.humbug/icons/app-icon.svg")
         icon_pixmap = QPixmap(icon_path)
-        scaled_size = int(160 * style_manager.zoom_factor())  # 160px base size
+        scaled_size = int(160 * zoom_factor)  # 160px base size
         icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
@@ -64,11 +65,13 @@ class AboutDialog(QDialog):
         desc_label.setOpenExternalLinks(True)
         layout.addWidget(desc_label)
 
+        min_button_width = int(90 * zoom_factor)
+
         # Close button with proper styling and sizing
         close_button = QPushButton(strings.close_button)
         close_button.clicked.connect(self.accept)
-        close_button.setMinimumWidth(80)
-        close_button.setContentsMargins(6, 6, 6, 6)
+        close_button.setMinimumWidth(min_button_width)
+        close_button.setContentsMargins(8, 8, 8, 8)
         layout.addSpacing(24)  # Add spacing before button
         layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addSpacing(16)  # Space at the bottom

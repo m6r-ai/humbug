@@ -6,6 +6,8 @@ Buf fixes:
 
 - If you deleted a message from a conversation and then forked it, you could end up with a corrupted message
   history in the forked conversation (not in the original).
+- Updated all dialog boxes to have buttons appear in a consistent order, colour the recommended action in
+  blue, and use consistent layout/spacing.
 
 ## v0.11 (2025-05-02)
 

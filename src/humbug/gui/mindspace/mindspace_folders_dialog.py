@@ -111,7 +111,8 @@ class MindspaceFoldersDialog(QDialog):
         self._cancel_button.clicked.connect(self.reject)
 
         # Set minimum button sizes
-        min_button_width = 90
+        zoom_factor = style_manager.zoom_factor()
+        min_button_width = int(90 * zoom_factor)
         min_button_height = 40
         for button in [self._ok_button, self._cancel_button]:
             button.setMinimumWidth(min_button_width)

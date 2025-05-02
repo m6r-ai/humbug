@@ -6,7 +6,7 @@ from typing import List
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QPlainTextEdit, QWidget
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QKeyEvent
 
 from humbug.gui.color_role import ColorRole
@@ -126,9 +126,13 @@ class MessageBox(QDialog):
                 recommended_button = button
                 break
 
+        zoom_factor = self._style_manager.zoom_factor()
+        min_button_width = int(90 * zoom_factor)
+        min_button_height = 40
         for button in buttons:
             btn = QPushButton(self._get_button_text(button))
-            btn.setMinimumSize(QSize(90, 40))
+            btn.setMinimumWidth(min_button_width)
+            btn.setMinimumHeight(min_button_height)
             btn.setContentsMargins(8, 8, 8, 8)
             self._button_results[btn] = button
             btn.clicked.connect(self._handle_button)
