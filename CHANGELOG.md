@@ -2,6 +2,11 @@
 
 ## v0.12 (2025-05-02)
 
+Buf fixes:
+
+- If you deleted a message from a conversation and then forked it, you could end up with a corrupted message
+  history in the forked conversation (not in the original).
+
 ## v0.11 (2025-05-02)
 
 New features:
