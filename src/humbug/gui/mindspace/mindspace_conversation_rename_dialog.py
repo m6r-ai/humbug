@@ -42,6 +42,7 @@ class MindspaceConversationRenameDialog(QDialog):
         # Button row
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)
+        button_layout.addStretch()
 
         # Create OK and Cancel buttons
         self._ok_button = QPushButton(strings.ok)
@@ -60,8 +61,10 @@ class MindspaceConversationRenameDialog(QDialog):
             button.setContentsMargins(8, 8, 8, 8)
             button_layout.addWidget(button)
 
+        button_layout.addStretch()
         layout.addLayout(button_layout)
         self.setLayout(layout)
+
         self._apply_styling()
         self._validate_input()
 

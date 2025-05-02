@@ -110,6 +110,7 @@ class MessageBox(QDialog):
         # Add buttons
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)
+        button_layout.addStretch()
 
         self._button_results = {}
         default_button = None
@@ -120,11 +121,10 @@ class MessageBox(QDialog):
         recommended_buttons = [MessageBoxButton.OK, MessageBoxButton.YES, MessageBoxButton.SAVE]
 
         # If we have multiple options, use the first recommended one that appears
-        if len(buttons) > 1:
-            for button in buttons:
-                if button in recommended_buttons:
-                    recommended_button = button
-                    break
+        for button in buttons:
+            if button in recommended_buttons:
+                recommended_button = button
+                break
 
         for button in buttons:
             btn = QPushButton(self._get_button_text(button))
@@ -134,6 +134,7 @@ class MessageBox(QDialog):
             btn.clicked.connect(self._handle_button)
 
             # Apply recommended styling if this is our primary action button
+            print(f"Button: {button}, Recommended: {recommended_button}")
             if button == recommended_button:
                 btn.setProperty("recommended", True)
 
@@ -160,6 +161,7 @@ class MessageBox(QDialog):
         if line_count > 2:
             layout.addSpacing(12)
 
+        button_layout.addStretch()
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
