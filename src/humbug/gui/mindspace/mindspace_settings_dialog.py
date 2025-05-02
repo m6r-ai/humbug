@@ -41,7 +41,9 @@ class MindspaceSettingsDialog(QDialog):
         self._initial_settings: MindspaceSettings | None = None
         self._current_settings: MindspaceSettings | None = None
 
-        self._style_manager = StyleManager()
+        style_manager = StyleManager()
+        zoom_factor = style_manager.zoom_factor()
+        element_width = int(zoom_factor * 300)
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
@@ -54,7 +56,7 @@ class MindspaceSettingsDialog(QDialog):
         self._model_label.setMinimumHeight(40)
         self._model_combo = QComboBox()
         self._model_combo.setView(QListView())
-        self._model_combo.setMinimumWidth(300)
+        self._model_combo.setMinimumWidth(element_width)
         self._model_combo.setMinimumHeight(40)
 
         self._user_manager = UserManager()
@@ -79,7 +81,7 @@ class MindspaceSettingsDialog(QDialog):
         self._temp_spin.setRange(0.0, 1.0)
         self._temp_spin.setSingleStep(0.1)
         self._temp_spin.setDecimals(1)
-        self._temp_spin.setMinimumWidth(300)
+        self._temp_spin.setMinimumWidth(element_width)
         self._temp_spin.setMinimumHeight(40)
         self._temp_spin.valueChanged.connect(self._handle_value_change)
         temp_layout.addWidget(self._temp_label)
@@ -93,7 +95,7 @@ class MindspaceSettingsDialog(QDialog):
         self._reasoning_label.setMinimumHeight(40)
         self._reasoning_combo = QComboBox()
         self._reasoning_combo.setView(QListView())
-        self._reasoning_combo.setMinimumWidth(300)
+        self._reasoning_combo.setMinimumWidth(element_width)
         self._reasoning_combo.setMinimumHeight(40)
         self._reasoning_combo.currentIndexChanged.connect(self._handle_value_change)
         reasoning_layout.addWidget(self._reasoning_label)
@@ -106,8 +108,8 @@ class MindspaceSettingsDialog(QDialog):
         self._soft_tabs_label = QLabel(strings.use_soft_tabs)
         self._soft_tabs_label.setMinimumHeight(40)
         self._soft_tabs_check = QCheckBox()
+        self._soft_tabs_check.setMinimumWidth(element_width)
         self._soft_tabs_check.setMinimumHeight(40)
-        self._soft_tabs_check.setMinimumWidth(300)
         self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
         soft_tabs_layout.addWidget(self._soft_tabs_label)
         soft_tabs_layout.addStretch()
@@ -120,7 +122,7 @@ class MindspaceSettingsDialog(QDialog):
         self._tab_size_label.setMinimumHeight(40)
         self._tab_size_spin = QSpinBox()
         self._tab_size_spin.setRange(1, 8)
-        self._tab_size_spin.setMinimumWidth(300)
+        self._tab_size_spin.setMinimumWidth(element_width)
         self._tab_size_spin.setMinimumHeight(40)
         self._tab_size_spin.valueChanged.connect(self._handle_value_change)
         tab_size_layout.addWidget(self._tab_size_label)
@@ -133,8 +135,8 @@ class MindspaceSettingsDialog(QDialog):
         self._auto_backup_label = QLabel(strings.auto_backup)
         self._auto_backup_label.setMinimumHeight(40)
         self._auto_backup_check = QCheckBox()
+        self._auto_backup_check.setMinimumWidth(element_width)
         self._auto_backup_check.setMinimumHeight(40)
-        self._auto_backup_check.setMinimumWidth(300)
         self._auto_backup_check.stateChanged.connect(self._handle_value_change)
         auto_backup_layout.addWidget(self._auto_backup_label)
         auto_backup_layout.addStretch()
@@ -147,7 +149,7 @@ class MindspaceSettingsDialog(QDialog):
         self._backup_interval_label.setMinimumHeight(40)
         self._backup_interval_spin = QSpinBox()
         self._backup_interval_spin.setRange(60, 3600)  # 1 minute to 1 hour
-        self._backup_interval_spin.setMinimumWidth(300)
+        self._backup_interval_spin.setMinimumWidth(element_width)
         self._backup_interval_spin.setMinimumHeight(40)
         self._backup_interval_spin.valueChanged.connect(self._handle_value_change)
         backup_interval_layout.addWidget(self._backup_interval_label)
@@ -186,7 +188,7 @@ class MindspaceSettingsDialog(QDialog):
         self.setLayout(layout)
 
         # Apply consistent dialog styling
-        self.setStyleSheet(self._style_manager.get_dialog_stylesheet())
+        self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
     def _update_reasoning_combo(self, model: str) -> None:
         """Update the reasoning combo box based on the current model's capabilities.

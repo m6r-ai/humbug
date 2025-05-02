@@ -1,10 +1,10 @@
 """Dialog for configuring initial mindspace folder structure."""
 
-from typing import List, cast
+from typing import List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
-    QPushButton, QWidget, QSizePolicy
+    QPushButton, QWidget, QLineEdit
 )
 
 from humbug.gui.style_manager import StyleManager
@@ -15,7 +15,8 @@ class MindspaceFoldersDialog(QDialog):
     """Dialog for selecting which folders to create in a new mindspace."""
 
     def __init__(self, mindspace_path: str, parent: QWidget | None = None) -> None:
-        """Initialize the mindspace folders dialog.
+        """
+        Initialize the mindspace folders dialog.
 
         Args:
             mindspace_path: Path where mindspace will be created
@@ -23,14 +24,15 @@ class MindspaceFoldersDialog(QDialog):
         """
         super().__init__(parent)
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.mindspace_folders_title)
         self.setMinimumWidth(500)
         self.setModal(True)
 
-        self._style_manager = StyleManager()
+        style_manager = StyleManager()
+        zoom_factor = style_manager.zoom_factor()
+        element_width = int(zoom_factor * 300)
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
@@ -41,27 +43,14 @@ class MindspaceFoldersDialog(QDialog):
         path_layout = QHBoxLayout()
         self._path_label = QLabel(strings.mindspace_path)
         self._path_label.setMinimumHeight(40)
+        path_edit = QLineEdit()
+        path_edit.setMinimumWidth(element_width)
+        path_edit.setMinimumHeight(40)
+        path_edit.setEnabled(False)
+        path_edit.setText(mindspace_path)
         path_layout.addWidget(self._path_label)
         path_layout.addStretch()
-
-        # Create header-style container for path value
-        value_container = QWidget()
-        value_container.setObjectName("path_widget")
-        value_container.setMinimumWidth(300)
-        value_layout = QHBoxLayout(value_container)
-        value_layout.setContentsMargins(0, 0, 0, 0)
-        value_layout.setSpacing(0)
-
-        self._path_value = QLabel(mindspace_path)
-        self._path_value.setMinimumHeight(40)
-        value_layout.addWidget(self._path_value)
-
-        # Create a spacer widget
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        value_layout.addWidget(spacer)
-
-        path_layout.addWidget(value_container)
+        path_layout.addWidget(path_edit)
         layout.addLayout(path_layout)
 
         # Rest of the dialog content remains the same
@@ -72,7 +61,7 @@ class MindspaceFoldersDialog(QDialog):
         self._conversations_check = QCheckBox()
         self._conversations_check.setChecked(True)
         self._conversations_check.setEnabled(False)
-        self._conversations_check.setMinimumWidth(300)
+        self._conversations_check.setMinimumWidth(element_width)
         self._conversations_check.setMinimumHeight(40)
         conv_layout.addWidget(conv_label)
         conv_layout.addStretch()
@@ -85,8 +74,8 @@ class MindspaceFoldersDialog(QDialog):
         metaphor_label.setMinimumHeight(40)
         self._metaphor_check = QCheckBox()
         self._metaphor_check.setChecked(True)
+        self._metaphor_check.setMinimumWidth(element_width)
         self._metaphor_check.setMinimumHeight(40)
-        self._metaphor_check.setMinimumWidth(300)
         metaphor_layout.addWidget(metaphor_label)
         metaphor_layout.addStretch()
         metaphor_layout.addWidget(self._metaphor_check)
@@ -98,7 +87,7 @@ class MindspaceFoldersDialog(QDialog):
         src_label.setMinimumHeight(40)
         self._src_check = QCheckBox()
         self._src_check.setChecked(False)
-        self._src_check.setMinimumWidth(300)
+        self._src_check.setMinimumWidth(element_width)
         self._src_check.setMinimumHeight(40)
         src_layout.addWidget(src_label)
         src_layout.addStretch()
@@ -138,11 +127,11 @@ class MindspaceFoldersDialog(QDialog):
         self.setLayout(layout)
 
         # Apply consistent dialog styling
-        self._handle_style_changed()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
     def get_selected_folders(self) -> List[str]:
-        """Get list of folder names to create.
+        """
+        Get list of folder names to create.
 
         Returns:
             List of folder names to create in mindspace
@@ -150,48 +139,8 @@ class MindspaceFoldersDialog(QDialog):
         folders = ['conversations']  # Always create conversations folder
         if self._metaphor_check.isChecked():
             folders.append('metaphor')
+
         if self._src_check.isChecked():
             folders.append('src')
+
         return folders
-
-    def _handle_language_changed(self) -> None:
-        """Update all dialog texts when language changes."""
-        strings = self._language_manager.strings()
-        self.setWindowTitle(strings.mindspace_folders_title)
-        self._path_label.setText(strings.mindspace_path)
-
-        # Update folder labels
-        for checkbox, label in zip(
-            [self._conversations_check, self._metaphor_check, self._src_check],
-            [strings.conversations_folder, strings.metaphor_folder, strings.src_folder]
-        ):
-            # Find the label widget in the checkbox's parent layout
-            layout = cast(QWidget, checkbox.parent()).layout()
-            if layout is None:
-                continue
-
-            item = layout.itemAt(0)
-            if item is None:
-                continue
-
-            label_widget = item.widget()
-            if not isinstance(label_widget, QLabel):
-                continue
-
-            label_widget.setText(label)
-
-        self._ok_button.setText(strings.ok)
-        self._cancel_button.setText(strings.cancel)
-
-    def _handle_style_changed(self) -> None:
-        """Update styling when application style changes."""
-        style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        base_font_size = style_manager.base_font_size()
-
-        # Update font sizes
-        font = self.font()
-        font.setPointSizeF(base_font_size * zoom_factor)
-        self.setFont(font)
-
-        self.setStyleSheet(self._style_manager.get_dialog_stylesheet())

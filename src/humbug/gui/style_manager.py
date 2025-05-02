@@ -947,6 +947,8 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 border: none;
+                border-radius: 4px;
+                padding: 8px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
 
