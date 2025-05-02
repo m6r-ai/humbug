@@ -1327,25 +1327,6 @@ Context: Capabilities
 
             During retries, preserve the message in the input box.
 
-        Context: Provider-specific errors
-            Each AI provider may return different error formats.  The application must normalize these different error formats
-            into a consistent internal format for display and handling.
-
-            Context: OpenAI errors
-                OpenAI errors include:
-
-                - Invalid API key
-                - Rate limits exceeded
-                - Model overloaded
-
-            Context: Gemini errors
-                Gemini errors include:
-
-                - Invalid API key
-                - Quota exceeded
-                - Model not found
-                - Invalid request format
-
         Context: Error display format
             Errors appear in message history with:
 

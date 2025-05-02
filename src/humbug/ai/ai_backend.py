@@ -101,17 +101,8 @@ class AIBackend(ABC):
 
                             self._logger.debug("API error: %d: %s", response.status, error_data)
 
-                            # Map Gemini error codes to consistent format
-                            if "error" in error_data and "status" in error_data["error"]:
-                                error_code = error_data["error"]["status"]
-                                if error_code == "RESOURCE_EXHAUSTED":
-                                    error_msg = "Rate limit exceeded. Retrying..."
-                                elif error_code == "PERMISSION_DENIED":
-                                    error_msg = "Invalid API key or permissions"
-                                elif error_code == "UNAVAILABLE":
-                                    error_msg = "Service temporarily unavailable"
-
-                            if response.status == 429 or "RESOURCE_EXHAUSTED" in error_msg:
+                            # If we get a 429 error, this is a rate limit error and we should retry
+                            if response.status == 429:
                                 if attempt < self._max_retries - 1:
                                     delay = self._base_delay * (2 ** attempt)
                                     yield AIResponse(
