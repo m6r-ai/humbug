@@ -209,7 +209,7 @@ def get_french_strings() -> LanguageStrings:
         new="Nouveau",
         new_folder="Dossier",
         rename_file_title="Renommer le fichier",
-        rename_file_prompt="Entrez un nouveau nom",
+        file_name="Nom du fichier",
         rename_error_title="Erreur de renommage",
         rename_error_exists="Un fichier avec ce nom existe déjà.",
         rename_error_generic="Impossible de renommer le fichier : ",

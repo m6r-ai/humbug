@@ -209,7 +209,7 @@ def get_english_strings() -> LanguageStrings:
         new="New",
         new_folder="Folder",
         rename_file_title="Rename File",
-        rename_file_prompt="Enter new name",
+        file_name="File name",
         rename_error_title="Rename Error",
         rename_error_exists="A file with this name already exists.",
         rename_error_generic="Could not rename file: ",

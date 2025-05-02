@@ -209,7 +209,7 @@ def get_arabic_strings() -> LanguageStrings:
         new="جديد",
         new_folder="مجلد",
         rename_file_title="إعادة تسمية الملف",
-        rename_file_prompt="أدخل اسمًا جديدًا",
+        file_name="اسم الملف",
         rename_error_title="خطأ في إعادة التسمية",
         rename_error_exists="يوجد ملف بهذا الاسم بالفعل.",
         rename_error_generic="تعذر إعادة تسمية الملف: ",

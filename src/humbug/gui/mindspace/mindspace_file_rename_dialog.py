@@ -24,17 +24,21 @@ class MindspaceFileRenameDialog(QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Add name input
+        zoom_factor = self._style_manager.zoom_factor()
+        element_width = int(zoom_factor * 300)
+
+        name_layout = QHBoxLayout()
+        name_label = QLabel(strings.file_name)
+        name_label.setMinimumHeight(40)
         self._name_input = QLineEdit()
         self._name_input.setText(old_name)
         self._name_input.setMinimumHeight(40)
+        self._name_input.setMinimumWidth(element_width)
         self._name_input.textChanged.connect(self._validate_input)
-
-        # Add label and input
-        name_label = QLabel(strings.rename_file_prompt)
-        name_label.setMinimumHeight(40)
-        layout.addWidget(name_label)
-        layout.addWidget(self._name_input)
+        name_layout.addWidget(name_label)
+        name_layout.addStretch()
+        name_layout.addWidget(self._name_input)
+        layout.addLayout(name_layout)
 
         # Add spacing before buttons
         layout.addSpacing(24)

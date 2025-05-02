@@ -201,7 +201,7 @@ class LanguageStrings:
     new: str
     new_folder: str
     rename_file_title: str
-    rename_file_prompt: str
+    file_name: str
     rename_error_title: str
     rename_error_exists: str
     rename_error_generic: str
