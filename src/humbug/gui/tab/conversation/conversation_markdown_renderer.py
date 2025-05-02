@@ -4,9 +4,11 @@ Markdown AST visitor to render the AST directly to a QTextDocument.
 
 from typing import List
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QTextCursor, QTextDocument, QTextCharFormat, QTextBlockFormat,
-    QTextListFormat, QFont, QFontMetricsF, QTextList
+    QTextListFormat, QFont, QFontMetricsF, QTextList, QTextTable,
+    QTextTableFormat, QTextFrameFormat, QTextLength
 )
 
 from humbug.gui.color_role import ColorRole
@@ -15,7 +17,8 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownDocumentNode, MarkdownParagraphNode, MarkdownHeadingNode,
     MarkdownTextNode, MarkdownBoldNode, MarkdownEmphasisNode, MarkdownInlineCodeNode,
     MarkdownCodeBlockNode, MarkdownListItemNode, MarkdownOrderedListNode,
-    MarkdownUnorderedListNode, MarkdownLineBreakNode
+    MarkdownUnorderedListNode, MarkdownLineBreakNode, MarkdownTableNode, MarkdownTableHeaderNode,
+    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode
 )
 
 
@@ -41,6 +44,10 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._default_font_height: float = 0
 
         self._style_manager = StyleManager()
+
+        # Table state variables
+        self._current_table: QTextTable | None = None
+        self._current_row: int = 0
 
     def visit_MarkdownDocumentNode(self, node: MarkdownDocumentNode) -> None:  # pylint: disable=invalid-name
         """
@@ -422,3 +429,193 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         # Insert line break character
         self._cursor.insertText("\u2028")
+
+    def visit_MarkdownTableNode(self, node: MarkdownTableNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a table node to the QTextDocument.
+
+        Args:
+            node: The table node to render
+
+        Returns:
+            None
+        """
+        # Insert a new block if needed
+        if not self._cursor.atBlockStart():
+            self._cursor.insertBlock()
+
+        orig_block_format = self._cursor.blockFormat()
+        top_frame = self._cursor.currentFrame()
+
+        # Process all children (header and body sections)
+        for child in node.children:
+            self.visit(child)
+
+        self._cursor.setPosition(top_frame.lastPosition())
+
+        # Add a new block after the table with proper spacing
+        if not self._cursor.atBlockStart():
+            self._cursor.insertBlock()
+
+        # Set spacing after table
+        block_format = QTextBlockFormat(orig_block_format)
+        block_format.setBottomMargin(self._default_font_height)
+        self._cursor.setBlockFormat(block_format)
+
+    def visit_MarkdownTableHeaderNode(self, node: MarkdownTableHeaderNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a table header node to the QTextDocument.
+
+        Args:
+            node: The table header node to render
+
+        Returns:
+            None
+        """
+        # The header node contains rows, which we'll process
+        # in the row visitor. We just pass through to the children.
+        for child in node.children:
+            self.visit(child)
+
+    def visit_MarkdownTableBodyNode(self, node: MarkdownTableBodyNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a table body node to the QTextDocument.
+
+        Args:
+            node: The table body node to render
+
+        Returns:
+            None
+        """
+        # The body node contains rows, which we'll process
+        # in the row visitor. We just pass through to the children.
+        for child in node.children:
+            self.visit(child)
+
+    def visit_MarkdownTableRowNode(self, node: MarkdownTableRowNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a table row node to the QTextDocument.
+
+        Args:
+            node: The table row node to render
+
+        Returns:
+            None
+        """
+        # Is this the first row of a table?
+        is_first_row = isinstance(node.parent, MarkdownTableHeaderNode) and node is node.parent.children[0]
+
+        # If this is the first row, we need to create the table
+        if is_first_row:
+            # Count the cells to determine column count
+            column_count = len(node.children)
+
+            # Count all rows in header and body to determine row count
+            header = node.parent
+            body = None
+
+            # Find the table body (sibling of header)
+            table_node = header.parent
+            for sibling in table_node.children:
+                if isinstance(sibling, MarkdownTableBodyNode):
+                    body = sibling
+                    break
+
+            # Calculate total row count
+            row_count = len(header.children)
+            if body:
+                row_count += len(body.children)
+
+            # Create table format
+            table_format = QTextTableFormat()
+            table_format.setCellPadding(2)
+            table_format.setCellSpacing(0)
+            table_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
+            table_format.setBorder(1)
+
+            # Get the width of the document
+            doc_width = self._document.textWidth()
+            if doc_width > 0:
+                table_format.setWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
+
+            # Set uniform column widths
+            col_width_percent = 100 / column_count
+            col_widths = [QTextLength(QTextLength.Type.PercentageLength, col_width_percent) for _ in range(column_count)]
+            table_format.setColumnWidthConstraints(col_widths)
+
+            # Create the table
+            self._current_table = self._cursor.insertTable(row_count, column_count, table_format)
+            self._current_row = 0
+
+        # Process all cells in this row
+        for i, cell_node in enumerate(node.children):
+            if self._current_table and i < self._current_table.columns():
+                # Get the current table cell
+                print(f"TableRow: {node.line_start}-{node.line_end} (is_first_row={is_first_row})")
+                table_cell = self._current_table.cellAt(self._current_row, i)
+                cell_cursor = table_cell.firstCursorPosition()
+
+                # Apply cell format based on alignment
+                if isinstance(cell_node, MarkdownTableCellNode):
+                    # Create the cell format object
+                    cell_format = table_cell.format()
+
+                    # Set alignment based on the cell's alignment property
+#                    if cell_node.alignment == 'center':
+#                        cell_format.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+#                    elif cell_node.alignment == 'right':
+#                        cell_format.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+#                    else:  # default to left
+#                        cell_format.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+                    # Apply header styling if needed
+                    if cell_node.is_header:
+                        cell_format.setBackground(self._style_manager.get_color(ColorRole.SYNTAX_INLINE_CODE))
+
+                    # Apply the cell format
+                    table_cell.setFormat(cell_format)
+
+                    # Create character format for headers (bold text)
+                    if cell_node.is_header:
+                        cell_char_format = QTextCharFormat()
+                        cell_char_format.setFontWeight(QFont.Weight.Bold)
+                        cell_cursor.setCharFormat(cell_char_format)
+
+                # Store the current cursor position
+                old_cursor = self._cursor
+                self._cursor = cell_cursor
+
+                # Visit the cell node to render its content
+                self.visit(cell_node)
+
+                # Restore cursor
+                self._cursor = old_cursor
+
+        # Increment row counter
+        self._current_row += 1
+
+        # Check if this is the last row in the table
+        if ((isinstance(node.parent, MarkdownTableHeaderNode) and
+             node is node.parent.children[-1] and
+             not any(isinstance(sibling, MarkdownTableBodyNode) for sibling in node.parent.parent.children)) or
+            (isinstance(node.parent, MarkdownTableBodyNode) and
+             node is node.parent.children[-1])):
+            # Reset table state
+            self._current_table = None
+            self._current_row = 0
+
+    def visit_MarkdownTableCellNode(self, node: MarkdownTableCellNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a table cell node to the QTextDocument.
+
+        Args:
+            node: The table cell node to render
+
+        Returns:
+            None
+        """
+        # Process all inline content (text, bold, etc.)
+        for child in node.children:
+            self.visit(child)
