@@ -54,11 +54,15 @@ class MessageBox(QDialog):
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self.setWindowTitle(title)
-        self.setModal(True)
-        self.setMinimumWidth(400)
 
         self._style_manager = StyleManager()
+        zoom_factor = self._style_manager.zoom_factor()
+
+        self.setWindowTitle(title)
+        self.setModal(True)
+        min_widget_width = int(zoom_factor * 400)
+        self.setMinimumWidth(min_widget_width)
+
         self._language_manager = LanguageManager()
 
         # Create layout with proper spacing
