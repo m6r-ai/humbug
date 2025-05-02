@@ -218,11 +218,11 @@ The software is released under an Apache 2.0 open source license.
 
 ## Find out more on YouTube
 
-You can find out more about Humbug and Metaphor on YouTube: [@m6rai on YouTube](https://youtube.com/@m6rai).
+Find out more about Humbug and Metaphor on YouTube: [@m6rai on YouTube](https://youtube.com/@m6rai).
 
 ## Join us on Discord
 
-If you want to engage with other users and developers, you can join us on [Discord](https://discord.gg/GZhJ7ZtgwN).
+Join us on [Discord](https://discord.gg/GZhJ7ZtgwN) to get help or share your ideas.
 
 ## More information
 
