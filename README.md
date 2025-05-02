@@ -158,11 +158,18 @@ free API keys for low volume testing, so you can get started with either, or bot
 
 1. Create and activate a virtual environment:
 
+   Linux and MacOS:
+
    ```bash
    python -m venv venv
-   source venv/bin/activate  # Linux/MacOS
-   # or
-   venv\Scripts\activate     # Windows
+   source venv/bin/activate
+   ```
+
+    Windows:
+
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate
    ```
 
 2. Install build tools:
