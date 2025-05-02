@@ -151,3 +151,34 @@ class MarkdownCodeBlockNode(MarkdownASTNode):
 
 class MarkdownLineBreakNode(MarkdownASTNode):
     """Node representing a line break."""
+
+
+class MarkdownTableNode(MarkdownASTNode):
+    """Node representing an HTML table (<table>)."""
+
+
+class MarkdownTableHeaderNode(MarkdownASTNode):
+    """Node representing the header row section of a table (<thead>)."""
+
+
+class MarkdownTableBodyNode(MarkdownASTNode):
+    """Node representing the body section of a table (<tbody>)."""
+
+
+class MarkdownTableRowNode(MarkdownASTNode):
+    """Node representing a table row (<tr>)."""
+
+
+class MarkdownTableCellNode(MarkdownASTNode):
+    """Node representing a table cell (<td> or <th>)."""
+    def __init__(self, is_header: bool = False, alignment: str = "left") -> None:
+        """
+        Initialize a table cell node.
+
+        Args:
+            is_header: Whether this is a header cell (<th>) or a data cell (<td>)
+            alignment: Cell alignment ('left', 'center', 'right')
+        """
+        super().__init__()
+        self.is_header = is_header
+        self.alignment = alignment

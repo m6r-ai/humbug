@@ -5,7 +5,8 @@ from typing import List, Any
 
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownTextNode, MarkdownHeadingNode, MarkdownInlineCodeNode,
-    MarkdownCodeBlockNode, MarkdownASTNode
+    MarkdownCodeBlockNode, MarkdownASTNode, MarkdownTableNode, MarkdownTableHeaderNode,
+    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode
 )
 
 
@@ -119,3 +120,92 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         print(f"{self._indent()}Content: '{node.content[:30]}...' ({len(node.content)} chars)")
         self.indent_level -= 1
         return node.content
+
+    def visit_MarkdownTableNode(self, node: MarkdownTableNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit a table node and print its structure.
+
+        Args:
+            node: The table node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        line_range = ""
+        if node.line_start is not None and node.line_end is not None:
+            line_range = f" (lines {node.line_start}-{node.line_end})"
+
+        print(f"{self._indent()}Table{line_range}")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results
+
+    def visit_MarkdownTableHeaderNode(self, node: MarkdownTableHeaderNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit a table header node and print its info.
+
+        Args:
+            node: The table header node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        print(f"{self._indent()}TableHeader")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results
+
+    def visit_MarkdownTableBodyNode(self, node: MarkdownTableBodyNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit a table body node and print its info.
+
+        Args:
+            node: The table body node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        print(f"{self._indent()}TableBody")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results
+
+    def visit_MarkdownTableRowNode(self, node: MarkdownTableRowNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit a table row node and print its info.
+
+        Args:
+            node: The table row node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        line_range = ""
+        if node.line_start is not None and node.line_end is not None:
+            line_range = f" (lines {node.line_start}-{node.line_end})"
+
+        print(f"{self._indent()}TableRow{line_range}")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results
+
+    def visit_MarkdownTableCellNode(self, node: MarkdownTableCellNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit a table cell node and print its properties.
+
+        Args:
+            node: The table cell node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        cell_type = "HeaderCell" if node.is_header else "Cell"
+        print(f"{self._indent()}{cell_type} (alignment: {node.alignment})")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results

@@ -10,7 +10,9 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode, MarkdownLineBreakNode,
     MarkdownEmphasisNode, MarkdownBoldNode, MarkdownHeadingNode,
     MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
-    MarkdownListItemNode, MarkdownInlineCodeNode, MarkdownCodeBlockNode
+    MarkdownListItemNode, MarkdownInlineCodeNode, MarkdownCodeBlockNode,
+    MarkdownTableNode, MarkdownTableHeaderNode, MarkdownTableBodyNode,
+    MarkdownTableRowNode, MarkdownTableCellNode
 )
 
 
@@ -35,6 +37,8 @@ class MarkdownParser:
         self._unordered_list_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
         self._ordered_list_pattern = re.compile(r'^(\s*)(\d+)\.[ \t]+(.*?)$', re.MULTILINE)
         self._code_block_pattern = re.compile(r'^```(?:([\w\-#+./*():\s]+))?$')
+        self._table_row_pattern = re.compile(r'^(\|.+\|)$', re.MULTILINE)
+        self._table_separator_pattern = re.compile(r'^(\|[\s:-]+\|)$', re.MULTILINE)
 
         self._logger = logging.getLogger("ASTBuilder")
 
@@ -62,6 +66,13 @@ class MarkdownParser:
         self._code_block_nesting_level = 0
         self._code_block_indents: List[int] = []
 
+        # Table state tracking
+        self._in_table = False
+        self._table_alignments: List[str] = []  # Alignments for each column
+        self._current_table: MarkdownTableNode | None = None
+        self._table_header: MarkdownTableHeaderNode | None = None
+        self._table_body: MarkdownTableBodyNode | None = None
+
     def document(self) -> MarkdownDocumentNode:
         """
         Get the current document node.
@@ -81,7 +92,8 @@ class MarkdownParser:
         Returns:
             A tuple of (line_type, content) where line_type is one of:
             'heading', 'unordered_list_item', 'ordered_list_item', 'blank', 'text',
-            'code_block_start', 'code_block_end', 'code_block_content'
+            'code_block_start', 'code_block_end', 'code_block_content',
+            'table_row', 'table_separator'
 
         Raises:
             None
@@ -125,6 +137,14 @@ class MarkdownParser:
             level = len(heading_match.group(1))
             content = heading_match.group(2).strip()
             return 'heading', (level, content)
+
+        # Check for table separator row
+        if line.strip().startswith('|') and line.strip().endswith('|'):
+            # Check if it's a separator row with at least one colon or dash
+            if '-' in line and (':-' in line or '-:' in line or '--' in line):
+                return 'table_separator', line.strip()
+            # Regular table row
+            return 'table_row', line.strip()
 
         # Check for unordered list item
         unordered_match = self._unordered_list_pattern.match(line)
@@ -523,6 +543,189 @@ class MarkdownParser:
 
         return item
 
+    def _parse_table_separator(self, separator_line: str) -> List[str]:
+        """
+        Parse a table separator line to determine column alignments.
+
+        Args:
+            separator_line: A line containing the table column separators (e.g., |---|:---:|--:|)
+
+        Returns:
+            List of alignment strings ('left', 'center', 'right') for each column
+        """
+        cells = [cell.strip() for cell in separator_line.split('|')[1:-1]]
+        alignments = []
+
+        for cell in cells:
+            if cell.startswith(':') and cell.endswith(':'):
+                alignments.append('center')
+
+            elif cell.endswith(':'):
+                alignments.append('right')
+
+            else:
+                alignments.append('left')
+
+        return alignments
+
+    def _parse_table_row(self, row_line: str, is_header: bool, alignments: List[str]) -> MarkdownTableRowNode:
+        """
+        Parse a table row and create a row node with cells.
+
+        Args:
+            row_line: The table row line
+            is_header: Whether this is a header row
+            alignments: List of column alignments
+
+        Returns:
+            A table row node
+        """
+        # Create the row node
+        row_node = MarkdownTableRowNode()
+
+        # Split the line into cells
+        cells = [cell.strip() for cell in row_line.split('|')[1:-1]]
+
+        # Create a cell for each part
+        for i, cell_content in enumerate(cells):
+            # Get the alignment for this column (default to 'left')
+            alignment = 'left'
+            if i < len(alignments):
+                alignment = alignments[i]
+
+            # Create a cell node
+            cell_node = MarkdownTableCellNode(is_header=is_header, alignment=alignment)
+
+            # Process the cell content with inline formatting
+            for node in self.parse_inline_formatting(cell_content):
+                cell_node.add_child(node)
+
+            # Add the cell to the row
+            row_node.add_child(cell_node)
+
+        return row_node
+
+    def _handle_table_row(self, line: str, line_num: int) -> None:
+        """
+        Handle a table row line in the parsing process.
+
+        Args:
+            line: The table row line
+            line_num: The line number
+
+        Returns:
+            None
+        """
+        # If we're not already in a table, create a new one
+        if not self._in_table:
+            self._in_table = True
+            self._current_table = MarkdownTableNode()
+            self._table_header = MarkdownTableHeaderNode()
+            self._table_body = MarkdownTableBodyNode()
+            self._current_table.add_child(self._table_header)
+            self._current_table.add_child(self._table_body)
+
+            # Register table line numbers
+            self._current_table.line_start = line_num
+            self._table_header.line_start = line_num
+
+            # Since we don't have alignments yet, assume left alignment for all columns
+            # Count the number of cells in this row
+            cell_count = len([cell for cell in line.split('|')[1:-1]])
+            self._table_alignments = ['left'] * cell_count
+
+            # Parse the first row as a header row
+            header_row = self._parse_table_row(line, True, self._table_alignments)
+            header_row.line_start = line_num
+            header_row.line_end = line_num
+            self._table_header.add_child(header_row)
+            self.register_node_line(header_row, line_num)
+
+        else:
+            # We're already in a table, add this as a body row
+            body_row = self._parse_table_row(line, False, self._table_alignments)
+            body_row.line_start = line_num
+            body_row.line_end = line_num
+            self._table_body.add_child(body_row)
+            self.register_node_line(body_row, line_num)
+
+        # Update the table's line_end
+        if self._current_table:
+            self._current_table.line_end = line_num
+
+    def _handle_table_separator(self, line: str, line_num: int) -> None:
+        """
+        Handle a table separator line in the parsing process.
+
+        Args:
+            line: The table separator line
+            line_num: The line number
+
+        Returns:
+            None
+        """
+        if not self._in_table or not self._current_table:
+            # This is a separator without a preceding header row
+            # Create the table structure first
+            self._in_table = True
+            self._current_table = MarkdownTableNode()
+            self._table_header = MarkdownTableHeaderNode()
+            self._table_body = MarkdownTableBodyNode()
+            self._current_table.add_child(self._table_header)
+            self._current_table.add_child(self._table_body)
+
+            # Register table line numbers
+            self._current_table.line_start = line_num
+            self._table_header.line_start = line_num
+
+            # Add an empty header row
+            header_row = MarkdownTableRowNode()
+            header_row.line_start = line_num
+            header_row.line_end = line_num
+            self._table_header.add_child(header_row)
+
+        # Parse the separator to get column alignments
+        self._table_alignments = self._parse_table_separator(line)
+
+        # Update the alignment of cells in the header row if we have a header
+        if self._current_table and self._table_header and self._table_header.children:
+            header_row = self._table_header.children[0]
+
+            # If header row has no cells but we know alignments, create empty cells
+            if not header_row.children and self._table_alignments:
+                for i, alignment in enumerate(self._table_alignments):
+                    cell = MarkdownTableCellNode(is_header=True, alignment=alignment)
+                    header_row.add_child(cell)
+
+            else:
+                # Update alignment of existing cells
+                for i, cell in enumerate(header_row.children):
+                    if i < len(self._table_alignments) and isinstance(cell, MarkdownTableCellNode):
+                        cell.alignment = self._table_alignments[i]
+
+        # Register separator line
+        if self._current_table:
+            self.register_node_line(self._current_table, line_num)
+            self._current_table.line_end = line_num
+
+    def _finalize_table(self) -> None:
+        """
+        Finalize the current table and add it to the document.
+
+        Returns:
+            None
+        """
+        if self._in_table and self._current_table:
+            # Add the table to the document
+            self._document.add_child(self._current_table)
+
+            # Reset table state
+            self._in_table = False
+            self._table_alignments = []
+            self._current_table = None
+            self._table_header = None
+            self._table_body = None
+
     def register_node_line(self, node: MarkdownASTNode, line_num: int) -> None:
         """
         Register a node with a line number for later reference.
@@ -672,9 +875,17 @@ class MarkdownParser:
             if line_type not in ('text', 'blank'):
                 self._last_paragraph = None
 
+            # Handle table end when a non-table line is encountered
+            if self._in_table and line_type not in ('table_row', 'table_separator'):
+                self._finalize_table()
+
             # Handle blank lines for list state
             if line_type == 'blank':
                 self._blank_line_count += 1
+
+                # If we're in a table, end it
+                if self._in_table:
+                    self._finalize_table()
 
                 # If we're in a list, mark it as having blank lines
                 if self._active_lists:
@@ -705,6 +916,17 @@ class MarkdownParser:
                 self._list_contains_blank_line = set()
                 self._last_paragraph = None
                 self._last_list_item = None
+                self._last_processed_line_type = line_type
+                return
+
+            # Handle table-related lines
+            if line_type == 'table_row':
+                self._handle_table_row(content, line_num)
+                self._last_processed_line_type = line_type
+                return
+
+            if line_type == 'table_separator':
+                self._handle_table_separator(content, line_num)
                 self._last_processed_line_type = line_type
                 return
 
@@ -779,6 +1001,13 @@ class MarkdownParser:
         self._code_block_nesting_level = 0
         self._code_block_indents = []
 
+        # Reset table state
+        self._in_table = False
+        self._table_alignments = []
+        self._current_table = None
+        self._table_header = None
+        self._table_body = None
+
         lines = text.split('\n')
         for i, line in enumerate(lines):
             self.parse_line(line, i)
@@ -786,6 +1015,10 @@ class MarkdownParser:
         # Handle case where document ends while still in a code block
         if self._in_code_block:
             self._finalize_code_block(len(lines) - 1)
+
+        # Handle case where document ends while still in a table
+        if self._in_table:
+            self._finalize_table()
 
         return self._document
 
