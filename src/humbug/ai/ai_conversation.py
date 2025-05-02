@@ -142,6 +142,8 @@ class AIConversation:
         Args:
             messages: List of AIMessage objects to load
         """
+        self._conversation.clear()
+
         # Iterate over the messages
         for message in messages:
             self._conversation.add_message(message)

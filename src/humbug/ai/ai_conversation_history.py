@@ -14,6 +14,11 @@ class AIConversationHistory:
         self._messages: List[AIMessage] = []
         self._last_response_tokens = {"input": 0, "output": 0}
 
+    def clear(self) -> None:
+        """Clear the conversation history."""
+        self._messages.clear()
+        self._last_response_tokens = {"input": 0, "output": 0}
+
     def add_message(self, message: AIMessage) -> None:
         """Add a message to the history."""
         self._messages.append(message)
