@@ -1,4 +1,4 @@
-# Humbug v0.11
+# Humbug v0.12
 
 Humbug is an extensible open-source tool designed to help you build and maintain software using AI.
 
@@ -59,20 +59,9 @@ explore interactively, update the context and iterate.  We can go further than n
 have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
 can be used to refine the Metaphor context.
 
-## What's new in v0.11
+## What's new in v0.12
 
-- The system shell syntax highlighting now recognizes the difference between option values and positional
-  arguments, using different colours for each.
-- When forking conversations, the new conversation now appears in an adjacent column so the old and new
-  conversations appear side-by-side.
-- Added a button to the AI response messages allowing a conversation to be forked immediately after that
-  message.
-- Added a button to the user messages allowing all messages from that message onwards to be deleted
-  from the conversation history.
-- The preferred action button in all dialog boxes is now blue, matching conventions elsewhere.
-- The `m6rc` system shell command now takes a `-j` or `--submit` flag.  Without either of these,
-  Metaphor prompts are compiled, but not submitted, matching the behaviour of "New Metaphor Conversation".
-  Pass `-j` or `--submit` to have the compiled prompt be automatically submitted.
+TBD
 
 ## Features
 
