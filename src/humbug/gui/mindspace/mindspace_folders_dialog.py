@@ -101,6 +101,7 @@ class MindspaceFoldersDialog(QDialog):
         # Button row
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)
+        button_layout.addStretch()
 
         self._ok_button = QPushButton(strings.ok)
         self._ok_button.clicked.connect(self.accept)
@@ -116,13 +117,9 @@ class MindspaceFoldersDialog(QDialog):
             button.setMinimumWidth(min_button_width)
             button.setMinimumHeight(min_button_height)
             button.setContentsMargins(8, 8, 8, 8)
+            button_layout.addWidget(button)
 
-        # Center the buttons
         button_layout.addStretch()
-        button_layout.addWidget(self._ok_button)
-        button_layout.addWidget(self._cancel_button)
-        button_layout.addStretch()
-
         layout.addLayout(button_layout)
         self.setLayout(layout)
 

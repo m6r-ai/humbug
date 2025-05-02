@@ -121,26 +121,28 @@ class ConversationSettingsDialog(QDialog):
         # Button row with proper spacing and alignment
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)
+        button_layout.addStretch()
 
         self.ok_button = QPushButton(strings.ok)
         self.ok_button.clicked.connect(self._handle_ok)
         self.ok_button.setProperty("recommended", True)
 
-        self.cancel_button = QPushButton(strings.cancel)
-        self.cancel_button.clicked.connect(self.reject)
-
         self.apply_button = QPushButton(strings.apply)
         self.apply_button.clicked.connect(self._handle_apply)
+
+        self.cancel_button = QPushButton(strings.cancel)
+        self.cancel_button.clicked.connect(self.reject)
 
         # Set minimum button widths and heights
         min_button_width = 90
         min_button_height = 40
-        for button in [self.ok_button, self.cancel_button, self.apply_button]:
+        for button in [self.ok_button, self.apply_button, self.cancel_button]:
             button.setMinimumWidth(min_button_width)
             button.setMinimumHeight(min_button_height)
             button.setContentsMargins(8, 8, 8, 8)
             button_layout.addWidget(button)
 
+        button_layout.addStretch()
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
