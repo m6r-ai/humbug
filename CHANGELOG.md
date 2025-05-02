@@ -9,6 +9,7 @@ Buf fixes:
 - Resolved problems with scaling of some dialog boxes when using a zoomed-in display.
 - Updated all dialog boxes to have buttons appear in a consistent order, colour the recommended action in
   blue, and use consistent layout/spacing.
+- 503 errors are now retried and have a better status message.
 
 ## v0.11 (2025-05-02)
 

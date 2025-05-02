@@ -110,7 +110,25 @@ class AIBackend(ABC):
                                         content="",
                                         error=AIError(
                                             code="rate_limit",
-                                            message=f"Rate limit exceeded. Retrying in {delay} seconds...",
+                                            message=f"Rate limit exceeded.  Retrying in {delay} seconds...",
+                                            retries_exhausted=False,
+                                            details=error_data
+                                        )
+                                    )
+                                    await asyncio.sleep(delay)
+                                    attempt += 1
+                                    continue
+
+                            # If we get a 503 error, the server is overloaded and we should retry
+                            if response.status == 503:
+                                if attempt < self._max_retries - 1:
+                                    delay = self._base_delay * (2 ** attempt)
+                                    yield AIResponse(
+                                        reasoning="",
+                                        content="",
+                                        error=AIError(
+                                            code="overloaded",
+                                            message=f"Servers is overloaded.  Retrying in {delay} seconds...",
                                             retries_exhausted=False,
                                             details=error_data
                                         )
