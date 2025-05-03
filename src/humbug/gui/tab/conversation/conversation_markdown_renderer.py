@@ -326,9 +326,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
 
-        if at_block_start:
-            self._cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
-
         # Exit this list level
         self._list_level -= 1
 
@@ -448,6 +445,21 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         orig_block_format = self._cursor.blockFormat()
         top_frame = self._cursor.currentFrame()
 
+        # Verify that this table has at least one header row and one body row before rendering
+        has_valid_structure = False
+
+        for child in node.children:
+            if isinstance(child, MarkdownTableHeaderNode) and child.children:
+                for header_child in node.children:
+                    if isinstance(header_child, MarkdownTableBodyNode) and header_child.children:
+                        has_valid_structure = True
+                        break
+
+        if not has_valid_structure:
+            # Fallback: render as text if the table structure is invalid
+            self._render_table_as_text(node)
+            return
+
         # Process all children (header and body sections)
         for child in node.children:
             self.visit(child)
@@ -466,6 +478,50 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Add a new block after the table with proper spacing
         # Note: Qt needs a block after a table otherwise it segfaults!
         self._cursor.insertBlock()
+
+    def _render_table_as_text(self, node: MarkdownTableNode) -> None:
+        """
+        Render a table as plain text when it has an invalid structure.
+
+        Args:
+            node: The table node to render
+
+        Returns:
+            None
+        """
+        # Create a paragraph for each row in the table
+        for child in node.children:
+            if isinstance(child, MarkdownTableHeaderNode):
+                for row in child.children:
+                    paragraph = MarkdownParagraphNode()
+
+                    # Create a text representation of the row
+                    row_text = "|"
+                    for cell in row.children:
+                        cell_text = ""
+                        for content in cell.children:
+                            if isinstance(content, MarkdownTextNode):
+                                cell_text += content.content
+                        row_text += f" {cell_text} |"
+
+                    paragraph.add_child(MarkdownTextNode(row_text))
+                    self.visit(paragraph)
+
+            if isinstance(child, MarkdownTableBodyNode):
+                for row in child.children:
+                    paragraph = MarkdownParagraphNode()
+
+                    # Create a text representation of the row
+                    row_text = "|"
+                    for cell in row.children:
+                        cell_text = ""
+                        for content in cell.children:
+                            if isinstance(content, MarkdownTextNode):
+                                cell_text += content.content
+                        row_text += f" {cell_text} |"
+
+                    paragraph.add_child(MarkdownTextNode(row_text))
+                    self.visit(paragraph)
 
     def visit_MarkdownTableHeaderNode(self, node: MarkdownTableHeaderNode) -> None:  # pylint: disable=invalid-name
         """
@@ -514,6 +570,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         if is_first_row:
             # Count the cells to determine column count
             column_count = len(node.children)
+            if column_count == 0:
+                # Can't create a table with no columns, fallback to text
+                return
 
             # Count all rows in header and body to determine row count
             header = node.parent
@@ -530,6 +589,11 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             row_count = len(header.children)
             if body:
                 row_count += len(body.children)
+
+            # Ensure we have at least one body row
+            if body is None or len(body.children) == 0:
+                # Can't create a table with no body, fallback to text
+                return
 
             # Create table format
             table_format = QTextTableFormat()
@@ -556,7 +620,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         for i, cell_node in enumerate(node.children):
             if self._current_table and i < self._current_table.columns():
                 # Get the current table cell
-                print(f"TableRow: {node.line_start}-{node.line_end} (is_first_row={is_first_row})")
                 table_cell = self._current_table.cellAt(self._current_row, i)
                 cell_cursor = table_cell.firstCursorPosition()
 

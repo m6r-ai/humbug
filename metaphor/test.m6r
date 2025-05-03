@@ -5,5 +5,5 @@ Context:
     I am testing some software
 
 Action:
-    Please give me a 5x2 table with numbers in English in one column
-    and numbers in French in the other.
+    Please give me a 10x2 table with numbers in English in one column
+    and numbers in Arabic and their pronunciations in the other.
