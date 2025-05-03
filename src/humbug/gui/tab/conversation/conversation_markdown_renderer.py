@@ -67,7 +67,8 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Clear the document.  At some point in the future we may want to do
         # incremental edits instead.
-        self._document.clear()
+        cursor.select(QTextCursor.SelectionType.Document)
+        cursor.removeSelectedText()
 
         # Set up the default font size
         font = QFont()
@@ -316,7 +317,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._lists.pop()
 
         # If we find ourselves in a new block then we need to look at its predecessor
-        # as that's the one that actulally has our last list item
+        # as that's the one that actually has our last list item
         at_block_start = self._cursor.atBlockStart()
         if at_block_start:
             self._cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
@@ -461,6 +462,10 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         block_format = QTextBlockFormat(orig_block_format)
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
+
+        # Add a new block after the table with proper spacing
+        # Note: Qt needs a block after a table otherwise it segfaults!
+        self._cursor.insertBlock()
 
     def visit_MarkdownTableHeaderNode(self, node: MarkdownTableHeaderNode) -> None:  # pylint: disable=invalid-name
         """
