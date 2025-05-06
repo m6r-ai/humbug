@@ -625,10 +625,12 @@ class MarkdownParser:
             # Store this as a header row
             cells = [cell.strip() for cell in line.split('|')[1:-1]]
             self._table_buffer.header_rows.append(cells)
+
         elif self._table_buffer.is_confirmed_table:
             # This is a body row
             cells = [cell.strip() for cell in line.split('|')[1:-1]]
             self._table_buffer.body_rows.append(cells)
+
         else:
             # This is another potential header row
             cells = [cell.strip() for cell in line.split('|')[1:-1]]
