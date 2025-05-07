@@ -626,21 +626,15 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
                 # Apply cell format based on alignment
                 if isinstance(cell_node, MarkdownTableCellNode):
                     # Create the cell format object
-                    cell_format = table_cell.format()
-
-                    # Set alignment based on the cell's alignment property
-#                    if cell_node.alignment == 'center':
-#                        cell_format.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-#                    elif cell_node.alignment == 'right':
-#                        cell_format.setAlignment(Qt.AlignmentFlag.AlignRight)
-
-#                    else:  # default to left
-#                        cell_format.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                    cell_format = table_cell.format().toTableCellFormat()
+                    cell_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
+                    cell_format.setBorder(1)
+                    cell_format.setBorderBrush(self._style_manager.get_color(ColorRole.TABLE_BORDER))
+                    cell_format.setPadding(8)
 
                     # Apply header styling if needed
                     if cell_node.is_header:
-                        cell_format.setBackground(self._style_manager.get_color(ColorRole.SYNTAX_INLINE_CODE))
+                        cell_format.setBackground(self._style_manager.get_color(ColorRole.TABLE_HEADER_BACKGROUND))
 
                     # Apply the cell format
                     table_cell.setFormat(cell_format)
@@ -650,6 +644,20 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
                         cell_char_format = QTextCharFormat()
                         cell_char_format.setFontWeight(QFont.Weight.Bold)
                         cell_cursor.setCharFormat(cell_char_format)
+
+                    # Set text alignment on the block format inside the cell
+                    block_format = cell_cursor.blockFormat()
+
+                    if cell_node.alignment == 'center':
+                        block_format.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+                    elif cell_node.alignment == 'right':
+                        block_format.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+                    else:
+                        block_format.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+                    cell_cursor.setBlockFormat(block_format)
 
                 # Store the current cursor position
                 old_cursor = self._cursor

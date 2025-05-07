@@ -187,14 +187,24 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c0c0c0"
             },
 
+            # Table elements
+            ColorRole.TABLE_BORDER: {
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#a0a0a0"
+            },
+            ColorRole.TABLE_HEADER_BACKGROUND: {
+                ColorMode.DARK: "#2d2d3d",
+                ColorMode.LIGHT: "#d0d0e0"
+            },
+
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
                 ColorMode.DARK: "#020202",
-                ColorMode.LIGHT: "#e4e4e4"
+                ColorMode.LIGHT: "#f4f4f4"
             },
             ColorRole.MESSAGE_USER_BACKGROUND: {
                 ColorMode.DARK: "#141414",
-                ColorMode.LIGHT: "#f4f4f4"
+                ColorMode.LIGHT: "#e4e4e4"
             },
             ColorRole.MESSAGE_FOCUSED: {
                 ColorMode.DARK: "#6a7684",

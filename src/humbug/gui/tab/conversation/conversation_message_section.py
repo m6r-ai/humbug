@@ -284,9 +284,6 @@ class ConversationMessageSection(QFrame):
         # Store for re-styling
         self._content_node = content
         self._renderer.visit(content)
-        import humbug.markdown.markdown_ast_printer as printer
-        ast_printer = printer.MarkdownASTPrinter()
-        ast_printer.visit(content)
 
     def has_selection(self) -> bool:
         """Check if text is selected in the text area."""
