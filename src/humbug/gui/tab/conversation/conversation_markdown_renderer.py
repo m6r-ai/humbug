@@ -326,6 +326,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
 
+        if at_block_start:
+            self._cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
+
         # Exit this list level
         self._list_level -= 1
 
