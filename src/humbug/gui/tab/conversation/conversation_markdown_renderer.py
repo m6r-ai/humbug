@@ -469,13 +469,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setPosition(top_frame.lastPosition())
 
-        # Add a new block after the table with proper spacing
-        if not self._cursor.atBlockStart():
-            self._cursor.insertBlock()
-
         # Set spacing after table
         block_format = QTextBlockFormat(orig_block_format)
-        block_format.setBottomMargin(self._default_font_height)
+        block_format.setBottomMargin(self._default_font_height * 2)
         self._cursor.setBlockFormat(block_format)
 
         # Add a new block after the table with proper spacing
