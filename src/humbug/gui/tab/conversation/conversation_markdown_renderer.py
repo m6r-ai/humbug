@@ -327,7 +327,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._cursor.setBlockFormat(block_format)
 
         if at_block_start:
-            self._cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
+            self._cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
 
         # Exit this list level
         self._list_level -= 1
