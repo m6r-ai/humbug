@@ -1108,4 +1108,23 @@ class StyleManager(QObject):
             QPushButton[recommended="true"]:pressed {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
             }}
+
+            QScrollArea {{
+                background-color: {self.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
         """
