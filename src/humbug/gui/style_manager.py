@@ -952,6 +952,11 @@ class StyleManager(QObject):
                 font-size: {base_font_size * zoom_factor}pt;
             }}
 
+            QScrollArea > QWidget > QWidget {{
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                border: none;
+            }}
+
             /* Labels */
             QLabel {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -1109,10 +1114,6 @@ class StyleManager(QObject):
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
             }}
 
-            QScrollArea {{
-                background-color: {self.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
             QScrollBar:vertical {{
                 background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;
