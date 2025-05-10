@@ -85,8 +85,16 @@ class StyleManager(QObject):
 
             # Text colours
             ColorRole.TEXT_PRIMARY: {
+                ColorMode.DARK: "#e0e0e0",
+                ColorMode.LIGHT: "#202020"
+            },
+            ColorRole.TEXT_BRIGHT: {
                 ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#000000"
+            },
+            ColorRole.TEXT_HEADING: {
+                ColorMode.DARK: "#ffecb0",
+                ColorMode.LIGHT: "#203880"
             },
             ColorRole.TEXT_DISABLED: {
                 ColorMode.DARK: "#707070",
@@ -961,25 +969,15 @@ class StyleManager(QObject):
             QGroupBox {{
                 font-weight: bold;
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: 1px solid {self.get_color_str(ColorRole.TABLE_BORDER)};
-                border-radius: 6px;
-                margin-top: 1.5ex;
-                padding-top: 1.5ex;
-                padding-bottom: 0.5ex;
-                padding-left: 0.5ex;
-                padding-right: 0.5ex;
-            }}
-
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                left: 10px;
-                padding: 0 5px;
+                border: 0px;
+                padding: 0px;
+                margin: 0px;
             }}
 
             /* Labels */
             QLabel {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 border: none;
                 border-radius: 4px;
                 padding: 8px 0 8px 0;

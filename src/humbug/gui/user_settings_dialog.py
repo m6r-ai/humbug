@@ -69,6 +69,65 @@ class UserSettingsDialog(QDialog):
         scroll_layout.setSpacing(12)
         scroll_layout.setContentsMargins(0, 0, 8, 0)
 
+        # Fixed width for labels to ensure alignment
+        label_width = 125
+        field_width = 550
+        min_height = 30
+
+        # Section title for general settings
+        general_title = QLabel(strings.general_settings)
+        general_title.setStyleSheet("font-weight: bold; font-size: 14pt;")
+        self._general_settings_title_label = general_title
+        scroll_layout.addWidget(general_title)
+
+        # Add language selector
+        language_layout, self._language_combo = self._create_language_selector(self, min_height)
+        scroll_layout.addLayout(language_layout)
+
+        # Connect language change handler
+        self._language_combo.currentIndexChanged.connect(self._handle_value_change)
+
+        # Add font size selector
+        font_size_layout = QHBoxLayout()
+        self._font_size_label = QLabel(strings.font_size)
+        self._font_size_label.setMinimumWidth(label_width)
+        self._font_size_label.setMinimumHeight(min_height)
+        self._font_size_spin = QDoubleSpinBox()
+        self._font_size_spin.setRange(8.0, 24.0)
+        self._font_size_spin.setSingleStep(0.5)
+        self._font_size_spin.setDecimals(1)
+        self._font_size_spin.setMinimumWidth(field_width)
+        self._font_size_spin.setMinimumHeight(min_height)
+        self._font_size_spin.setContentsMargins(8, 8, 8, 8)
+        self._font_size_spin.valueChanged.connect(self._handle_value_change)
+        font_size_layout.addWidget(self._font_size_label)
+        font_size_layout.addWidget(self._font_size_spin)
+        scroll_layout.addLayout(font_size_layout)
+
+        # Add theme selector
+        theme_layout = QHBoxLayout()
+        self._theme_label = QLabel(strings.display_theme)
+        self._theme_label.setMinimumWidth(label_width)
+        self._theme_label.setMinimumHeight(min_height)
+        self._theme_combo = QComboBox(self)
+        self._theme_combo.setView(QListView())  # Workaround to get styles to work
+        self._theme_combo.setMinimumWidth(field_width)
+        self._theme_combo.setMinimumHeight(min_height)
+
+        # Add theme options
+        self._theme_combo.addItem(strings.theme_dark, ColorMode.DARK)
+        self._theme_combo.addItem(strings.theme_light, ColorMode.LIGHT)
+
+        # Connect theme change handler
+        self._theme_combo.currentIndexChanged.connect(self._handle_value_change)
+
+        theme_layout.addWidget(self._theme_label)
+        theme_layout.addWidget(self._theme_combo)
+        scroll_layout.addLayout(theme_layout)
+
+        # Add spacing between section
+        scroll_layout.addSpacing(24)
+
         # Section title for AI backends
         ai_backends_title = QLabel(strings.ai_backends_title)
         ai_backends_title.setStyleSheet("font-weight: bold; font-size: 14pt;")
@@ -87,21 +146,24 @@ class UserSettingsDialog(QDialog):
             ("xai", strings.xai_backend)
         ]
 
-        # Fixed width for labels to ensure alignment
-        label_width = 125
-        field_width = 550
-
         for backend_id, backend_name in ai_backend_mapping:
-            group_box = QGroupBox(backend_name)
+            group_box = QGroupBox()
             self._ai_backend_group_boxes[backend_id] = group_box
             group_layout = QVBoxLayout()
+            group_layout.setContentsMargins(0, 0, 0, 0)
+
+            # Title
+            title_layout = QHBoxLayout()
+            title_label = QLabel(backend_name)
+            title_layout.addWidget(title_label)
+            group_layout.addLayout(title_layout)
 
             # Enable checkbox
             enable_layout = QHBoxLayout()
             enable_label = QLabel(strings.enable_backend)
             enable_label.setMinimumWidth(label_width)
             enable_checkbox = QCheckBox()
-            enable_checkbox.setMinimumHeight(40)
+            enable_checkbox.setMinimumHeight(min_height)
 
             # Create a container layout for the checkbox to align with text fields
             checkbox_container = QHBoxLayout()
@@ -110,7 +172,6 @@ class UserSettingsDialog(QDialog):
 
             enable_layout.addWidget(enable_label)
             enable_layout.addLayout(checkbox_container)
-
             group_layout.addLayout(enable_layout)
 
             # API Key field
@@ -119,7 +180,7 @@ class UserSettingsDialog(QDialog):
             key_label.setMinimumWidth(label_width)
             key_input = QLineEdit()
             key_input.setMinimumWidth(field_width)
-            key_input.setMinimumHeight(40)
+            key_input.setMinimumHeight(min_height)
             key_layout.addWidget(key_label)
             key_layout.addWidget(key_input)
             group_layout.addLayout(key_layout)
@@ -130,7 +191,7 @@ class UserSettingsDialog(QDialog):
             url_label.setMinimumWidth(label_width)
             url_input = QLineEdit()
             url_input.setMinimumWidth(field_width)
-            url_input.setMinimumHeight(40)
+            url_input.setMinimumHeight(min_height)
             url_layout.addWidget(url_label)
             url_layout.addWidget(url_input)
             group_layout.addLayout(url_layout)
@@ -157,60 +218,7 @@ class UserSettingsDialog(QDialog):
 
             group_box.setLayout(group_layout)
             scroll_layout.addWidget(group_box)
-
-        # Add spacing between section
-        scroll_layout.addSpacing(24)
-
-        # Section title for general settings
-        general_title = QLabel(strings.general_settings)
-        general_title.setStyleSheet("font-weight: bold; font-size: 14pt;")
-        self._general_settings_title_label = general_title
-        scroll_layout.addWidget(general_title)
-
-        # Add language selector
-        language_layout, self._language_combo = self._create_language_selector(self)
-        scroll_layout.addLayout(language_layout)
-
-        # Connect language change handler
-        self._language_combo.currentIndexChanged.connect(self._handle_value_change)
-
-        # Add font size selector
-        font_size_layout = QHBoxLayout()
-        self._font_size_label = QLabel(strings.font_size)
-        self._font_size_label.setMinimumWidth(label_width)
-        self._font_size_label.setMinimumHeight(40)
-        self._font_size_spin = QDoubleSpinBox()
-        self._font_size_spin.setRange(8.0, 24.0)
-        self._font_size_spin.setSingleStep(0.5)
-        self._font_size_spin.setDecimals(1)
-        self._font_size_spin.setMinimumWidth(field_width)
-        self._font_size_spin.setMinimumHeight(40)
-        self._font_size_spin.setContentsMargins(8, 8, 8, 8)
-        self._font_size_spin.valueChanged.connect(self._handle_value_change)
-        font_size_layout.addWidget(self._font_size_label)
-        font_size_layout.addWidget(self._font_size_spin)
-        scroll_layout.addLayout(font_size_layout)
-
-        # Add theme selector
-        theme_layout = QHBoxLayout()
-        self._theme_label = QLabel(strings.display_theme)
-        self._theme_label.setMinimumWidth(label_width)
-        self._theme_label.setMinimumHeight(40)
-        self._theme_combo = QComboBox(self)
-        self._theme_combo.setView(QListView())  # Workaround to get styles to work
-        self._theme_combo.setMinimumWidth(field_width)
-        self._theme_combo.setMinimumHeight(40)
-
-        # Add theme options
-        self._theme_combo.addItem(strings.theme_dark, ColorMode.DARK)
-        self._theme_combo.addItem(strings.theme_light, ColorMode.LIGHT)
-
-        # Connect theme change handler
-        self._theme_combo.currentIndexChanged.connect(self._handle_value_change)
-
-        theme_layout.addWidget(self._theme_label)
-        theme_layout.addWidget(self._theme_combo)
-        scroll_layout.addLayout(theme_layout)
+            scroll_layout.addSpacing(24)
 
         # Add stretch at the end to push all content up
         scroll_layout.addStretch()
@@ -261,7 +269,7 @@ class UserSettingsDialog(QDialog):
         key_input.setEnabled(enabled)
         url_input.setEnabled(enabled)
 
-    def _create_language_selector(self, parent: QWidget) -> tuple[QHBoxLayout, QComboBox]:
+    def _create_language_selector(self, parent: QWidget, min_height: int) -> tuple[QHBoxLayout, QComboBox]:
         """
         Create language selection UI elements.
 
@@ -276,11 +284,11 @@ class UserSettingsDialog(QDialog):
         layout = QHBoxLayout()
         self._language_label = QLabel(language_manager.strings().select_language)
         self._language_label.setMinimumWidth(125)  # Fixed width for alignment
-        self._language_label.setMinimumHeight(40)
+        self._language_label.setMinimumHeight(min_height)
         combo = QComboBox(parent)
         combo.setView(QListView())  # Weird workaround to get styles to work!
         combo.setMinimumWidth(550)
-        combo.setMinimumHeight(40)
+        combo.setMinimumHeight(min_height)
 
         # Add language options
         language_names = {
@@ -310,6 +318,11 @@ class UserSettingsDialog(QDialog):
         self._ai_backends_title_label.setText(strings.ai_backends_title)
         self._general_settings_title_label.setText(strings.general_settings)
 
+        # Update general settings labels
+        self._language_label.setText(strings.select_language)
+        self._font_size_label.setText(strings.font_size)
+        self._theme_label.setText(strings.display_theme)
+
         # Update AI backend group boxes and their labels
         backend_mapping = {
             "anthropic": strings.anthropic_backend,
@@ -323,19 +336,10 @@ class UserSettingsDialog(QDialog):
         }
 
         for backend_id, controls in self._ai_backend_controls.items():
-            # Update group box title
-            if backend_id in self._ai_backend_group_boxes:
-                self._ai_backend_group_boxes[backend_id].setTitle(backend_mapping[backend_id])
-
-            # Update control labels
+            controls["title_label"].setText(backend_mapping[backend_id])
             controls["enable_label"].setText(strings.enable_backend)
             controls["key_label"].setText(strings.api_key)
             controls["url_label"].setText(strings.api_url)
-
-        # Update other labels
-        self._language_label.setText(strings.select_language)
-        self._font_size_label.setText(strings.font_size)
-        self._theme_label.setText(strings.display_theme)
 
         # Update theme combo box items
         current_theme = self._theme_combo.currentData()

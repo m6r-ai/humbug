@@ -150,7 +150,8 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         font_size = base_font_size * font_multiplier * self._style_manager.zoom_factor()
         char_format.setFontPointSize(font_size)
         char_format.setFontWeight(QFont.Weight.Bold)
-        self._cursor.setCharFormat(char_format)  # Apply heading character format
+        char_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_HEADING))
+        self._cursor.setCharFormat(char_format)
 
         # Apply block format (heading level)
         block_format = QTextBlockFormat()
@@ -200,6 +201,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Create a new format based on the current one but with bold
         bold_format = QTextCharFormat(orig_char_format)
         bold_format.setFontWeight(QFont.Weight.Bold)
+        bold_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_BRIGHT))
         self._cursor.setCharFormat(bold_format)
 
         for child in node.children:
@@ -642,6 +644,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
                     if cell_node.is_header:
                         cell_char_format = QTextCharFormat()
                         cell_char_format.setFontWeight(QFont.Weight.Bold)
+                        cell_char_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_BRIGHT))
                         cell_cursor.setCharFormat(cell_char_format)
 
                     # Set text alignment on the block format inside the cell

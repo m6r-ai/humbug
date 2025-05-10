@@ -12,6 +12,8 @@ class ColorRole(Enum):
 
     # Text colours
     TEXT_PRIMARY = auto()               # Primary text color
+    TEXT_BRIGHT = auto()                # Bright text color
+    TEXT_HEADING = auto()               # Heading text color
     TEXT_DISABLED = auto()              # Disabled text color
     TEXT_SELECTED = auto()              # Selected text background
     TEXT_FOUND = auto()                 # Found text background
