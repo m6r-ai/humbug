@@ -2,6 +2,12 @@
 
 ## v0.12 (2025-05-02)
 
+New features:
+
+- Markdown tables are now rendered as tables when an AI is streaming its responses to the user.
+- AI backend settings now have explicit enable/disable checkboxes and also have an optional URL as well as
+  an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.
+
 Bug fixes:
 
 - If you deleted a message from a conversation and then forked it, you could end up with a corrupted message

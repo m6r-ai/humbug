@@ -61,7 +61,9 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.12
 
-TBD
+- Markdown tables are now rendered as tables when an AI is streaming its responses to the user.
+- AI backend settings now have explicit enable/disable checkboxes and also have an optional URL as well as
+  an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.
 
 ## Features
 
