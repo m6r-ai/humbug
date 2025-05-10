@@ -47,6 +47,7 @@ class UserSettingsDialog(QDialog):
         self._initial_settings: UserSettings | None = None
         self._current_settings: UserSettings | None = None
         self._ai_backend_controls: Dict[str, Dict[str, QWidget]] = {}
+        self._ai_backend_group_boxes: Dict[str, QGroupBox] = {}
         self._logger = logging.getLogger(__name__)
 
         self._style_manager = StyleManager()
@@ -71,6 +72,7 @@ class UserSettingsDialog(QDialog):
         # Section title for AI backends
         ai_backends_title = QLabel(strings.ai_backends_title)
         ai_backends_title.setStyleSheet("font-weight: bold; font-size: 14pt;")
+        self._ai_backends_title_label = ai_backends_title
         scroll_layout.addWidget(ai_backends_title)
 
         # Create AI backend settings groups
@@ -85,13 +87,14 @@ class UserSettingsDialog(QDialog):
             ("xai", strings.xai_backend)
         ]
 
+        # Fixed width for labels to ensure alignment
+        label_width = 125
+        field_width = 550
+
         for backend_id, backend_name in ai_backend_mapping:
             group_box = QGroupBox(backend_name)
+            self._ai_backend_group_boxes[backend_id] = group_box
             group_layout = QVBoxLayout()
-
-            # Fixed width for labels to ensure alignment
-            label_width = 125
-            field_width = 550
 
             # Enable checkbox
             enable_layout = QHBoxLayout()
@@ -136,7 +139,10 @@ class UserSettingsDialog(QDialog):
             self._ai_backend_controls[backend_id] = {
                 "enable": enable_checkbox,
                 "key": key_input,
-                "url": url_input
+                "url": url_input,
+                "enable_label": enable_label,
+                "key_label": key_label,
+                "url_label": url_label
             }
 
             # Connect checkbox to enable/disable fields
@@ -158,6 +164,7 @@ class UserSettingsDialog(QDialog):
         # Section title for general settings
         general_title = QLabel(strings.general_settings)
         general_title.setStyleSheet("font-weight: bold; font-size: 14pt;")
+        self._general_settings_title_label = general_title
         scroll_layout.addWidget(general_title)
 
         # Add language selector
@@ -300,56 +307,30 @@ class UserSettingsDialog(QDialog):
         self.setWindowTitle(strings.user_settings)
 
         # Update section titles
-        for widget in self.findChildren(QLabel):
-            if widget.styleSheet() == "font-weight: bold; font-size: 14pt;":
-                if widget.text() in ["AI Backend Configuration", "General Settings"]:
-                    if widget.text() == "AI Backend Configuration":
-                        widget.setText(strings.ai_backends_title)
+        self._ai_backends_title_label.setText(strings.ai_backends_title)
+        self._general_settings_title_label.setText(strings.general_settings)
 
-                    elif widget.text() == "General Settings":
-                        widget.setText(strings.general_settings)
+        # Update AI backend group boxes and their labels
+        backend_mapping = {
+            "anthropic": strings.anthropic_backend,
+            "deepseek": strings.deepseek_backend,
+            "google": strings.google_backend,
+            "m6r": strings.m6r_backend,
+            "mistral": strings.mistral_backend,
+            "openai": strings.openai_backend,
+            "ollama": strings.ollama_backend,
+            "xai": strings.xai_backend
+        }
 
-        # Update AI backend group boxes
         for backend_id, controls in self._ai_backend_controls.items():
-            # Find the backend group box and update its title
-            parent = controls["enable"].parentWidget()
-            while parent and not isinstance(parent, QGroupBox):
-                parent = parent.parentWidget()
+            # Update group box title
+            if backend_id in self._ai_backend_group_boxes:
+                self._ai_backend_group_boxes[backend_id].setTitle(backend_mapping[backend_id])
 
-            if parent and isinstance(parent, QGroupBox):
-                # Map backend IDs to their corresponding string keys
-                backend_mapping = {
-                    "anthropic": "anthropic_backend",
-                    "deepseek": "deepseek_backend",
-                    "google": "google_backend",
-                    "m6r": "m6r_backend",
-                    "mistral": "mistral_backend",
-                    "openai": "openai_backend",
-                    "ollama": "ollama_backend",
-                    "xai": "xai_backend"
-                }
-                if backend_id in backend_mapping:
-                    title_attr = backend_mapping[backend_id]
-                    parent.setTitle(getattr(strings, title_attr))
-
-            # Update labels within the backend group
-            layout = controls["enable"].parentWidget().layout()
-            if layout:
-                for i in range(layout.count()):
-                    item = layout.itemAt(i)
-                    if item and isinstance(item.layout(), QHBoxLayout):
-                        inner_layout = item.layout()
-                        for j in range(inner_layout.count()):
-                            widget = inner_layout.itemAt(j).widget()
-                            if isinstance(widget, QLabel):
-                                if widget.text() == "Enable Backend":
-                                    widget.setText(strings.enable_backend)
-
-                                elif widget.text() == "API Key":
-                                    widget.setText(strings.api_key)
-
-                                elif widget.text() in ["API URL (optional)", "API URL"]:
-                                    widget.setText(strings.api_url)
+            # Update control labels
+            controls["enable_label"].setText(strings.enable_backend)
+            controls["key_label"].setText(strings.api_key)
+            controls["url_label"].setText(strings.api_url)
 
         # Update other labels
         self._language_label.setText(strings.select_language)

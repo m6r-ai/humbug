@@ -957,6 +957,26 @@ class StyleManager(QObject):
                 border: none;
             }}
 
+            /* Group Boxes */
+            QGroupBox {{
+                font-weight: bold;
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {self.get_color_str(ColorRole.TABLE_BORDER)};
+                border-radius: 6px;
+                margin-top: 1.5ex;
+                padding-top: 1.5ex;
+                padding-bottom: 0.5ex;
+                padding-left: 0.5ex;
+                padding-right: 0.5ex;
+            }}
+
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                left: 10px;
+                padding: 0 5px;
+            }}
+
             /* Labels */
             QLabel {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
