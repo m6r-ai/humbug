@@ -103,11 +103,10 @@ class MindspaceSettingsDialog(QDialog):
 
         # Soft tabs setting
         soft_tabs_layout = QHBoxLayout()
+        soft_tabs_layout.setSpacing(8)
         self._soft_tabs_check = QCheckBox()
-        self._soft_tabs_check.setMinimumHeight(min_height)
         self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
         self._soft_tabs_label = QLabel(strings.use_soft_tabs)
-        self._soft_tabs_label.setMinimumHeight(min_height)
         soft_tabs_layout.addWidget(self._soft_tabs_check)
         soft_tabs_layout.addWidget(self._soft_tabs_label)
         soft_tabs_layout.addStretch()
@@ -128,11 +127,10 @@ class MindspaceSettingsDialog(QDialog):
 
         # Add auto-backup settings
         auto_backup_layout = QHBoxLayout()
+        auto_backup_layout.setSpacing(8)
         self._auto_backup_check = QCheckBox()
-        self._auto_backup_check.setMinimumHeight(min_height)
         self._auto_backup_check.stateChanged.connect(self._handle_value_change)
         self._auto_backup_label = QLabel(strings.auto_backup)
-        self._auto_backup_label.setMinimumHeight(min_height)
         auto_backup_layout.addWidget(self._auto_backup_check)
         auto_backup_layout.addWidget(self._auto_backup_label)
         auto_backup_layout.addStretch()

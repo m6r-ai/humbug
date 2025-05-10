@@ -163,6 +163,7 @@ class UserSettingsDialog(QDialog):
 
             # Enable checkbox
             enable_layout = QHBoxLayout()
+            enable_layout.setSpacing(8)
             enable_checkbox = QCheckBox()
             enable_label = QLabel(strings.enable_backend)
             enable_label.setMinimumWidth(label_width)
@@ -201,7 +202,8 @@ class UserSettingsDialog(QDialog):
                 "url": url_input,
                 "enable_label": enable_label,
                 "key_label": key_label,
-                "url_label": url_label
+                "url_label": url_label,
+                "title_label": title_label
             }
 
             # Connect checkbox to enable/disable fields
