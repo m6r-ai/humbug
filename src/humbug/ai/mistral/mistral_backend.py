@@ -9,11 +9,16 @@ from humbug.ai.mistral.mistral_stream_response import MistralStreamResponse
 class MistralBackend(AIBackend):
     """Mistral API backend implementation with streaming support."""
 
-    def __init__(self, api_key: str) -> None:
-        """Initialize the Mistral backend."""
+    def __init__(self, api_key: str, base_url: str | None = None) -> None:
+        """Initialize the Mistral backend.
+
+        Args:
+            api_key: API key for Mistral
+            base_url: Custom API base URL (optional)
+        """
         super().__init__()
         self._api_key = api_key
-        self._api_url = "https://api.mistral.ai/v1/chat/completions"
+        self._api_url = base_url or "https://api.mistral.ai/v1/chat/completions"
 
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Mistral-specific request data."""

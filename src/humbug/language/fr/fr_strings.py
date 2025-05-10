@@ -97,14 +97,22 @@ def get_french_strings() -> LanguageStrings:
         yes="Oui",
         no="Non",
 
-        # User Settings dialog
-        anthropic_api_key="Clé API Anthropic",
-        deepseek_api_key="Clé API DeepSeek",
-        google_api_key="Clé API Google",
-        m6r_api_key="Clé API M6R",
-        mistral_api_key="Clé API Mistral",
-        openai_api_key="Clé API OpenAI",
-        xai_api_key="Clé API xAI",
+        # User Settings dialog - AI backends section
+        ai_backends_title="Configuration des backends d'IA",
+        general_settings="Paramètres généraux",
+        enable_backend="Activer le backend",
+        api_key="Clé API",
+        api_url="URL API (optionnel)",
+        anthropic_backend="Anthropic",
+        deepseek_backend="DeepSeek",
+        google_backend="Google",
+        m6r_backend="M6R",
+        mistral_backend="Mistral",
+        openai_backend="OpenAI",
+        ollama_backend="Ollama (local)",
+        xai_backend="xAI",
+
+        # User Settings dialog - other settings
         select_language="Langue",
         font_size="Taille de police",
         theme_dark="Sombre",

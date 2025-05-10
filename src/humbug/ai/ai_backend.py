@@ -24,6 +24,8 @@ class AIBackend(ABC):
 
     def __init__(self) -> None:
         """Initialize common attributes."""
+        self._api_key = ""
+        self._api_url = ""
         self._uses_data = True  # Indicates that we default to normal SSE encoding
         self._max_retries = 6
         self._base_delay = 2

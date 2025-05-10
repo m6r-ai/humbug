@@ -9,11 +9,16 @@ from humbug.ai.deepseek.deepseek_stream_response import DeepseekStreamResponse
 class DeepseekBackend(AIBackend):
     """Deepseek API backend implementation with streaming support."""
 
-    def __init__(self, api_key: str):
-        """Initialize the Deepseek backend."""
+    def __init__(self, api_key: str, base_url: str | None = None):
+        """Initialize the Deepseek backend.
+
+        Args:
+            api_key: API key for Deepseek
+            base_url: Custom API base URL (optional)
+        """
         super().__init__()
         self._api_key = api_key
-        self._api_url = "https://api.deepseek.com/chat/completions"
+        self._api_url = base_url or "https://api.deepseek.com/chat/completions"
 
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Deepseek-specific request data."""

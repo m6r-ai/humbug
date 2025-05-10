@@ -110,20 +110,12 @@ class UserManager(QObject):
             self._logger.error("Failed to save user settings: %s", str(e))
 
     def _initialize_ai_backends(self) -> None:
-        """Initialize AI backends using current API keys."""
-        api_keys = self.get_api_keys()
+        """Initialize AI backends using current settings."""
+        if not self._settings:
+            self._settings = UserSettings.create_default()
 
-        self._ai_backends = AIProvider.create_backends(
-            anthropic_key=api_keys.get("ANTHROPIC_API_KEY"),
-            deepseek_key=api_keys.get("DEEPSEEK_API_KEY"),
-            google_key=api_keys.get("GOOGLE_API_KEY"),
-            m6r_key=api_keys.get("M6R_API_KEY"),
-            mistral_key=api_keys.get("MISTRAL_API_KEY"),
-            openai_key=api_keys.get("OPENAI_API_KEY"),
-            xai_key=api_keys.get("XAI_API_KEY")
-        )
-
-        self._logger.info("Initialized AI backends with available API keys")
+        self._ai_backends = AIProvider.create_backends(self._settings.ai_backends)
+        self._logger.info("Initialized AI backends with available settings")
 
     def update_settings(self, new_settings: UserSettings) -> None:
         """
@@ -142,7 +134,7 @@ class UserManager(QObject):
             self._settings = new_settings
             self._save_settings()
 
-            # Re-initialize backends with new API keys
+            # Re-initialize backends with new settings
             self._initialize_ai_backends()
 
             # Emit signal to notify listeners
@@ -162,42 +154,6 @@ class UserManager(QObject):
             self._load_settings()
 
         return cast(UserSettings, self._settings)
-
-    def get_api_keys(self, include_env_vars: bool = True) -> Dict[str, str]:
-        """
-        Get current API keys, optionally including environment variables.
-
-        Environment variables take precedence over stored keys when included.
-
-        Args:
-            include_env_vars: Whether to include environment variables
-
-        Returns:
-            Dictionary of API keys
-        """
-        if self._settings is None:
-            self._load_settings()
-
-        api_keys = cast(UserSettings, self._settings).api_keys.copy()
-
-        if include_env_vars:
-            # Check environment variables and override stored keys if present
-            env_keys = {
-                "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY"),
-                "DEEPSEEK_API_KEY": os.environ.get("DEEPSEEK_API_KEY"),
-                "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
-                "M6R_API_KEY": os.environ.get("M6R_API_KEY"),
-                "MISTRAL_API_KEY": os.environ.get("MISTRAL_API_KEY"),
-                "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
-                "XAI_API_KEY": os.environ.get("XAI_API_KEY")
-            }
-
-            # Only override if environment variable is not None
-            for key, value in env_keys.items():
-                if value is not None:
-                    api_keys[key] = value
-
-        return api_keys
 
     def get_ai_backends(self) -> Dict[str, AIBackend]:
         """

@@ -9,11 +9,16 @@ from humbug.ai.anthropic.anthropic_stream_response import AnthropicStreamRespons
 class AnthropicBackend(AIBackend):
     """Anthropic API backend implementation."""
 
-    def __init__(self, api_key: str):
-        """Initialize the Anthropic backend."""
+    def __init__(self, api_key: str, base_url: str | None = None):
+        """Initialize the Anthropic backend.
+
+        Args:
+            api_key: API key for Anthropic
+            base_url: Custom API base URL (optional)
+        """
         super().__init__()
         self._api_key = api_key
-        self._api_url = "https://api.anthropic.com/v1/messages"
+        self._api_url = base_url or "https://api.anthropic.com/v1/messages"
 
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Anthropic-specific request data."""

@@ -97,14 +97,22 @@ def get_english_strings() -> LanguageStrings:
         yes="Yes",
         no="No",
 
-        # User Settings dialog
-        anthropic_api_key="Anthropic API Key",
-        deepseek_api_key="DeepSeek API Key",
-        google_api_key="Google API Key",
-        m6r_api_key="M6R API Key",
-        mistral_api_key="Mistral API Key",
-        openai_api_key="OpenAI API Key",
-        xai_api_key="xAI API Key",
+        # User Settings dialog - AI backends section
+        ai_backends_title="AI Backend Configuration",
+        general_settings="General Settings",
+        enable_backend="Enable Backend",
+        api_key="API Key",
+        api_url="API URL (optional)",
+        anthropic_backend="Anthropic",
+        deepseek_backend="DeepSeek",
+        google_backend="Google",
+        m6r_backend="M6R",
+        mistral_backend="Mistral",
+        openai_backend="OpenAI",
+        ollama_backend="Ollama (local)",
+        xai_backend="xAI",
+
+        # User Settings dialog - other settings
         select_language="Language",
         font_size="Font Size",
         theme_dark="Dark",

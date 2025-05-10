@@ -97,14 +97,22 @@ def get_arabic_strings() -> LanguageStrings:
         yes="نعم",
         no="لا",
 
-        # User Settings dialog
-        anthropic_api_key="مفتاح واجهة برمجة تطبيقات أنثروبيك",
-        deepseek_api_key="مفتاح واجهة برمجة تطبيقات ديبسيك",
-        google_api_key="مفتاح واجهة برمجة تطبيقات جوجل",
-        m6r_api_key="مفتاح واجهة برمجة تطبيقات M6R",
-        mistral_api_key="مفتاح واجهة برمجة تطبيقات ميسترال",
-        openai_api_key="مفتاح واجهة برمجة تطبيقات أوبن إيه آي",
-        xai_api_key="مفتاح واجهة برمجة تطبيقات xAI",
+        # User Settings dialog - AI backends section
+        ai_backends_title="إعدادات خلفيات الذكاء الاصطناعي",
+        general_settings="الإعدادات العامة",
+        enable_backend="تفعيل الخلفية",
+        api_key="مفتاح API",
+        api_url="عنوان URL للواجهة (اختياري)",
+        anthropic_backend="أنثروبيك",
+        deepseek_backend="ديبسيك",
+        google_backend="جوجل",
+        m6r_backend="M6R",
+        mistral_backend="ميسترال",
+        openai_backend="أوبن إي آي",
+        ollama_backend="أولاما (محلي)",
+        xai_backend="xAI",
+
+        # User Settings dialog - other settings
         select_language="اللغة",
         font_size="حجم الخط",
         theme_dark="داكن",

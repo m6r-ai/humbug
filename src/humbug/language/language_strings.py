@@ -92,14 +92,22 @@ class LanguageStrings:
     yes: str
     no: str
 
-    # User Settings dialog
-    anthropic_api_key: str
-    deepseek_api_key: str
-    google_api_key: str
-    m6r_api_key: str
-    mistral_api_key: str
-    openai_api_key: str
-    xai_api_key: str
+    # User Settings dialog - AI backends section
+    ai_backends_title: str
+    general_settings: str
+    enable_backend: str
+    api_key: str
+    api_url: str
+    anthropic_backend: str
+    deepseek_backend: str
+    google_backend: str
+    m6r_backend: str
+    mistral_backend: str
+    openai_backend: str
+    ollama_backend: str
+    xai_backend: str
+
+    # User Settings dialog - other settings
     select_language: str
     font_size: str
     theme_dark: str

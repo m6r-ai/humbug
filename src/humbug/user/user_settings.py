@@ -5,6 +5,7 @@ import json
 import os
 from typing import Dict
 
+from humbug.ai.ai_backend_settings import AIBackendSettings
 from humbug.language.language_code import LanguageCode
 from humbug.gui.style_manager import ColorMode
 
@@ -14,7 +15,7 @@ class UserSettings:
     """
     User-specific application settings.
     """
-    api_keys: Dict[str, str] = field(default_factory=dict)
+    ai_backends: Dict[str, AIBackendSettings] = field(default_factory=dict)
     language: LanguageCode = LanguageCode.EN
     font_size: float| None = None  # None means use the default font size
     theme: ColorMode = ColorMode.DARK  # Default to dark mode
@@ -23,14 +24,15 @@ class UserSettings:
     def create_default(cls) -> "UserSettings":
         """Create a new UserSettings object with default empty values."""
         return cls(
-            api_keys={
-                "ANTHROPIC_API_KEY": "",
-                "DEEPSEEK_API_KEY": "",
-                "GOOGLE_API_KEY": "",
-                "M6R_API_KEY": "",
-                "MISTRAL_API_KEY": "",
-                "OPENAI_API_KEY": "",
-                "XAI_API_KEY": ""
+            ai_backends={
+                "anthropic": AIBackendSettings(),
+                "deepseek": AIBackendSettings(),
+                "google": AIBackendSettings(),
+                "m6r": AIBackendSettings(),
+                "mistral": AIBackendSettings(),
+                "openai": AIBackendSettings(),
+                "ollama": AIBackendSettings(enabled=True),  # Ollama is enabled by default as it's local
+                "xai": AIBackendSettings()
             },
             language=LanguageCode.EN,
             font_size=None,
@@ -56,10 +58,17 @@ class UserSettings:
 
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            if "api_keys" in data:
-                for key, value in data["api_keys"].items():
-                    settings.api_keys[key] = value
 
+            # Load AI backend settings
+            if "ai_backends" in data:
+                for backend_id, backend_data in data["ai_backends"].items():
+                    settings.ai_backends[backend_id] = AIBackendSettings(
+                        enabled=backend_data.get("enabled", False),
+                        api_key=backend_data.get("api_key", ""),
+                        url=backend_data.get("url", "")
+                    )
+
+            # Load other settings
             language_code = data.get("language", "EN")
             settings.language = LanguageCode[language_code]
             settings.font_size = data.get("fontSize", None)
@@ -93,9 +102,25 @@ class UserSettings:
 
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            for key in settings.api_keys:
-                if key in data:
-                    settings.api_keys[key] = data[key]
+
+            # Convert legacy API keys to backend settings
+            backend_mapping = {
+                "ANTHROPIC_API_KEY": "anthropic",
+                "DEEPSEEK_API_KEY": "deepseek",
+                "GOOGLE_API_KEY": "google",
+                "M6R_API_KEY": "m6r",
+                "MISTRAL_API_KEY": "mistral",
+                "OPENAI_API_KEY": "openai",
+                "XAI_API_KEY": "xai"
+            }
+
+            for key, backend_id in backend_mapping.items():
+                if key in data and data[key]:
+                    settings.ai_backends[backend_id] = AIBackendSettings(
+                        enabled=True,
+                        api_key=data[key],
+                        url=""
+                    )
 
         return settings
 
@@ -112,9 +137,18 @@ class UserSettings:
         # Ensure directory exists
         os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
 
+        # Convert backend settings to serializable format
+        ai_backends_data = {}
+        for backend_id, backend_settings in self.ai_backends.items():
+            ai_backends_data[backend_id] = {
+                "enabled": backend_settings.enabled,
+                "api_key": backend_settings.api_key,
+                "url": backend_settings.url
+            }
+
         # Save settings in a structured format for future extensibility
         data = {
-            "api_keys": self.api_keys,
+            "ai_backends": ai_backends_data,
             "language": self.language.name,
             "fontSize": self.font_size,
             "theme": self.theme.name,

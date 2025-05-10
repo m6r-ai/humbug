@@ -9,11 +9,16 @@ from humbug.ai.openai.openai_stream_response import OpenAIStreamResponse
 class OpenAIBackend(AIBackend):
     """OpenAI API backend implementation with streaming support."""
 
-    def __init__(self, api_key: str) -> None:
-        """Initialize the OpenAI backend."""
+    def __init__(self, api_key: str, base_url: str | None = None) -> None:
+        """Initialize the OpenAI backend.
+
+        Args:
+            api_key: API key for OpenAI
+            base_url: Custom API base URL (optional)
+        """
         super().__init__()
         self._api_key = api_key
-        self._api_url = "https://api.openai.com/v1/chat/completions"
+        self._api_url = base_url or "https://api.openai.com/v1/chat/completions"
 
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build OpenAI-specific request data."""

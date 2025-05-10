@@ -9,11 +9,16 @@ from humbug.ai.google.google_stream_response import GoogleStreamResponse
 class GoogleBackend(AIBackend):
     """Google Gemini API backend implementation."""
 
-    def __init__(self, api_key: str):
-        """Initialize the Google backend."""
+    def __init__(self, api_key: str, base_url: str | None = None):
+        """Initialize the Google backend.
+
+        Args:
+            api_key: API key for Google
+            base_url: Custom API base URL (optional)
+        """
         super().__init__()
         self._api_key = api_key
-        self._api_base = "https://generativelanguage.googleapis.com/v1beta/models"
+        self._api_base = base_url or "https://generativelanguage.googleapis.com/v1beta/models"
 
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Google-specific request data."""
