@@ -960,7 +960,6 @@ class StyleManager(QObject):
             /* Labels */
             QLabel {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 border: none;
                 border-radius: 4px;
                 padding: 8px 0 8px 0;
@@ -984,7 +983,6 @@ class StyleManager(QObject):
             /* Checkboxes */
             QCheckBox {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 spacing: 8px;
             }}
             QCheckBox::indicator {{
