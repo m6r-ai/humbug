@@ -141,10 +141,6 @@ class UserSettingsDialog(QDialog):
                     padding-bottom: 4px;
                 }}
             """)
-            # Remove the separator line from this subsection
-            separator = backend_title.findChild(QFrame)
-            if separator:
-                separator.hide()
 
             self._settings_container.add_setting(backend_title)
 
@@ -275,6 +271,7 @@ class UserSettingsDialog(QDialog):
             if isinstance(widget, SettingsSection):
                 if widget._label.text() == strings.general_settings:
                     widget._label.setText(strings.general_settings)
+
                 elif widget._label.text() == strings.ai_backends_title:
                     widget._label.setText(strings.ai_backends_title)
 
