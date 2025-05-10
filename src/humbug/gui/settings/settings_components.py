@@ -645,8 +645,8 @@ class SettingsDisplay(SettingsField):
         min_height = int(30 * zoom_factor)
         self._display.setMinimumHeight(min_height)
 
-        value_color = self._style_manager.get_color_str(ColorRole.TEXT_BRIGHT)
-        background = self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        value_color = self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)
+        background = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)
 
         self._display.setStyleSheet(f"""
             QLabel {{
