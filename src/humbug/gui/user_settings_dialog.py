@@ -76,7 +76,7 @@ class UserSettingsDialog(QDialog):
         self._settings_container = SettingsContainer()
 
         # General settings section
-        general_section = SettingsFactory.create_section(strings.general_settings)
+        general_section = SettingsFactory.create_header(strings.general_settings)
         self._settings_container.add_setting(general_section)
 
         # Language selection
@@ -115,7 +115,7 @@ class UserSettingsDialog(QDialog):
         self._theme_combo.set_items(theme_items)
 
         # AI backends section
-        backends_section = SettingsFactory.create_section(strings.ai_backends_title)
+        backends_section = SettingsFactory.create_header(strings.ai_backends_title)
         self._settings_container.add_setting(backends_section)
 
         # Create AI backend settings
@@ -133,15 +133,6 @@ class UserSettingsDialog(QDialog):
         for backend_id, backend_name in ai_backend_mapping:
             # Add a backend title subsection
             backend_title = SettingsFactory.create_section(backend_name)
-            backend_title._label.setStyleSheet(f"""
-                QLabel {{
-                    font-size: {self._style_manager.base_font_size() * self._style_manager.zoom_factor() * 1.2}pt;
-                    font-weight: bold;
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_HEADING)};
-                    padding-bottom: 4px;
-                }}
-            """)
-
             self._settings_container.add_setting(backend_title)
 
             # Enable checkbox

@@ -19,6 +19,7 @@ from humbug.gui.style_manager import StyleManager, ColorRole
 
 class SettingType(Enum):
     """Enum for different types of settings components."""
+    HEADER = auto()         # Header for grouping settings
     SECTION = auto()        # Section header
     CHECKBOX = auto()       # Boolean setting with checkbox
     COMBO = auto()          # Selection from dropdown
@@ -66,6 +67,51 @@ class SettingsItem(QWidget):
         """Set the current value of this setting."""
 
 
+class SettingsHeader(SettingsItem):
+    """
+    Header for grouping related sections.
+
+    Attributes:
+        _label (QLabel): The header title label
+    """
+
+    def __init__(self, title: str, parent: Optional[QWidget] = None) -> None:
+        """
+        Initialize a section header with the specified title.
+
+        Args:
+            title: Text to display in the header
+            parent: Parent widget
+        """
+        super().__init__(parent)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 24, 0, 8)
+        layout.setSpacing(4)
+
+        self._label = QLabel(title)
+        layout.addWidget(self._label)
+
+        self.setLayout(layout)
+        self._update_styling()
+
+    def _update_styling(self) -> None:
+        """Update section header styling."""
+        font_size = self._style_manager.base_font_size()
+        zoom_factor = self._style_manager.zoom_factor()
+        scaled_font_size = int(font_size * zoom_factor * 1.5)  # 50% larger than base
+
+        color = self._style_manager.get_color_str(ColorRole.TEXT_BRIGHT)
+        self._label.setStyleSheet(f"""
+            QLabel {{
+                font-size: {scaled_font_size}pt;
+                font-weight: bold;
+                color: {color};
+                padding-bottom: 4px;
+            }}
+        """)
+
+
 class SettingsSection(SettingsItem):
     """
     Section header for grouping related settings.
@@ -91,12 +137,6 @@ class SettingsSection(SettingsItem):
         self._label = QLabel(title)
         layout.addWidget(self._label)
 
-        # Add a subtle separator line
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(separator)
-
         self.setLayout(layout)
         self._update_styling()
 
@@ -104,7 +144,7 @@ class SettingsSection(SettingsItem):
         """Update section header styling."""
         font_size = self._style_manager.base_font_size()
         zoom_factor = self._style_manager.zoom_factor()
-        scaled_font_size = int(font_size * zoom_factor * 1.5)  # 50% larger than base
+        scaled_font_size = int(font_size * zoom_factor)
 
         color = self._style_manager.get_color_str(ColorRole.TEXT_BRIGHT)
         self._label.setStyleSheet(f"""
@@ -115,15 +155,6 @@ class SettingsSection(SettingsItem):
                 padding-bottom: 4px;
             }}
         """)
-
-        # Set the separator color
-        separator = self.findChild(QFrame)
-        if separator:
-            separator.setStyleSheet(f"""
-                QFrame {{
-                    color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
-                }}
-            """)
 
 
 class SettingsCheckbox(SettingsItem):
@@ -677,6 +708,11 @@ class SettingsFactory:
     This provides helper methods to create various types of settings items
     with default styling and behavior.
     """
+
+    @staticmethod
+    def create_header(title: str, parent: Optional[QWidget] = None) -> SettingsHeader:
+        """Create a header."""
+        return SettingsHeader(title, parent)
 
     @staticmethod
     def create_section(title: str, parent: Optional[QWidget] = None) -> SettingsSection:
