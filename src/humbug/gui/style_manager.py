@@ -970,21 +970,13 @@ class StyleManager(QObject):
                 border: none;
             }}
 
-            /* Group Boxes */
-            QGroupBox {{
-                font-weight: bold;
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: 0px;
-                padding: 0px;
-                margin: 0px;
-            }}
-
             /* Labels */
             QLabel {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 border: none;
-                padding: 1px 0 1px 0;
+                padding: 0;
+                margin: 0;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
 

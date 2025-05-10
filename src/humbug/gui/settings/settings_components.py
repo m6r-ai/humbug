@@ -10,7 +10,7 @@ from typing import List, Optional, Any, Tuple
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
-    QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit, QListView, QFrame
+    QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit, QListView
 )
 from PySide6.QtCore import Qt, Signal
 
@@ -86,8 +86,7 @@ class SettingsHeader(SettingsItem):
         super().__init__(parent)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 24, 0, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(0, 8, 0, 8)
 
         self._label = QLabel(title)
         layout.addWidget(self._label)
@@ -99,9 +98,9 @@ class SettingsHeader(SettingsItem):
         """Update section header styling."""
         font_size = self._style_manager.base_font_size()
         zoom_factor = self._style_manager.zoom_factor()
-        scaled_font_size = int(font_size * zoom_factor * 1.5)  # 50% larger than base
+        scaled_font_size = int(font_size * zoom_factor * 2.0)  # 100% larger than base
 
-        color = self._style_manager.get_color_str(ColorRole.TEXT_BRIGHT)
+        color = self._style_manager.get_color_str(ColorRole.TEXT_HEADING)
         self._label.setStyleSheet(f"""
             QLabel {{
                 font-size: {scaled_font_size}pt;
@@ -109,6 +108,10 @@ class SettingsHeader(SettingsItem):
                 color: {color};
             }}
         """)
+
+    def set_label(self, text: str) -> None:
+        """Set the header label text."""
+        self._label.setText(text)
 
 
 class SettingsSection(SettingsItem):
@@ -130,8 +133,7 @@ class SettingsSection(SettingsItem):
         super().__init__(parent)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 24, 0, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(0, 8, 0, 8)
 
         self._label = QLabel(title)
         layout.addWidget(self._label)
@@ -177,7 +179,6 @@ class SettingsCheckbox(SettingsItem):
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 8, 0, 8)
-        layout.setSpacing(8)
 
         self._checkbox = QCheckBox()
         self._checkbox.stateChanged.connect(self._handle_changed)
@@ -235,24 +236,12 @@ class SettingsField(SettingsItem):
         super().__init__(parent)
 
         self._layout = QVBoxLayout()
-        self._layout.setContentsMargins(0, 8, 0, 8)
-        self._layout.setSpacing(4)
+        self._layout.setContentsMargins(0, 4, 0, 4)
 
         self._label = QLabel(label_text)
         self._layout.addWidget(self._label)
 
         self.setLayout(self._layout)
-
-    def _update_styling(self) -> None:
-        """Update label and control styling."""
-        # Base implementation updates only the label
-        color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        self._label.setStyleSheet(f"""
-            QLabel {{
-                color: {color};
-                padding-bottom: 2px;
-            }}
-        """)
 
 
 class SettingsCombo(SettingsField):
@@ -350,10 +339,7 @@ class SettingsCombo(SettingsField):
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
-        element_width = int(300 * zoom_factor)
-        min_height = 30
-
-        self._combo.setMinimumWidth(element_width)
+        min_height = int(30 * zoom_factor)
         self._combo.setMinimumHeight(min_height)
 
     def setEnabled(self, enabled: bool) -> None:
@@ -424,10 +410,7 @@ class SettingsSpinBox(SettingsField):
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
-        element_width = int(300 * zoom_factor)
-        min_height = 30
-
-        self._spin.setMinimumWidth(element_width)
+        min_height = int(30 * zoom_factor)
         self._spin.setMinimumHeight(min_height)
 
     def set_enabled(self, enabled: bool) -> None:
@@ -502,10 +485,7 @@ class SettingsDoubleSpinBox(SettingsField):
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
-        element_width = int(300 * zoom_factor)
-        min_height = 30
-
-        self._spin.setMinimumWidth(element_width)
+        min_height = int(30 * zoom_factor)
         self._spin.setMinimumHeight(min_height)
 
     def set_enabled(self, enabled: bool) -> None:
@@ -571,10 +551,7 @@ class SettingsTextField(SettingsField):
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
-        element_width = int(300 * zoom_factor)
-        min_height = 30
-
-        self._text_field.setMinimumWidth(element_width)
+        min_height = int(30 * zoom_factor)
         self._text_field.setMinimumHeight(min_height)
 
     def set_enabled(self, enabled: bool) -> None:
@@ -625,10 +602,7 @@ class SettingsDisplay(SettingsField):
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
-        element_width = int(300 * zoom_factor)
-        min_height = 30
-
-        self._display.setMinimumWidth(element_width)
+        min_height = int(30 * zoom_factor)
         self._display.setMinimumHeight(min_height)
 
         value_color = self._style_manager.get_color_str(ColorRole.TEXT_BRIGHT)

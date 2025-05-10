@@ -14,13 +14,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_backend_settings import AIBackendSettings
-from humbug.gui.style_manager import StyleManager, ColorMode, ColorRole
+from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.user.user_settings import UserSettings
 from humbug.gui.settings.settings_components import (
     SettingsContainer, SettingsFactory,
-    SettingsCheckbox, SettingsTextField, SettingsSection, SettingsItem
+    SettingsCheckbox, SettingsTextField, SettingsItem
 )
 
 
@@ -76,8 +76,8 @@ class UserSettingsDialog(QDialog):
         self._settings_container = SettingsContainer()
 
         # General settings section
-        general_section = SettingsFactory.create_header(strings.general_settings)
-        self._settings_container.add_setting(general_section)
+        self._general_section = SettingsFactory.create_header(strings.general_settings)
+        self._settings_container.add_setting(self._general_section)
 
         display_section = SettingsFactory.create_section("Display Settings")
         self._settings_container.add_setting(display_section)
@@ -118,8 +118,8 @@ class UserSettingsDialog(QDialog):
         self._theme_combo.set_items(theme_items)
 
         # AI backends section
-        backends_section = SettingsFactory.create_header(strings.ai_backends_title)
-        self._settings_container.add_setting(backends_section)
+        self._backends_section = SettingsFactory.create_header(strings.ai_backends_title)
+        self._settings_container.add_setting(self._backends_section)
 
         # Create AI backend settings
         ai_backend_mapping = [
@@ -260,14 +260,8 @@ class UserSettingsDialog(QDialog):
         self.cancel_button.setText(strings.cancel)
         self.apply_button.setText(strings.apply)
 
-        # Update section titles
-        for widget in self._settings_container._settings:
-            if isinstance(widget, SettingsSection):
-                if widget._label.text() == strings.general_settings:
-                    widget._label.setText(strings.general_settings)
-
-                elif widget._label.text() == strings.ai_backends_title:
-                    widget._label.setText(strings.ai_backends_title)
+        self._general_section.set_label(strings.general_settings)
+        self._backends_section.set_label(strings.ai_backends_title)
 
         # Update AI backend titles and fields
         backend_mapping = {
