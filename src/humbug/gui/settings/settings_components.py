@@ -107,7 +107,6 @@ class SettingsHeader(SettingsItem):
                 font-size: {scaled_font_size}pt;
                 font-weight: bold;
                 color: {color};
-                padding-bottom: 4px;
             }}
         """)
 
@@ -152,7 +151,6 @@ class SettingsSection(SettingsItem):
                 font-size: {scaled_font_size}pt;
                 font-weight: bold;
                 color: {color};
-                padding-bottom: 4px;
             }}
         """)
 

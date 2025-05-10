@@ -79,6 +79,9 @@ class UserSettingsDialog(QDialog):
         general_section = SettingsFactory.create_header(strings.general_settings)
         self._settings_container.add_setting(general_section)
 
+        display_section = SettingsFactory.create_section("Display Settings")
+        self._settings_container.add_setting(display_section)
+
         # Language selection
         self._language_combo = SettingsFactory.create_combo(strings.select_language)
         self._settings_container.add_setting(self._language_combo)
