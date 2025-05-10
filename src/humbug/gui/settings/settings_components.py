@@ -284,10 +284,12 @@ class SettingsCombo(SettingsField):
         _items (List[tuple]): The items and their data values
     """
 
-    def __init__(self,
-                 label_text: str,
-                 items: List[Tuple[str, Any]] = None,
-                 parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        label_text: str,
+        items: List[Tuple[str, Any]] = None,
+        parent: Optional[QWidget] = None
+    ) -> None:
         """
         Initialize a combo box setting.
 
@@ -386,12 +388,14 @@ class SettingsSpinBox(SettingsField):
         _initial_value (int): The initial value
     """
 
-    def __init__(self,
-                 label_text: str,
-                 min_value: int = 0,
-                 max_value: int = 100,
-                 step: int = 1,
-                 parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        label_text: str,
+        min_value: int = 0,
+        max_value: int = 100,
+        step: int = 1,
+        parent: Optional[QWidget] = None
+    ) -> None:
         """
         Initialize a spin box setting.
 
@@ -457,13 +461,15 @@ class SettingsDoubleSpinBox(SettingsField):
         _initial_value (float): The initial value
     """
 
-    def __init__(self,
-                 label_text: str,
-                 min_value: float = 0.0,
-                 max_value: float = 100.0,
-                 step: float = 1.0,
-                 decimals: int = 2,
-                 parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        label_text: str,
+        min_value: float = 0.0,
+        max_value: float = 100.0,
+        step: float = 1.0,
+        decimals: int = 2,
+        parent: Optional[QWidget] = None
+    ) -> None:
         """
         Initialize a double spin box setting.
 
@@ -532,10 +538,12 @@ class SettingsTextField(SettingsField):
         _initial_value (str): The initial value
     """
 
-    def __init__(self,
-                 label_text: str,
-                 placeholder: str = "",
-                 parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        label_text: str,
+        placeholder: str = "",
+        parent: Optional[QWidget] = None
+    ) -> None:
         """
         Initialize a text field setting.
 
@@ -597,10 +605,12 @@ class SettingsDisplay(SettingsField):
         _display (QLabel): The display label
     """
 
-    def __init__(self,
-                 label_text: str,
-                 value: str = "",
-                 parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        label_text: str,
+        value: str = "",
+        parent: Optional[QWidget] = None
+    ) -> None:
         """
         Initialize a display field setting.
 
