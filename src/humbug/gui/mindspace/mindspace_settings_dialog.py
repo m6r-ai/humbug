@@ -44,10 +44,11 @@ class MindspaceSettingsDialog(QDialog):
         style_manager = StyleManager()
         zoom_factor = style_manager.zoom_factor()
         element_width = int(zoom_factor * 300)
+        min_height = 30
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
-        layout.setSpacing(12)
+        layout.setSpacing(4)
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Add model selection
@@ -56,7 +57,7 @@ class MindspaceSettingsDialog(QDialog):
         self._model_combo = QComboBox()
         self._model_combo.setView(QListView())
         self._model_combo.setMinimumWidth(element_width)
-        self._model_combo.setMinimumHeight(40)
+        self._model_combo.setMinimumHeight(min_height)
 
         self._user_manager = UserManager()
         ai_backends = self._user_manager.get_ai_backends()
@@ -80,7 +81,7 @@ class MindspaceSettingsDialog(QDialog):
         self._temp_spin.setSingleStep(0.1)
         self._temp_spin.setDecimals(1)
         self._temp_spin.setMinimumWidth(element_width)
-        self._temp_spin.setMinimumHeight(40)
+        self._temp_spin.setMinimumHeight(min_height)
         self._temp_spin.valueChanged.connect(self._handle_value_change)
         temp_layout.addWidget(self._temp_label)
         temp_layout.addStretch()
@@ -93,7 +94,7 @@ class MindspaceSettingsDialog(QDialog):
         self._reasoning_combo = QComboBox()
         self._reasoning_combo.setView(QListView())
         self._reasoning_combo.setMinimumWidth(element_width)
-        self._reasoning_combo.setMinimumHeight(40)
+        self._reasoning_combo.setMinimumHeight(min_height)
         self._reasoning_combo.currentIndexChanged.connect(self._handle_value_change)
         reasoning_layout.addWidget(self._reasoning_label)
         reasoning_layout.addStretch()
@@ -103,10 +104,10 @@ class MindspaceSettingsDialog(QDialog):
         # Soft tabs setting
         soft_tabs_layout = QHBoxLayout()
         self._soft_tabs_check = QCheckBox()
-        self._soft_tabs_check.setMinimumHeight(40)
+        self._soft_tabs_check.setMinimumHeight(min_height)
         self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
         self._soft_tabs_label = QLabel(strings.use_soft_tabs)
-        self._soft_tabs_label.setMinimumHeight(40)
+        self._soft_tabs_label.setMinimumHeight(min_height)
         soft_tabs_layout.addWidget(self._soft_tabs_check)
         soft_tabs_layout.addWidget(self._soft_tabs_label)
         soft_tabs_layout.addStretch()
@@ -118,7 +119,7 @@ class MindspaceSettingsDialog(QDialog):
         self._tab_size_spin = QSpinBox()
         self._tab_size_spin.setRange(1, 8)
         self._tab_size_spin.setMinimumWidth(element_width)
-        self._tab_size_spin.setMinimumHeight(40)
+        self._tab_size_spin.setMinimumHeight(min_height)
         self._tab_size_spin.valueChanged.connect(self._handle_value_change)
         tab_size_layout.addWidget(self._tab_size_label)
         tab_size_layout.addStretch()
@@ -128,10 +129,10 @@ class MindspaceSettingsDialog(QDialog):
         # Add auto-backup settings
         auto_backup_layout = QHBoxLayout()
         self._auto_backup_check = QCheckBox()
-        self._auto_backup_check.setMinimumHeight(40)
+        self._auto_backup_check.setMinimumHeight(min_height)
         self._auto_backup_check.stateChanged.connect(self._handle_value_change)
         self._auto_backup_label = QLabel(strings.auto_backup)
-        self._auto_backup_label.setMinimumHeight(40)
+        self._auto_backup_label.setMinimumHeight(min_height)
         auto_backup_layout.addWidget(self._auto_backup_check)
         auto_backup_layout.addWidget(self._auto_backup_label)
         auto_backup_layout.addStretch()
@@ -143,7 +144,7 @@ class MindspaceSettingsDialog(QDialog):
         self._backup_interval_spin = QSpinBox()
         self._backup_interval_spin.setRange(60, 3600)  # 1 minute to 1 hour
         self._backup_interval_spin.setMinimumWidth(element_width)
-        self._backup_interval_spin.setMinimumHeight(40)
+        self._backup_interval_spin.setMinimumHeight(min_height)
         self._backup_interval_spin.valueChanged.connect(self._handle_value_change)
         backup_interval_layout.addWidget(self._backup_interval_label)
         backup_interval_layout.addStretch()

@@ -38,6 +38,7 @@ class ConversationSettingsDialog(QDialog):
         style_manager = StyleManager()
         zoom_factor = style_manager.zoom_factor()
         element_width = int(zoom_factor * 300)
+        min_height = 30
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
@@ -50,7 +51,7 @@ class ConversationSettingsDialog(QDialog):
         self._model_combo = QComboBox()
         self._model_combo.setView(QListView())  # Weird workaround to get styles to work!
         self._model_combo.setMinimumWidth(element_width)
-        self._model_combo.setMinimumHeight(40)
+        self._model_combo.setMinimumHeight(min_height)
         self._model_combo.currentTextChanged.connect(self._handle_value_change)
         model_layout.addWidget(self._model_label)
         model_layout.addStretch()
@@ -65,7 +66,7 @@ class ConversationSettingsDialog(QDialog):
         self._temp_spin.setSingleStep(0.100000000001)  # Increased step size to avoid FP issues
         self._temp_spin.setDecimals(1)
         self._temp_spin.setMinimumWidth(element_width)
-        self._temp_spin.setMinimumHeight(40)
+        self._temp_spin.setMinimumHeight(min_height)
         self._temp_spin.valueChanged.connect(self._handle_value_change)
         temp_layout.addWidget(self._temp_label)
         temp_layout.addStretch()
@@ -78,7 +79,7 @@ class ConversationSettingsDialog(QDialog):
         self._reasoning_combo = QComboBox()
         self._reasoning_combo.setView(QListView())
         self._reasoning_combo.setMinimumWidth(element_width)
-        self._reasoning_combo.setMinimumHeight(40)
+        self._reasoning_combo.setMinimumHeight(min_height)
         self._reasoning_combo.currentIndexChanged.connect(self._handle_value_change)
         reasoning_layout.addWidget(self._reasoning_label)
         reasoning_layout.addStretch()
@@ -90,7 +91,7 @@ class ConversationSettingsDialog(QDialog):
         self._context_label = QLabel(strings.settings_context_label)
         self._context_value = QLabel()
         self._context_value.setMinimumWidth(element_width)
-        self._context_value.setMinimumHeight(40)
+        self._context_value.setMinimumHeight(min_height)
         self._context_value.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         context_layout.addWidget(self._context_label)
         context_layout.addStretch()
