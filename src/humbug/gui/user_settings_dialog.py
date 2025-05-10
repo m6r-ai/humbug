@@ -20,17 +20,8 @@ from humbug.language.language_manager import LanguageManager
 from humbug.user.user_settings import UserSettings
 from humbug.gui.settings.settings_components import (
     SettingsContainer, SettingsFactory,
-    SettingsCheckbox, SettingsTextField, SettingsItem
+    SettingsCheckbox, SettingsTextField
 )
-
-
-class SettingsSpacer(SettingsItem):
-    """A simple spacer widget that implements the SettingsItem interface."""
-
-    def __init__(self, height: int = 16, parent: QWidget | None = None) -> None:
-        """Initialize a spacer with the specified height."""
-        super().__init__(parent)
-        self.setFixedHeight(height)
 
 
 class UserSettingsDialog(QDialog):
@@ -117,6 +108,10 @@ class UserSettingsDialog(QDialog):
         ]
         self._theme_combo.set_items(theme_items)
 
+        # Add some spacing between backends
+        spacer = SettingsFactory.create_spacer(16)
+        self._settings_container.add_setting(spacer)
+
         # AI backends section
         self._backends_section = SettingsFactory.create_header(strings.ai_backends_title)
         self._settings_container.add_setting(self._backends_section)
@@ -164,7 +159,8 @@ class UserSettingsDialog(QDialog):
             )
 
             # Add some spacing between backends
-            self._settings_container.add_setting(SettingsSpacer(16))
+            spacer = SettingsFactory.create_spacer(16)
+            self._settings_container.add_setting(spacer)
 
         # Add stretch at the end to push all content up
         self._settings_container.add_stretch()

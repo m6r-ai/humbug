@@ -67,6 +67,15 @@ class SettingsItem(QWidget):
         """Set the current value of this setting."""
 
 
+class SettingsSpacer(SettingsItem):
+    """A simple spacer widget that implements the SettingsItem interface."""
+
+    def __init__(self, height: int = 16, parent: QWidget | None = None) -> None:
+        """Initialize a spacer with the specified height."""
+        super().__init__(parent)
+        self.setFixedHeight(height)
+
+
 class SettingsHeader(SettingsItem):
     """
     Header for grouping related sections.
@@ -680,6 +689,11 @@ class SettingsFactory:
     This provides helper methods to create various types of settings items
     with default styling and behavior.
     """
+
+    @staticmethod
+    def create_spacer(height: int, parent: Optional[QWidget] = None) -> SettingsSpacer:
+        """Create a header."""
+        return SettingsSpacer(height, parent)
 
     @staticmethod
     def create_header(title: str, parent: Optional[QWidget] = None) -> SettingsHeader:
