@@ -6,15 +6,13 @@ consistent layout, styling, and behavior throughout the application.
 """
 
 from enum import Enum, auto
-from typing import Callable, List, Optional, Any, Union, Dict, Tuple
+from typing import List, Optional, Any, Tuple
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
-    QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit, QPushButton,
-    QListView, QGroupBox, QFrame
+    QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit, QListView, QFrame
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFontMetrics
 
 from humbug.gui.style_manager import StyleManager, ColorRole
 
@@ -28,7 +26,6 @@ class SettingType(Enum):
     DOUBLE_SPIN = auto()    # Float spinner
     TEXT = auto()           # Text input
     DISPLAY = auto()        # Read-only display field
-    GROUP = auto()          # Group of related settings
 
 
 class SettingsItem(QWidget):
@@ -53,7 +50,6 @@ class SettingsItem(QWidget):
 
     def _update_styling(self) -> None:
         """Update styling when application style changes."""
-        pass
 
     def is_modified(self) -> bool:
         """Check if this setting has been modified from its initial value."""
@@ -61,7 +57,6 @@ class SettingsItem(QWidget):
 
     def reset_modified_state(self) -> None:
         """Reset the modified state after applying changes."""
-        pass
 
     def get_value(self) -> Any:
         """Get the current value of this setting."""
@@ -69,7 +64,6 @@ class SettingsItem(QWidget):
 
     def set_value(self, value: Any) -> None:
         """Set the current value of this setting."""
-        pass
 
 
 class SettingsSection(SettingsItem):
@@ -621,104 +615,6 @@ class SettingsDisplay(SettingsField):
         """)
 
 
-class SettingsGroup(SettingsItem):
-    """
-    Group of related settings.
-
-    Attributes:
-        _group_box (QGroupBox): The group box container
-        _layout (QVBoxLayout): Layout for the group content
-        _settings (List[SettingsItem]): List of settings in this group
-    """
-
-    def __init__(self,
-                 title: str,
-                 parent: Optional[QWidget] = None) -> None:
-        """
-        Initialize a settings group.
-
-        Args:
-            title: Title for the group box
-            parent: Parent widget
-        """
-        super().__init__(parent)
-
-        # Create main layout
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(0, 8, 0, 16)
-        main_layout.setSpacing(0)
-
-        # Create group box
-        self._group_box = QGroupBox(title)
-
-        # Create layout for group content
-        self._layout = QVBoxLayout()
-        self._layout.setContentsMargins(8, 12, 8, 8)
-        self._layout.setSpacing(4)
-
-        self._group_box.setLayout(self._layout)
-        main_layout.addWidget(self._group_box)
-
-        self.setLayout(main_layout)
-        self._settings = []
-        self._update_styling()
-
-    def add_setting(self, setting: SettingsItem) -> None:
-        """
-        Add a setting to this group.
-
-        Args:
-            setting: The setting item to add
-        """
-        self._layout.addWidget(setting)
-        self._settings.append(setting)
-        setting.value_changed.connect(self._handle_child_changed)
-
-    def _handle_child_changed(self) -> None:
-        """Forward value changed signals from child settings."""
-        self.value_changed.emit()
-
-    def is_modified(self) -> bool:
-        """Check if any settings in the group are modified."""
-        return any(setting.is_modified() for setting in self._settings)
-
-    def reset_modified_state(self) -> None:
-        """Reset the modified state of all settings in the group."""
-        for setting in self._settings:
-            setting.reset_modified_state()
-
-    def _update_styling(self) -> None:
-        """Update group box styling."""
-        font_size = self._style_manager.base_font_size()
-        zoom_factor = self._style_manager.zoom_factor()
-        scaled_font_size = int(font_size * zoom_factor * 1.2)  # 20% larger than base
-
-        color = self._style_manager.get_color_str(ColorRole.TEXT_HEADING)
-        border_color = self._style_manager.get_color_str(ColorRole.SPLITTER)
-
-        self._group_box.setStyleSheet(f"""
-            QGroupBox {{
-                font-size: {scaled_font_size}pt;
-                font-weight: bold;
-                color: {color};
-                border: 1px solid {border_color};
-                border-radius: 6px;
-                margin-top: 12px;
-            }}
-
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                left: 8px;
-                padding: 0 4px;
-            }}
-        """)
-
-        # Update styling for all children
-        for setting in self._settings:
-            setting._update_styling()
-
-
 class SettingsContainer(QWidget):
     """
     Container for organized settings with consistent layout and styling.
@@ -841,12 +737,3 @@ class SettingsFactory:
     ) -> SettingsDisplay:
         """Create a display field."""
         return SettingsDisplay(label_text, value, parent)
-
-    @staticmethod
-    def create_group(
-        title: str,
-        parent: Optional[QWidget] = None
-    ) -> SettingsGroup:
-        """Create a settings group."""
-        return SettingsGroup(title, parent)
-

@@ -960,6 +960,11 @@ class StyleManager(QObject):
                 font-size: {base_font_size * zoom_factor}pt;
             }}
 
+            QScrollArea {{
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                border: none;
+            }}
+
             QScrollArea > QWidget > QWidget {{
                 background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 border: none;
