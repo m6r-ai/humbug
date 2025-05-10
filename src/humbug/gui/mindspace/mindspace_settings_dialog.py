@@ -51,9 +51,8 @@ class MindspaceSettingsDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Add model selection
-        model_layout = QHBoxLayout()
+        model_layout = QVBoxLayout()
         self._model_label = QLabel(strings.settings_model_label)
-        self._model_label.setMinimumHeight(40)
         self._model_combo = QComboBox()
         self._model_combo.setView(QListView())
         self._model_combo.setMinimumWidth(element_width)
@@ -74,9 +73,8 @@ class MindspaceSettingsDialog(QDialog):
         layout.addLayout(model_layout)
 
         # Add temperature setting
-        temp_layout = QHBoxLayout()
+        temp_layout = QVBoxLayout()
         self._temp_label = QLabel(strings.settings_temp_label)
-        self._temp_label.setMinimumHeight(40)
         self._temp_spin = QDoubleSpinBox()
         self._temp_spin.setRange(0.0, 1.0)
         self._temp_spin.setSingleStep(0.1)
@@ -90,9 +88,8 @@ class MindspaceSettingsDialog(QDialog):
         layout.addLayout(temp_layout)
 
         # Add reasoning capabilities
-        reasoning_layout = QHBoxLayout()
+        reasoning_layout = QVBoxLayout()
         self._reasoning_label = QLabel(strings.settings_reasoning_label)
-        self._reasoning_label.setMinimumHeight(40)
         self._reasoning_combo = QComboBox()
         self._reasoning_combo.setView(QListView())
         self._reasoning_combo.setMinimumWidth(element_width)
@@ -105,21 +102,19 @@ class MindspaceSettingsDialog(QDialog):
 
         # Soft tabs setting
         soft_tabs_layout = QHBoxLayout()
-        self._soft_tabs_label = QLabel(strings.use_soft_tabs)
-        self._soft_tabs_label.setMinimumHeight(40)
         self._soft_tabs_check = QCheckBox()
-        self._soft_tabs_check.setMinimumWidth(element_width)
         self._soft_tabs_check.setMinimumHeight(40)
         self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
+        self._soft_tabs_label = QLabel(strings.use_soft_tabs)
+        self._soft_tabs_label.setMinimumHeight(40)
+        soft_tabs_layout.addWidget(self._soft_tabs_check)
         soft_tabs_layout.addWidget(self._soft_tabs_label)
         soft_tabs_layout.addStretch()
-        soft_tabs_layout.addWidget(self._soft_tabs_check)
         layout.addLayout(soft_tabs_layout)
 
         # Tab size setting
-        tab_size_layout = QHBoxLayout()
+        tab_size_layout = QVBoxLayout()
         self._tab_size_label = QLabel(strings.tab_size)
-        self._tab_size_label.setMinimumHeight(40)
         self._tab_size_spin = QSpinBox()
         self._tab_size_spin.setRange(1, 8)
         self._tab_size_spin.setMinimumWidth(element_width)
@@ -132,21 +127,19 @@ class MindspaceSettingsDialog(QDialog):
 
         # Add auto-backup settings
         auto_backup_layout = QHBoxLayout()
-        self._auto_backup_label = QLabel(strings.auto_backup)
-        self._auto_backup_label.setMinimumHeight(40)
         self._auto_backup_check = QCheckBox()
-        self._auto_backup_check.setMinimumWidth(element_width)
         self._auto_backup_check.setMinimumHeight(40)
         self._auto_backup_check.stateChanged.connect(self._handle_value_change)
+        self._auto_backup_label = QLabel(strings.auto_backup)
+        self._auto_backup_label.setMinimumHeight(40)
+        auto_backup_layout.addWidget(self._auto_backup_check)
         auto_backup_layout.addWidget(self._auto_backup_label)
         auto_backup_layout.addStretch()
-        auto_backup_layout.addWidget(self._auto_backup_check)
         layout.addLayout(auto_backup_layout)
 
         # Add auto-backup interval setting
-        backup_interval_layout = QHBoxLayout()
+        backup_interval_layout = QVBoxLayout()
         self._backup_interval_label = QLabel(strings.backup_interval)
-        self._backup_interval_label.setMinimumHeight(40)
         self._backup_interval_spin = QSpinBox()
         self._backup_interval_spin.setRange(60, 3600)  # 1 minute to 1 hour
         self._backup_interval_spin.setMinimumWidth(element_width)

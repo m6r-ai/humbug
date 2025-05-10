@@ -66,8 +66,8 @@ class UserSettingsDialog(QDialog):
         # Container widget for the scroll area
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setSpacing(12)
-        scroll_layout.setContentsMargins(0, 0, 8, 0)
+        scroll_layout.setSpacing(4)
+        scroll_layout.setContentsMargins(0, 0, 20, 0)
 
         # Fixed width for labels to ensure alignment
         label_width = 125
@@ -75,10 +75,11 @@ class UserSettingsDialog(QDialog):
         min_height = 30
 
         # Section title for general settings
+        general_layout = QHBoxLayout()
         general_title = QLabel(strings.general_settings)
-        general_title.setStyleSheet("font-weight: bold; font-size: 14pt;")
         self._general_settings_title_label = general_title
-        scroll_layout.addWidget(general_title)
+        general_layout.addWidget(general_title)
+        scroll_layout.addLayout(general_layout)
 
         # Add language selector
         language_layout, self._language_combo = self._create_language_selector(self, min_height)
@@ -88,7 +89,7 @@ class UserSettingsDialog(QDialog):
         self._language_combo.currentIndexChanged.connect(self._handle_value_change)
 
         # Add font size selector
-        font_size_layout = QHBoxLayout()
+        font_size_layout = QVBoxLayout()
         self._font_size_label = QLabel(strings.font_size)
         self._font_size_label.setMinimumWidth(label_width)
         self._font_size_label.setMinimumHeight(min_height)
@@ -105,7 +106,7 @@ class UserSettingsDialog(QDialog):
         scroll_layout.addLayout(font_size_layout)
 
         # Add theme selector
-        theme_layout = QHBoxLayout()
+        theme_layout = QVBoxLayout()
         self._theme_label = QLabel(strings.display_theme)
         self._theme_label.setMinimumWidth(label_width)
         self._theme_label.setMinimumHeight(min_height)
@@ -129,10 +130,11 @@ class UserSettingsDialog(QDialog):
         scroll_layout.addSpacing(24)
 
         # Section title for AI backends
+        ai_backends_layout = QHBoxLayout()
         ai_backends_title = QLabel(strings.ai_backends_title)
-        ai_backends_title.setStyleSheet("font-weight: bold; font-size: 14pt;")
         self._ai_backends_title_label = ai_backends_title
-        scroll_layout.addWidget(ai_backends_title)
+        ai_backends_layout.addWidget(ai_backends_title)
+        scroll_layout.addLayout(ai_backends_layout)
 
         # Create AI backend settings groups
         ai_backend_mapping = [
@@ -141,8 +143,8 @@ class UserSettingsDialog(QDialog):
             ("google", strings.google_backend),
             ("m6r", strings.m6r_backend),
             ("mistral", strings.mistral_backend),
-            ("openai", strings.openai_backend),
             ("ollama", strings.ollama_backend),
+            ("openai", strings.openai_backend),
             ("xai", strings.xai_backend)
         ]
 
@@ -151,6 +153,7 @@ class UserSettingsDialog(QDialog):
             self._ai_backend_group_boxes[backend_id] = group_box
             group_layout = QVBoxLayout()
             group_layout.setContentsMargins(0, 0, 0, 0)
+            group_layout.setSpacing(4)
 
             # Title
             title_layout = QHBoxLayout()
@@ -160,22 +163,17 @@ class UserSettingsDialog(QDialog):
 
             # Enable checkbox
             enable_layout = QHBoxLayout()
+            enable_checkbox = QCheckBox()
             enable_label = QLabel(strings.enable_backend)
             enable_label.setMinimumWidth(label_width)
-            enable_checkbox = QCheckBox()
-            enable_checkbox.setMinimumHeight(min_height)
 
-            # Create a container layout for the checkbox to align with text fields
-            checkbox_container = QHBoxLayout()
-            checkbox_container.addWidget(enable_checkbox)
-            checkbox_container.addStretch()
-
+            enable_layout.addWidget(enable_checkbox)
             enable_layout.addWidget(enable_label)
-            enable_layout.addLayout(checkbox_container)
+            enable_layout.addStretch()
             group_layout.addLayout(enable_layout)
 
             # API Key field
-            key_layout = QHBoxLayout()
+            key_layout = QVBoxLayout()
             key_label = QLabel(strings.api_key)
             key_label.setMinimumWidth(label_width)
             key_input = QLineEdit()
@@ -186,7 +184,7 @@ class UserSettingsDialog(QDialog):
             group_layout.addLayout(key_layout)
 
             # URL field
-            url_layout = QHBoxLayout()
+            url_layout = QVBoxLayout()
             url_label = QLabel(strings.api_url)
             url_label.setMinimumWidth(label_width)
             url_input = QLineEdit()
@@ -262,6 +260,23 @@ class UserSettingsDialog(QDialog):
     def _handle_style_changed(self) -> None:
         """Update dialog style when the application style changes."""
         self.setStyleSheet(self._style_manager.get_dialog_stylesheet())
+        font_size = self._style_manager.base_font_size()
+        zoom_factor = self._style_manager.zoom_factor()
+        scaled_font_size = int(font_size * zoom_factor * 2)
+        self._general_settings_title_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: {scaled_font_size}pt;
+                font-weight: bold;
+                padding: 0px;
+            }}
+        """)
+        self._ai_backends_title_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: {scaled_font_size}pt;
+                font-weight: bold;
+                padding: 0px;
+            }}
+        """)
 
     def _handle_backend_enabled(self, state: int, key_input: QLineEdit, url_input: QLineEdit) -> None:
         """Enable or disable the key and URL fields based on checkbox state."""
@@ -281,7 +296,7 @@ class UserSettingsDialog(QDialog):
         """
         language_manager = LanguageManager()
 
-        layout = QHBoxLayout()
+        layout = QVBoxLayout()
         self._language_label = QLabel(language_manager.strings().select_language)
         self._language_label.setMinimumWidth(125)  # Fixed width for alignment
         self._language_label.setMinimumHeight(min_height)
@@ -315,8 +330,8 @@ class UserSettingsDialog(QDialog):
         self.setWindowTitle(strings.user_settings)
 
         # Update section titles
-        self._ai_backends_title_label.setText(strings.ai_backends_title)
         self._general_settings_title_label.setText(strings.general_settings)
+        self._ai_backends_title_label.setText(strings.ai_backends_title)
 
         # Update general settings labels
         self._language_label.setText(strings.select_language)
@@ -330,8 +345,8 @@ class UserSettingsDialog(QDialog):
             "google": strings.google_backend,
             "m6r": strings.m6r_backend,
             "mistral": strings.mistral_backend,
-            "openai": strings.openai_backend,
             "ollama": strings.ollama_backend,
+            "openai": strings.openai_backend,
             "xai": strings.xai_backend
         }
 

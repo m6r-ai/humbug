@@ -45,9 +45,8 @@ class ConversationSettingsDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Model selection
-        model_layout = QHBoxLayout()
+        model_layout = QVBoxLayout()
         self._model_label = QLabel(strings.settings_model_label)
-        self._model_label.setMinimumHeight(40)
         self._model_combo = QComboBox()
         self._model_combo.setView(QListView())  # Weird workaround to get styles to work!
         self._model_combo.setMinimumWidth(element_width)
@@ -59,9 +58,8 @@ class ConversationSettingsDialog(QDialog):
         layout.addLayout(model_layout)
 
         # Temperature setting
-        temp_layout = QHBoxLayout()
+        temp_layout = QVBoxLayout()
         self._temp_label = QLabel(strings.settings_temp_label)
-        self._temp_label.setMinimumHeight(40)
         self._temp_spin = QDoubleSpinBox()
         self._temp_spin.setRange(0.0, 1.0)
         self._temp_spin.setSingleStep(0.100000000001)  # Increased step size to avoid FP issues
@@ -75,9 +73,8 @@ class ConversationSettingsDialog(QDialog):
         layout.addLayout(temp_layout)
 
         # Reasoning capabilities
-        reasoning_layout = QHBoxLayout()
+        reasoning_layout = QVBoxLayout()
         self._reasoning_label = QLabel(strings.settings_reasoning_label)
-        self._reasoning_label.setMinimumHeight(40)
         self._reasoning_combo = QComboBox()
         self._reasoning_combo.setView(QListView())
         self._reasoning_combo.setMinimumWidth(element_width)
@@ -89,9 +86,8 @@ class ConversationSettingsDialog(QDialog):
         layout.addLayout(reasoning_layout)
 
         # Context window display
-        context_layout = QHBoxLayout()
+        context_layout = QVBoxLayout()
         self._context_label = QLabel(strings.settings_context_label)
-        self._context_label.setMinimumHeight(40)
         self._context_value = QLabel()
         self._context_value.setMinimumWidth(element_width)
         self._context_value.setMinimumHeight(40)
@@ -102,9 +98,8 @@ class ConversationSettingsDialog(QDialog):
         layout.addLayout(context_layout)
 
         # Max output display
-        output_layout = QHBoxLayout()
+        output_layout = QVBoxLayout()
         self._output_label = QLabel(strings.settings_max_output_label)
-        self._output_label.setMinimumHeight(40)
         self._output_value = QLabel()
         self._output_value.setMinimumWidth(element_width)
         self._output_value.setMinimumHeight(40)
