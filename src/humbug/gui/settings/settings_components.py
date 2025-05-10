@@ -103,6 +103,10 @@ class SettingsHeader(SettingsItem):
         self.setLayout(layout)
         self._update_styling()
 
+    def set_label(self, text: str) -> None:
+        """Set the header label text."""
+        self._label.setText(text)
+
     def _update_styling(self) -> None:
         """Update section header styling."""
         font_size = self._style_manager.base_font_size()
@@ -117,10 +121,6 @@ class SettingsHeader(SettingsItem):
                 color: {color};
             }}
         """)
-
-    def set_label(self, text: str) -> None:
-        """Set the header label text."""
-        self._label.setText(text)
 
 
 class SettingsSection(SettingsItem):
@@ -149,6 +149,10 @@ class SettingsSection(SettingsItem):
 
         self.setLayout(layout)
         self._update_styling()
+
+    def set_label(self, text: str) -> None:
+        """Set the header label text."""
+        self._label.setText(text)
 
     def _update_styling(self) -> None:
         """Update section header styling."""
@@ -223,6 +227,10 @@ class SettingsCheckbox(SettingsItem):
         self._checkbox.setChecked(value)
         self._initial_value = value
 
+    def set_label(self, text: str) -> None:
+        """Set the header label text."""
+        self._label.setText(text)
+
 
 class SettingsField(SettingsItem):
     """
@@ -251,6 +259,10 @@ class SettingsField(SettingsItem):
         self._layout.addWidget(self._label)
 
         self.setLayout(self._layout)
+
+    def set_label(self, text: str) -> None:
+        """Set the header label text."""
+        self._label.setText(text)
 
 
 class SettingsCombo(SettingsField):

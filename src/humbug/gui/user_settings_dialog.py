@@ -6,7 +6,7 @@ such as API keys for different AI backends.
 """
 
 import logging
-from typing import Dict
+from typing import Dict, cast
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
@@ -19,7 +19,7 @@ from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
 from humbug.user.user_settings import UserSettings
 from humbug.gui.settings.settings_components import (
-    SettingsContainer, SettingsFactory,
+    SettingsContainer, SettingsFactory, SettingsSection,
     SettingsCheckbox, SettingsTextField
 )
 
@@ -239,8 +239,11 @@ class UserSettingsDialog(QDialog):
         for code in LanguageCode:
             language_items.append((language_names[code], code))
 
+        self._language_combo.set_label(strings.select_language)
         self._language_combo.set_items(language_items)
         self._language_combo.set_value(current_value)
+
+        self._font_size_spin.set_label(strings.font_size)
 
         # Update theme combo items
         current_theme = self._theme_combo.get_value()
@@ -248,6 +251,7 @@ class UserSettingsDialog(QDialog):
             (strings.theme_dark, ColorMode.DARK),
             (strings.theme_light, ColorMode.LIGHT)
         ]
+        self._theme_combo.set_label(strings.display_theme)
         self._theme_combo.set_items(theme_items)
         self._theme_combo.set_value(current_theme)
 
@@ -272,17 +276,10 @@ class UserSettingsDialog(QDialog):
         }
 
         for backend_id, controls in self._ai_backend_controls.items():
-            controls["title"]._label.setText(backend_mapping[backend_id])
-
-            # Update field labels
-            if isinstance(controls["enable"], SettingsCheckbox):
-                controls["enable"]._label.setText(strings.enable_backend)
-
-            if isinstance(controls["key"], SettingsTextField):
-                controls["key"]._label.setText(strings.api_key)
-
-            if isinstance(controls["url"], SettingsTextField):
-                controls["url"]._label.setText(strings.api_url)
+            cast(SettingsSection, controls["title"]).set_label(backend_mapping[backend_id])
+            cast(SettingsCheckbox, controls["enable"]).set_label(strings.enable_backend)
+            cast(SettingsTextField, controls["key"]).set_label(strings.api_key)
+            cast(SettingsTextField, controls["url"]).set_label(strings.api_url)
 
         # Adjust dialog size to fit new content
         self.adjustSize()
