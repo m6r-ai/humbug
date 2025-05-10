@@ -69,6 +69,9 @@ class ConversationSettingsDialog(QDialog):
         self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
         self._settings_container.add_setting(self._reasoning_combo)
 
+        spacer = SettingsFactory.create_spacer(16)
+        self._settings_container.add_setting(spacer)
+
         # Add model info section
 #        info_section = SettingsFactory.create_section(strings.model_info)
         info_section = SettingsFactory.create_section("Model Info")

@@ -109,7 +109,7 @@ class UserSettingsDialog(QDialog):
         self._theme_combo.set_items(theme_items)
 
         # Add some spacing between backends
-        spacer = SettingsFactory.create_spacer(16)
+        spacer = SettingsFactory.create_spacer(24)
         self._settings_container.add_setting(spacer)
 
         # AI backends section

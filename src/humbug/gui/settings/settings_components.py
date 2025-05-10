@@ -47,9 +47,9 @@ class SettingsItem(QWidget):
         """Initialize the settings item with consistent styling."""
         super().__init__(parent)
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._update_styling)
+        self._style_manager.style_changed.connect(self._handle_style_changed)
 
-    def _update_styling(self) -> None:
+    def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
 
     def is_modified(self) -> bool:
@@ -73,7 +73,8 @@ class SettingsSpacer(SettingsItem):
     def __init__(self, height: int = 16, parent: QWidget | None = None) -> None:
         """Initialize a spacer with the specified height."""
         super().__init__(parent)
-        self.setFixedHeight(height)
+        zoom_factor = self._style_manager.zoom_factor()
+        self.setFixedHeight(int(zoom_factor * height))
 
 
 class SettingsHeader(SettingsItem):
@@ -95,19 +96,20 @@ class SettingsHeader(SettingsItem):
         super().__init__(parent)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 8, 0, 8)
+        zoom_factor = self._style_manager.zoom_factor()
+        layout.setContentsMargins(0, 0, 0, int(16 * zoom_factor))
 
         self._label = QLabel(title)
         layout.addWidget(self._label)
 
         self.setLayout(layout)
-        self._update_styling()
+        self._handle_style_changed()
 
     def set_label(self, text: str) -> None:
         """Set the header label text."""
         self._label.setText(text)
 
-    def _update_styling(self) -> None:
+    def _handle_style_changed(self) -> None:
         """Update section header styling."""
         font_size = self._style_manager.base_font_size()
         zoom_factor = self._style_manager.zoom_factor()
@@ -142,19 +144,20 @@ class SettingsSection(SettingsItem):
         super().__init__(parent)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 8, 0, 8)
+        zoom_factor = self._style_manager.zoom_factor()
+        layout.setContentsMargins(0, 0, 0, int(4 * zoom_factor))
 
         self._label = QLabel(title)
         layout.addWidget(self._label)
 
         self.setLayout(layout)
-        self._update_styling()
+        self._handle_style_changed()
 
     def set_label(self, text: str) -> None:
         """Set the header label text."""
         self._label.setText(text)
 
-    def _update_styling(self) -> None:
+    def _handle_style_changed(self) -> None:
         """Update section header styling."""
         font_size = self._style_manager.base_font_size()
         zoom_factor = self._style_manager.zoom_factor()
@@ -191,7 +194,7 @@ class SettingsCheckbox(SettingsItem):
         super().__init__(parent)
 
         layout = QHBoxLayout()
-        layout.setContentsMargins(0, 8, 0, 8)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self._checkbox = QCheckBox()
         self._checkbox.stateChanged.connect(self._handle_changed)
@@ -204,7 +207,7 @@ class SettingsCheckbox(SettingsItem):
 
         self.setLayout(layout)
         self._initial_value = False
-        self._update_styling()
+        self._handle_style_changed()
 
     def _handle_changed(self) -> None:
         """Handle checkbox state changes."""
@@ -230,6 +233,12 @@ class SettingsCheckbox(SettingsItem):
     def set_label(self, text: str) -> None:
         """Set the header label text."""
         self._label.setText(text)
+
+    def _handle_style_changed(self) -> None:
+        """Update checkbox styling."""
+        zoom_factor = self._style_manager.zoom_factor()
+        min_height = int(30 * zoom_factor)
+        self._checkbox.setMinimumHeight(min_height)
 
 
 class SettingsField(SettingsItem):
@@ -302,7 +311,7 @@ class SettingsCombo(SettingsField):
         # Add to layout
         self._layout.addWidget(self._combo)
         self._initial_index = self._combo.currentIndex()
-        self._update_styling()
+        self._handle_style_changed()
 
     def _handle_changed(self) -> None:
         """Handle combo box selection changes."""
@@ -354,9 +363,9 @@ class SettingsCombo(SettingsField):
         self._combo.blockSignals(False)
         self._initial_index = self._combo.currentIndex()
 
-    def _update_styling(self) -> None:
+    def _handle_style_changed(self) -> None:
         """Update combo box styling."""
-        super()._update_styling()
+        super()._handle_style_changed()
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
@@ -402,7 +411,7 @@ class SettingsSpinBox(SettingsField):
 
         self._layout.addWidget(self._spin)
         self._initial_value = self._spin.value()
-        self._update_styling()
+        self._handle_style_changed()
 
     def _handle_changed(self) -> None:
         """Handle spin box value changes."""
@@ -425,9 +434,9 @@ class SettingsSpinBox(SettingsField):
         self._spin.setValue(value)
         self._initial_value = value
 
-    def _update_styling(self) -> None:
+    def _handle_style_changed(self) -> None:
         """Update spin box styling."""
-        super()._update_styling()
+        super()._handle_style_changed()
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
@@ -476,7 +485,7 @@ class SettingsDoubleSpinBox(SettingsField):
 
         self._layout.addWidget(self._spin)
         self._initial_value = self._spin.value()
-        self._update_styling()
+        self._handle_style_changed()
 
     def _handle_changed(self) -> None:
         """Handle double spin box value changes."""
@@ -500,9 +509,9 @@ class SettingsDoubleSpinBox(SettingsField):
         self._spin.setValue(value)
         self._initial_value = value
 
-    def _update_styling(self) -> None:
+    def _handle_style_changed(self) -> None:
         """Update double spin box styling."""
-        super()._update_styling()
+        super()._handle_style_changed()
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
@@ -543,7 +552,7 @@ class SettingsTextField(SettingsField):
 
         self._layout.addWidget(self._text_field)
         self._initial_value = self._text_field.text()
-        self._update_styling()
+        self._handle_style_changed()
 
     def _handle_changed(self) -> None:
         """Handle text field changes."""
@@ -566,9 +575,9 @@ class SettingsTextField(SettingsField):
         self._text_field.setText(value)
         self._initial_value = value
 
-    def _update_styling(self) -> None:
+    def _handle_style_changed(self) -> None:
         """Update text field styling."""
-        super()._update_styling()
+        super()._handle_style_changed()
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
@@ -607,7 +616,7 @@ class SettingsDisplay(SettingsField):
         self._display.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
         self._layout.addWidget(self._display)
-        self._update_styling()
+        self._handle_style_changed()
 
     def get_value(self) -> str:
         """Get the current display text."""
@@ -617,9 +626,9 @@ class SettingsDisplay(SettingsField):
         """Set the display text."""
         self._display.setText(value)
 
-    def _update_styling(self) -> None:
+    def _handle_style_changed(self) -> None:
         """Update display field styling."""
-        super()._update_styling()
+        super()._handle_style_changed()
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
@@ -704,7 +713,7 @@ class SettingsFactory:
 
     @staticmethod
     def create_spacer(height: int, parent: Optional[QWidget] = None) -> SettingsSpacer:
-        """Create a header."""
+        """Create a spacer."""
         return SettingsSpacer(height, parent)
 
     @staticmethod

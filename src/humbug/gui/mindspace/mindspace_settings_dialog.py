@@ -76,6 +76,9 @@ class MindspaceSettingsDialog(QDialog):
         self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
         self._settings_container.add_setting(self._reasoning_combo)
 
+        spacer = SettingsFactory.create_spacer(16)
+        self._settings_container.add_setting(spacer)
+
         # Editor section
 #        editor_section = SettingsFactory.create_section(strings.editor_settings)
         editor_section = SettingsFactory.create_section("Editor Settings")
@@ -90,6 +93,9 @@ class MindspaceSettingsDialog(QDialog):
             strings.tab_size, 1, 8, 1
         )
         self._settings_container.add_setting(self._tab_size_spin)
+
+        spacer = SettingsFactory.create_spacer(16)
+        self._settings_container.add_setting(spacer)
 
         # Backup section
 #        backup_section = SettingsFactory.create_section(strings.backup_settings)
