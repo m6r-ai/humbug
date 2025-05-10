@@ -1128,7 +1128,8 @@ class StyleManager(QObject):
 
             QScrollBar:vertical {{
                 background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
+                width: 32px;
+                margin-left: 20px;
             }}
             QScrollBar::handle:vertical {{
                 background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
