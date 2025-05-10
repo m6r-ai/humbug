@@ -1,25 +1,25 @@
 """
-Dialog for configuring mindspace-specific settings.
+Dialog for configuring mindspace-specific settings using the settings framework.
 
 This dialog allows users to configure mindspace settings such as tab behavior and size.
 Settings are persisted to the mindspace's settings.json file.
 """
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QPushButton, QSpinBox, QCheckBox, QDoubleSpinBox, QListView, QWidget
+    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
 )
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.gui.settings.settings_components import SettingsContainer, SettingsFactory
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.user.user_manager import UserManager
 
 
 class MindspaceSettingsDialog(QDialog):
-    """Dialog for editing mindspace settings."""
+    """Dialog for editing mindspace settings using the settings framework."""
 
     settings_changed = Signal(MindspaceSettings)
 
@@ -35,123 +35,91 @@ class MindspaceSettingsDialog(QDialog):
         strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.mindspace_settings)
-        self.setMinimumWidth(500)
+        self.setMinimumWidth(800)
+        self.setMinimumHeight(600)
         self.setModal(True)
 
         self._initial_settings: MindspaceSettings | None = None
         self._current_settings: MindspaceSettings | None = None
 
         style_manager = StyleManager()
-        zoom_factor = style_manager.zoom_factor()
-        element_width = int(zoom_factor * 300)
-        min_height = 30
 
-        # Main layout with proper spacing
-        layout = QVBoxLayout()
-        layout.setSpacing(4)
-        layout.setContentsMargins(20, 20, 20, 20)
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Add model selection
-        model_layout = QVBoxLayout()
-        self._model_label = QLabel(strings.settings_model_label)
-        self._model_combo = QComboBox()
-        self._model_combo.setView(QListView())
-        self._model_combo.setMinimumWidth(element_width)
-        self._model_combo.setMinimumHeight(min_height)
+        # Create a scroll area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
-        self._user_manager = UserManager()
-        ai_backends = self._user_manager.get_ai_backends()
+        # Create settings container
+        self._settings_container = SettingsContainer()
 
-        models = []
-        for model in AIConversationSettings.iter_models_by_backends(ai_backends):
-            models.append(model)
+        # Model section
+#        model_section = SettingsFactory.create_section(strings.model_settings)
+        model_section = SettingsFactory.create_section("Model Settings")
+        self._settings_container.add_setting(model_section)
 
-        self._model_combo.addItems(models)
-        self._model_combo.currentTextChanged.connect(self._handle_value_change)
-        model_layout.addWidget(self._model_label)
-        model_layout.addStretch()
-        model_layout.addWidget(self._model_combo)
-        layout.addLayout(model_layout)
+        # Model selection
+        self._model_combo = SettingsFactory.create_combo(strings.settings_model_label)
+        self._settings_container.add_setting(self._model_combo)
 
-        # Add temperature setting
-        temp_layout = QVBoxLayout()
-        self._temp_label = QLabel(strings.settings_temp_label)
-        self._temp_spin = QDoubleSpinBox()
-        self._temp_spin.setRange(0.0, 1.0)
-        self._temp_spin.setSingleStep(0.1)
-        self._temp_spin.setDecimals(1)
-        self._temp_spin.setMinimumWidth(element_width)
-        self._temp_spin.setMinimumHeight(min_height)
-        self._temp_spin.valueChanged.connect(self._handle_value_change)
-        temp_layout.addWidget(self._temp_label)
-        temp_layout.addStretch()
-        temp_layout.addWidget(self._temp_spin)
-        layout.addLayout(temp_layout)
+        # Temperature setting
+        self._temp_spin = SettingsFactory.create_double_spinbox(
+            strings.settings_temp_label, 0.0, 1.0, 0.1, 1
+        )
+        self._settings_container.add_setting(self._temp_spin)
 
-        # Add reasoning capabilities
-        reasoning_layout = QVBoxLayout()
-        self._reasoning_label = QLabel(strings.settings_reasoning_label)
-        self._reasoning_combo = QComboBox()
-        self._reasoning_combo.setView(QListView())
-        self._reasoning_combo.setMinimumWidth(element_width)
-        self._reasoning_combo.setMinimumHeight(min_height)
-        self._reasoning_combo.currentIndexChanged.connect(self._handle_value_change)
-        reasoning_layout.addWidget(self._reasoning_label)
-        reasoning_layout.addStretch()
-        reasoning_layout.addWidget(self._reasoning_combo)
-        layout.addLayout(reasoning_layout)
+        # Reasoning capabilities
+        self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
+        self._settings_container.add_setting(self._reasoning_combo)
+
+        # Editor section
+#        editor_section = SettingsFactory.create_section(strings.editor_settings)
+        editor_section = SettingsFactory.create_section("Editor Settings")
+        self._settings_container.add_setting(editor_section)
 
         # Soft tabs setting
-        soft_tabs_layout = QHBoxLayout()
-        soft_tabs_layout.setSpacing(8)
-        self._soft_tabs_check = QCheckBox()
-        self._soft_tabs_check.stateChanged.connect(self._handle_value_change)
-        self._soft_tabs_label = QLabel(strings.use_soft_tabs)
-        soft_tabs_layout.addWidget(self._soft_tabs_check)
-        soft_tabs_layout.addWidget(self._soft_tabs_label)
-        soft_tabs_layout.addStretch()
-        layout.addLayout(soft_tabs_layout)
+        self._soft_tabs_check = SettingsFactory.create_checkbox(strings.use_soft_tabs)
+        self._settings_container.add_setting(self._soft_tabs_check)
 
         # Tab size setting
-        tab_size_layout = QVBoxLayout()
-        self._tab_size_label = QLabel(strings.tab_size)
-        self._tab_size_spin = QSpinBox()
-        self._tab_size_spin.setRange(1, 8)
-        self._tab_size_spin.setMinimumWidth(element_width)
-        self._tab_size_spin.setMinimumHeight(min_height)
-        self._tab_size_spin.valueChanged.connect(self._handle_value_change)
-        tab_size_layout.addWidget(self._tab_size_label)
-        tab_size_layout.addStretch()
-        tab_size_layout.addWidget(self._tab_size_spin)
-        layout.addLayout(tab_size_layout)
+        self._tab_size_spin = SettingsFactory.create_spinbox(
+            strings.tab_size, 1, 8, 1
+        )
+        self._settings_container.add_setting(self._tab_size_spin)
 
-        # Add auto-backup settings
-        auto_backup_layout = QHBoxLayout()
-        auto_backup_layout.setSpacing(8)
-        self._auto_backup_check = QCheckBox()
-        self._auto_backup_check.stateChanged.connect(self._handle_value_change)
-        self._auto_backup_label = QLabel(strings.auto_backup)
-        auto_backup_layout.addWidget(self._auto_backup_check)
-        auto_backup_layout.addWidget(self._auto_backup_label)
-        auto_backup_layout.addStretch()
-        layout.addLayout(auto_backup_layout)
+        # Backup section
+#        backup_section = SettingsFactory.create_section(strings.backup_settings)
+        backup_section = SettingsFactory.create_section("Backup Settings")
+        self._settings_container.add_setting(backup_section)
 
-        # Add auto-backup interval setting
-        backup_interval_layout = QVBoxLayout()
-        self._backup_interval_label = QLabel(strings.backup_interval)
-        self._backup_interval_spin = QSpinBox()
-        self._backup_interval_spin.setRange(60, 3600)  # 1 minute to 1 hour
-        self._backup_interval_spin.setMinimumWidth(element_width)
-        self._backup_interval_spin.setMinimumHeight(min_height)
-        self._backup_interval_spin.valueChanged.connect(self._handle_value_change)
-        backup_interval_layout.addWidget(self._backup_interval_label)
-        backup_interval_layout.addStretch()
-        backup_interval_layout.addWidget(self._backup_interval_spin)
-        layout.addLayout(backup_interval_layout)
+        # Auto-backup setting
+        self._auto_backup_check = SettingsFactory.create_checkbox(strings.auto_backup)
+        self._settings_container.add_setting(self._auto_backup_check)
 
-        # Add spacing before buttons
-        layout.addSpacing(24)
-        layout.addStretch()
+        # Backup interval setting
+        self._backup_interval_spin = SettingsFactory.create_spinbox(
+            strings.backup_interval, 60, 3600, 60
+        )
+        self._settings_container.add_setting(self._backup_interval_spin)
+
+        # Add stretch to push content up
+        self._settings_container.add_stretch()
+
+        # Connect change handlers
+        self._auto_backup_check.value_changed.connect(self._handle_auto_backup_change)
+        self._model_combo.value_changed.connect(self._handle_model_change)
+        self._settings_container.value_changed.connect(self._handle_value_change)
+
+        # Get AI backends for model options
+        self._user_manager = UserManager()
+
+        # Set the scroll content
+        scroll_area.setWidget(self._settings_container)
+        main_layout.addWidget(scroll_area)
 
         # Button row
         button_layout = QHBoxLayout()
@@ -179,111 +147,75 @@ class MindspaceSettingsDialog(QDialog):
             button_layout.addWidget(button)
 
         button_layout.addStretch()
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
+        main_layout.addLayout(button_layout)
+        self.setLayout(main_layout)
 
         # Apply consistent dialog styling
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
+    def _handle_auto_backup_change(self) -> None:
+        """Handle changes to auto backup checkbox."""
+        auto_backup_checked = self._auto_backup_check.get_value()
+        self._backup_interval_spin.set_enabled(auto_backup_checked)
+
+    def _handle_model_change(self) -> None:
+        """Handle model selection changes."""
+        current_model = self._model_combo.get_text()
+        self._update_model_capabilities(current_model)
+
     def _update_reasoning_combo(self, model: str) -> None:
-        """Update the reasoning combo box based on the current model's capabilities.
-
-        Args:
-            model: The selected model name
-        """
-        # Remember current selection
-        current_reasoning = None
-        if self._reasoning_combo.currentIndex() >= 0:
-            current_reasoning = self._reasoning_combo.currentData()
-
-        # Block signals while updating
-        self._reasoning_combo.blockSignals(True)
-        self._reasoning_combo.clear()
-
+        """Update the reasoning combo box based on the current model's capabilities."""
         # Get model's reasoning capabilities
         capabilities = AIConversationSettings.get_reasoning_capability(model)
         strings = self._language_manager.strings()
 
+        # Create items for the combo box
+        items = []
+
         # Add NO_REASONING if supported
         if capabilities & ReasoningCapability.NO_REASONING:
-            self._reasoning_combo.addItem(strings.settings_no_reasoning, ReasoningCapability.NO_REASONING)
+            items.append((strings.settings_no_reasoning, ReasoningCapability.NO_REASONING))
 
         # Add HIDDEN_REASONING if supported
         if capabilities & ReasoningCapability.HIDDEN_REASONING:
-            self._reasoning_combo.addItem(strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING)
+            items.append((strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING))
 
         # Add VISIBLE_REASONING if supported
         if capabilities & ReasoningCapability.VISIBLE_REASONING:
-            self._reasoning_combo.addItem(strings.settings_visible_reasoning, ReasoningCapability.VISIBLE_REASONING)
+            items.append((strings.settings_visible_reasoning, ReasoningCapability.VISIBLE_REASONING))
 
-        # Set previous selection if possible
-        if current_reasoning is not None:
-            index_found = False
-            for i in range(self._reasoning_combo.count()):
-                if self._reasoning_combo.itemData(i) == current_reasoning:
-                    self._reasoning_combo.setCurrentIndex(i)
-                    index_found = True
-                    break
-
-            # If the previous reasoning isn't available for this model, default to NO_REASONING
-            if not index_found:
-                self._reasoning_combo.setCurrentIndex(0)  # Select "No Reasoning"
+        # Update the combo box items
+        self._reasoning_combo.set_items(items)
 
         # Disable combo box if only one option
-        self._reasoning_combo.setEnabled(self._reasoning_combo.count() > 1)
+        self._reasoning_combo.setEnabled(len(items) > 1)
 
-        # Unblock signals
-        self._reasoning_combo.blockSignals(False)
+    def _update_model_capabilities(self, model: str) -> None:
+        """Update settings based on model capabilities."""
+        # Update reasoning capabilities dropdown
+        self._update_reasoning_combo(model)
+
+        # Update temperature setting
+        supports_temp = AIConversationSettings.supports_temperature(model)
+        self._temp_spin.set_enabled(supports_temp)
 
     def _handle_value_change(self) -> None:
         """Handle changes to any setting value."""
         if not self._current_settings:
             return
 
-        auto_backup_checked = self._auto_backup_check.isChecked()
-        self._backup_interval_spin.setEnabled(auto_backup_checked)
-
-        # Get current temperature value based on model support
-        current_model = self._model_combo.currentText()
-        current_temp = self._temp_spin.value()
-        current_reasoning = self._reasoning_combo.currentData()
-
-        # Update reasoning capabilities when model changes
-        supports_temp = AIConversationSettings.supports_temperature(current_model)
-        self._temp_spin.setEnabled(supports_temp)
-
-        # Update reasoning combo as needed
-        self._update_reasoning_combo(current_model)
-
-        # Compare temperatures accounting for None values
-        temp_changed = False
-        if current_temp is None and self._current_settings.temperature is None:
-            temp_changed = False
-        elif current_temp is None or self._current_settings.temperature is None:
-            temp_changed = True
-        else:
-            temp_changed = abs(current_temp - self._current_settings.temperature) > 0.01
-
-        self.apply_button.setEnabled(
-            self._soft_tabs_check.isChecked() != self._current_settings.use_soft_tabs or
-            self._tab_size_spin.value() != self._current_settings.tab_size or
-            auto_backup_checked != self._current_settings.auto_backup or
-            self._backup_interval_spin.value() != self._current_settings.auto_backup_interval or
-            current_model != self._current_settings.model or
-            temp_changed or
-            current_reasoning != self._current_settings.reasoning
-        )
+        self.apply_button.setEnabled(self._settings_container.is_modified())
 
     def get_settings(self) -> MindspaceSettings:
         """Get current settings from dialog."""
         return MindspaceSettings(
-            use_soft_tabs=self._soft_tabs_check.isChecked(),
-            tab_size=self._tab_size_spin.value(),
-            auto_backup=self._auto_backup_check.isChecked(),
-            auto_backup_interval=self._backup_interval_spin.value(),
-            model=self._model_combo.currentText(),
-            temperature=self._temp_spin.value(),
-            reasoning=self._reasoning_combo.currentData()
+            use_soft_tabs=self._soft_tabs_check.get_value(),
+            tab_size=self._tab_size_spin.get_value(),
+            auto_backup=self._auto_backup_check.get_value(),
+            auto_backup_interval=self._backup_interval_spin.get_value(),
+            model=self._model_combo.get_text(),
+            temperature=self._temp_spin.get_value(),
+            reasoning=self._reasoning_combo.get_value()
         )
 
     def set_settings(self, settings: MindspaceSettings) -> None:
@@ -300,32 +232,30 @@ class MindspaceSettingsDialog(QDialog):
         )
 
         # Editor settings
-        self._soft_tabs_check.setChecked(settings.use_soft_tabs)
-        self._tab_size_spin.setValue(settings.tab_size)
-        self._auto_backup_check.setChecked(settings.auto_backup)
-        self._backup_interval_spin.setValue(settings.auto_backup_interval)
-        self._backup_interval_spin.setEnabled(settings.auto_backup)
+        self._soft_tabs_check.set_value(settings.use_soft_tabs)
+        self._tab_size_spin.set_value(settings.tab_size)
+        self._auto_backup_check.set_value(settings.auto_backup)
+        self._backup_interval_spin.set_value(settings.auto_backup_interval)
+        self._backup_interval_spin.set_enabled(settings.auto_backup)
 
-        # Model selection
-        model_index = self._model_combo.findText(settings.model)
-        if model_index >= 0:
-            self._model_combo.setCurrentIndex(model_index)
+        # Populate model combo
+        ai_backends = self._user_manager.get_ai_backends()
+        models = []
+        for model in AIConversationSettings.iter_models_by_backends(ai_backends):
+            models.append((model, model))  # (display_text, data_value)
 
-        # Temperature setting
-        supports_temp = AIConversationSettings.supports_temperature(settings.model)
-        self._temp_spin.setEnabled(supports_temp)
-        self._temp_spin.setValue(settings.temperature)
+        self._model_combo.set_items(models)
+        self._model_combo.set_value(settings.model)
 
-        # Update reasoning options based on the selected model
-        self._update_reasoning_combo(settings.model)
+        # Set temperature
+        self._temp_spin.set_value(settings.temperature)
 
-        # Select the current reasoning setting if possible
-        for i in range(self._reasoning_combo.count()):
-            if self._reasoning_combo.itemData(i) == settings.reasoning:
-                self._reasoning_combo.setCurrentIndex(i)
-                break
+        # Update reasoning options and select current value
+        self._update_model_capabilities(settings.model)
+        self._reasoning_combo.set_value(settings.reasoning)
 
-        # Reset the apply button state
+        # Reset the modified state
+        self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
     def _handle_apply(self) -> None:
@@ -333,6 +263,7 @@ class MindspaceSettingsDialog(QDialog):
         settings = self.get_settings()
         self._current_settings = settings
         self.settings_changed.emit(settings)
+        self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
     def _handle_ok(self) -> None:

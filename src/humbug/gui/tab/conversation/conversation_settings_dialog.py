@@ -1,21 +1,21 @@
-"""Dialog for configuring conversation-specific settings."""
-
-from typing import List
+"""
+Dialog for configuring conversation-specific settings using the settings framework.
+"""
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QComboBox, QDoubleSpinBox, QListView, QWidget
+    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
 )
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.gui.settings.settings_components import SettingsContainer, SettingsFactory
 from humbug.user.user_manager import UserManager
 
 
 class ConversationSettingsDialog(QDialog):
-    """Dialog for editing conversation settings."""
+    """Dialog for editing conversation settings using the settings framework."""
 
     settings_changed = Signal(AIConversationSettings)
 
@@ -26,93 +26,72 @@ class ConversationSettingsDialog(QDialog):
         strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.conversation_settings)
-        self.setMinimumWidth(500)
+        self.setMinimumWidth(800)
+        self.setMinimumHeight(600)
         self.setModal(True)
 
         self._user_manager = UserManager()
         self._ai_backends = self._user_manager.get_ai_backends()
-        self._available_models: List[str] = []
         self._initial_settings: AIConversationSettings | None = None
         self._current_settings: AIConversationSettings | None = None
 
         style_manager = StyleManager()
-        zoom_factor = style_manager.zoom_factor()
-        element_width = int(zoom_factor * 300)
-        min_height = 30
 
-        # Main layout with proper spacing
-        layout = QVBoxLayout()
-        layout.setSpacing(12)
-        layout.setContentsMargins(20, 20, 20, 20)
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Model selection
-        model_layout = QVBoxLayout()
-        self._model_label = QLabel(strings.settings_model_label)
-        self._model_combo = QComboBox()
-        self._model_combo.setView(QListView())  # Weird workaround to get styles to work!
-        self._model_combo.setMinimumWidth(element_width)
-        self._model_combo.setMinimumHeight(min_height)
-        self._model_combo.currentTextChanged.connect(self._handle_value_change)
-        model_layout.addWidget(self._model_label)
-        model_layout.addStretch()
-        model_layout.addWidget(self._model_combo)
-        layout.addLayout(model_layout)
+        # Create a scroll area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
-        # Temperature setting
-        temp_layout = QVBoxLayout()
-        self._temp_label = QLabel(strings.settings_temp_label)
-        self._temp_spin = QDoubleSpinBox()
-        self._temp_spin.setRange(0.0, 1.0)
-        self._temp_spin.setSingleStep(0.100000000001)  # Increased step size to avoid FP issues
-        self._temp_spin.setDecimals(1)
-        self._temp_spin.setMinimumWidth(element_width)
-        self._temp_spin.setMinimumHeight(min_height)
-        self._temp_spin.valueChanged.connect(self._handle_value_change)
-        temp_layout.addWidget(self._temp_label)
-        temp_layout.addStretch()
-        temp_layout.addWidget(self._temp_spin)
-        layout.addLayout(temp_layout)
+        # Create settings container
+        self._settings_container = SettingsContainer()
 
-        # Reasoning capabilities
-        reasoning_layout = QVBoxLayout()
-        self._reasoning_label = QLabel(strings.settings_reasoning_label)
-        self._reasoning_combo = QComboBox()
-        self._reasoning_combo.setView(QListView())
-        self._reasoning_combo.setMinimumWidth(element_width)
-        self._reasoning_combo.setMinimumHeight(min_height)
-        self._reasoning_combo.currentIndexChanged.connect(self._handle_value_change)
-        reasoning_layout.addWidget(self._reasoning_label)
-        reasoning_layout.addStretch()
-        reasoning_layout.addWidget(self._reasoning_combo)
-        layout.addLayout(reasoning_layout)
+        # Add a section title
+#        model_section = SettingsFactory.create_section(strings.model_settings)
+        model_section = SettingsFactory.create_section("Model Settings")
+        self._settings_container.add_setting(model_section)
 
-        # Context window display
-        context_layout = QVBoxLayout()
-        self._context_label = QLabel(strings.settings_context_label)
-        self._context_value = QLabel()
-        self._context_value.setMinimumWidth(element_width)
-        self._context_value.setMinimumHeight(min_height)
-        self._context_value.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        context_layout.addWidget(self._context_label)
-        context_layout.addStretch()
-        context_layout.addWidget(self._context_value)
-        layout.addLayout(context_layout)
+        # Create model selection
+        self._model_combo = SettingsFactory.create_combo(strings.settings_model_label)
+        self._settings_container.add_setting(self._model_combo)
 
-        # Max output display
-        output_layout = QVBoxLayout()
-        self._output_label = QLabel(strings.settings_max_output_label)
-        self._output_value = QLabel()
-        self._output_value.setMinimumWidth(element_width)
-        self._output_value.setMinimumHeight(40)
-        self._output_value.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        output_layout.addWidget(self._output_label)
-        output_layout.addStretch()
-        output_layout.addWidget(self._output_value)
-        layout.addLayout(output_layout)
+        # Create temperature setting
+        self._temp_spin = SettingsFactory.create_double_spinbox(
+            strings.settings_temp_label, 0.0, 1.0, 0.1, 1
+        )
+        self._settings_container.add_setting(self._temp_spin)
 
-        # Add extra spacing before buttons
-        layout.addSpacing(24)
-        layout.addStretch()
+        # Create reasoning capabilities
+        self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
+        self._settings_container.add_setting(self._reasoning_combo)
+
+        # Add model info section
+#        info_section = SettingsFactory.create_section(strings.model_info)
+        info_section = SettingsFactory.create_section("Model Info")
+        self._settings_container.add_setting(info_section)
+
+        # Create context window display
+        self._context_display = SettingsFactory.create_display(strings.settings_context_label)
+        self._settings_container.add_setting(self._context_display)
+
+        # Create max output display
+        self._output_display = SettingsFactory.create_display(strings.settings_max_output_label)
+        self._settings_container.add_setting(self._output_display)
+
+        # Add stretch to push content to top
+        self._settings_container.add_stretch()
+
+        # Connect change handlers
+        self._model_combo.value_changed.connect(self._handle_model_change)
+        self._settings_container.value_changed.connect(self._handle_value_change)
+
+        # Set the scroll content
+        scroll_area.setWidget(self._settings_container)
+        main_layout.addWidget(scroll_area)
 
         # Button row with proper spacing and alignment
         button_layout = QHBoxLayout()
@@ -140,55 +119,43 @@ class ConversationSettingsDialog(QDialog):
             button_layout.addWidget(button)
 
         button_layout.addStretch()
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
+        main_layout.addLayout(button_layout)
+        self.setLayout(main_layout)
 
         # Apply consistent dialog styling
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
+    def _handle_model_change(self) -> None:
+        """Handle model selection changes."""
+        current_model = self._model_combo.get_text()
+        self._update_model_displays(current_model)
+
     def _update_reasoning_combo(self, model: str) -> None:
-        """Update the reasoning combo box based on the current model's capabilities.
-
-        Args:
-            model: The selected model name
-        """
-        # Remember current selection
-        current_reasoning = None
-        if self._reasoning_combo.currentIndex() >= 0:
-            current_reasoning = self._reasoning_combo.currentData()
-
-        # Block signals while updating
-        self._reasoning_combo.blockSignals(True)
-        self._reasoning_combo.clear()
-
+        """Update the reasoning combo box based on the current model's capabilities."""
         # Get model's reasoning capabilities
         capabilities = AIConversationSettings.get_reasoning_capability(model)
         strings = self._language_manager.strings()
 
+        # Create items for the combo box
+        items = []
+
         # Add NO_REASONING if supported
         if capabilities & ReasoningCapability.NO_REASONING:
-            self._reasoning_combo.addItem(strings.settings_no_reasoning, ReasoningCapability.NO_REASONING)
+            items.append((strings.settings_no_reasoning, ReasoningCapability.NO_REASONING))
 
         # Add HIDDEN_REASONING if supported
         if capabilities & ReasoningCapability.HIDDEN_REASONING:
-            self._reasoning_combo.addItem(strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING)
+            items.append((strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING))
 
         # Add VISIBLE_REASONING if supported
         if capabilities & ReasoningCapability.VISIBLE_REASONING:
-            self._reasoning_combo.addItem(strings.settings_visible_reasoning, ReasoningCapability.VISIBLE_REASONING)
+            items.append((strings.settings_visible_reasoning, ReasoningCapability.VISIBLE_REASONING))
 
-        # Set previous selection if possible
-        if current_reasoning is not None:
-            for i in range(self._reasoning_combo.count()):
-                if self._reasoning_combo.itemData(i) == current_reasoning:
-                    self._reasoning_combo.setCurrentIndex(i)
-                    break
+        # Update the combo box items
+        self._reasoning_combo.set_items(items)
 
         # Disable combo box if only one option
-        self._reasoning_combo.setEnabled(self._reasoning_combo.count() > 1)
-
-        # Unblock signals
-        self._reasoning_combo.blockSignals(False)
+        self._reasoning_combo.setEnabled(len(items) > 1)
 
     def _update_model_displays(self, model: str) -> None:
         """Update the model-specific displays with proper localization."""
@@ -198,53 +165,32 @@ class ConversationSettingsDialog(QDialog):
         # Update reasoning capabilities dropdown
         self._update_reasoning_combo(model)
 
+        # Update temperature setting
+        supports_temp = AIConversationSettings.supports_temperature(model)
+        self._temp_spin.set_enabled(supports_temp)
+
         # Update context window display
-        self._context_value.setText(
+        self._context_display.set_value(
             f"{limits['context_window']:,} {strings.settings_tokens_label}"
         )
-        self._context_value.setProperty('valueDisplay', True)
-        self._context_value.style().unpolish(self._context_value)
-        self._context_value.style().polish(self._context_value)
 
         # Update max output tokens display
-        self._output_value.setText(
+        self._output_display.set_value(
             f"{limits['max_output_tokens']:,} {strings.settings_tokens_label}"
         )
-        self._output_value.setProperty('valueDisplay', True)
-        self._output_value.style().unpolish(self._output_value)
-        self._output_value.style().polish(self._output_value)
 
     def _handle_value_change(self) -> None:
         """Handle changes to any setting value."""
         if not self._current_settings:
             return
 
-        current_model = self._model_combo.currentText()
-        current_temp = self._temp_spin.value()
-        current_reasoning = self._reasoning_combo.currentData()
-
-        supports_temp = AIConversationSettings.supports_temperature(current_model)
-        self._temp_spin.setEnabled(supports_temp)
-        self._update_model_displays(current_model)
-
-        temp_changed = False
-        if current_temp is None and self._current_settings.temperature is None:
-            temp_changed = False
-        elif current_temp is None or self._current_settings.temperature is None:
-            temp_changed = True
-        else:
-            temp_changed = abs(current_temp - self._current_settings.temperature) > 0.01
-
-        model_changed = current_model != self._current_settings.model
-        reasoning_changed = current_reasoning != self._current_settings.reasoning
-
-        self.apply_button.setEnabled(model_changed or temp_changed or reasoning_changed)
+        self.apply_button.setEnabled(self._settings_container.is_modified())
 
     def get_settings(self) -> AIConversationSettings:
         """Get the current settings from the dialog."""
-        model = self._model_combo.currentText()
-        temperature = self._temp_spin.value()
-        reasoning = self._reasoning_combo.currentData()
+        model = self._model_combo.get_text()
+        temperature = self._temp_spin.get_value()
+        reasoning = self._reasoning_combo.get_value()
         return AIConversationSettings(
             model=model,
             temperature=temperature,
@@ -253,14 +199,6 @@ class ConversationSettingsDialog(QDialog):
 
     def set_settings(self, settings: AIConversationSettings) -> None:
         """Set the current settings in the dialog."""
-        models = []
-        for model in AIConversationSettings.iter_models_by_backends(self._ai_backends):
-            models.append(model)
-
-        self._available_models = models
-        self._model_combo.clear()
-        self._model_combo.addItems(models)
-
         self._initial_settings = AIConversationSettings(
             model=settings.model,
             temperature=settings.temperature,
@@ -272,27 +210,23 @@ class ConversationSettingsDialog(QDialog):
             reasoning=settings.reasoning
         )
 
-        # Model selection
-        model_index = self._model_combo.findText(settings.model)
-        if model_index >= 0:
-            self._model_combo.setCurrentIndex(model_index)
+        # Populate model combo
+        models = []
+        for model in AIConversationSettings.iter_models_by_backends(self._ai_backends):
+            models.append((model, model))  # (display_text, data_value)
 
+        self._model_combo.set_items(models)
+        self._model_combo.set_value(settings.model)
+
+        # Set temperature
+        self._temp_spin.set_value(settings.temperature)
+
+        # Set reasoning and update model displays
         self._update_model_displays(settings.model)
+        self._reasoning_combo.set_value(settings.reasoning)
 
-        # Temperature setting
-        supports_temp = AIConversationSettings.supports_temperature(settings.model)
-        self._temp_spin.setEnabled(supports_temp)
-        self._temp_spin.setValue(settings.temperature)
-
-        # Reasoning capabilities
-        # Setting the model will populate the reasoning combo box
-        # We need to select the current reasoning setting
-        for i in range(self._reasoning_combo.count()):
-            if self._reasoning_combo.itemData(i) == settings.reasoning:
-                self._reasoning_combo.setCurrentIndex(i)
-                break
-
-        # Reset the apply button state
+        # Reset modified state
+        self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
     def _handle_apply(self) -> None:
@@ -300,6 +234,7 @@ class ConversationSettingsDialog(QDialog):
         settings = self.get_settings()
         self._current_settings = settings
         self.settings_changed.emit(settings)
+        self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
     def _handle_ok(self) -> None:
@@ -311,4 +246,5 @@ class ConversationSettingsDialog(QDialog):
         """Handle Cancel button click."""
         if self._initial_settings:
             self.settings_changed.emit(self._initial_settings)
+
         super().reject()
