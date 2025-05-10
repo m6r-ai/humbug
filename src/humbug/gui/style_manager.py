@@ -79,7 +79,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.BACKGROUND_DIALOG: {
-                ColorMode.DARK: "#343434",
+                ColorMode.DARK: "#282828",
                 ColorMode.LIGHT: "#d0d0d0"
             },
 
@@ -157,7 +157,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#2050c0"
             },
             ColorRole.BUTTON_BACKGROUND_DISABLED: {
-                ColorMode.DARK: "#2c2c2c",
+                ColorMode.DARK: "#202020",
                 ColorMode.LIGHT: "#d8d8d8"
             },
 

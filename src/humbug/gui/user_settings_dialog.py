@@ -66,7 +66,7 @@ class UserSettingsDialog(QDialog):
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setSpacing(12)
-        scroll_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_layout.setContentsMargins(0, 0, 8, 0)
 
         # Section title for AI backends
         ai_backends_title = QLabel(strings.ai_backends_title)
