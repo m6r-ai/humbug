@@ -975,6 +975,7 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 border: none;
+                border-radius: 4px;
                 padding: 0;
                 margin: 0;
                 font-size: {base_font_size * zoom_factor}pt;
@@ -986,8 +987,8 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
-                padding: 8px;
-                font-size: {base_font_size * zoom_factor}pt;
+                padding: 4px;
+                font-size: {int(base_font_size * zoom_factor)}pt;
             }}
             QLineEdit:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
@@ -997,13 +998,14 @@ class StyleManager(QObject):
             /* Checkboxes */
             QCheckBox {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                spacing: 8px;
-            }}
-            QCheckBox::indicator {{
-                width: 18px;
-                height: 18px;
                 border: none;
                 border-radius: 4px;
+                padding: 0;
+                margin: 0;
+            }}
+            QCheckBox::indicator {{
+                width: {int(18 * zoom_factor)}px;
+                height: {int(18 * zoom_factor)}px;
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
             }}
             QCheckBox::indicator:disabled {{
@@ -1022,8 +1024,9 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
-                padding: 8px;
-                font-size: {base_font_size * zoom_factor}pt;
+                padding: 6px;
+                margin: 0;
+                font-size: {int(base_font_size * zoom_factor)}pt;
             }}
             QComboBox:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
@@ -1052,7 +1055,6 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QComboBox QListView {{
-                border: none;
                 background-color: {self.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
@@ -1063,7 +1065,7 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
-                padding: 8px;
+                padding: 4px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
             QSpinBox:disabled, QDoubleSpinBox:disabled {{
@@ -1100,7 +1102,7 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
-                padding: 8px;
+                padding: 4px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
             QPushButton:hover {{
@@ -1128,8 +1130,7 @@ class StyleManager(QObject):
 
             QScrollBar:vertical {{
                 background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 32px;
-                margin-left: 20px;
+                width: 12px;
             }}
             QScrollBar::handle:vertical {{
                 background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
