@@ -360,71 +360,50 @@ Context: Capabilities
             The application supports loading settings from a configuration file, "user-settings.json" that is
             stored in the ".humbug" directory in the user's home directory.
 
-            Context: user-settings.json file
-                The "user-settings.json" file contains API keys for different providers:
+            The file is:
 
-                ```json
-                {
-                    "api_keys": {
-                        "ANTHROPIC_API_KEY": "",
-                        "DEEPSEEK_API_KEY": "",
-                        "GOOGLE_API_KEY": "",
-                        "M6R_API_KEY": "",
-                        "MISTRAL_API_KEY": "",
-                        "OPENAI_API_KEY": "",
-                        "XAI_API_KEY": ""
-                    }
-                }
-                ```
+            - Created automatically if it doesn't exist
+            - Read during application startup
 
-                The file is:
+            Context: File permissions
+                For security:
 
-                - Created automatically if it doesn't exist
-                - Read during application startup
-
-                Context: Key precedence
-                    API keys are loaded with the following precedence:
-
-                    1. Non-empty values from user-settings.json
-                    2. Environment variables if corresponding file value is empty
-
-                    The environment variables checked are:
-
-                    - ANTHROPIC_API_KEY for Anthropic models
-                    - DEEPSEEK_API_KEY for Deepseek models
-                    - GOOGLE_API_KEY for Google models
-                    - M6R_API_KEY for M6R models
-                    - MISTRAL_API_KEY for M6R models
-                    - OPENAI_API_KEY for OpenAI models
-                    - XAI_API_KEY for OpenAI models
-
-                Context: File permissions
-                    For security:
-
-                    - The .humbug directory is created with mode 0o700 (user access only)
-                    - The user-settings.json file is created with mode 0o600 (user read/write only)
+                - The .humbug directory is created with mode 0o700 (user access only)
+                - The user-settings.json file is created with mode 0o600 (user read/write only)
 
         Context: User Settings Dialog
             The user settings dialog allows the user to specify user-specifc settings.
 
-            Context: API Keys
-                The dialog supports editing the API keys used for any of the backend AI models for which there is
-                an API key.
+            Context: General settings
+                Context: Display settings
+                    Context: Language
+                        The language to be used by messages in the application can be selected from a drop-down list.
 
-            Context: Language
-                The language to be used by messages in the application can be selected from a drop-down list.
+                    Context: Font Size
+                        The fontSize setting controls the base font size used in editors and related text areas.
+                        When not specified, the system default font size will be used.
 
-            Context: Font Size
-                The fontSize setting controls the base font size used in editors and related text areas.
-                When not specified, the system default font size will be used.
+                        The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
 
-                The font size must be between 8.0 and 24.0 points, and supports one decimal place of precision.
+                    Context: Display Theme
+                        The theme setting controls the default display theme that will be used by the application.
+                        This can be overriden via the "Display Theme" menu item, but changes there are not persisted.
 
-            Context: Display Theme
-                The theme setting controls the default display theme that will be used by the application.
-                This can be overriden via the "Display Theme" menu item, but changes there are not persisted.
+                        Unless set otherwise, the display theme will be dark mode.
 
-                Unless set otherwise, the display theme will be dark mode.
+            Context: AI backend configuration
+                This section comprises a series of sub-sections, one per AI backend.
+
+                Context: Enable backend
+                    A checkbox enables or disables support for the backend AI model.
+
+                Context: API key
+                    The dialog supports editing the API key used for the backend AI model.
+
+                Context: API URL
+                    The dialog supports an optional override URL that the user may specify for the backend AI model.
+                    If this is left blank then the default URL will be used (and this is shown as ghost text in the
+                    edit control).
 
     Context: Mindspace operations
         Context: File tree interaction
@@ -1239,11 +1218,6 @@ Context: Capabilities
 
             For each provider, the default model is the first one in each list.
 
-        Context: Provider configuration
-            Each provider requires its own API key, as noted in the section about API key configuration.
-
-            At least one provider must be configured for the application to start.
-
     Context: Temperature settings
         Temperature controls how deterministic or creative the AI's responses are:
 
@@ -1287,6 +1261,22 @@ Context: Capabilities
         - Disabled for models that do not support a temperature setting.
         - Preserves previous temperature when switching between models that support temperatures.
         - Reverts to default when switching from models that do not support temperatures to a model that does.
+
+    Context: API key precedence
+        API keys are loaded with the following precedence:
+
+        1. Non-empty values from user-settings.json
+        2. Environment variables if corresponding file value is empty
+
+        The environment variables checked are:
+
+        - ANTHROPIC_API_KEY for Anthropic models
+        - DEEPSEEK_API_KEY for Deepseek models
+        - GOOGLE_API_KEY for Google models
+        - M6R_API_KEY for M6R models
+        - MISTRAL_API_KEY for M6R models
+        - OPENAI_API_KEY for OpenAI models
+        - XAI_API_KEY for OpenAI models
 
     Context: Error handling and recovery
         Context: Handling other network errors
