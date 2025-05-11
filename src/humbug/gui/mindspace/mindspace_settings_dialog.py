@@ -126,6 +126,7 @@ class MindspaceSettingsDialog(QDialog):
         # Set the scroll content
         scroll_area.setWidget(self._settings_container)
         main_layout.addWidget(scroll_area)
+        main_layout.addSpacing(20)
 
         # Button row
         button_layout = QHBoxLayout()

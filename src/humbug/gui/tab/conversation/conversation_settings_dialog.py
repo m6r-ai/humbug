@@ -27,7 +27,6 @@ class ConversationSettingsDialog(QDialog):
 
         self.setWindowTitle(strings.conversation_settings)
         self.setMinimumWidth(800)
-        self.setMinimumHeight(600)
         self.setModal(True)
 
         self._user_manager = UserManager()
@@ -95,6 +94,7 @@ class ConversationSettingsDialog(QDialog):
         # Set the scroll content
         scroll_area.setWidget(self._settings_container)
         main_layout.addWidget(scroll_area)
+        main_layout.addSpacing(20)
 
         # Button row with proper spacing and alignment
         button_layout = QHBoxLayout()
