@@ -25,9 +25,7 @@ class OllamaBackend(AIBackend):
         Args:
             base_url: Custom API base URL (optional)
         """
-        super().__init__()
-        self._api_key = api_key
-        self._api_url = base_url or self.get_default_url()
+        super().__init__(api_key, base_url)
 
         # Llama doesn't use normal SSE encoding!
         self._uses_data = False

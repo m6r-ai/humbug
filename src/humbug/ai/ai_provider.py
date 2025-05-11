@@ -71,7 +71,7 @@ class AIProvider:
             # Create backend instance with consistent parameter passing
             backends[provider] = backend_class(
                 api_key=provider_settings.api_key,
-                base_url=provider_settings.url if provider_settings.url else None
+                api_url=provider_settings.url if provider_settings.url else None
             )
 
         return backends

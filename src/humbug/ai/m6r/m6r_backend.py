@@ -19,20 +19,6 @@ class M6RBackend(AIBackend):
         """
         return "http://localhost:8080/v1/chat"
 
-    def __init__(self, api_key: str, base_url: str | None = None) -> None:
-        """Initialize the M6R backend.
-
-        Args:
-            api_key: API key for M6R
-            base_url: Custom API base URL (optional)
-        """
-        super().__init__()
-        self._api_key = api_key
-        self._api_url = base_url or self.get_default_url()
-
-        # M6R uses standard SSE encoding
-        self._uses_data = True
-
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build M6R-specific request data."""
         # Take existing messages and include current message

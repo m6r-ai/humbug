@@ -6,7 +6,7 @@ consistent layout, styling, and behavior throughout the application.
 """
 
 from enum import Enum, auto
-from typing import List, Optional, Any, Tuple
+from typing import List, Any, Tuple
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
@@ -43,7 +43,7 @@ class SettingsItem(QWidget):
 
     value_changed = Signal()
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the settings item with consistent styling."""
         super().__init__(parent)
         self._style_manager = StyleManager()
@@ -85,7 +85,7 @@ class SettingsHeader(SettingsItem):
         _label (QLabel): The header title label
     """
 
-    def __init__(self, title: str, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, title: str, parent: QWidget | None = None) -> None:
         """
         Initialize a section header with the specified title.
 
@@ -133,7 +133,7 @@ class SettingsSection(SettingsItem):
         _label (QLabel): The section title label
     """
 
-    def __init__(self, title: str, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, title: str, parent: QWidget | None = None) -> None:
         """
         Initialize a section header with the specified title.
 
@@ -183,7 +183,7 @@ class SettingsCheckbox(SettingsItem):
         _initial_value (bool): The initial value for detecting changes
     """
 
-    def __init__(self, text: str, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, text: str, parent: QWidget | None = None) -> None:
         """
         Initialize a checkbox setting.
 
@@ -251,7 +251,7 @@ class SettingsField(SettingsItem):
         _layout (QVBoxLayout): Layout for the setting
     """
 
-    def __init__(self, label_text: str, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, label_text: str, parent: QWidget | None = None) -> None:
         """
         Initialize a field setting with label and control.
 
@@ -287,8 +287,8 @@ class SettingsCombo(SettingsField):
     def __init__(
         self,
         label_text: str,
-        items: List[Tuple[str, Any]] = None,
-        parent: Optional[QWidget] = None
+        items: List[Tuple[str, Any]] | None = None,
+        parent: QWidget | None = None
     ) -> None:
         """
         Initialize a combo box setting.
@@ -394,7 +394,7 @@ class SettingsSpinBox(SettingsField):
         min_value: int = 0,
         max_value: int = 100,
         step: int = 1,
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ) -> None:
         """
         Initialize a spin box setting.
@@ -468,7 +468,7 @@ class SettingsDoubleSpinBox(SettingsField):
         max_value: float = 100.0,
         step: float = 1.0,
         decimals: int = 2,
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ) -> None:
         """
         Initialize a double spin box setting.
@@ -542,7 +542,7 @@ class SettingsTextField(SettingsField):
         self,
         label_text: str,
         placeholder: str = "",
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ) -> None:
         """
         Initialize a text field setting.
@@ -609,7 +609,7 @@ class SettingsDisplay(SettingsField):
         self,
         label_text: str,
         value: str = "",
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ) -> None:
         """
         Initialize a display field setting.
@@ -674,12 +674,12 @@ class SettingsContainer(QWidget):
 
     value_changed = Signal()
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the settings container."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._settings = []
+        self._settings: List[SettingsItem] = []
 
         # Create main layout with proper spacing
         self._layout = QVBoxLayout()
@@ -722,30 +722,30 @@ class SettingsFactory:
     """
 
     @staticmethod
-    def create_spacer(height: int, parent: Optional[QWidget] = None) -> SettingsSpacer:
+    def create_spacer(height: int, parent: QWidget | None = None) -> SettingsSpacer:
         """Create a spacer."""
         return SettingsSpacer(height, parent)
 
     @staticmethod
-    def create_header(title: str, parent: Optional[QWidget] = None) -> SettingsHeader:
+    def create_header(title: str, parent: QWidget | None = None) -> SettingsHeader:
         """Create a header."""
         return SettingsHeader(title, parent)
 
     @staticmethod
-    def create_section(title: str, parent: Optional[QWidget] = None) -> SettingsSection:
+    def create_section(title: str, parent: QWidget | None = None) -> SettingsSection:
         """Create a section header."""
         return SettingsSection(title, parent)
 
     @staticmethod
-    def create_checkbox(text: str, parent: Optional[QWidget] = None) -> SettingsCheckbox:
+    def create_checkbox(text: str, parent: QWidget | None = None) -> SettingsCheckbox:
         """Create a checkbox setting."""
         return SettingsCheckbox(text, parent)
 
     @staticmethod
     def create_combo(
         label_text: str,
-        items: List[Tuple[str, Any]] = None,
-        parent: Optional[QWidget] = None
+        items: List[Tuple[str, Any]] | None = None,
+        parent: QWidget | None = None
     ) -> SettingsCombo:
         """Create a combo box setting."""
         return SettingsCombo(label_text, items, parent)
@@ -756,7 +756,7 @@ class SettingsFactory:
         min_value: int = 0,
         max_value: int = 100,
         step: int = 1,
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ) -> SettingsSpinBox:
         """Create a spin box setting."""
         return SettingsSpinBox(label_text, min_value, max_value, step, parent)
@@ -768,7 +768,7 @@ class SettingsFactory:
         max_value: float = 100.0,
         step: float = 1.0,
         decimals: int = 2,
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ) -> SettingsDoubleSpinBox:
         """Create a double spin box setting."""
         return SettingsDoubleSpinBox(label_text, min_value, max_value, step, decimals, parent)
@@ -777,7 +777,7 @@ class SettingsFactory:
     def create_text_field(
         label_text: str,
         placeholder: str = "",
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ) -> SettingsTextField:
         """Create a text field setting."""
         return SettingsTextField(label_text, placeholder, parent)
@@ -786,7 +786,7 @@ class SettingsFactory:
     def create_display(
         label_text: str,
         value: str = "",
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ) -> SettingsDisplay:
         """Create a display field."""
         return SettingsDisplay(label_text, value, parent)

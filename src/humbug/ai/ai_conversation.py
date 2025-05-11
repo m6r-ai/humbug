@@ -11,6 +11,7 @@ from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_response import AIError
 from humbug.ai.ai_usage import AIUsage
+from humbug.user.user_manager import UserManager
 
 
 class AIConversationEvent(Enum):
@@ -31,8 +32,7 @@ class AIConversation:
     """
 
     def __init__(
-        self,
-        ai_backends: Dict[str, Any]
+        self
     ) -> None:
         """Initialize the AIConversation.
 
@@ -40,8 +40,7 @@ class AIConversation:
             ai_backends: Dictionary of available AI backends
         """
         self._logger = logging.getLogger("AIConversation")
-        self._ai_backends = ai_backends
-
+        self._user_manager = UserManager()
         self._settings = AIConversationSettings()
         self._conversation = AIConversationHistory()
         self._current_tasks: List[asyncio.Task] = []
@@ -193,7 +192,7 @@ class AIConversation:
             # Get appropriate backend for conversation
             settings = self.conversation_settings()
             provider = AIConversationSettings.get_provider(settings.model)
-            backend = self._ai_backends.get(provider)
+            backend = self._user_manager.get_ai_backends().get(provider)
 
             if not backend:
                 error_msg = f"No backend available for provider: {provider}"

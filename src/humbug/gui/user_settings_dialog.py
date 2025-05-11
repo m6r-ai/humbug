@@ -223,10 +223,10 @@ class UserSettingsDialog(QDialog):
             backend_id: ID of the backend whose enabled state changed
         """
         controls = self._ai_backend_controls[backend_id]
-        enabled = controls["enable"].get_value()
+        enabled = cast(SettingsCheckbox, controls["enable"]).get_value()
 
-        controls["key"].set_enabled(enabled)
-        controls["url"].set_enabled(enabled)
+        cast(SettingsTextField, controls["key"]).set_enabled(enabled)
+        cast(SettingsTextField, controls["url"]).set_enabled(enabled)
 
     def _handle_language_changed(self) -> None:
         """Update all dialog texts with current language strings."""
@@ -302,9 +302,9 @@ class UserSettingsDialog(QDialog):
         # Create AI backend settings
         ai_backends = {}
         for backend_id, controls in self._ai_backend_controls.items():
-            enabled = controls["enable"].get_value()
-            api_key = controls["key"].get_value()
-            url = controls["url"].get_value()
+            enabled = cast(SettingsCheckbox, controls["enable"]).get_value()
+            api_key = cast(SettingsTextField, controls["key"]).get_value()
+            url = cast(SettingsTextField, controls["url"]).get_value()
 
             ai_backends[backend_id] = AIBackendSettings(
                 enabled=enabled,
@@ -346,13 +346,13 @@ class UserSettingsDialog(QDialog):
         for backend_id, controls in self._ai_backend_controls.items():
             backend_settings = settings.ai_backends.get(backend_id, AIBackendSettings())
 
-            controls["enable"].set_value(backend_settings.enabled)
-            controls["key"].set_value(backend_settings.api_key)
-            controls["url"].set_value(backend_settings.url)
+            cast(SettingsCheckbox, controls["enable"]).set_value(backend_settings.enabled)
+            cast(SettingsTextField, controls["key"]).set_value(backend_settings.api_key)
+            cast(SettingsTextField, controls["url"]).set_value(backend_settings.url)
 
             # Update enabled state
-            controls["key"].set_enabled(backend_settings.enabled)
-            controls["url"].set_enabled(backend_settings.enabled)
+            cast(SettingsTextField, controls["key"]).set_enabled(backend_settings.enabled)
+            cast(SettingsTextField, controls["url"]).set_enabled(backend_settings.enabled)
 
         # Set initial language selection
         self._language_combo.set_value(settings.language)

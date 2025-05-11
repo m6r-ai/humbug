@@ -2,7 +2,7 @@
 Markdown AST visitor to render the AST directly to a QTextDocument.
 """
 
-from typing import List
+from typing import List, cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (
@@ -576,11 +576,11 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
                 return
 
             # Count all rows in header and body to determine row count
-            header = node.parent
+            header = cast(MarkdownTableHeaderNode, node.parent)
             body = None
 
             # Find the table body (sibling of header)
-            table_node = header.parent
+            table_node = cast(MarkdownTableNode, header.parent)
             for sibling in table_node.children:
                 if isinstance(sibling, MarkdownTableBodyNode):
                     body = sibling
@@ -676,10 +676,13 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Check if this is the last row in the table
         if ((isinstance(node.parent, MarkdownTableHeaderNode) and
-             node is node.parent.children[-1] and
-             not any(isinstance(sibling, MarkdownTableBodyNode) for sibling in node.parent.parent.children)) or
-            (isinstance(node.parent, MarkdownTableBodyNode) and
-             node is node.parent.children[-1])):
+                node is node.parent.children[-1] and
+                not any(
+                    isinstance(sibling, MarkdownTableBodyNode) for sibling in cast(MarkdownTableNode, node.parent.parent).children
+                )
+            ) or
+            (isinstance(node.parent, MarkdownTableBodyNode) and node is node.parent.children[-1])
+        ):
             # Reset table state
             self._current_table = None
             self._current_row = 0

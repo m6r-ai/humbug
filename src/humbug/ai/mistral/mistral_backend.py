@@ -19,17 +19,6 @@ class MistralBackend(AIBackend):
         """
         return "https://api.mistral.ai/v1/chat/completions"
 
-    def __init__(self, api_key: str, base_url: str | None = None) -> None:
-        """Initialize the Mistral backend.
-
-        Args:
-            api_key: API key for Mistral
-            base_url: Custom API base URL (optional)
-        """
-        super().__init__()
-        self._api_key = api_key
-        self._api_url = base_url or self.get_default_url()
-
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Mistral-specific request data."""
         # conversation_history already contains properly formatted messages

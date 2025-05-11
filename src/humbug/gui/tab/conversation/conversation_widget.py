@@ -27,7 +27,6 @@ from humbug.gui.tab.conversation.conversation_transcript_error import Conversati
 from humbug.gui.tab.conversation.conversation_transcript_handler import ConversationTranscriptHandler
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.user.user_manager import UserManager
 
 
 @dataclass
@@ -120,8 +119,6 @@ class ConversationWidget(QWidget):
         super().__init__(parent)
         self._logger = logging.getLogger("ConversationWidget")
 
-        self._user_manager = UserManager()
-
         self._bookmarked_messages: Dict[ConversationMessage, BookmarkData] = {}
         self._current_bookmark_index: int | None = None
 
@@ -134,9 +131,7 @@ class ConversationWidget(QWidget):
 
         self._ai_conversation = None
         if not use_existing_ai_conversation:
-            self._ai_conversation = AIConversation(
-                self._user_manager.get_ai_backends()
-            )
+            self._ai_conversation = AIConversation()
 
             # Register callbacks for AIConversation events
             self._register_ai_conversation_callbacks()
