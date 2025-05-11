@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from humbug.ai.ai_backend_settings import AIBackendSettings
+from humbug.ai.ai_provider import AIProvider
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
@@ -142,7 +143,11 @@ class UserSettingsDialog(QDialog):
             self._settings_container.add_setting(api_key_field)
 
             # URL field
-            url_field = SettingsFactory.create_text_field(strings.api_url)
+            default_url = AIProvider.get_default_url(backend_id)
+            url_field = SettingsFactory.create_text_field(
+                strings.api_url,
+                placeholder=default_url
+            )
             self._settings_container.add_setting(url_field)
 
             # Store controls for this backend

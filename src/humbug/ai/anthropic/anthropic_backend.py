@@ -9,6 +9,16 @@ from humbug.ai.anthropic.anthropic_stream_response import AnthropicStreamRespons
 class AnthropicBackend(AIBackend):
     """Anthropic API backend implementation."""
 
+    @classmethod
+    def get_default_url(cls) -> str:
+        """
+        Get the default API URL.
+
+        Returns:
+            The default URL
+        """
+        return "https://api.anthropic.com/v1/messages"
+
     def __init__(self, api_key: str, base_url: str | None = None):
         """Initialize the Anthropic backend.
 
@@ -18,7 +28,7 @@ class AnthropicBackend(AIBackend):
         """
         super().__init__()
         self._api_key = api_key
-        self._api_url = base_url or "https://api.anthropic.com/v1/messages"
+        self._api_url = base_url or self.get_default_url()
 
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build Anthropic-specific request data."""

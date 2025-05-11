@@ -9,14 +9,25 @@ from humbug.ai.ollama.ollama_stream_response import OllamaStreamResponse # Impor
 class OllamaBackend(AIBackend):
     """Ollama API backend implementation with streaming support."""
 
-    def __init__(self, base_url: str | None = None) -> None:
+    @classmethod
+    def get_default_url(cls) -> str:
+        """
+        Get the default API URL.
+
+        Returns:
+            The default URL
+        """
+        return "http://localhost:11434/api/chat"
+
+    def __init__(self, api_key: str, base_url: str | None = None) -> None:
         """Initialize the Ollama backend.
 
         Args:
             base_url: Custom API base URL (optional)
         """
         super().__init__()
-        self._api_url = base_url or "http://localhost:11434/api/chat"
+        self._api_key = api_key
+        self._api_url = base_url or self.get_default_url()
 
         # Llama doesn't use normal SSE encoding!
         self._uses_data = False

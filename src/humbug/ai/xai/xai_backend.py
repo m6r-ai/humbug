@@ -9,6 +9,16 @@ from humbug.ai.xai.xai_stream_response import XAIStreamResponse
 class XAIBackend(AIBackend):
     """xAI API backend implementation with streaming support."""
 
+    @classmethod
+    def get_default_url(cls) -> str:
+        """
+        Get the default API URL.
+
+        Returns:
+            The default URL
+        """
+        return "https://api.x.ai/v1/chat/completions"
+
     def __init__(self, api_key: str, base_url: str | None = None):
         """Initialize the xAI backend.
 
@@ -18,7 +28,7 @@ class XAIBackend(AIBackend):
         """
         super().__init__()
         self._api_key = api_key
-        self._api_url = base_url or "https://api.x.ai/v1/chat/completions"
+        self._api_url = base_url or self.get_default_url()
 
     def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
         """Build xAI-specific request data."""

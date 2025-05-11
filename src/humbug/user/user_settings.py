@@ -31,7 +31,7 @@ class UserSettings:
                 "m6r": AIBackendSettings(),
                 "mistral": AIBackendSettings(),
                 "openai": AIBackendSettings(),
-                "ollama": AIBackendSettings(enabled=True),  # Ollama is enabled by default as it's local
+                "ollama": AIBackendSettings(),
                 "xai": AIBackendSettings()
             },
             language=LanguageCode.EN,

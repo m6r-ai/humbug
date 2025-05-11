@@ -9,6 +9,16 @@ from humbug.ai.m6r.m6r_stream_response import M6RStreamResponse
 class M6RBackend(AIBackend):
     """M6R API backend implementation."""
 
+    @classmethod
+    def get_default_url(cls) -> str:
+        """
+        Get the default API URL.
+
+        Returns:
+            The default URL
+        """
+        return "http://localhost:8080/v1/chat"
+
     def __init__(self, api_key: str, base_url: str | None = None) -> None:
         """Initialize the M6R backend.
 
@@ -18,7 +28,7 @@ class M6RBackend(AIBackend):
         """
         super().__init__()
         self._api_key = api_key
-        self._api_url = base_url or "http://localhost:8080/v1/chat"  # Default to localhost
+        self._api_url = base_url or self.get_default_url()
 
         # M6R uses standard SSE encoding
         self._uses_data = True

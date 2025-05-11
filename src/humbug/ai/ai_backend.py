@@ -22,6 +22,16 @@ from humbug.ai.ai_rate_limiter import AIRateLimiter
 class AIBackend(ABC):
     """Abstract base class for AI backends."""
 
+    @classmethod
+    def get_default_url(cls) -> str:
+        """
+        Get the default API URL for this backend.
+
+        Returns:
+            The default URL for this backend.
+        """
+        return ""
+
     def __init__(self) -> None:
         """Initialize common attributes."""
         self._api_key = ""
