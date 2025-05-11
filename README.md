@@ -64,6 +64,8 @@ can be used to refine the Metaphor context.
 - Markdown tables are now rendered as tables when an AI is streaming its responses to the user.
 - AI backend settings now have explicit enable/disable checkboxes and also have an optional URL as well as
   an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.
+- The layout of user, mindspace, and conversation settings dialogs has been updated to make them more compact
+  and more consistent with each other.
 
 ## Features
 

@@ -7,6 +7,8 @@ New features:
 - Markdown tables are now rendered as tables when an AI is streaming its responses to the user.
 - AI backend settings now have explicit enable/disable checkboxes and also have an optional URL as well as
   an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.
+- The layout of user, mindspace, and conversation settings dialogs has been updated to make them more compact
+  and more consistent with each other.
 
 Bug fixes:
 
@@ -16,6 +18,13 @@ Bug fixes:
 - Updated all dialog boxes to have buttons appear in a consistent order, colour the recommended action in
   blue, and use consistent layout/spacing.
 - 503 errors are now retried and have a better status message.
+- If you changed the API key for an AI backend this would not update an open conversation tab until it was
+  closed and re-opened.
+
+Internal structure changes:
+
+- Settings dialogs now use a series of new settings components that make it easier to handle larger amounts
+  of configuration data, and to ensure settings are all handled in the same consistent way.
 
 ## v0.11 (2025-05-02)
 
