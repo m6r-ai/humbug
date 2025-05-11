@@ -197,11 +197,11 @@ class StyleManager(QObject):
 
             # Table elements
             ColorRole.TABLE_BORDER: {
-                ColorMode.DARK: "#404040",
+                ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#a0a0a0"
             },
             ColorRole.TABLE_HEADER_BACKGROUND: {
-                ColorMode.DARK: "#2d2d3d",
+                ColorMode.DARK: "#404030",
                 ColorMode.LIGHT: "#d0d0e0"
             },
 
