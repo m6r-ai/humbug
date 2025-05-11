@@ -19,13 +19,14 @@ class OllamaBackend(AIBackend):
         """
         return "http://localhost:11434/api/chat"
 
-    def __init__(self, api_key: str, base_url: str | None = None) -> None:
+    def __init__(self, api_key: str, api_url: str | None = None) -> None:
         """Initialize the Ollama backend.
 
         Args:
-            base_url: Custom API base URL (optional)
+            api_key: API key for authentication (not used in this case)
+            api_url: Custom API base URL (optional)
         """
-        super().__init__(api_key, base_url)
+        super().__init__(api_key, api_url)
 
         # Llama doesn't use normal SSE encoding!
         self._uses_data = False
