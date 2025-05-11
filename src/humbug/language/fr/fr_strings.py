@@ -130,12 +130,16 @@ def get_french_strings() -> LanguageStrings:
         src_folder='Créer le dossier "src"',
 
         # Mindspace settings
+        model_settings="Paramètres du modèle",
+        editor_settings="Paramètres de l'éditeur",
         use_soft_tabs="Utiliser des tabulations douces",
         tab_size="Taille de tabulation",
+        backup_settings="Paramètres de sauvegarde",
         auto_backup="Sauvegarde automatique",
         backup_interval="Intervalle de sauvegarde (secondes)",
 
         # Conversation settings
+        model_info="Informations sur le modèle",
         settings_model_label="Modèle IA",
         settings_temp_label="Température",
         settings_context_label="Fenêtre de contexte",

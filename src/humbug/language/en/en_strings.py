@@ -130,12 +130,16 @@ def get_english_strings() -> LanguageStrings:
         src_folder='Create "src" Folder',
 
         # Mindspace settings
+        model_settings="Model Settings",
+        editor_settings="Editor Settings",
         use_soft_tabs="Use Soft Tabs",
         tab_size="Tab Size",
+        backup_settings="Backup Settings",
         auto_backup="Auto Backup",
         backup_interval="Backup Interval (seconds)",
 
         # Conversation settings
+        model_info="Model Information",
         settings_model_label="AI Model",
         settings_temp_label="Temperature",
         settings_context_label="Context Window",

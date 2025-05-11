@@ -130,12 +130,16 @@ def get_arabic_strings() -> LanguageStrings:
         src_folder='إنشاء مجلد "src"',
 
         # Mindspace settings
+        model_settings="إعدادات النموذج",
+        editor_settings="إعدادات المحرر",
         use_soft_tabs="استخدام المسافات البادئة",
         tab_size="حجم المسافة البادئة",
+        backup_settings="إعدادات النسخ الاحتياطي",
         auto_backup="نسخ احتياطي تلقائي",
         backup_interval="فترة النسخ الاحتياطي (ثواني)",
 
         # Conversation settings
+        model_info="معلومات النموذج",
         settings_model_label="نموذج الذكاء الاصطناعي",
         settings_temp_label="درجة الحرارة",
         settings_context_label="نافذة السياق",

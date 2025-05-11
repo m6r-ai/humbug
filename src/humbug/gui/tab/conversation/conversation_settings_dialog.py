@@ -50,8 +50,7 @@ class ConversationSettingsDialog(QDialog):
         self._settings_container = SettingsContainer()
 
         # Add a section title
-#        model_section = SettingsFactory.create_section(strings.model_settings)
-        model_section = SettingsFactory.create_section("Model Settings")
+        model_section = SettingsFactory.create_section(strings.model_settings)
         self._settings_container.add_setting(model_section)
 
         # Create model selection
@@ -72,8 +71,7 @@ class ConversationSettingsDialog(QDialog):
         self._settings_container.add_setting(spacer)
 
         # Add model info section
-#        info_section = SettingsFactory.create_section(strings.model_info)
-        info_section = SettingsFactory.create_section("Model Info")
+        info_section = SettingsFactory.create_section(strings.model_info)
         self._settings_container.add_setting(info_section)
 
         # Create context window display

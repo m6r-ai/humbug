@@ -125,12 +125,16 @@ class LanguageStrings:
     src_folder: str
 
     # Mindspace settings
+    model_settings: str
+    editor_settings: str
     use_soft_tabs: str
     tab_size: str
+    backup_settings: str
     auto_backup: str
     backup_interval: str
 
     # Conversation settings
+    model_info: str
     settings_model_label: str
     settings_temp_label: str
     settings_context_label: str

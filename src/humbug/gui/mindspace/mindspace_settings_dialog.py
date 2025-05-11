@@ -58,8 +58,7 @@ class MindspaceSettingsDialog(QDialog):
         self._settings_container = SettingsContainer()
 
         # Model section
-#        model_section = SettingsFactory.create_section(strings.model_settings)
-        model_section = SettingsFactory.create_section("Model Settings")
+        model_section = SettingsFactory.create_section(strings.model_settings)
         self._settings_container.add_setting(model_section)
 
         # Model selection
@@ -80,8 +79,7 @@ class MindspaceSettingsDialog(QDialog):
         self._settings_container.add_setting(spacer)
 
         # Editor section
-#        editor_section = SettingsFactory.create_section(strings.editor_settings)
-        editor_section = SettingsFactory.create_section("Editor Settings")
+        editor_section = SettingsFactory.create_section(strings.editor_settings)
         self._settings_container.add_setting(editor_section)
 
         # Soft tabs setting
@@ -98,8 +96,7 @@ class MindspaceSettingsDialog(QDialog):
         self._settings_container.add_setting(spacer)
 
         # Backup section
-#        backup_section = SettingsFactory.create_section(strings.backup_settings)
-        backup_section = SettingsFactory.create_section("Backup Settings")
+        backup_section = SettingsFactory.create_section(strings.backup_settings)
         self._settings_container.add_setting(backup_section)
 
         # Auto-backup setting
