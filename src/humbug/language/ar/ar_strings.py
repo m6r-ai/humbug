@@ -98,8 +98,9 @@ def get_arabic_strings() -> LanguageStrings:
         no="لا",
 
         # User Settings dialog - AI backends section
-        ai_backends_title="إعدادات خلفيات الذكاء الاصطناعي",
         general_settings="الإعدادات العامة",
+        display_settings="إعدادات العرض",
+        ai_backend_config="إعدادات خلفيات الذكاء الاصطناعي",
         enable_backend="تفعيل الخلفية",
         api_key="مفتاح API",
         api_url="عنوان URL للواجهة (اختياري)",

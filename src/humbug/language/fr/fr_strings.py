@@ -98,8 +98,9 @@ def get_french_strings() -> LanguageStrings:
         no="Non",
 
         # User Settings dialog - AI backends section
-        ai_backends_title="Configuration des backends d'IA",
         general_settings="Paramètres généraux",
+        display_settings="Paramètres d'affichage",
+        ai_backend_config="Configuration des backends d'IA",
         enable_backend="Activer le backend",
         api_key="Clé API",
         api_url="URL API (optionnel)",

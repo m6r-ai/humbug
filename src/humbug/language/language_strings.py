@@ -93,8 +93,9 @@ class LanguageStrings:
     no: str
 
     # User Settings dialog - AI backends section
-    ai_backends_title: str
     general_settings: str
+    display_settings: str
+    ai_backend_config: str
     enable_backend: str
     api_key: str
     api_url: str

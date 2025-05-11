@@ -98,8 +98,9 @@ def get_english_strings() -> LanguageStrings:
         no="No",
 
         # User Settings dialog - AI backends section
-        ai_backends_title="AI Backend Configuration",
         general_settings="General Settings",
+        display_settings="Display Settings",
+        ai_backend_config="AI Backend Configuration",
         enable_backend="Enable Backend",
         api_key="API Key",
         api_url="API URL (optional)",

@@ -71,8 +71,8 @@ class UserSettingsDialog(QDialog):
         self._general_section = SettingsFactory.create_header(strings.general_settings)
         self._settings_container.add_setting(self._general_section)
 
-        display_section = SettingsFactory.create_section("Display Settings")
-        self._settings_container.add_setting(display_section)
+        self._display_section = SettingsFactory.create_section(strings.display_settings)
+        self._settings_container.add_setting(self._display_section)
 
         # Language selection
         self._language_combo = SettingsFactory.create_combo(strings.select_language)
@@ -114,7 +114,7 @@ class UserSettingsDialog(QDialog):
         self._settings_container.add_setting(spacer)
 
         # AI backends section
-        self._backends_section = SettingsFactory.create_header(strings.ai_backends_title)
+        self._backends_section = SettingsFactory.create_header(strings.ai_backend_config)
         self._settings_container.add_setting(self._backends_section)
 
         # Create AI backend settings
@@ -267,7 +267,8 @@ class UserSettingsDialog(QDialog):
         self.apply_button.setText(strings.apply)
 
         self._general_section.set_label(strings.general_settings)
-        self._backends_section.set_label(strings.ai_backends_title)
+        self._display_section.set_label(strings.display_settings)
+        self._backends_section.set_label(strings.ai_backend_config)
 
         # Update AI backend titles and fields
         backend_mapping = {
