@@ -44,7 +44,7 @@ class UserSettingsDialog(QDialog):
 
         self.setWindowTitle(strings.user_settings)
         self.setMinimumWidth(800)
-        self.setMinimumHeight(600)
+        self.setMinimumHeight(700)
         self.setModal(True)
 
         self._initial_settings: UserSettings | None = None

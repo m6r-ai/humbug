@@ -36,7 +36,7 @@ class MindspaceSettingsDialog(QDialog):
 
         self.setWindowTitle(strings.mindspace_settings)
         self.setMinimumWidth(800)
-        self.setMinimumHeight(600)
+        self.setMinimumHeight(700)
         self.setModal(True)
 
         self._initial_settings: MindspaceSettings | None = None
