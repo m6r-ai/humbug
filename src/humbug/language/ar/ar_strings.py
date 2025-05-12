@@ -81,7 +81,7 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Input widget
         processing_message="معالجة طلبك (Esc للإلغاء)",
-        input_prompt="أضف رسالتك... ({key} للإرسال)",
+        input_prompt="رسالة لـ {model}... ({key} للإرسال)",
         command_prompt="الأمر... (Enter أو {key} للإرسال)",
 
         # File tree messages

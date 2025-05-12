@@ -22,6 +22,7 @@ class ConversationInput(ConversationMessage):
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
         self._is_streaming = False
+        self._current_model = ""
         super().__init__(parent, is_input=True)
 
         # Connect text cursor signals
@@ -33,6 +34,11 @@ class ConversationInput(ConversationMessage):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
+        self._update_header_text()
+
+    def set_model(self, model: str) -> None:
+        """Set the model name for the input prompt."""
+        self._current_model = model
         self._update_header_text()
 
     def _handle_language_changed(self) -> None:
@@ -64,7 +70,7 @@ class ConversationInput(ConversationMessage):
 
         else:
             submit_key = self._get_submit_key_text()
-            self._role_label.setText(strings.input_prompt.format(key=submit_key))
+            self._role_label.setText(strings.input_prompt.format(model=self._current_model, key=submit_key))
 
         self._set_role_style()
 

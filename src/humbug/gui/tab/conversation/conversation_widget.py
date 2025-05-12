@@ -507,6 +507,7 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         ai_conversation.update_conversation_settings(new_settings)
         self.status_updated.emit()
+        self._input.set_model(new_settings.model)
 
     def conversation_settings(self) -> AIConversationSettings:
         """
@@ -884,19 +885,19 @@ class ConversationWidget(QWidget):
             ai_conversation = cast(AIConversation, self._ai_conversation)
             ai_conversation.update_conversation_settings(default_settings)
             ai_conversation.load_message_history(messages)
+            conversation_settings = ai_conversation.conversation_settings()
+            self._input.set_model(conversation_settings.model)
 
         # Add messages to this widget.
         loop = asyncio.get_event_loop()
         for message in messages:
             loop.create_task(self.add_message(message))
 
-        # If we have everything loaded we can update the display with final state
-        if not reuse_ai_conversation:
-            self.status_updated.emit()
-
         # Ensure we're scrolled to the end
         self._auto_scroll = True
         self._scroll_to_bottom()
+
+        self.status_updated.emit()
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
@@ -1313,6 +1314,8 @@ class ConversationWidget(QWidget):
             # Update streaming state if the AI conversation is already streaming
             self._is_streaming = ai_conversation.is_streaming()
             self._input.set_streaming(self._is_streaming)
+            conversation_settings = ai_conversation.conversation_settings()
+            self._input.set_model(conversation_settings.model)
 
         else:
             # Restore settings
