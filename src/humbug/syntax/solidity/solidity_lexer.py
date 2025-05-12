@@ -69,8 +69,11 @@ class SolidityLexer(Lexer):
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_natspec_comment = prev_lexer_state.in_natspec_comment
 
-        if self._in_block_comment or self._in_natspec_comment:
+        if self._in_block_comment:
             self._read_block_comment(0)
+
+        if self._in_natspec_comment:
+            self._read_natspec_block_comment(0)
 
         if not self._in_block_comment and not self._in_natspec_comment:
             self._inner_lex()
@@ -133,6 +136,7 @@ class SolidityLexer(Lexer):
                         self._input[self._position + 2] == '/'):
                     self._read_natspec_line_comment()
                     return
+
                 # Regular single line comment
                 self._read_comment()
                 return
@@ -141,8 +145,9 @@ class SolidityLexer(Lexer):
                 # Check for NatSpec comment (/**)
                 if (self._position + 2 < self._input_len and
                         self._input[self._position + 2] == '*'):
-                    self._read_natspec_block_comment()
+                    self._read_natspec_block_comment(3)
                     return
+
                 # Regular block comment
                 self._read_block_comment(2)
                 return
@@ -181,7 +186,7 @@ class SolidityLexer(Lexer):
         """
         self._in_block_comment = True
         start = self._position
-        self._position += skip_chars  # Skip /*
+        self._position += skip_chars
         while (self._position + 1) < self._input_len:
             if self._input[self._position] == '*' and self._input[self._position + 1] == '/':
                 self._in_block_comment = False
@@ -200,13 +205,13 @@ class SolidityLexer(Lexer):
             start=start
         ))
 
-    def _read_natspec_block_comment(self) -> None:
+    def _read_natspec_block_comment(self, skip_chars: int) -> None:
         """
         Read a NatSpec block comment token.
         """
         self._in_natspec_comment = True
         start = self._position
-        self._position += 3  # Skip /**
+        self._position += skip_chars
         while (self._position + 1) < self._input_len:
             if self._input[self._position] == '*' and self._input[self._position + 1] == '/':
                 self._in_natspec_comment = False
