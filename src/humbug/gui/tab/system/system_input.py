@@ -143,7 +143,6 @@ class SystemInput(SystemMessage):
         # Set command prompt with submit key hint
         submit_key = self._get_submit_key_text()
 
-        # Check if command_prompt exists in strings, otherwise fall back to input_prompt
         self._role_label.setText(strings.command_prompt.format(key=submit_key))
         self._set_role_style()
 
