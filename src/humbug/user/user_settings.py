@@ -68,6 +68,25 @@ class UserSettings:
                         url=backend_data.get("url", "")
                     )
 
+            # Legacy support for older settings format (v0.8 through v0.11)
+            elif "api_keys" in data:
+                backend_mapping = {
+                    "ANTHROPIC_API_KEY": "anthropic",
+                    "DEEPSEEK_API_KEY": "deepseek",
+                    "GOOGLE_API_KEY": "google",
+                    "M6R_API_KEY": "m6r",
+                    "MISTRAL_API_KEY": "mistral",
+                    "OPENAI_API_KEY": "openai",
+                    "XAI_API_KEY": "xai"
+                }
+
+                for backend_id, api_key in data["api_keys"].items():
+                    settings.ai_backends[backend_mapping[backend_id]] = AIBackendSettings(
+                        enabled=api_key is not None and api_key != "",
+                        api_key=api_key,
+                        url=""
+                    )
+
             # Load other settings
             language_code = data.get("language", "EN")
             settings.language = LanguageCode[language_code]
