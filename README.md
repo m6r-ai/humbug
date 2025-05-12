@@ -3,18 +3,15 @@
 Humbug is an extensible open-source tool designed to help you build and maintain software using AI.
 
 To do this it uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation
-language.  Metaphor aims to let you be clear about what you want to achieve so your AI is not left guessing or
-hallucinating.
-
-Metaphor scripts are designed to let you capture context in a structured way.  To make this simpler, you can embed
-files and explain how you want the AI to use them (source code, requirements docs, design specs, information about
-public APIs in libraries, etc).  Metaphor descriptions can also be broken into components so they can be
-reused across projects.  For example you might have design or coding rules, UX style guidelines, or implementation
-details for how you use specific parts of your tech stack.
+language.  Metaphor is very quick to learn (just 5 keywords) and is structured to let you be clear about what you want
+your AI to do for you, so it's not left guessing or hallucinating.
 
 By making prompt creation a repeatable engineering process it's easy to try new ideas, and iterate towards what you
 want.  If you don't like something, you can make adjustments to your Metaphor scripts and try again.  If you want to
 see if a different AI models will give you better results you can do that too!
+
+There's a guide to getting started with Metaphor at
+[https://github.com/m6r-ai/getting-started-with-metaphor](https://github.com/m6r-ai/getting-started-with-metaphor).
 
 While Metaphor is designed to help start your conversations with AI, and Humbug is the tool designed to get the most out of
 those conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into
@@ -234,7 +231,7 @@ Join us on [Discord](https://discord.gg/GZhJ7ZtgwN) to get help or share your id
 
 You can find out more about Metaphor and some of the things that have been done with it here:
 
-- [Hello, Metaphor (A brief tutorial)](https://github.com:/m6r-ai/hello-metaphor)
+- [Getting started with Metaphor](https://github.com:/m6r-ai/getting-started-with-metaphor)
 - [m6rclib (Metaphor compiler library)](https://github.com:/m6r-ai/m6rclib)
 - [m6rc (Stand-alone Metaphor compiler)](https://github.com:/m6r-ai/m6rc)
 - [commit-critic (Code review tool)](https://github.com:/m6r-ai/commit-critic)
