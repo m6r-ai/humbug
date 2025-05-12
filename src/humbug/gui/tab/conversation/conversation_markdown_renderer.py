@@ -715,7 +715,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         for child in node.children:
             self.visit(child)
 
-    def visit_MarkdownHorizontalRuleNode(self, _node: MarkdownHorizontalRuleNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownHorizontalRuleNode(self, node: MarkdownHorizontalRuleNode) -> None:  # pylint: disable=invalid-name
         """
         Render a horizontal rule node to the QTextDocument.
 
@@ -738,4 +738,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._cursor.insertImage(img_format)
 
         self._cursor.insertBlock()
-        self._cursor.insertBlock()
+
+        previous_sibling = node.previous_sibling()
+        if not previous_sibling or not isinstance(previous_sibling, MarkdownTableNode):
+            self._cursor.insertBlock()
