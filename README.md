@@ -43,19 +43,19 @@ single Metaphor prompts.  The biggest changes have been well over 1000 lines of 
 The ability to use AI for large refactoring and redesign tasks also means Humbug is a codebase that can
 evolve very fast but with very little technical debt.
 
-One fun aspect of using Metaphor is we can use Humbug to become an expert on its own design.  If you use the
+One fun aspect of using Metaphor is you can use Humbug to become an expert on its own design.  If you use the
 Metaphor script `humbug-expert.m6r` and run this with a model that has a very large context window (e.g. Gemini)
 then you can ask the AI about the design or implementation of the software!
 
 ## Engineering over vibes!
 
-Vibe coding can be a great way to experiment and try out ideas but can be incredibly frustrating for experienced
-engineers.  Vibe coding can be an incredible way to support prototyping and brainstorming, but high quality code requires
-careful review and understanding.
+Naive vibe coding can be a great way to experiment and try out ideas but can be incredibly frustrating for experienced
+engineers.  It can be an incredible way to support prototyping and brainstorming, but high quality code requires
+careful planning, review, and understanding.
 
 By offering a solid grounding context, Metaphor and Humbug aim to provide a way to capture the learnings from
-vibe coding into something that can be used in a more predictable way.  We can start from our reference context,
-explore interactively, update the context and iterate.  We can go further than normal vibe coding because we can also
+vibe coding into something that can be used in a more predictable way.  You can start from our reference context,
+explore interactively, update the context and iterate.  You can go further than normal vibe coding because you can also
 have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
 can be used to refine the Metaphor context.
 
@@ -232,7 +232,7 @@ Join us on [Discord](https://discord.gg/GZhJ7ZtgwN) to get help or share your id
 
 ## More information
 
-You can find out more about Metaphor and some of the things we've done with it here:
+You can find out more about Metaphor and some of the things that have been done with it here:
 
 - [Hello, Metaphor (A brief tutorial)](https://github.com:/m6r-ai/hello-metaphor)
 - [m6rclib (Metaphor compiler library)](https://github.com:/m6r-ai/m6rclib)
