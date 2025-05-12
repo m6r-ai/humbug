@@ -1058,6 +1058,10 @@ class ConversationWidget(QWidget):
         # Update the AI conversation history
         ai_conversation.load_message_history(preserved_history_messages)
 
+        # Work out what the conversation settings now are - they may have changed
+        conversation_settings = ai_conversation.conversation_settings()
+        self._input.set_model(conversation_settings.model)
+
         # Update the transcript file by rewriting it with only the preserved messages
         transcript_messages = [msg.to_transcript_dict() for msg in preserved_history_messages]
 
