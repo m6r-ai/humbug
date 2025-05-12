@@ -253,7 +253,6 @@ class MarkdownParser:
             # Check for bold formatting
             elif (i + 1 < len(text) and
                     ((text[i:i+2] == '**') or (text[i:i+2] == '__' and not self._no_underscores))):
-
                 # Determine which marker we're using
                 marker = text[i:i+2]
 
