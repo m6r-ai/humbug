@@ -20,6 +20,7 @@ class ProgrammingLanguage(IntEnum):
     PYTHON = auto()
     RUST = auto()
     SCHEME = auto()
+    SOLIDITY = auto()
     SWIFT = auto()
     TEXT = auto()
     TYPESCRIPT = auto()

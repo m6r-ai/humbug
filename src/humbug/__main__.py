@@ -30,6 +30,7 @@ from humbug.syntax.move.move_parser import MoveParser
 from humbug.syntax.python.python_parser import PythonParser
 from humbug.syntax.rust.rust_parser import RustParser
 from humbug.syntax.scheme.scheme_parser import SchemeParser
+from humbug.syntax.solidity.solidity_parser import SolidityParser
 from humbug.syntax.swift.swift_parser import SwiftParser
 from humbug.syntax.text.text_parser import TextParser
 from humbug.syntax.typescript.typescript_parser import TypeScriptParser
