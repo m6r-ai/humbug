@@ -10,6 +10,7 @@ New features:
   an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.
 - The layout of user, mindspace, and conversation settings dialogs has been updated to make them more compact
   and more consistent with each other.
+- Added initial syntax highlighting support for Solidity.
 
 Bug fixes:
 

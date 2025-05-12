@@ -67,6 +67,7 @@ can be used to refine the Metaphor context.
   an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.
 - The layout of user, mindspace, and conversation settings dialogs has been updated to make them more compact
   and more consistent with each other.
+- Added initial syntax highlighting support for Solidity.
 
 ## Features
 
@@ -78,7 +79,7 @@ Compatible with MacOS X, Linux, and Windows 10/11.
 
 - Real-time streaming of AI responses.
 - Configurable AI model settings per conversation.
-- Supports Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI models (Ollama currently assumes local installs only).
+- Supports Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI models.
 - Configurable temperature settings for supported models.
 - Handles reasoning outputs for models that support them.
 - Error handling and retry mechanisms for API requests.
@@ -93,7 +94,7 @@ Compatible with MacOS X, Linux, and Windows 10/11.
 - Bookmarks messages for rapid navigation.
 - Syntax highlighting for various languages and file formats, including nested systax highlighting where code for
   one language appears inside a different one.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
-  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Swift, and TypeScript.
+  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Solidity, Swift, and TypeScript.
 
 ### System shell
 
