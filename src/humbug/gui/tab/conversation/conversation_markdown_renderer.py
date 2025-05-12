@@ -166,7 +166,11 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Apply block format (heading level)
         block_format = QTextBlockFormat()
         block_format.setHeadingLevel(level)
-        if node.previous_sibling():
+
+        # We don't need a top margin if this is the first block in the document or
+        # if the previous sibling is a horizontal rule
+        previous_sibling = node.previous_sibling()
+        if previous_sibling and not isinstance(previous_sibling, MarkdownHorizontalRuleNode):
             block_format.setTopMargin(self._default_font_height * font_multiplier)
 
         block_format.setBottomMargin(self._default_font_height)
