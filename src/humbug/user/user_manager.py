@@ -9,6 +9,7 @@ from typing import Dict, cast
 from PySide6.QtCore import QObject, Signal
 
 from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_backend_settings import AIBackendSettings
 from humbug.ai.ai_provider import AIProvider
 from humbug.user.user_settings import UserSettings
 
@@ -114,10 +115,27 @@ class UserManager(QObject):
 
     def _initialize_ai_backends(self) -> None:
         """Initialize AI backends using current settings."""
-        if not self._settings:
-            self._settings = UserSettings.create_default()
+        # Check environment variables and insert them where there's no saved setting
+        env_keys = {
+            "anthropic": os.environ.get("ANTHROPIC_API_KEY"),
+            "deepseek": os.environ.get("DEEPSEEK_API_KEY"),
+            "google": os.environ.get("GOOGLE_API_KEY"),
+            "m6r": os.environ.get("M6R_API_KEY"),
+            "mistral": os.environ.get("MISTRAL_API_KEY"),
+            "openai": os.environ.get("OPENAI_API_KEY"),
+            "xai": os.environ.get("XAI_API_KEY")
+        }
 
-        self._ai_backends = AIProvider.create_backends(self._settings.ai_backends)
+        for backend_id, api_key in env_keys.items():
+            settings = cast(UserSettings, self._settings)
+            if api_key is not None and not settings.ai_backends[backend_id].enabled:
+                settings.ai_backends[backend_id] = AIBackendSettings(
+                    enabled=True,
+                    api_key=api_key,
+                    url=""
+                )
+
+        self._ai_backends = AIProvider.create_backends(settings.ai_backends)
         self._logger.info("Initialized AI backends with available settings")
 
     def update_settings(self, new_settings: UserSettings) -> None:
@@ -130,9 +148,6 @@ class UserManager(QObject):
         Raises:
             UserError: If settings cannot be saved
         """
-        if not self._settings:
-            self._load_settings()
-
         try:
             self._settings = new_settings
             self._save_settings()
@@ -153,9 +168,6 @@ class UserManager(QObject):
         Returns:
             The current UserSettings object
         """
-        if self._settings is None:
-            self._load_settings()
-
         return cast(UserSettings, self._settings)
 
     def get_ai_backends(self) -> Dict[str, AIBackend]:
@@ -165,7 +177,4 @@ class UserManager(QObject):
         Returns:
             Dictionary mapping provider names to backend instances
         """
-        if not self._ai_backends:
-            self._initialize_ai_backends()
-
         return self._ai_backends
