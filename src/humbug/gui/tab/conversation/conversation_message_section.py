@@ -422,6 +422,16 @@ class ConversationMessageSection(QFrame):
             background_color: Color string for background
             font: Font to use
         """
+        # Style the frame
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
+                border: 0;
+            }}
+        """)
+
         self._text_area.setFont(font)
         self._text_area.setStyleSheet(f"""
             QTextEdit {{
@@ -446,16 +456,6 @@ class ConversationMessageSection(QFrame):
             }}
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
                 width: 0px;
-            }}
-        """)
-
-        # Style the frame
-        self.setStyleSheet(f"""
-            QFrame {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
-                border: 0;
             }}
         """)
 

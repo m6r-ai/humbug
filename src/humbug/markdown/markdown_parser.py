@@ -12,7 +12,7 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
     MarkdownListItemNode, MarkdownInlineCodeNode, MarkdownCodeBlockNode,
     MarkdownTableNode, MarkdownTableHeaderNode, MarkdownTableBodyNode,
-    MarkdownTableRowNode, MarkdownTableCellNode
+    MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode
 )
 
 
@@ -81,6 +81,7 @@ class MarkdownParser:
         self._code_block_pattern = re.compile(r'^```(?:([\w\-#+./*():\s]+))?$')
         self._table_row_pattern = re.compile(r'^(\|.+\|)$', re.MULTILINE)
         self._table_separator_pattern = re.compile(r'^(\|[\s:-]+\|)$', re.MULTILINE)
+        self._horizontal_rule_pattern = re.compile(r'^(?:\s*(?:[-*_])\s*){3,}$')
 
         self._logger = logging.getLogger("ASTBuilder")
 
@@ -199,6 +200,10 @@ class MarkdownParser:
             number = ordered_match.group(2)
             content = ordered_match.group(3)
             return 'ordered_list_item', (indent, number, content)
+
+        # Check for horizontal rule
+        if self._horizontal_rule_pattern.match(line):
+            return 'horizontal_rule', None
 
         # Default to regular text
         return 'text', line
@@ -580,6 +585,23 @@ class MarkdownParser:
         self._last_processed_line_type = 'unordered_list_item'
 
         return item
+
+    def parse_horizontal_rule(self, line_num: int) -> MarkdownHorizontalRuleNode:
+        """
+        Parse a horizontal rule line and create a horizontal rule node.
+
+        Args:
+            line_num: The line number
+
+        Returns:
+            A horizontal rule node
+        """
+        horizontal_rule = MarkdownHorizontalRuleNode()
+        horizontal_rule.line_start = line_num
+        horizontal_rule.line_end = line_num
+        self.register_node_line(horizontal_rule, line_num)
+
+        return horizontal_rule
 
     def _parse_table_separator(self, separator_line: str) -> List[str]:
         """
@@ -1028,6 +1050,16 @@ class MarkdownParser:
             elif line_type == 'ordered_list_item':
                 indent, number, text = content
                 self._last_list_item = self.parse_ordered_list_item(indent, number, text, line_num)
+
+            elif line_type == 'horizontal_rule':
+                horizontal_rule = self.parse_horizontal_rule(line_num)
+                self._document.add_child(horizontal_rule)
+
+                # Reset list tracking after a horizontal rule
+                self._active_lists = []
+                self._list_contains_blank_line = set()
+                self._last_list_item = None
+                self._last_paragraph = None
 
             elif line_type == 'blank':
                 # Blank lines are handled above for list state

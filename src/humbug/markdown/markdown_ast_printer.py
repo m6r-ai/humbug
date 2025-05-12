@@ -6,7 +6,7 @@ from typing import List, Any
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownTextNode, MarkdownHeadingNode, MarkdownInlineCodeNode,
     MarkdownCodeBlockNode, MarkdownASTNode, MarkdownTableNode, MarkdownTableHeaderNode,
-    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode
+    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode
 )
 
 
@@ -209,3 +209,19 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         results = super().generic_visit(node)
         self.indent_level -= 1
         return results
+
+    def visit_MarkdownHorizontalRuleNode(self, node: MarkdownHorizontalRuleNode) -> None:  # pylint: disable=invalid-name
+        """
+        Visit a horizontal rule node and print its details.
+
+        Args:
+            node: The horizontal rule node to visit
+
+        Returns:
+            None
+        """
+        line_range = ""
+        if node.line_start is not None:
+            line_range = f" (line {node.line_start})"
+
+        print(f"{self._indent()}HorizontalRule{line_range}")

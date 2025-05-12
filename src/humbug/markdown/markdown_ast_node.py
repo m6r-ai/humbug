@@ -182,3 +182,7 @@ class MarkdownTableCellNode(MarkdownASTNode):
         super().__init__()
         self.is_header = is_header
         self.alignment = alignment
+
+
+class MarkdownHorizontalRuleNode(MarkdownASTNode):
+    """Node representing a horizontal rule (<hr>)."""

@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QTextCursor, QTextDocument, QTextCharFormat, QTextBlockFormat,
     QTextListFormat, QFont, QFontMetricsF, QTextList, QTextTable,
-    QTextTableFormat, QTextFrameFormat, QTextLength
+    QTextTableFormat, QTextFrameFormat, QTextLength, QImage, QTextImageFormat
 )
 
 from humbug.gui.color_role import ColorRole
@@ -18,7 +18,7 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownTextNode, MarkdownBoldNode, MarkdownEmphasisNode, MarkdownInlineCodeNode,
     MarkdownCodeBlockNode, MarkdownListItemNode, MarkdownOrderedListNode,
     MarkdownUnorderedListNode, MarkdownLineBreakNode, MarkdownTableNode, MarkdownTableHeaderNode,
-    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode
+    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode
 )
 
 
@@ -44,10 +44,20 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         self._default_font_height: float = 0
 
         self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._handle_style_changed()
 
         # Table state variables
         self._current_table: QTextTable | None = None
         self._current_row: int = 0
+
+    def _handle_style_changed(self) -> None:
+        """Handle style changes."""
+        # Add a pixel image resource to the document for horizontal rules.  Make the image
+        # very wide so it will always fit the width of the viewport.
+        pixel_image = QImage(8192, 1, QImage.Format.Format_ARGB32)
+        pixel_image.fill(self._style_manager.get_color(ColorRole.TABLE_BORDER))
+        self._document.addResource(QTextDocument.ResourceType.ImageResource, "pixel", pixel_image)
 
     def visit_MarkdownDocumentNode(self, node: MarkdownDocumentNode) -> None:  # pylint: disable=invalid-name
         """
@@ -700,3 +710,28 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Process all inline content (text, bold, etc.)
         for child in node.children:
             self.visit(child)
+
+    def visit_MarkdownHorizontalRuleNode(self, _node: MarkdownHorizontalRuleNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a horizontal rule node to the QTextDocument.
+
+        Args:
+            node: The horizontal rule node to render
+
+        Returns:
+            None
+        """
+        # Insert a new block if needed
+        if not self._cursor.atBlockStart():
+            self._cursor.insertBlock()
+
+        # This is a workaround for the fact that QTextDocument doesn't support
+        # horizontal rules directly.  We use an image resource instead.
+        img_format = QTextImageFormat()
+        img_format.setName("pixel")
+        img_format.setMaximumWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
+        img_format.setHeight(1)
+        self._cursor.insertImage(img_format)
+
+        self._cursor.insertBlock()
+        self._cursor.insertBlock()
