@@ -119,25 +119,6 @@ class UnixTerminal(TerminalBase):
         """Terminate Unix terminal process."""
         self._running = False
 
-        if self._process_id:
-            try:
-                # Try graceful termination
-                os.killpg(os.getpgid(self._process_id), signal.SIGHUP)
-
-                # Wait for process
-                try:
-                    await asyncio.get_event_loop().run_in_executor(
-                        None, os.waitpid, self._process_id, 0
-                    )
-
-                except ChildProcessError:
-                    pass  # Already terminated
-
-            except ProcessLookupError:
-                pass  # Already terminated
-
-            self._process_id = None
-
         if self._main_fd is not None:
             try:
                 os.close(self._main_fd)
@@ -146,6 +127,18 @@ class UnixTerminal(TerminalBase):
                 pass
 
             self._main_fd = None
+
+        if self._process_id:
+            # Wait for process
+            try:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, os.waitpid, self._process_id, 0
+                )
+
+            except ChildProcessError:
+                pass  # Already terminated
+
+            self._process_id = None
 
     def is_running(self) -> bool:
         """Check if Unix process is running."""
