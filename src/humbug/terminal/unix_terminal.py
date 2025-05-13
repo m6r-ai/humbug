@@ -10,6 +10,7 @@ if sys.platform == 'win32':
 
 import asyncio
 import fcntl
+import locale
 import os
 import pty
 import select
@@ -40,6 +41,22 @@ class UnixTerminal(TerminalBase):
         main_fd, secondary_fd = pty.openpty()
 
         shell = command if command else os.environ.get('SHELL', '/bin/sh')
+
+        # Get user's home directory
+        home_dir = os.path.expanduser('~')
+
+        # Create a copy of the current environment
+        env = os.environ.copy()
+
+        # Ensure critical environment variables are set
+        env['TERM'] = 'xterm-256color'
+        if 'LANG' not in env:
+            # This is a fallback - it's better to set something here if LANG is not set
+            # to avoid issues with locale settings in the child process.
+            env['LANG'] = 'en_US.UTF-8'
+
+        if 'HOME' not in env:
+            env['HOME'] = home_dir
 
         # Fork process
         pid = os.fork()
@@ -77,12 +94,17 @@ class UnixTerminal(TerminalBase):
                 for i in range(1, signal.NSIG):
                     try:
                         signal.signal(i, signal.SIG_DFL)
+
                     except OSError:
                         # Some signals can't be modified (like SIGKILL)
                         pass
 
-                # Set TERM environment variable
-                os.environ['TERM'] = 'xterm-256color'
+                # Update environment with our modified copy
+                os.environ.clear()
+                os.environ.update(env)
+
+                # Change to user's home directory
+                os.chdir(home_dir)
 
                 # Execute shell/command
                 os.execvp(shell.split()[0], shell.split())
