@@ -1,5 +1,12 @@
 # Changelog for Humbug
 
+## v0.12.2 (2025-05-13)
+
+Bug fixes:
+
+- When starting the terminal from the MacOS application launcher we didn't default to the user's home directory
+  or have a LANG environment variable.
+
 ## v0.12.1 (2025-05-13)
 
 Bug fixes:
