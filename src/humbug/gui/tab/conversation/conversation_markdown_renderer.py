@@ -739,6 +739,9 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.insertBlock()
 
+        # In most cases we need to add 2 new blocks after the horizontal rule
+        # to ensure proper spacing.  However, if the previous sibling is a
+        # MarkdownTableNode then we only need to add one.
         previous_sibling = node.previous_sibling()
         if not previous_sibling or not isinstance(previous_sibling, MarkdownTableNode):
             self._cursor.insertBlock()
