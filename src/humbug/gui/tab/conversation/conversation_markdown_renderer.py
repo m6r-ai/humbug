@@ -112,10 +112,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # If not at start of block, add a new block
-        if not self._cursor.atBlockStart():
-            self._cursor.insertBlock()
-
         orig_block_format = self._cursor.blockFormat()
 
         # If we're in a list then ignore this.  We want our list formatting consistent.
@@ -143,10 +139,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # Add a new block with heading format
-        if not self._cursor.atBlockStart():
-            self._cursor.insertBlock()
-
         orig_block_format = self._cursor.blockFormat()
         orig_char_format = self._cursor.charFormat()
 
@@ -215,7 +207,22 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # Create a new format based on the current one but with bold
         bold_format = QTextCharFormat(orig_char_format)
         bold_format.setFontWeight(QFont.Weight.Bold)
-        bold_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_BRIGHT))
+
+        # Determine if this bold node is within a heading
+        is_in_heading = False
+        parent = node.parent
+        while parent is not None:
+            if isinstance(parent, MarkdownHeadingNode):
+                is_in_heading = True
+                break
+            parent = parent.parent
+
+        # Set foreground color based on context
+        if is_in_heading:
+            bold_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_HEADING_BRIGHT))
+        else:
+            bold_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_BRIGHT))
+
         self._cursor.setCharFormat(bold_format)
 
         for child in node.children:
@@ -458,9 +465,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             None
         """
         # Insert a new block if needed
-        if not self._cursor.atBlockStart():
-            self._cursor.insertBlock()
-
         orig_block_format = self._cursor.blockFormat()
         top_frame = self._cursor.currentFrame()
 
@@ -487,7 +491,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # Set spacing after table
         block_format = QTextBlockFormat(orig_block_format)
-        block_format.setBottomMargin(self._default_font_height * 2)
+        block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
 
         # Add a new block after the table with proper spacing
@@ -725,8 +729,11 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # Insert a new block if needed
-        if not self._cursor.atBlockStart():
+        # We need to add a new block before the horizontal rule to ensure proper spacing.
+        # However, if the previous sibling is a table then we don't need to do this because
+        # one already exists.
+        previous_sibling = node.previous_sibling()
+        if not previous_sibling or not isinstance(previous_sibling, MarkdownTableNode):
             self._cursor.insertBlock()
 
         # This is a workaround for the fact that QTextDocument doesn't support
@@ -742,6 +749,5 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # In most cases we need to add 2 new blocks after the horizontal rule
         # to ensure proper spacing.  However, if the previous sibling is a
         # MarkdownTableNode then we only need to add one.
-        previous_sibling = node.previous_sibling()
         if not previous_sibling or not isinstance(previous_sibling, MarkdownTableNode):
             self._cursor.insertBlock()

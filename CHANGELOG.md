@@ -1,5 +1,13 @@
 # Changelog for Humbug
 
+## v0.12.1 (2025-05-13)
+
+Bug fixes:
+
+- The MacOS shell could intermittently fail to close correctly when the application was closing, leaving it
+  hanging.
+- Bold text in a heading could end up the wrong colour.
+
 ## v0.12 (2025-05-13)
 
 New features:
