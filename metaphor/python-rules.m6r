@@ -63,7 +63,7 @@ Context: Python implementation rules
             Document what exceptions each function may raise in its docstring.
 
         Context: Handling exceptions
-            We should attempt to handle and mitigate exceptions at the level closest to which they are first
+            Attempt to handle and mitigate exceptions at the level closest to which they are first
             detected.  If we cannot handle or mitigate the exception then it should be wrapped in a domain-appropriate
             exception class and this re-raised to the next level up the call stack.
 
@@ -72,7 +72,7 @@ Context: Python implementation rules
             Preserve the exception chain using `raise ... from e` syntax.
 
         Context: Avoid bare `except:` or `except Exception:` clauses.
-            We should avoid the use of bare `except:` or `except Exception:` clauses unless a function we are calling
+            Avoid the use of bare `except:` or `except Exception:` clauses unless a function we are calling
             can only have exceptions handled this way.
 
             We should always catch specific exception types that could occur from an operation.
