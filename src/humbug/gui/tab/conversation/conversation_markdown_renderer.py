@@ -117,7 +117,14 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # If we're in a list then ignore this.  We want our list formatting consistent.
         if not self._lists:
             block_format = QTextBlockFormat(orig_block_format)
-            block_format.setBottomMargin(self._default_font_height)
+            next_sibling = node.next_sibling()
+            if next_sibling and isinstance(next_sibling, MarkdownHorizontalRuleNode):
+                # If the next sibling is a horizontal rule, we don't need a bottom margin
+                block_format.setBottomMargin(0)
+            else:
+                # Otherwise, we need a bottom margin
+                block_format.setBottomMargin(self._default_font_height)
+
             self._cursor.setBlockFormat(block_format)
 
         # Process all inline content
@@ -148,8 +155,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         level = min(node.level, 6) - 1  # Convert to 0-based index
 
         base_font_size = self._style_manager.base_font_size()
-        font_multiplier = ((base_font_size * 2.0) - multipliers[level]) / base_font_size
-        font_size = base_font_size * font_multiplier * self._style_manager.zoom_factor()
+        font_size = base_font_size * multipliers[level] * self._style_manager.zoom_factor()
         char_format.setFontPointSize(font_size)
         char_format.setFontWeight(QFont.Weight.Bold)
         char_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_HEADING))
@@ -163,7 +169,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         # if the previous sibling is a horizontal rule
         previous_sibling = node.previous_sibling()
         if previous_sibling and not isinstance(previous_sibling, MarkdownHorizontalRuleNode):
-            block_format.setTopMargin(self._default_font_height * font_multiplier)
+            block_format.setTopMargin(self._default_font_height * multipliers[level])
 
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
@@ -215,6 +221,7 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
             if isinstance(parent, MarkdownHeadingNode):
                 is_in_heading = True
                 break
+
             parent = parent.parent
 
         # Set foreground color based on context
@@ -289,10 +296,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # Insert a new block if needed
-        if not self._cursor.atBlockStart():
-            self._cursor.insertBlock()
-
         orig_block_format = self._cursor.blockFormat()
         orig_char_format = self._cursor.charFormat()
 
