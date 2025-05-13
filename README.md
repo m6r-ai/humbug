@@ -21,15 +21,15 @@ the AI, and provides you access to any command line tools you might want to use.
 Well over 80% of Humbug has been built and maintained by AI using Metaphor (the Metaphor files are in the repo), so
 it demonstrates how effective this approach can be.
 
-![Humbug in action](./docs/humbug-v0.10-1.webp)
+![Humbug in action](./docs/humbug-v0.12-1.webp)
 
-![Humbug in action](./docs/humbug-v0.9-1.webp)
+![Humbug in action](./docs/humbug-v0.12-2.webp)
 
-![Humbug in action](./docs/humbug-v0.8-2.webp)
+![Humbug in action](./docs/humbug-v0.12-3.webp)
 
-![Humbug in action](./docs/humbug-v0.9-2.webp)
+![Humbug in action](./docs/humbug-v0.12-4.webp)
 
-![Humbug in action](./docs/humbug-v0.9-5.webp)
+![Humbug in action](./docs/humbug-v0.12-5.webp)
 
 ## What does that mean in practice?
 
