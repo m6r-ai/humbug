@@ -1,4 +1,4 @@
-# Humbug v0.12
+# Humbug v0.12.1
 
 Humbug is an extensible open-source tool designed to help you build and maintain software using AI.
 

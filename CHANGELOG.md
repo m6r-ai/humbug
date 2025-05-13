@@ -7,6 +7,8 @@ Bug fixes:
 - The MacOS shell could intermittently fail to close correctly when the application was closing, leaving it
   hanging.
 - Bold text in a heading could end up the wrong colour.
+- Some spacings around horizontal rules could end up slightly too large.
+- Headings did not use the correct font sizes.
 
 ## v0.12 (2025-05-13)
 
