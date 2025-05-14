@@ -342,7 +342,7 @@ class MarkdownParser:
 
         return nodes
 
-    def parse_heading(self, level: int, content: str, line_num: int) -> MarkdownHeadingNode:
+    def parse_heading(self, level: int, content: str, line_num: int) -> None:
         """
         Parse a heading line and create a heading node.
 
@@ -350,12 +350,6 @@ class MarkdownParser:
             level: The heading level (1-6)
             content: The heading content
             line_num: The line number
-
-        Returns:
-            A heading node
-
-        Raises:
-            None
         """
         heading = MarkdownHeadingNode(level)
         for node in self.parse_inline_formatting(content):
@@ -365,7 +359,7 @@ class MarkdownParser:
         heading.line_end = line_num
         self.register_node_line(heading, line_num)
 
-        return heading
+        self._document.add_child(heading)
 
     def parse_text(self, text: str, line_num: int) -> MarkdownParagraphNode:
         """
@@ -374,12 +368,6 @@ class MarkdownParser:
         Args:
             text: The text content
             line_num: The line number
-
-        Returns:
-            A paragraph node
-
-        Raises:
-            None
         """
         paragraph = MarkdownParagraphNode()
         for node in self.parse_inline_formatting(text):
@@ -389,6 +377,7 @@ class MarkdownParser:
         paragraph.line_end = line_num
         self.register_node_line(paragraph, line_num)
 
+        self._document.add_child(paragraph)
         return paragraph
 
     def _current_list_state(self) -> ListState | None:
@@ -560,7 +549,7 @@ class MarkdownParser:
         list_item.add_child(paragraph)
         self.register_node_line(paragraph, line_num)
 
-    def parse_ordered_list_item(self, indent: int, number: str, content: str, line_num: int) -> MarkdownListItemNode:
+    def parse_ordered_list_item(self, indent: int, number: str, content: str, line_num: int) -> None:
         """
         Parse an ordered list item and create a list item node.
 
@@ -569,12 +558,6 @@ class MarkdownParser:
             number: The list item number (as a string)
             content: The item content
             line_num: The line number
-
-        Returns:
-            A list item node
-
-        Raises:
-            None
         """
         # Extract the starting number
         try:
@@ -595,6 +578,7 @@ class MarkdownParser:
         # Check if this list has blank lines, which means we need to use paragraphs for content
         if current_list.contains_blank_line:
             self._add_paragraph_to_list_item(item, content, line_num)
+
         else:
             # Process the content with inline formatting
             for node in self.parse_inline_formatting(content):
@@ -608,9 +592,7 @@ class MarkdownParser:
         current_list.last_item = item
         self._last_processed_line_type = 'ordered_list_item'
 
-        return item
-
-    def parse_unordered_list_item(self, indent: int, marker: str, content: str, line_num: int) -> MarkdownListItemNode:
+    def parse_unordered_list_item(self, indent: int, marker: str, content: str, line_num: int) -> None:
         """
         Parse an unordered list item and create a list item node.
 
@@ -619,12 +601,6 @@ class MarkdownParser:
             marker: The bullet marker (-, *, +)
             content: The item content
             line_num: The line number
-
-        Returns:
-            A list item node
-
-        Raises:
-            None
         """
         list_node = self.find_or_create_unordered_list(indent)
         current_list = self._current_list_state()
@@ -639,6 +615,7 @@ class MarkdownParser:
         # Check if this list has blank lines, which means we need to use paragraphs for content
         if current_list.contains_blank_line:
             self._add_paragraph_to_list_item(item, content, line_num)
+
         else:
             # Process the content with inline formatting
             for node in self.parse_inline_formatting(content):
@@ -651,8 +628,6 @@ class MarkdownParser:
         # Update tracking variables
         current_list.last_item = item
         self._last_processed_line_type = 'unordered_list_item'
-
-        return item
 
     def parse_horizontal_rule(self, line_num: int) -> MarkdownHorizontalRuleNode:
         """
@@ -742,8 +717,7 @@ class MarkdownParser:
         # If we're not already in a potential table, ignore it
         if not self._table_buffer.is_in_potential_table:
             # Treat as normal text
-            paragraph = self.parse_text(line, line_num)
-            self._document.add_child(paragraph)
+            self.parse_text(line, line_num)
             return
 
         # Store the separator row
@@ -859,8 +833,7 @@ class MarkdownParser:
             line_num = self._table_buffer.start_line + i
             # Convert back to text line
             line_text = '|' + '|'.join(row) + '|'
-            paragraph = self.parse_text(line_text, line_num)
-            self._document.add_child(paragraph)
+            self.parse_text(line_text, line_num)
 
         # Handle separator if present
         if self._table_buffer.separator_row:
@@ -876,8 +849,7 @@ class MarkdownParser:
                     parts.append('---')
 
             line_text = '|' + '|'.join(parts) + '|'
-            paragraph = self.parse_text(line_text, line_num)
-            self._document.add_child(paragraph)
+            self.parse_text(line_text, line_num)
 
         # Handle any body rows
         body_start = self._table_buffer.start_line + len(self._table_buffer.header_rows)
@@ -888,8 +860,7 @@ class MarkdownParser:
             line_num = body_start + i
             # Convert back to text line
             line_text = '|' + '|'.join(row) + '|'
-            paragraph = self.parse_text(line_text, line_num)
-            self._document.add_child(paragraph)
+            self.parse_text(line_text, line_num)
 
         # Reset table buffer
         self._table_buffer.reset()
@@ -1096,8 +1067,7 @@ class MarkdownParser:
             # Process other line types
             if line_type == 'heading':
                 level, heading_text = content
-                heading = self.parse_heading(level, heading_text, line_num)
-                self._document.add_child(heading)
+                self.parse_heading(level, heading_text, line_num)
                 # Reset list tracking after a heading
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
@@ -1105,13 +1075,13 @@ class MarkdownParser:
 
             if line_type == 'unordered_list_item':
                 indent, marker, text = content
-                item = self.parse_unordered_list_item(indent, marker, text, line_num)
+                self.parse_unordered_list_item(indent, marker, text, line_num)
                 self._last_processed_line_type = line_type
                 return
 
             if line_type == 'ordered_list_item':
                 indent, number, text = content
-                item = self.parse_ordered_list_item(indent, number, text, line_num)
+                self.parse_ordered_list_item(indent, number, text, line_num)
                 self._last_processed_line_type = line_type
                 return
 
@@ -1132,7 +1102,6 @@ class MarkdownParser:
 
             # Regular paragraph
             paragraph = self.parse_text(content, line_num)
-            self._document.add_child(paragraph)
             self._last_paragraph = paragraph
 
             # Reset list tracking after a paragraph
