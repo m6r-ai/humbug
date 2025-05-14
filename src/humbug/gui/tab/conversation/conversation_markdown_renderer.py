@@ -114,8 +114,19 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         orig_block_format = self._cursor.blockFormat()
 
-        # If we're in a list then ignore this.  We want our list formatting consistent.
-        if not self._lists:
+        # Are we in a list?  If yes, we need to potentially do some tricks to ensure
+        # paragraphs are rendered correctly.
+        if self._lists:
+            previous_sibling = node.previous_sibling()
+            if previous_sibling:
+                list_fmt = QTextListFormat(self._lists[-1].format())
+                list_fmt.setStyle(QTextListFormat.Style.ListStyleUndefined)
+                new_list = self._cursor.createList(list_fmt)
+                new_list.setFormat(list_fmt)
+                new_list.add(self._cursor.block())
+
+        else:
+            # We're in a normal paragraph, so format it normally
             block_format = QTextBlockFormat(orig_block_format)
             next_sibling = node.next_sibling()
             if next_sibling and isinstance(next_sibling, MarkdownHorizontalRuleNode):

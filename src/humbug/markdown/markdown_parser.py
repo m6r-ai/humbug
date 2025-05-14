@@ -984,6 +984,24 @@ class MarkdownParser:
         """Reset all list tracking state."""
         self._list_stack = []
 
+    def _convert_list_items_to_paragraphs(self):
+        """Convert all existing list items in the current list to have paragraphs blocks."""
+        current_list = self._list_stack[-1]
+        for list_item in current_list.list_node.children:
+            if isinstance(list_item, MarkdownListItemNode):
+                # Convert the list item to a paragraph
+                paragraph = MarkdownParagraphNode()
+                while list_item.children:
+                    child = list_item.children[0]
+                    list_item.remove_child(child)
+                    paragraph.add_child(child)
+
+                # Update line numbers
+                paragraph.line_start = list_item.line_start
+                paragraph.line_end = list_item.line_end
+                self.register_node_line(paragraph, list_item.line_start)
+                list_item.add_child(paragraph)
+
     def parse_line(self, line: str, line_num: int) -> None:
         """
         Parse a single line and add the resulting nodes to the AST.
@@ -1020,8 +1038,10 @@ class MarkdownParser:
                 self._blank_line_count += 1
 
                 # If we're in a list, mark it as having blank lines
-# TODO - We need to hunt down earlier list items to insert paragraph markers for them too
                 if self._list_stack:
+                    if not self._list_stack[-1].contains_blank_line:
+                        self._convert_list_items_to_paragraphs()
+
                     self._list_stack[-1].contains_blank_line = True
 
                 self._last_processed_line_type = line_type
