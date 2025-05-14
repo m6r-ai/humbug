@@ -1033,21 +1033,59 @@ class MarkdownParser:
                     # Not a valid table, render as regular text
                     self._handle_incomplete_table()
 
-            # Handle blank lines for list state
+            # Handle blank lines first
             if line_type == 'blank':
                 self._blank_line_count += 1
+                self._last_processed_line_type = line_type
+                return
 
-                # If we're in a list, mark it as having blank lines
-                if self._list_stack:
+            if line_type == 'unordered_list_item':
+                # If we're in a list, and we've seen a blank line, then mark it as having blank lines
+                if self._list_stack and self._blank_line_count > 0:
                     if not self._list_stack[-1].contains_blank_line:
                         self._convert_list_items_to_paragraphs()
 
                     self._list_stack[-1].contains_blank_line = True
 
+                # Now process the unordered list item
+                indent, marker, text = content
+                self.parse_unordered_list_item(indent, marker, text, line_num)
                 self._last_processed_line_type = line_type
+                self._blank_line_count = 0
                 return
 
+            if line_type == 'ordered_list_item':
+                # If we're in a list, and we've seen a blank line, then mark it as having blank lines
+                if self._list_stack and self._blank_line_count > 0:
+                    if not self._list_stack[-1].contains_blank_line:
+                        self._convert_list_items_to_paragraphs()
+
+                    self._list_stack[-1].contains_blank_line = True
+
+                # Now process the ordered list item
+                indent, number, text = content
+                self.parse_ordered_list_item(indent, number, text, line_num)
+                self._last_processed_line_type = line_type
+                self._blank_line_count = 0
+                return
+
+            # Once we're here we no longer care about blank line processing
             self._blank_line_count = 0
+
+            if line_type == 'text':
+                # Try to handle as a continuation first
+                if self._handle_text_continuation(content, line_num):
+                    self._last_processed_line_type = line_type
+                    return
+
+                # Regular paragraph
+                paragraph = self.parse_text(content, line_num)
+                self._last_paragraph = paragraph
+
+                # Reset list tracking after a paragraph
+                self._reset_list_state()
+                self._last_processed_line_type = line_type
+                return
 
             # Handle code blocks
             if line_type == 'code_block_start':
@@ -1093,18 +1131,6 @@ class MarkdownParser:
                 self._last_processed_line_type = line_type
                 return
 
-            if line_type == 'unordered_list_item':
-                indent, marker, text = content
-                self.parse_unordered_list_item(indent, marker, text, line_num)
-                self._last_processed_line_type = line_type
-                return
-
-            if line_type == 'ordered_list_item':
-                indent, number, text = content
-                self.parse_ordered_list_item(indent, number, text, line_num)
-                self._last_processed_line_type = line_type
-                return
-
             if line_type == 'horizontal_rule':
                 horizontal_rule = self.parse_horizontal_rule(line_num)
                 self._document.add_child(horizontal_rule)
@@ -1114,20 +1140,6 @@ class MarkdownParser:
                 self._last_paragraph = None
                 self._last_processed_line_type = line_type
                 return
-
-            # We have a text line
-            # Try to handle as a continuation first
-            if self._handle_text_continuation(content, line_num):
-                self._last_processed_line_type = line_type
-                return
-
-            # Regular paragraph
-            paragraph = self.parse_text(content, line_num)
-            self._last_paragraph = paragraph
-
-            # Reset list tracking after a paragraph
-            self._reset_list_state()
-            self._last_processed_line_type = line_type
 
         except Exception as e:
             self._logger.exception("Error parsing line %d: %s", line_num, line)
