@@ -20,7 +20,7 @@ class MarkdownParserState(ParserState):
         language: The current programming language being parsed
         embedded_parser_state: State of the embedded language parser
         in_list_item: Indicates if we're currently in a list item
-        list_indent: The indentation level of the current list item
+        list_indent_stack: Stack of indentation levels for nested lists
         block_type: The type of block element we're in (heading, blockquote, list)
     """
     in_fence_block: bool = False
@@ -28,8 +28,13 @@ class MarkdownParserState(ParserState):
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState | None = None
     in_list_item: bool = False
-    list_indent: int = 0
+    list_indent_stack: List[int] = None  # Will be initialized as empty list
     block_type: TokenType | None = None
+
+    def __post_init__(self) -> None:
+        """Initialize mutable default attributes."""
+        if self.list_indent_stack is None:
+            self.list_indent_stack = []
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.MARKDOWN)
@@ -42,10 +47,10 @@ class MarkdownParser(Parser):
     """
 
     def _embedded_parse(
-            self,
-            language: ProgrammingLanguage,
-            prev_embedded_parser_state: ParserState | None,
-            input_str: str
+        self,
+        language: ProgrammingLanguage,
+        prev_embedded_parser_state: ParserState | None,
+        input_str: str
     ) -> ParserState | None:
         """
         Parse embedded code content using an appropriate language parser.
@@ -116,6 +121,7 @@ class MarkdownParser(Parser):
         Note:
             Handles transitions between regular conversation content and code fence blocks,
             delegating code blocks to appropriate language parsers.
+            Supports nested list items by maintaining a stack of indentation levels.
         """
         in_fence_block = False
         fence_depth = 0
@@ -123,7 +129,7 @@ class MarkdownParser(Parser):
         embedded_parser_state = None
         parsing_continuation = False
         in_list_item = False
-        list_indent = 0
+        list_indent_stack = []
         block_type = None
 
         if prev_parser_state is not None:
@@ -136,7 +142,7 @@ class MarkdownParser(Parser):
             embedded_parser_state = prev_parser_state.embedded_parser_state
             parsing_continuation = prev_parser_state.parsing_continuation
             in_list_item = prev_parser_state.in_list_item
-            list_indent = prev_parser_state.list_indent
+            list_indent_stack = prev_parser_state.list_indent_stack.copy()  # Make a copy to avoid reference issues
             block_type = prev_parser_state.block_type
 
         parse_embedded = language != ProgrammingLanguage.UNKNOWN
@@ -153,7 +159,7 @@ class MarkdownParser(Parser):
                 if not token:
                     break
 
-                # If we've already proessed something interesting on this line, run to the end of it
+                # If we've already processed something interesting on this line, run to the end of it
                 if seen_text:
                     if block_type is not None:
                         token.type = block_type
@@ -203,41 +209,82 @@ class MarkdownParser(Parser):
                     break
 
                 if token.type in (TokenType.HEADING, TokenType.BLOCKQUOTE):
-                    # If we encounter a block element, we need to check if we're in a list item
                     in_list_item = False
                     block_type = token.type
-                    list_indent = 0
+                    list_indent_stack.clear()
                     self._tokens.append(token)
                     continue
 
                 if token.type == TokenType.LIST_MARKER:
-                    # If we encounter a list marker, we need to check if we're in a list item
-                    in_list_item = True
-                    block_type = token.type
-
+                    # We've found a list marker - determine its nesting level
                     next_token = lexer.peek_next_token()
-                    list_indent = 0 if not next_token else next_token.start
+                    current_indent = 0 if not next_token else next_token.start
+
+                    # Handle nesting level logic
+                    if not in_list_item:
+                        # Starting a new list
+                        in_list_item = True
+                        list_indent_stack.append(current_indent)
+
+                    else:
+                        # We're already in a list, check if this is a nested list or continuation
+                        if list_indent_stack and current_indent > list_indent_stack[-1]:
+                            # This is a nested list with deeper indentation
+                            list_indent_stack.append(current_indent)
+
+                        elif list_indent_stack:
+                            # Check if we need to pop out of nested lists
+                            while list_indent_stack and current_indent < list_indent_stack[-1]:
+                                list_indent_stack.pop()
+
+                            # If we popped everything, we're at a new list
+                            if not list_indent_stack:
+                                list_indent_stack.append(current_indent)
+
+                            # If at same level as an existing indent, we're continuing that list
+                            elif current_indent != list_indent_stack[-1]:
+                                list_indent_stack.append(current_indent)
+
+                    block_type = token.type
                     self._tokens.append(token)
                     continue
 
-                if in_list_item:
-                    # Check if this is a continuation of a list item
-                    if token.start >= list_indent:
+                if in_list_item and list_indent_stack:
+                    # Check if this is a continuation of the current list item
+                    if token.start >= list_indent_stack[-1]:
                         token.type = TokenType.LIST_MARKER
                         self._tokens.append(token)
                         continue
 
-                block_type = None
-                in_list_item = False
-                list_indent = 0
+                    # Not enough indentation, pop out of nested lists as needed
+                    while list_indent_stack and token.start < list_indent_stack[-1]:
+                        list_indent_stack.pop()
+
+                    if not list_indent_stack:
+                        # We've exited all lists
+                        in_list_item = False
+                        block_type = None
+
+                    else:
+                        # We're still in a list, but at a higher level
+                        token.type = TokenType.LIST_MARKER
+                        self._tokens.append(token)
+                        continue
+
+                # Not in a list anymore or never were
+                if not list_indent_stack:
+                    block_type = None
+                    in_list_item = False
+
                 self._tokens.append(token)
 
+        # Create and return parser state
         parser_state = MarkdownParserState()
         parser_state.in_fence_block = in_fence_block
         parser_state.fence_depth = fence_depth
         parser_state.language = language
         parser_state.in_list_item = in_list_item
-        parser_state.list_indent = list_indent
+        parser_state.list_indent_stack = list_indent_stack
         parser_state.block_type = block_type
 
         if parse_embedded:
