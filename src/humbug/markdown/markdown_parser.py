@@ -4,7 +4,7 @@ Parser to construct an AST from Markdown.
 
 import logging
 import re
-from typing import Dict, List, Tuple, Any, Set
+from typing import Dict, List, Tuple, Any
 
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode, MarkdownLineBreakNode,
@@ -62,6 +62,24 @@ class TableBufferState:
                 len(self.body_rows) > 0)
 
 
+class ListState:
+    """Tracks the state of a list and its items during parsing."""
+
+    def __init__(self, list_node: MarkdownOrderedListNode | MarkdownUnorderedListNode, indent: int) -> None:
+        """
+        Initialize a list state tracker.
+
+        Args:
+            list_node: The list node (MarkdownOrderedListNode or MarkdownUnorderedListNode)
+            indent: The indentation level of the list marker
+        """
+        self.list_node = list_node
+        self.indent = indent
+        self.content_indent = indent  # Will be updated based on marker length
+        self.last_item: MarkdownListItemNode | None = None
+        self.contains_blank_line = False
+
+
 class MarkdownParser:
     """
     Builder class for constructing an AST from markdown text.
@@ -92,12 +110,10 @@ class MarkdownParser:
         self._line_to_node_map: Dict[int, List[MarkdownASTNode]] = {}
 
         # List state tracking
-        self._active_lists: List[Tuple[MarkdownOrderedListNode | MarkdownUnorderedListNode, int]] = []  # (list_node, indent)
-        self._list_contains_blank_line: Set[MarkdownASTNode] = set()  # Lists that have blank lines
+        self._list_stack: List[ListState] = []
 
         # Text continuation tracking
         self._last_paragraph: MarkdownParagraphNode | None = None
-        self._last_list_item: MarkdownListItemNode | None = None
         self._last_processed_line_type: str = ""
         self._blank_line_count: int = 0
 
@@ -182,6 +198,7 @@ class MarkdownParser:
             # Check if it's a separator row with at least one colon or dash
             if '-' in line and (':-' in line or '-:' in line or '--' in line):
                 return 'table_separator', line.strip()
+
             # Regular table row
             return 'table_row', line.strip()
 
@@ -374,6 +391,58 @@ class MarkdownParser:
 
         return paragraph
 
+    def _current_list_state(self) -> ListState | None:
+        """
+        Return the current list state or None if not in a list.
+
+        Returns:
+            The current list state or None
+        """
+        return self._list_stack[-1] if self._list_stack else None
+
+    def _parent_list_state(self) -> ListState | None:
+        """
+        Return the parent list state or None if there's no parent.
+
+        Returns:
+            The parent list state or None
+        """
+        return self._list_stack[-2] if len(self._list_stack) > 1 else None
+
+    def _close_lists_at_indent(self, indent: int) -> None:
+        """
+        Close all lists at or deeper than the given indent level.
+
+        Args:
+            indent: The indentation level
+        """
+        while self._list_stack and self._list_stack[-1].indent >= indent:
+            self._list_stack.pop()
+
+    def _find_parent_for_list(self) -> MarkdownASTNode:
+        """
+        Find the appropriate parent for a new list.
+
+        Returns:
+            The parent node
+        """
+        if not self._list_stack:
+            return self._document
+
+        # Find the last list item of the deepest list to be the parent
+        current_list = self._list_stack[-1]
+        if current_list.last_item:
+            return current_list.last_item
+
+        # If there's no list item yet, go up the stack
+        for i in range(len(self._list_stack) - 2, -1, -1):
+            list_state = self._list_stack[i]
+            if list_state.last_item:
+                return list_state.last_item
+
+        # If no list items found, use the document
+        return self._document
+
     def create_ordered_list(self, indent: int, start_number: int) -> MarkdownOrderedListNode:
         """
         Create an ordered list at the given indent level with specified start number.
@@ -386,16 +455,16 @@ class MarkdownParser:
             The created ordered list node
         """
         # Close deeper lists
-        self._close_deeper_lists(indent)
+        self._close_lists_at_indent(indent)
 
         # Check if we already have an ordered list at this level
-        if self._active_lists and self._active_lists[-1][1] == indent:
-            list_node, _ = self._active_lists[-1]
-            if isinstance(list_node, MarkdownOrderedListNode):
-                return list_node
+        if self._list_stack and self._list_stack[-1].indent == indent:
+            list_state = self._list_stack[-1]
+            if isinstance(list_state.list_node, MarkdownOrderedListNode):
+                return list_state.list_node
 
             # Different list type, close it
-            self._active_lists.pop()
+            self._list_stack.pop()
 
         # Find parent
         parent = self._find_parent_for_list()
@@ -403,7 +472,10 @@ class MarkdownParser:
         # Create new ordered list
         new_list = MarkdownOrderedListNode(indent, start_number)
         parent.add_child(new_list)
-        self._active_lists.append((new_list, indent))
+
+        # Create and add list state
+        list_state = ListState(new_list, indent)
+        self._list_stack.append(list_state)
 
         return new_list
 
@@ -418,16 +490,16 @@ class MarkdownParser:
             The created unordered list node
         """
         # Close deeper lists
-        self._close_deeper_lists(indent)
+        self._close_lists_at_indent(indent)
 
         # Check if we already have an unordered list at this level
-        if self._active_lists and self._active_lists[-1][1] == indent:
-            list_node, _ = self._active_lists[-1]
-            if isinstance(list_node, MarkdownUnorderedListNode):
-                return list_node
+        if self._list_stack and self._list_stack[-1].indent == indent:
+            list_state = self._list_stack[-1]
+            if isinstance(list_state.list_node, MarkdownUnorderedListNode):
+                return list_state.list_node
 
             # Different list type, close it
-            self._active_lists.pop()
+            self._list_stack.pop()
 
         # Find parent
         parent = self._find_parent_for_list()
@@ -435,36 +507,12 @@ class MarkdownParser:
         # Create new unordered list
         new_list = MarkdownUnorderedListNode(indent)
         parent.add_child(new_list)
-        self._active_lists.append((new_list, indent))
+
+        # Create and add list state
+        list_state = ListState(new_list, indent)
+        self._list_stack.append(list_state)
 
         return new_list
-
-    def _close_deeper_lists(self, indent: int) -> None:
-        """
-        Close lists that are at a deeper indentation level.
-
-        Args:
-            indent: The current indentation level
-        """
-        while self._active_lists and self._active_lists[-1][1] > indent:
-            self._active_lists.pop()
-
-    def _find_parent_for_list(self) -> MarkdownASTNode:
-        """
-        Find the appropriate parent for a new list.
-
-        Returns:
-            The parent node
-        """
-        parent: MarkdownASTNode = self._document
-        if self._active_lists:
-            for i in range(len(self._active_lists) - 1, -1, -1):
-                list_node, _ = self._active_lists[i]
-                if list_node.children:
-                    parent = list_node.children[-1]  # Last list item
-                    break
-
-        return parent
 
     def _add_paragraph_to_list_item(self, list_item: MarkdownListItemNode, content: str, line_num: int) -> None:
         """
@@ -512,6 +560,14 @@ class MarkdownParser:
         # Create or find the ordered list
         list_node = self.create_ordered_list(indent, start_number)
 
+        # Get the current list state
+        current_list = self._current_list_state()
+        if not current_list:
+            # This should never happen, but just in case
+            self._logger.error("No current list state found for ordered list item")
+            current_list = ListState(list_node, indent)
+            self._list_stack.append(current_list)
+
         # Create the list item
         item = MarkdownListItemNode()
         list_node.add_child(item)
@@ -519,10 +575,11 @@ class MarkdownParser:
         # Calculate the actual content indentation for this specific marker
         marker_length = len(number) + 2  # +2 for the "." and space after number
         actual_content_indent = indent + marker_length
-        list_node.content_indent = max(list_node.content_indent, actual_content_indent)
+        current_list.content_indent = max(current_list.content_indent, actual_content_indent)
+        list_node.content_indent = current_list.content_indent  # Update list node content indent too
 
         # Check if this list has blank lines, which means we need to use paragraphs for content
-        if list_node in self._list_contains_blank_line:
+        if current_list.contains_blank_line:
             self._add_paragraph_to_list_item(item, content, line_num)
         else:
             # Process the content with inline formatting
@@ -534,7 +591,7 @@ class MarkdownParser:
         self.register_node_line(item, line_num)
 
         # Update tracking variables
-        self._last_list_item = item
+        current_list.last_item = item
         self._last_processed_line_type = 'ordered_list_item'
 
         return item
@@ -558,6 +615,14 @@ class MarkdownParser:
         # Create or find the unordered list
         list_node = self.create_unordered_list(indent)
 
+        # Get the current list state
+        current_list = self._current_list_state()
+        if not current_list:
+            # This should never happen, but just in case
+            self._logger.error("No current list state found for unordered list item")
+            current_list = ListState(list_node, indent)
+            self._list_stack.append(current_list)
+
         # Create the list item
         item = MarkdownListItemNode()
         list_node.add_child(item)
@@ -565,10 +630,11 @@ class MarkdownParser:
         # Calculate the actual content indentation for this specific marker
         marker_length = len(marker) + 1  # +1 for the space after marker
         actual_content_indent = indent + marker_length
-        list_node.content_indent = max(list_node.content_indent, actual_content_indent)
+        current_list.content_indent = max(current_list.content_indent, actual_content_indent)
+        list_node.content_indent = current_list.content_indent  # Update list node content indent too
 
         # Check if this list has blank lines, which means we need to use paragraphs for content
-        if list_node in self._list_contains_blank_line:
+        if current_list.contains_blank_line:
             self._add_paragraph_to_list_item(item, content, line_num)
         else:
             # Process the content with inline formatting
@@ -580,7 +646,7 @@ class MarkdownParser:
         self.register_node_line(item, line_num)
 
         # Update tracking variables
-        self._last_list_item = item
+        current_list.last_item = item
         self._last_processed_line_type = 'unordered_list_item'
 
         return item
@@ -880,8 +946,8 @@ class MarkdownParser:
     def _handle_text_continuation(self, text: str, line_num: int) -> bool:
         """
         Handle text as a continuation of the previous paragraph or list item.
-        A text line is only a continuation of a list item if it is indented
-        by at least the same amount as the original list item text.
+        A text line is a continuation of a list item if it is indented
+        by at least the same amount as the list item's content indent.
 
         Args:
             text: The text content
@@ -890,12 +956,15 @@ class MarkdownParser:
         Returns:
             True if handled as a continuation, False otherwise
         """
+        print("** Handling text continuation **")
         # Can only continue if no blank lines were encountered
         if self._blank_line_count > 0:
+            print("Blank line count is greater than 0, cannot continue")
             return False
 
         # Case 1: Continue a paragraph
         if self._last_paragraph and self._last_processed_line_type == 'text':
+            print("continuing paragraph")
             # Add a space between the continued text as long as we didn't just have a line break
             if not isinstance(self._last_paragraph.children[-1], MarkdownLineBreakNode):
                 self._last_paragraph.add_child(MarkdownTextNode(" "))
@@ -908,39 +977,41 @@ class MarkdownParser:
             return True
 
         # Case 2: Continue a list item
-        if self._last_list_item and self._last_processed_line_type in ('unordered_list_item', 'ordered_list_item'):
+        print(f"list stack: {self._list_stack}: {self._last_processed_line_type}")
+        if self._list_stack and self._last_processed_line_type in ('unordered_list_item', 'ordered_list_item'):
             # Get the indentation of the current line
+            print('processing text continuation')
             current_indent = len(text) - len(text.lstrip())
 
-            # Find which list contains our last list item
-            required_indent = 0
-            for list_node, _ in self._active_lists:
-                for child in list_node.children:
-                    if child is self._last_list_item:
-                        required_indent = list_node.content_indent
-                        break
+            # Find the appropriate list for continuation by checking indentation
+            list_state = None
+            for state in reversed(self._list_stack):
+                if current_indent >= state.content_indent:
+                    list_state = state
+                    break
 
-            # Check if the current line is indented enough to be a continuation
-            if current_indent < required_indent:
-                # Not indented enough, so it's not a continuation
+            if not list_state or not list_state.last_item:
+                print("List state not found or no last item to continue")
                 return False
 
+            print(f'Continuing list item: {list_state.last_item}')
             formatted_text = text.lstrip()
 
             # Check if the list has blank lines (uses paragraph formatting)
-            for list_node, _ in self._active_lists:
-                if list_node in self._list_contains_blank_line:
-                    # Create a new paragraph for this continuation
-                    self._add_paragraph_to_list_item(self._last_list_item, formatted_text, line_num)
-                    return True
+            if list_state.contains_blank_line:
+                # Create a new paragraph for this continuation
+                print("Adding paragraph to list item")
+                self._add_paragraph_to_list_item(list_state.last_item, formatted_text, line_num)
 
-            # Otherwise continue inline
-            self._last_list_item.add_child(MarkdownTextNode(" "))
-            for node in self.parse_inline_formatting(formatted_text):
-                self._last_list_item.add_child(node)
+            else:
+                # Otherwise continue inline
+                print("Continuing inline formatting")
+                list_state.last_item.add_child(MarkdownTextNode(" "))
+                for node in self.parse_inline_formatting(formatted_text):
+                    list_state.last_item.add_child(node)
 
-            self._last_list_item.line_end = line_num
-            self.register_node_line(self._last_list_item, line_num)
+            list_state.last_item.line_end = line_num
+            self.register_node_line(list_state.last_item, line_num)
             return True
 
         return False
@@ -952,8 +1023,12 @@ class MarkdownParser:
         Returns:
             None
         """
-        for list_node, _ in self._active_lists:
-            self._list_contains_blank_line.add(list_node)
+        for list_state in self._list_stack:
+            list_state.contains_blank_line = True
+
+    def _reset_list_state(self) -> None:
+        """Reset all list tracking state."""
+        self._list_stack = []
 
     def parse_line(self, line: str, line_num: int) -> None:
         """
@@ -971,6 +1046,7 @@ class MarkdownParser:
         """
         try:
             line_type, content = self.identify_line_type(line)
+            print(f"Parsing line {line_num}: {line_type} - {content}")
 
             # Reset paragraph tracking if not continuing text
             if line_type not in ('text', 'blank'):
@@ -981,6 +1057,7 @@ class MarkdownParser:
                 # Check if we have a complete table to create
                 if self._table_buffer.is_valid_table():
                     self._create_table_from_buffer()
+
                 else:
                     # Not a valid table, render as regular text
                     self._handle_incomplete_table()
@@ -990,8 +1067,11 @@ class MarkdownParser:
                 self._blank_line_count += 1
 
                 # If we're in a list, mark it as having blank lines
-                if self._active_lists:
+                if self._list_stack:
                     self._handle_blank_line_in_list()
+                    print(f"last processed before this blank: {self._last_processed_line_type}")
+                    return
+
             else:
                 self._blank_line_count = 0
 
@@ -1014,10 +1094,8 @@ class MarkdownParser:
                 self._finalize_code_block(line_num)
 
                 # Reset list tracking and other state after a code block
-                self._active_lists = []
-                self._list_contains_blank_line = set()
+                self._reset_list_state()
                 self._last_paragraph = None
-                self._last_list_item = None
                 self._last_processed_line_type = line_type
                 return
 
@@ -1038,48 +1116,48 @@ class MarkdownParser:
                 heading = self.parse_heading(level, heading_text, line_num)
                 self._document.add_child(heading)
                 # Reset list tracking after a heading
-                self._active_lists = []
-                self._list_contains_blank_line = set()
-                self._last_list_item = None
+                self._reset_list_state()
+                self._last_processed_line_type = line_type
+                return
 
-            elif line_type == 'unordered_list_item':
+            if line_type == 'unordered_list_item':
                 indent, marker, text = content
-                self._last_list_item = self.parse_unordered_list_item(indent, marker, text, line_num)
+                item = self.parse_unordered_list_item(indent, marker, text, line_num)
+                self._last_processed_line_type = line_type
+                return
 
-            elif line_type == 'ordered_list_item':
+            if line_type == 'ordered_list_item':
                 indent, number, text = content
-                self._last_list_item = self.parse_ordered_list_item(indent, number, text, line_num)
+                item = self.parse_ordered_list_item(indent, number, text, line_num)
+                self._last_processed_line_type = line_type
+                return
 
-            elif line_type == 'horizontal_rule':
+            if line_type == 'horizontal_rule':
                 horizontal_rule = self.parse_horizontal_rule(line_num)
                 self._document.add_child(horizontal_rule)
 
                 # Reset list tracking after a horizontal rule
-                self._active_lists = []
-                self._list_contains_blank_line = set()
-                self._last_list_item = None
+                self._reset_list_state()
                 self._last_paragraph = None
+                self._last_processed_line_type = line_type
+                return
 
-            elif line_type == 'blank':
-                # Blank lines are handled above for list state
-                pass
+            if line_type == 'blank':
+                self._last_processed_line_type = line_type
+                return
 
-            elif line_type == 'text':
-                # Try to handle as a continuation first
-                if self._handle_text_continuation(content, line_num):
-                    return
+            # We have a text line
+            # Try to handle as a continuation first
+            if self._handle_text_continuation(content, line_num):
+                return
 
-                # Regular paragraph
-                paragraph = self.parse_text(content, line_num)
-                self._document.add_child(paragraph)
-                self._last_paragraph = paragraph
+            # Regular paragraph
+            paragraph = self.parse_text(content, line_num)
+            self._document.add_child(paragraph)
+            self._last_paragraph = paragraph
 
-                # Reset list tracking after a paragraph
-                self._active_lists = []
-                self._list_contains_blank_line = set()
-                self._last_list_item = None
-
-            # Update the last processed line type
+            # Reset list tracking after a paragraph
+            self._reset_list_state()
             self._last_processed_line_type = line_type
 
         except Exception as e:
@@ -1101,10 +1179,8 @@ class MarkdownParser:
         """
         self._document = MarkdownDocumentNode()
         self._line_to_node_map = {}
-        self._active_lists = []
-        self._list_contains_blank_line = set()
+        self._reset_list_state()
         self._last_paragraph = None
-        self._last_list_item = None
         self._last_processed_line_type = ""
         self._blank_line_count = 0
         self._in_code_block = False
@@ -1134,50 +1210,6 @@ class MarkdownParser:
             self._finalize_code_block(len(lines) - 1)
 
         return self._document
-
-    def _create_list_at_indent(self, indent: int, is_ordered: bool) -> MarkdownASTNode:
-        """
-        Create a list node at the specified indent level.
-
-        Args:
-            indent: The indentation level for the list
-            is_ordered: Whether to create an ordered or unordered list
-
-        Returns:
-            The created list node
-        """
-        # Find the parent for this list based on indent
-        parent: MarkdownASTNode = self._document
-        parent_indent = -1
-
-        for list_node, list_indent in self._active_lists:
-            if parent_indent < list_indent < indent:
-                if list_node.children:
-                    parent = list_node.children[-1]  # Last list item
-                    parent_indent = list_indent
-
-        # Create a list item if the parent is a list
-        if any(isinstance(parent, list_type) for list_type in [MarkdownOrderedListNode, MarkdownUnorderedListNode]):
-            list_item = MarkdownListItemNode()
-            parent.add_child(list_item)
-            parent = list_item
-
-        # Create the appropriate list type
-        new_list: MarkdownOrderedListNode | MarkdownUnorderedListNode
-        if is_ordered:
-            new_list = MarkdownOrderedListNode(indent)
-        else:
-            new_list = MarkdownUnorderedListNode(indent)
-
-        parent.add_child(new_list)
-        self._active_lists.append((new_list, indent))
-
-        # Create an initial list item to maintain proper structure
-        initial_item = MarkdownListItemNode()
-        new_list.add_child(initial_item)
-        self._last_list_item = initial_item
-
-        return new_list
 
     def update_ast(self, text: str, previous_text: str) -> MarkdownDocumentNode:
         """
