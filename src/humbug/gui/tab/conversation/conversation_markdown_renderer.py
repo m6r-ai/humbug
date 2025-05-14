@@ -114,6 +114,18 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
         """
         orig_block_format = self._cursor.blockFormat()
 
+        # We're in a normal paragraph, so format it normally
+        block_format = QTextBlockFormat(orig_block_format)
+        next_sibling = node.next_sibling()
+        if next_sibling and isinstance(next_sibling, MarkdownHorizontalRuleNode):
+            # If the next sibling is a horizontal rule, we don't need a bottom margin
+            block_format.setBottomMargin(0)
+        else:
+            # Otherwise, we need a bottom margin
+            block_format.setBottomMargin(self._default_font_height)
+
+        self._cursor.setBlockFormat(block_format)
+
         # Are we in a list?  If yes, we need to potentially do some tricks to ensure
         # paragraphs are rendered correctly.
         if self._lists:
@@ -124,19 +136,6 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
                 new_list = self._cursor.createList(list_fmt)
                 new_list.setFormat(list_fmt)
                 new_list.add(self._cursor.block())
-
-        else:
-            # We're in a normal paragraph, so format it normally
-            block_format = QTextBlockFormat(orig_block_format)
-            next_sibling = node.next_sibling()
-            if next_sibling and isinstance(next_sibling, MarkdownHorizontalRuleNode):
-                # If the next sibling is a horizontal rule, we don't need a bottom margin
-                block_format.setBottomMargin(0)
-            else:
-                # Otherwise, we need a bottom margin
-                block_format.setBottomMargin(self._default_font_height)
-
-            self._cursor.setBlockFormat(block_format)
 
         # Process all inline content
         for child in node.children:

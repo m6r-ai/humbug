@@ -948,7 +948,7 @@ class MarkdownParser:
             return True
 
         # Case 2: Continue a list item
-        if self._list_stack and self._last_processed_line_type in ('unordered_list_item', 'ordered_list_item', 'blank'):
+        if self._list_stack and self._last_processed_line_type in ('unordered_list_item', 'ordered_list_item', 'blank', 'text'):
             # Get the indentation of the current line
             current_indent = len(text) - len(text.lstrip())
 
@@ -1118,6 +1118,7 @@ class MarkdownParser:
             # We have a text line
             # Try to handle as a continuation first
             if self._handle_text_continuation(content, line_num):
+                self._last_processed_line_type = line_type
                 return
 
             # Regular paragraph
