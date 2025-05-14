@@ -416,8 +416,25 @@ class MarkdownParser:
         Args:
             indent: The indentation level
         """
+        closed_lists = False
+
         while self._list_stack and self._list_stack[-1].indent >= indent:
             self._list_stack.pop()
+            closed_lists = True
+
+        # If we closed any lists, we should treat it as if a blank line was encountered
+        # This will ensure proper formatting when returning to an outer list
+        if closed_lists:
+            # Mark any remaining lists as containing blank lines
+            for list_state in self._list_stack:
+                list_state.contains_blank_line = True
+
+            # When transitioning back to an outer list after closing inner lists,
+            # we should reset the last processed line type to indicate a "break" in the list continuity
+            self._last_processed_line_type = 'blank'
+
+            # Reset the paragraph continuity as well
+            self._last_paragraph = None
 
     def _find_parent_for_list(self) -> MarkdownASTNode:
         """
