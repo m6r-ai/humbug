@@ -974,7 +974,6 @@ class ColumnManager(QWidget):
 
         try:
             # Fork the conversation
-            print(f"protection: {self._protect_current_tab}")
             new_tab = await conversation_tab.fork_conversation()
             new_tab.forkRequested.connect(self._fork_conversation)
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
