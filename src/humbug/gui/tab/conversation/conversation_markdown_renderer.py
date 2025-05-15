@@ -116,12 +116,14 @@ class ConversationMarkdownRenderer(MarkdownASTVisitor):
 
         # We're in a normal paragraph, so format it normally
         block_format = QTextBlockFormat(orig_block_format)
+
+
+        # If the next sibling is a horizontal rule, we don't need a bottom margin
         next_sibling = node.next_sibling()
         if next_sibling and isinstance(next_sibling, MarkdownHorizontalRuleNode):
-            # If the next sibling is a horizontal rule, we don't need a bottom margin
             block_format.setBottomMargin(0)
+
         else:
-            # Otherwise, we need a bottom margin
             block_format.setBottomMargin(self._default_font_height)
 
         self._cursor.setBlockFormat(block_format)
