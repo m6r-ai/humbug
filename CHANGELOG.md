@@ -8,6 +8,10 @@ Bug fixes:
 - Attempting to quit Humbug with unsaved changes in a file would result in you being asked twice if you wanted
   to discard.
 
+Internal structure changes:
+
+- The QTextEdit markdown renderer was moved to allow it to be reused more easily.
+
 ## v0.12.2 (2025-05-13)
 
 Bug fixes:
