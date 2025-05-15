@@ -7,3 +7,4 @@ class TabType(Enum):
     EDITOR = auto()
     SYSTEM = auto()
     TERMINAL = auto()
+    WIKI = auto()
