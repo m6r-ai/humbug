@@ -5,6 +5,8 @@
 Bug fixes:
 
 - Markdown rendering of lists that included paragraphs did not work correctly.
+- Attempting to quit Humbug with unsaved changes in a file would result in you being asked twice if you wanted
+  to discard.
 
 ## v0.12.2 (2025-05-13)
 
