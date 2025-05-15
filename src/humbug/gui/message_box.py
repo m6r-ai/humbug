@@ -142,7 +142,6 @@ class MessageBox(QDialog):
             btn.clicked.connect(self._handle_button)
 
             # Apply recommended styling if this is our primary action button
-            print(f"Button: {button}, Recommended: {recommended_button}")
             if button == recommended_button:
                 btn.setProperty("recommended", True)
 
