@@ -2,7 +2,9 @@
 
 ## v0.13 (2025-05-xx)
 
-TBD
+Bug fixes:
+
+- Markdown rendering of lists that included paragraphs did not work correctly.
 
 ## v0.12.2 (2025-05-13)
 
