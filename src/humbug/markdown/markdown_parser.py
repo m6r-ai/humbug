@@ -405,9 +405,12 @@ class MarkdownParser:
         Args:
             indent: The indentation level
             consider_marker: Whether to consider the marker length for closing lists
+
+        Returns:
+            True if lists were closed, False otherwise
         """
         if not self._list_stack:
-            return
+            return False
 
         closed_lists = False
 
@@ -419,19 +422,7 @@ class MarkdownParser:
             self._list_stack.pop()
             closed_lists = True
 
-        # If we closed any lists, we should treat it as if a blank line was encountered
-        # This will ensure proper formatting when returning to an outer list
-        if closed_lists:
-            # Mark any remaining lists as containing blank lines
-            for list_state in self._list_stack:
-                list_state.contains_blank_line = True
-
-            # When transitioning back to an outer list after closing inner lists,
-            # we should reset the last processed line type to indicate a "break" in the list continuity
-            self._last_processed_line_type = 'blank'
-
-            # Reset the paragraph continuity as well
-            self._last_paragraph = None
+        return closed_lists
 
     def _find_parent_for_list(self) -> MarkdownASTNode:
         """
@@ -468,9 +459,6 @@ class MarkdownParser:
         Returns:
             The created ordered list node
         """
-        # Close deeper lists
-        self._close_lists_at_indent(indent, False)
-
         # Check if we already have an ordered list at this level
         if self._list_stack and self._list_stack[-1].indent == indent:
             list_state = self._list_stack[-1]
@@ -503,9 +491,6 @@ class MarkdownParser:
         Returns:
             The created unordered list node
         """
-        # Close deeper lists
-        self._close_lists_at_indent(indent, False)
-
         # Check if we already have an unordered list at this level
         if self._list_stack and self._list_stack[-1].indent == indent:
             list_state = self._list_stack[-1]
@@ -562,8 +547,19 @@ class MarkdownParser:
         # Extract the starting number
         try:
             start_number = int(number)
+
         except ValueError:
             start_number = 1
+
+        # Close deeper lists
+        self._close_lists_at_indent(indent, False)
+
+        # If we're in a list, and we've seen a blank line, then mark the list as having blank lines
+        if self._list_stack and self._blank_line_count > 0:
+            if not self._list_stack[-1].contains_blank_line:
+                self._convert_list_items_to_paragraphs()
+
+            self._list_stack[-1].contains_blank_line = True
 
         list_node = self.find_or_create_ordered_list(indent, start_number)
         current_list = self._current_list_state()
@@ -602,6 +598,16 @@ class MarkdownParser:
             content: The item content
             line_num: The line number
         """
+        # Close deeper lists
+        self._close_lists_at_indent(indent, False)
+
+        # If we're in a list, and we've seen a blank line, then mark the list as having blank lines
+        if self._list_stack and self._blank_line_count > 0:
+            if not self._list_stack[-1].contains_blank_line:
+                self._convert_list_items_to_paragraphs()
+
+            self._list_stack[-1].contains_blank_line = True
+
         list_node = self.find_or_create_unordered_list(indent)
         current_list = self._current_list_state()
 
@@ -843,8 +849,10 @@ class MarkdownParser:
             for alignment in self._table_buffer.alignments:
                 if alignment == 'center':
                     parts.append(':---:')
+
                 elif alignment == 'right':
                     parts.append('---:')
+
                 else:
                     parts.append('---')
 
@@ -930,10 +938,6 @@ class MarkdownParser:
         Returns:
             True if handled as a continuation, False otherwise
         """
-        # Can only continue if no blank lines were encountered
-        if self._blank_line_count > 0:
-            return False
-
         # Case 1: Continue a paragraph
         if self._last_paragraph and self._last_processed_line_type == 'text':
             # Add a space between the continued text as long as we didn't just have a line break
@@ -952,7 +956,17 @@ class MarkdownParser:
             # Get the indentation of the current line
             current_indent = len(text) - len(text.lstrip())
 
-            self._close_lists_at_indent(current_indent, True)
+            if self._close_lists_at_indent(current_indent, True):
+                # We closed one or more lists, we should treat it as if a blank line was encountered
+                # This will ensure proper formatting when returning to an outer list
+                if self._list_stack:
+                    self._list_stack[-1].contains_blank_line = True
+                    self._last_processed_line_type = 'blank'
+                    self._blank_line_count = 1
+
+                # Reset the paragraph continuity as well
+                self._last_paragraph = None
+
             list_state = self._current_list_state()
             if not list_state or not list_state.last_item:
                 return False
@@ -1040,13 +1054,6 @@ class MarkdownParser:
                 return
 
             if line_type == 'unordered_list_item':
-                # If we're in a list, and we've seen a blank line, then mark it as having blank lines
-                if self._list_stack and self._blank_line_count > 0:
-                    if not self._list_stack[-1].contains_blank_line:
-                        self._convert_list_items_to_paragraphs()
-
-                    self._list_stack[-1].contains_blank_line = True
-
                 # Now process the unordered list item
                 indent, marker, text = content
                 self.parse_unordered_list_item(indent, marker, text, line_num)
@@ -1055,13 +1062,6 @@ class MarkdownParser:
                 return
 
             if line_type == 'ordered_list_item':
-                # If we're in a list, and we've seen a blank line, then mark it as having blank lines
-                if self._list_stack and self._blank_line_count > 0:
-                    if not self._list_stack[-1].contains_blank_line:
-                        self._convert_list_items_to_paragraphs()
-
-                    self._list_stack[-1].contains_blank_line = True
-
                 # Now process the ordered list item
                 indent, number, text = content
                 self.parse_ordered_list_item(indent, number, text, line_num)
@@ -1071,21 +1071,6 @@ class MarkdownParser:
 
             # Once we're here we no longer care about blank line processing
             self._blank_line_count = 0
-
-            if line_type == 'text':
-                # Try to handle as a continuation first
-                if self._handle_text_continuation(content, line_num):
-                    self._last_processed_line_type = line_type
-                    return
-
-                # Regular paragraph
-                paragraph = self.parse_text(content, line_num)
-                self._last_paragraph = paragraph
-
-                # Reset list tracking after a paragraph
-                self._reset_list_state()
-                self._last_processed_line_type = line_type
-                return
 
             # Handle code blocks
             if line_type == 'code_block_start':
@@ -1107,7 +1092,6 @@ class MarkdownParser:
 
                 # Reset list tracking and other state after a code block
                 self._reset_list_state()
-                self._last_paragraph = None
                 self._last_processed_line_type = line_type
                 return
 
@@ -1137,9 +1121,22 @@ class MarkdownParser:
 
                 # Reset list tracking after a horizontal rule
                 self._reset_list_state()
-                self._last_paragraph = None
                 self._last_processed_line_type = line_type
                 return
+
+            # We have text left
+            # Try to handle as a continuation first
+            if self._handle_text_continuation(content, line_num):
+                self._last_processed_line_type = line_type
+                return
+
+            # Regular paragraph
+            paragraph = self.parse_text(content, line_num)
+            self._last_paragraph = paragraph
+
+            # Reset list tracking after a paragraph
+            self._reset_list_state()
+            self._last_processed_line_type = line_type
 
         except Exception as e:
             self._logger.exception("Error parsing line %d: %s", line_num, line)
