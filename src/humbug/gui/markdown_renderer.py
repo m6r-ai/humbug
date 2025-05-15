@@ -22,7 +22,7 @@ from humbug.markdown.markdown_ast_node import (
 )
 
 
-class ConversationMarkdownRenderer(MarkdownASTVisitor):
+class MarkdownRenderer(MarkdownASTVisitor):
     """Visitor that renders the AST directly to a QTextDocument."""
 
     def __init__(self, document: QTextDocument) -> None:

@@ -14,10 +14,10 @@ from PySide6.QtGui import (
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.markdown_renderer import MarkdownRenderer
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.tab.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
-from humbug.gui.tab.conversation.conversation_markdown_renderer import ConversationMarkdownRenderer
 from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
@@ -119,7 +119,7 @@ class ConversationMessageSection(QFrame):
 
         # Render directly to the document
         document = self._text_area.document()
-        self._renderer = ConversationMarkdownRenderer(document)
+        self._renderer = MarkdownRenderer(document)
 
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
