@@ -19,6 +19,8 @@ from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.gui.tab.system.system_tab import SystemTab
+from humbug.gui.tab.wiki.wiki_error import WikiError
+from humbug.gui.tab.wiki.wiki_tab import WikiTab
 from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_label import TabLabel
 from humbug.gui.tab.tab_state import TabState
@@ -839,6 +841,19 @@ class ColumnManager(QWidget):
 
         return None
 
+    def find_wiki_tab_by_path(self, path: str) -> WikiTab | None:
+        """
+        Find a wiki tab by its path.
+
+        Args:
+            path: The wiki path to search for
+
+        Returns:
+            The WikiTab if found, None otherwise
+        """
+        tab = self._tabs.get(path)
+        return tab if isinstance(tab, WikiTab) else None
+
     def show_system(self) -> SystemTab:
         """
             Show the system tab.
@@ -1064,6 +1079,28 @@ class ColumnManager(QWidget):
         self.add_tab(terminal, title)
         return terminal
 
+    def open_wiki(self, path: str) -> WikiTab:
+        """Open an existing conversation file."""
+        wiki_id = os.path.splitext(os.path.basename(path))[0]
+
+        # Check if already open
+        existing_tab = self.find_wiki_tab_by_path(wiki_id)
+        if existing_tab:
+            self._set_current_tab(wiki_id)
+            return existing_tab
+
+        try:
+            wiki_tab = WikiTab.load_from_file(
+                path,
+                self
+            )
+            self.add_tab(wiki_tab, f"Wiki: {wiki_id}")
+            return wiki_tab
+
+        except WikiError as e:
+            self._logger.exception("Failed to open wiki page: %s", str(e))
+            raise
+
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""
         tab_columns = []
@@ -1171,6 +1208,9 @@ class ColumnManager(QWidget):
         if state.type == TabType.TERMINAL:
             return TerminalTab.restore_from_state(state, self)
 
+        if state.type == TabType.WIKI:
+            return WikiTab.restore_from_state(state, self)
+
         return None
 
     def _deferred_set_active_column(self, active_column_index: int, active_tab_ids: List[str]) -> None:
@@ -1213,6 +1253,9 @@ class ColumnManager(QWidget):
                 return f"Term: {os.path.basename(state.metadata['command'])}"
 
             return "Terminal"
+
+        if isinstance(tab, WikiTab):
+            return f"Wiki: {tab.tab_id()}"
 
         return os.path.basename(state.path)
 

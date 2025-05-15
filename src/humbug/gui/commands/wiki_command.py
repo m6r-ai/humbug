@@ -1,4 +1,4 @@
-"""Command for opening or creating files in an editor tab from the system terminal."""
+"""Command for opening pages in a wiki tab from the system terminal."""
 
 import logging
 import os
@@ -10,32 +10,28 @@ from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
-class EditCommand(SystemCommand):
-    """Command to open or create a file in an editor tab."""
+class WikiCommand(SystemCommand):
+    """Command to open a wiki tab."""
 
-    def __init__(self, edit_file_callback: Callable[[str], bool]) -> None:
+    def __init__(self, wiki_file_callback: Callable[[str], bool]) -> None:
         """
-        Initialize edit command.
+        Initialize wiki command.
 
         Args:
             open_file_callback: Callback to open an existing file
         """
         super().__init__()
-        self._edit_file = edit_file_callback
+        self._wiki_file = wiki_file_callback
         self._mindspace_manager = MindspaceManager()
-        self._logger = logging.getLogger("EditCommand")
+        self._logger = logging.getLogger("WikiCommand")
 
     def name(self) -> str:
         """Get the name of the command."""
-        return "edit"
-
-    def aliases(self) -> List[str]:
-        """Get alternate names for the command."""
-        return ["open"]
+        return "wiki"
 
     def help_text(self) -> str:
         """Get the help text for the command."""
-        return "Opens a file for editing"
+        return "Opens a wiki tab"
 
     def _execute_command(self, tokens: List[Token]) -> bool:
         """
@@ -52,7 +48,7 @@ class EditCommand(SystemCommand):
         if not args:
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
-                "No filename specified. Usage: edit <filename>"
+                "No filename specified. Usage: wiki <filename>"
             )
             return False
 
@@ -67,7 +63,7 @@ class EditCommand(SystemCommand):
                 full_path = filename
 
             if not os.path.exists(full_path):
-                # Create directory if needed
+                # Create directory if ned
                 directory = os.path.dirname(full_path)
                 if directory and not os.path.exists(directory):
                     try:
@@ -80,24 +76,24 @@ class EditCommand(SystemCommand):
                         )
                         return False
 
-            if not self._edit_file(full_path):
+            if not self._wiki_file(full_path):
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,
-                    f"Failed to edit file: {filename}"
+                    f"Failed to open page: {filename}"
                 )
                 return False
 
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.SUCCESS,
-                f"Editing file: {filename}"
+                f"Opening page: {filename}"
             )
             return True
 
         except Exception as e:
-            self._logger.exception("Error processing file: %s", str(e))
+            self._logger.exception("Error processing page: %s", str(e))
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.ERROR,
-                f"Error processing file: {str(e)}"
+                f"Error processing page: {str(e)}"
             )
             return False
 
@@ -118,7 +114,7 @@ class EditCommand(SystemCommand):
         Returns:
             List of possible completions
         """
-        # For the edit command, we're primarily interested in completing file paths
+        # For the wiki command, we're primarily interested in completing file paths
         # Only handle options if we're explicitly looking at an option token
         if current_token.type == TokenType.OPTION:
             return self._get_option_completions(current_token.value)

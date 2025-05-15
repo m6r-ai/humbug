@@ -22,6 +22,7 @@ from humbug.gui.commands.edit_command import EditCommand
 from humbug.gui.commands.help_command import HelpCommand
 from humbug.gui.commands.m6rc_command import M6rcCommand
 from humbug.gui.commands.terminal_command import TerminalCommand
+from humbug.gui.commands.wiki_command import WikiCommand
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.gui.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
@@ -388,6 +389,9 @@ class MainWindow(QMainWindow):
 
         terminal_command = TerminalCommand(self._process_terminal_command)
         self._command_registry.register_command(terminal_command)
+
+        wiki_command = WikiCommand(self._process_wiki_command)
+        self._command_registry.register_command(wiki_command)
 
         # Register help command last so it can see all other commands
         help_command = HelpCommand(self._command_registry)
@@ -1284,5 +1288,12 @@ class MainWindow(QMainWindow):
         """Process the terminal command."""
         self._column_manager.protect_current_tab(True)
         self._column_manager.new_terminal()
+        self._column_manager.protect_current_tab(False)
+        return True
+
+    def _process_wiki_command(self, path: str) -> bool:
+        """Process the wiki command."""
+        self._column_manager.protect_current_tab(True)
+        self._column_manager.open_wiki(path)
         self._column_manager.protect_current_tab(False)
         return True

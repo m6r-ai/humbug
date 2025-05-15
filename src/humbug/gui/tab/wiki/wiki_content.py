@@ -12,10 +12,10 @@ from PySide6.QtGui import QColor, QResizeEvent, QGuiApplication
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.message_box import MessageBox, MessageBoxType
+from humbug.gui.tab.wiki.wiki_content_section import WikiContentSection
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_converter import MarkdownConverter, MarkdownDocumentNode
 from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.wiki.wiki_content_section import WikiContentSection
 
 
 class WikiContent(QFrame):

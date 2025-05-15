@@ -13,10 +13,10 @@ from PySide6.QtGui import QCursor, QResizeEvent, QColor
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.message_box import MessageBox, MessageBoxType
+from humbug.gui.tab.wiki.wiki_content import WikiContent
+from humbug.gui.tab.wiki.wiki_error import WikiError, WikiIOError
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_converter import MarkdownConverter
-from humbug.wiki.wiki_content import WikiContent
-from humbug.wiki.wiki_error import WikiError, WikiIOError
 
 
 class WikiWidgetEventFilter(QObject):

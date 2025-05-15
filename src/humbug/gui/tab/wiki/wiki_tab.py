@@ -14,9 +14,9 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
+from humbug.gui.tab.wiki.wiki_widget import WikiWidget
+from humbug.gui.tab.wiki.wiki_error import WikiError
 from humbug.language.language_manager import LanguageManager
-from humbug.wiki.wiki_widget import WikiWidget
-from humbug.wiki.wiki_error import WikiError
 
 
 class WikiTab(TabBase):
