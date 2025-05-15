@@ -487,6 +487,7 @@ class EditorTab(TabBase):
             return self.save()
 
         if result == MessageBoxButton.DISCARD:
+            self._set_modified(False)
             return True
 
         return False
