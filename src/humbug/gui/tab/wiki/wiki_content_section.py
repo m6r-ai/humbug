@@ -1,7 +1,7 @@
 """Widget for displaying a section of wiki content."""
 
 import logging
-from typing import List, Tuple, cast
+from typing import List, Tuple, cast, Optional
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QLabel, QHBoxLayout, QWidget
@@ -13,6 +13,7 @@ from PySide6.QtGui import (
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.markdown_block_data import HeadingBlockData
 from humbug.gui.markdown_renderer import MarkdownRenderer
 from humbug.gui.tab.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
@@ -29,6 +30,9 @@ class WikiContentSection(QFrame):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
+
+    # New signal for link clicks
+    linkClicked = Signal(str)
 
     def __init__(
         self,
@@ -112,6 +116,13 @@ class WikiContentSection(QFrame):
         self._text_area.mousePressed.connect(self._on_mouse_pressed)
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
+        # Add mouse move tracking for cursor changes on links
+        self._text_area.viewport().setMouseTracking(True)
+        self._text_area.viewport().mouseMoveEvent = self._on_mouse_moved
+
+        # Add handler for mouse clicks to detect link activation
+        self._text_area.mousePressEvent = self._on_text_area_mouse_press
+
         # Add appropriate highlighter
         self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
         self.set_language(language)
@@ -170,6 +181,54 @@ class WikiContentSection(QFrame):
         """Handle mouse release from text area."""
         self._mouse_left_button_pressed = False
         self.mouseReleased.emit()
+
+    # New method to handle mouse movement
+    def _on_mouse_moved(self, event: QMouseEvent) -> None:
+        """
+        Handle mouse movement to update cursor for links.
+
+        Args:
+            event: The mouse event
+        """
+        # Get the text cursor at the mouse position
+        cursor = self._text_area.cursorForPosition(event.pos())
+
+        # Check if the cursor is on a link
+        url = cursor.charFormat().anchorHref()
+
+        # Update cursor shape based on whether we're hovering over a link
+        if url:
+            self._text_area.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
+
+        else:
+            self._text_area.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+
+        # Call the original mouseMoveEvent
+        QWidget.mouseMoveEvent(self._text_area.viewport(), event)
+
+    # New method to handle mouse press in the text area
+    def _on_text_area_mouse_press(self, event: QMouseEvent) -> None:
+        """
+        Handle mouse press events in the text area, including link activation.
+
+        Args:
+            event: The mouse event
+        """
+        # Process link clicks
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Get the text cursor at the mouse position
+            cursor = self._text_area.cursorForPosition(event.pos())
+
+            # Check if the cursor is on a link
+            url = cursor.charFormat().anchorHref()
+            if url:
+                # Emit the linkClicked signal
+                self.linkClicked.emit(url)
+                event.accept()
+                return
+
+        # Call the original mousePressEvent for other cases
+        ConversationTextEdit.mousePressEvent(self._text_area, event)
 
     def _on_selection_changed(self) -> None:
         """Handle selection changes in the text area."""
@@ -254,6 +313,32 @@ class WikiContentSection(QFrame):
             matches.append((cursor.selectionStart(), cursor.selectionEnd()))
 
         return matches
+
+    # New method to find an element by ID
+    def find_element_by_id(self, element_id: str) -> Optional[Tuple[int, int]]:
+        """
+        Find an element with the given ID.
+
+        Args:
+            element_id: The ID to search for
+
+        Returns:
+            Tuple of (block_number, position) if found, None otherwise
+        """
+        document = self._text_area.document()
+
+        # Iterate through all blocks looking for matching elements
+        for block_num in range(document.blockCount()):
+            block = document.findBlockByNumber(block_num)
+
+            # Get user data from the block
+            user_data = block.userData()
+
+            # Check if this block has the target ID
+            if isinstance(user_data, HeadingBlockData) and user_data.element_id == element_id:
+                return (block_num, block.position())
+
+        return None
 
     def highlight_matches(
         self,

@@ -1,6 +1,7 @@
 """Wiki content widget implementation."""
 
 import logging
+import re
 from datetime import datetime
 from typing import Dict, List, Any, Set, Tuple, cast
 
@@ -132,6 +133,16 @@ class WikiWidget(QWidget):
         self._scroll_timer.timeout.connect(self._update_scroll)
         self._last_mouse_pos: QPoint | None = None
 
+        # Timer for smooth animated scrolling
+        self._smooth_scroll_timer = QTimer(self)
+        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+        self._smooth_scroll_target: int = 0
+        self._smooth_scroll_start: int = 0
+        self._smooth_scroll_distance: int = 0
+        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_time: int = 0
+
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
@@ -173,6 +184,10 @@ class WikiWidget(QWidget):
         )
         content_widget.scrollRequested.connect(self._handle_selection_scroll)
         content_widget.mouseReleased.connect(self._stop_scroll)
+
+        # Connect to the new linkClicked signal
+        content_widget.linkClicked.connect(self._handle_link_clicked)
+
         content_widget.set_content(content, self._path)
 
         # Add widget before the stretch
@@ -182,6 +197,35 @@ class WikiWidget(QWidget):
         self._install_activation_tracking(content_widget)
 
         return content_widget
+
+    # New method to handle link clicks
+    def _handle_link_clicked(self, url: str) -> None:
+        """
+        Handle link clicks from content blocks.
+
+        Args:
+            url: The URL that was clicked
+        """
+        self._logger.debug("Link clicked: %s", url)
+
+        # Activate this widget
+        self.activated.emit()
+
+        # Handle local links (anchors starting with #)
+        if url.startswith("#"):
+            # Extract the target ID without the # prefix
+            target_id = url[1:]
+            self._scroll_to_target(target_id)
+
+        # URLs with file:// scheme are local files
+        elif url.startswith("file://"):
+            # Could implement opening local files here if needed
+            pass
+
+        # External links could be handled differently if needed
+        else:
+            # Could implement opening external links in a browser
+            pass
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """
@@ -284,6 +328,50 @@ class WikiWidget(QWidget):
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.minimum())
 
+    def _start_smooth_scroll(self, target_value: int) -> None:
+        """
+        Start smooth scrolling animation to target value.
+
+        Args:
+            target_value: Target scroll position
+        """
+        scrollbar = self._scroll_area.verticalScrollBar()
+
+        # If we're already scrolling or the value is out of range, do nothing
+        if self._smooth_scroll_timer.isActive():
+            self._smooth_scroll_timer.stop()
+
+        # Set up the animation parameters
+        self._smooth_scroll_start = scrollbar.value()
+        self._smooth_scroll_target = target_value
+        self._smooth_scroll_distance = target_value - self._smooth_scroll_start
+        self._smooth_scroll_time = 0
+
+        # Start the animation timer
+        self._smooth_scroll_timer.start()
+
+    # New method to update smooth scrolling animation
+    def _update_smooth_scroll(self) -> None:
+        """Update the smooth scrolling animation."""
+        self._smooth_scroll_time += self._smooth_scroll_timer.interval()
+
+        # Calculate progress (0 to 1)
+        progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
+
+        # Apply easing function (ease out cubic)
+        t = 1 - (1 - progress) ** 3
+
+        # Calculate new position
+        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+
+        # Update scrollbar position
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scrollbar.setValue(new_position)
+
+        # Stop the timer when animation is complete
+        if progress >= 1.0:
+            self._smooth_scroll_timer.stop()
+
     def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
         viewport_pos = self._scroll_area.viewport().mapFromGlobal(mouse_pos)
@@ -348,6 +436,72 @@ class WikiWidget(QWidget):
             self._content_with_selection.clear_selection()
 
         self._content_with_selection = content_widget
+
+    # New method to scroll to a target element by ID
+    def _scroll_to_target(self, target_id: str) -> None:
+        """
+        Scroll to a target element by ID.
+
+        Args:
+            target_id: The ID of the target element to scroll to
+        """
+        # Normalize the target ID to handle different formats
+        target_id = self._normalize_id(target_id)
+
+        # Try to find the target in content blocks
+        for content_block in self._content_blocks:
+            target_position = content_block.find_element_by_id(target_id)
+            if target_position:
+                section_idx, _block_num, position = target_position
+
+                # Get the position to scroll to
+                target_point = content_block.select_and_scroll_to_position(section_idx, position)
+
+                # Map position to scroll area coordinates
+                pos_in_scroll_area = content_block.mapTo(self._content_container, target_point)
+
+                # Calculate the scroll position
+                scrollbar = self._scroll_area.verticalScrollBar()
+                current_scroll = scrollbar.value()
+
+                # Calculate target scroll position (with some margin)
+                target_scroll = pos_in_scroll_area.y() - 50  # 50px margin above target
+
+                # Smoothly scroll to the target position
+                self._start_smooth_scroll(target_scroll)
+
+                # Successfully found and scrolled
+                self._logger.debug(f"Scrolled to target {target_id} at position {position}")
+                return
+
+        # If target wasn't found, log it
+        self._logger.debug(f"Target not found: {target_id}")
+
+    # New helper method to normalize IDs
+    def _normalize_id(self, id_str: str) -> str:
+        """
+        Normalize an ID string to be consistent with how IDs are generated.
+
+        Args:
+            id_str: The ID string to normalize
+
+        Returns:
+            Normalized ID string
+        """
+        # Convert to lowercase
+        id_str = id_str.lower()
+
+        # Replace spaces with hyphens
+        id_str = id_str.replace(' ', '-')
+
+        # Remove special characters
+        id_str = re.sub(r'[^a-z0-9-]', '', id_str)
+
+        # Ensure it doesn't start with a number (same as in renderer)
+        if id_str and id_str[0].isdigit():
+            id_str = 'h-' + id_str
+
+        return id_str
 
     def has_selection(self) -> bool:
         """Check if any content has selected text."""

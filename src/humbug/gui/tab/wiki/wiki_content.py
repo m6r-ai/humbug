@@ -1,7 +1,7 @@
 """Widget for displaying a content block in the wiki."""
 
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QWidget
@@ -23,6 +23,9 @@ class WikiContent(QFrame):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
+
+    # New signal for link clicks
+    linkClicked = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
@@ -87,7 +90,21 @@ class WikiContent(QFrame):
         )
         section.scrollRequested.connect(self.scrollRequested)
         section.mouseReleased.connect(self.mouseReleased)
+
+        # Connect to the new linkClicked signal
+        section.linkClicked.connect(self._handle_link_clicked)
+
         return section
+
+    def _handle_link_clicked(self, url: str) -> None:
+        """
+        Handle link clicks from a section and forward them.
+
+        Args:
+            url: The URL that was clicked
+        """
+        # Forward the signal with the URL
+        self.linkClicked.emit(url)
 
     def _handle_section_selection_changed(self, section: WikiContentSection, has_selection: bool) -> None:
         """
@@ -237,6 +254,23 @@ class WikiContent(QFrame):
                     all_matches.append((i, match[0], match[1]))
 
         return all_matches
+
+    def find_element_by_id(self, element_id: str) -> Optional[Tuple[int, int, int]]:
+        """
+        Find an element with the given ID.
+
+        Args:
+            element_id: The ID to search for
+
+        Returns:
+            Tuple of (section_index, block_number, position) if found, None otherwise
+        """
+        for i, section in enumerate(self._sections):
+            position = section.find_element_by_id(element_id)
+            if position is not None:
+                return (i, position[0], position[1])
+
+        return None
 
     def highlight_matches(
         self,
