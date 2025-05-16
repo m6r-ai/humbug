@@ -79,7 +79,7 @@ class AboutDialog(QDialog):
         self.setLayout(layout)
 
         # Apply dialog styling
-        link_color = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        link_color = style_manager.get_color_str(ColorRole.TEXT_LINK)
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};

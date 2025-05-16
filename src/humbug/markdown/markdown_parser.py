@@ -12,7 +12,8 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
     MarkdownListItemNode, MarkdownInlineCodeNode, MarkdownCodeBlockNode,
     MarkdownTableNode, MarkdownTableHeaderNode, MarkdownTableBodyNode,
-    MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode
+    MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
+    MarkdownImageNode, MarkdownLinkNode
 )
 
 
@@ -225,6 +226,51 @@ class MarkdownParser:
         # Default to regular text
         return 'text', line
 
+    def _find_closing_parenthesis(self, text: str, start_pos: int) -> int:
+        """
+        Find the closing parenthesis that matches an opening one, handling nested parentheses.
+
+        Args:
+            text: The text to search in
+            start_pos: The position after the opening parenthesis
+
+        Returns:
+            The position of the closing parenthesis, or -1 if not found
+        """
+        paren_count = 1
+        pos = start_pos
+
+        while pos < len(text):
+            if text[pos] == '(':
+                paren_count += 1
+
+            elif text[pos] == ')':
+                paren_count -= 1
+                if paren_count == 0:
+                    return pos
+            pos += 1
+
+        return -1
+
+    def _parse_url_and_title(self, url_title: str) -> Tuple[str, str | None]:
+        """
+        Parse a URL string that may contain a title in quotes.
+
+        Args:
+            url_title: The string containing URL and optional title
+
+        Returns:
+            A tuple of (url, title) where title may be None
+        """
+        # Look for title in quotes
+        title_match = re.search(r'\s+[\'"](.+?)[\'"]$', url_title)
+        if title_match:
+            title = title_match.group(1)
+            url = url_title[:title_match.start()].strip()
+            return url, title
+
+        return url_title.strip(), None
+
     def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:
         """
         Parse inline formatting (bold, italic, inline code) in text and create appropriate AST nodes.
@@ -249,8 +295,65 @@ class MarkdownParser:
         current_text = ""
 
         while i < len(text):
-            # Check for inline code (highest precedence)
-            if text[i] == '`':
+            # Check for image (highest precedence due to the '!' prefix)
+            if text[i] == '!' and i + 1 < len(text) and text[i+1] == '[':
+                # Look for the closing '](' pattern
+                bracket_end = text.find('](', i + 2)
+                if bracket_end != -1:
+                    # Find closing parenthesis
+                    paren_end = self._find_closing_parenthesis(text, bracket_end + 2)
+                    if paren_end != -1:
+                        # Add any accumulated text before this image
+                        if current_text:
+                            nodes.append(MarkdownTextNode(current_text))
+                            current_text = ""
+
+                        # Extract the alt text and URL
+                        alt_text = text[i+2:bracket_end]
+                        url_title = text[bracket_end+2:paren_end]
+                        url, title = self._parse_url_and_title(url_title)
+
+                        # Create image node
+                        image_node = MarkdownImageNode(url, alt_text, title)
+                        nodes.append(image_node)
+
+                        # Move past the closing parenthesis
+                        i = paren_end + 1
+                        continue
+
+            # Check for link
+            elif text[i] == '[':
+                # Look for the closing '](' pattern
+                bracket_end = text.find('](', i + 1)
+                if bracket_end != -1:
+                    # Find closing parenthesis
+                    paren_end = self._find_closing_parenthesis(text, bracket_end + 2)
+                    if paren_end != -1:
+                        # Add any accumulated text before this link
+                        if current_text:
+                            nodes.append(MarkdownTextNode(current_text))
+                            current_text = ""
+
+                        # Extract the link text and URL
+                        link_text = text[i+1:bracket_end]
+                        url_title = text[bracket_end+2:paren_end]
+                        url, title = self._parse_url_and_title(url_title)
+
+                        # Create link node
+                        link_node = MarkdownLinkNode(url, title)
+
+                        # Process the content inside the link text recursively
+                        for child_node in self.parse_inline_formatting(link_text):
+                            link_node.add_child(child_node)
+
+                        nodes.append(link_node)
+
+                        # Move past the closing parenthesis
+                        i = paren_end + 1
+                        continue
+
+            # Check for inline code (high precedence)
+            elif text[i] == '`':
                 # Look for the closing backtick
                 end_pos = text.find('`', i + 1)
                 if end_pos != -1:

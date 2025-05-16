@@ -6,7 +6,8 @@ from typing import List, Any
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownTextNode, MarkdownHeadingNode, MarkdownInlineCodeNode,
     MarkdownCodeBlockNode, MarkdownASTNode, MarkdownTableNode, MarkdownTableHeaderNode,
-    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode
+    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
+    MarkdownLinkNode, MarkdownImageNode
 )
 
 
@@ -100,6 +101,46 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
 
         print(f"{self._indent()}InlineCode{line_range}: '{node.content}'")
         return node.content
+
+    def visit_MarkdownLinkNode(self, node: MarkdownLinkNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit a link node and print its URL and title.
+
+        Args:
+            node: The link node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        line_range = ""
+        if node.line_start is not None and node.line_end is not None:
+            line_range = f" (lines {node.line_start}-{node.line_end})"
+
+        title_info = f", title='{node.title}'" if node.title else ""
+        print(f"{self._indent()}Link{line_range}: url='{node.url}'{title_info}")
+
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results
+
+    def visit_MarkdownImageNode(self, node: MarkdownImageNode) -> str:  # pylint: disable=invalid-name
+        """
+        Visit an image node and print its URL, alt text, and title.
+
+        Args:
+            node: The image node to visit
+
+        Returns:
+            The image URL
+        """
+        line_range = ""
+        if node.line_start is not None and node.line_end is not None:
+            line_range = f" (lines {node.line_start}-{node.line_end})"
+
+        title_info = f", title='{node.title}'" if node.title else ""
+        print(f"{self._indent()}Image{line_range}: url='{node.url}', alt='{node.alt_text}'{title_info}")
+        return node.url
 
     def visit_MarkdownCodeBlockNode(self, node: MarkdownCodeBlockNode) -> str:  # pylint: disable=invalid-name
         """

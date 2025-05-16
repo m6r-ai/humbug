@@ -134,6 +134,38 @@ class MarkdownInlineCodeNode(MarkdownASTNode):
         self.content = content
 
 
+class MarkdownLinkNode(MarkdownASTNode):
+    """Node representing a link (<a>)."""
+    def __init__(self, url: str = "", title: str | None = None) -> None:
+        """
+        Initialize a link node.
+
+        Args:
+            url: The link URL
+            title: Optional title attribute
+        """
+        super().__init__()
+        self.url = url
+        self.title = title
+
+
+class MarkdownImageNode(MarkdownASTNode):
+    """Node representing an image (<img>)."""
+    def __init__(self, url: str = "", alt_text: str = "", title: str | None = None) -> None:
+        """
+        Initialize an image node.
+
+        Args:
+            url: The image URL
+            alt_text: Alternative text for the image
+            title: Optional title attribute
+        """
+        super().__init__()
+        self.url = url
+        self.alt_text = alt_text
+        self.title = title
+
+
 class MarkdownCodeBlockNode(MarkdownASTNode):
     """Node representing a code block (<pre><code>)."""
     def __init__(self, language: str = "", content: str = "") -> None:

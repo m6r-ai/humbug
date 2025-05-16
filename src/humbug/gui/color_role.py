@@ -20,6 +20,7 @@ class ColorRole(Enum):
     TEXT_FOUND = auto()                 # Found text background
     TEXT_FOUND_DIM = auto()             # Dimmed found text background
     TEXT_RECOMMENDED = auto()           # Recommended text color
+    TEXT_LINK = auto()                  # Link text color
 
     # Tab colours
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background

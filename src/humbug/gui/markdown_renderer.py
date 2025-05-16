@@ -18,7 +18,8 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownTextNode, MarkdownBoldNode, MarkdownEmphasisNode, MarkdownInlineCodeNode,
     MarkdownCodeBlockNode, MarkdownListItemNode, MarkdownOrderedListNode,
     MarkdownUnorderedListNode, MarkdownLineBreakNode, MarkdownTableNode, MarkdownTableHeaderNode,
-    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode
+    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
+    MarkdownLinkNode, MarkdownImageNode
 )
 
 
@@ -297,6 +298,72 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         # Restore previous format
         self._cursor.setCharFormat(orig_char_format)
+
+    def visit_MarkdownLinkNode(self, node: MarkdownLinkNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a link node to the QTextDocument.
+
+        Args:
+            node: The link node to render
+
+        Returns:
+            None
+        """
+        # Save current format
+        orig_char_format = self._cursor.charFormat()
+
+        # Create a new format for links
+        link_format = QTextCharFormat(orig_char_format)
+        link_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_LINK))
+        link_format.setFontUnderline(True)
+        link_format.setAnchor(True)
+        link_format.setAnchorHref(node.url)
+
+        # Add the link title as a tooltip if present
+        if node.title:
+            link_format.setToolTip(node.title)
+
+        self._cursor.setCharFormat(link_format)
+
+        # Process all content inside the link
+        for child in node.children:
+            self.visit(child)
+
+        # Restore previous format
+        self._cursor.setCharFormat(orig_char_format)
+
+    def visit_MarkdownImageNode(self, node: MarkdownImageNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render an image node to the QTextDocument.
+
+        Args:
+            node: The image node to render
+
+        Returns:
+            None
+        """
+        # For images, we'll need to download or load them first
+        # For now, we'll create a placeholder image
+        image = QImage(100, 100, QImage.Format.Format_ARGB32)
+        image.fill(self._style_manager.get_color(ColorRole.BACKGROUND_SECONDARY))
+
+        # Create a resource for this image
+        resource_name = f"image_{hash(node.url)}"
+        self._document.addResource(QTextDocument.ResourceType.ImageResource, resource_name, image)
+
+        # Create an image format
+        img_format = QTextImageFormat()
+        img_format.setName(resource_name)
+
+        # Add alt text and title if available
+        if node.title:
+            img_format.setToolTip(node.title if not node.alt_text else f"{node.alt_text} - {node.title}")
+
+        elif node.alt_text:
+            img_format.setToolTip(node.alt_text)
+
+        # Insert the image
+        self._cursor.insertImage(img_format)
 
     def visit_MarkdownCodeBlockNode(self, node: MarkdownCodeBlockNode) -> None:  # pylint: disable=invalid-name
         """

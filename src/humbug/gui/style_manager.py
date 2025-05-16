@@ -120,6 +120,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#ffffff"
             },
+            ColorRole.TEXT_LINK: {
+                ColorMode.DARK: "#80a0ff",
+                ColorMode.LIGHT: "#0000ff"
+            },
 
             # Tab colours
             ColorRole.TAB_BACKGROUND_ACTIVE: {
