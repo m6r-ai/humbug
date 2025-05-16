@@ -404,4 +404,3 @@ class WikiContentSection(QFrame):
             self._init_colour_mode = self._style_manager.color_mode()
             if self._highlighter:
                 self._highlighter.rehighlight()
-

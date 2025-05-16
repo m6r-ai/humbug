@@ -7,14 +7,13 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QWidget
 )
 from PySide6.QtCore import Signal, QPoint
-from PySide6.QtGui import QColor, QResizeEvent, QGuiApplication
+from PySide6.QtGui import QColor, QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.tab.wiki.wiki_content_section import WikiContentSection
 from humbug.language.language_manager import LanguageManager
-from humbug.markdown.markdown_converter import MarkdownConverter, MarkdownDocumentNode
+from humbug.markdown.markdown_converter import MarkdownConverter
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
@@ -70,7 +69,6 @@ class WikiContent(QFrame):
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
-        pass  # No language-specific elements in content
 
     def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> WikiContentSection:
         """
@@ -111,17 +109,18 @@ class WikiContent(QFrame):
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str) -> None:
+    def set_content(self, text: str, path: str | None) -> None:
         """
         Set content, processing markdown.
 
         Args:
             text: The content text
+            path: Path to the file
         """
         self._content = text
 
         # Extract sections directly using the markdown converter
-        sections_data = self._markdown_converter.extract_sections(text)
+        sections_data = self._markdown_converter.extract_sections(text, path)
 
         # Create or update sections
         for i, (node, language) in enumerate(sections_data):

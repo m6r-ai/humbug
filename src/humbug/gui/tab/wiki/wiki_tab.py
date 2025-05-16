@@ -3,10 +3,8 @@
 import logging
 import os
 from datetime import datetime
-from typing import cast
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
-from PySide6.QtCore import Signal
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
@@ -95,7 +93,6 @@ class WikiTab(TabBase):
 
     def update_status(self) -> None:
         """Update status bar."""
-        pass  # No specific status needed for wiki tabs
 
     def can_close_tab(self) -> bool:
         """Check if wiki can be closed."""
@@ -103,7 +100,6 @@ class WikiTab(TabBase):
 
     def close_tab(self) -> None:
         """Close the wiki tab."""
-        pass  # No specific cleanup needed
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Get serializable state for mindspace persistence."""
@@ -195,7 +191,6 @@ class WikiTab(TabBase):
 
     def undo(self) -> None:
         """Undo not supported for wiki."""
-        pass
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
@@ -203,7 +198,6 @@ class WikiTab(TabBase):
 
     def redo(self) -> None:
         """Redo not supported for wiki."""
-        pass
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
@@ -211,7 +205,6 @@ class WikiTab(TabBase):
 
     def cut(self) -> None:
         """Cut not supported for wiki."""
-        pass
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
@@ -227,7 +220,13 @@ class WikiTab(TabBase):
 
     def paste(self) -> None:
         """Paste not supported for wiki."""
-        pass
+
+    def can_submit(self) -> bool:
+        """Check if terminal can submit (not supported)."""
+        return False
+
+    def submit(self) -> None:
+        """Submit terminal input (not supported)."""
 
     def show_find(self) -> None:
         """Show the find widget."""

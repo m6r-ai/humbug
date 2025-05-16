@@ -41,6 +41,17 @@ class MarkdownASTVisitor(ASTVisitor['MarkdownASTNode']):
 class MarkdownDocumentNode(MarkdownASTNode):
     """Root node representing an entire HTML document."""
 
+    def __init__(self, source_path: str | None = None) -> None:
+        """
+        Initialize a document node.
+
+        Args:
+            source_path: Optional path to the source file for resolving relative references
+        """
+        super().__init__()
+        print(f"MarkdownDocumentNode: {source_path}")
+        self.source_path = source_path
+
 
 class MarkdownParagraphNode(MarkdownASTNode):
     """Node representing an HTML paragraph (<p>)."""

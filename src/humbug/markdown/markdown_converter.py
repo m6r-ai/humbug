@@ -23,7 +23,12 @@ class MarkdownConverter:
     """
 
     def __init__(self) -> None:
-        """Initialize the markdown converter with an AST builder and HTML renderer."""
+        """
+        Initialize the markdown converter with an AST builder and HTML renderer.
+
+        Args:
+            source_path: Optional path to the source markdown file
+        """
         self.ast_builder = MarkdownParser(True)
 
         self._logger = logging.getLogger("ConversationMarkdownConverter")
@@ -34,12 +39,15 @@ class MarkdownConverter:
         # Store builder state for preservation during reset
         self.builder_state = None
 
-    def extract_sections(self, text: str) -> List[Tuple[MarkdownASTNode, ProgrammingLanguage | None]]:
+        self._source_path: str | None = None
+
+    def extract_sections(self, text: str, path: str | None) -> List[Tuple[MarkdownASTNode, ProgrammingLanguage | None]]:
         """
         Process markdown text and extract content sections from it.
 
         Args:
             text: The markdown text to process
+            path: Optional path to the source markdown file
 
         Returns:
             List of (node, language) tuples where language is None for markdown content
@@ -49,10 +57,10 @@ class MarkdownConverter:
             None
         """
         try:
-            # Update the AST based on the changes
-            self.ast_builder.update_ast(text, self.current_text)
+            self._source_path = path
 
-            # Update the current text
+            # Update the AST based on the changes
+            self.ast_builder.update_ast(text, self.current_text, path)
             self.current_text = text
 
             # Extract content sections from the AST document
@@ -83,7 +91,7 @@ class MarkdownConverter:
         def add_markdown_section() -> None:
             if current_markdown_nodes:
                 # Create a container node for these markdown nodes
-                container = MarkdownDocumentNode()
+                container = MarkdownDocumentNode(self._source_path)
                 for node in current_markdown_nodes:
                     container.add_child(node)
 

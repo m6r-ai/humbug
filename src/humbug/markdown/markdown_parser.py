@@ -92,6 +92,7 @@ class MarkdownParser:
     def __init__(self, no_underscores: bool):
         """Initialize the AST builder with regex patterns for markdown elements."""
         self._no_underscores = no_underscores
+        self._source_path: str | None = None
 
         # Regular expressions for markdown elements
         self._heading_pattern = re.compile(r'^(#{1,10})\s+(.*?)(?:\s+#{1,10})?$', re.MULTILINE)
@@ -1258,7 +1259,7 @@ class MarkdownParser:
         Raises:
             MarkdownParseError: If there's an error parsing the text
         """
-        self._document = MarkdownDocumentNode()
+        self._document = MarkdownDocumentNode(self._source_path)
         self._line_to_node_map = {}
         self._reset_list_state()
         self._last_paragraph = None
@@ -1292,13 +1293,14 @@ class MarkdownParser:
 
         return self._document
 
-    def update_ast(self, text: str, previous_text: str) -> MarkdownDocumentNode:
+    def update_ast(self, text: str, previous_text: str, path: str | None = None) -> MarkdownDocumentNode:
         """
         Update the AST incrementally based on changes between previous_text and text.
 
         Args:
             text: The new markdown text
             previous_text: The previous markdown text, or None if this is the first update
+            path: Optional path to the source markdown file
 
         Returns:
             The updated document root node
@@ -1306,6 +1308,7 @@ class MarkdownParser:
         Raises:
             MarkdownParseError: If there's an error updating the AST
         """
+        self._source_path = path
         if previous_text is None or not self._document.children:
             # First update or empty document, build from scratch
             return self.build_ast(text)

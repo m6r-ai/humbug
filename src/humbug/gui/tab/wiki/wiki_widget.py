@@ -8,15 +8,13 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QEvent, QObject, QTimer
-from PySide6.QtGui import QCursor, QResizeEvent, QColor
+from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.tab.wiki.wiki_content import WikiContent
-from humbug.gui.tab.wiki.wiki_error import WikiError, WikiIOError
+from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.language.language_manager import LanguageManager
-from humbug.markdown.markdown_converter import MarkdownConverter
 
 
 class WikiWidgetEventFilter(QObject):
@@ -154,9 +152,6 @@ class WikiWidget(QWidget):
         self._event_filter.widget_activated.connect(self._handle_widget_activation)
         self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
 
-        # Initialize markdown converter
-        self._markdown_converter = MarkdownConverter()
-
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update status if needed
@@ -178,7 +173,7 @@ class WikiWidget(QWidget):
         )
         content_widget.scrollRequested.connect(self._handle_selection_scroll)
         content_widget.mouseReleased.connect(self._stop_scroll)
-        content_widget.set_content(content)
+        content_widget.set_content(content, self._path)
 
         # Add widget before the stretch
         self._content_layout.insertWidget(self._content_layout.count() - 1, content_widget)
@@ -202,7 +197,7 @@ class WikiWidget(QWidget):
         for child in widget.findChildren(QWidget):
             cast(QWidget, child).installEventFilter(self._event_filter)
 
-    def _handle_widget_activation(self, widget: QWidget) -> None:
+    def _handle_widget_activation(self, _widget: QWidget) -> None:
         """
         Handle activation of a widget.
 
@@ -219,7 +214,6 @@ class WikiWidget(QWidget):
         Args:
             widget: The widget lost focus
         """
-        pass  # No specific action needed for deactivation
 
     def load_content(self) -> None:
         """Load content from the wiki file."""

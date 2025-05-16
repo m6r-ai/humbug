@@ -2,7 +2,9 @@
 Markdown AST visitor to render the AST directly to a QTextDocument.
 """
 
-from typing import List, cast
+import logging
+import os
+from typing import List, Tuple, cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (
@@ -34,7 +36,10 @@ class MarkdownRenderer(MarkdownASTVisitor):
             document: The QTextDocument to render into
         """
         super().__init__()
+        self._logger = logging.getLogger("MarkdownRenderer")
+
         self._document = document
+        self._source_path: str | None = None
         self._cursor = QTextCursor(document)
         self._cursor.movePosition(QTextCursor.MoveOperation.Start)
         self._orig_block_format = self._cursor.blockFormat()
@@ -70,6 +75,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
+        self._source_path = node.source_path
+
         # Treat this entire operation as one "edit" so Qt doesn't attempt to
         # rendering as we're adding things.  It's *much* faster to do this as
         # one batch update.
@@ -332,6 +339,95 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Restore previous format
         self._cursor.setCharFormat(orig_char_format)
 
+    def _is_local_file(self, url: str) -> bool:
+        """
+        Determine if a URL refers to a local file.
+
+        Args:
+            url: The URL to check
+
+        Returns:
+            True if the URL represents a local file, False otherwise
+        """
+        # Handle relative and absolute paths
+        if url.startswith('/') or url.startswith('./') or url.startswith('../') or ':' not in url:
+            return True
+
+        # Handle file:// URLs
+        if url.startswith('file://'):
+            return True
+
+        # Handle Windows-style paths (C:/, D:/, etc.)
+        if len(url) > 1 and url[1] == ':' and url[0].isalpha() and url[2] == '/':
+            return True
+
+        return False
+
+    def _load_local_image(self, path: str) -> Tuple[QImage, bool]:
+        """
+        Load an image from a local file path.
+
+        Args:
+            path: The path to the image file
+
+        Returns:
+            A tuple of (QImage, success_flag)
+        """
+        logger = logging.getLogger("MarkdownRenderer")
+
+        # Convert file:// URLs to local paths
+        if path.startswith('file://'):
+            path = path[7:]
+
+        # Normalize path (handle relative paths, etc.)
+        try:
+            # If the path is relative, resolve it against the source path
+            if not os.path.isabs(path) and self._source_path:
+                source_dir = os.path.dirname(self._source_path)
+                path = os.path.normpath(os.path.join(source_dir, path))
+
+            elif not os.path.isabs(path):
+                # Fallback to current working directory if source path is unknown
+                path = os.path.abspath(path)
+
+            # Check if file exists
+            if not os.path.isfile(path):
+                logger.warning("Local image not found: %s", path)
+                return self._create_placeholder_image(), False
+
+            # Load the image
+            image = QImage(path)
+            if image.isNull():
+                logger.warning("Failed to load image: %s", path)
+                return self._create_placeholder_image(), False
+
+            # Verify the image is valid
+            if image.width() <= 0 or image.height() <= 0:
+                logger.warning("Invalid image dimensions: %s", path)
+                return self._create_placeholder_image(), False
+
+            # Resize the image if it's too large for displaying in the document
+            max_width = 800  # Maximum width for displayed images
+            if image.width() > max_width:
+                image = image.scaledToWidth(max_width, Qt.TransformationMode.SmoothTransformation)
+
+            return image, True
+
+        except Exception:
+            logger.exception("Error loading local image: %s", path)
+            return self._create_placeholder_image(), False
+
+    def _create_placeholder_image(self) -> QImage:
+        """
+        Create a placeholder image for when an image cannot be loaded.
+
+        Returns:
+            A QImage representing a placeholder
+        """
+        image = QImage(100, 100, QImage.Format.Format_ARGB32)
+        image.fill(self._style_manager.get_color(ColorRole.BACKGROUND_SECONDARY))
+        return image
+
     def visit_MarkdownImageNode(self, node: MarkdownImageNode) -> None:  # pylint: disable=invalid-name
         """
         Render an image node to the QTextDocument.
@@ -342,10 +438,12 @@ class MarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # For images, we'll need to download or load them first
-        # For now, we'll create a placeholder image
-        image = QImage(100, 100, QImage.Format.Format_ARGB32)
-        image.fill(self._style_manager.get_color(ColorRole.BACKGROUND_SECONDARY))
+        image = self._create_placeholder_image()
+        loaded_successfully = False
+
+        # Attempt to load local images
+        if self._is_local_file(node.url):
+            image, loaded_successfully = self._load_local_image(node.url)
 
         # Create a resource for this image
         resource_name = f"image_{hash(node.url)}"
@@ -355,12 +453,26 @@ class MarkdownRenderer(MarkdownASTVisitor):
         img_format = QTextImageFormat()
         img_format.setName(resource_name)
 
-        # Add alt text and title if available
-        if node.title:
-            img_format.setToolTip(node.title if not node.alt_text else f"{node.alt_text} - {node.title}")
+        # If the image loaded successfully, preserve its aspect ratio
+        if loaded_successfully:
+            # Set the image width/height while maintaining aspect ratio
+            img_format.setWidth(image.width())
+            img_format.setHeight(image.height())
 
-        elif node.alt_text:
-            img_format.setToolTip(node.alt_text)
+        # Add alt text and title if available
+        tooltip = ""
+        if node.alt_text:
+            tooltip = node.alt_text
+
+        if node.title:
+            if tooltip:
+                tooltip += f" - {node.title}"
+
+            else:
+                tooltip = node.title
+
+        if tooltip:
+            img_format.setToolTip(tooltip)
 
         # Insert the image
         self._cursor.insertImage(img_format)
