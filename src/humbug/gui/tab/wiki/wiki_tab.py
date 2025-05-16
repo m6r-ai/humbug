@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
+from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
@@ -135,7 +136,13 @@ class WikiTab(TabBase):
         # Check if the file exists
         if not os.path.exists(path):
             # Show error message if file doesn't exist
-            self._show_error_message(f"File not found: {path}")
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_opening_file_title,
+                strings.could_not_open.format(path, "File does not exist"),
+            )
             return
 
         # Check if it's a markdown file or other wiki-compatible format
@@ -179,12 +186,7 @@ class WikiTab(TabBase):
         Args:
             message: The error message to display
         """
-        error_dialog = QMessageBox(self)
-        error_dialog.setIcon(QMessageBox.Icon.Warning)
-        error_dialog.setWindowTitle("Link Error")
-        error_dialog.setText(message)
-        error_dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
-        error_dialog.exec()
+
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""

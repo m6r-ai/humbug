@@ -1081,12 +1081,11 @@ class ColumnManager(QWidget):
 
     def open_wiki(self, path: str) -> WikiTab:
         """Open an existing conversation file."""
-        wiki_id = os.path.splitext(os.path.basename(path))[0]
-
         # Check if already open
-        existing_tab = self.find_wiki_tab_by_path(wiki_id)
+        existing_tab = self.find_wiki_tab_by_path(path)
+        print(f"existing_tab: {existing_tab}")
         if existing_tab:
-            self._set_current_tab(wiki_id)
+            self._set_current_tab(existing_tab.tab_id())
             return existing_tab
 
         try:
@@ -1094,10 +1093,9 @@ class ColumnManager(QWidget):
                 path,
                 self
             )
-
             wiki_tab.open_wiki_path.connect(self.open_wiki)
 
-            self.add_tab(wiki_tab, f"Wiki: {wiki_id}")
+            self.add_tab(wiki_tab, os.path.basename(path))
             return wiki_tab
 
         except WikiError as e:
