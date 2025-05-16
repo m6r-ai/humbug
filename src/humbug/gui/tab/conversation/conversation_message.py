@@ -270,7 +270,8 @@ class ConversationMessage(QFrame):
         # Extract sections directly using the markdown converter
         if not self._is_input:
             # Process the content and extract sections in one step
-            sections_data = self._markdown_converter.extract_sections(text)
+            sections_data = self._markdown_converter.extract_sections(text, None)
+
         else:
             # Input widgets don't use markdown processing
             text_node = MarkdownDocumentNode()
