@@ -300,7 +300,6 @@ class WikiContentSection(QFrame):
 
         return matches
 
-    # New method to find an element by ID
     def find_element_by_id(self, element_id: str) -> Optional[Tuple[int, int]]:
         """
         Find an element with the given ID.

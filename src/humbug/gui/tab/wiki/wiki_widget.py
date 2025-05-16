@@ -201,7 +201,6 @@ class WikiWidget(QWidget):
 
         return content_widget
 
-    # New method to handle link clicks
     def _handle_link_clicked(self, url: str) -> None:
         """
         Handle link clicks from content blocks.
@@ -346,7 +345,6 @@ class WikiWidget(QWidget):
         # Start the animation timer
         self._smooth_scroll_timer.start()
 
-    # New method to update smooth scrolling animation
     def _update_smooth_scroll(self) -> None:
         """Update the smooth scrolling animation."""
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
@@ -433,7 +431,6 @@ class WikiWidget(QWidget):
 
         self._content_with_selection = content_widget
 
-    # New method to scroll to a target element by ID
     def _scroll_to_target(self, target_id: str) -> None:
         """
         Scroll to a target element by ID.
@@ -459,15 +456,8 @@ class WikiWidget(QWidget):
 
                 # Smoothly scroll to the target position
                 self._start_smooth_scroll(target_scroll)
-
-                # Successfully found and scrolled
-                self._logger.debug(f"Scrolled to target {target_id} at position {position}")
                 return
 
-        # If target wasn't found, log it
-        self._logger.debug(f"Target not found: {target_id}")
-
-    # New helper method to normalize IDs
     def _normalize_id(self, id_str: str) -> str:
         """
         Normalize an ID string to be consistent with how IDs are generated.

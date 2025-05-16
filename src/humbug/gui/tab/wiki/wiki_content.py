@@ -23,8 +23,6 @@ class WikiContent(QFrame):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
-
-    # New signal for link clicks
     linkClicked = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:

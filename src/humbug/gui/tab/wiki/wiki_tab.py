@@ -225,7 +225,7 @@ class WikiTab(TabBase):
         metadata.update(self._wiki_content_widget.create_state_metadata())
 
         return TabState(
-            type=TabType.WIKI,  # New tab type for wiki
+            type=TabType.WIKI,
             tab_id=self._tab_id,
             path=self._path,
             timestamp=self._timestamp,

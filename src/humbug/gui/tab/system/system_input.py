@@ -20,7 +20,6 @@ class SystemInput(SystemMessage):
     cursorPositionChanged = Signal()
     pageScrollRequested = Signal()
 
-    # New signals
     command_submitted = Signal(str)
     tab_completion_requested = Signal(str, bool, bool, int)  # text, is_continuation, move_forward, cursor_position
 
