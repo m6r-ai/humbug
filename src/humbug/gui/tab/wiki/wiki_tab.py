@@ -77,6 +77,16 @@ class WikiTab(TabBase):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+    def scroll_to_anchor(self, anchor: str) -> None:
+        """
+        Scroll to the specified anchor in the wiki content.
+
+        Args:
+            anchor: Anchor ID to scroll to
+        """
+        # Delegate to the wiki content widget
+        self._wiki_content_widget.scroll_to_target(anchor)
+
     def _handle_external_link(self, url: str) -> None:
         """
         Handle opening external links and local file links.
@@ -127,11 +137,16 @@ class WikiTab(TabBase):
         if path.startswith("file://"):
             path = path[7:]
 
+        base_path = path
+        anchor = None
+        if '#' in path:
+            base_path, anchor = path.split('#', 1)
+
         # Normalize the path
-        if not os.path.isabs(path) and self._path:
+        if not os.path.isabs(base_path) and self._path:
             # If the path is relative, resolve it against the current wiki file's path
             base_dir = os.path.dirname(self._path)
-            path = os.path.normpath(os.path.join(base_dir, path))
+            path = os.path.normpath(os.path.join(base_dir, base_path))
 
         # Check if the file exists
         if not os.path.exists(path):
@@ -148,11 +163,18 @@ class WikiTab(TabBase):
         # Check if it's a markdown file or other wiki-compatible format
         if path.lower().endswith(('.md', '.markdown', '.wiki', '.txt')):
             # Emit a signal to the parent to open a new wiki tab with the path
-            self.open_wiki_path.emit(path)
+            if anchor:
+                # If an anchor is specified, scroll to it in the new tab
+                print(f"Opening wiki file: {path} with anchor: {anchor}")
+                self.open_wiki_path.emit(f"{path}#{anchor}")
+                return
 
-        else:
-            # For other file types, use the system's default application
-            self._open_with_system_default(path)
+            # Otherwise, just open the file
+            self.open_wiki_path.emit(path)
+            return
+
+        # For other file types, use the system's default application
+        self._open_with_system_default(path)
 
     def _open_external_url(self, url: str) -> None:
         """
@@ -251,11 +273,10 @@ class WikiTab(TabBase):
         """
         try:
             # Create wiki tab
-            wiki_id = os.path.splitext(os.path.basename(path))[0]
             timestamp = datetime.now()  # Use current time as default
 
             # Create the tab
-            wiki_tab = cls(wiki_id, path, timestamp, parent)
+            wiki_tab = cls(path, path, timestamp, parent)
 
             # Load content
             wiki_tab._wiki_content_widget.load_content()

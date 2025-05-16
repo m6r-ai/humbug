@@ -316,7 +316,6 @@ class WikiContentSection(QFrame):
         for block_num in range(document.blockCount()):
             block = document.findBlockByNumber(block_num)
 
-            # Get user data from the block
             user_data = block.userData()
             if isinstance(user_data, HeadingBlockData) and user_data.element_id == element_id:
                 return (block_num, block.position())

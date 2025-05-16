@@ -208,8 +208,6 @@ class WikiWidget(QWidget):
         Args:
             url: The URL that was clicked
         """
-        self._logger.debug("Link clicked: %s", url)
-
         # Activate this widget
         self.activated.emit()
 
@@ -217,7 +215,7 @@ class WikiWidget(QWidget):
         if url.startswith("#"):
             # Extract the target ID without the # prefix
             target_id = url[1:]
-            self._scroll_to_target(target_id)
+            self.scroll_to_target(target_id)
             return
 
         self.open_external_link.emit(url)
@@ -431,7 +429,7 @@ class WikiWidget(QWidget):
 
         self._content_with_selection = content_widget
 
-    def _scroll_to_target(self, target_id: str) -> None:
+    def scroll_to_target(self, target_id: str) -> None:
         """
         Scroll to a target element by ID.
 
