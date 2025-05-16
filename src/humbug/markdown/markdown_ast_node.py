@@ -49,7 +49,6 @@ class MarkdownDocumentNode(MarkdownASTNode):
             source_path: Optional path to the source file for resolving relative references
         """
         super().__init__()
-        print(f"MarkdownDocumentNode: {source_path}")
         self.source_path = source_path
 
 
