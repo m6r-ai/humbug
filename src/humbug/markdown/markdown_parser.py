@@ -1284,6 +1284,7 @@ class MarkdownParser:
         if self._table_buffer.is_in_potential_table:
             if self._table_buffer.is_valid_table():
                 self._create_table_from_buffer()
+
             else:
                 self._handle_incomplete_table()
 
@@ -1322,6 +1323,7 @@ class MarkdownParser:
         for i, (old, new) in enumerate(zip(old_lines, new_lines)):
             if old == new:
                 common_prefix_len = i + 1
+
             else:
                 break
 
@@ -1330,6 +1332,7 @@ class MarkdownParser:
         for i, (old, new) in enumerate(zip(reversed(old_lines), reversed(new_lines))):
             if old == new and common_prefix_len + common_suffix_len < min(len(old_lines), len(new_lines)):
                 common_suffix_len = i + 1
+
             else:
                 break
 
