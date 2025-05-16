@@ -4,7 +4,6 @@ Markdown AST visitor to render the AST directly to a QTextDocument.
 
 import logging
 import os
-import re
 from typing import List, Tuple, cast
 
 from PySide6.QtCore import Qt
@@ -196,12 +195,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
 
-        # Generate an ID for this heading based on its text content
-        heading_text = self._extract_heading_text(node)
-        element_id = self._create_id_from_text(heading_text)
-
         # Store the ID as block user data
-        self._cursor.block().setUserData(HeadingBlockData(element_id))
+        self._cursor.block().setUserData(HeadingBlockData(node.anchor_id))
 
         # Process all inline content for the heading
         for child in node.children:
@@ -213,59 +208,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
             self._cursor.insertBlock()
 
         self._cursor.setBlockFormat(orig_block_format)
-
-    def _extract_heading_text(self, node: MarkdownHeadingNode) -> str:
-        """
-        Extract plain text from a heading node.
-
-        Args:
-            node: The heading node
-
-        Returns:
-            Plain text content of the heading
-        """
-        heading_text = ""
-
-        # Recursively extract text from all children
-        def extract_text(node):
-            nonlocal heading_text
-            if isinstance(node, MarkdownTextNode):
-                heading_text += node.content
-
-            # Recursively process children
-            for child in node.children:
-                extract_text(child)
-
-        # Start extraction with all heading children
-        for child in node.children:
-            extract_text(child)
-
-        return heading_text
-
-    def _create_id_from_text(self, text: str) -> str:
-        """
-        Create a simplified ID from text suitable for HTML anchor links.
-
-        Args:
-            text: The text to convert to an ID
-
-        Returns:
-            A simplified string suitable for use as an element ID
-        """
-        # Convert to lowercase
-        text = text.lower()
-
-        # Replace spaces with hyphens
-        text = text.replace(' ', '-')
-
-        # Remove special characters
-        text = re.sub(r'[^a-z0-9-]', '', text)
-
-        # Ensure it doesn't start with a number
-        if text and text[0].isdigit():
-            text = 'h-' + text
-
-        return text
 
     def visit_MarkdownTextNode(self, node: MarkdownTextNode) -> None:  # pylint: disable=invalid-name
         """
@@ -393,8 +335,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Check if this is an internal link to a heading
         if self._is_internal_heading_link(url):
             # Convert from heading text to element ID format
-            heading_text = url.lstrip('#')
-            element_id = self._create_id_from_text(heading_text)
+            element_id = url.lstrip('#')
             url = f"#{element_id}"
 
         link_format.setAnchorHref(url)
@@ -403,7 +344,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
         if node.title:
             link_format.setToolTip(node.title)
         else:
-            print(f"Link title: {url}")
             link_format.setToolTip(url)
 
         self._cursor.setCharFormat(link_format)
@@ -811,6 +751,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
                         for content in cell.children:
                             if isinstance(content, MarkdownTextNode):
                                 cell_text += content.content
+
                         row_text += f" {cell_text} |"
 
                     paragraph.add_child(MarkdownTextNode(row_text))
@@ -827,6 +768,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
                         for content in cell.children:
                             if isinstance(content, MarkdownTextNode):
                                 cell_text += content.content
+
                         row_text += f" {cell_text} |"
 
                     paragraph.add_child(MarkdownTextNode(row_text))

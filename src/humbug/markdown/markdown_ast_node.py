@@ -58,7 +58,7 @@ class MarkdownParagraphNode(MarkdownASTNode):
 
 class MarkdownHeadingNode(MarkdownASTNode):
     """Node representing an HTML heading (<h1> through <h6>)."""
-    def __init__(self, level: int) -> None:
+    def __init__(self, level: int, anchor_id: str) -> None:
         """
         Initialize a heading node.
 
@@ -69,6 +69,7 @@ class MarkdownHeadingNode(MarkdownASTNode):
 
         # Level should be 1-6
         self.level = max(1, min(6, level))
+        self.anchor_id = anchor_id
 
 
 class MarkdownOrderedListNode(MarkdownASTNode):

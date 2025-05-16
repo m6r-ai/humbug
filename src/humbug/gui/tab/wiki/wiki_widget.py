@@ -453,14 +453,8 @@ class WikiWidget(QWidget):
                 # Get the position to scroll to
                 target_point = content_block.select_and_scroll_to_position(section_idx, position)
 
-                # Map position to scroll area coordinates
+                # Map position to scroll area coordinates and get the target point
                 pos_in_scroll_area = content_block.mapTo(self._content_container, target_point)
-
-                # Calculate the scroll position
-                scrollbar = self._scroll_area.verticalScrollBar()
-                current_scroll = scrollbar.value()
-
-                # Calculate target scroll position (with some margin)
                 target_scroll = pos_in_scroll_area.y() - 50  # 50px margin above target
 
                 # Smoothly scroll to the target position

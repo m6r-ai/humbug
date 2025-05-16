@@ -111,6 +111,9 @@ class MarkdownParser:
         # Mapping from line numbers to nodes for incremental updates
         self._line_to_node_map: Dict[int, List[MarkdownASTNode]] = {}
 
+        # Track header IDs to allow us to create unique link anchors for headings with the same text
+        self._used_header_ids: Dict[str, int] = {}
+
         # List state tracking
         self._list_stack: List[ListState] = []
 
@@ -446,6 +449,31 @@ class MarkdownParser:
 
         return nodes
 
+    def _create_id_from_text(self, text: str) -> str:
+        """
+        Create a simplified ID from text suitable for HTML anchor links.
+
+        Args:
+            text: The text to convert to an ID
+
+        Returns:
+            A simplified string suitable for use as an element ID
+        """
+        # Convert to lowercase
+        text = text.lower()
+
+        # Replace spaces with hyphens
+        text = text.replace(' ', '-')
+
+        # Remove special characters
+        text = re.sub(r'[^a-z0-9-]', '', text)
+
+        # Ensure it doesn't start with a number
+        if text and text[0].isdigit():
+            text = 'h-' + text
+
+        return text
+
     def parse_heading(self, level: int, content: str, line_num: int) -> None:
         """
         Parse a heading line and create a heading node.
@@ -455,7 +483,19 @@ class MarkdownParser:
             content: The heading content
             line_num: The line number
         """
-        heading = MarkdownHeadingNode(level)
+        anchor_id = self._create_id_from_text(content)
+
+        # Check if this ID already exists.  If it doesn't, then record we've seen it.   If it does,
+        # then add a suffix to it to make it unique.
+        if anchor_id not in self._used_header_ids:
+            self._used_header_ids[anchor_id] = 0
+
+        else:
+            # This ID already exists, increment the counter and append it
+            self._used_header_ids[anchor_id] += 1
+            anchor_id = f"{anchor_id}-{self._used_header_ids[anchor_id]}"
+
+        heading = MarkdownHeadingNode(level, anchor_id)
         for node in self.parse_inline_formatting(content):
             heading.add_child(node)
 

@@ -319,8 +319,6 @@ class WikiContentSection(QFrame):
 
             # Get user data from the block
             user_data = block.userData()
-
-            # Check if this block has the target ID
             if isinstance(user_data, HeadingBlockData) and user_data.element_id == element_id:
                 return (block_num, block.position())
 

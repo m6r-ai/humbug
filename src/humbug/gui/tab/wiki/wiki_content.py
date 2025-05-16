@@ -104,7 +104,6 @@ class WikiContent(QFrame):
             url: The URL that was clicked
         """
         # Forward the signal with the URL
-        print(f"Link clicked: {url}")
         self.linkClicked.emit(url)
 
     def _handle_section_selection_changed(self, section: WikiContentSection, has_selection: bool) -> None:
