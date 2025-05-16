@@ -455,9 +455,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         # If the image loaded successfully, preserve its aspect ratio
         if loaded_successfully:
-            # Set the image width/height while maintaining aspect ratio
-            img_format.setWidth(image.width())
-            img_format.setHeight(image.height())
+            # Set the maximum width to 100% of the document width.  This lets the image
+            # scale down to fit the document width but not scale up.
+            img_format.setMaximumWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
 
         # Add alt text and title if available
         tooltip = ""
