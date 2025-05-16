@@ -15,10 +15,10 @@ from PySide6.QtGui import (
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.markdown_renderer import MarkdownRenderer
+from humbug.gui.markdown_text_edit import MarkdownTextEdit
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.tab.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
-from humbug.gui.tab.conversation.conversation_text_edit import ConversationTextEdit
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
 from humbug.syntax.programming_language import ProgrammingLanguage
@@ -104,7 +104,7 @@ class ConversationMessageSection(QFrame):
         self._use_markdown = not is_input and language is None
 
         # Create text area
-        self._text_area = ConversationTextEdit()
+        self._text_area = MarkdownTextEdit()
         self._text_area.setAcceptRichText(self._use_markdown)
         self._text_area.setReadOnly(not is_input)
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -136,7 +136,7 @@ class ConversationMessageSection(QFrame):
 
         self._handle_language_changed()
 
-    def text_area(self) -> ConversationTextEdit:
+    def text_area(self) -> MarkdownTextEdit:
         """Get the text area widget."""
         return self._text_area
 

@@ -1,4 +1,4 @@
-"""Widget for displaying parts of individual conversation messages."""
+"""Widget for displaying parts of individual Markdown messages."""
 
 import logging
 from typing import cast
@@ -16,8 +16,8 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 
-class ConversationTextEdit(QTextEdit):
-    """QTextEdit that automatically adjusts its height to content."""
+class MarkdownTextEdit(QTextEdit):
+    """QTextEdit that automatically adjusts its height to content to display Markdown."""
 
     mousePressed = Signal(QMouseEvent)
     mouseReleased = Signal(QMouseEvent)
@@ -56,7 +56,7 @@ class ConversationTextEdit(QTextEdit):
         # Track code block state
         self._has_code_block = False
 
-        self._logger = logging.getLogger("ConversationTextEdit")
+        self._logger = logging.getLogger("MarkdownTextEdit")
 
         # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
         palette = self.palette()
@@ -375,7 +375,6 @@ class ConversationTextEdit(QTextEdit):
                 # Only set cursor if it actually moved
                 if cursor.position() != orig_pos:
                     self.setTextCursor(cursor)
-                    # Signal for scroll - ConversationTab will handle ensuring cursor visibility
                     self.pageScrollRequested.emit()
 
             event.accept()
@@ -474,7 +473,7 @@ class ConversationTextEdit(QTextEdit):
         self._pending_update = False
         self.updateGeometry()
 
-        # Ensure parent ConversationMessage updates as well
+        # Ensure parent updates as well
         if self.parent():
             cast(QWidget, self.parent()).updateGeometry()
 
