@@ -231,6 +231,10 @@ class WikiTab(TabBase):
         self._tab_id = new_id
         self._wiki_content_widget.update_path(new_path)
 
+    def path(self) -> str:
+        """Get the path of the wiki file."""
+        return self._path
+
     def update_status(self) -> None:
         """Update status bar."""
 
@@ -272,15 +276,9 @@ class WikiTab(TabBase):
             WikiError: If the wiki tab cannot be loaded
         """
         try:
-            # Create wiki tab
             timestamp = datetime.now()  # Use current time as default
-
-            # Create the tab
             wiki_tab = cls(path, path, timestamp, parent)
-
-            # Load content
             wiki_tab._wiki_content_widget.load_content()
-
             return wiki_tab
 
         except Exception as e:

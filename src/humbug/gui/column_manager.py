@@ -886,8 +886,8 @@ class ColumnManager(QWidget):
         tab_id = str(uuid.uuid4())
         editor = EditorTab(tab_id, self)
         editor.set_filename("", self._untitled_count)
-
-        self._connect_editor_signals(editor)
+        editor.title_changed.connect(self._handle_tab_title_changed)
+        editor.modified_state_changed.connect(self._handle_tab_modified)
         self.add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
 
@@ -902,8 +902,8 @@ class ColumnManager(QWidget):
         tab_id = path
         editor = EditorTab(tab_id, self)
         editor.set_filename(path)
-
-        self._connect_editor_signals(editor)
+        editor.title_changed.connect(self._handle_tab_title_changed)
+        editor.modified_state_changed.connect(self._handle_tab_modified)
         self.add_tab(editor, os.path.basename(path))
         return editor
 
@@ -1092,7 +1092,6 @@ class ColumnManager(QWidget):
         try:
             wiki_tab = WikiTab.load_from_file(path_minus_anchor, self)
             wiki_tab.open_wiki_path.connect(self.open_wiki)
-
             self.add_tab(wiki_tab, os.path.basename(path_minus_anchor))
 
             # If there's an anchor, scroll to it
@@ -1203,7 +1202,8 @@ class ColumnManager(QWidget):
 
         if state.type == TabType.EDITOR:
             editor_tab = EditorTab.restore_from_state(state, self)
-            self._connect_editor_signals(editor_tab)
+            editor_tab.title_changed.connect(self._handle_tab_title_changed)
+            editor_tab.modified_state_changed.connect(self._handle_tab_modified)
             return editor_tab
 
         if state.type == TabType.SYSTEM:
@@ -1241,11 +1241,6 @@ class ColumnManager(QWidget):
         # Update tab states to show correct active highlighting
         self._update_tabs()
 
-    def _connect_editor_signals(self, editor: EditorTab) -> None:
-        """Connect standard editor tab signals."""
-        editor.title_changed.connect(self._handle_tab_title_changed)
-        editor.modified_state_changed.connect(self._handle_tab_modified)
-
     def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
         """Get appropriate title for tab type."""
         if isinstance(tab, ConversationTab):
@@ -1261,7 +1256,7 @@ class ColumnManager(QWidget):
             return "Terminal"
 
         if isinstance(tab, WikiTab):
-            return f"Wiki: {tab.tab_id()}"
+            return f"Wiki: {os.path.basename(state.path)}"
 
         return os.path.basename(state.path)
 

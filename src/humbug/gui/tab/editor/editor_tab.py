@@ -318,12 +318,14 @@ class EditorTab(TabBase):
                     strings.error_opening_file_title,
                     strings.could_not_open.format(filename, str(e))
                 )
+
         self._update_title()
 
     def _update_title(self) -> None:
         """Update the tab title based on filename and modified state."""
         if self._path:
             title = os.path.basename(self._path)
+
         else:
             title = f"Untitled-{self._untitled_number}"
 
