@@ -21,6 +21,7 @@ class ConversationTextEdit(QTextEdit):
 
     mousePressed = Signal(QMouseEvent)
     mouseReleased = Signal(QMouseEvent)
+    linkClicked = Signal(str)
     pageScrollRequested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -67,8 +68,17 @@ class ConversationTextEdit(QTextEdit):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
-        super().mousePressEvent(event)
         self.mousePressed.emit(event)
+
+        # Check for link clicks
+        anchor = self.anchorAt(event.pos())
+        if anchor and event.button() == Qt.MouseButton.LeftButton:
+            self.linkClicked.emit(anchor)
+            event.accept()
+            return
+
+        # Default handling for other cases
+        super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """Propagate mouse release events to parent."""

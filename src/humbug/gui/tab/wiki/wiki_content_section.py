@@ -6,7 +6,7 @@ from typing import List, Tuple, cast, Optional
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QLabel, QHBoxLayout, QWidget
 )
-from PySide6.QtCore import Signal, Qt, QPoint
+from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent
 from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
 )
@@ -30,8 +30,6 @@ class WikiContentSection(QFrame):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
-
-    # New signal for link clicks
     linkClicked = Signal(str)
 
     def __init__(
@@ -115,13 +113,11 @@ class WikiContentSection(QFrame):
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mousePressed.connect(self._on_mouse_pressed)
         self._text_area.mouseReleased.connect(self._on_mouse_released)
+        self._text_area.linkClicked.connect(self.linkClicked)
 
         # Add mouse move tracking for cursor changes on links
         self._text_area.viewport().setMouseTracking(True)
-        self._text_area.viewport().mouseMoveEvent = self._on_mouse_moved
-
-        # Add handler for mouse clicks to detect link activation
-        self._text_area.mousePressEvent = self._on_text_area_mouse_press
+        self._text_area.viewport().installEventFilter(self)
 
         # Add appropriate highlighter
         self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
@@ -182,19 +178,36 @@ class WikiContentSection(QFrame):
         self._mouse_left_button_pressed = False
         self.mouseReleased.emit()
 
-    # New method to handle mouse movement
-    def _on_mouse_moved(self, event: QMouseEvent) -> None:
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """
+        Filter events for the text area viewport.
+
+        Args:
+            watched: The object being watched
+            event: The event that occurred
+
+        Returns:
+            True if the event was handled, False to pass it along
+        """
+        # Handle mouse move events for the text area viewport
+        if watched == self._text_area.viewport() and event.type() == QEvent.Type.MouseMove:
+            mouse_event = cast(QMouseEvent, event)
+            self._handle_mouse_move(mouse_event)
+            # Return False to allow normal processing
+            return False
+
+        # Pass all other events to the parent class
+        return super().eventFilter(watched, event)
+
+    def _handle_mouse_move(self, event: QMouseEvent) -> None:
         """
         Handle mouse movement to update cursor for links.
 
         Args:
             event: The mouse event
         """
-        # Get the text cursor at the mouse position
-        cursor = self._text_area.cursorForPosition(event.pos())
-
-        # Check if the cursor is on a link
-        url = cursor.charFormat().anchorHref()
+        # Check if the mouse is over a link
+        url = self._text_area.anchorAt(event.pos())
 
         # Update cursor shape based on whether we're hovering over a link
         if url:
@@ -202,33 +215,6 @@ class WikiContentSection(QFrame):
 
         else:
             self._text_area.viewport().setCursor(Qt.CursorShape.IBeamCursor)
-
-        # Call the original mouseMoveEvent
-        QWidget.mouseMoveEvent(self._text_area.viewport(), event)
-
-    # New method to handle mouse press in the text area
-    def _on_text_area_mouse_press(self, event: QMouseEvent) -> None:
-        """
-        Handle mouse press events in the text area, including link activation.
-
-        Args:
-            event: The mouse event
-        """
-        # Process link clicks
-        if event.button() == Qt.MouseButton.LeftButton:
-            # Get the text cursor at the mouse position
-            cursor = self._text_area.cursorForPosition(event.pos())
-
-            # Check if the cursor is on a link
-            url = cursor.charFormat().anchorHref()
-            if url:
-                # Emit the linkClicked signal
-                self.linkClicked.emit(url)
-                event.accept()
-                return
-
-        # Call the original mousePressEvent for other cases
-        ConversationTextEdit.mousePressEvent(self._text_area, event)
 
     def _on_selection_changed(self) -> None:
         """Handle selection changes in the text area."""
