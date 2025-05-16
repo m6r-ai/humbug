@@ -1094,6 +1094,9 @@ class ColumnManager(QWidget):
                 path,
                 self
             )
+
+            wiki_tab.open_wiki_path.connect(self.open_wiki)
+
             self.add_tab(wiki_tab, f"Wiki: {wiki_id}")
             return wiki_tab
 
@@ -1209,7 +1212,9 @@ class ColumnManager(QWidget):
             return TerminalTab.restore_from_state(state, self)
 
         if state.type == TabType.WIKI:
-            return WikiTab.restore_from_state(state, self)
+            wiki_tab = WikiTab.restore_from_state(state, self)
+            wiki_tab.open_wiki_path.connect(self.open_wiki)
+            return wiki_tab
 
         return None
 

@@ -402,6 +402,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Add the link title as a tooltip if present
         if node.title:
             link_format.setToolTip(node.title)
+        else:
+            print(f"Link title: {url}")
+            link_format.setToolTip(url)
 
         self._cursor.setCharFormat(link_format)
 

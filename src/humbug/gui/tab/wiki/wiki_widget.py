@@ -64,6 +64,9 @@ class WikiWidget(QWidget):
     # Emits when parent should be activated by user interaction
     activated = Signal()
 
+    # Emits when a link is clicked
+    open_external_link = Signal(str)
+
     def __init__(
         self,
         path: str,
@@ -216,16 +219,9 @@ class WikiWidget(QWidget):
             # Extract the target ID without the # prefix
             target_id = url[1:]
             self._scroll_to_target(target_id)
+            return
 
-        # URLs with file:// scheme are local files
-        elif url.startswith("file://"):
-            # Could implement opening local files here if needed
-            pass
-
-        # External links could be handled differently if needed
-        else:
-            # Could implement opening external links in a browser
-            pass
+        self.open_external_link.emit(url)
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """

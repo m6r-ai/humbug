@@ -4,6 +4,8 @@ import logging
 import os
 from datetime import datetime
 
+from PySide6.QtCore import QUrl, Signal
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from humbug.gui.color_role import ColorRole
@@ -19,6 +21,9 @@ from humbug.language.language_manager import LanguageManager
 
 class WikiTab(TabBase):
     """Wiki tab for displaying wiki-like content."""
+
+    # Signal to request opening a new wiki tab
+    open_wiki_path = Signal(str)
 
     def __init__(
         self,
@@ -57,6 +62,7 @@ class WikiTab(TabBase):
         # Create wiki content widget
         self._wiki_content_widget = WikiWidget(path, timestamp, self)
         self._wiki_content_widget.status_updated.connect(self.update_status)
+        self._wiki_content_widget.open_external_link.connect(self._handle_external_link)
         layout.addWidget(self._wiki_content_widget)
 
         # Install activation tracking
@@ -69,6 +75,116 @@ class WikiTab(TabBase):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
+
+    def _handle_external_link(self, url: str) -> None:
+        """
+        Handle opening external links and local file links.
+
+        Args:
+            url: The URL or file path to open
+        """
+        # Check if it's a local file URL
+        if url.startswith("file://") or self._is_local_file_path(url):
+            self._open_local_file(url)
+            return
+
+        # Assume it's an external URL
+        self._open_external_url(url)
+
+    def _is_local_file_path(self, path: str) -> bool:
+        """
+        Determine if a path is a local file path.
+
+        Args:
+            path: The path to check
+
+        Returns:
+            True if the path is a local file path, False otherwise
+        """
+        # Handle absolute paths
+        if os.path.isabs(path):
+            return True
+
+        # Handle relative paths
+        if path.startswith('./') or path.startswith('../'):
+            return True
+
+        # Handle Windows-style paths (C:/, D:/, etc.)
+        if len(path) > 1 and path[1] == ':' and path[0].isalpha() and (path[2] == '/' or path[2] == '\\'):
+            return True
+
+        return False
+
+    def _open_local_file(self, path: str) -> None:
+        """
+        Open a local file link in a new Wiki tab or appropriate application.
+
+        Args:
+            path: The file path to open
+        """
+        # Remove file:// prefix if present
+        if path.startswith("file://"):
+            path = path[7:]
+
+        # Normalize the path
+        if not os.path.isabs(path) and self._path:
+            # If the path is relative, resolve it against the current wiki file's path
+            base_dir = os.path.dirname(self._path)
+            path = os.path.normpath(os.path.join(base_dir, path))
+
+        # Check if the file exists
+        if not os.path.exists(path):
+            # Show error message if file doesn't exist
+            self._show_error_message(f"File not found: {path}")
+            return
+
+        # Check if it's a markdown file or other wiki-compatible format
+        if path.lower().endswith(('.md', '.markdown', '.wiki', '.txt')):
+            # Emit a signal to the parent to open a new wiki tab with the path
+            self.open_wiki_path.emit(path)
+
+        else:
+            # For other file types, use the system's default application
+            self._open_with_system_default(path)
+
+    def _open_external_url(self, url: str) -> None:
+        """
+        Open an external URL in the system's default web browser.
+
+        Args:
+            url: The URL to open
+        """
+        # Make sure the URL has a scheme
+        if not url.startswith(('http://', 'https://')):
+            url = 'http://' + url
+
+        # Use Qt's QDesktopServices to open the URL in the default browser
+        QDesktopServices.openUrl(QUrl(url))
+
+    def _open_with_system_default(self, path: str) -> None:
+        """
+        Open a file with the system's default application.
+
+        Args:
+            path: The file path to open
+        """
+        # Create a properly formatted file URL
+        file_url = QUrl.fromLocalFile(path)
+        QDesktopServices.openUrl(file_url)
+
+    def _show_error_message(self, message: str) -> None:
+        """
+        Show an error message dialog.
+
+        Args:
+            message: The error message to display
+        """
+        error_dialog = QMessageBox(self)
+        error_dialog.setIcon(QMessageBox.Icon.Warning)
+        error_dialog.setWindowTitle("Link Error")
+        error_dialog.setText(message)
+        error_dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+        error_dialog.exec()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
