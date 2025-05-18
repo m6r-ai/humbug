@@ -5,10 +5,6 @@ from PySide6.QtGui import QTextBlockUserData
 
 class MarkdownBlockData(QTextBlockUserData):
     """Base class for all markdown-specific text block user data."""
-    
-    def __init__(self) -> None:
-        """Initialize the base class."""
-        super().__init__()
 
 
 class HeadingBlockData(MarkdownBlockData):
@@ -23,4 +19,3 @@ class HeadingBlockData(MarkdownBlockData):
         """
         super().__init__()
         self.element_id = element_id
-
