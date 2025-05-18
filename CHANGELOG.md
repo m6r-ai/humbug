@@ -2,6 +2,10 @@
 
 ## v0.13 (2025-05-xx)
 
+New features:
+
+- Any dialog box that has a destructive default action now has a red default button instead of blue.
+
 Bug fixes:
 
 - Markdown rendering of lists that included paragraphs did not work correctly.
