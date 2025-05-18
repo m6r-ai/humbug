@@ -1,7 +1,6 @@
 """Wiki tab implementation."""
 
 import logging
-import os
 from datetime import datetime
 
 from PySide6.QtCore import QUrl, Signal
@@ -18,6 +17,7 @@ from humbug.gui.tab.tab_type import TabType
 from humbug.gui.tab.wiki.wiki_widget import WikiWidget
 from humbug.gui.tab.wiki.wiki_error import WikiError
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_wiki import MindspaceWiki
 
 
 class WikiTab(TabBase):
@@ -47,6 +47,9 @@ class WikiTab(TabBase):
         self._path: str = path
         self._timestamp = timestamp
 
+        # Get or create mindspace wiki manage
+        self._wiki_manager = MindspaceWiki()
+
         # Create layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -63,7 +66,7 @@ class WikiTab(TabBase):
         # Create wiki content widget
         self._wiki_content_widget = WikiWidget(path, timestamp, self)
         self._wiki_content_widget.status_updated.connect(self.update_status)
-        self._wiki_content_widget.open_external_link.connect(self._handle_external_link)
+        self._wiki_content_widget.open_external_link.connect(self._handle_link)
         layout.addWidget(self._wiki_content_widget)
 
         # Install activation tracking
@@ -87,94 +90,39 @@ class WikiTab(TabBase):
         # Delegate to the wiki content widget
         self._wiki_content_widget.scroll_to_target(anchor)
 
-    def _handle_external_link(self, url: str) -> None:
+    def _handle_link(self, url: str) -> None:
         """
-        Handle opening external links and local file links.
+        Handle opening links.
 
         Args:
             url: The URL or file path to open
         """
-        # Check if it's a local file URL
-        if url.startswith("file://") or self._is_local_file_path(url):
-            self._open_local_file(url)
-            return
+        try:
+            # If url starts with #, it's a local anchor
+            if url.startswith("#"):
+                anchor = url[1:]
+                self.scroll_to_anchor(anchor)
+                return
 
-        # Assume it's an external URL
-        self._open_external_url(url)
+            # Try to resolve the link path
+            resolved_path = self._wiki_manager.resolve_link(self._path, url)
+            if resolved_path is not None:
+                # It's a local file link - open in wiki tab
+                self.open_wiki_path.emit(resolved_path)
+                return
 
-    def _is_local_file_path(self, path: str) -> bool:
-        """
-        Determine if a path is a local file path.
+            # Otherwise, it's an external link - open in browser
+            self._open_external_url(url)
 
-        Args:
-            path: The path to check
-
-        Returns:
-            True if the path is a local file path, False otherwise
-        """
-        # Handle absolute paths
-        if os.path.isabs(path):
-            return True
-
-        # Handle relative paths
-        if path.startswith('./') or path.startswith('../'):
-            return True
-
-        # Handle Windows-style paths (C:/, D:/, etc.)
-        if len(path) > 1 and path[1] == ':' and path[0].isalpha() and (path[2] == '/' or path[2] == '\\'):
-            return True
-
-        return False
-
-    def _open_local_file(self, path: str) -> None:
-        """
-        Open a local file link in a new Wiki tab or appropriate application.
-
-        Args:
-            path: The file path to open
-        """
-        # Remove file:// prefix if present
-        if path.startswith("file://"):
-            path = path[7:]
-
-        base_path = path
-        anchor = None
-        if '#' in path:
-            base_path, anchor = path.split('#', 1)
-
-        # Normalize the path
-        if not os.path.isabs(base_path) and self._path:
-            # If the path is relative, resolve it against the current wiki file's path
-            base_dir = os.path.dirname(self._path)
-            path = os.path.normpath(os.path.join(base_dir, base_path))
-
-        # Check if the file exists
-        if not os.path.exists(path):
-            # Show error message if file doesn't exist
+        except WikiError as e:
+            # Show error message if link couldn't be handled
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
                 strings.error_opening_file_title,
-                strings.could_not_open.format(path, "File does not exist"),
+                strings.could_not_open.format(url, str(e)),
             )
-            return
-
-        # Check if it's a markdown file or other wiki-compatible format
-        if path.lower().endswith(('.md', '.markdown', '.wiki', '.txt')):
-            # Emit a signal to the parent to open a new wiki tab with the path
-            if anchor:
-                # If an anchor is specified, scroll to it in the new tab
-                print(f"Opening wiki file: {path} with anchor: {anchor}")
-                self.open_wiki_path.emit(f"{path}#{anchor}")
-                return
-
-            # Otherwise, just open the file
-            self.open_wiki_path.emit(path)
-            return
-
-        # For other file types, use the system's default application
-        self._open_with_system_default(path)
 
     def _open_external_url(self, url: str) -> None:
         """
@@ -189,26 +137,6 @@ class WikiTab(TabBase):
 
         # Use Qt's QDesktopServices to open the URL in the default browser
         QDesktopServices.openUrl(QUrl(url))
-
-    def _open_with_system_default(self, path: str) -> None:
-        """
-        Open a file with the system's default application.
-
-        Args:
-            path: The file path to open
-        """
-        # Create a properly formatted file URL
-        file_url = QUrl.fromLocalFile(path)
-        QDesktopServices.openUrl(file_url)
-
-    def _show_error_message(self, message: str) -> None:
-        """
-        Show an error message dialog.
-
-        Args:
-            message: The error message to display
-        """
-
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""

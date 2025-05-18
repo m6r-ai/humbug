@@ -1092,7 +1092,7 @@ class ColumnManager(QWidget):
         try:
             wiki_tab = WikiTab.load_page(path_minus_anchor, self)
             wiki_tab.open_wiki_path.connect(self.open_wiki)
-            self.add_tab(wiki_tab, os.path.basename(path_minus_anchor))
+            self.add_tab(wiki_tab, f"Wiki: {os.path.basename(path_minus_anchor)}")
 
             # If there's an anchor, scroll to it
             if anchor:

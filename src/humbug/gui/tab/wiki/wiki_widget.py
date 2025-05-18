@@ -16,6 +16,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.wiki.wiki_content import WikiContent
 from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_wiki import MindspaceWiki
 
 
 class WikiWidgetEventFilter(QObject):
@@ -85,6 +86,8 @@ class WikiWidget(QWidget):
         self._logger = logging.getLogger("WikiWidget")
         self._path = path
         self._timestamp = timestamp
+
+        self._mindspace_wiki = MindspaceWiki()
 
         # Widget tracking
         self._content_blocks: List[WikiContent] = []
@@ -255,8 +258,8 @@ class WikiWidget(QWidget):
     def load_content(self) -> None:
         """Load content from the wiki file."""
         try:
-            with open(self._path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            # Use MindspaceWiki to get content
+            content, _ = self._mindspace_wiki.get_wiki_content(self._path)
 
             # Clear existing content blocks
             self.clear_content()
