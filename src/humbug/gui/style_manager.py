@@ -279,8 +279,8 @@ class StyleManager(QObject):
 
             # Close button states
             ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#ff4444",
-                ColorMode.LIGHT: "#ff4444"
+                ColorMode.DARK: "#d04030",
+                ColorMode.LIGHT: "#c03020"
             },
 
             # Line numbers
