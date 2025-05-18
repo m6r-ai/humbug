@@ -261,12 +261,12 @@ class WikiTab(TabBase):
         )
 
     @classmethod
-    def load_from_file(cls, path: str, parent: QWidget | None = None) -> 'WikiTab':
+    def load_page(cls, path: str, parent: QWidget | None = None) -> 'WikiTab':
         """
-        Load a wiki tab from a file.
+        Load a wiki page.
 
         Args:
-            path: Path to wiki file
+            path: Path to wiki page
             parent: Optional parent widget
 
         Returns:

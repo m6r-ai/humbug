@@ -955,7 +955,7 @@ class ColumnManager(QWidget):
             return existing_tab
 
         try:
-            conversation_tab = ConversationTab.load_from_file(path, self)
+            conversation_tab = ConversationTab.load_conversation(path, self)
             conversation_tab.forkRequested.connect(self._fork_conversation)
             conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             self.add_tab(conversation_tab, f"Conv: {conversation_id}")
@@ -1090,7 +1090,7 @@ class ColumnManager(QWidget):
             return existing_tab
 
         try:
-            wiki_tab = WikiTab.load_from_file(path_minus_anchor, self)
+            wiki_tab = WikiTab.load_page(path_minus_anchor, self)
             wiki_tab.open_wiki_path.connect(self.open_wiki)
             self.add_tab(wiki_tab, os.path.basename(path_minus_anchor))
 

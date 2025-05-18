@@ -194,7 +194,7 @@ class ConversationTab(TabBase):
         )
 
     @classmethod
-    def load_from_file(cls, path: str, parent: QWidget | None = None) -> 'ConversationTab':
+    def load_conversation(cls, path: str, parent: QWidget | None = None) -> 'ConversationTab':
         """
         Load a conversation tab from a transcript file.
 
