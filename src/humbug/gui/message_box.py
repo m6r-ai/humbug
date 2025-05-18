@@ -41,7 +41,8 @@ class MessageBox(QDialog):
         title: str,
         text: str,
         buttons: List[MessageBoxButton],
-        parent: QWidget | None = None
+        parent: QWidget | None = None,
+        destructive: bool = False
     ) -> None:
         """
         Initialize the message box.
@@ -143,7 +144,7 @@ class MessageBox(QDialog):
 
             # Apply recommended styling if this is our primary action button
             if button == recommended_button:
-                btn.setProperty("recommended", True)
+                btn.setProperty("recommended", not destructive)
 
             button_layout.addWidget(btn)
 
@@ -269,7 +270,8 @@ class MessageBox(QDialog):
         msg_type: MessageBoxType,
         title: str,
         text: str,
-        buttons: List[MessageBoxButton] | None = None
+        buttons: List[MessageBoxButton] | None = None,
+        destructive: bool = False
     ) -> MessageBoxButton:
         """
         Show a message box and return the clicked button.
@@ -280,6 +282,7 @@ class MessageBox(QDialog):
             title: Dialog title
             text: Message text
             buttons: List of buttons (defaults to just OK)
+            dangerous: If True, use a destructive button style
 
         Returns:
             The MessageBoxButton that was clicked
@@ -287,6 +290,6 @@ class MessageBox(QDialog):
         if buttons is None:
             buttons = [MessageBoxButton.OK]
 
-        dialog = cls(msg_type, title, text, buttons, parent)
+        dialog = cls(msg_type, title, text, buttons, parent, destructive)
         dialog.exec()
         return dialog.result_button

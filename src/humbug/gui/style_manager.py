@@ -172,6 +172,18 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#3060d0",
                 ColorMode.LIGHT: "#2050c0"
             },
+            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: {
+                ColorMode.DARK: "#c03020",
+                ColorMode.LIGHT: "#d04030"
+            },
+            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: {
+                ColorMode.DARK: "#e05040",
+                ColorMode.LIGHT: "#b02010"
+            },
+            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: {
+                ColorMode.DARK: "#d04030",
+                ColorMode.LIGHT: "#c03020"
+            },
             ColorRole.BUTTON_BACKGROUND_DISABLED: {
                 ColorMode.DARK: "#202020",
                 ColorMode.LIGHT: "#d8d8d8"
@@ -1134,6 +1146,16 @@ class StyleManager(QObject):
             }}
             QPushButton[recommended="true"]:pressed {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+            }}
+            QPushButton[recommended="false"] {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+            }}
+            QPushButton[recommended="false"]:hover {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+            }}
+            QPushButton[recommended="false"]:pressed {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
             QScrollBar:vertical {{

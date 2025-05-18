@@ -39,6 +39,12 @@ class ColorRole(Enum):
                                         # Recommended primary action button pressed
     BUTTON_BACKGROUND_RECOMMENDED_HOVER = auto()
                                         # Recommended primary action button hover
+    BUTTON_BACKGROUND_DESTRUCTIVE = auto()
+                                        # Destructive primary action button
+    BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED = auto()
+                                        # Destructive primary action button pressed
+    BUTTON_BACKGROUND_DESTRUCTIVE_HOVER = auto()
+                                        # Destructive primary action button hover
     BUTTON_BACKGROUND_DISABLED = auto()
                                         # Disabled push button background
 

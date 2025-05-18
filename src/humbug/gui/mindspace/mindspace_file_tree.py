@@ -190,7 +190,8 @@ class MindspaceFileTree(QWidget):
             strings.confirm_delete_title,
             strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" +
                 strings.delete_warning_detail,
-            [MessageBoxButton.YES, MessageBoxButton.NO]
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            True
         )
 
         if result == MessageBoxButton.YES:
