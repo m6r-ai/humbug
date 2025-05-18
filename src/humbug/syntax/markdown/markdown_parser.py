@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, cast
 
 from humbug.syntax.lexer import TokenType, Token
 from humbug.syntax.markdown.markdown_lexer import MarkdownLexer
@@ -28,7 +28,7 @@ class MarkdownParserState(ParserState):
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState | None = None
     in_list_item: bool = False
-    list_indent_stack: List[int] = None  # Will be initialized as empty list
+    list_indent_stack: List[int] | None = None
     block_type: TokenType | None = None
 
     def __post_init__(self) -> None:
@@ -129,7 +129,7 @@ class MarkdownParser(Parser):
         embedded_parser_state = None
         parsing_continuation = False
         in_list_item = False
-        list_indent_stack = []
+        list_indent_stack: List[int] = []
         block_type = None
 
         if prev_parser_state is not None:
@@ -142,7 +142,7 @@ class MarkdownParser(Parser):
             embedded_parser_state = prev_parser_state.embedded_parser_state
             parsing_continuation = prev_parser_state.parsing_continuation
             in_list_item = prev_parser_state.in_list_item
-            list_indent_stack = prev_parser_state.list_indent_stack.copy()  # Make a copy to avoid reference issues
+            list_indent_stack = cast(List[int], prev_parser_state.list_indent_stack).copy()  # Copy to avoid reference issues
             block_type = prev_parser_state.block_type
 
         parse_embedded = language != ProgrammingLanguage.UNKNOWN

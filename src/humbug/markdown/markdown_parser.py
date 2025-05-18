@@ -4,7 +4,7 @@ Parser to construct an AST from Markdown.
 
 import logging
 import re
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, cast
 
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode, MarkdownLineBreakNode,
@@ -542,7 +542,7 @@ class MarkdownParser:
         """
         return self._list_stack[-2] if len(self._list_stack) > 1 else None
 
-    def _close_lists_at_indent(self, indent: int, consider_marker: bool) -> None:
+    def _close_lists_at_indent(self, indent: int, consider_marker: bool) -> bool:
         """
         Close all lists deeper than the given indent level.
 
@@ -706,7 +706,7 @@ class MarkdownParser:
             self._list_stack[-1].contains_blank_line = True
 
         list_node = self.find_or_create_ordered_list(indent, start_number)
-        current_list = self._current_list_state()
+        current_list = cast(ListState, self._current_list_state())
 
         # Create the list item
         item = MarkdownListItemNode()
@@ -753,7 +753,7 @@ class MarkdownParser:
             self._list_stack[-1].contains_blank_line = True
 
         list_node = self.find_or_create_unordered_list(indent)
-        current_list = self._current_list_state()
+        current_list = cast(ListState, self._current_list_state())
 
         # Create the list item
         item = MarkdownListItemNode()
@@ -1124,7 +1124,7 @@ class MarkdownParser:
 
             else:
                 # Otherwise continue inline
-                last_item = list_state.last_item
+                last_item: MarkdownASTNode = list_state.last_item
                 if isinstance(last_item.children[-1], MarkdownParagraphNode):
                     last_item = last_item.children[-1]
 
@@ -1142,7 +1142,7 @@ class MarkdownParser:
         """Reset all list tracking state."""
         self._list_stack = []
 
-    def _convert_list_items_to_paragraphs(self):
+    def _convert_list_items_to_paragraphs(self) -> None:
         """Convert all existing list items in the current list to have paragraphs blocks."""
         current_list = self._list_stack[-1]
         for list_item in current_list.list_node.children:
@@ -1157,7 +1157,7 @@ class MarkdownParser:
                 # Update line numbers
                 paragraph.line_start = list_item.line_start
                 paragraph.line_end = list_item.line_end
-                self.register_node_line(paragraph, list_item.line_start)
+                self.register_node_line(paragraph, cast(int, list_item.line_start))
                 list_item.add_child(paragraph)
 
     def parse_line(self, line: str, line_num: int) -> None:
