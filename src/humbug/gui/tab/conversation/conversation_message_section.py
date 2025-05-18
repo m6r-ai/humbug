@@ -427,7 +427,7 @@ class ConversationMessageSection(QFrame):
             QFrame {{
                 background-color: {background_color};
                 margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
+                border-radius: {int(self._style_manager.message_bubble_spacing() / 2)}px;
                 border: 0;
             }}
         """)
