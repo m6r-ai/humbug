@@ -3,12 +3,15 @@
 from typing import List
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
-    QPushButton, QWidget, QLineEdit
+    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QWidget,
+    QScrollArea, QFrame
 )
 
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.gui.settings.settings_components import (
+    SettingsContainer, SettingsFactory
+)
 
 
 class MindspaceFoldersDialog(QDialog):
@@ -31,72 +34,52 @@ class MindspaceFoldersDialog(QDialog):
         self.setModal(True)
 
         style_manager = StyleManager()
-        zoom_factor = style_manager.zoom_factor()
-        element_width = int(zoom_factor * 300)
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Path label and value container
-        path_layout = QHBoxLayout()
-        self._path_label = QLabel(strings.mindspace_path)
-        self._path_label.setMinimumHeight(40)
-        path_edit = QLineEdit()
-        path_edit.setMinimumWidth(element_width)
-        path_edit.setMinimumHeight(40)
-        path_edit.setEnabled(False)
-        path_edit.setText(mindspace_path)
-        path_layout.addWidget(self._path_label)
-        path_layout.addStretch()
-        path_layout.addWidget(path_edit)
-        layout.addLayout(path_layout)
+        # Create a scroll area for the settings
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
-        # Rest of the dialog content remains the same
-        # Conversations folder option
-        conv_layout = QHBoxLayout()
-        conv_label = QLabel(strings.conversations_folder)
-        conv_label.setMinimumHeight(40)
-        self._conversations_check = QCheckBox()
-        self._conversations_check.setChecked(True)
-        self._conversations_check.setEnabled(False)
-        self._conversations_check.setMinimumWidth(element_width)
-        self._conversations_check.setMinimumHeight(40)
-        conv_layout.addWidget(conv_label)
-        conv_layout.addStretch()
-        conv_layout.addWidget(self._conversations_check)
-        layout.addLayout(conv_layout)
+        # Create settings container for folder options
+        self._settings_container = SettingsContainer()
+
+        # Path display
+        self._path_display = SettingsFactory.create_display(
+            strings.mindspace_path,
+            mindspace_path
+        )
+        self._settings_container.add_setting(self._path_display)
+
+        # Conversations folder option (required)
+        self._conversations_check = SettingsFactory.create_checkbox(strings.conversations_folder)
+        self._conversations_check.set_value(True)
+        self._conversations_check.setEnabled(False)  # Always required
+        self._settings_container.add_setting(self._conversations_check)
 
         # Metaphor folder option
-        metaphor_layout = QHBoxLayout()
-        metaphor_label = QLabel(strings.metaphor_folder)
-        metaphor_label.setMinimumHeight(40)
-        self._metaphor_check = QCheckBox()
-        self._metaphor_check.setChecked(True)
-        self._metaphor_check.setMinimumWidth(element_width)
-        self._metaphor_check.setMinimumHeight(40)
-        metaphor_layout.addWidget(metaphor_label)
-        metaphor_layout.addStretch()
-        metaphor_layout.addWidget(self._metaphor_check)
-        layout.addLayout(metaphor_layout)
+        self._metaphor_check = SettingsFactory.create_checkbox(strings.metaphor_folder)
+        self._metaphor_check.set_value(True)
+        self._settings_container.add_setting(self._metaphor_check)
 
         # Source folder option
-        src_layout = QHBoxLayout()
-        src_label = QLabel(strings.src_folder)
-        src_label.setMinimumHeight(40)
-        self._src_check = QCheckBox()
-        self._src_check.setChecked(False)
-        self._src_check.setMinimumWidth(element_width)
-        self._src_check.setMinimumHeight(40)
-        src_layout.addWidget(src_label)
-        src_layout.addStretch()
-        src_layout.addWidget(self._src_check)
-        layout.addLayout(src_layout)
+        self._src_check = SettingsFactory.create_checkbox(strings.src_folder)
+        self._src_check.set_value(False)
+        self._settings_container.add_setting(self._src_check)
+
+        # Add stretch to push everything up
+        self._settings_container.add_stretch()
+
+        # Set the scroll content
+        scroll_area.setWidget(self._settings_container)
+        layout.addWidget(scroll_area)
 
         # Add spacing before buttons
         layout.addSpacing(24)
-        layout.addStretch()
 
         # Button row
         button_layout = QHBoxLayout()
@@ -135,10 +118,11 @@ class MindspaceFoldersDialog(QDialog):
             List of folder names to create in mindspace
         """
         folders = ['conversations']  # Always create conversations folder
-        if self._metaphor_check.isChecked():
+
+        if self._metaphor_check.get_value():
             folders.append('metaphor')
 
-        if self._src_check.isChecked():
+        if self._src_check.get_value():
             folders.append('src')
 
         return folders
