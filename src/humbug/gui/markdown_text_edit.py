@@ -483,7 +483,7 @@ class MarkdownTextEdit(QTextEdit):
             # No new content
             return
 
-        self.setText(text)
+        self.setPlainText(text)
 
     def clear(self) -> None:
         """Override clear to reset current length."""
