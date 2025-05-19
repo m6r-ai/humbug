@@ -20,7 +20,7 @@ class SystemTextEdit(QTextEdit):
 
     mousePressed = Signal(QMouseEvent)
     mouseReleased = Signal(QMouseEvent)
-    pageScrollRequested = Signal()
+    page_key_scroll_requested = Signal()
 
     def __init__(self, is_input: bool, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -170,8 +170,7 @@ class SystemTextEdit(QTextEdit):
                 # Only set cursor if it actually moved
                 if cursor.position() != orig_pos:
                     self.setTextCursor(cursor)
-                    # Signal for scroll - SystemTab will handle ensuring cursor visibility
-                    self.pageScrollRequested.emit()
+                    self.page_key_scroll_requested.emit()
 
             event.accept()
             return

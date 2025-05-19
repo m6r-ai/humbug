@@ -178,7 +178,7 @@ class ConversationWidget(QWidget):
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
         )
-        self._input.pageScrollRequested.connect(self._handle_edit_page_scroll)
+        self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
         self._input.forkRequested.connect(self._fork_from_message)

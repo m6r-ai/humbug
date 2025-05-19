@@ -22,7 +22,7 @@ class MarkdownTextEdit(QTextEdit):
     mousePressed = Signal(QMouseEvent)
     mouseReleased = Signal(QMouseEvent)
     linkClicked = Signal(str)
-    pageScrollRequested = Signal()
+    page_key_scroll_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -375,7 +375,7 @@ class MarkdownTextEdit(QTextEdit):
                 # Only set cursor if it actually moved
                 if cursor.position() != orig_pos:
                     self.setTextCursor(cursor)
-                    self.pageScrollRequested.emit()
+                    self.page_key_scroll_requested.emit()
 
             event.accept()
             return

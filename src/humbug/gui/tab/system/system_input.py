@@ -18,7 +18,7 @@ class SystemInput(SystemMessage):
 
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
-    pageScrollRequested = Signal()
+    page_key_scroll_requested = Signal()
 
     command_submitted = Signal(str)
     tab_completion_requested = Signal(str, bool, bool, int)  # text, is_continuation, move_forward, cursor_position
@@ -36,7 +36,7 @@ class SystemInput(SystemMessage):
 
         # Connect text cursor signals
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
-        self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
+        self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
         self._text_area.enable_highlighter()
 

@@ -17,7 +17,7 @@ class ConversationInput(ConversationMessage):
 
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
-    pageScrollRequested = Signal()
+    page_key_scroll_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
@@ -29,7 +29,7 @@ class ConversationInput(ConversationMessage):
         self._text_area = self._sections[0].text_area()
 
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
-        self._text_area.pageScrollRequested.connect(self.pageScrollRequested)
+        self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
