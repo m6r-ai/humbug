@@ -77,11 +77,11 @@ class MindspaceWiki:
             entries = os.listdir(directory_path)
 
             # Start with a heading
-            lines = [f"# {dir_name}", ""]
-
-            # Add directory contents
-            lines.append("## Contents")
-            lines.append("")
+            lines = [
+                f"# {dir_name}"
+                "",
+                f"Path: `{directory_path}`"
+            ]
 
             # Sort entries - directories first, then files
             dirs = []
@@ -100,25 +100,20 @@ class MindspaceWiki:
 
             # Add directories
             if dirs:
-                lines.append("### Directories")
+                lines.append("## Folders (directories)")
                 lines.append("")
                 for d in dirs:
                     full_path = os.path.join(directory_path, d)
-                    lines.append(f"- 📁 [{d}]({full_path})")
+                    lines.append(f"- [{d}]({full_path})")
                 lines.append("")
 
             # Add files
             if files:
-                lines.append("### Files")
+                lines.append("## Files")
                 lines.append("")
                 for f in files:
                     full_path = os.path.join(directory_path, f)
-                    icon = "📄"
-                    if f.lower().endswith(".md"):
-                        icon = "📝"
-                    elif ProgrammingLanguageUtils.from_file_extension(f) != ProgrammingLanguage.TEXT:
-                        icon = "💻"
-                    lines.append(f"- {icon} [{f}]({full_path})")
+                    lines.append(f"- [{f}]({full_path})")
 
             return "\n".join(lines)
 
@@ -156,7 +151,7 @@ class MindspaceWiki:
             lines = [
                 f"# {file_name}",
                 "",
-                f"Source file: `{file_path}`",
+                f"Path: `{file_path}`",
                 "",
                 "```" + lang_spec,
                 file_content,
