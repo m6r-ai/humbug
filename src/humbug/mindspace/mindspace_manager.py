@@ -334,7 +334,7 @@ class MindspaceManager(QObject):
         if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
-        return os.path.join(self._mindspace_path, relative_path)
+        return os.path.normpath(os.path.join(self._mindspace_path, relative_path))
 
     def make_relative_path(self, path: str) -> str | None:
         """

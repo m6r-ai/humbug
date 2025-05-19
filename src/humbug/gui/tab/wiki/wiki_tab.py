@@ -1,6 +1,7 @@
 """Wiki tab implementation."""
 
 import logging
+import os
 from datetime import datetime
 
 from PySide6.QtCore import QUrl, Signal
@@ -48,6 +49,7 @@ class WikiTab(TabBase):
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("WikiTab")
         self._path: str = path
+        print(f"WikiTab path: {self._path}")
         self._timestamp = timestamp
 
         # Get or create mindspace wiki manage
@@ -205,7 +207,7 @@ class WikiTab(TabBase):
         """
         try:
             timestamp = datetime.now()  # Use current time as default
-            wiki_tab = cls(path, path, timestamp, parent)
+            wiki_tab = cls("wiki:" + path, path, timestamp, parent)
             wiki_tab._wiki_content_widget.load_content()
             return wiki_tab
 
@@ -218,7 +220,7 @@ class WikiTab(TabBase):
         if not state.timestamp:
             raise WikiError("Wiki tab requires timestamp")
 
-        tab = cls(state.tab_id, state.path, state.timestamp, parent)
+        tab = cls(state.tab_id, os.path.normpath(state.path), state.timestamp, parent)
 
         # Load wiki content
         try:

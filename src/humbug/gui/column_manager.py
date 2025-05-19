@@ -348,6 +348,8 @@ class ColumnManager(QWidget):
                 # Update conversation internals without signaling
                 conversation.update_path(new_id, new_path)
 
+# TODO: Add support for wiki tabs - note they need to rerender too!
+
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
         tab_widget = ColumnWidget()

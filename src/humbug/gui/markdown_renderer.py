@@ -424,7 +424,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
             elif not os.path.isabs(path):
                 # Fallback to current working directory if source path is unknown
-                path = os.path.abspath(path)
+                path = os.path.normpath(os.path.abspath(path))
 
             # Check if file exists
             if not os.path.isfile(path):
@@ -443,9 +443,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
                 return self._create_placeholder_image(), False
 
             # Resize the image if it's too large for displaying in the document
-            max_width = 800  # Maximum width for displayed images
-            if image.width() > max_width:
-                image = image.scaledToWidth(max_width, Qt.TransformationMode.SmoothTransformation)
+#            max_width = 800  # Maximum width for displayed images
+#            if image.width() > max_width:
+#                image = image.scaledToWidth(max_width, Qt.TransformationMode.SmoothTransformation)
 
             return image, True
 

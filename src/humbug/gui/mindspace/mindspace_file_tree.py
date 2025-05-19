@@ -151,7 +151,7 @@ class MindspaceFileTree(QWidget):
 
         if new_name != old_name:
             directory = os.path.dirname(path)
-            new_path = os.path.join(directory, new_name)
+            new_path = os.path.normpath(os.path.join(directory, new_name))
 
             try:
                 # Check if file already exists
@@ -188,8 +188,7 @@ class MindspaceFileTree(QWidget):
             self,
             MessageBoxType.WARNING,
             strings.confirm_delete_title,
-            strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" +
-                strings.delete_warning_detail,
+            strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
             [MessageBoxButton.YES, MessageBoxButton.NO],
             True
         )

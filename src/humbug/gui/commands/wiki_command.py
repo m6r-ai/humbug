@@ -52,7 +52,7 @@ class WikiCommand(SystemCommand):
             )
             return False
 
-        filename = args[0] if args else ""
+        filename = os.path.normpath(args[0]) if args else ""
 
         try:
             # Convert relative path to absolute path within mindspace
