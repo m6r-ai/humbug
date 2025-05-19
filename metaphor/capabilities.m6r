@@ -32,7 +32,7 @@ Context: Capabilities
         interface on the right side. The two regions are separated by a resizable splitter that allows the user
         to adjust the relative widths.  At the bottom of the main window is an application status bar.
 
-        Tabs can be arranged as either single column of tabs, or have a split view that has two columns of tabs
+        Tabs can be arranged as either single column of tabs, or have a split view that has up to 6 columns of tabs
         side-by-side.
 
         Context: Tab columns
@@ -165,12 +165,13 @@ Context: Capabilities
             The welcome message is automatically hidden when tabs are created and reappears when all tabs are closed.
 
             Context: Tab types
-                There are 4 distinct types of tabs:
+                There are 5 distinct types of tabs:
 
                 - Conversation tabs: For AI interactions
                 - Editor tabs: For file editing
                 - System tab: For interacting with Humbug system command line tools
                 - Terminal tabs: For interacting with local command line tools
+                - Wiki tabs: For viewing information within the mindspace
 
                 Each type has its own distinct visual appearance and behavior.
 
@@ -181,6 +182,7 @@ Context: Capabilities
                 Include: metaphor/tab-editor.m6r
                 Include: metaphor/tab-system.m6r
                 Include: metaphor/tab-terminal.m6r
+                Include: metaphor/tab-wiki.m6r
 
             Context: Syntax highlighting
                 Code blocks and inline code will be syntax highlighted based on the programming language
