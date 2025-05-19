@@ -48,11 +48,6 @@ class MindspaceWiki:
                 # Generate directory listing
                 content = self._generate_directory_content(path)
 
-            elif path.lower().endswith(".md"):
-                # Regular markdown file
-                with open(path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-
             else:
                 # Source code or other file
                 content = self._generate_file_content(path)
@@ -154,11 +149,33 @@ class MindspaceWiki:
                 f"# {file_name}",
                 "",
                 f"Path: `{rel_path}`",
-                "",
+                ""
+            ]
+
+            if file_path.lower().endswith(".md"):
+                # Regular markdown file
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    md_content = f.read()
+
+                md_lines = [
+                    "## Preview",
+                    "",
+                    "---",
+                    md_content,
+                    "---"
+                ]
+
+                lines += md_lines
+
+
+            source_lines = [
+                "## Source",
                 "```" + lang_spec,
                 file_content,
                 "```"
             ]
+
+            lines += source_lines
 
             return "\n".join(lines)
 
