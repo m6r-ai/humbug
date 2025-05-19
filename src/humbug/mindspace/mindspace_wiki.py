@@ -73,14 +73,15 @@ class MindspaceWiki:
             Markdown content with directory listing
         """
         try:
-            dir_name = os.path.basename(directory_path)
+            rel_path = self._mindspace_manager.make_relative_path(directory_path)
+            dir_name = os.path.basename(rel_path)
             entries = os.listdir(directory_path)
 
             # Start with a heading
             lines = [
                 f"# {dir_name}"
                 "",
-                f"Path: `{directory_path}`"
+                f"Path: `{rel_path}`"
             ]
 
             # Sort entries - directories first, then files
@@ -132,6 +133,7 @@ class MindspaceWiki:
             Markdown content with file contents
         """
         try:
+            rel_path = self._mindspace_manager.make_relative_path(file_path)
             file_name = os.path.basename(file_path)
 
             # Determine language for syntax highlighting
@@ -151,7 +153,7 @@ class MindspaceWiki:
             lines = [
                 f"# {file_name}",
                 "",
-                f"Path: `{file_path}`",
+                f"Path: `{rel_path}`",
                 "",
                 "```" + lang_spec,
                 file_content,
