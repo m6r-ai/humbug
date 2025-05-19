@@ -6,10 +6,11 @@ from typing import List, Tuple, cast, Optional
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QLabel, QHBoxLayout, QWidget
 )
-from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent
+from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent, QSize
 from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont, QIcon
 )
+from PySide6.QtWidgets import QToolButton
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -31,6 +32,7 @@ class WikiContentSection(QFrame):
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
     linkClicked = Signal(str)
+    edit_clicked = Signal()
 
     def __init__(
         self,
@@ -65,6 +67,7 @@ class WikiContentSection(QFrame):
         self._language = language
         self._language_header = None
         self._header_container = None
+        self._edit_button = None
 
         if language is not None:
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
@@ -82,6 +85,11 @@ class WikiContentSection(QFrame):
 
             # Add stretch to fill remaining space
             self._header_layout.addStretch()
+
+            # Add Edit button with icon
+            self._edit_button = QToolButton()
+            self._edit_button.clicked.connect(self._on_edit_clicked)
+            self._header_layout.addWidget(self._edit_button)
 
             # Add header container to main layout
             self._layout.addWidget(self._header_container)
@@ -129,6 +137,10 @@ class WikiContentSection(QFrame):
 
         self._handle_language_changed()
 
+    def _on_edit_clicked(self) -> None:
+        """Handle the edit button being clicked."""
+        self.edit_clicked.emit()
+
     def text_area(self) -> MarkdownTextEdit:
         """Get the text area widget."""
         return self._text_area
@@ -167,6 +179,9 @@ class WikiContentSection(QFrame):
                 language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
             )
             self._language_header.setText(language_header)
+
+        if self._edit_button:
+            self._edit_button.setToolTip(strings.tooltip_edit_file)
 
     def _on_mouse_pressed(self, event: QMouseEvent) -> None:
         """Handle mouse press from text area."""
@@ -465,6 +480,32 @@ class WikiContentSection(QFrame):
         else:
             if self._content_node:
                 self._renderer.visit(self._content_node)
+
+        button_style = f"""
+            QToolButton {{
+                background-color: {background_color};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 0px;
+            }}
+            QToolButton:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QToolButton:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+        """
+
+        icon_base_size = 14
+        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+
+        if self._edit_button:
+            self._edit_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("edit"), icon_base_size
+            )))
+            self._edit_button.setIconSize(icon_size)
+            self._edit_button.setStyleSheet(button_style)
 
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode() != self._init_colour_mode:

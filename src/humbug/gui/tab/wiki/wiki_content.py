@@ -24,6 +24,7 @@ class WikiContent(QFrame):
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
     linkClicked = Signal(str)
+    edit_clicked = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
@@ -88,6 +89,7 @@ class WikiContent(QFrame):
         )
         section.scrollRequested.connect(self.scrollRequested)
         section.mouseReleased.connect(self.mouseReleased)
+        section.edit_clicked.connect(self.edit_clicked)
 
         # Connect to the new linkClicked signal
         section.linkClicked.connect(self._handle_link_clicked)

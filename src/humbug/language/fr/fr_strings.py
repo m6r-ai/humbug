@@ -236,6 +236,7 @@ def get_french_strings() -> LanguageStrings:
         tooltip_save_message="Enregistrer le message au format markdown",
         tooltip_fork_message="Créer une nouvelle conversation après ce message",
         tooltip_delete_from_message="Supprimer la conversation à partir d'ici",
+        tooltip_edit_file="Modifier ce fichier",
 
         delete_from_here_title="Supprimer les messages",
         delete_from_here_message=(

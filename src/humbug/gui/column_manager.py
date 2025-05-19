@@ -1071,8 +1071,8 @@ class ColumnManager(QWidget):
         self.add_tab(terminal, title)
         return terminal
 
-    def open_wiki(self, path: str) -> WikiTab:
-        """Open an existing conversation file."""
+    def open_wiki_page(self, path: str) -> WikiTab:
+        """Open a wiki page."""
         path_minus_anchor = path
         anchor = None
         if '#' in path:
@@ -1091,7 +1091,8 @@ class ColumnManager(QWidget):
 
         try:
             wiki_tab = WikiTab.load_page(path_minus_anchor, self)
-            wiki_tab.open_wiki_path.connect(self.open_wiki)
+            wiki_tab.open_wiki_path.connect(self.open_wiki_page)
+            wiki_tab.edit_file.connect(self.open_file)
             self.add_tab(wiki_tab, f"Wiki: {os.path.basename(path_minus_anchor)}")
 
             # If there's an anchor, scroll to it
@@ -1214,7 +1215,8 @@ class ColumnManager(QWidget):
 
         if state.type == TabType.WIKI:
             wiki_tab = WikiTab.restore_from_state(state, self)
-            wiki_tab.open_wiki_path.connect(self.open_wiki)
+            wiki_tab.open_wiki_path.connect(self.open_wiki_page)
+            wiki_tab.edit_file.connect(self.open_file)
             return wiki_tab
 
         return None

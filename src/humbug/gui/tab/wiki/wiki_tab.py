@@ -26,6 +26,9 @@ class WikiTab(TabBase):
     # Signal to request opening a new wiki tab
     open_wiki_path = Signal(str)
 
+    # Signal to request editing a file
+    edit_file = Signal(str)
+
     def __init__(
         self,
         tab_id: str,
@@ -67,6 +70,7 @@ class WikiTab(TabBase):
         self._wiki_content_widget = WikiWidget(path, timestamp, self)
         self._wiki_content_widget.status_updated.connect(self.update_status)
         self._wiki_content_widget.open_external_link.connect(self._handle_link)
+        self._wiki_content_widget.edit_file.connect(self.edit_file)
         layout.addWidget(self._wiki_content_widget)
 
         # Install activation tracking

@@ -68,6 +68,9 @@ class WikiWidget(QWidget):
     # Emits when a link is clicked
     open_external_link = Signal(str)
 
+    # Emits when a file edit button is clicked
+    edit_file = Signal(str)
+
     def __init__(
         self,
         path: str,
@@ -189,6 +192,7 @@ class WikiWidget(QWidget):
         )
         content_widget.scrollRequested.connect(self._handle_selection_scroll)
         content_widget.mouseReleased.connect(self._stop_scroll)
+        content_widget.edit_clicked.connect(self._handle_edit_clicked)
 
         # Connect to the new linkClicked signal
         content_widget.linkClicked.connect(self._handle_link_clicked)
@@ -202,6 +206,15 @@ class WikiWidget(QWidget):
         self._install_activation_tracking(content_widget)
 
         return content_widget
+
+    # Add a handler for the edit_clicked signal:
+    def _handle_edit_clicked(self) -> None:
+        """Handle edit button clicks from content blocks."""
+        # Activate this widget
+        self.activated.emit()
+
+        # Emit the edit_file signal
+        self.edit_file.emit(self._path)
 
     def _handle_link_clicked(self, url: str) -> None:
         """
