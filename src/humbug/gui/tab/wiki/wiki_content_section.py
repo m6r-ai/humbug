@@ -408,7 +408,7 @@ class WikiContentSection(QFrame):
             QFrame {{
                 background-color: {background_color};
                 margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing() / 2)}px;
+                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
                 border: 0;
             }}
         """)

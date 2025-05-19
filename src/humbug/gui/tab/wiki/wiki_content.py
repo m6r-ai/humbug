@@ -147,9 +147,9 @@ class WikiContent(QFrame):
 
                 text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
                 background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+                tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
                 color = (
-                    self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None
-                    else background_color
+                    tab_background_color if language is None else background_color
                 )
                 factor = self._style_manager.zoom_factor()
                 font = self.font()
@@ -212,26 +212,15 @@ class WikiContent(QFrame):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
+        tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
         background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
 
         # Apply styling to all sections
         for section in self._sections:
             language = section.language()
-            color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE) if language is not None else background_color
+            color = tab_background_color if language is None else background_color
             section.apply_style(text_color, color, font)
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {background_color};
-            }}
-            QFrame {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
-                border: 2px solid {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)}
-            }}
-        """)
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """

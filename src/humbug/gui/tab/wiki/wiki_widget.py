@@ -116,9 +116,8 @@ class WikiWidget(QWidget):
         self._content_layout = QVBoxLayout(self._content_container)
         self._content_container.setLayout(self._content_layout)
 
-        spacing = int(StyleManager().message_bubble_spacing())
-        self._content_layout.setSpacing(spacing)
-        self._content_layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        self._content_layout.setSpacing(0)
+        self._content_layout.setContentsMargins(0, 0, 0, 0)
         self._content_layout.addStretch()
 
         self._content_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
