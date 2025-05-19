@@ -1071,6 +1071,13 @@ class ColumnManager(QWidget):
         self.add_tab(terminal, title)
         return terminal
 
+    def open_wiki_link(self, link: str) -> WikiTab:
+        """Open a wiki link in a new tab."""
+        self.protect_current_tab(True)
+        wiki_tab = self.open_wiki_page(link)
+        self.protect_current_tab(False)
+        return wiki_tab
+
     def open_wiki_page(self, path: str) -> WikiTab:
         """Open a wiki page."""
         path_minus_anchor = path
@@ -1091,8 +1098,8 @@ class ColumnManager(QWidget):
 
         try:
             wiki_tab = WikiTab.load_page(path_minus_anchor, self)
-            wiki_tab.open_wiki_path.connect(self.open_wiki_page)
-            wiki_tab.edit_file.connect(self.open_file)
+            wiki_tab.open_wiki_path.connect(self.open_wiki_link)
+            wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
             self.add_tab(wiki_tab, f"Wiki: {os.path.basename(path_minus_anchor)}")
 
             # If there's an anchor, scroll to it
@@ -1104,6 +1111,20 @@ class ColumnManager(QWidget):
         except WikiError as e:
             self._logger.exception("Failed to open wiki page: %s", str(e))
             raise
+
+    def _edit_file_from_wiki_page(self, path: str) -> EditorTab:
+        """
+        Edit a file from a wiki page.
+
+        Args:
+            path: Path to the file
+        Returns:
+            The opened editor tab
+        """
+        self.protect_current_tab(True)
+        tab = self.open_file(path)
+        self.protect_current_tab(False)
+        return tab
 
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""
@@ -1215,8 +1236,8 @@ class ColumnManager(QWidget):
 
         if state.type == TabType.WIKI:
             wiki_tab = WikiTab.restore_from_state(state, self)
-            wiki_tab.open_wiki_path.connect(self.open_wiki_page)
-            wiki_tab.edit_file.connect(self.open_file)
+            wiki_tab.open_wiki_path.connect(self.open_wiki_link)
+            wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
             return wiki_tab
 
         return None

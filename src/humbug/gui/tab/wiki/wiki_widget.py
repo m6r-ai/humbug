@@ -66,7 +66,7 @@ class WikiWidget(QWidget):
     activated = Signal()
 
     # Emits when a link is clicked
-    open_external_link = Signal(str)
+    open_link = Signal(str)
 
     # Emits when a file edit button is clicked
     edit_file = Signal(str)
@@ -233,7 +233,7 @@ class WikiWidget(QWidget):
             self.scroll_to_target(target_id)
             return
 
-        self.open_external_link.emit(url)
+        self.open_link.emit(url)
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """

@@ -69,7 +69,7 @@ class WikiTab(TabBase):
         # Create wiki content widget
         self._wiki_content_widget = WikiWidget(path, timestamp, self)
         self._wiki_content_widget.status_updated.connect(self.update_status)
-        self._wiki_content_widget.open_external_link.connect(self._handle_link)
+        self._wiki_content_widget.open_link.connect(self._handle_link)
         self._wiki_content_widget.edit_file.connect(self.edit_file)
         layout.addWidget(self._wiki_content_widget)
 
@@ -98,20 +98,16 @@ class WikiTab(TabBase):
         """
         Handle opening links.
 
+        We don't need to handle local anchor links as the WikiWidget does that.
+
         Args:
             url: The URL or file path to open
         """
         try:
-            # If url starts with #, it's a local anchor
-            if url.startswith("#"):
-                anchor = url[1:]
-                self.scroll_to_anchor(anchor)
-                return
-
             # Try to resolve the link path
             resolved_path = self._wiki_manager.resolve_link(self._path, url)
             if resolved_path is not None:
-                # It's a local file link - open in wiki tab
+                # It's a local mindspace link - open in wiki tab
                 self.open_wiki_path.emit(resolved_path)
                 return
 

@@ -1293,7 +1293,5 @@ class MainWindow(QMainWindow):
 
     def _process_wiki_command(self, path: str) -> bool:
         """Process the wiki command."""
-        self._column_manager.protect_current_tab(True)
-        self._column_manager.open_wiki(path)
-        self._column_manager.protect_current_tab(False)
+        self._column_manager.open_wiki_link(path)
         return True
