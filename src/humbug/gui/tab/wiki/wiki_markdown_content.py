@@ -11,13 +11,13 @@ from PySide6.QtGui import QColor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.wiki.wiki_content_section import WikiContentSection
+from humbug.gui.tab.wiki.wiki_markdown_content_section import WikiMarkdownContentSection
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_converter import MarkdownConverter
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
-class WikiContent(QFrame):
+class WikiMarkdownContent(QFrame):
     """Widget for displaying a content block in the wiki with sections."""
 
     selectionChanged = Signal(bool)
@@ -36,7 +36,7 @@ class WikiContent(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
-        self._logger = logging.getLogger("WikiContent")
+        self._logger = logging.getLogger("WikiMarkdownContent")
         self._content = ""
 
         self._language_manager = LanguageManager()
@@ -59,8 +59,8 @@ class WikiContent(QFrame):
         self._layout.addWidget(self._sections_container)
 
         # Track sections
-        self._sections: List[WikiContentSection] = []
-        self._section_with_selection: WikiContentSection | None = None
+        self._sections: List[WikiMarkdownContentSection] = []
+        self._section_with_selection: WikiMarkdownContentSection | None = None
 
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
@@ -72,7 +72,7 @@ class WikiContent(QFrame):
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
 
-    def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> WikiContentSection:
+    def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> WikiMarkdownContentSection:
         """
         Create a new section widget.
 
@@ -80,10 +80,10 @@ class WikiContent(QFrame):
             language: Optional programming language for the section
 
         Returns:
-            A new WikiContentSection instance
+            A new WikiMarkdownContentSection instance
         """
         is_input = False  # Wiki sections are never input
-        section = WikiContentSection(is_input, language, self._sections_container)
+        section = WikiMarkdownContentSection(is_input, language, self._sections_container)
         section.selectionChanged.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
@@ -106,7 +106,7 @@ class WikiContent(QFrame):
         # Forward the signal with the URL
         self.linkClicked.emit(url)
 
-    def _handle_section_selection_changed(self, section: WikiContentSection, has_selection: bool) -> None:
+    def _handle_section_selection_changed(self, section: WikiMarkdownContentSection, has_selection: bool) -> None:
         """
         Handle selection changes in a section widget.
 
@@ -280,7 +280,7 @@ class WikiContent(QFrame):
             return
 
         # Group matches by section
-        section_matches: Dict[WikiContentSection, List[Tuple[int, int, int]]] = {}
+        section_matches: Dict[WikiMarkdownContentSection, List[Tuple[int, int, int]]] = {}
         for section in self._sections:
             section_matches[section] = []
 

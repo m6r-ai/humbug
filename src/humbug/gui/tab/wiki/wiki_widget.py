@@ -13,7 +13,7 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.wiki.wiki_content import WikiContent
+from humbug.gui.tab.wiki.wiki_markdown_content import WikiMarkdownContent
 from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_wiki import MindspaceWiki
@@ -93,8 +93,8 @@ class WikiWidget(QWidget):
         self._mindspace_wiki = MindspaceWiki()
 
         # Widget tracking
-        self._content_blocks: List[WikiContent] = []
-        self._content_with_selection: WikiContent | None = None
+        self._content_blocks: List[WikiMarkdownContent] = []
+        self._content_with_selection: WikiMarkdownContent | None = None
 
         # Initialize tracking variables
         self._auto_scroll = True
@@ -130,7 +130,7 @@ class WikiWidget(QWidget):
         content_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[WikiContent, List[Tuple[int, int, int]]] = {}
+        self._search_highlights: Dict[WikiMarkdownContent, List[Tuple[int, int, int]]] = {}
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -160,11 +160,11 @@ class WikiWidget(QWidget):
         self._handle_style_changed()
 
         # Find functionality
-        self._matches: List[Tuple[WikiContent, List[Tuple[int, int, int]]]] = []
+        self._matches: List[Tuple[WikiMarkdownContent, List[Tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
-        self._highlighted_widgets: Set[WikiContent] = set()
+        self._highlighted_widgets: Set[WikiMarkdownContent] = set()
 
         # Set up activation tracking
         self._event_filter = WikiWidgetEventFilter(self)
@@ -176,7 +176,7 @@ class WikiWidget(QWidget):
         # Update status if needed
         self.status_updated.emit()
 
-    def _add_content_block(self, content: str) -> WikiContent:
+    def _add_content_block(self, content: str) -> WikiMarkdownContent:
         """
         Add a new content block to the wiki view.
 
@@ -184,9 +184,9 @@ class WikiWidget(QWidget):
             content: The content text
 
         Returns:
-            The created WikiContent widget
+            The created WikiMarkdownContent widget
         """
-        content_widget = WikiContent(self)
+        content_widget = WikiMarkdownContent(self)
         content_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(content_widget, has_selection)
         )
@@ -431,7 +431,7 @@ class WikiWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
-    def _handle_selection_changed(self, content_widget: WikiContent, has_selection: bool) -> None:
+    def _handle_selection_changed(self, content_widget: WikiMarkdownContent, has_selection: bool) -> None:
         """Handle selection changes in content widgets."""
         if not has_selection:
             if self._content_with_selection:
@@ -675,7 +675,7 @@ class WikiWidget(QWidget):
         # Trigger scrolling to this position
         self.handle_find_scroll(widget, section_num, start)
 
-    def handle_find_scroll(self, widget: WikiContent, section_num: int, position: int) -> None:
+    def handle_find_scroll(self, widget: WikiMarkdownContent, section_num: int, position: int) -> None:
         """
         Handle scroll requests from find operations.
 

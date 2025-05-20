@@ -25,7 +25,7 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
-class WikiContentSection(QFrame):
+class WikiMarkdownContentSection(QFrame):
     """Widget for displaying a section of wiki content with markdown support."""
 
     selectionChanged = Signal(bool)
@@ -51,7 +51,7 @@ class WikiContentSection(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
-        self._logger = logging.getLogger("WikiContentSection")
+        self._logger = logging.getLogger("WikiMarkdownContentSection")
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
