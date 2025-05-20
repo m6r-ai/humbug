@@ -13,7 +13,6 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.wiki.wiki_content import WikiContent
 from humbug.gui.tab.wiki.wiki_markdown_content import WikiMarkdownContent
-from humbug.language.language_manager import LanguageManager
 
 
 class WikiMarkdownPreviewContent(WikiContent):
@@ -30,31 +29,11 @@ class WikiMarkdownPreviewContent(WikiContent):
         self._logger = logging.getLogger("WikiMarkdownPreviewContent")
         self._content = ""
 
-        self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
-
         self._style_manager = StyleManager()
 
         # Create layout
         spacing = int(self._style_manager.message_bubble_spacing())
         self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
-
-        # Create header container with preview label
-        self._header_container = QWidget()
-        self._header_layout = QHBoxLayout(self._header_container)
-        self._header_layout.setContentsMargins(0, 0, 0, 0)
-        self._header_layout.setSpacing(4)
-
-        # Add preview label
-        self._preview_label = QLabel()
-        self._preview_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._header_layout.addWidget(self._preview_label)
-
-        # Add stretch to fill remaining space
-        self._header_layout.addStretch()
-
-        # Add header container to main layout
-        self._layout.addWidget(self._header_container)
 
         # Create the actual markdown content widget
         self._markdown_content = WikiMarkdownContent(self)
@@ -65,14 +44,8 @@ class WikiMarkdownPreviewContent(WikiContent):
         self._layout.addWidget(self._markdown_content)
 
         self._path = None
-        self._handle_language_changed()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
-
-    def _handle_language_changed(self) -> None:
-        """Update text when language changes."""
-        strings = self._language_manager.strings()
-        self._preview_label.setText("Markdown Preview")
 
     def set_content(self, text: str, path: str | None) -> None:
         """
@@ -249,26 +222,5 @@ class WikiMarkdownPreviewContent(WikiContent):
                 margin: 0;
                 border-radius: {int(self._style_manager.message_bubble_spacing())}px;
                 border: 0;
-            }}
-        """)
-
-        # Style the header container
-        self._header_container.setStyleSheet(f"""
-            QWidget {{
-                background-color: {background_color};
-                margin: 0;
-                padding: 0;
-            }}
-        """)
-
-        # Style the preview label
-        label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
-        self._preview_label.setFont(font)
-        self._preview_label.setStyleSheet(f"""
-            QLabel {{
-                color: {label_color};
-                background-color: {background_color};
-                margin: 0;
-                padding: 0;
             }}
         """)
