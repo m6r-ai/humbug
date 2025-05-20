@@ -10,8 +10,7 @@ By making prompt creation a repeatable engineering process it's easy to try new 
 want.  If you don't like something, you can make adjustments to your Metaphor scripts and try again.  If you want to
 see if a different AI models will give you better results you can do that too!
 
-Read 
-[Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) to find out more.
+Read [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) to find out more.
 
 While Metaphor is designed to help start your conversations with AI, and Humbug is the tool designed to get the most out of
 those conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into
