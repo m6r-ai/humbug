@@ -2,8 +2,7 @@
 
 import logging
 import os
-from datetime import datetime
-from typing import Tuple, Optional
+from typing import List, Optional
 
 from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -24,7 +23,7 @@ class MindspaceWiki:
         self._logger = logging.getLogger("MindspaceWiki")
         self._mindspace_manager = MindspaceManager()
 
-    def get_wiki_content(self, path: str) -> Tuple[str, datetime]:
+    def get_wiki_content(self, path: str) -> List[str]:
         """
         Get wiki content for a path, generating it dynamically based on file type.
 
@@ -42,8 +41,6 @@ class MindspaceWiki:
             if not os.path.exists(path):
                 raise WikiIOError(f"Path does not exist: {path}")
 
-            timestamp = datetime.fromtimestamp(os.path.getmtime(path))
-
             if os.path.isdir(path):
                 # Generate directory listing
                 content = self._generate_directory_content(path)
@@ -52,12 +49,12 @@ class MindspaceWiki:
                 # Source code or other file
                 content = self._generate_file_content(path)
 
-            return content, timestamp
+            return content
 
         except Exception as e:
             raise WikiIOError(f"Failed to read wiki content: {str(e)}") from e
 
-    def _generate_directory_content(self, directory_path: str) -> str:
+    def _generate_directory_content(self, directory_path: str) -> List[str]:
         """
         Generate wiki content for a directory.
 
@@ -111,13 +108,13 @@ class MindspaceWiki:
                     full_path = os.path.join(directory_path, f)
                     lines.append(f"- [{f}]({full_path})")
 
-            return "\n".join(lines)
+            return ["\n".join(lines)]
 
         except Exception as e:
             self._logger.error("Error generating directory content: %s", str(e))
             return f"# Error\n\nFailed to generate directory content: {str(e)}"
 
-    def _generate_file_content(self, file_path: str) -> str:
+    def _generate_file_content(self, file_path: str) -> List[str]:
         """
         Generate wiki content for a file.
 
@@ -144,6 +141,8 @@ class MindspaceWiki:
             with open(file_path, 'r', encoding='utf-8') as f:
                 file_content = f.read()
 
+            contents: List[str] = []
+
             # Generate markdown
             lines = [
                 f"# {file_name}",
@@ -151,6 +150,7 @@ class MindspaceWiki:
                 f"Path: `{rel_path}`",
                 ""
             ]
+            contents.append("\n".join(lines))
 
             if file_path.lower().endswith(".md"):
                 # Regular markdown file
@@ -164,8 +164,7 @@ class MindspaceWiki:
                     md_content,
                     "---"
                 ]
-
-                lines += md_lines
+                contents.append("\n".join(md_lines))
 
 
             source_lines = [
@@ -174,10 +173,9 @@ class MindspaceWiki:
                 file_content,
                 "```"
             ]
+            contents.append("\n".join(source_lines))
 
-            lines += source_lines
-
-            return "\n".join(lines)
+            return contents
 
         except Exception as e:
             self._logger.error("Error generating file content: %s", str(e))

@@ -176,7 +176,7 @@ class WikiWidget(QWidget):
         # Update status if needed
         self.status_updated.emit()
 
-    def add_content_block(self, content: str) -> WikiContent:
+    def _add_content_block(self, content: str) -> WikiContent:
         """
         Add a new content block to the wiki view.
 
@@ -268,16 +268,17 @@ class WikiWidget(QWidget):
         """
 
     def load_content(self) -> None:
-        """Load content from the wiki file."""
+        """Load content from the mindspace wiki."""
         try:
             # Use MindspaceWiki to get content
-            content, _ = self._mindspace_wiki.get_wiki_content(self._path)
+            contents = self._mindspace_wiki.get_wiki_content(self._path)
 
             # Clear existing content blocks
             self.clear_content()
 
             # Add content blocks
-            self.add_content_block(content)
+            for content in contents:
+                self._add_content_block(content)
 
             # Ensure we're scrolled to the top
             self._auto_scroll = True
