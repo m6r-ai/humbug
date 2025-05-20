@@ -16,7 +16,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.wiki.wiki_markdown_content import WikiMarkdownContent
 from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_wiki import MindspaceWiki
+from humbug.mindspace.mindspace_wiki import MindspaceWiki, MindspaceWikiContentType
 
 
 class WikiWidgetEventFilter(QObject):
@@ -176,7 +176,7 @@ class WikiWidget(QWidget):
         # Update status if needed
         self.status_updated.emit()
 
-    def _add_content_block(self, content: str) -> WikiMarkdownContent:
+    def _add_content_block(self, content_type: MindspaceWikiContentType, content: str) -> WikiMarkdownContent:
         """
         Add a new content block to the wiki view.
 
@@ -277,8 +277,8 @@ class WikiWidget(QWidget):
             self.clear_content()
 
             # Add content blocks
-            for content in contents:
-                self._add_content_block(content)
+            for content_type, content in contents:
+                self._add_content_block(content_type, content)
 
             # Ensure we're scrolled to the top
             self._auto_scroll = True

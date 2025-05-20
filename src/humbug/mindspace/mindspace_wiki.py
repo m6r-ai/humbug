@@ -1,13 +1,20 @@
 """Mindspace wiki functionality."""
 
+from enum import Enum, auto
 import logging
 import os
-from typing import List, Optional
+from typing import List, Tuple
 
 from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
+
+
+class MindspaceWikiContentType(Enum):
+    """Enum for wiki content types."""
+    MARKDOWN = auto()       # Standard markdown text
+    FILE = auto()           # File content (e.g., source code)
 
 
 class MindspaceWiki:
@@ -23,7 +30,7 @@ class MindspaceWiki:
         self._logger = logging.getLogger("MindspaceWiki")
         self._mindspace_manager = MindspaceManager()
 
-    def get_wiki_content(self, path: str) -> List[str]:
+    def get_wiki_content(self, path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
         """
         Get wiki content for a path, generating it dynamically based on file type.
 
@@ -108,7 +115,7 @@ class MindspaceWiki:
                     full_path = os.path.join(directory_path, f)
                     lines.append(f"- [{f}]({full_path})")
 
-            return ["\n".join(lines)]
+            return [(MindspaceWikiContentType.MARKDOWN, "\n".join(lines))]
 
         except Exception as e:
             self._logger.error("Error generating directory content: %s", str(e))
@@ -141,7 +148,7 @@ class MindspaceWiki:
             with open(file_path, 'r', encoding='utf-8') as f:
                 file_content = f.read()
 
-            contents: List[str] = []
+            contents: List[Tuple[MindspaceWikiContentType, str]] = []
 
             # Generate markdown
             lines = [
@@ -150,7 +157,7 @@ class MindspaceWiki:
                 f"Path: `{rel_path}`",
                 ""
             ]
-            contents.append("\n".join(lines))
+            contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
             if file_path.lower().endswith(".md"):
                 # Regular markdown file
@@ -164,7 +171,7 @@ class MindspaceWiki:
                     md_content,
                     "---"
                 ]
-                contents.append("\n".join(md_lines))
+                contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
 
 
             source_lines = [
@@ -173,7 +180,7 @@ class MindspaceWiki:
                 file_content,
                 "```"
             ]
-            contents.append("\n".join(source_lines))
+            contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(source_lines)))
 
             return contents
 
@@ -181,7 +188,7 @@ class MindspaceWiki:
             self._logger.error("Error generating file content: %s", str(e))
             return f"# Error\n\nFailed to generate content for {file_path}: {str(e)}"
 
-    def resolve_link(self, current_path: str, target_path: str) -> Optional[str]:
+    def resolve_link(self, current_path: str, target_path: str) -> str | None:
         """
         Resolve a link path to an absolute path.
 
