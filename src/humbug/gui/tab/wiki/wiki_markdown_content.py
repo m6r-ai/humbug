@@ -20,16 +20,18 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 class WikiMarkdownContent(WikiContent):
     """Widget for displaying markdown content in the wiki with sections."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, contained: bool = False) -> None:
         """
         Initialize the markdown content widget.
 
         Args:
             parent: Optional parent widget
+            contained: Whether this content is contained within another widget
         """
         super().__init__(parent)
         self._logger = logging.getLogger("WikiMarkdownContent")
         self._content = ""
+        self._contained = contained
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -130,8 +132,14 @@ class WikiMarkdownContent(WikiContent):
                 self._sections_layout.addWidget(section)
 
                 text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-                background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-                tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
+                if self._contained:
+                    tab_background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+                    background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
+
+                else:
+                    tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
+                    background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+
                 color = (
                     tab_background_color if language is None else background_color
                 )
@@ -192,10 +200,21 @@ class WikiMarkdownContent(WikiContent):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
-        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+        if self._contained:
+            tab_background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+            background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
+
+        else:
+            tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
+            background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
 
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {tab_background_color};
+            }}
+        """)
         # Apply styling to all sections
         for section in self._sections:
             language = section.language()

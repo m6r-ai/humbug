@@ -3,10 +3,8 @@
 import logging
 from typing import List, Tuple, Callable
 
-from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QLabel
-)
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor
 
 from humbug.gui.color_role import ColorRole
@@ -36,7 +34,7 @@ class WikiMarkdownPreviewContent(WikiContent):
         self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         # Create the actual markdown content widget
-        self._markdown_content = WikiMarkdownContent(self)
+        self._markdown_content = WikiMarkdownContent(self, True)
         self._markdown_content.selectionChanged.connect(self.selectionChanged)
         self._markdown_content.scrollRequested.connect(self.scrollRequested)
         self._markdown_content.mouseReleased.connect(self.mouseReleased)
