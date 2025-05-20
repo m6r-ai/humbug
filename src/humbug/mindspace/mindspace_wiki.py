@@ -3,7 +3,7 @@
 from enum import Enum, auto
 import logging
 import os
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -59,7 +59,7 @@ class MindspaceWiki:
         except Exception as e:
             raise WikiIOError(f"Failed to read wiki content: {str(e)}") from e
 
-    def _generate_directory_content(self, directory_path: str) -> List[str]:
+    def _generate_directory_content(self, directory_path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
         """
         Generate wiki content for a directory.
 
@@ -71,7 +71,7 @@ class MindspaceWiki:
         """
         try:
             rel_path = self._mindspace_manager.make_relative_path(directory_path)
-            dir_name = os.path.basename(rel_path)
+            dir_name = os.path.basename(cast(str, rel_path))
             entries = os.listdir(directory_path)
 
             # Start with a heading
@@ -103,6 +103,7 @@ class MindspaceWiki:
                 for d in dirs:
                     full_path = os.path.join(directory_path, d)
                     lines.append(f"- [{d}]({full_path})")
+
                 lines.append("")
 
             # Add files
@@ -117,9 +118,9 @@ class MindspaceWiki:
 
         except Exception as e:
             self._logger.error("Error generating directory content: %s", str(e))
-            return f"# Error\n\nFailed to generate directory content: {str(e)}"
+            return [(MindspaceWikiContentType.MARKDOWN, f"# Error\n\nFailed to generate directory content: {str(e)}")]
 
-    def _generate_file_content(self, file_path: str) -> List[str]:
+    def _generate_file_content(self, file_path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
         """
         Generate wiki content for a file.
 
@@ -176,7 +177,7 @@ class MindspaceWiki:
 
         except Exception as e:
             self._logger.error("Error generating file content: %s", str(e))
-            return f"# Error\n\nFailed to generate content for {file_path}: {str(e)}"
+            return [(MindspaceWikiContentType.MARKDOWN, f"# Error\n\nFailed to generate content for {file_path}: {str(e)}")]
 
     def resolve_link(self, current_path: str, target_path: str) -> str | None:
         """

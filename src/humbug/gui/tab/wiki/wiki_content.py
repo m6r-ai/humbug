@@ -1,7 +1,7 @@
 """Base class for all wiki content types."""
 
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Callable
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
 from PySide6.QtCore import Signal, QPoint
@@ -113,7 +113,7 @@ class WikiContent(QFrame):
         """
         return []
 
-    def find_element_by_id(self, _element_id: str) -> Optional[Tuple[int, int, int]]:
+    def find_element_by_id(self, _element_id: str) -> Tuple[int, int, int] | None:
         """
         Find an element with the given ID.
 
@@ -172,7 +172,7 @@ class WikiContent(QFrame):
         """
         return QPoint(0, 0)
 
-    def get_context_menu_actions(self) -> List[Tuple[str, callable]]:
+    def get_context_menu_actions(self) -> List[Tuple[str, Callable]]:
         """
         Get context menu actions for this content.
 
@@ -204,6 +204,15 @@ class WikiContent(QFrame):
             String identifier for the content type
         """
         return "base"
+
+    def set_content(self, _text: str, _path: str | None) -> None:
+        """
+        Set content, processing markdown.
+
+        Args:
+            text: The content text
+            path: Path to the file
+        """
 
     def get_serializable_data(self) -> dict:
         """

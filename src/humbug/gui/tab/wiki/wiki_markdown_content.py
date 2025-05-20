@@ -1,7 +1,7 @@
 """Widget for displaying a markdown content block in the wiki."""
 
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Callable
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QWidget
@@ -222,7 +222,7 @@ class WikiMarkdownContent(WikiContent):
 
         return all_matches
 
-    def find_element_by_id(self, element_id: str) -> Optional[Tuple[int, int, int]]:
+    def find_element_by_id(self, element_id: str) -> Tuple[int, int, int] | None:
         """
         Find an element with the given ID.
 
@@ -322,7 +322,7 @@ class WikiMarkdownContent(WikiContent):
 
         return QPoint(0, 0)
 
-    def get_context_menu_actions(self) -> List[Tuple[str, callable]]:
+    def get_context_menu_actions(self) -> List[Tuple[str, Callable]]:
         """
         Get context menu actions for this content.
 
