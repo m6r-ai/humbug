@@ -1,4 +1,4 @@
-# Changelog for Humbug
+# Change log for Humbug
 
 ## v0.13 (2025-05-xx)
 
