@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QWidget
 )
 from PySide6.QtCore import Signal, QPoint
-from PySide6.QtGui import QColor, QResizeEvent
+from PySide6.QtGui import QColor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -201,10 +201,6 @@ class WikiContent(QFrame):
         if self._section_with_selection:
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        """Handle resize events."""
-        super().resizeEvent(event)
 
     def _handle_style_changed(self) -> None:
         """Handle the style changing."""
