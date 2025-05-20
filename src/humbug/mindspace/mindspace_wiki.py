@@ -11,8 +11,9 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 
 class MindspaceWikiContentType(Enum):
     """Enum for wiki content types."""
-    MARKDOWN = auto()       # Standard markdown text
-    FILE = auto()           # File content (e.g., source code)
+    MARKDOWN = auto()           # Standard markdown text
+    MARKDOWN_PREVIEW = auto()   # Markdown preview
+    FILE = auto()               # File content (e.g., source code)
 
 
 class MindspaceWiki:
@@ -152,20 +153,19 @@ class MindspaceWiki:
             if file_path.lower().endswith(".md"):
                 # Regular markdown file
                 with open(file_path, 'r', encoding='utf-8') as f:
-                    md_content = f.read()
+                    file_content = f.read()
 
                 md_lines = [
-                    "## Preview",
-                    "",
-                    "---",
-                    md_content,
-                    "---"
+                    "## Preview"
                 ]
                 contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
-
+                md_lines2 = [
+                    file_content
+                ]
+                contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
 
             source_lines = [
-                "## Source",
+                "## Source"
             ]
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(source_lines)))
             source_lines2 = [
