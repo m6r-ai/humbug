@@ -1,55 +1,38 @@
-"""Widget for displaying a content block in the wiki."""
+"""Widget for displaying a markdown content block in the wiki."""
 
 import logging
 from typing import Dict, List, Tuple, Optional
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QWidget
+    QVBoxLayout, QWidget
 )
-from PySide6.QtCore import Signal, QPoint
+from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.wiki.wiki_content import WikiContent
 from humbug.gui.tab.wiki.wiki_markdown_content_section import WikiMarkdownContentSection
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_converter import MarkdownConverter
 from humbug.syntax.programming_language import ProgrammingLanguage
 
 
-class WikiMarkdownContent(QFrame):
-    """Widget for displaying a content block in the wiki with sections."""
-
-    selectionChanged = Signal(bool)
-    scrollRequested = Signal(QPoint)
-    mouseReleased = Signal()
-    linkClicked = Signal(str)
-    edit_clicked = Signal()
+class WikiMarkdownContent(WikiContent):
+    """Widget for displaying markdown content in the wiki with sections."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
-        Initialize the content widget.
+        Initialize the markdown content widget.
 
         Args:
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
-
         self._logger = logging.getLogger("WikiMarkdownContent")
         self._content = ""
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
-
-        self._style_manager = StyleManager()
-
-        # Create layout
-        self._layout = QVBoxLayout(self)
-        self.setLayout(self._layout)
-        spacing = int(self._style_manager.message_bubble_spacing())
-        self._layout.setSpacing(spacing)
-        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         # Container for content sections
         self._sections_container = QWidget(self)
@@ -339,3 +322,71 @@ class WikiMarkdownContent(QFrame):
             return section.mapTo(self, pos_in_section)
 
         return QPoint(0, 0)
+
+    def get_context_menu_actions(self) -> List[Tuple[str, callable]]:
+        """
+        Get context menu actions for this content.
+
+        Returns:
+            List of (action_name, callback) tuples
+        """
+        actions = []
+
+        # Add copy action if text is selected
+        if self.has_selection():
+            actions.append(("Copy", self.copy_selection))
+
+        # Add edit action
+        actions.append(("Edit", lambda: self.edit_clicked.emit()))
+
+        return actions
+
+    def supports_editing(self) -> bool:
+        """
+        Check if this content type supports editing.
+
+        Returns:
+            True if this content type supports editing, False otherwise
+        """
+        return True
+
+    def get_content_type(self) -> str:
+        """
+        Get the type of this content.
+
+        Returns:
+            String identifier for the content type
+        """
+        return "markdown"
+
+    def get_serializable_data(self) -> dict:
+        """
+        Get serializable data for this content.
+
+        Returns:
+            Dictionary of serializable data
+        """
+        return {
+            "type": self.get_content_type(),
+            "content": self._content
+        }
+
+    def update_from_serialized_data(self, data: dict) -> bool:
+        """
+        Update this content from serialized data.
+
+        Args:
+            data: Dictionary of serialized data
+
+        Returns:
+            True if the update was successful, False otherwise
+        """
+        if data.get("type") != self.get_content_type():
+            return False
+
+        content = data.get("content")
+        if not isinstance(content, str):
+            return False
+
+        self.set_content(content, None)
+        return True
