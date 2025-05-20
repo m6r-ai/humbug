@@ -13,6 +13,7 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
+from humbug.gui.tab.wiki.wiki_file_content import WikiFileContent
 from humbug.gui.tab.wiki.wiki_markdown_content import WikiMarkdownContent
 from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.language.language_manager import LanguageManager
@@ -186,7 +187,15 @@ class WikiWidget(QWidget):
         Returns:
             The created WikiMarkdownContent widget
         """
-        content_widget = WikiMarkdownContent(self)
+        if content_type == MindspaceWikiContentType.MARKDOWN:
+            content_widget = WikiMarkdownContent(self)
+        elif content_type == MindspaceWikiContentType.FILE:
+            content_widget = WikiFileContent(self)
+        else:
+            # Default to markdown for unknown types
+            self._logger.warning("Unknown content type: %s, defaulting to markdown", content_type)
+            content_widget = WikiMarkdownContent(self)
+
         content_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(content_widget, has_selection)
         )

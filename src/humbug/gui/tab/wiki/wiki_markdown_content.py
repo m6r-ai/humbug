@@ -72,7 +72,6 @@ class WikiMarkdownContent(WikiContent):
         )
         section.scrollRequested.connect(self.scrollRequested)
         section.mouseReleased.connect(self.mouseReleased)
-        section.edit_clicked.connect(self.edit_clicked)
 
         # Connect to the new linkClicked signal
         section.linkClicked.connect(self._handle_link_clicked)
@@ -336,9 +335,6 @@ class WikiMarkdownContent(WikiContent):
         if self.has_selection():
             actions.append(("Copy", self.copy_selection))
 
-        # Add edit action
-        actions.append(("Edit", lambda: self.edit_clicked.emit()))
-
         return actions
 
     def supports_editing(self) -> bool:
@@ -348,7 +344,7 @@ class WikiMarkdownContent(WikiContent):
         Returns:
             True if this content type supports editing, False otherwise
         """
-        return True
+        return False
 
     def get_content_type(self) -> str:
         """

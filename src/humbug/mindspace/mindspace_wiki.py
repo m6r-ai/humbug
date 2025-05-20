@@ -176,11 +176,12 @@ class MindspaceWiki:
 
             source_lines = [
                 "## Source",
-                "```" + lang_spec,
-                file_content,
-                "```"
             ]
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(source_lines)))
+            source_lines2 = [
+                file_content
+            ]
+            contents.append((MindspaceWikiContentType.FILE, "\n".join(source_lines2)))
 
             return contents
 
