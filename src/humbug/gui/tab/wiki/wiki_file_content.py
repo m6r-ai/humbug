@@ -427,6 +427,7 @@ class WikiFileContent(WikiContent):
                 background-color: {background_color};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
+                border-radius: 0;
                 padding: 0px;
             }}
             QToolButton:hover {{
