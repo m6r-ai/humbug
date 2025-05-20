@@ -1,14 +1,14 @@
 """Widget for displaying source code content in the wiki."""
 
 import logging
-from typing import Dict, List, Tuple, Optional, cast
+from typing import List, Tuple, Optional
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QWidget, QHBoxLayout, QLabel, QToolButton
 )
-from PySide6.QtCore import QPoint, Qt, QObject, QEvent, QSize
+from PySide6.QtCore import QPoint, Qt, QSize
 from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont, QIcon
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QIcon
 )
 
 from humbug.gui.color_role import ColorRole
@@ -44,14 +44,14 @@ class WikiFileContent(WikiContent):
         # Container for source content
         self._content_container = QWidget(self)
         self._content_layout = QVBoxLayout(self._content_container)
+        spacing = int(self._style_manager.message_bubble_spacing())
+        self._content_layout.setSpacing(spacing)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
-        self._content_layout.setSpacing(0)
         self._layout.addWidget(self._content_container)
+        self._layout.setSpacing(spacing)
+        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         # Create header with edit button
-        spacing = int(self._style_manager.message_bubble_spacing())
-        self._content_layout.setContentsMargins(spacing, spacing, spacing, spacing)
-
         self._header_container = QWidget()
         self._header_layout = QHBoxLayout(self._header_container)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
@@ -83,6 +83,7 @@ class WikiFileContent(WikiContent):
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
+        self._content_layout.setSpacing(spacing)
         self._content_layout.addWidget(self._text_area)
 
         # Initialize variables
@@ -163,24 +164,14 @@ class WikiFileContent(WikiContent):
         # Determine language based on file extension
         if path:
             self._language = ProgrammingLanguageUtils.from_file_extension(path)
-            self._apply_language()
+
         else:
             # Default to TEXT if no path provided
             self._language = ProgrammingLanguage.TEXT
-            self._apply_language()
 
-        # Set text content
-        self._text_area.set_text(text)
-
-    def _apply_language(self) -> None:
-        """Apply language settings based on detected file type."""
         if self._language is None:
             # Default to text if no language detected
             self._language = ProgrammingLanguage.TEXT
-
-        # Set up syntax highlighter
-        if self._highlighter:
-            self._highlighter.setDocument(None)  # Disconnect old highlighter
 
         highlighter = ConversationLanguageHighlighter(self._text_area.document())
         highlighter.set_language(self._language)
@@ -191,6 +182,8 @@ class WikiFileContent(WikiContent):
         strings = self._language_manager.strings()
         language_name = ProgrammingLanguageUtils.get_display_name(self._language)
         self._language_header.setText(strings.highlighting.format(language=language_name))
+
+        self._text_area.set_text(text)
 
     def has_selection(self) -> bool:
         """
@@ -301,7 +294,7 @@ class WikiFileContent(WikiContent):
         """Clear all highlights from the content."""
         self._text_area.setExtraSelections([])
 
-    def select_and_scroll_to_position(self, section_num: int, position: int) -> QPoint:
+    def select_and_scroll_to_position(self, _section_num: int, position: int) -> QPoint:
         """
         Select text and get position for scrolling.
 
@@ -350,7 +343,7 @@ class WikiFileContent(WikiContent):
             actions.append(("Copy", self.copy_selection))
 
         # Add edit action
-        actions.append(("Edit", lambda: self.edit_clicked.emit()))
+        actions.append(("Edit", self.edit_clicked.emit))
 
         return actions
 
@@ -362,19 +355,8 @@ class WikiFileContent(WikiContent):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        spacing = int(self._style_manager.message_bubble_spacing())
         background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-
-        # Style the main container
-        self.setStyleSheet(f"""
-            QFrame {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {spacing}px;
-                border: 0;
-            }}
-        """)
 
         # Style text area
         self._text_area.setFont(font)
@@ -465,6 +447,15 @@ class WikiFileContent(WikiContent):
         self._edit_button.setIconSize(icon_size)
         self._edit_button.setStyleSheet(button_style)
 
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
+                border: 0;
+            }}
+        """)
+
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode() != self._init_colour_mode:
             self._init_colour_mode = self._style_manager.color_mode()
@@ -523,4 +514,3 @@ class WikiFileContent(WikiContent):
 
         self.set_content(content, path)
         return True
-

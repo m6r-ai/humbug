@@ -7,8 +7,6 @@ from typing import List, Tuple
 
 from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class MindspaceWikiContentType(Enum):
@@ -134,15 +132,6 @@ class MindspaceWiki:
         try:
             rel_path = self._mindspace_manager.make_relative_path(file_path)
             file_name = os.path.basename(file_path)
-
-            # Determine language for syntax highlighting
-            language = ProgrammingLanguageUtils.from_file_extension(file_path)
-            lang_name = ProgrammingLanguageUtils.get_display_name(language).lower()
-
-            # If language is "None" (meaning TEXT), don't specify a language
-            lang_spec = lang_name
-            if language == ProgrammingLanguage.TEXT:
-                lang_spec = ""
 
             # Read file contents
             with open(file_path, 'r', encoding='utf-8') as f:

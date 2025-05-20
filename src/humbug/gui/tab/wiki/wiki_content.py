@@ -52,9 +52,8 @@ class WikiContent(QFrame):
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        spacing = int(self._style_manager.message_bubble_spacing())
-        self._layout.setSpacing(spacing)
-        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
 
     def _handle_style_changed(self) -> None:
         """

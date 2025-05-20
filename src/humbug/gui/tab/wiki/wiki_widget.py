@@ -101,6 +101,9 @@ class WikiWidget(QWidget):
         self._auto_scroll = True
         self._last_scroll_maximum = 0
 
+        self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+
         # Create layout
         content_layout = QVBoxLayout(self)
         self.setLayout(content_layout)
@@ -120,8 +123,9 @@ class WikiWidget(QWidget):
         self._content_layout = QVBoxLayout(self._content_container)
         self._content_container.setLayout(self._content_layout)
 
-        self._content_layout.setSpacing(0)
-        self._content_layout.setContentsMargins(0, 0, 0, 0)
+        spacing = int(self._style_manager.message_bubble_spacing())
+        self._content_layout.setSpacing(spacing)
+        self._content_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._content_layout.addStretch()
 
         self._content_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -156,8 +160,6 @@ class WikiWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
         # Find functionality
@@ -189,8 +191,10 @@ class WikiWidget(QWidget):
         """
         if content_type == MindspaceWikiContentType.MARKDOWN:
             content_widget = WikiMarkdownContent(self)
+
         elif content_type == MindspaceWikiContentType.FILE:
             content_widget = WikiFileContent(self)
+
         else:
             # Default to markdown for unknown types
             self._logger.warning("Unknown content type: %s, defaulting to markdown", content_type)
