@@ -1111,6 +1111,14 @@ class MarkdownParser:
                 # Reset the paragraph continuity as well
                 self._last_paragraph = None
 
+            else:
+                # If we've seen a blank line, then mark the list as having blank lines
+                if self._blank_line_count > 0:
+                    if not self._list_stack[-1].contains_blank_line:
+                        self._convert_list_items_to_paragraphs()
+
+                    self._list_stack[-1].contains_blank_line = True
+
             list_state = self._current_list_state()
             if not list_state or not list_state.last_item:
                 return False
@@ -1213,9 +1221,6 @@ class MarkdownParser:
                 self._blank_line_count = 0
                 return
 
-            # Once we're here we no longer care about blank line processing
-            self._blank_line_count = 0
-
             # Handle code blocks
             if line_type == 'code_block_start':
                 self._in_code_block = True
@@ -1223,11 +1228,13 @@ class MarkdownParser:
                 self._code_block_content = []
                 self._code_block_start_line = line_num
                 self._last_processed_line_type = line_type
+                self._blank_line_count = 0
                 return
 
             if line_type == 'code_block_content':
                 self._code_block_content.append(content)
                 self._last_processed_line_type = line_type
+                self._blank_line_count = 0
                 return
 
             if line_type == 'code_block_end':
@@ -1237,35 +1244,37 @@ class MarkdownParser:
                 # Reset list tracking and other state after a code block
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
+                self._blank_line_count = 0
                 return
 
             # Handle table-related lines
             if line_type == 'table_row':
                 self._handle_table_row(content, line_num)
                 self._last_processed_line_type = line_type
+                self._blank_line_count = 0
                 return
 
             if line_type == 'table_separator':
                 self._handle_table_separator(content, line_num)
                 self._last_processed_line_type = line_type
+                self._blank_line_count = 0
                 return
 
             # Process other line types
             if line_type == 'heading':
                 level, heading_text = content
                 self.parse_heading(level, heading_text, line_num)
-                # Reset list tracking after a heading
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
+                self._blank_line_count = 0
                 return
 
             if line_type == 'horizontal_rule':
                 horizontal_rule = self.parse_horizontal_rule(line_num)
                 self._document.add_child(horizontal_rule)
-
-                # Reset list tracking after a horizontal rule
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
+                self._blank_line_count = 0
                 return
 
             # We have text left
@@ -1277,10 +1286,9 @@ class MarkdownParser:
             # Regular paragraph
             paragraph = self.parse_text(content, line_num)
             self._last_paragraph = paragraph
-
-            # Reset list tracking after a paragraph
             self._reset_list_state()
             self._last_processed_line_type = line_type
+            self._blank_line_count = 0
 
         except Exception as e:
             self._logger.exception("Error parsing line %d: %s", line_num, line)
