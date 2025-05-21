@@ -318,6 +318,7 @@ class MainWindow(QMainWindow):
         self._file_tree.file_activated.connect(self._handle_file_activation)
         self._file_tree.file_deleted.connect(self._handle_file_deletion)
         self._file_tree.file_renamed.connect(self._handle_file_rename)
+        self._file_tree.file_edited.connect(self._open_file_path)
         self._splitter.addWidget(self._file_tree)
 
         # Create tab manager in splitter

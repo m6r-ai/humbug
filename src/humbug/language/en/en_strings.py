@@ -219,8 +219,7 @@ def get_english_strings() -> LanguageStrings:
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Rename",
         delete="Delete",
-        new="New",
-        new_folder="Folder",
+        edit="Edit",
         rename_file_title="Rename File",
         file_name="File name",
         rename_error_title="Rename Error",

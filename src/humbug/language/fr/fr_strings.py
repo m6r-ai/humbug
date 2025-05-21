@@ -219,8 +219,7 @@ def get_french_strings() -> LanguageStrings:
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Renommer",
         delete="Supprimer",
-        new="Nouveau",
-        new_folder="Dossier",
+        edit="Modifier",
         rename_file_title="Renommer le fichier",
         file_name="Nom du fichier",
         rename_error_title="Erreur de renommage",

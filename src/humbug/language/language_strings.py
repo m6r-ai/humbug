@@ -211,8 +211,7 @@ class LanguageStrings:
     # Mindspace File Tree Edit Menu Errors and Options
     rename: str
     delete: str
-    new: str
-    new_folder: str
+    edit: str
     rename_file_title: str
     file_name: str
     rename_error_title: str

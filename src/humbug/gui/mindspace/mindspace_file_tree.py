@@ -26,6 +26,7 @@ class MindspaceFileTree(QWidget):
     file_activated = Signal(str)  # Emits path when file is activated
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
+    file_edited = Signal(str)  # Emits path when file is edited
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the file tree widget."""
@@ -114,18 +115,21 @@ class MindspaceFileTree(QWidget):
             is_dir = os.path.isdir(path)
             is_conv = path.lower().endswith('.conv')
 
-            # Rename action
+            # Create actions
+            edit_action = None if is_dir or is_conv else menu.addAction(strings.edit)
             rename_action = menu.addAction(
                 strings.rename_conversation if not is_dir and is_conv else strings.rename
             )
-
-            # Delete action
-            delete_action = menu.addAction(strings.delete)
+            delete_action = None if is_dir else menu.addAction(strings.delete)
 
             # Execute the menu
             action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
             if action:
+                if action == edit_action:
+                    self._handle_edit_file(path)
+                    return
+
                 if action == rename_action:
                     if not is_dir and is_conv:
                         self._handle_rename_conversation(path)
@@ -136,6 +140,10 @@ class MindspaceFileTree(QWidget):
 
                 if action == delete_action:
                     self._handle_delete_file(path)
+
+    def _handle_edit_file(self, path: str) -> None:
+        """Edit a file."""
+        self.file_edited.emit(path)
 
     def _handle_rename_file(self, path: str) -> None:
         """Prompt user to rename a file and handle renaming."""
@@ -174,40 +182,6 @@ class MindspaceFileTree(QWidget):
                     MessageBoxType.WARNING,
                     strings.rename_error_title,
                     strings.rename_error_generic.format(str(e))
-                )
-
-    def _handle_delete_file(self, path: str) -> None:
-        """Handle request to delete a file.
-
-        Args:
-            path: Path to the file to delete
-        """
-        # Show confirmation dialog using MessageBox
-        strings = self._language_manager.strings()
-        result = MessageBox.show_message(
-            self,
-            MessageBoxType.WARNING,
-            strings.confirm_delete_title,
-            strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
-            [MessageBoxButton.YES, MessageBoxButton.NO],
-            True
-        )
-
-        if result == MessageBoxButton.YES:
-            try:
-                # First emit signal so tabs can be closed
-                self.file_deleted.emit(path)
-
-                # Then delete the file
-                os.remove(path)
-
-            except OSError as e:
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.file_error_title,
-                    strings.error_deleting_file.format(str(e)),
-                    [MessageBoxButton.OK]
                 )
 
     def _handle_rename_conversation(self, path: str) -> None:
@@ -262,6 +236,40 @@ class MindspaceFileTree(QWidget):
                 strings.error_rename_failed.format(str(e)),
                 [MessageBoxButton.OK]
             )
+
+    def _handle_delete_file(self, path: str) -> None:
+        """Handle request to delete a file.
+
+        Args:
+            path: Path to the file to delete
+        """
+        # Show confirmation dialog using MessageBox
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.WARNING,
+            strings.confirm_delete_title,
+            strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            True
+        )
+
+        if result == MessageBoxButton.YES:
+            try:
+                # First emit signal so tabs can be closed
+                self.file_deleted.emit(path)
+
+                # Then delete the file
+                os.remove(path)
+
+            except OSError as e:
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.file_error_title,
+                    strings.error_deleting_file.format(str(e)),
+                    [MessageBoxButton.OK]
+                )
 
     def set_mindspace(self, path: str) -> None:
         """Set the mindspace root directory."""

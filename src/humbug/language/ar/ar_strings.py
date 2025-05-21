@@ -219,8 +219,7 @@ def get_arabic_strings() -> LanguageStrings:
         # Mindspace File Tree Edit Menu Errors and Options
         rename="إعادة التسمية",
         delete="حذف",
-        new="جديد",
-        new_folder="مجلد",
+        edit="تحرير",
         rename_file_title="إعادة تسمية الملف",
         file_name="اسم الملف",
         rename_error_title="خطأ في إعادة التسمية",
