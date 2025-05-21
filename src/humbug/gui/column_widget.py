@@ -33,14 +33,14 @@ class ColumnWidget(QTabWidget):
         self.installEventFilter(self)
         tab_bar.installEventFilter(self)
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Handle window activation and mouse events to detect active column."""
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Emit activation on mouse press or focus
             self.column_activated.emit(self)
             return False  # Don't consume the event
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(watched, event)
 
     def addTab(self, widget: QWidget, *args: Any, **kwargs: Any) -> int:
         """Override addTab to install event filter on new tabs."""
