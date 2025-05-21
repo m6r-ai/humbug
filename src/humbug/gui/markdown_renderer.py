@@ -126,6 +126,10 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # We're in a normal paragraph, so format it normally
         block_format = QTextBlockFormat(orig_block_format)
 
+        # If the previous sibling is a list, we need to add a top margin
+        previous_sibling = node.previous_sibling()
+        if previous_sibling and isinstance(previous_sibling, (MarkdownOrderedListNode, MarkdownUnorderedListNode)):
+            block_format.setTopMargin(self._default_font_height)
 
         # If the next sibling is a horizontal rule, we don't need a bottom margin
         next_sibling = node.next_sibling()
@@ -446,6 +450,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 #            max_width = 800  # Maximum width for displayed images
 #            if image.width() > max_width:
 #                image = image.scaledToWidth(max_width, Qt.TransformationMode.SmoothTransformation)
+# TODO: HANDLE IMAGE SCALING
 
             return image, True
 
@@ -576,7 +581,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
             self._cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
 
         block_format = self._cursor.blockFormat()
-        block_format.setBottomMargin(self._default_font_height)
+        block_format.setBottomMargin(0)
         self._cursor.setBlockFormat(block_format)
 
         if at_block_start:
@@ -681,6 +686,11 @@ class MarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
+        # If our next line is a list item, we don't need a line break
+        next_sibling = _node.next_sibling()
+        if next_sibling and isinstance(next_sibling, MarkdownOrderedListNode | MarkdownUnorderedListNode):
+            return
+
         # Insert line break character
         self._cursor.insertText("\u2028")
 
