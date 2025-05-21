@@ -103,7 +103,7 @@ class MarkdownParser:
         self._table_separator_pattern = re.compile(r'^(\|[\s:-]+\|)$', re.MULTILINE)
         self._horizontal_rule_pattern = re.compile(r'^(?:\s*(?:[-*_])\s*){3,}$')
 
-        self._logger = logging.getLogger("ASTBuilder")
+        self._logger = logging.getLogger("MarkdownParser")
 
         # Initialize an empty document
         self._document = MarkdownDocumentNode()
@@ -159,13 +159,13 @@ class MarkdownParser:
             None
         """
         # Handle code block state
-        stripped_line = line.lstrip()
-        indent = len(line) - len(stripped_line)
+        lstripped_line = line.lstrip()
+        indent = len(line) - len(lstripped_line)
 
         if self._in_code_block:
             # Check for code fence.  If we have one then we're either closing
             # this block or nesting another.
-            code_block_match = self._code_block_pattern.match(stripped_line)
+            code_block_match = self._code_block_pattern.match(lstripped_line)
             if code_block_match:
                 language = code_block_match.group(1)
                 if language is not None or indent > self._code_block_indents[-1]:
@@ -181,14 +181,15 @@ class MarkdownParser:
             return 'code_block_content', line
 
         # Check for code block start
-        code_block_match = self._code_block_pattern.match(stripped_line)
+        code_block_match = self._code_block_pattern.match(lstripped_line)
         if code_block_match:
             language = code_block_match.group(1) or ""
             self._code_block_nesting_level = 1
             self._code_block_indents.append(indent)
             return 'code_block_start', language
 
-        if not line.strip():
+        stripped_line = line.strip()
+        if not stripped_line:
             return 'blank', None
 
         # Check for heading
@@ -199,13 +200,13 @@ class MarkdownParser:
             return 'heading', (level, content)
 
         # Check for table separator row
-        if line.strip().startswith('|') and line.strip().endswith('|'):
+        if stripped_line.startswith('|') and stripped_line.endswith('|'):
             # Check if it's a separator row with at least one colon or dash
             if '-' in line and (':-' in line or '-:' in line or '--' in line):
-                return 'table_separator', line.strip()
+                return 'table_separator', stripped_line
 
             # Regular table row
-            return 'table_row', line.strip()
+            return 'table_row', stripped_line
 
         # Check for unordered list item
         unordered_match = self._unordered_list_pattern.match(line)
@@ -1136,7 +1137,10 @@ class MarkdownParser:
                 if isinstance(last_item.children[-1], MarkdownParagraphNode):
                     last_item = last_item.children[-1]
 
-                last_item.add_child(MarkdownTextNode(" "))
+                # If we weren't just preceded by a line break then add a space
+                if not isinstance(last_item.children[-1], MarkdownLineBreakNode):
+                    last_item.add_child(MarkdownTextNode(" "))
+
                 for node in self.parse_inline_formatting(formatted_text):
                     last_item.add_child(node)
 
