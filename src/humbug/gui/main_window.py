@@ -794,7 +794,7 @@ class MainWindow(QMainWindow):
             self._open_conversation_path(path)
             return
 
-        self._open_file_path(path)
+        self._column_manager.open_wiki_page(path)
 
     def _handle_file_deletion(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.

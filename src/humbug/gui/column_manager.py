@@ -73,7 +73,7 @@ class ColumnManager(QWidget):
 
         # Create welcome widget
         self._welcome_widget = WelcomeWidget()
-        self._welcome_widget.file_dropped.connect(self._handle_welcome_file_drop)
+        self._welcome_widget.path_dropped.connect(self._handle_welcome_tree_drop)
         self._stack.addWidget(self._welcome_widget)
 
         # Create widget to hold columns
@@ -196,8 +196,8 @@ class ColumnManager(QWidget):
         tab_data = self._create_tab_data(new_tab, tab_title)
         self._add_tab_to_column(tab_data, target_column)
 
-    def _handle_welcome_file_drop(self, file_path: str) -> None:
-        """Handle file drops when only welcome widget is visible."""
+    def _handle_welcome_tree_drop(self, path: str) -> None:
+        """Handle mindspace tree drops when only welcome widget is visible."""
         # Create first column if it doesn't exist
         if not self._tab_columns:
             self._create_column(0)
@@ -206,14 +206,15 @@ class ColumnManager(QWidget):
         self._active_column = self._tab_columns[0]
 
         # Handle the file drop
-        ext = os.path.splitext(file_path)[1].lower()
+        ext = os.path.splitext(path)[1].lower()
         if ext == '.conv':
-            conversation_tab = self.open_conversation(file_path)
+            conversation_tab = self.open_conversation(path)
             if conversation_tab:
                 self._stack.setCurrentWidget(self._columns_widget)
+
         else:
-            editor_tab = self.open_file(file_path)
-            if editor_tab:
+            wiki_tab = self.open_wiki_page(path)
+            if wiki_tab:
                 self._stack.setCurrentWidget(self._columns_widget)
 
     def _handle_splitter_moved(self, _pos: int, _index: int) -> None:
@@ -280,17 +281,17 @@ class ColumnManager(QWidget):
         # Update active states
         self._update_tabs()
 
-    def _handle_file_drop(self, file_path: str, target_column: ColumnWidget, target_index: int) -> None:
+    def _handle_path_drop(self, path: str, target_column: ColumnWidget, target_index: int) -> None:
         """
         Handle a file being dropped into a column.
 
         Args:
-            file_path: Path to the dropped file
+            path: Path dropped
             target_column: Column where the file was dropped
             target_index: Target position in the column
         """
         # Check file extension
-        ext = os.path.splitext(file_path)[1].lower()
+        ext = os.path.splitext(path)[1].lower()
 
         # Set the target column as active
         self._active_column = target_column
@@ -298,23 +299,23 @@ class ColumnManager(QWidget):
         try:
             if ext == '.conv':
                 # Open conversation file
-                conversation_tab = self.open_conversation(file_path)
+                conversation_tab = self.open_conversation(path)
                 if conversation_tab:
                     # Move the tab to the target position if not already there
                     current_index = target_column.indexOf(conversation_tab)
                     if current_index != target_index:
                         target_column.tabBar().moveTab(current_index, target_index)
+
             else:
-                # Open regular file
-                editor_tab = self.open_file(file_path)
-                if editor_tab:
+                wiki_tab = self.open_wiki_page(path)
+                if wiki_tab:
                     # Move the tab to the target position if not already there
-                    current_index = target_column.indexOf(editor_tab)
+                    current_index = target_column.indexOf(wiki_tab)
                     if current_index != target_index:
                         target_column.tabBar().moveTab(current_index, target_index)
 
         except (ConversationError, OSError) as e:
-            self._logger.exception("Failed to open dropped file '%s': %s", file_path, str(e))
+            self._logger.exception("Failed to open dropped file '%s': %s", path, str(e))
 
     def handle_file_rename(self, old_path: str, new_path: str) -> None:
         """Handle renaming of files by updating any open tabs.
@@ -357,7 +358,7 @@ class ColumnManager(QWidget):
         tab_widget.currentChanged.connect(self._handle_tab_changed)
         tab_widget.column_activated.connect(self._handle_column_activated)
         tab_widget.tab_drop.connect(self._handle_tab_drop)
-        tab_widget.file_drop.connect(self._handle_file_drop)
+        tab_widget.path_drop.connect(self._handle_path_drop)
 
         self._column_splitter.insertWidget(index, tab_widget)
         self._tab_columns.insert(index, tab_widget)

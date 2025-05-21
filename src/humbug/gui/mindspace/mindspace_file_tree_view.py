@@ -1,6 +1,5 @@
 """File tree view implementation for mindspace files."""
 
-import os
 from typing import cast
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
@@ -66,13 +65,9 @@ class MindspaceFileTreeView(QTreeView):
         if not drag_index.isValid():
             return
 
-        # Only allow dragging files, not directories
-        if os.path.isdir(path):
-            return
-
-        # Create mime data with file path
+        # Create mime data with path
         mime_data = QMimeData()
-        mime_data.setData("application/x-humbug-file", path.encode())
+        mime_data.setData("application/x-humbug-path", path.encode())
 
         # Create drag object
         drag = QDrag(self)

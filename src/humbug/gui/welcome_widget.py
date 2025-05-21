@@ -11,7 +11,7 @@ from humbug.gui.style_manager import StyleManager
 
 class WelcomeWidget(QFrame):
     """Widget showing welcome message when no tabs are open."""
-    file_dropped = Signal(str)
+    path_dropped = Signal(str)
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize welcome widget."""
@@ -53,7 +53,7 @@ class WelcomeWidget(QFrame):
         Args:
             event: The drag enter event
         """
-        if event.mimeData().hasFormat("application/x-humbug-file"):
+        if event.mimeData().hasFormat("application/x-humbug-path"):
             event.acceptProposedAction()
             return
 
@@ -67,17 +67,17 @@ class WelcomeWidget(QFrame):
             event: The drop event
 
         Raises:
-            UnicodeDecodeError: If the file path data cannot be decoded as UTF-8
+            UnicodeDecodeError: If the path data cannot be decoded as UTF-8
         """
-        if event.mimeData().hasFormat("application/x-humbug-file"):
-            mime_data = event.mimeData().data("application/x-humbug-file").data()
+        if event.mimeData().hasFormat("application/x-humbug-path"):
+            mime_data = event.mimeData().data("application/x-humbug-path").data()
 
             # Convert to bytes first if it's not already bytes
             if not isinstance(mime_data, bytes):
                 mime_data = bytes(mime_data)
 
-            file_path = mime_data.decode()
-            self.file_dropped.emit(file_path)
+            path = mime_data.decode()
+            self.path_dropped.emit(path)
             event.acceptProposedAction()
             return
 

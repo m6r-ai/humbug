@@ -12,7 +12,7 @@ class ColumnWidget(QTabWidget):
 
     column_activated = Signal(QTabWidget)
     tab_drop = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
-    file_drop = Signal(str, QTabWidget, int)  # file_path, target_column, target_index
+    path_drop = Signal(str, QTabWidget, int)  # path, target_column, target_index
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab widget."""
@@ -71,7 +71,7 @@ class ColumnWidget(QTabWidget):
             event.acceptProposedAction()
             return
 
-        if event.mimeData().hasFormat("application/x-humbug-file"):
+        if event.mimeData().hasFormat("application/x-humbug-path"):
             event.acceptProposedAction()
             return
 
@@ -88,7 +88,7 @@ class ColumnWidget(QTabWidget):
             None
         """
         if (event.mimeData().hasFormat("application/x-humbug-tab") or
-                event.mimeData().hasFormat("application/x-humbug-file")):
+                event.mimeData().hasFormat("application/x-humbug-path")):
             event.acceptProposedAction()
 
             # Map cursor position to the tab bar to find insertion position
@@ -132,15 +132,15 @@ class ColumnWidget(QTabWidget):
             event.acceptProposedAction()
             return
 
-        if event.mimeData().hasFormat("application/x-humbug-file"):
-            # Extract file path from mime data
-            mime_data = event.mimeData().data("application/x-humbug-file").data()
+        if event.mimeData().hasFormat("application/x-humbug-path"):
+            # Extract path from mime data
+            mime_data = event.mimeData().data("application/x-humbug-path").data()
 
             # Convert to bytes first if it's not already bytes
             if not isinstance(mime_data, bytes):
                 mime_data = bytes(mime_data)
 
-            file_path = mime_data.decode()
+            path = mime_data.decode()
 
             # Map the drop position to the tab bar
             pos = self.tabBar().mapFromParent(event.pos())
@@ -150,8 +150,8 @@ class ColumnWidget(QTabWidget):
             if target_index == -1:
                 target_index = self.count()
 
-            # Emit signal with file info for tab manager to handle
-            self.file_drop.emit(file_path, self, target_index)
+            # Emit signal with path info for column manager to handle
+            self.path_drop.emit(path, self, target_index)
             event.acceptProposedAction()
             return
 
