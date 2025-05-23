@@ -10,7 +10,7 @@ from typing import Any
 from humbug.ast.ast import ASTNode, ASTVisitor
 
 
-class MarkdownASTNode(ASTNode['MarkdownASTNode']):
+class MarkdownASTNode(ASTNode):
     """Base class for all Markdown AST nodes."""
 
     def __init__(self) -> None:
@@ -34,7 +34,7 @@ class MarkdownASTNode(ASTNode['MarkdownASTNode']):
         return visitor.visit(self)
 
 
-class MarkdownASTVisitor(ASTVisitor['MarkdownASTNode']):
+class MarkdownASTVisitor(ASTVisitor):
     """Base visitor class for Markdown AST traversal."""
 
 

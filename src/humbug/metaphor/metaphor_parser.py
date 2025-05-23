@@ -72,7 +72,7 @@ class MetaphorParser:
         if isinstance(node, MetaphorRoleNode):
             return True
 
-        return any(self._has_role_node(child) for child in node.children)
+        return any(self._has_role_node(cast(MetaphorASTNode, child)) for child in node.children)
 
     def _has_context_node(self, node: MetaphorASTNode) -> bool:
         """
@@ -87,7 +87,7 @@ class MetaphorParser:
         if isinstance(node, MetaphorContextNode):
             return True
 
-        return any(self._has_context_node(child) for child in node.children)
+        return any(self._has_context_node(cast(MetaphorASTNode, child)) for child in node.children)
 
     def _has_action_node(self, node: MetaphorASTNode) -> bool:
         """
@@ -102,7 +102,7 @@ class MetaphorParser:
         if isinstance(node, MetaphorActionNode):
             return True
 
-        return any(self._has_action_node(child) for child in node.children)
+        return any(self._has_action_node(cast(MetaphorASTNode, child)) for child in node.children)
 
     def parse(
         self,

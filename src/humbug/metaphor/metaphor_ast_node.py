@@ -3,12 +3,12 @@ Types and classes for representing the AST (Abstract Syntax Tree)
 of a Metaphor document.
 """
 
-from typing import List, Any
+from typing import List, Any, cast
 
 from humbug.ast.ast import ASTNode, ASTVisitor
 
 
-class MetaphorASTNode(ASTNode['MetaphorASTNode']):
+class MetaphorASTNode(ASTNode):
     """
     Base class for all Metaphor AST nodes.
 
@@ -45,7 +45,7 @@ class MetaphorASTNode(ASTNode['MetaphorASTNode']):
 
         # Add all children with increased indentation
         for child in self.children:
-            result += "\n" + child.__str__(indent + 1)
+            result += "\n" + cast(MetaphorASTNode, child).__str__(indent + 1)
 
         return result
 
@@ -73,7 +73,7 @@ class MetaphorASTNode(ASTNode['MetaphorASTNode']):
         Returns:
             List of child nodes matching the specified class
         """
-        return [child for child in self.children if isinstance(child, node_class)]
+        return [cast(MetaphorASTNode, child) for child in self.children if isinstance(child, node_class)]
 
     def accept(self, visitor: 'MetaphorASTVisitor') -> Any:
         """
@@ -161,10 +161,10 @@ class MetaphorActionNode(MetaphorASTNode):
         super().__init__(label)
 
 
-class MetaphorASTVisitor(ASTVisitor['MetaphorASTNode']):
+class MetaphorASTVisitor(ASTVisitor):
     """Base visitor class for Metaphor AST traversal."""
 
-    def visit(self, node: MetaphorASTNode) -> Any:
+    def visit(self, node: ASTNode) -> Any:
         """
         Visit a node and dispatch to the appropriate visit method.
 
@@ -178,7 +178,7 @@ class MetaphorASTVisitor(ASTVisitor['MetaphorASTNode']):
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: MetaphorASTNode) -> List[Any]:
+    def generic_visit(self, node: ASTNode) -> List[Any]:
         """
         Default visit method for nodes without specific handlers.
 
@@ -190,6 +190,6 @@ class MetaphorASTVisitor(ASTVisitor['MetaphorASTNode']):
         """
         results = []
         for child in node.children:
-            results.append(self.visit(child))
+            results.append(self.visit(cast(MetaphorASTNode, child)))
 
         return results

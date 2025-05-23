@@ -41,7 +41,7 @@ class WikiMarkdownPreviewContent(WikiContent):
         self._markdown_content.linkClicked.connect(self.linkClicked)
         self._layout.addWidget(self._markdown_content)
 
-        self._path = None
+        self._path: str | None = None
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
@@ -55,7 +55,6 @@ class WikiMarkdownPreviewContent(WikiContent):
         """
         self._content = text
         self._path = path
-        # Pass content to the inner markdown content widget
         self._markdown_content.set_content(text, path)
 
     def has_selection(self) -> bool:

@@ -1,8 +1,9 @@
 """
 Visitor class to print markdown AST structures for debugging
 """
-from typing import List, Any
+from typing import List, Any, cast
 
+from humbug.ast.ast import ASTNode
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownTextNode, MarkdownHeadingNode, MarkdownInlineCodeNode,
     MarkdownCodeBlockNode, MarkdownASTNode, MarkdownTableNode, MarkdownTableHeaderNode,
@@ -27,7 +28,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         """
         return "  " * self.indent_level
 
-    def generic_visit(self, node: MarkdownASTNode) -> List[Any]:
+    def generic_visit(self, node: ASTNode) -> List[Any]:
         """
         Default visit method that prints the node type.
 
@@ -37,14 +38,15 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         Returns:
             The results of visiting the children
         """
+        ast_node = cast(MarkdownASTNode, node)
         node_name = node.__class__.__name__
         line_range = ""
-        if node.line_start is not None and node.line_end is not None:
-            line_range = f" (lines {node.line_start}-{node.line_end})"
+        if ast_node.line_start is not None and ast_node.line_end is not None:
+            line_range = f" (lines {ast_node.line_start}-{ast_node.line_end})"
 
         print(f"{self._indent()}{node_name}{line_range}")
         self.indent_level += 1
-        results = super().generic_visit(node)
+        results = super().generic_visit(ast_node)
         self.indent_level -= 1
         return results
 

@@ -2,8 +2,9 @@
 Visitor class to print Metaphor AST structures for debugging
 """
 
-from typing import List, Any, Type
+from typing import List, Any, Type, cast
 
+from humbug.ast.ast import ASTNode
 from humbug.metaphor.metaphor_ast_node import (
     MetaphorASTVisitor, MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode
 )
@@ -26,7 +27,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         """
         return "  " * self.indent_level
 
-    def generic_visit(self, node: MetaphorASTNode) -> List[Any]:
+    def generic_visit(self, node: ASTNode) -> List[Any]:
         """
         Default visit method that prints the node type.
 
@@ -38,7 +39,8 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         """
         # Print node information
         node_class = node.__class__.__name__
-        print(f"{self._indent()}{node_class}: {node.value()}")
+        ast_node = cast(MetaphorASTNode, node)
+        print(f"{self._indent()}{node_class}: {ast_node.value()}")
 
         # Visit children with increased indentation
         self.indent_level += 1
@@ -100,7 +102,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         self.indent_level += 1
         results = []
         for child in node.children:
-            results.append(self.visit_with_specific_types(child, types_to_show))
+            results.append(self.visit_with_specific_types(cast(MetaphorASTNode, child), types_to_show))
 
         self.indent_level -= 1
 

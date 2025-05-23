@@ -3,8 +3,9 @@ Format visitor implementation for Metaphor AST.
 """
 
 import io
-from typing import Any, Dict, Final, TextIO, Type
+from typing import Any, Dict, Final, TextIO, Type, cast
 
+from humbug.ast.ast import ASTNode
 from humbug.metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorASTVisitor, MetaphorActionNode, MetaphorCodeNode,
     MetaphorContextNode, MetaphorRoleNode, MetaphorRootNode, MetaphorTextNode
@@ -47,7 +48,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
         self.visit(node)
         return self.output.getvalue()
 
-    def generic_visit(self, node: MetaphorASTNode) -> Any:
+    def generic_visit(self, node: ASTNode) -> Any:
         """
         Default visit method for node types without specific handlers.
 
@@ -59,7 +60,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
         """
         results = []
         for child in node.children:
-            results.append(self.visit(child))
+            results.append(self.visit(cast(MetaphorASTNode, child)))
 
         return results
 

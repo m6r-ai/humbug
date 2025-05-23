@@ -6,7 +6,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 """
 
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode
 from humbug.markdown.markdown_parser import MarkdownParser, MarkdownParserError
@@ -110,9 +110,10 @@ class MarkdownConverter:
 
                 # Add the code block node as a section with its language
                 sections.append((node, language))
+
             else:
                 # Add to current markdown content
-                current_markdown_nodes.append(node)
+                current_markdown_nodes.append(cast(MarkdownASTNode, node))
 
         # Add any remaining markdown content
         add_markdown_section()

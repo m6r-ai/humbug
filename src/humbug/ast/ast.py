@@ -5,11 +5,9 @@ This module provides shared infrastructure for different AST implementations,
 allowing for code reuse while maintaining separation between languages.
 """
 
-from typing import List, TypeVar, Generic, Any
+from typing import List, Any
 
-T = TypeVar('T', bound='ASTNode')
-
-class ASTNode(Generic[T]):
+class ASTNode:
     """
     Base class for all AST nodes in any language.
 
@@ -20,10 +18,10 @@ class ASTNode(Generic[T]):
 
     def __init__(self) -> None:
         """Initialize a base AST node with empty children list and no parent."""
-        self.parent: T | None = None
-        self.children: List[T] = []
+        self.parent: ASTNode | None = None
+        self.children: List[ASTNode] = []
 
-    def add_child(self, child: T) -> T:
+    def add_child(self, child: 'ASTNode') -> 'ASTNode':
         """
         Add a child node to this node.
 
@@ -37,7 +35,7 @@ class ASTNode(Generic[T]):
         self.children.append(child)
         return child
 
-    def remove_child(self, child: T) -> None:
+    def remove_child(self, child: 'ASTNode') -> None:
         """
         Remove a child node from this node.
 
@@ -60,7 +58,7 @@ class ASTNode(Generic[T]):
 
         self.children = []
 
-    def previous_sibling(self) -> T | None:
+    def previous_sibling(self) -> 'ASTNode | None':
         """
         Get the previous sibling of this node, if any.
 
@@ -76,7 +74,7 @@ class ASTNode(Generic[T]):
 
         return None
 
-    def next_sibling(self) -> T | None:
+    def next_sibling(self) -> 'ASTNode | None':
         """
         Get the next sibling of this node, if any.
 
@@ -93,7 +91,7 @@ class ASTNode(Generic[T]):
         return None
 
 
-class ASTVisitor(Generic[T]):
+class ASTVisitor:
     """
     Base visitor class for AST traversal.
 
@@ -101,7 +99,7 @@ class ASTVisitor(Generic[T]):
     specialized processing of different node types.
     """
 
-    def visit(self, node: T) -> Any:
+    def visit(self, node: ASTNode) -> Any:
         """
         Visit a node and dispatch to the appropriate visit method.
 
@@ -115,7 +113,7 @@ class ASTVisitor(Generic[T]):
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: T) -> List[Any]:
+    def generic_visit(self, node: ASTNode) -> List[Any]:
         """
         Default visit method for nodes without specific handlers.
 
