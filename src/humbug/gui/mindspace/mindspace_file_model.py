@@ -43,15 +43,19 @@ class MindspaceFileModel(QSortFilterProxyModel):
 
         return True
 
-    def lessThan(self, left: QModelIndex | QPersistentModelIndex, right: QModelIndex | QPersistentModelIndex) -> bool:
+    def lessThan(
+        self,
+        source_left: QModelIndex | QPersistentModelIndex,
+        source_right: QModelIndex | QPersistentModelIndex
+    ) -> bool:
         """Sort directories before files, then alphabetically."""
         source_model = cast(QFileSystemModel, self.sourceModel())
         if not source_model:
             return False
 
         # Get file info for both indexes
-        left_info = source_model.fileInfo(left)
-        right_info = source_model.fileInfo(right)
+        left_info = source_model.fileInfo(source_left)
+        right_info = source_model.fileInfo(source_right)
 
         # Directories come before files
         if left_info.isDir() and not right_info.isDir():
