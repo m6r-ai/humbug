@@ -531,7 +531,7 @@ class ColumnManager(QWidget):
         # Otherwise use the column to the left
         return self._tab_columns[current_column_number - 1]
 
-    def add_tab(self, tab: TabBase, title: str) -> None:
+    def _add_tab(self, tab: TabBase, title: str) -> None:
         """
         Add a new tab to the manager.
 
@@ -873,7 +873,7 @@ class ColumnManager(QWidget):
         system_tab = SystemTab(tab_id, self)
 
         # Use language strings for the tab title
-        self.add_tab(system_tab, "System Shell")
+        self._add_tab(system_tab, "System Shell")
         return system_tab
 
     def clear_system_interactions(self) -> None:
@@ -891,7 +891,7 @@ class ColumnManager(QWidget):
         editor.set_filename("", self._untitled_count)
         editor.title_changed.connect(self._handle_tab_title_changed)
         editor.modified_state_changed.connect(self._handle_tab_modified)
-        self.add_tab(editor, f"Untitled-{self._untitled_count}")
+        self._add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
 
     def open_file(self, path: str) -> EditorTab:
@@ -907,7 +907,7 @@ class ColumnManager(QWidget):
         editor.set_filename(path)
         editor.title_changed.connect(self._handle_tab_title_changed)
         editor.modified_state_changed.connect(self._handle_tab_modified)
-        self.add_tab(editor, os.path.basename(path))
+        self._add_tab(editor, os.path.basename(path))
         return editor
 
     def new_conversation(
@@ -944,7 +944,7 @@ class ColumnManager(QWidget):
         )
         conversation_tab.update_conversation_settings(conversation_settings)
 
-        self.add_tab(conversation_tab, f"Conv: {conversation_id}")
+        self._add_tab(conversation_tab, f"Conv: {conversation_id}")
         return conversation_id
 
     def open_conversation(self, path: str) -> ConversationTab | None:
@@ -961,7 +961,7 @@ class ColumnManager(QWidget):
             conversation_tab = ConversationTab.load_conversation(path, self)
             conversation_tab.forkRequested.connect(self._fork_conversation)
             conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
-            self.add_tab(conversation_tab, f"Conv: {conversation_id}")
+            self._add_tab(conversation_tab, f"Conv: {conversation_id}")
             return conversation_tab
 
         except ConversationError as e:
@@ -989,7 +989,7 @@ class ColumnManager(QWidget):
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
             # Add new tab to manager
-            self.add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
+            self._add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
@@ -1028,7 +1028,7 @@ class ColumnManager(QWidget):
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
             # Add new tab to manager
-            self.add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
+            self._add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
@@ -1071,7 +1071,7 @@ class ColumnManager(QWidget):
         else:
             title = "Terminal"
 
-        self.add_tab(terminal, title)
+        self._add_tab(terminal, title)
         return terminal
 
     def open_wiki_link(self, link: str) -> WikiTab:
@@ -1103,7 +1103,7 @@ class ColumnManager(QWidget):
             wiki_tab = WikiTab.load_page(path_minus_anchor, self)
             wiki_tab.open_wiki_path.connect(self.open_wiki_link)
             wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
-            self.add_tab(wiki_tab, f"Wiki: {os.path.basename(path_minus_anchor)}")
+            self._add_tab(wiki_tab, f"Wiki: {os.path.basename(path_minus_anchor)}")
 
             # If there's an anchor, scroll to it
             if anchor:
@@ -1211,7 +1211,7 @@ class ColumnManager(QWidget):
 
                 self._active_column = self._tab_columns[column_index]
                 title = self._get_tab_title(tab, state)
-                self.add_tab(tab, title)
+                self._add_tab(tab, title)
 
             except Exception as e:
                 self._logger.exception("Failed to restore tab manager state: %s", str(e))
