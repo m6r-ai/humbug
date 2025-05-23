@@ -1206,11 +1206,13 @@ Context: Capabilities
         Context: Model providers
             Models are provided by different AI services:
 
-            - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022", "claude-3.7-sonnet-20250219"
+            - Anthropic models: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022",
+              "claude-3.7-sonnet-20250219", "claude-4-sonnet-20250514", "claude-4-opus-20250514"
             - Deepseek models: "deepseek-chat", "deepseek-reasoner"
-            - Google models: "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp", "gemini-2.0-pro-exp", "gemini-2.5-pro-exp-03-25"
+            - Google models: "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp", "gemini-2.0-pro-exp",
+              "gemini-2.5-pro-exp-03-25"
             - M6R models: "tessa"
-            - Mistral models: "codestral-latest", "mistral-large-latest", "mistral-small-latest"
+            - Mistral models: "codestral-latest", "devstral-small-2505", "mistral-large-latest", "mistral-small-latest"
             - Ollama models: "llama3.2", "phi4"
             - OpenAI models: "gpt-4o-mini", "gpt-4o", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4.5-preview",
               "o1-mini", "o1", "o3-mini", "o3", "o4-mini"
@@ -1226,6 +1228,8 @@ Context: Capabilities
         - claude-3-5-haiku-20241022: Supports temperature 0.0-1.0
         - claude-3-5-sonnet-20241022: Supports temperature 0.0-1.0
         - claude-3-7-sonnet-20240219: Supports temperature 0.0-1.0
+        - claude-4-sonnet-20240514: Supports temperature 0.0-1.0
+        - claude-4-opus-20240514: Supports temperature 0.0-1.0
         - deepseek-chat: Supports temperature 0.0-1.0
         - deepseek-reasoner: Supports temperature 0.0-1.0
         - gemini-1.5-flash: Supports temperature 0.0-1.0
@@ -1235,6 +1239,7 @@ Context: Capabilities
         - gemini-2.5-pro-exp-03-25: Supports temperature 0.0-1.0
         - tessa: No temperature setting
         - codestral-latest: Supports temperature 0.0-1.0
+        - devstral-small-2505: Supports temperature 0.0-1.0
         - mistral-large-latest: Supports temperature 0.0-1.0
         - mistral-small-latest: Supports temperature 0.0-1.0
         - llama3.2: Supports temperature 0.0-1.0

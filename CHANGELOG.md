@@ -5,6 +5,8 @@
 New features:
 
 - Any dialog box that has a destructive default action now has a red default button instead of blue.
+- Added new Anthropic models: Claude Sonnet 4, Claude Opus 4.
+- Added new Mistral small model: Devstral Small.
 
 Bug fixes:
 

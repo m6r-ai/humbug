@@ -43,6 +43,38 @@ class AIConversationSettings:
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING
         ),
+        "claude-4-sonnet-20250514": AIModel(
+            name="claude-4-sonnet-20250514",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=64000,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "claude-4-sonnet-20250514 (thinking)": AIModel(
+            name="claude-4-sonnet-20250514",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=64000,
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING
+        ),
+        "claude-4-opus-20250514": AIModel(
+            name="claude-4-opus-20250514",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=64000,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "claude-4-opus-20250514 (thinking)": AIModel(
+            name="claude-4-opus-20250514",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=64000,
+            supports_temperature=False,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING
+        ),
 
         # Deepseek models
         "deepseek-chat": AIModel(
@@ -119,6 +151,14 @@ class AIConversationSettings:
             name="codestral-latest",
             provider="mistral",
             context_window=262144,
+            max_output_tokens=65536,  # This is an arbitrary number - Mistral don't publish this
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING
+        ),
+        "devstral-small-2505": AIModel(
+            name="devstral-small-2505",
+            provider="mistral",
+            context_window=131072,
             max_output_tokens=65536,  # This is an arbitrary number - Mistral don't publish this
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING
