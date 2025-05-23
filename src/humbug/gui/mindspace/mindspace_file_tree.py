@@ -348,11 +348,12 @@ class MindspaceFileTree(QWidget):
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
-                padding: 4px;
+                padding: 0 0 0 4px;
             }}
             QTreeView::item {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 2px;
+                padding: 2px 0 2px 0;
+                margin: 0px;
             }}
             QTreeView::item:selected {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
@@ -366,14 +367,14 @@ class MindspaceFileTree(QWidget):
             QTreeView::branch:has-children:!has-siblings:closed,
             QTreeView::branch:closed:has-children:has-siblings {{
                 image: url("{self._style_manager.get_icon_path(expand_icon)}");
-                padding: 2px;
+                padding: 0px;
                 width: {branch_icon_size}px;
                 height: {branch_icon_size}px;
             }}
             QTreeView::branch:open:has-children:!has-siblings,
             QTreeView::branch:open:has-children:has-siblings {{
                 image: url("{self._style_manager.get_icon_path("arrow-down")}");
-                padding: 2px;
+                padding: 0px;
                 width: {branch_icon_size}px;
                 height: {branch_icon_size}px;
             }}
