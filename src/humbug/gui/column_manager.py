@@ -1219,29 +1219,30 @@ class ColumnManager(QWidget):
 
     def _restore_tab_from_state(self, state: TabState) -> TabBase | None:
         """Create appropriate tab type from state."""
-        if state.type == TabType.CONVERSATION:
-            conversation_tab = ConversationTab.restore_from_state(state, self)
-            conversation_tab.forkRequested.connect(self._fork_conversation)
-            conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
-            return conversation_tab
+        match state.type:
+            case TabType.CONVERSATION:
+                conversation_tab = ConversationTab.restore_from_state(state, self)
+                conversation_tab.forkRequested.connect(self._fork_conversation)
+                conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
+                return conversation_tab
 
-        if state.type == TabType.EDITOR:
-            editor_tab = EditorTab.restore_from_state(state, self)
-            editor_tab.title_changed.connect(self._handle_tab_title_changed)
-            editor_tab.modified_state_changed.connect(self._handle_tab_modified)
-            return editor_tab
+            case TabType.EDITOR:
+                editor_tab = EditorTab.restore_from_state(state, self)
+                editor_tab.title_changed.connect(self._handle_tab_title_changed)
+                editor_tab.modified_state_changed.connect(self._handle_tab_modified)
+                return editor_tab
 
-        if state.type == TabType.SYSTEM:
-            return SystemTab.restore_from_state(state, self)
+            case TabType.SYSTEM:
+                return SystemTab.restore_from_state(state, self)
 
-        if state.type == TabType.TERMINAL:
-            return TerminalTab.restore_from_state(state, self)
+            case TabType.TERMINAL:
+                return TerminalTab.restore_from_state(state, self)
 
-        if state.type == TabType.WIKI:
-            wiki_tab = WikiTab.restore_from_state(state, self)
-            wiki_tab.open_wiki_path.connect(self.open_wiki_link)
-            wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
-            return wiki_tab
+            case TabType.WIKI:
+                wiki_tab = WikiTab.restore_from_state(state, self)
+                wiki_tab.open_wiki_path.connect(self.open_wiki_link)
+                wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
+                return wiki_tab
 
         return None
 
