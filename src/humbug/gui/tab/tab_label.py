@@ -239,9 +239,9 @@ class TabLabel(QWidget):
         """
         return self._label.text()
 
-    def update_text(self, text: str) -> None:
+    def set_text(self, text: str) -> None:
         """
-        Update the text displayed in the tab label.
+        Set the text displayed in the tab label.
 
         Args:
             text: New text to display
@@ -257,4 +257,4 @@ class TabLabel(QWidget):
             text: New text to display
         """
         self._tab_id = tab_id
-        self.update_text(text)
+        self.set_text(text)

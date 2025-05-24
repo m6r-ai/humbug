@@ -328,13 +328,7 @@ class ColumnManager(QWidget):
         editor = self.find_editor_tab_by_filename(old_path)
         if editor:
             editor.set_filename(new_path)
-            title = os.path.basename(new_path)
-            if editor.is_modified():
-                title += "*"
-
-            # Update tab label text
-            label = self._tab_labels[editor.tab_id()]
-            label.update_text(title)
+            self._update_label(editor)
 
         # For conversations, find by ID and update path
         if old_path.endswith('.conv'):
@@ -351,6 +345,8 @@ class ColumnManager(QWidget):
                 # Update tab label text
                 label = self._tab_labels[new_id]
                 label.update_id(new_id, f"Conv: {new_id}")
+                self.adjustSize()
+
                 label.close_clicked.connect(lambda: self._close_tab_by_id(new_id))
 
                 # Update conversation internals without signaling
@@ -651,10 +647,12 @@ class ColumnManager(QWidget):
         if label:
             current_text = label.text()
             if modified and not current_text.endswith('*'):
-                label.update_text(f"{current_text}*")
+                label.set_text(f"{current_text}*")
 
             elif not modified and current_text.endswith('*'):
-                label.update_text(current_text[:-1])
+                label.set_text(current_text[:-1])
+
+            self.adjustSize()
 
     def can_split_column(self) -> bool:
         """Can the current column be split in two?"""
@@ -1481,7 +1479,7 @@ class ColumnManager(QWidget):
             return
 
         current_tab.save()
-        self._update_label_after_save(current_tab)
+        self._update_label(current_tab)
 
     def can_save_file_as(self) -> bool:
         """Check if the current file can be saved as a new file."""
@@ -1493,17 +1491,16 @@ class ColumnManager(QWidget):
 
     def save_file_as(self) -> None:
         """Save the current file with a new name."""
-        print("Saving file as...")
         current_tab = self._get_current_tab()
         if not isinstance(current_tab, EditorTab):
             return
 
         current_tab.save_as()
-        self._update_label_after_save(current_tab)
+        self._update_label(current_tab)
 
-    def _update_label_after_save(self, current_tab: EditorTab) -> None:
+    def _update_label(self, current_tab: EditorTab) -> None:
         """
-        Update the tab label after saving a file.
+        Update the tab label.
 
         Args:
             tab_id: ID of the tab to update
@@ -1512,13 +1509,11 @@ class ColumnManager(QWidget):
         if current_tab.is_modified():
             title += "*"
 
-        print(f"Updating tab title to: {title}")
         label = self._tab_labels.get(current_tab.tab_id())
-        if label:
-            print(f"Updating label text to: {title}")
-            label.update_text(title)
-            self.adjustSize()
+        cast(TabLabel, label).set_text(title)
 
+        # Adjust size to fit new label text
+        self.adjustSize()
 
     def can_show_all_columns(self) -> bool:
         """Check if all columns can be shown."""
