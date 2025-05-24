@@ -1214,6 +1214,7 @@ class MainWindow(QMainWindow):
 
         finally:
             self._column_manager.protect_current_tab(False)
+
         return True
 
     def _process_edit_command(self, file_path: str) -> bool:
