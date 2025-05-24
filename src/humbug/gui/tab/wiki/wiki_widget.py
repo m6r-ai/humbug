@@ -32,7 +32,7 @@ class WikiWidgetEventFilter(QObject):
         """Initialize the event filter."""
         super().__init__(parent)
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """
         Filter events to detect widget activation.
 
@@ -45,15 +45,15 @@ class WikiWidgetEventFilter(QObject):
         """
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Simply emit the signal with the object that received the event
-            self.widget_activated.emit(obj)
+            self.widget_activated.emit(watched)
             return False  # Don't consume the event
 
         if event.type() == QEvent.Type.FocusOut:
             # Emit a widget deactivated signal
-            self.widget_deactivated.emit(obj)
+            self.widget_deactivated.emit(watched)
             return False  # Don't consume the event
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(watched, event)
 
 
 class WikiWidget(QWidget):
