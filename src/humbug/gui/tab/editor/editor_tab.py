@@ -29,7 +29,7 @@ from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 class EditorTab(TabBase):
     """Tab for editing text files."""
 
-    def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
+    def __init__(self, tab_id: str, path: str, untitled_number: int | None, parent: QWidget | None = None) -> None:
         """Initialize editor tab.
 
         Args:
@@ -38,8 +38,8 @@ class EditorTab(TabBase):
         """
         super().__init__(tab_id, parent)
 
-        self._path: str = ""
-        self._untitled_number: int | None = None
+        self._path: str = path
+        self._untitled_number = untitled_number
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode()
         self._last_save_content = ""
@@ -72,6 +72,13 @@ class EditorTab(TabBase):
         layout.addWidget(self._editor_widget)
 
         self._install_activation_tracking(self._editor_widget)
+
+        if path and os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            self._editor_widget.setPlainText(content)
+            self._last_save_content = content
 
         # Set up syntax highlighter
         self._highlighter = EditorHighlighter(self._editor_widget.document())
@@ -145,15 +152,13 @@ class EditorTab(TabBase):
     @classmethod
     def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'EditorTab':
         """Create and restore an editor tab from serialized state."""
-        # Create new tab instance
-        tab = cls(state.tab_id, parent)
-
         # Set filename and load content
+        number: int | None = None
         if state.path.startswith("untitled-"):
             number = int(state.path.split("-")[1])
-            tab.set_filename("", number)
-        else:
-            tab.set_filename(state.path)
+
+        # Create new tab instance
+        tab = cls(state.tab_id, "" if number else state.path, number, parent)
 
         if state.metadata:
             # Restore language if specified
@@ -287,52 +292,18 @@ class EditorTab(TabBase):
         """Get the name of the file being edited."""
         return self._path
 
-    def set_filename(self, filename: str, untitled_number: int | None = None) -> None:
+    def set_filename(self, filename: str) -> None:
         """
         Set the file being edited.
 
         Args:
             filename: Path to file or None for new file
-            untitled_number: Number to use for untitled file
         """
         self._path = filename
-        self._untitled_number = untitled_number
 
         # Update syntax highlighting based on file extension
         new_language = ProgrammingLanguageUtils.from_file_extension(filename)
         self._update_programming_language(new_language)
-
-        if filename and os.path.exists(filename):
-            try:
-                with open(filename, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                self._editor_widget.setPlainText(content)
-                self._last_save_content = content
-                self._set_modified(False)
-
-            except Exception as e:
-                strings = self._language_manager.strings()
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.error_opening_file_title,
-                    strings.could_not_open.format(filename, str(e))
-                )
-
-        self._update_title()
-
-    def _update_title(self) -> None:
-        """Update the tab title based on filename and modified state."""
-        if self._path:
-            title = os.path.basename(self._path)
-
-        else:
-            title = f"Untitled-{self._untitled_number}"
-
-        if self._is_modified:
-            title += "*"
-
-        self.title_changed.emit(self._tab_id, title)
 
     def _handle_text_changed(self) -> None:
         """Handle changes to editor content."""
@@ -580,7 +551,6 @@ class EditorTab(TabBase):
         self._mindspace_manager.update_file_dialog_directory(filename)
         self._path = filename
         self._untitled_number = None
-        self._update_title()
 
         new_language = ProgrammingLanguageUtils.from_file_extension(filename)
         self._update_programming_language(new_language)

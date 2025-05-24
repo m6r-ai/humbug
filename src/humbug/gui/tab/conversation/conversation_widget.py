@@ -57,7 +57,7 @@ class ConversationWidgetEventFilter(QObject):
         """Initialize the event filter."""
         super().__init__(parent)
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """
         Filter events to detect widget activation.
 
@@ -70,15 +70,15 @@ class ConversationWidgetEventFilter(QObject):
         """
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Simply emit the signal with the object that received the event
-            self.widget_activated.emit(obj)
+            self.widget_activated.emit(watched)
             return False  # Don't consume the event
 
         if event.type() == QEvent.Type.FocusOut:
             # Emit a widget deactivated signal
-            self.widget_deactivated.emit(obj)
+            self.widget_deactivated.emit(watched)
             return False  # Don't consume the event
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(watched, event)
 
 
 class ConversationWidget(QWidget):
@@ -798,13 +798,13 @@ class ConversationWidget(QWidget):
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
-    def update_path(self, new_path: str) -> None:
-        """Update the conversation file path.
+    def set_path(self, new_path: str) -> None:
+        """Set the conversation file path.
 
         Args:
             new_path: New path for the conversation file
         """
-        self._transcript_handler.update_path(new_path)
+        self._transcript_handler.set_path(new_path)
 
     def _handle_edit_page_scroll(self) -> None:
         """

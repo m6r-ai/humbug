@@ -62,8 +62,8 @@ class ConversationTranscriptHandler:
 
             self._initialize_file(timestamp)
 
-    def update_path(self, new_path: str) -> None:
-        """Update the transcript file path.
+    def set_path(self, new_path: str) -> None:
+        """Set the transcript file path.
 
         Args:
             new_path: New path for the transcript file

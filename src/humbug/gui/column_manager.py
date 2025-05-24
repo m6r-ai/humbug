@@ -328,6 +328,13 @@ class ColumnManager(QWidget):
         editor = self.find_editor_tab_by_filename(old_path)
         if editor:
             editor.set_filename(new_path)
+            title = os.path.basename(new_path)
+            if editor.is_modified():
+                title += "*"
+
+            # Update tab label text
+            label = self._tab_labels[editor.tab_id()]
+            label.update_text(title)
 
         # For conversations, find by ID and update path
         if old_path.endswith('.conv'):
@@ -347,7 +354,7 @@ class ColumnManager(QWidget):
                 label.close_clicked.connect(lambda: self._close_tab_by_id(new_id))
 
                 # Update conversation internals without signaling
-                conversation.update_path(new_id, new_path)
+                conversation.set_path(new_id, new_path)
 
 # TODO: Add support for wiki tabs - note they need to rerender too!
 
@@ -628,19 +635,6 @@ class ColumnManager(QWidget):
         column.setCurrentWidget(tab)
         self._active_column = column
 
-    def _handle_tab_title_changed(self, tab_id: str, title: str) -> None:
-        """
-        Update a tab's title.
-
-        Args:
-            tab_id: ID of the tab to update
-            title: New title for the tab
-        """
-        label = self._tab_labels.get(tab_id)
-        if label:
-            label.update_text(title)
-            self.adjustSize()
-
     def _handle_tab_modified(self, tab_id: str, modified: bool) -> None:
         """
         Update a tab's modified state.
@@ -658,6 +652,7 @@ class ColumnManager(QWidget):
             current_text = label.text()
             if modified and not current_text.endswith('*'):
                 label.update_text(f"{current_text}*")
+
             elif not modified and current_text.endswith('*'):
                 label.update_text(current_text[:-1])
 
@@ -887,9 +882,7 @@ class ColumnManager(QWidget):
         """Create a new empty editor tab."""
         self._untitled_count += 1
         tab_id = str(uuid.uuid4())
-        editor = EditorTab(tab_id, self)
-        editor.set_filename("", self._untitled_count)
-        editor.title_changed.connect(self._handle_tab_title_changed)
+        editor = EditorTab(tab_id, "", self._untitled_count, self)
         editor.modified_state_changed.connect(self._handle_tab_modified)
         self._add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
@@ -903,9 +896,7 @@ class ColumnManager(QWidget):
             return existing_tab
 
         tab_id = path
-        editor = EditorTab(tab_id, self)
-        editor.set_filename(path)
-        editor.title_changed.connect(self._handle_tab_title_changed)
+        editor = EditorTab(tab_id, path, None, self)
         editor.modified_state_changed.connect(self._handle_tab_modified)
         self._add_tab(editor, os.path.basename(path))
         return editor
@@ -1228,7 +1219,6 @@ class ColumnManager(QWidget):
 
             case TabType.EDITOR:
                 editor_tab = EditorTab.restore_from_state(state, self)
-                editor_tab.title_changed.connect(self._handle_tab_title_changed)
                 editor_tab.modified_state_changed.connect(self._handle_tab_modified)
                 return editor_tab
 
@@ -1491,6 +1481,7 @@ class ColumnManager(QWidget):
             return
 
         current_tab.save()
+        self._update_label_after_save(current_tab)
 
     def can_save_file_as(self) -> bool:
         """Check if the current file can be saved as a new file."""
@@ -1502,11 +1493,32 @@ class ColumnManager(QWidget):
 
     def save_file_as(self) -> None:
         """Save the current file with a new name."""
+        print("Saving file as...")
         current_tab = self._get_current_tab()
         if not isinstance(current_tab, EditorTab):
             return
 
         current_tab.save_as()
+        self._update_label_after_save(current_tab)
+
+    def _update_label_after_save(self, current_tab: EditorTab) -> None:
+        """
+        Update the tab label after saving a file.
+
+        Args:
+            tab_id: ID of the tab to update
+        """
+        title = os.path.basename(current_tab.filename())
+        if current_tab.is_modified():
+            title += "*"
+
+        print(f"Updating tab title to: {title}")
+        label = self._tab_labels.get(current_tab.tab_id())
+        if label:
+            print(f"Updating label text to: {title}")
+            label.update_text(title)
+            self.adjustSize()
+
 
     def can_show_all_columns(self) -> bool:
         """Check if all columns can be shown."""

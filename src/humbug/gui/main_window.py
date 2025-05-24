@@ -315,8 +315,8 @@ class MainWindow(QMainWindow):
 
         # Create and add file tree
         self._file_tree = MindspaceFileTree(self)
-        self._file_tree.file_activated.connect(self._handle_file_activation)
-        self._file_tree.file_deleted.connect(self._handle_file_deletion)
+        self._file_tree.file_activated.connect(self._handle_file_activate)
+        self._file_tree.file_deleted.connect(self._handle_file_delete)
         self._file_tree.file_renamed.connect(self._handle_file_rename)
         self._file_tree.file_edited.connect(self._open_file_path)
         self._splitter.addWidget(self._file_tree)
@@ -786,9 +786,9 @@ class MainWindow(QMainWindow):
 
         self._column_manager.new_file()
 
-    def _handle_file_activation(self, path: str) -> None:
+    def _handle_file_activate(self, path: str) -> None:
         """Handle file activation from the file tree."""
-        # Are we opening a conversation or a file?
+        # Are we opening a conversation or a wiki page?
         ext = os.path.splitext(path)[1].lower()
         if ext == ".conv":
             self._open_conversation_path(path)
@@ -796,7 +796,7 @@ class MainWindow(QMainWindow):
 
         self._column_manager.open_wiki_page(path)
 
-    def _handle_file_deletion(self, path: str) -> None:
+    def _handle_file_delete(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.
 
         Args:

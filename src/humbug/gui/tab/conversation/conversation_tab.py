@@ -264,7 +264,7 @@ class ConversationTab(TabBase):
         except Exception as e:
             raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
 
-    def update_path(self, new_id: str, new_path: str) -> None:
+    def set_path(self, new_id: str, new_path: str) -> None:
         """Update the conversation file path.
 
         Args:
@@ -273,7 +273,7 @@ class ConversationTab(TabBase):
         """
         self._path = new_path
         self._tab_id = new_id
-        self._conversation_widget.update_path(new_path)
+        self._conversation_widget.set_path(new_path)
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
