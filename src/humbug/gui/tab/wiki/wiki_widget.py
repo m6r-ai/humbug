@@ -314,8 +314,9 @@ class WikiWidget(QWidget):
         self._content_blocks = []
         self._content_with_selection = None
 
-    def update_path(self, new_path: str) -> None:
-        """Update the path for the wiki file.
+    def set_path(self, new_path: str) -> None:
+        """
+        Set the path for the wiki file.
 
         Args:
             new_path: New path for the wiki file

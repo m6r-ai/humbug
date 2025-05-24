@@ -265,7 +265,8 @@ class ConversationTab(TabBase):
             raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
 
     def set_path(self, new_id: str, new_path: str) -> None:
-        """Update the conversation file path.
+        """
+        Set the conversation file path.
 
         Args:
             new_id: New ID for the conversation

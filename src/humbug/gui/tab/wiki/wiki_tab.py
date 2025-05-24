@@ -150,8 +150,9 @@ class WikiTab(TabBase):
         # Update status bar
         self.update_status()
 
-    def update_path(self, new_id: str, new_path: str) -> None:
-        """Update the wiki file path.
+    def set_path(self, new_id: str, new_path: str) -> None:
+        """
+        Set the wiki file path.
 
         Args:
             new_id: New ID for the wiki
@@ -159,7 +160,7 @@ class WikiTab(TabBase):
         """
         self._path = new_path
         self._tab_id = new_id
-        self._wiki_content_widget.update_path(new_path)
+        self._wiki_content_widget.set_path(new_path)
 
     def path(self) -> str:
         """Get the path of the wiki file."""

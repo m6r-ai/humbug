@@ -799,7 +799,8 @@ class ConversationWidget(QWidget):
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
     def set_path(self, new_path: str) -> None:
-        """Set the conversation file path.
+        """
+        Set the conversation file path.
 
         Args:
             new_path: New path for the conversation file
