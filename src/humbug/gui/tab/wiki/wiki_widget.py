@@ -2,7 +2,6 @@
 
 import logging
 import re
-from datetime import datetime
 from typing import Dict, List, Any, Set, Tuple, cast
 
 from PySide6.QtWidgets import (
@@ -77,7 +76,6 @@ class WikiWidget(QWidget):
     def __init__(
         self,
         path: str,
-        timestamp: datetime,
         parent: QWidget | None = None
     ) -> None:
         """
@@ -85,13 +83,11 @@ class WikiWidget(QWidget):
 
         Args:
             path: Full path to wiki file
-            timestamp: ISO format timestamp for the wiki
             parent: Optional parent widget
         """
         super().__init__(parent)
         self._logger = logging.getLogger("WikiWidget")
         self._path = path
-        self._timestamp = timestamp
 
         self._mindspace_wiki = MindspaceWiki()
 

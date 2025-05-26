@@ -1112,10 +1112,9 @@ Context: Capabilities
                     "metadata": {
                         "type": "object",
                         "properties": {
-                            "timestamp": { "type": "string", "format": "date-time" },
-                            "version": { "type": "string" },
+                            "version": { "type": "string" }
                         },
-                        "required": ["timestamp", "version"]
+                        "required": ["version"]
                     },
                     "conversation": {
                         "type": "array",

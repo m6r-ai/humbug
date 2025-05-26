@@ -14,7 +14,6 @@ class TabState:
     cursor_position: Dict[str, int] | None = None
     horizontal_scroll: int | None = None
     vertical_scroll: int | None = None
-    timestamp: datetime | None = None
     metadata: Dict[str, Any] | None = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -28,10 +27,6 @@ class TabState:
         # Convert TabType enum to string
         if state_dict['type']:
             state_dict['type'] = state_dict['type'].name
-
-        # Convert datetime to ISO format string
-        if state_dict['timestamp']:
-            state_dict['timestamp'] = state_dict['timestamp'].isoformat()
 
         return state_dict
 
@@ -48,9 +43,5 @@ class TabState:
         # Convert string back to TabType enum
         if 'type' in data and isinstance(data['type'], str):
             data['type'] = TabType[data['type']]
-
-        # Convert timestamp string back to datetime if present
-        if data.get('timestamp'):
-            data['timestamp'] = datetime.fromisoformat(data['timestamp'])
 
         return cls(**data)

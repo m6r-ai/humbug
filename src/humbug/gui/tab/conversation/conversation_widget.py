@@ -2,7 +2,6 @@
 
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime
 import logging
 import time
 from typing import Dict, List, Tuple, Any, Set, cast
@@ -103,7 +102,6 @@ class ConversationWidget(QWidget):
     def __init__(
         self,
         path: str,
-        timestamp: datetime,
         parent: QWidget | None = None,
         use_existing_ai_conversation: bool = False
     ) -> None:
@@ -112,7 +110,6 @@ class ConversationWidget(QWidget):
 
         Args:
             path: Full path to transcript file
-            timestamp: ISO format timestamp for the conversation
             parent: Optional parent widget
             use_existing_ai_conversation: Will we use an existing AI conversation?
         """
@@ -123,7 +120,7 @@ class ConversationWidget(QWidget):
         self._current_bookmark_index: int | None = None
 
         # Create transcript handler with provided filename
-        self._transcript_handler = ConversationTranscriptHandler(path, timestamp)
+        self._transcript_handler = ConversationTranscriptHandler(path)
 
         self._mindspace_manager = MindspaceManager()
 

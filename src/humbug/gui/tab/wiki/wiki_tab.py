@@ -1,6 +1,5 @@
 """Wiki tab implementation."""
 
-from datetime import datetime
 import logging
 from typing import cast
 
@@ -34,7 +33,6 @@ class WikiTab(TabBase):
         self,
         tab_id: str,
         path: str,
-        timestamp: datetime,
         parent: QWidget | None = None
     ) -> None:
         """
@@ -43,13 +41,11 @@ class WikiTab(TabBase):
         Args:
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             path: Full path to wiki file
-            timestamp: ISO format timestamp for the wiki
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("WikiTab")
         self._path = path
-        self._timestamp = timestamp
 
         # Get or create mindspace wiki manage
         self._wiki_manager = MindspaceWiki()
@@ -68,7 +64,7 @@ class WikiTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create wiki content widget
-        self._wiki_content_widget = WikiWidget(path, timestamp, self)
+        self._wiki_content_widget = WikiWidget(path, self)
         self._wiki_content_widget.status_updated.connect(self.update_status)
         self._wiki_content_widget.open_link.connect(self._handle_link)
         self._wiki_content_widget.edit_file.connect(self.edit_file)
@@ -180,7 +176,6 @@ class WikiTab(TabBase):
             type=TabType.WIKI,
             tab_id=self._tab_id,
             path=self._path,
-            timestamp=self._timestamp,
             metadata=metadata
         )
 
@@ -200,8 +195,7 @@ class WikiTab(TabBase):
             WikiError: If the wiki tab cannot be loaded
         """
         try:
-            timestamp = datetime.now()  # Use current time as default
-            wiki_tab = cls("", path, timestamp, parent)
+            wiki_tab = cls("", path, parent)
             wiki_tab._wiki_content_widget.load_content()
             return wiki_tab
 
@@ -211,10 +205,7 @@ class WikiTab(TabBase):
     @classmethod
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'WikiTab':
         """Create and restore a wiki tab from serialized state."""
-        if not state.timestamp:
-            raise WikiError("Wiki tab requires timestamp")
-
-        tab = cls(state.tab_id, state.path, state.timestamp, parent)
+        tab = cls(state.tab_id, state.path, parent)
 
         # Load wiki content
         try:

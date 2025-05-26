@@ -41,7 +41,6 @@ class ConversationTab(TabBase):
         self,
         tab_id: str,
         path: str,
-        timestamp: datetime,
         parent: QWidget | None = None,
         use_existing_ai_conversation: bool = False
     ) -> None:
@@ -51,13 +50,11 @@ class ConversationTab(TabBase):
         Args:
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             path: Full path to transcript file
-            timestamp: ISO format timestamp for the conversation
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
         self._path = path
-        self._timestamp = timestamp
         self._current_tasks: List[asyncio.Task] = []
 
         # Create layout
@@ -75,7 +72,7 @@ class ConversationTab(TabBase):
 
         # Create conversation widget
         self._conversation_widget = ConversationWidget(
-            path, timestamp, self, use_existing_ai_conversation
+            path, self, use_existing_ai_conversation
         )
         self._conversation_widget.forkRequested.connect(self.forkRequested)
         self._conversation_widget.forkFromIndexRequested.connect(self.forkFromIndexRequested)
@@ -124,7 +121,7 @@ class ConversationTab(TabBase):
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
-        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, cast(QWidget, self.parent()))
+        forked_tab = ConversationTab(conversation_id, new_path, cast(QWidget, self.parent()))
 
         # Get messages up to the specified index (inclusive)
         all_messages = self._conversation_widget.get_conversation_history().get_messages()
@@ -133,7 +130,7 @@ class ConversationTab(TabBase):
 
         try:
             # Write history to new transcript file
-            handler = ConversationTranscriptHandler(new_path, timestamp)
+            handler = ConversationTranscriptHandler(new_path)
             await handler.write(transcript_messages)
 
             # Load messages into the new tab
@@ -156,7 +153,7 @@ class ConversationTab(TabBase):
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
-        forked_tab = ConversationTab(conversation_id, new_path, self._timestamp, cast(QWidget, self.parent()))
+        forked_tab = ConversationTab(conversation_id, new_path, cast(QWidget, self.parent()))
 
         # Get all messages and write to new transcript
         messages = self._conversation_widget.get_conversation_history().get_messages()
@@ -164,7 +161,7 @@ class ConversationTab(TabBase):
 
         try:
             # Write history to new transcript file
-            handler = ConversationTranscriptHandler(new_path, timestamp)
+            handler = ConversationTranscriptHandler(new_path)
             await handler.write(transcript_messages)
 
         except Exception as e:
@@ -189,7 +186,6 @@ class ConversationTab(TabBase):
             type=TabType.CONVERSATION,
             tab_id=self._tab_id,
             path=self._path,
-            timestamp=self._timestamp,
             metadata=metadata
         )
 
@@ -213,10 +209,8 @@ class ConversationTab(TabBase):
             transcript = ConversationTranscriptHandler(path)
             transcript_data = transcript.read()
 
-            timestamp = transcript_data.timestamp
-
             # Create conversation tab
-            conversation_tab = cls("", path, timestamp, parent)
+            conversation_tab = cls("", path, parent)
             conversation_tab._conversation_widget.load_message_history(transcript_data.messages, False)
 
             return conversation_tab
@@ -233,20 +227,14 @@ class ConversationTab(TabBase):
     @classmethod
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
-        if not state.timestamp:
-            raise ConversationError("Conversation tab requires timestamp")
 
         use_existing_ai_conversation = bool(state.metadata and state.metadata.get('is_ephemeral'))
-        tab = cls(state.tab_id, state.path, state.timestamp, parent, use_existing_ai_conversation)
+        tab = cls(state.tab_id, state.path, parent, use_existing_ai_conversation)
 
         # Load conversation from transcript
         try:
             transcript = ConversationTranscriptHandler(state.path)
             transcript_data = transcript.read()
-
-            # Validate timestamp matches state
-            if state.timestamp != transcript_data.timestamp:
-                raise ConversationError("Timestamp mismatch in transcript metadata")
 
             # Load the message history
             tab._conversation_widget.load_message_history(transcript_data.messages, use_existing_ai_conversation)

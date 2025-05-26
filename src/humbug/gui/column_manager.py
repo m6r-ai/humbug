@@ -918,11 +918,11 @@ class ColumnManager(QWidget):
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
         timestamp = datetime.utcnow()
-        conversation_str = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-        filename = os.path.join("conversations", f"{conversation_str}.conv")
+        conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+        filename = os.path.join("conversations", f"{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
-        conversation_tab = ConversationTab("", full_path, timestamp, self)
+        conversation_tab = ConversationTab("", full_path, self)
         conversation_tab.forkRequested.connect(self._fork_conversation)
         conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
@@ -941,7 +941,7 @@ class ColumnManager(QWidget):
         )
         conversation_tab.update_conversation_settings(conversation_settings)
 
-        self._add_tab(conversation_tab, f"Conv: {conversation_str}")
+        self._add_tab(conversation_tab, f"Conv: {conversation_title}")
         return conversation_tab.tab_id()
 
     def open_conversation(self, path: str) -> ConversationTab | None:

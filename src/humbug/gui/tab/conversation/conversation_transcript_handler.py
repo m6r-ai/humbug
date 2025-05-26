@@ -4,7 +4,6 @@ from dataclasses import dataclass
 import json
 import logging
 import os
-from datetime import datetime
 from typing import Dict, List, Any
 
 from humbug.ai.ai_message import AIMessage
@@ -35,32 +34,24 @@ class FloatOneDecimalEncoder(json.JSONEncoder):
 class ConversationTranscriptData:
     """Container for transcript data and metadata."""
     messages: List[AIMessage]
-    timestamp: datetime
     version: str
 
 
 class ConversationTranscriptHandler:
     """Handles reading and writing conversation transcripts."""
 
-    def __init__(self, filename: str, timestamp: datetime | None = None):
+    def __init__(self, filename: str):
         """
         Initialize transcript handler for a conversation.
 
         Args:
             filename: Full path to transcript file
-            timestamp: ISO format timestamp for new conversations
-
-        Raises:
-            ValueError: If creating new transcript without timestamp
         """
         self._filename = filename
         self._logger = logging.getLogger("ConversationTranscriptHandler")
 
         if not os.path.exists(filename):
-            if timestamp is None:
-                raise ValueError("Timestamp required when creating new transcript")
-
-            self._initialize_file(timestamp)
+            self._initialize_file()
 
     def set_path(self, new_path: str) -> None:
         """Set the transcript file path.
@@ -70,7 +61,7 @@ class ConversationTranscriptHandler:
         """
         self._filename = new_path
 
-    def _initialize_file(self, timestamp: datetime) -> None:
+    def _initialize_file(self) -> None:
         """
         Initialize a new transcript file with metadata.
 
@@ -79,7 +70,6 @@ class ConversationTranscriptHandler:
         """
         metadata = {
             "metadata": {
-                "timestamp": timestamp.isoformat(),
                 "version": "0.1",
             },
             "conversation": []
@@ -117,9 +107,6 @@ class ConversationTranscriptHandler:
         if "version" not in metadata:
             raise ConversationTranscriptFormatError("Missing version in metadata")
 
-        if "timestamp" not in metadata:
-            raise ConversationTranscriptFormatError("Missing timestamp in metadata")
-
         if not isinstance(data["conversation"], list):
             raise ConversationTranscriptFormatError("Conversation must be array")
 
@@ -156,15 +143,8 @@ class ConversationTranscriptHandler:
             except ValueError as e:
                 raise ConversationTranscriptFormatError(f"Invalid message format: {str(e)}") from e
 
-        try:
-            timestamp = datetime.fromisoformat(data["metadata"]["timestamp"])
-
-        except ValueError as e:
-            raise ConversationTranscriptFormatError(f"Invalid timestamp format: {str(e)}") from e
-
         return ConversationTranscriptData(
             messages=messages,
-            timestamp=timestamp,
             version=data["metadata"]["version"]
         )
 
