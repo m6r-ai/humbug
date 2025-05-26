@@ -206,7 +206,7 @@ class WikiTab(TabBase):
         """
         try:
             timestamp = datetime.now()  # Use current time as default
-            wiki_tab = cls("wiki:" + path, path, timestamp, parent)
+            wiki_tab = cls("", path, timestamp, parent)
             wiki_tab._wiki_content_widget.load_content()
             return wiki_tab
 
