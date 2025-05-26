@@ -324,26 +324,26 @@ class ColumnManager(QWidget):
             new_path: New path after renaming
         """
         # Find any editor tab for this file
-        editor = self.find_editor_tab_by_filename(old_path)
-        if editor:
-            editor.set_filename(new_path)
-            self._update_editor_tab_label(editor)
+        editor_tab = self._find_editor_tab_by_path(old_path)
+        if editor_tab:
+            editor_tab.set_path(new_path)
+            self._update_editor_tab_label(editor_tab)
 
         # For conversations, find by ID and update path
         if old_path.endswith('.conv'):
-            old_id = os.path.splitext(os.path.basename(old_path))[0]
-            conversation = self.find_conversation_tab_by_path(old_id)
-            if conversation:
+            old_path = os.path.splitext(os.path.basename(old_path))[0]
+            conversation_tab = self._find_conversation_tab_by_path(old_path)
+            if conversation_tab:
                 # Get new ID
-                new_id = os.path.splitext(os.path.basename(new_path))[0]
+                new_title = os.path.splitext(os.path.basename(new_path))[0]
 
                 # Update tab label text
-                label = self._tab_labels[new_id]
-                label.set_text(f"Conv: {new_id}")
+                label = self._tab_labels[new_title]
+                label.set_text(f"Conv: {new_title}")
                 self.adjustSize()
 
                 # Update conversation internals without signaling
-                conversation.set_path(new_id, new_path)
+                conversation_tab.set_path(new_path)
 
 # TODO: Add support for wiki tabs - note they need to rerender too!
 
@@ -814,7 +814,7 @@ class ColumnManager(QWidget):
         """
         return self._tabs.get(tab_id)
 
-    def find_conversation_tab_by_path(self, path: str) -> ConversationTab | None:
+    def _find_conversation_tab_by_path(self, path: str) -> ConversationTab | None:
         """
         Find a conversation tab by its conversation path.
 
@@ -830,23 +830,23 @@ class ColumnManager(QWidget):
 
         return None
 
-    def find_editor_tab_by_filename(self, filename: str) -> EditorTab | None:
+    def _find_editor_tab_by_path(self, path: str) -> EditorTab | None:
         """
-        Find an editor tab by its filename.
+        Find an editor tab by its path.
 
         Args:
-            filename: The filename to search for
+            path: The path to search for
 
         Returns:
             The EditorTab if found, None otherwise
         """
         for tab in self._tabs.values():
-            if isinstance(tab, EditorTab) and tab.filename() == filename:
+            if isinstance(tab, EditorTab) and tab.path() == path:
                 return tab
 
         return None
 
-    def find_wiki_tab_by_path(self, path: str) -> WikiTab | None:
+    def _find_wiki_tab_by_path(self, path: str) -> WikiTab | None:
         """
         Find a wiki tab by its path.
 
@@ -900,7 +900,7 @@ class ColumnManager(QWidget):
         assert os.path.isabs(path), "Path must be absolute"
 
         # Check if file is already open
-        existing_tab = self.find_editor_tab_by_filename(path)
+        existing_tab = self._find_editor_tab_by_path(path)
         if existing_tab is not None:
             self._set_current_tab(existing_tab.tab_id())
             return existing_tab
@@ -950,7 +950,7 @@ class ColumnManager(QWidget):
 
         # Check if already open
         abs_path = self._mindspace_manager.get_absolute_path(path)
-        existing_tab = self.find_conversation_tab_by_path(abs_path)
+        existing_tab = self._find_conversation_tab_by_path(abs_path)
         if existing_tab:
             self._set_current_tab(existing_tab.tab_id())
             return existing_tab
@@ -1089,7 +1089,7 @@ class ColumnManager(QWidget):
             path_minus_anchor, anchor = path.split('#', 1)
 
         # Check if already open
-        existing_tab = self.find_wiki_tab_by_path(path_minus_anchor)
+        existing_tab = self._find_wiki_tab_by_path(path_minus_anchor)
         if existing_tab:
             self._set_current_tab(existing_tab.tab_id())
 
@@ -1431,14 +1431,14 @@ class ColumnManager(QWidget):
             path: Path of file being deleted
         """
         # Find and close any editor tab for this file
-        editor = self.find_editor_tab_by_filename(path)
+        editor = self._find_editor_tab_by_path(path)
         if editor:
             self._close_tab_by_id(editor.tab_id(), True)
 
         # Also check for conversation files
         if path.endswith('.conv'):
             conversation_path = os.path.splitext(os.path.basename(path))[0]
-            conversation = self.find_conversation_tab_by_path(conversation_path)
+            conversation = self._find_conversation_tab_by_path(conversation_path)
             if conversation:
                 self._close_tab_by_id(conversation.tab_id(), True)
 
@@ -1514,7 +1514,7 @@ class ColumnManager(QWidget):
         Args:
             current_tab: Tab to update
         """
-        title = os.path.basename(tab.filename())
+        title = os.path.basename(tab.path())
         if tab.is_modified():
             title += "*"
 

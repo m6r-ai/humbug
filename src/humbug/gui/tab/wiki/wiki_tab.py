@@ -1,7 +1,8 @@
 """Wiki tab implementation."""
 
-import logging
 from datetime import datetime
+import logging
+from typing import cast
 
 from PySide6.QtCore import QUrl, Signal
 from PySide6.QtGui import QDesktopServices
@@ -47,7 +48,7 @@ class WikiTab(TabBase):
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("WikiTab")
-        self._path: str = path
+        self._path = path
         self._timestamp = timestamp
 
         # Get or create mindspace wiki manage
@@ -105,7 +106,7 @@ class WikiTab(TabBase):
         """
         try:
             # Try to resolve the link path
-            resolved_path = self._wiki_manager.resolve_link(self._path, url)
+            resolved_path = self._wiki_manager.resolve_link(cast(str, self._path), url)
             if resolved_path is not None:
                 # It's a local mindspace link - open in wiki tab
                 self.open_wiki_path.emit(resolved_path)
@@ -148,21 +149,15 @@ class WikiTab(TabBase):
         # Update status bar
         self.update_status()
 
-    def set_path(self, new_id: str, new_path: str) -> None:
+    def set_path(self, path: str) -> None:
         """
         Set the wiki file path.
 
         Args:
-            new_id: New ID for the wiki
-            new_path: New path for the wiki file
+            path: New path for the wiki file
         """
-        self._path = new_path
-        self._tab_id = new_id
-        self._wiki_content_widget.set_path(new_path)
-
-    def path(self) -> str:
-        """Get the path of the wiki file."""
-        return self._path
+        self._path = path
+        self._wiki_content_widget.set_path(path)
 
     def update_status(self) -> None:
         """Update status bar."""

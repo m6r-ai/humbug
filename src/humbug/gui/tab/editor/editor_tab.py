@@ -38,7 +38,7 @@ class EditorTab(TabBase):
         """
         super().__init__(tab_id, parent)
 
-        self._path: str = path
+        self._path = path
         self._untitled_number = untitled_number
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode()
@@ -288,21 +288,17 @@ class EditorTab(TabBase):
             self._highlighter.set_language(new_language)
             self.update_status()
 
-    def filename(self) -> str:
-        """Get the name of the file being edited."""
-        return self._path
-
-    def set_filename(self, filename: str) -> None:
+    def set_path(self, path: str) -> None:
         """
         Set the file being edited.
 
         Args:
             filename: Path to file or None for new file
         """
-        self._path = filename
+        self._path = path
 
         # Update syntax highlighting based on file extension
-        new_language = ProgrammingLanguageUtils.from_file_extension(filename)
+        new_language = ProgrammingLanguageUtils.from_file_extension(path)
         self._update_programming_language(new_language)
 
     def _handle_text_changed(self) -> None:

@@ -56,7 +56,7 @@ class ConversationTab(TabBase):
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
-        self._path: str = path
+        self._path = path
         self._timestamp = timestamp
         self._current_tasks: List[asyncio.Task] = []
 
@@ -152,7 +152,7 @@ class ConversationTab(TabBase):
         conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
 
         # Create new file in same directory as current conversation
-        base_dir = os.path.dirname(self._path)
+        base_dir = os.path.dirname(cast(str, self._path))
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
@@ -267,17 +267,15 @@ class ConversationTab(TabBase):
         """Get the conversation file path."""
         return self._path
 
-    def set_path(self, new_id: str, new_path: str) -> None:
+    def set_path(self, path: str) -> None:
         """
         Set the conversation file path.
 
         Args:
-            new_id: New ID for the conversation
             new_path: New path for the conversation file
         """
-        self._path = new_path
-        self._tab_id = new_id
-        self._conversation_widget.set_path(new_path)
+        self._path = path
+        self._conversation_widget.set_path(path)
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""

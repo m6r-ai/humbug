@@ -48,6 +48,7 @@ class TabBase(QFrame):
 
         self._tab_id = tab_id
         self._is_modified = False
+        self._path: str = ""
 
         # Set up activation tracking
         self._event_filter = TabEventFilter(self)
@@ -81,6 +82,24 @@ class TabBase(QFrame):
         if modified != self._is_modified:
             self._is_modified = modified
             self.modified_state_changed.emit(self._tab_id, modified)
+
+    def path(self) -> str:
+        """
+        Get the path associated with this tab, if any.
+
+        Returns:
+            Path as a string, or None if not set
+        """
+        return self._path
+
+    def set_path(self, path: str) -> None:
+        """
+        Set the path associated with this tab.
+
+        Args:
+            path: Path to associate with this tab
+        """
+        raise NotImplementedError("Subclasses must implement set_path")
 
     def get_state(self, temp_state: bool) -> TabState:
         """
