@@ -150,7 +150,7 @@ class EditorTab(TabBase):
         )
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'EditorTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'EditorTab':
         """Create and restore an editor tab from serialized state."""
         # Set filename and load content
         number: int | None = None

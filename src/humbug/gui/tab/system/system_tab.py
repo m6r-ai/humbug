@@ -107,13 +107,13 @@ class SystemTab(TabBase):
         )
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'SystemTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'SystemTab':
         """
         Create and restore a tab from serialized state.
 
         Args:
             state: TabState object containing serialized state
-            parent: Optional parent widget
+            parent: Parent widget
 
         Returns:
             Restored SystemTab instance

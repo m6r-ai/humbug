@@ -337,13 +337,13 @@ class TerminalTab(TabBase):
         )
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'TerminalTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'TerminalTab':
         """
         Restore terminal from saved state.
 
         Args:
             state: State to restore from
-            parent: Optional parent widget
+            parent: Parent widget
 
         Returns:
             New TerminalTab instance

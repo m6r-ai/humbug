@@ -98,7 +98,7 @@ class TabBase(QFrame):
         raise NotImplementedError("Subclasses must implement get_state")
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'TabBase':
+    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'TabBase':
         """
         Create and restore a tab from serialized state.
 
@@ -107,7 +107,7 @@ class TabBase(QFrame):
         Args:
             state: TabState object containing serialized state
                 (note: state.type will be string, not TabType enum)
-            parent: Optional parent widget
+            parent: Parent widget
 
         Returns:
             Newly created and restored tab instance

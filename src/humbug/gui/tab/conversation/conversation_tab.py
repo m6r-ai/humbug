@@ -231,7 +231,7 @@ class ConversationTab(TabBase):
             raise ConversationError(f"Failed to create conversation tab: {str(e)}") from e
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'ConversationTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
         if not state.timestamp:
             raise ConversationError("Conversation tab requires timestamp")

@@ -214,7 +214,7 @@ class WikiTab(TabBase):
             raise WikiError(f"Failed to create wiki tab: {str(e)}") from e
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget | None = None) -> 'WikiTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'WikiTab':
         """Create and restore a wiki tab from serialized state."""
         if not state.timestamp:
             raise WikiError("Wiki tab requires timestamp")
