@@ -16,20 +16,22 @@ class TabLabel(QWidget):
     close_clicked = Signal()
     drag_started = Signal()
 
-    def __init__(self, text: str, tool_tip: str, tab_id: str, parent: QWidget | None = None) -> None:
+    def __init__(self, tab_id: str, icon_name: str, text: str, tool_tip: str, parent: QWidget | None = None) -> None:
         """
         Initialize the tab label widget.
 
         Args:
+            tab_id: Unique identifier for the associated tab
+            icon_name: Name of the icon to display
             text: The text to display in the tab
             tool_tip: Tooltip text for the tab
-            tab_id: Unique identifier for the associated tab
             parent: Optional parent widget
         """
         super().__init__(parent)
 
         self.setToolTip(tool_tip)
         self._tab_id = tab_id
+        self._icon_name = icon_name
         self._is_current = False
         self._is_active_column = False
         self._is_hovered = False
@@ -41,7 +43,10 @@ class TabLabel(QWidget):
         self._layout = QHBoxLayout(self)
         self.setLayout(self._layout)
 
-        # Add label with size policy
+        self._type_button = QToolButton()
+        self._type_button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self._layout.addWidget(self._type_button)
+
         self._label = QLabel(text)
         self._label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._layout.addWidget(self._label)
@@ -55,6 +60,15 @@ class TabLabel(QWidget):
         self.handle_style_changed(False)
 
         self.setMouseTracking(True)
+
+    def _create_type_icon(self) -> QIcon:
+        """Create an icon for the tab type."""
+        icon = QIcon()
+        icon_path = self._style_manager.get_icon_path(self._icon_name)
+        pixmap = self._style_manager.scale_icon(icon_path, 16)
+        icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
+        return icon
 
     def _create_visible_close_icon(self) -> QIcon:
         icon = QIcon()
@@ -94,13 +108,18 @@ class TabLabel(QWidget):
         # Update close button size
         factor = self._style_manager.zoom_factor()
         button_size = int(16 * factor)
+        self._type_button.setFixedSize(button_size, button_size)
         self._close_button.setFixedSize(button_size, button_size)
 
         # Update icon size
         icon_size = int(16 * factor)
+        self._type_button.setIconSize(QSize(icon_size, icon_size))
         self._close_button.setIconSize(QSize(icon_size, icon_size))
 
         # Recreate icons at new size
+        self._type_icon = self._create_type_icon()
+        self._type_button.setIcon(self._type_icon)
+
         self._visible_close_icon = self._create_visible_close_icon()
         self._visible_disabled_close_icon = self._create_visible_disabled_close_icon()
         self._invisible_close_icon = self._create_invisible_close_icon()
@@ -111,7 +130,7 @@ class TabLabel(QWidget):
         v_margins = int(4 * factor)
         self._layout.setContentsMargins(margins, v_margins, margins, v_margins)
 
-        self._update_close_button()
+        self._update_buttons()
 
         self.adjustSize()
 
@@ -186,9 +205,9 @@ class TabLabel(QWidget):
     def update_hover_state(self, is_hovered: bool) -> None:
         """Handle updates to the hover state for the label."""
         self._is_hovered = is_hovered
-        self._update_close_button()
+        self._update_buttons()
 
-    def _update_close_button(self) -> None:
+    def _update_buttons(self) -> None:
         """Update close button appearance based on current state."""
         visible = self._is_current or self._is_hovered
 
@@ -196,7 +215,15 @@ class TabLabel(QWidget):
         if visible:
             base_color = (ColorRole.TAB_BACKGROUND_ACTIVE if self._is_current and not self._is_hovered
                         else ColorRole.TAB_BACKGROUND_HOVER)
-            style = f"""
+            type_style = f"""
+                QToolButton {{
+                    border: none;
+                    outline: none;
+                    padding: 0px;
+                    background: {style_manager.get_color_str(base_color)};
+                }}
+            """
+            close_style = f"""
                 QToolButton {{
                     border: none;
                     outline: none;
@@ -211,8 +238,9 @@ class TabLabel(QWidget):
             self._close_button.setIcon(icon)
             self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self._close_button.setToolTip("Close Tab")
+
         else:
-            style = f"""
+            type_style = f"""
                 QToolButton {{
                     border: none;
                     outline: none;
@@ -220,17 +248,19 @@ class TabLabel(QWidget):
                     background: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
                 }}
             """
+            close_style = type_style
             self._close_button.setIcon(self._invisible_close_icon)
             self._close_button.setCursor(Qt.CursorShape.ArrowCursor)
             self._close_button.setToolTip("")
 
-        self._close_button.setStyleSheet(style)
+        self._type_button.setStyleSheet(type_style)
+        self._close_button.setStyleSheet(close_style)
 
     def set_current(self, is_current: bool, is_active_column: bool) -> None:
         """Update the current state of the tab."""
         self._is_current = is_current
         self._is_active_column = is_active_column
-        self._update_close_button()
+        self._update_buttons()
 
     def text(self) -> str:
         """

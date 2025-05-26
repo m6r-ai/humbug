@@ -42,9 +42,25 @@ class TabData:
             title: Initial title for the tab
             tool_tip: Tooltip text for the tab
         """
+        icon = ""
+        if isinstance(tab, ConversationTab):
+            icon = "conversation"
+
+        elif isinstance(tab, EditorTab):
+            icon = "editor"
+
+        elif isinstance(tab, SystemTab):
+            icon = "system"
+
+        elif isinstance(tab, TerminalTab):
+            icon = "terminal"
+
+        elif isinstance(tab, WikiTab):
+            icon = "wiki"
+
         self.tab = tab
         self.tab_id = tab.tab_id()
-        self.label = TabLabel(title, tool_tip, self.tab_id)
+        self.label = TabLabel(self.tab_id, icon, title, tool_tip)
 
 
 class ColumnManager(QWidget):
@@ -946,8 +962,7 @@ class ColumnManager(QWidget):
             reasoning=settings.reasoning
         )
         conversation_tab.update_conversation_settings(conversation_settings)
-
-        self._add_tab(conversation_tab, f"Conv: {conversation_title}")
+        self._add_tab(conversation_tab, conversation_title)
         return conversation_tab.tab_id()
 
     def open_conversation(self, path: str) -> ConversationTab | None:
@@ -966,7 +981,7 @@ class ColumnManager(QWidget):
             conversation_tab.forkRequested.connect(self._fork_conversation)
             conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
-            self._add_tab(conversation_tab, f"Conv: {conversation_title}")
+            self._add_tab(conversation_tab, conversation_title)
             return conversation_tab
 
         except ConversationError as e:
@@ -992,9 +1007,7 @@ class ColumnManager(QWidget):
             new_tab = await conversation_tab.fork_conversation()
             new_tab.forkRequested.connect(self._fork_conversation)
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
-
-            # Add new tab to manager
-            self._add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
+            self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
@@ -1031,9 +1044,7 @@ class ColumnManager(QWidget):
             new_tab = await conversation_tab.fork_conversation_from_index(message_index)
             new_tab.forkRequested.connect(self._fork_conversation)
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
-
-            # Add new tab to manager
-            self._add_tab(new_tab, f"Conv: {new_tab.tab_id()}")
+            self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
@@ -1071,7 +1082,7 @@ class ColumnManager(QWidget):
         terminal = TerminalTab("", command, self)
 
         if command:
-            title = f"Term: {os.path.basename(command)}"
+            title = os.path.basename(command)
         else:
             title = "Terminal"
 
@@ -1102,7 +1113,7 @@ class ColumnManager(QWidget):
             wiki_tab = WikiTab.create_from_path(path_minus_anchor, self)
             wiki_tab.open_wiki_path.connect(self.open_wiki_page)
             wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
-            self._add_tab(wiki_tab, f"Wiki: {os.path.basename(path_minus_anchor)}")
+            self._add_tab(wiki_tab, os.path.basename(path_minus_anchor))
 
             # If there's an anchor, scroll to it
             if anchor:
@@ -1195,19 +1206,19 @@ class ColumnManager(QWidget):
     def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
         """Get appropriate title for tab type."""
         if isinstance(tab, ConversationTab):
-            return f"Conv: {os.path.splitext(os.path.basename(state.path))[0]}"
+            return os.path.splitext(os.path.basename(state.path))[0]
 
         if isinstance(tab, SystemTab):
             return "System Shell"
 
         if isinstance(tab, TerminalTab):
             if state.metadata and "command" in state.metadata:
-                return f"Term: {os.path.basename(state.metadata['command'])}"
+                return os.path.basename(state.metadata['command'])
 
             return "Terminal"
 
         if isinstance(tab, WikiTab):
-            return f"Wiki: {os.path.basename(state.path)}"
+            return os.path.basename(state.path)
 
         return os.path.basename(state.path)
 

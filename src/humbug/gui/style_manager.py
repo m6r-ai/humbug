@@ -695,6 +695,46 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            # Conversation tab icon
+            green = "green"
+            write_icon(f'conversation-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="8" width="48" height="48" stroke="{green}" stroke-width="6" fill="none"/>
+                </svg>
+            ''')
+
+            # Editor tab icon
+            red = "red"
+            write_icon(f'editor-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="8" width="48" height="48" stroke="{red}" stroke-width="6" fill="none"/>
+                </svg>
+            ''')
+
+            # System tab icon
+            magenta = "magenta"
+            write_icon(f'system-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="8" width="48" height="48" stroke="{magenta}" stroke-width="6" fill="none"/>
+                </svg>
+            ''')
+
+            # Terminal tab icon
+            yellow = "yellow"
+            write_icon(f'terminal-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="8" width="48" height="48" stroke="{yellow}" stroke-width="6" fill="none"/>
+                </svg>
+            ''')
+
+            # Wiki tab icon
+            blue = "blue"
+            write_icon(f'wiki-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="8" width="48" height="48" stroke="{blue}" stroke-width="6" fill="none"/>
+                </svg>
+            ''')
+
             # Checkbox check mark
             write_icon(f'check-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">

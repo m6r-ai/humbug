@@ -121,7 +121,7 @@ class ConversationTab(TabBase):
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
-        forked_tab = ConversationTab(conversation_id, new_path, cast(QWidget, self.parent()))
+        forked_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
 
         # Get messages up to the specified index (inclusive)
         all_messages = self._conversation_widget.get_conversation_history().get_messages()
@@ -153,7 +153,7 @@ class ConversationTab(TabBase):
         new_path = os.path.join(base_dir, f"{conversation_id}.conv")
 
         # Create new tab using same history
-        forked_tab = ConversationTab(conversation_id, new_path, cast(QWidget, self.parent()))
+        forked_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
 
         # Get all messages and write to new transcript
         messages = self._conversation_widget.get_conversation_history().get_messages()
