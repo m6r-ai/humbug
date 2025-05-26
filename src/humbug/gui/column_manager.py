@@ -956,7 +956,7 @@ class ColumnManager(QWidget):
             return existing_tab
 
         try:
-            conversation_tab = ConversationTab.load_conversation(abs_path, self)
+            conversation_tab = ConversationTab.create_from_path(abs_path, self)
             conversation_tab.forkRequested.connect(self._fork_conversation)
             conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
@@ -1072,13 +1072,6 @@ class ColumnManager(QWidget):
         self._add_tab(terminal, title)
         return terminal
 
-    def open_wiki_link(self, link: str) -> WikiTab:
-        """Open a wiki link in a new tab."""
-        self.protect_current_tab(True)
-        wiki_tab = self.open_wiki_page(link)
-        self.protect_current_tab(False)
-        return wiki_tab
-
     def open_wiki_page(self, path: str) -> WikiTab:
         """Open a wiki page."""
         assert os.path.isabs(path), "Path must be absolute"
@@ -1100,8 +1093,8 @@ class ColumnManager(QWidget):
             return existing_tab
 
         try:
-            wiki_tab = WikiTab.load_page(path_minus_anchor, self)
-            wiki_tab.open_wiki_path.connect(self.open_wiki_link)
+            wiki_tab = WikiTab.create_from_path(path_minus_anchor, self)
+            wiki_tab.open_wiki_path.connect(self.open_wiki_page)
             wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
             self._add_tab(wiki_tab, f"Wiki: {os.path.basename(path_minus_anchor)}")
 
@@ -1187,7 +1180,7 @@ class ColumnManager(QWidget):
 
             case TabType.WIKI:
                 wiki_tab = WikiTab.restore_from_state(state, self)
-                wiki_tab.open_wiki_path.connect(self.open_wiki_link)
+                wiki_tab.open_wiki_path.connect(self.open_wiki_page)
                 wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
                 return wiki_tab
 

@@ -180,12 +180,12 @@ class WikiTab(TabBase):
         )
 
     @classmethod
-    def load_page(cls, path: str, parent: QWidget | None = None) -> 'WikiTab':
+    def create_from_path(cls, path: str, parent: QWidget | None = None) -> 'WikiTab':
         """
-        Load a wiki page.
+        Create a wiki tab based on the contents at a path.
 
         Args:
-            path: Path to wiki page
+            path: Path to wiki contents
             parent: Optional parent widget
 
         Returns:
