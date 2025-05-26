@@ -33,7 +33,7 @@ class SystemTab(TabBase):
         Initialize the system tab.
 
         Args:
-            tab_id: Unique identifier for this tab
+            tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)

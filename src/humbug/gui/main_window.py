@@ -30,6 +30,7 @@ from humbug.gui.mindspace.mindspace_file_tree import MindspaceFileTree
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
+from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
@@ -954,9 +955,7 @@ class MainWindow(QMainWindow):
 
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            return self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path()
-            )
+            return self._column_manager.new_conversation()
 
         except MindspaceError as e:
             strings = self._language_manager.strings()
@@ -1009,11 +1008,11 @@ class MainWindow(QMainWindow):
             return
 
         # Get the tab and set input text
-        conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
+        conversation_tab = self._column_manager.find_tab_by_id(conversation_id)
         if conversation_tab is None:
             return
 
-        conversation_tab.set_input_text(prompt)
+        cast(ConversationTab, conversation_tab).set_input_text(prompt)
 
     def _open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""
@@ -1202,9 +1201,7 @@ class MainWindow(QMainWindow):
         self._column_manager.protect_current_tab(True)
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path(), model, temperature
-            )
+            self._column_manager.new_conversation(model, temperature)
 
         except MindspaceError as e:
             self._mindspace_manager.add_system_interaction(
@@ -1261,9 +1258,7 @@ class MainWindow(QMainWindow):
         conversation_id: str | None = None
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            conversation_id = self._column_manager.new_conversation(
-                self._mindspace_manager.mindspace_path(), model, temperature
-            )
+            conversation_id = self._column_manager.new_conversation(model, temperature)
 
         except MindspaceError as e:
             self._mindspace_manager.add_system_interaction(
@@ -1275,11 +1270,11 @@ class MainWindow(QMainWindow):
         if conversation_id is None:
             return False
 
-        conversation_tab = self._column_manager.find_conversation_tab_by_id(conversation_id)
+        conversation_tab = self._column_manager.find_tab_by_id(conversation_id)
         if conversation_tab is None:
             return False
 
-        conversation_tab.set_input_text(prompt)
+        cast(ConversationTab, conversation_tab).set_input_text(prompt)
 
         if should_submit:
             conversation_tab.submit()

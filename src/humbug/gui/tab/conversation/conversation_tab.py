@@ -49,7 +49,7 @@ class ConversationTab(TabBase):
         Initialize the unified conversation tab.
 
         Args:
-            tab_id: Unique identifier for this tab
+            tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             path: Full path to transcript file
             timestamp: ISO format timestamp for the conversation
             parent: Optional parent widget
@@ -213,11 +213,10 @@ class ConversationTab(TabBase):
             transcript = ConversationTranscriptHandler(path)
             transcript_data = transcript.read()
 
-            conversation_id = os.path.splitext(os.path.basename(path))[0]
             timestamp = transcript_data.timestamp
 
             # Create conversation tab
-            conversation_tab = cls(conversation_id, path, timestamp, parent)
+            conversation_tab = cls("", path, timestamp, parent)
             conversation_tab._conversation_widget.load_message_history(transcript_data.messages, False)
 
             return conversation_tab
@@ -263,6 +262,10 @@ class ConversationTab(TabBase):
 
         except Exception as e:
             raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
+
+    def path(self) -> str:
+        """Get the conversation file path."""
+        return self._path
 
     def set_path(self, new_id: str, new_path: str) -> None:
         """

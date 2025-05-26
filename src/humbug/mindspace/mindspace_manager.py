@@ -318,7 +318,7 @@ class MindspaceManager(QObject):
 
         return None
 
-    def get_mindspace_path(self, relative_path: str) -> str:
+    def get_absolute_path(self, relative_path: str) -> str:
         """
         Convert a mindspace-relative path to an absolute path.
 
@@ -336,7 +336,7 @@ class MindspaceManager(QObject):
 
         return os.path.normpath(os.path.join(self._mindspace_path, relative_path))
 
-    def make_relative_path(self, path: str) -> str | None:
+    def get_relative_path(self, path: str) -> str:
         """
         Convert an absolute path to a mindspace-relative path if possible.
 
@@ -344,27 +344,31 @@ class MindspaceManager(QObject):
             path: Absolute path to convert.
 
         Returns:
-            Path relative to mindspace root, or None if path is outside mindspace.
+            Path relative to mindspace root, or the abosolute path if outside mindspace,
         """
+        abs_path = os.path.abspath(path)
         if not self.has_mindspace():
-            return None
+            return abs_path
 
         try:
             # Normalize both paths for comparison
-            abs_path = os.path.abspath(path)
             mindspace_path = os.path.abspath(self._mindspace_path)
 
             # Check if the path is actually within the mindspace
             # by comparing the normalized path beginnings
             common_path = os.path.commonpath([abs_path, mindspace_path])
             if common_path != mindspace_path:
-                return None  # Path is outside mindspace
+                return abs_path
 
             # If we get here, the path is within the mindspace, so make it relative
             return os.path.relpath(abs_path, mindspace_path)
 
         except ValueError:
-            return None  # Path is on different
+            self._logger.warning(
+                "Failed to convert path '%s' to relative path within mindspace '%s': %s",
+                path, self._mindspace_path, str(ValueError)
+            )
+            raise
 
     def ensure_mindspace_dir(self, dir_path: str) -> str:
         """
@@ -383,7 +387,7 @@ class MindspaceManager(QObject):
         if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
-        abs_path = self.get_mindspace_path(dir_path)
+        abs_path = self.get_absolute_path(dir_path)
         try:
             os.makedirs(abs_path, exist_ok=True)
             return abs_path

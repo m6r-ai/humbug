@@ -3,7 +3,6 @@ from datetime import datetime
 import logging
 import os
 from typing import Dict, List, cast
-import uuid
 
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Signal, QTimer
@@ -328,26 +327,20 @@ class ColumnManager(QWidget):
         editor = self.find_editor_tab_by_filename(old_path)
         if editor:
             editor.set_filename(new_path)
-            self._update_label(editor)
+            self._update_editor_tab_label(editor)
 
         # For conversations, find by ID and update path
         if old_path.endswith('.conv'):
             old_id = os.path.splitext(os.path.basename(old_path))[0]
-            conversation = self.find_conversation_tab_by_id(old_id)
+            conversation = self.find_conversation_tab_by_path(old_id)
             if conversation:
                 # Get new ID
                 new_id = os.path.splitext(os.path.basename(new_path))[0]
 
-                # Update manager's data structures
-                self._tabs[new_id] = self._tabs.pop(old_id)
-                self._tab_labels[new_id] = self._tab_labels.pop(old_id)
-
                 # Update tab label text
                 label = self._tab_labels[new_id]
-                label.update_id(new_id, f"Conv: {new_id}")
+                label.set_text(f"Conv: {new_id}")
                 self.adjustSize()
-
-                label.close_clicked.connect(lambda: self._close_tab_by_id(new_id))
 
                 # Update conversation internals without signaling
                 conversation.set_path(new_id, new_path)
@@ -630,6 +623,7 @@ class ColumnManager(QWidget):
 
         column.setCurrentWidget(tab)
         self._active_column = column
+        self._update_tabs()
 
     def _handle_tab_modified(self, tab_id: str, modified: bool) -> None:
         """
@@ -808,18 +802,33 @@ class ColumnManager(QWidget):
         """Get index of currently active column."""
         return self._tab_columns.index(self._active_column)
 
-    def find_conversation_tab_by_id(self, conversation_id: str) -> ConversationTab | None:
+    def find_tab_by_id(self, tab_id: str) -> TabBase | None:
         """
-        Find a conversation tab by its conversation ID.
+        Find a tab by its ID.
 
         Args:
-            conversation_id: The ID to search for
+            tab_id: The ID of the tab to search for
+
+        Returns:
+            The TabBase instance if found, None otherwise
+        """
+        return self._tabs.get(tab_id)
+
+    def find_conversation_tab_by_path(self, path: str) -> ConversationTab | None:
+        """
+        Find a conversation tab by its conversation path.
+
+        Args:
+            conversation_path: The path to search for
 
         Returns:
             The ConversationTab if found, None otherwise
         """
-        tab = self._tabs.get(conversation_id)
-        return tab if isinstance(tab, ConversationTab) else None
+        for tab in self._tabs.values():
+            if isinstance(tab, ConversationTab) and tab.path() == path:
+                return tab
+
+        return None
 
     def find_editor_tab_by_filename(self, filename: str) -> EditorTab | None:
         """
@@ -847,8 +856,11 @@ class ColumnManager(QWidget):
         Returns:
             The WikiTab if found, None otherwise
         """
-        tab = self._tabs.get(path)
-        return tab if isinstance(tab, WikiTab) else None
+        for tab in self._tabs.values():
+            if isinstance(tab, WikiTab) and tab.path() == path:
+                return tab
+
+        return None
 
     def show_system(self) -> SystemTab:
         """
@@ -862,8 +874,7 @@ class ColumnManager(QWidget):
                 self._set_current_tab(tab.tab_id())
                 return tab
 
-        tab_id = str(uuid.uuid4())
-        system_tab = SystemTab(tab_id, self)
+        system_tab = SystemTab("", self)
 
         # Use language strings for the tab title
         self._add_tab(system_tab, "System Shell")
@@ -879,42 +890,39 @@ class ColumnManager(QWidget):
     def new_file(self) -> EditorTab:
         """Create a new empty editor tab."""
         self._untitled_count += 1
-        tab_id = str(uuid.uuid4())
-        editor = EditorTab(tab_id, "", self._untitled_count, self)
+        editor = EditorTab("", "", self._untitled_count, self)
         editor.modified_state_changed.connect(self._handle_tab_modified)
         self._add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
 
     def open_file(self, path: str) -> EditorTab:
         """Open a file in a new or existing editor tab."""
+        assert os.path.isabs(path), "Path must be absolute"
+
         # Check if file is already open
         existing_tab = self.find_editor_tab_by_filename(path)
         if existing_tab is not None:
             self._set_current_tab(existing_tab.tab_id())
             return existing_tab
 
-        tab_id = path
-        editor = EditorTab(tab_id, path, None, self)
+        editor = EditorTab("", path, None, self)
         editor.modified_state_changed.connect(self._handle_tab_modified)
         self._add_tab(editor, os.path.basename(path))
         return editor
 
     def new_conversation(
         self,
-        mindspace_path: str,
         model: str | None = None,
         temperature: float | None = None
     ) -> str:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
         timestamp = datetime.utcnow()
-        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+        conversation_str = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+        filename = os.path.join("conversations", f"{conversation_str}.conv")
+        full_path = self._mindspace_manager.get_absolute_path(filename)
 
-        # Create path relative to mindspace
-        filename = os.path.join("conversations", f"{conversation_id}.conv")
-        full_path = os.path.join(mindspace_path, filename)
-
-        conversation_tab = ConversationTab(conversation_id, full_path, timestamp, self)
+        conversation_tab = ConversationTab("", full_path, timestamp, self)
         conversation_tab.forkRequested.connect(self._fork_conversation)
         conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
@@ -933,24 +941,26 @@ class ColumnManager(QWidget):
         )
         conversation_tab.update_conversation_settings(conversation_settings)
 
-        self._add_tab(conversation_tab, f"Conv: {conversation_id}")
-        return conversation_id
+        self._add_tab(conversation_tab, f"Conv: {conversation_str}")
+        return conversation_tab.tab_id()
 
     def open_conversation(self, path: str) -> ConversationTab | None:
         """Open an existing conversation file."""
-        conversation_id = os.path.splitext(os.path.basename(path))[0]
+        assert os.path.isabs(path), "Path must be absolute"
 
         # Check if already open
-        existing_tab = self.find_conversation_tab_by_id(conversation_id)
+        abs_path = self._mindspace_manager.get_absolute_path(path)
+        existing_tab = self.find_conversation_tab_by_path(abs_path)
         if existing_tab:
-            self._set_current_tab(conversation_id)
+            self._set_current_tab(existing_tab.tab_id())
             return existing_tab
 
         try:
-            conversation_tab = ConversationTab.load_conversation(path, self)
+            conversation_tab = ConversationTab.load_conversation(abs_path, self)
             conversation_tab.forkRequested.connect(self._fork_conversation)
             conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
-            self._add_tab(conversation_tab, f"Conv: {conversation_id}")
+            conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
+            self._add_tab(conversation_tab, f"Conv: {conversation_title}")
             return conversation_tab
 
         except ConversationError as e:
@@ -1052,8 +1062,7 @@ class ColumnManager(QWidget):
         Returns:
             Created terminal tab
         """
-        tab_id = str(uuid.uuid4())
-        terminal = TerminalTab(tab_id, command, self)
+        terminal = TerminalTab("", command, self)
 
         if command:
             title = f"Term: {os.path.basename(command)}"
@@ -1072,6 +1081,8 @@ class ColumnManager(QWidget):
 
     def open_wiki_page(self, path: str) -> WikiTab:
         """Open a wiki page."""
+        assert os.path.isabs(path), "Path must be absolute"
+
         path_minus_anchor = path
         anchor = None
         if '#' in path:
@@ -1154,6 +1165,94 @@ class ColumnManager(QWidget):
             'active_column_index': active_column_index
         }
 
+    def _restore_tab_from_state(self, state: TabState) -> TabBase | None:
+        """Create appropriate tab type from state."""
+        match state.type:
+            case TabType.CONVERSATION:
+                conversation_tab = ConversationTab.restore_from_state(state, self)
+                conversation_tab.forkRequested.connect(self._fork_conversation)
+                conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
+                return conversation_tab
+
+            case TabType.EDITOR:
+                editor_tab = EditorTab.restore_from_state(state, self)
+                editor_tab.modified_state_changed.connect(self._handle_tab_modified)
+                return editor_tab
+
+            case TabType.SYSTEM:
+                return SystemTab.restore_from_state(state, self)
+
+            case TabType.TERMINAL:
+                return TerminalTab.restore_from_state(state, self)
+
+            case TabType.WIKI:
+                wiki_tab = WikiTab.restore_from_state(state, self)
+                wiki_tab.open_wiki_path.connect(self.open_wiki_link)
+                wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
+                return wiki_tab
+
+        return None
+
+    def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
+        """Get appropriate title for tab type."""
+        if isinstance(tab, ConversationTab):
+            return f"Conv: {os.path.splitext(os.path.basename(state.path))[0]}"
+
+        if isinstance(tab, SystemTab):
+            return "System Shell"
+
+        if isinstance(tab, TerminalTab):
+            if state.metadata and "command" in state.metadata:
+                return f"Term: {os.path.basename(state.metadata['command'])}"
+
+            return "Terminal"
+
+        if isinstance(tab, WikiTab):
+            return f"Wiki: {os.path.basename(state.path)}"
+
+        return os.path.basename(state.path)
+
+    def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
+        """Restore state for a single column of tabs."""
+        for state_dict in tab_states:
+            try:
+                state = TabState.from_dict(state_dict)
+                state.path = self._mindspace_manager.get_absolute_path(state.path)
+
+                tab = self._restore_tab_from_state(state)
+                if not tab:
+                    continue
+
+                self._active_column = self._tab_columns[column_index]
+                title = self._get_tab_title(tab, state)
+                self._add_tab(tab, title)
+
+            except Exception as e:
+                self._logger.exception("Failed to restore tab manager state: %s", str(e))
+                continue
+
+    def _deferred_set_active_column(self, active_column_index: int, active_tab_ids: List[str]) -> None:
+        """
+        Set the active column and tab after UI has settled.
+
+        Args:
+            active_column_index: Index of the column to make active
+            active_tab_ids: List of active tab IDs for each column
+        """
+        # Set the active column
+        if 0 <= active_column_index < len(self._tab_columns):
+            self._active_column = self._tab_columns[active_column_index]
+
+            # If there's an active tab in this column, ensure it has focus
+            if active_tab_ids and active_column_index < len(active_tab_ids):
+                active_tab_id = active_tab_ids[active_column_index]
+                if active_tab_id in self._tabs:
+                    tab = self._tabs[active_tab_id]
+                    tab.setFocus()
+
+        # Update tab states to show correct active highlighting
+        self._update_tabs()
+
     def restore_state(self, saved_state: Dict) -> None:
         """Restore tabs and active states from saved state."""
         saved_columns = saved_state.get('columns', [])
@@ -1184,96 +1283,6 @@ class ColumnManager(QWidget):
 
         # Defer setting the active column to ensure it's not overridden by other UI operations
         QTimer.singleShot(0, lambda: self._deferred_set_active_column(active_column_index, active_tab_ids))
-
-    def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
-        """Restore state for a single column of tabs."""
-        for state_dict in tab_states:
-            try:
-                state = TabState.from_dict(state_dict)
-
-                if not os.path.isabs(state.path):
-                    state.path = self._mindspace_manager.get_mindspace_path(state.path)
-
-                tab = self._restore_tab_from_state(state)
-                if not tab:
-                    continue
-
-                self._active_column = self._tab_columns[column_index]
-                title = self._get_tab_title(tab, state)
-                self._add_tab(tab, title)
-
-            except Exception as e:
-                self._logger.exception("Failed to restore tab manager state: %s", str(e))
-                continue
-
-    def _restore_tab_from_state(self, state: TabState) -> TabBase | None:
-        """Create appropriate tab type from state."""
-        match state.type:
-            case TabType.CONVERSATION:
-                conversation_tab = ConversationTab.restore_from_state(state, self)
-                conversation_tab.forkRequested.connect(self._fork_conversation)
-                conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
-                return conversation_tab
-
-            case TabType.EDITOR:
-                editor_tab = EditorTab.restore_from_state(state, self)
-                editor_tab.modified_state_changed.connect(self._handle_tab_modified)
-                return editor_tab
-
-            case TabType.SYSTEM:
-                return SystemTab.restore_from_state(state, self)
-
-            case TabType.TERMINAL:
-                return TerminalTab.restore_from_state(state, self)
-
-            case TabType.WIKI:
-                wiki_tab = WikiTab.restore_from_state(state, self)
-                wiki_tab.open_wiki_path.connect(self.open_wiki_link)
-                wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
-                return wiki_tab
-
-        return None
-
-    def _deferred_set_active_column(self, active_column_index: int, active_tab_ids: List[str]) -> None:
-        """
-        Set the active column and tab after UI has settled.
-
-        Args:
-            active_column_index: Index of the column to make active
-            active_tab_ids: List of active tab IDs for each column
-        """
-        # Set the active column
-        if 0 <= active_column_index < len(self._tab_columns):
-            self._active_column = self._tab_columns[active_column_index]
-
-            # If there's an active tab in this column, ensure it has focus
-            if active_tab_ids and active_column_index < len(active_tab_ids):
-                active_tab_id = active_tab_ids[active_column_index]
-                if active_tab_id in self._tabs:
-                    tab = self._tabs[active_tab_id]
-                    tab.setFocus()
-
-        # Update tab states to show correct active highlighting
-        self._update_tabs()
-
-    def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
-        """Get appropriate title for tab type."""
-        if isinstance(tab, ConversationTab):
-            return f"Conv: {tab.tab_id()}"
-
-        if isinstance(tab, SystemTab):
-            return "System Shell"
-
-        if isinstance(tab, TerminalTab):
-            if state.metadata and "command" in state.metadata:
-                return f"Term: {os.path.basename(state.metadata['command'])}"
-
-            return "Terminal"
-
-        if isinstance(tab, WikiTab):
-            return f"Wiki: {os.path.basename(state.path)}"
-
-        return os.path.basename(state.path)
 
     def _handle_style_changed(self) -> None:
         """
@@ -1428,8 +1437,8 @@ class ColumnManager(QWidget):
 
         # Also check for conversation files
         if path.endswith('.conv'):
-            conversation_id = os.path.splitext(os.path.basename(path))[0]
-            conversation = self.find_conversation_tab_by_id(conversation_id)
+            conversation_path = os.path.splitext(os.path.basename(path))[0]
+            conversation = self.find_conversation_tab_by_path(conversation_path)
             if conversation:
                 self._close_tab_by_id(conversation.tab_id(), True)
 
@@ -1479,7 +1488,7 @@ class ColumnManager(QWidget):
             return
 
         current_tab.save()
-        self._update_label(current_tab)
+        self._update_editor_tab_label(current_tab)
 
     def can_save_file_as(self) -> bool:
         """Check if the current file can be saved as a new file."""
@@ -1496,20 +1505,20 @@ class ColumnManager(QWidget):
             return
 
         current_tab.save_as()
-        self._update_label(current_tab)
+        self._update_editor_tab_label(current_tab)
 
-    def _update_label(self, current_tab: EditorTab) -> None:
+    def _update_editor_tab_label(self, tab: EditorTab) -> None:
         """
         Update the tab label.
 
         Args:
-            tab_id: ID of the tab to update
+            current_tab: Tab to update
         """
-        title = os.path.basename(current_tab.filename())
-        if current_tab.is_modified():
+        title = os.path.basename(tab.filename())
+        if tab.is_modified():
             title += "*"
 
-        label = self._tab_labels.get(current_tab.tab_id())
+        label = self._tab_labels.get(tab.tab_id())
         cast(TabLabel, label).set_text(title)
 
         # Adjust size to fit new label text

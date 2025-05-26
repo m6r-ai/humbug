@@ -248,13 +248,3 @@ class TabLabel(QWidget):
         """
         self._label.setText(text)
         self.adjustSize()
-
-    def update_id(self, tab_id: str, text: str) -> None:
-        """
-        Update the ID and the text displayed in the tab label.
-
-        Args:
-            text: New text to display
-        """
-        self._tab_id = tab_id
-        self.set_text(text)

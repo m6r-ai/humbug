@@ -116,10 +116,7 @@ class M6rcCommand(SystemCommand):
 
         try:
             # Check if the path exists.  Convert to absolute path if it's relative
-            file_path = args[0]
-            if not os.path.isabs(file_path):
-                file_path = self._mindspace_manager.get_mindspace_path(file_path)
-
+            file_path = self._mindspace_manager.get_absolute_path(args[0])
             if not os.path.exists(file_path):
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,

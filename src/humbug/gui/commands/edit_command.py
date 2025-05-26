@@ -56,16 +56,8 @@ class EditCommand(SystemCommand):
             )
             return False
 
-        filename = os.path.normpath(args[0]) if args else ""
-
         try:
-            # Convert relative path to absolute path within mindspace
-            if not os.path.isabs(filename):
-                full_path = self._mindspace_manager.get_mindspace_path(filename)
-
-            else:
-                full_path = filename
-
+            full_path = self._mindspace_manager.get_absolute_path(args[0])
             if not os.path.exists(full_path):
                 # Create directory if needed
                 directory = os.path.dirname(full_path)
@@ -83,13 +75,13 @@ class EditCommand(SystemCommand):
             if not self._edit_file(full_path):
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,
-                    f"Failed to edit file: {filename}"
+                    f"Failed to edit file: {args[0]}"
                 )
                 return False
 
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.SUCCESS,
-                f"Editing file: {filename}"
+                f"Editing file: {args[0]}"
             )
             return True
 

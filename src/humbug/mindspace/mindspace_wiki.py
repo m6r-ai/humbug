@@ -71,8 +71,8 @@ class MindspaceWiki:
             Markdown content with directory listing
         """
         try:
-            rel_path = self._mindspace_manager.make_relative_path(directory_path)
-            dir_name = os.path.basename(cast(str, rel_path))
+            rel_path = self._mindspace_manager.get_relative_path(directory_path)
+            dir_name = os.path.basename(cast(str, directory_path))
             entries = os.listdir(directory_path)
 
             # Start with a heading
@@ -132,7 +132,7 @@ class MindspaceWiki:
             Markdown content with file contents
         """
         try:
-            rel_path = self._mindspace_manager.make_relative_path(file_path)
+            rel_path = self._mindspace_manager.get_relative_path(file_path)
             file_name = os.path.basename(file_path)
 
             # Read file contents
@@ -197,13 +197,13 @@ class MindspaceWiki:
         if target_path.startswith("#"):
             return None
 
-        # Handle file:// links
-        if target_path.startswith("file://"):
-            target_path = target_path[7:]
-
         # Handle external links
         if target_path.startswith(("http://", "https://")):
             return None
+
+        # Handle file:// links
+        if target_path.startswith("file://"):
+            target_path = target_path[7:]
 
         # Extract anchor if present
         base_path = target_path

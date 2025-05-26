@@ -1,7 +1,6 @@
 """Wiki tab implementation."""
 
 import logging
-import os
 from datetime import datetime
 
 from PySide6.QtCore import QUrl, Signal
@@ -41,7 +40,7 @@ class WikiTab(TabBase):
         Initialize the wiki tab.
 
         Args:
-            tab_id: Unique identifier for this tab
+            tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             path: Full path to wiki file
             timestamp: ISO format timestamp for the wiki
             parent: Optional parent widget
@@ -49,7 +48,6 @@ class WikiTab(TabBase):
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("WikiTab")
         self._path: str = path
-        print(f"WikiTab path: {self._path}")
         self._timestamp = timestamp
 
         # Get or create mindspace wiki manage
@@ -221,7 +219,7 @@ class WikiTab(TabBase):
         if not state.timestamp:
             raise WikiError("Wiki tab requires timestamp")
 
-        tab = cls(state.tab_id, os.path.normpath(state.path), state.timestamp, parent)
+        tab = cls(state.tab_id, state.path, state.timestamp, parent)
 
         # Load wiki content
         try:

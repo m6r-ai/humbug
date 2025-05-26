@@ -285,7 +285,7 @@ class SystemCommand:
 
         # Check if dir_path exists in mindspace.  Note if the dir_path is empty we pass an
         # empty string because it will be appended to the mindspace path
-        mindspace_dir = self._mindspace_manager.get_mindspace_path(dir_path or "")
+        mindspace_dir = self._mindspace_manager.get_absolute_path(dir_path or "")
         if not os.path.exists(mindspace_dir) or not os.path.isdir(mindspace_dir):
             return []
 
@@ -338,7 +338,7 @@ class SystemCommand:
         if not self._mindspace_manager.has_mindspace():
             return []
 
-        mindspace_dir = self._mindspace_manager.get_mindspace_path(dir_path)
+        mindspace_dir = self._mindspace_manager.get_absolute_path(dir_path)
         if not os.path.exists(mindspace_dir) or not os.path.isdir(mindspace_dir):
             return []
 

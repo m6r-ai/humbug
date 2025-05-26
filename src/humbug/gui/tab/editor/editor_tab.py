@@ -33,7 +33,7 @@ class EditorTab(TabBase):
         """Initialize editor tab.
 
         Args:
-            tab_id: Unique identifier for this tab
+            tab_id: Unique identifier for this tab, or a UUID will be generated if not provided
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
@@ -359,7 +359,7 @@ class EditorTab(TabBase):
         if not self._mindspace_manager.has_mindspace():
             return  # No backups without a mindspace
 
-        backup_dir = self._mindspace_manager.get_mindspace_path(os.path.join(".humbug", "backups"))
+        backup_dir = self._mindspace_manager.get_absolute_path(os.path.join(".humbug", "backups"))
         os.makedirs(backup_dir, exist_ok=True)
 
         if not self._path:
@@ -427,7 +427,7 @@ class EditorTab(TabBase):
 
         elif self._untitled_number:
             # Clean up backups for untitled file
-            backup_dir = self._mindspace_manager.get_mindspace_path(os.path.join(".humbug", "backups"))
+            backup_dir = self._mindspace_manager.get_absolute_path(os.path.join(".humbug", "backups"))
             prefix = f"backup-{self._untitled_number}-"
             try:
                 for file in os.listdir(backup_dir):

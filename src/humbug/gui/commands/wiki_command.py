@@ -52,16 +52,8 @@ class WikiCommand(SystemCommand):
             )
             return False
 
-        filename = os.path.normpath(args[0]) if args else ""
-
         try:
-            # Convert relative path to absolute path within mindspace
-            if not os.path.isabs(filename):
-                full_path = self._mindspace_manager.get_mindspace_path(filename)
-
-            else:
-                full_path = filename
-
+            full_path = self._mindspace_manager.get_absolute_path(args[0])
             if not os.path.exists(full_path):
                 # Create directory if ned
                 directory = os.path.dirname(full_path)
@@ -79,13 +71,13 @@ class WikiCommand(SystemCommand):
             if not self._wiki_file(full_path):
                 self._mindspace_manager.add_system_interaction(
                     SystemMessageSource.ERROR,
-                    f"Failed to open page: {filename}"
+                    f"Failed to open page: {args[0]}"
                 )
                 return False
 
             self._mindspace_manager.add_system_interaction(
                 SystemMessageSource.SUCCESS,
-                f"Opening page: {filename}"
+                f"Opening page: {args[0]}"
             )
             return True
 

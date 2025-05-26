@@ -1,4 +1,5 @@
 from typing import cast
+import uuid
 
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal, QObject, QEvent
@@ -38,10 +39,13 @@ class TabBase(QFrame):
         Initialize the base tab.
 
         Args:
-            tab_id: Unique identifier for this tab
+            tab_id: Unique identifier for this tab.  If not provided, a new UUID will be generated.
             parent: Optional parent widget
         """
         super().__init__(parent)
+        if not tab_id:
+            tab_id = str(uuid.uuid4())
+
         self._tab_id = tab_id
         self._is_modified = False
 

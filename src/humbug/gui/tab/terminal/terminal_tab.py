@@ -79,9 +79,10 @@ class TerminalTab(TabBase):
         Initialize terminal tab.
 
         Args:
-            tab_id: Unique identifier for this tab
+            tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             command: Optional command to run in terminal
             parent: Optional parent widget
+            start_process: Whether to start the terminal process immediately
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("TerminalTab")
