@@ -83,6 +83,9 @@ class EditorTab(TabBase):
         # Set up syntax highlighter
         self._highlighter = EditorHighlighter(self._editor_widget.document())
 
+        new_language = ProgrammingLanguageUtils.from_file_extension(path)
+        self._update_programming_language(new_language)
+
         # Connect to style changes
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
