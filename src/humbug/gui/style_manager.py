@@ -93,8 +93,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#000000"
             },
             ColorRole.TEXT_HEADING: {
-                ColorMode.DARK: "#ffe8a0",
-                ColorMode.LIGHT: "#203880"
+                ColorMode.DARK: "#ffe0a0",
+                ColorMode.LIGHT: "#204080"
             },
             ColorRole.TEXT_HEADING_BRIGHT: {
                 ColorMode.DARK: "#ffe8a0",
