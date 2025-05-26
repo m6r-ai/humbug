@@ -16,6 +16,7 @@ from PySide6.QtGui import (
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.markdown_block_data import HeadingBlockData
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownDocumentNode, MarkdownParagraphNode, MarkdownHeadingNode,
     MarkdownTextNode, MarkdownBoldNode, MarkdownEmphasisNode, MarkdownInlineCodeNode,
@@ -49,6 +50,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._list_level = 0
 
         self._default_font_height: float = 0
+
+        self._mindspace_manager = MindspaceManager()
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -347,8 +350,17 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Add the link title as a tooltip if present
         if node.title:
             link_format.setToolTip(node.title)
+
         else:
-            link_format.setToolTip(url)
+            tip_url = url
+            if self._is_local_file(url):
+                # If it's a local file, show the path as tooltip
+                if url.startswith('file://'):
+                    tip_url = url[7:]
+
+                tip_url = self._mindspace_manager.get_relative_path(tip_url)
+
+            link_format.setToolTip(tip_url)
 
         self._cursor.setCharFormat(link_format)
 
