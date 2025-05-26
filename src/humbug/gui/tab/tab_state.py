@@ -1,5 +1,4 @@
 from dataclasses import dataclass, asdict
-from datetime import datetime
 from typing import Any, Dict
 
 from humbug.gui.tab.tab_type import TabType
