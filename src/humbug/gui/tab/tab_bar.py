@@ -16,10 +16,10 @@ class TabBar(QTabBar):
         self.setMouseTracking(True)
         self.current_hovered_tab = -1
 
-    def event(self, event: QEvent) -> bool:
+    def event(self, arg__1: QEvent) -> bool:
         """Process hover events."""
-        if event.type() == QEvent.Type.HoverMove:
-            pos = cast(QHoverEvent, event).pos()
+        if arg__1.type() == QEvent.Type.HoverMove:
+            pos = cast(QHoverEvent, arg__1).pos()
             tab_index = self.tabAt(pos)
 
             # Only emit signal when hovering over a new tab
@@ -37,7 +37,7 @@ class TabBar(QTabBar):
                 self.current_hovered_tab = tab_index
 
         # Handle mouse leaving the widget
-        elif event.type() == QEvent.Type.Leave:
+        elif arg__1.type() == QEvent.Type.Leave:
             if self.current_hovered_tab != -1:
                 label = self.tabButton(self.current_hovered_tab, QTabBar.ButtonPosition.LeftSide)
                 if label:
@@ -45,4 +45,4 @@ class TabBar(QTabBar):
 
                 self.current_hovered_tab = -1
 
-        return super().event(event)
+        return super().event(arg__1)

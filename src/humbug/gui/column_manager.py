@@ -33,17 +33,18 @@ from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 class TabData:
     """Encapsulates data related to a tab."""
-    def __init__(self, tab: TabBase, title: str):
+    def __init__(self, tab: TabBase, title: str, tool_tip: str) -> None:
         """
         Initialize tab data.
 
         Args:
             tab: The tab widget
             title: Initial title for the tab
+            tool_tip: Tooltip text for the tab
         """
         self.tab = tab
         self.tab_id = tab.tab_id()
-        self.label = TabLabel(title, self.tab_id)
+        self.label = TabLabel(title, tool_tip, self.tab_id)
 
 
 class ColumnManager(QWidget):
@@ -125,11 +126,16 @@ class ColumnManager(QWidget):
         Args:
             tab: The tab widget to add
             title: Initial title for the tab
+            tool_tip: Tooltip text for the tab
 
         Returns:
             TabData instance for the tab
         """
-        data = TabData(tab, title)
+        tool_tip = tab.path()
+        if tool_tip:
+            tool_tip = self._mindspace_manager.get_relative_path(tool_tip)
+
+        data = TabData(tab, title, tool_tip)
         data.label.close_clicked.connect(lambda: self._close_tab_by_id(data.tab_id))
         tab.activated.connect(lambda: self._handle_tab_activated(tab))
         return data

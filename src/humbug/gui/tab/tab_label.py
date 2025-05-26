@@ -16,17 +16,19 @@ class TabLabel(QWidget):
     close_clicked = Signal()
     drag_started = Signal()
 
-    def __init__(self, text: str, tab_id: str, parent: QWidget | None = None) -> None:
+    def __init__(self, text: str, tool_tip: str, tab_id: str, parent: QWidget | None = None) -> None:
         """
         Initialize the tab label widget.
 
         Args:
             text: The text to display in the tab
+            tool_tip: Tooltip text for the tab
             tab_id: Unique identifier for the associated tab
             parent: Optional parent widget
         """
         super().__init__(parent)
 
+        self.setToolTip(tool_tip)
         self._tab_id = tab_id
         self._is_current = False
         self._is_active_column = False
