@@ -636,107 +636,139 @@ class StyleManager(QObject):
             </svg>
         '''
 
+    def _write_icon(self, name: str, svg_data: str) -> None:
+        icon_dir = os.path.expanduser("~/.humbug/icons")
+        with open(os.path.join(icon_dir, name), 'w', encoding='utf-8') as f:
+            f.write(svg_data)
+
+    def _create_active_inactive_theme_icons(self, active: bool, suffix: str, color: str) -> None:
+        prefix = "" if active else "inactive-"
+
+        # Close button - visible version
+        self._write_icon(f'{prefix}close-{suffix}.svg', f'''
+            <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path stroke="{color}" stroke-width="6" fill="none"
+                    d="M16,16 L48,48 M48,16 L16,48"/>
+            </svg>
+        ''')
+
+        # Conversation tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
+        self._write_icon(f'{prefix}conversation-{suffix}.svg', f'''
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 10H8.01" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 10H12.01" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 10H16.01" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 13V7C21 5.11438 21 4.17157 20.4142 3.58579C19.8284 3 18.8856 3 17 3H7C5.11438 3
+                    4.17157 3 3.58579 3.58579C3 4.17157 3 5.11438 3 7V13C3 14.8856 3 15.8284 3.58579 16.4142C4.17157
+                    17 5.11438 17 7 17H7.5C7.77614 17 8 17.2239 8 17.5V20V20.1499C8 20.5037 8.40137 20.7081
+                    8.6875 20.5L13.0956 17.2941C13.3584 17.103 13.675 17 14 17H17C18.8856 17 19.8284 17 20.4142
+                    16.4142C21 15.8284 21 14.8856 21 13Z" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+        ''')
+
+        # Editor tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
+        self._write_icon(f'{prefix}editor-{suffix}.svg', f'''
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 21H21" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20.0651 7.39423L7.09967 20.4114C6.72438 20.7882 6.21446 21 5.68265 21H4.00383C3.44943
+                    21 3 20.5466 3 19.9922V18.2987C3 17.7696 3.20962 17.2621 3.58297 16.8873L16.5517 3.86681C19.5632
+                    1.34721 22.5747 4.87462 20.0651 7.39423Z" stroke="{color}" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M15.3097 5.30981L18.7274 8.72755" stroke="{color}" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        ''')
+
+        # System tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
+        self._write_icon(f'{prefix}system-{suffix}.svg', f'''
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 7C3 5.11438 3 4.17157 3.58579 3.58579C4.17157 3 5.11438 3 7 3H12H17C18.8856 3 19.8284
+                    3 20.4142 3.58579C21 4.17157 21 5.11438 21 7V10V13C21 14.8856 21 15.8284 20.4142 16.4142C19.8284
+                    17 18.8856 17 17 17H12H7C5.11438 17 4.17157 17 3.58579 16.4142C3 15.8284 3 14.8856 3 13V10V7Z"
+                    stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M7 21H17" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 17V21" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        ''')
+
+        # Terminal tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
+        self._write_icon(f'{prefix}terminal-{suffix}.svg', f'''
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 15H16" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+                <path d="M8 15L10.5 12.5V12.5C10.7761 12.2239 10.7761 11.7761 10.5 11.5V11.5L8 9"
+                    stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 8C3 6.11438 3 5.17157 3.58579 4.58579C4.17157 4 5.11438 4 7 4H12H17C18.8856 4
+                    19.8284 4 20.4142 4.58579C21 5.17157 21 6.11438 21 8V12V16C21 17.8856 21 18.8284 20.4142
+                    19.4142C19.8284 20 18.8856 20 17 20H12H7C5.11438 20 4.17157 20 3.58579 19.4142C3 18.8284
+                    3 17.8856 3 16V12V8Z" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+        ''')
+
+        # Wiki tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
+        self._write_icon(f'{prefix}wiki-{suffix}.svg', f'''
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.8284 6.82843C18.4065 7.40649 18.6955 7.69552 18.8478 8.06306C19 8.4306 19 8.83935
+                    19 9.65685L19 17C19 18.8856 19 19.8284 18.4142 20.4142C17.8284 21 16.8856 21 15 21H9C7.11438
+                    21 6.17157 21 5.58579 20.4142C5 19.8284 5 18.8856 5 17L5 7C5 5.11438 5 4.17157 5.58579
+                    3.58579C6.17157 3 7.11438 3 9 3H12.3431C13.1606 3 13.5694 3 13.9369 3.15224C14.3045 3.30448
+                    14.5935 3.59351 15.1716 4.17157L17.8284 6.82843Z" stroke="{color}"
+                    stroke-width="2" stroke-linejoin="round"/>
+                <path d="M9 6L11 6" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 9L12 9" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 12L11 12" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 15L12 15" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        ''')
+
     def _create_theme_icons(self) -> None:
         """Create theme-specific icons in the user's .humbug directory."""
         icon_dir = os.path.expanduser("~/.humbug/icons")
         os.makedirs(icon_dir, exist_ok=True)
 
-        def write_icon(name: str, svg_data: str) -> None:
-            with open(os.path.join(icon_dir, name), 'w', encoding='utf-8') as f:
-                f.write(svg_data)
-
         # Create collapsed and expanded arrows for both themes
         for mode in ColorMode:
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
-            disabled_color = self._colors[ColorRole.TEXT_DISABLED][mode]
+            inactive_color = self._colors[ColorRole.TEXT_DISABLED][mode]
             suffix = mode.name.lower()
 
             # Right-pointing arrow
-            write_icon(f'arrow-right-{suffix}.svg', f'''
+            self._write_icon(f'arrow-right-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none" d="M24,16 L40,32 L24,48"/>
                 </svg>
             ''')
 
             # Left-pointing arrow
-            write_icon(f'arrow-left-{suffix}.svg', f'''
+            self._write_icon(f'arrow-left-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none" d="M40,16 L24,32 L40,48"/>
                 </svg>
             ''')
 
             # Up-pointing arrow
-            write_icon(f'arrow-up-{suffix}.svg', f'''
+            self._write_icon(f'arrow-up-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none" d="M16,40 L32,24 L48,40"/>
                 </svg>
             ''')
 
             # Down-pointing arrow
-            write_icon(f'arrow-down-{suffix}.svg', f'''
+            self._write_icon(f'arrow-down-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none" d="M16,24 L32,40 L48,24"/>
                 </svg>
             ''')
 
             # Close button - visible version
-            write_icon(f'close-{suffix}.svg', f'''
+            self._write_icon(f'close-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none"
                         d="M16,16 L48,48 M48,16 L16,48"/>
                 </svg>
             ''')
 
-            # Disabled close button - visible version
-            write_icon(f'disabled-close-{suffix}.svg', f'''
-                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke="{disabled_color}" stroke-width="6" fill="none"
-                        d="M16,16 L48,48 M48,16 L16,48"/>
-                </svg>
-            ''')
-
-            # Conversation tab icon
-            green = "green"
-            write_icon(f'conversation-{suffix}.svg', f'''
-                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="8" width="48" height="48" stroke="{green}" stroke-width="6" fill="none"/>
-                </svg>
-            ''')
-
-            # Editor tab icon
-            red = "red"
-            write_icon(f'editor-{suffix}.svg', f'''
-                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="8" width="48" height="48" stroke="{red}" stroke-width="6" fill="none"/>
-                </svg>
-            ''')
-
-            # System tab icon
-            magenta = "magenta"
-            write_icon(f'system-{suffix}.svg', f'''
-                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="8" width="48" height="48" stroke="{magenta}" stroke-width="6" fill="none"/>
-                </svg>
-            ''')
-
-            # Terminal tab icon
-            yellow = "yellow"
-            write_icon(f'terminal-{suffix}.svg', f'''
-                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="8" width="48" height="48" stroke="{yellow}" stroke-width="6" fill="none"/>
-                </svg>
-            ''')
-
-            # Wiki tab icon
-            blue = "blue"
-            write_icon(f'wiki-{suffix}.svg', f'''
-                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="8" width="48" height="48" stroke="{blue}" stroke-width="6" fill="none"/>
-                </svg>
-            ''')
-
             # Checkbox check mark
-            write_icon(f'check-{suffix}.svg', f'''
+            self._write_icon(f'check-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none"
                         d="M16,32 L28,44 L48,20" stroke-linecap="round" stroke-linejoin="round"/>
@@ -744,7 +776,7 @@ class StyleManager(QObject):
             ''')
 
             # Message box icons
-            write_icon(f'info-{suffix}.svg', f'''
+            self._write_icon(f'info-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
                     <text x="32" y="40" text-anchor="middle"
@@ -752,7 +784,7 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
-            write_icon(f'warning-{suffix}.svg', f'''
+            self._write_icon(f'warning-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path d="M32 4 L60 56 L4 56 Z" stroke="{color}" stroke-width="4" fill="none"/>
                     <text x="32" y="48" text-anchor="middle"
@@ -760,7 +792,7 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
-            write_icon(f'critical-{suffix}.svg', f'''
+            self._write_icon(f'critical-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
                     <path stroke="{color}" stroke-width="4" fill="none"
@@ -768,7 +800,7 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
-            write_icon(f'question-{suffix}.svg', f'''
+            self._write_icon(f'question-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
                     <text x="32" y="44" text-anchor="middle"
@@ -776,7 +808,7 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
-            write_icon(f'save-{suffix}.svg', f'''
+            self._write_icon(f'save-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none"
                         d="M8,40, L8,56 L56,56 L56,40"/>
@@ -787,7 +819,7 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
-            write_icon(f'copy-{suffix}.svg', f'''
+            self._write_icon(f'copy-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <rect x="22" y="10" width="32" height="32" stroke="{color}" stroke-width="6" fill="none"/>
                     <path stroke="{color}" stroke-width="6" fill="none"
@@ -795,14 +827,14 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
-            write_icon(f'fork-{suffix}.svg', f'''
+            self._write_icon(f'fork-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none"
                         d="M32,8 L32,32 M32,32 L8,56 L8,40 M8,56 L24,56 M32,32 L56,56 L56,40 M56,56 L40,56"/>
                 </svg>
             ''')
 
-            write_icon(f'delete-{suffix}.svg', f'''
+            self._write_icon(f'delete-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none"
                         d="M12.5,20 L12.5,56 L51.5,56 L51.5,20 M4,20 L60,20 M18,20 L24,8 L40,8 L46,20"/>
@@ -811,21 +843,24 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
-            write_icon(f'edit-{suffix}.svg', f'''
+            self._write_icon(f'edit-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none"
                         d="M8,56 L56,56 M40,12 L52,24 L24,52 L8,56 L12,40 L40,12 Z"/>
                 </svg>
             ''')
 
+            self._create_active_inactive_theme_icons(True, suffix, color)
+            self._create_active_inactive_theme_icons(False, suffix, inactive_color)
+
         # Create the standard application icon for about dialog
-        write_icon('app-icon.svg', self._create_app_icon_svg('#4040c0', '#ffffff'))
+        self._write_icon('app-icon.svg', self._create_app_icon_svg('#4040c0', '#ffffff'))
 
         # Create light mode disabled version
-        write_icon('app-icon-disabled-light.svg', self._create_app_icon_svg('#c0c0c0', '#e0e0e0'))
+        self._write_icon('app-icon-disabled-light.svg', self._create_app_icon_svg('#c0c0c0', '#e0e0e0'))
 
         # Create dark mode disabled version
-        write_icon('app-icon-disabled-dark.svg', self._create_app_icon_svg('#202020', '#404040'))
+        self._write_icon('app-icon-disabled-dark.svg', self._create_app_icon_svg('#202020', '#404040'))
 
     def get_icon_path(self, name: str) -> str:
         """

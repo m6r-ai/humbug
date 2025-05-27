@@ -70,6 +70,15 @@ class TabLabel(QWidget):
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
 
+    def _create_inactive_type_icon(self) -> QIcon:
+        """Create an icon for the tab type."""
+        icon = QIcon()
+        icon_path = self._style_manager.get_icon_path(f"inactive-{self._icon_name}")
+        pixmap = self._style_manager.scale_icon(icon_path, 16)
+        icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
+        return icon
+
     def _create_visible_close_icon(self) -> QIcon:
         icon = QIcon()
         icon_path = self._style_manager.get_icon_path("close")
@@ -78,9 +87,9 @@ class TabLabel(QWidget):
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
 
-    def _create_visible_disabled_close_icon(self) -> QIcon:
+    def _create_visible_inactive_close_icon(self) -> QIcon:
         icon = QIcon()
-        icon_path = self._style_manager.get_icon_path("disabled-close")
+        icon_path = self._style_manager.get_icon_path("inactive-close")
         pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
         icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
@@ -118,10 +127,10 @@ class TabLabel(QWidget):
 
         # Recreate icons at new size
         self._type_icon = self._create_type_icon()
-        self._type_button.setIcon(self._type_icon)
+        self._inactive_type_icon = self._create_inactive_type_icon()
 
         self._visible_close_icon = self._create_visible_close_icon()
-        self._visible_disabled_close_icon = self._create_visible_disabled_close_icon()
+        self._visible_inactive_close_icon = self._create_visible_inactive_close_icon()
         self._invisible_close_icon = self._create_invisible_close_icon()
 
         # Update layout margins and spacing
@@ -234,8 +243,10 @@ class TabLabel(QWidget):
                     background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
                 }}
             """
-            icon = self._visible_close_icon if self._is_active_column else self._visible_disabled_close_icon
-            self._close_button.setIcon(icon)
+            type_icon = self._type_icon if self._is_active_column else self._inactive_type_icon
+            self._type_button.setIcon(type_icon)
+            close_icon = self._visible_close_icon if self._is_active_column else self._visible_inactive_close_icon
+            self._close_button.setIcon(close_icon)
             self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self._close_button.setToolTip("Close Tab")
 
@@ -249,6 +260,7 @@ class TabLabel(QWidget):
                 }}
             """
             close_style = type_style
+            self._type_button.setIcon(self._inactive_type_icon)
             self._close_button.setIcon(self._invisible_close_icon)
             self._close_button.setCursor(Qt.CursorShape.ArrowCursor)
             self._close_button.setToolTip("")
