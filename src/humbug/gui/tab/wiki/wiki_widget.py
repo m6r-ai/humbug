@@ -318,6 +318,7 @@ class WikiWidget(QWidget):
             new_path: New path for the wiki file
         """
         self._path = new_path
+        self.load_content()
 
     def _on_scroll_value_changed(self, value: int) -> None:
         """

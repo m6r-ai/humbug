@@ -345,28 +345,34 @@ class ColumnManager(QWidget):
             old_path: Original path of renamed file
             new_path: New path after renaming
         """
-        # Find any editor tab for this file
+        # Update any editor tab for this file
         editor_tab = self._find_editor_tab_by_path(old_path)
         if editor_tab:
             editor_tab.set_path(new_path)
             self._update_editor_tab_label(editor_tab)
 
-        # For conversations, find by ID and update path
+        # Update any conversation tab for this file
         if old_path.endswith('.conv'):
             conversation_tab = self._find_conversation_tab_by_path(old_path)
             if conversation_tab:
-                # Get new title
-                new_title = os.path.splitext(os.path.basename(new_path))[0]
+                conversation_tab.set_path(new_path)
 
                 # Update tab label text
-                label = self._tab_labels[new_title]
+                new_title = os.path.splitext(os.path.basename(new_path))[0]
+                label = self._tab_labels[conversation_tab.tab_id()]
                 label.set_text(new_title)
                 self.adjustSize()
 
-                # Update conversation internals without signaling
-                conversation_tab.set_path(new_path)
+        # Update any wiki tab for this file
+        wiki_tab = self._find_wiki_tab_by_path(old_path)
+        if wiki_tab:
+            wiki_tab.set_path(new_path)
 
-# TODO: Add support for wiki tabs - note they need to rerender too!
+            # Update tab label text
+            new_title = os.path.basename(new_path)
+            label = self._tab_labels[wiki_tab.tab_id()]
+            label.set_text(new_title)
+            self.adjustSize()
 
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""

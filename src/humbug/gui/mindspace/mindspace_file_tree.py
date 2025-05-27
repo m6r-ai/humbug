@@ -173,7 +173,6 @@ class MindspaceFileTree(QWidget):
                     return
 
                 os.rename(path, new_path)
-                # Emit signal for any necessary updates
                 self.file_renamed.emit(path, new_path)
 
             except OSError as e:
