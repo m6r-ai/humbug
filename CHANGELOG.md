@@ -4,6 +4,10 @@
 
 New features:
 
+- Added a new type of "wiki" tab and a matching "wiki" system shell command.  The wiki pages are dynamically generated
+  view of all the information relevent to a file or directory, including a preview of any markdown file content, and
+  any source code content.  This is now the default for opening files from the mindspace tree view.  Editing source code
+  can now be done via the edit button, or by right clicking on the file in the mindspace tree.
 - Any dialog box that has a destructive default action now has a red default button instead of blue.
 - Added new Anthropic models: Claude Sonnet 4, Claude Opus 4.
 - Added new Mistral small model: Devstral Small.
