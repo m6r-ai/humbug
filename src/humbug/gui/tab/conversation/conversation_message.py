@@ -358,7 +358,7 @@ class ConversationMessage(QFrame):
         self.forkRequested.emit()
 
     def _delete_message(self) -> None:
-        """Delete the conversation from this message."""
+        """Delete this message from the conversation."""
         strings = self._language_manager.strings()
 
         # Show confirmation dialog using the application's MessageBox class
@@ -367,7 +367,8 @@ class ConversationMessage(QFrame):
             MessageBoxType.QUESTION,
             strings.delete_from_here_title,
             strings.delete_from_here_message,
-            [MessageBoxButton.YES, MessageBoxButton.NO]
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            destructive=True
         )
 
         if result != MessageBoxButton.YES:
