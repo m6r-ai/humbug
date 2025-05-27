@@ -339,8 +339,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#0060c0"
             },
             ColorRole.SYNTAX_INLINE_CODE: {
-                ColorMode.DARK: "#8080f0",
-                ColorMode.LIGHT: "#3030c0"
+                ColorMode.DARK: "#f08080",
+                ColorMode.LIGHT: "#c03030"
             },
             ColorRole.SYNTAX_KEYWORD: {
                 ColorMode.DARK: "#ffc0eb",
