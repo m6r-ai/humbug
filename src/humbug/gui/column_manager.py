@@ -353,15 +353,14 @@ class ColumnManager(QWidget):
 
         # For conversations, find by ID and update path
         if old_path.endswith('.conv'):
-            old_path = os.path.splitext(os.path.basename(old_path))[0]
             conversation_tab = self._find_conversation_tab_by_path(old_path)
             if conversation_tab:
-                # Get new ID
+                # Get new title
                 new_title = os.path.splitext(os.path.basename(new_path))[0]
 
                 # Update tab label text
                 label = self._tab_labels[new_title]
-                label.set_text(f"Conv: {new_title}")
+                label.set_text(new_title)
                 self.adjustSize()
 
                 # Update conversation internals without signaling
@@ -1441,16 +1440,15 @@ class ColumnManager(QWidget):
             path: Path of file being deleted
         """
         # Find and close any editor tab for this file
-        editor = self._find_editor_tab_by_path(path)
-        if editor:
-            self._close_tab_by_id(editor.tab_id(), True)
+        editor_tab = self._find_editor_tab_by_path(path)
+        if editor_tab:
+            self._close_tab_by_id(editor_tab.tab_id(), True)
 
         # Also check for conversation files
         if path.endswith('.conv'):
-            conversation_path = os.path.splitext(os.path.basename(path))[0]
-            conversation = self._find_conversation_tab_by_path(conversation_path)
-            if conversation:
-                self._close_tab_by_id(conversation.tab_id(), True)
+            conversation_tab = self._find_conversation_tab_by_path(path)
+            if conversation_tab:
+                self._close_tab_by_id(conversation_tab.tab_id(), True)
 
     def can_close_all_tabs(self) -> bool:
         """Can we close all the tabs that are open?"""
