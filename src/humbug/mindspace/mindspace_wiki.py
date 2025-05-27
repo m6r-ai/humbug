@@ -5,8 +5,8 @@ import logging
 import os
 from typing import List, Tuple, cast
 
-from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_wiki_error import MindspaceWikiIOError
 
 
 class MindspaceWikiContentType(Enum):
@@ -40,12 +40,12 @@ class MindspaceWiki:
             Tuple of (content, timestamp)
 
         Raises:
-            WikiIOError: If the path cannot be read or does not exist
+            MindspaceWikiIOError: If the path cannot be read or does not exist
         """
         try:
             # Get file info
             if not os.path.exists(path):
-                raise WikiIOError(f"Path does not exist: {path}")
+                raise MindspaceWikiIOError(f"Path does not exist: {path}")
 
             if os.path.isdir(path):
                 # Generate directory listing
@@ -58,7 +58,7 @@ class MindspaceWiki:
             return content
 
         except Exception as e:
-            raise WikiIOError(f"Failed to read wiki content: {str(e)}") from e
+            raise MindspaceWikiIOError(f"Failed to read wiki content: {str(e)}") from e
 
     def _generate_directory_content(self, directory_path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
         """
@@ -258,7 +258,7 @@ class MindspaceWiki:
             Absolute path to the target or None if it's an external link
 
         Raises:
-            WikiIOError: If the target path does not exist
+            MindspaceWikiIOError: If the target path does not exist
         """
         # Handle anchors separately
         if target_path.startswith("#"):
@@ -285,7 +285,7 @@ class MindspaceWiki:
 
         # Check if path exists
         if not os.path.exists(base_path):
-            raise WikiIOError(f"Path does not exist: {base_path}")
+            raise MindspaceWikiIOError(f"Path does not exist: {base_path}")
 
         # Return resolved path with anchor if present
         if anchor:

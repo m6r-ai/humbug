@@ -18,7 +18,6 @@ from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.gui.tab.system.system_tab import SystemTab
-from humbug.gui.tab.wiki.wiki_error import WikiError
 from humbug.gui.tab.wiki.wiki_tab import WikiTab
 from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_label import TabLabel
@@ -29,6 +28,7 @@ from humbug.gui.welcome_widget import WelcomeWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
+from humbug.mindspace.mindspace_wiki_error import MindspaceWikiError
 
 
 class TabData:
@@ -1126,7 +1126,7 @@ class ColumnManager(QWidget):
 
             return wiki_tab
 
-        except WikiError as e:
+        except MindspaceWikiError as e:
             self._logger.exception("Failed to open wiki page: %s", str(e))
             raise
 

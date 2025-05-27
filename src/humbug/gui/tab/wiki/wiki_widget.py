@@ -16,9 +16,9 @@ from humbug.gui.tab.wiki.wiki_content import WikiContent
 from humbug.gui.tab.wiki.wiki_file_content import WikiFileContent
 from humbug.gui.tab.wiki.wiki_markdown_content import WikiMarkdownContent
 from humbug.gui.tab.wiki.wiki_markdown_preview_content import WikiMarkdownPreviewContent
-from humbug.gui.tab.wiki.wiki_error import WikiIOError
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_wiki import MindspaceWiki, MindspaceWikiContentType
+from humbug.mindspace.mindspace_wiki_error import MindspaceWikiIOError
 
 
 class WikiWidgetEventFilter(QObject):
@@ -299,7 +299,7 @@ class WikiWidget(QWidget):
             self._scroll_to_top()
 
         except Exception as e:
-            raise WikiIOError(f"Failed to read wiki file: {str(e)}") from e
+            raise MindspaceWikiIOError(f"Failed to read wiki file: {str(e)}") from e
 
     def clear_content(self) -> None:
         """Clear all content blocks."""

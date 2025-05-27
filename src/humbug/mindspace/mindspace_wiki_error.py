@@ -1,9 +1,9 @@
-"""Exception classes for wiki operations."""
+"""Exception classes for mindspace wiki operations."""
 
 from typing import Dict
 
 
-class WikiError(Exception):
+class MindspaceWikiError(Exception):
     """Base class for wiki-related exceptions."""
 
     def __init__(self, message: str, details: Dict | None = None) -> None:
@@ -18,5 +18,5 @@ class WikiError(Exception):
         self.details = details or {}
 
 
-class WikiIOError(WikiError):
+class MindspaceWikiIOError(MindspaceWikiError):
     """Exception raised when wiki file operations fail."""
