@@ -90,7 +90,7 @@ class MindspaceWiki:
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
             # Sort entries - directories first, then files
-            dirs = []
+            dirs = [".."]
             files = []
 
             for entry in entries:
@@ -118,11 +118,11 @@ class MindspaceWiki:
 
                 for i in range(len(dirs) - 1):
                     d = dirs[i]
-                    full_path = os.path.join(directory_path, d)
+                    full_path = os.path.abspath(os.path.join(directory_path, d))
                     lines.append(f"`  ├── ` [`{d}`]({full_path})  ")
 
                 d = dirs[-1]
-                full_path = os.path.join(directory_path, d)
+                full_path = os.path.abspath(os.path.join(directory_path, d))
                 lines.append(f"`  └── ` [`{d}`]({full_path})")
 
                 contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
@@ -141,11 +141,11 @@ class MindspaceWiki:
 
                 for i in range(len(files) - 1):
                     f = files[i]
-                    full_path = os.path.join(directory_path, f)
+                    full_path = os.path.abspath(os.path.join(directory_path, f))
                     lines.append(f"`  ├── ` [`{f}`]({full_path})  ")
 
                 f = files[-1]
-                full_path = os.path.join(directory_path, f)
+                full_path = os.path.abspath(os.path.join(directory_path, f))
                 lines.append(f"`  └── ` [`{f}`]({full_path})")
 
                 contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
