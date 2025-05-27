@@ -19,6 +19,8 @@ Bug fixes:
 - Markdown rendering of lists that included paragraphs did not work correctly.
 - Attempting to quit Humbug with unsaved changes in a file would result in you being asked twice if you wanted
   to discard.
+- Path names with `~` prefixes are now handled correctly in the system shell.
+- Path names with spaces in them are now handled correctly in the system shell.
 
 Internal structure changes:
 
