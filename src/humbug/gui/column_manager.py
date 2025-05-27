@@ -1450,6 +1450,11 @@ class ColumnManager(QWidget):
             if conversation_tab:
                 self._close_tab_by_id(conversation_tab.tab_id(), True)
 
+        # Close any wiki page we may have had for this file
+        wiki_tab = self._find_wiki_tab_by_path(path)
+        if wiki_tab:
+            self._close_tab_by_id(wiki_tab.tab_id(), True)
+
     def can_close_all_tabs(self) -> bool:
         """Can we close all the tabs that are open?"""
         all_tabs = list(self._tabs.values())
