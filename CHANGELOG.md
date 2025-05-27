@@ -8,6 +8,7 @@ New features:
 - Added new Anthropic models: Claude Sonnet 4, Claude Opus 4.
 - Added new Mistral small model: Devstral Small.
 - Tab labels now have tool tips.
+- Tab label types are now identified by icons instead of text prefixes.
 
 Bug fixes:
 
