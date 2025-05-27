@@ -76,8 +76,8 @@ class MindspaceWiki:
             entries = os.listdir(directory_path)
             print(f"Generating directory content for: {directory_path} (relative path: {rel_path})")
 
-            if rel_path == "." or rel_path == "":
-                dir_name = f"Project home: {os.path.basename(self._mindspace_manager.mindspace_path())}"
+            if rel_path in (".", ""):
+                dir_name = f"Mindspace home: {os.path.basename(self._mindspace_manager.mindspace_path())}"
 
             contents: List[Tuple[MindspaceWikiContentType, str]] = []
 

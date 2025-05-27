@@ -125,6 +125,15 @@ class SystemTab(TabBase):
 
         return tab
 
+    def set_path(self, path: str) -> None:
+        """
+        Set the path associated with this tab.
+
+        Args:
+            path: Path to associate with this tab
+        """
+        # Do nothing for terminal tabs
+
     def can_close_tab(self) -> bool:
         """Check if system can be closed."""
         return True
