@@ -633,6 +633,13 @@ Context: Capabilities
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Alt+O" for Windows).
 
+            Context: Open Wiki
+                The "Open Wiki" menu item will open the mindspace home wiki page.
+
+                This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+W" for Windows).
+
+                This option is only valid if a mindspace is open.
+
             Context: Open Conversation
                 The "Open Conversation..." menu item will show a file selection dialog allowing the user to open
                 an existing conversation transcript and continue the conversation in the same file.

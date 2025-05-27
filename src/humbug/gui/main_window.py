@@ -99,6 +99,10 @@ class MainWindow(QMainWindow):
         self._open_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
         self._open_mindspace_action.triggered.connect(self._open_mindspace)
 
+        self._open_wiki_action = QAction(strings.open_wiki, self)
+        self._open_wiki_action.setShortcut(QKeySequence("Ctrl+Shift+W"))
+        self._open_wiki_action.triggered.connect(self._open_wiki)
+
         self._open_conv_action = QAction(strings.open_conversation, self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
         self._open_conv_action.triggered.connect(self._open_conversation)
@@ -247,6 +251,7 @@ class MainWindow(QMainWindow):
         self._file_menu.addAction(self._new_terminal_action)
         self._file_menu.addSeparator()
         self._file_menu.addAction(self._open_mindspace_action)
+        self._file_menu.addAction(self._open_wiki_action)
         self._file_menu.addAction(self._open_conv_action)
         self._file_menu.addAction(self._open_file_action)
         self._file_menu.addSeparator()
@@ -409,6 +414,7 @@ class MainWindow(QMainWindow):
         self._new_conv_action.setEnabled(has_mindspace)
         self._new_metaphor_conv_action.setEnabled(has_mindspace)
         self._new_file_action.setEnabled(has_mindspace)
+        self._open_wiki_action.setEnabled(has_mindspace)
         self._open_conv_action.setEnabled(has_mindspace)
         self._open_file_action.setEnabled(has_mindspace)
         self._new_terminal_action.setEnabled(has_mindspace)
@@ -475,6 +481,7 @@ class MainWindow(QMainWindow):
         self._new_metaphor_conv_action.setText(strings.new_metaphor_conversation)
         self._new_file_action.setText(strings.new_file)
         self._open_mindspace_action.setText(strings.open_mindspace)
+        self._open_wiki_action.setText(strings.open_wiki)
         self._open_conv_action.setText(strings.open_conversation)
         self._open_file_action.setText(strings.open_file)
         self._fork_conv_action.setText(strings.fork_conversation)
@@ -852,6 +859,10 @@ class MainWindow(QMainWindow):
     def _save_file_as(self) -> None:
         """Save the current file with a new name."""
         self._column_manager.save_file_as()
+
+    def _open_wiki(self) -> None:
+        """Open the wiki page in a new tab."""
+        self._column_manager.open_wiki_page(self._mindspace_manager.get_absolute_path("."))
 
     def _show_system_shell(self) -> None:
         """Show the system tab."""

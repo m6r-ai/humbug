@@ -26,6 +26,7 @@ class LanguageStrings:
     open_mindspace: str
     open_conversation: str
     open_file: str
+    open_wiki: str
     fork_conversation: str
     save: str
     save_as: str
