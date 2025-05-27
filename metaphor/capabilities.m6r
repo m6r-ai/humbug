@@ -28,7 +28,7 @@ Context: Capabilities
         messages or strings, but the application will support the matching versions in all other languages.
 
     Context: Application window
-        The main window is divided into two primary regions: a file tree view on the left side, and a tabbed
+        The main window is divided into two primary regions: a mindspace tree view on the left side, and a tabbed
         interface on the right side. The two regions are separated by a resizable splitter that allows the user
         to adjust the relative widths.  At the bottom of the main window is an application status bar.
 
@@ -81,8 +81,8 @@ Context: Capabilities
                 - Within each column the active tab in the column is also restored.
                 - The column that was active when stored is also made the active column when restored.
 
-        Context: File tree view
-            The file tree displays the contents of the current mindspace:
+        Context: Mindspace tree view
+            The mindspace tree displays the contents of the current mindspace:
 
             - Shows the name of the current mindspace, or "no mindspace active" if none is active
             - Shows all files and folders in the mindspace directory
@@ -183,6 +183,20 @@ Context: Capabilities
                 Include: metaphor/tab-system.m6r
                 Include: metaphor/tab-terminal.m6r
                 Include: metaphor/tab-wiki.m6r
+
+            Context: Tab labels
+                Each tab has a tab label.  This comprises an icon indicating the tab type, a text label indicating the tab
+                contents, and a close button.
+
+                Clicking the close button (typically rendered as an "x" icon) will close the tab in the same way as
+                clicking the "Close Tab" menu item.
+
+                The close button will be:
+
+                - Always visible but not highlighted on the currently selected tab.
+                - Hidden by default on non-selected tabs, appearing only when the tab is hovered over.
+                - Use a transparent background when not hovered
+                - Highlighted in red when the mouse hovers over the close button itself.
 
             Context: Syntax highlighting
                 Code blocks and inline code will be syntax highlighted based on the programming language

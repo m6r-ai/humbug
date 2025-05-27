@@ -8,8 +8,6 @@ Context: Editor tabs
 
     If there are unsaved changes in the file, an asterisk (*) will appear after the filename.
 
-    The close button behavior matches that of conversation tabs.
-
     Context: Navigation
         The editor supports:
             - Home key: Moves cursor to start of current line

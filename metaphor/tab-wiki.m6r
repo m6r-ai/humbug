@@ -3,13 +3,13 @@ Context: Wiki tabs
     the user's mindspace.
 
     Context: File pages
-        Each file in the mindspace has a matching file page.  This contains information about the file, and includes
-        an embedded code block that matches the file's contents.
+        Each file in the mindspace has a matching file page.  This contains information about the file, and if the file
+        represents source code then the information includes an embedded code block representing that source code.
+
+        If the contents of the file can be previewed then a preview of the contents will also be shown.
 
     Context: Folder/directory pages
         Each directory in the mindspace has a matching folder/directory page.  This contains information about the directory,
         and includes details of all the directories and files that exist within it.
 
     Each wiki tab will be named with the path being viewed.
-
-    
