@@ -153,7 +153,7 @@ class MarkdownParser:
             A tuple of (line_type, content) where line_type is one of:
             'heading', 'unordered_list_item', 'ordered_list_item', 'blank', 'text',
             'code_block_start', 'code_block_end', 'code_block_content',
-            'table_row', 'table_separator'
+            'table_row', 'table_separator', 'line_break', 'horizontal_rule'
 
         Raises:
             None
@@ -188,6 +188,11 @@ class MarkdownParser:
             self._code_block_indents.append(indent)
             return 'code_block_start', language
 
+        # Check for a line break
+        if indent >= 2 and not lstripped_line:
+            return 'line_break', None
+
+        # Check for blank line
         stripped_line = line.strip()
         if not stripped_line:
             return 'blank', None
@@ -1190,7 +1195,7 @@ class MarkdownParser:
             line_type, content = self.identify_line_type(line)
 
             # Reset paragraph tracking if not continuing text
-            if line_type not in ('text', 'blank'):
+            if line_type not in ('text', 'blank', 'line_break'):
                 self._last_paragraph = None
 
             # Handle table ends when a non-table line is encountered
@@ -1203,14 +1208,16 @@ class MarkdownParser:
                     # Not a valid table, render as regular text
                     self._handle_incomplete_table()
 
-            # Handle blank lines first
+            if line_type == 'line_break':
+                self._document.add_child(MarkdownLineBreakNode())
+                return
+
             if line_type == 'blank':
                 self._blank_line_count += 1
                 self._last_processed_line_type = line_type
                 return
 
             if line_type == 'unordered_list_item':
-                # Now process the unordered list item
                 indent, marker, text = content
                 self.parse_unordered_list_item(indent, marker, text, line_num)
                 self._last_processed_line_type = line_type
@@ -1218,14 +1225,12 @@ class MarkdownParser:
                 return
 
             if line_type == 'ordered_list_item':
-                # Now process the ordered list item
                 indent, number, text = content
                 self.parse_ordered_list_item(indent, number, text, line_num)
                 self._last_processed_line_type = line_type
                 self._blank_line_count = 0
                 return
 
-            # Handle code blocks
             if line_type == 'code_block_start':
                 self._in_code_block = True
                 self._code_block_language = content
@@ -1242,10 +1247,7 @@ class MarkdownParser:
                 return
 
             if line_type == 'code_block_end':
-                # Create a code block node
                 self._finalize_code_block(line_num)
-
-                # Reset list tracking and other state after a code block
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
                 self._blank_line_count = 0

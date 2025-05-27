@@ -74,6 +74,10 @@ class MindspaceWiki:
             rel_path = self._mindspace_manager.get_relative_path(directory_path)
             dir_name = os.path.basename(cast(str, directory_path))
             entries = os.listdir(directory_path)
+            print(f"Generating directory content for: {directory_path} (relative path: {rel_path})")
+
+            if rel_path == "." or rel_path == "":
+                dir_name = f"Project home: {os.path.basename(self._mindspace_manager.mindspace_path())}"
 
             # Start with a heading
             lines = [
@@ -156,6 +160,7 @@ class MindspaceWiki:
                     file_content = f.read()
 
                 md_lines = [
+                    "  ",
                     "## Preview"
                 ]
                 contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
@@ -165,6 +170,7 @@ class MindspaceWiki:
                 contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
 
             source_lines = [
+                "  ",
                 "## Source"
             ]
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(source_lines)))
