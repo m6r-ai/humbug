@@ -156,6 +156,28 @@ class MindspaceWiki:
             self._logger.error("Error generating directory content: %s", str(e))
             return [(MindspaceWikiContentType.MARKDOWN, f"# Error\n\nFailed to generate directory content: {str(e)}")]
 
+    def get_file_type(self, file_path: str) -> str:
+        """
+        Determine the type of a file based on its extension.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            Type of the file as a string ('image', 'markdown', or 'other')
+        """
+        ext = os.path.splitext(file_path.lower())[1]
+
+        image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.tif', '.webp', '.svg', '.ico'}
+        if ext in image_extensions:
+            return 'image'
+
+        markdown_extensions = {'.md', '.markdown'}
+        if ext in markdown_extensions:
+            return 'markdown'
+
+        return 'other'
+
     def _generate_file_content(self, file_path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
         """
         Generate wiki content for a file.
@@ -170,10 +192,6 @@ class MindspaceWiki:
             rel_path = self._mindspace_manager.get_relative_path(file_path)
             file_name = os.path.basename(file_path)
 
-            # Read file contents
-            with open(file_path, 'r', encoding='utf-8') as f:
-                file_content = f.read()
-
             contents: List[Tuple[MindspaceWikiContentType, str]] = []
 
             # Generate markdown
@@ -184,11 +202,24 @@ class MindspaceWiki:
             ]
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
-            if file_path.lower().endswith(".md"):
-                # Regular markdown file
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    file_content = f.read()
+            file_type = self.get_file_type(file_path)
+            print(f"Generating file content for: {file_path} (type: {file_type})")
+            if file_type == 'image':
+                md_lines = [
+                    "  ",
+                    "## Preview"
+                ]
+                contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
+                md_lines2 = [
+                    f"![{file_name}]({file_path})"
+                ]
+                contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
+                return contents
 
+            with open(file_path, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+
+            if file_type == 'markdown':
                 md_lines = [
                     "  ",
                     "## Preview"
