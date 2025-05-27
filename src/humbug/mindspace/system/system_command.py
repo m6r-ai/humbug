@@ -93,6 +93,11 @@ class SystemCommand:
                 self.show_detailed_help()
                 return True
 
+            # Iterate the tokens and unescape any escaped characters
+            for token in tokens:
+                if token.type in (TokenType.ARGUMENT, TokenType.OPTION_VALUE):
+                    token.value = token.value.replace("\\ ", " ")
+
             # Execute the command with tokens only
             return self._execute_command(tokens)
 
@@ -276,6 +281,9 @@ class SystemCommand:
         if not self._mindspace_manager.has_mindspace():
             return []
 
+        # Unescape the partial path
+        partial_path = partial_path.replace("\\ ", " ")
+
         # Handle empty path
         if not partial_path:
             return self._list_directory("", file_extension)
@@ -306,15 +314,6 @@ class SystemCommand:
                     # Add trailing slash for directories
                     if os.path.isdir(os.path.join(mindspace_dir, item)):
                         full_path += os.path.sep
-
-                    # Escape spaces in path
-                    if " " in full_path:
-                        parts = full_path.split(" ")
-                        escaped_path = parts[0]
-                        for part in parts[1:]:
-                            escaped_path += "\\ " + part
-
-                        full_path = escaped_path
 
                     completions.append(full_path)
 
@@ -354,14 +353,6 @@ class SystemCommand:
                 # Add trailing slash for directories
                 if os.path.isdir(os.path.join(mindspace_dir, item)):
                     path += os.path.sep
-
-                # Escape spaces in path
-                if " " in path:
-                    parts = path.split(" ")
-                    escaped_path = parts[0]
-                    for part in parts[1:]:
-                        escaped_path += "\\ " + part
-                    path = escaped_path
 
                 items.append(path)
 

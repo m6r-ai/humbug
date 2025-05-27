@@ -28,7 +28,7 @@ class CommandLexer(Lexer):
         self._current_token_start = 0
         self._is_first_token = True
 
-    def lex(self, _prev_lexer_state: LexerState | None, input_str: str) -> None:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> None:
         """
         Lex the command line input.
 

@@ -318,15 +318,15 @@ class MindspaceManager(QObject):
 
         return None
 
-    def get_absolute_path(self, relative_path: str) -> str:
+    def get_absolute_path(self, path: str) -> str:
         """
         Convert a mindspace-relative path to an absolute path.
 
         Args:
-            relative_path: Path relative to the mindspace root.
+            path: Absolute path or path relative to the mindspace root.
 
         Returns:
-            Absolute path within the mindspace.
+            Absolute path.
 
         Raises:
             MindspaceNotFoundError: If no mindspace is currently open.
@@ -334,7 +334,11 @@ class MindspaceManager(QObject):
         if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
-        return os.path.normpath(os.path.join(self._mindspace_path, relative_path))
+        path = os.path.expanduser(path)
+        if os.path.isabs(path):
+            return os.path.abspath(path)
+
+        return os.path.abspath(os.path.join(self._mindspace_path, path))
 
     def get_relative_path(self, path: str) -> str:
         """
@@ -346,7 +350,7 @@ class MindspaceManager(QObject):
         Returns:
             Path relative to mindspace root, or the abosolute path if outside mindspace,
         """
-        abs_path = os.path.abspath(path)
+        abs_path = os.path.abspath(os.path.expanduser(path))
         if not self.has_mindspace():
             return abs_path
 
