@@ -90,63 +90,35 @@ class MindspaceWiki:
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
             # Sort entries - directories first, then files
-            dirs = [".."]
-            files = []
+            files = [".."]
 
             for entry in entries:
                 full_path = os.path.join(directory_path, entry)
-                if os.path.isdir(full_path):
-                    dirs.append(entry)
+                files.append(entry)
 
-                else:
-                    files.append(entry)
-
-            dirs.sort()
             files.sort()
 
-            # Add directories
-            if dirs:
-                md_lines = [
-                    "  ",
-                    "## Folders (directories)"
-                ]
-                contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
-
-                lines = []
-                lines.append(f"`{os.path.basename(directory_path)}`  ")
-                lines.append("`  ╷`  ")
-
-                for i in range(len(dirs) - 1):
-                    d = dirs[i]
-                    full_path = os.path.abspath(os.path.join(directory_path, d))
-                    lines.append(f"`  ├── ` [`{d}`]({full_path})  ")
-
-                d = dirs[-1]
-                full_path = os.path.abspath(os.path.join(directory_path, d))
-                lines.append(f"`  └── ` [`{d}`]({full_path})")
-
-                contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
-
-            # Add files
             if files:
                 md_lines = [
                     "  ",
-                    "## Files"
+                    "## Files and folders (directories)"
                 ]
                 contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
 
                 lines = []
-                lines.append(f"`{os.path.basename(directory_path)}`  ")
-                lines.append("`  ╷`  ")
+                lines.append(f"`{os.path.basename(directory_path)}{os.path.sep}`  ")
+                lines.append("`╷`  ")
 
                 for i in range(len(files) - 1):
                     f = files[i]
                     full_path = os.path.abspath(os.path.join(directory_path, f))
-                    lines.append(f"`  ├── ` [`{f}`]({full_path})  ")
+                    suffix = os.path.sep if os.path.isdir(full_path) else ""
+                    lines.append(f"`├── ` [`{f}{suffix}`]({full_path})  ")
 
                 f = files[-1]
                 full_path = os.path.abspath(os.path.join(directory_path, f))
-                lines.append(f"`  └── ` [`{f}`]({full_path})")
+                suffix = os.path.sep if os.path.isdir(full_path) else ""
+                lines.append(f"`└── ` [`{f}{suffix}`]({full_path})")
 
                 contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
 

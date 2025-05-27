@@ -198,6 +198,7 @@ Project structure:
 
 ```text
 src/humbug/
+╷
 ├── ai/            # AI backend and conversation implementations
 ├── ast/           # Abstract syntax tree implementation
 ├── gui/           # GUI components
