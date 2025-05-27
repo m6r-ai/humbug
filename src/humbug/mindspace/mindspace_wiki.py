@@ -79,12 +79,15 @@ class MindspaceWiki:
             if rel_path == "." or rel_path == "":
                 dir_name = f"Project home: {os.path.basename(self._mindspace_manager.mindspace_path())}"
 
+            contents: List[Tuple[MindspaceWikiContentType, str]] = []
+
             # Start with a heading
             lines = [
                 f"# {dir_name}"
                 "",
                 f"Path: `{rel_path}`"
             ]
+            contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
             # Sort entries - directories first, then files
             dirs = []
@@ -103,23 +106,51 @@ class MindspaceWiki:
 
             # Add directories
             if dirs:
-                lines.append("## Folders (directories)")
-                lines.append("")
-                for d in dirs:
-                    full_path = os.path.join(directory_path, d)
-                    lines.append(f"- [{d}]({full_path})")
+                md_lines = [
+                    "  ",
+                    "## Folders (directories)"
+                ]
+                contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
 
-                lines.append("")
+                lines = []
+                lines.append(f"`{os.path.basename(directory_path)}`  ")
+                lines.append("`  ╷`  ")
+
+                for i in range(len(dirs) - 1):
+                    d = dirs[i]
+                    full_path = os.path.join(directory_path, d)
+                    lines.append(f"`  ├── ` [`{d}`]({full_path})  ")
+
+                d = dirs[-1]
+                full_path = os.path.join(directory_path, d)
+                lines.append(f"`  └── ` [`{d}`]({full_path})")
+
+                contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
 
             # Add files
             if files:
-                lines.append("## Files")
-                lines.append("")
-                for f in files:
-                    full_path = os.path.join(directory_path, f)
-                    lines.append(f"- [{f}]({full_path})")
+                md_lines = [
+                    "  ",
+                    "## Files"
+                ]
+                contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
 
-            return [(MindspaceWikiContentType.MARKDOWN, "\n".join(lines))]
+                lines = []
+                lines.append(f"`{os.path.basename(directory_path)}`  ")
+                lines.append("`  ╷`  ")
+
+                for i in range(len(files) - 1):
+                    f = files[i]
+                    full_path = os.path.join(directory_path, f)
+                    lines.append(f"`  ├── ` [`{f}`]({full_path})  ")
+
+                f = files[-1]
+                full_path = os.path.join(directory_path, f)
+                lines.append(f"`  └── ` [`{f}`]({full_path})")
+
+                contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
+
+            return contents
 
         except Exception as e:
             self._logger.error("Error generating directory content: %s", str(e))
@@ -149,8 +180,7 @@ class MindspaceWiki:
             lines = [
                 f"# {file_name}",
                 "",
-                f"Path: `{rel_path}`",
-                ""
+                f"Path: `{rel_path}`"
             ]
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
