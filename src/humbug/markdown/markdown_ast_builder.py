@@ -15,6 +15,9 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
     MarkdownImageNode, MarkdownLinkNode
 )
+from humbug.syntax.parser_registry import ParserRegistry
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class MarkdownASTBuilderError(Exception):
@@ -129,6 +132,8 @@ class MarkdownASTBuilder:
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
         self._code_block_indents: List[int] = []
+        self._embedded_parser_state: Any = None
+        self._embedded_language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
 
         # Table state tracking using the new buffer approach
         self._table_buffer = TableBufferState()
@@ -141,6 +146,59 @@ class MarkdownASTBuilder:
             The document node
         """
         return self._document
+
+    def _should_parse_code_block_as_continuation(
+        self,
+        language: ProgrammingLanguage,
+        line_content: str
+    ) -> bool:
+        """
+        Check if a line should be parsed as a continuation by the embedded parser.
+
+        Args:
+            language: The programming language of the code block
+            line_content: The content of the line to check
+
+        Returns:
+            True if this line should be treated as a continuation
+        """
+        if language == ProgrammingLanguage.TEXT:
+            return False
+
+        # Get or create parser for this language
+        parser = ParserRegistry.create_parser(language)
+        if not parser:
+            return False
+
+        # If language changed, reset state
+        if language != self._embedded_language:
+            self._embedded_parser_state = None
+            self._embedded_language = language
+
+        try:
+            # Parse the line and check if we're in a continuation
+            new_state = parser.parse(self._embedded_parser_state, line_content)
+
+            # Update stored state
+            self._embedded_parser_state = new_state
+
+            # Return whether we're in a continuation
+            return new_state is not None and new_state.parsing_continuation
+
+        except Exception as e:
+            self._logger.warning(
+                "Error checking continuation for %s: %s",
+                language.name,
+                str(e)
+            )
+            return False
+
+    def _reset_code_block(self) -> None:
+        """
+        Reset the parser state for a completed code block.
+        """
+        self._embedded_parser_state = None
+        self._embedded_language = ProgrammingLanguage.UNKNOWN
 
     def identify_line_type(self, line: str) -> Tuple[str, Any]:
         """
@@ -163,6 +221,12 @@ class MarkdownASTBuilder:
         indent = len(line) - len(lstripped_line)
 
         if self._in_code_block:
+            # Check if our embedded parser indicates this should be a continuation
+            if self._code_block_language:
+                language = ProgrammingLanguageUtils.from_name(self._code_block_language)
+                if self._should_parse_code_block_as_continuation(language, line):
+                    return 'code_block_content', line
+
             # Check for code fence.  If we have one then we're either closing
             # this block or nesting another.
             code_block_match = self._code_block_pattern.match(lstripped_line)
@@ -1248,6 +1312,7 @@ class MarkdownASTBuilder:
 
             if line_type == 'code_block_end':
                 self._finalize_code_block(line_num)
+                self._reset_code_block()
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
                 self._blank_line_count = 0
