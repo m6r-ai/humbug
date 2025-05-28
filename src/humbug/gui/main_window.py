@@ -1000,7 +1000,7 @@ class MainWindow(QMainWindow):
         metaphor_ast_builder = MetaphorASTBuilder()
         try:
             syntax_tree = MetaphorRootNode()
-            metaphor_ast_builder.parse_file(syntax_tree, file_path, [search_path], search_path, [file_path])
+            metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, [file_path])
             formatter = MetaphorFormatVisitor()
             prompt = format_preamble() + formatter.format(syntax_tree)
 
@@ -1246,7 +1246,7 @@ class MainWindow(QMainWindow):
         metaphor_ast_builder = MetaphorASTBuilder()
         try:
             syntax_tree = MetaphorRootNode()
-            metaphor_ast_builder.parse_file(syntax_tree, file_path, [search_path], search_path, args)
+            metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, args)
             formatter = MetaphorFormatVisitor()
             prompt = format_preamble() + formatter.format(syntax_tree)
 

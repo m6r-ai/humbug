@@ -104,7 +104,7 @@ class MetaphorASTBuilder:
 
         return any(self._has_action_node(cast(MetaphorASTNode, child)) for child in node.children)
 
-    def parse(
+    def build_ast(
         self,
         parent_node: MetaphorASTNode,
         input_text: str,
@@ -205,7 +205,7 @@ class MetaphorASTBuilder:
             ))
             raise(MetaphorASTBuilderError("parser error", self._parse_errors)) from e
 
-    def parse_file(
+    def build_ast_from_file(
         self,
         parent_node: MetaphorASTNode,
         filename: str,
@@ -229,7 +229,7 @@ class MetaphorASTBuilder:
         try:
             self._check_file_not_loaded(filename)
             input_text = self._read_file(filename)
-            self.parse(parent_node, input_text, filename, search_paths, embed_path, arguments)
+            self.build_ast(parent_node, input_text, filename, search_paths, embed_path, arguments)
 
         except FileNotFoundError as e:
             self._parse_errors.append(MetaphorASTBuilderSyntaxError(
