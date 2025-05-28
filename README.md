@@ -1,4 +1,4 @@
-# Humbug v0.13
+# Humbug v0.14
 
 Humbug is an extensible open-source tool designed to help you design, build and maintain software using AI.
 
@@ -80,17 +80,9 @@ explore interactively, update the context and iterate.  You can go further than 
 have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
 can be used to refine the Metaphor context.
 
-## What's new in v0.13
+## What's new in v0.14
 
-- Added a new type of "wiki" tab and a matching "wiki" system shell command.  The wiki pages are dynamically generated
-  view of all the information relevent to a file or directory, including a preview of any markdown file content, and
-  any source code content.  This is now the default for opening files from the mindspace tree view.  Editing source code
-  can now be done via the edit button, or by right clicking on the file in the mindspace tree.
-- Any dialog box that has a destructive default action now has a red default button instead of blue.
-- Added new Anthropic models: Claude Sonnet 4, Claude Opus 4.
-- Added new Mistral small model: Devstral Small.
-- Tab labels now have tool tips.
-- Tab label types are now identified by icons instead of text prefixes.
+TBD
 
 ## Features
 
