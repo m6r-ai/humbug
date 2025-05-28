@@ -495,6 +495,11 @@ class MarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
+        # We may find we're in the middle of a paragraph block, in which case we need to ensure we start the
+        # image at a new block.
+        if not self._cursor.atBlockStart():
+            self._cursor.insertBlock()
+
         image = self._create_placeholder_image()
         loaded_successfully = False
 

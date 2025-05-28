@@ -4,7 +4,8 @@
 
 Bug fixes:
 
-TBD
+- If an image in a markdown file did not have a paragraph line separator from the preceding line then the formatting
+  was corrupted.
 
 ## v0.13 (2025-05-28)
 
