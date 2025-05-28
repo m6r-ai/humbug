@@ -5,7 +5,7 @@ import pytest
 from humbug.metaphor import (
     MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
-    MetaphorParserSyntaxError, MetaphorFormatVisitor,
+    MetaphorASTBuilderSyntaxError, MetaphorFormatVisitor,
     format_errors
 )
 
@@ -83,7 +83,7 @@ def test_format_ast_all_node_types():
 
 def test_format_errors_single_error():
     """Test formatting a single error."""
-    error = MetaphorParserSyntaxError(
+    error = MetaphorASTBuilderSyntaxError(
         message="Unexpected token",
         filename="test.m6r",
         line=1,
@@ -105,14 +105,14 @@ def test_format_errors_single_error():
 def test_format_errors_multiple_errors():
     """Test formatting multiple errors."""
     errors = [
-        MetaphorParserSyntaxError(
+        MetaphorASTBuilderSyntaxError(
             message="First error",
             filename="test1.m6r",
             line=1,
             column=3,
             input_text="abc"
         ),
-        MetaphorParserSyntaxError(
+        MetaphorASTBuilderSyntaxError(
             message="Second error",
             filename="test2.m6r",
             line=2,

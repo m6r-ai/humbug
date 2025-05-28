@@ -12,7 +12,7 @@ from humbug.metaphor.metaphor_ast_node import (
 )
 
 
-class MetaphorParserFileAlreadyUsedError(Exception):
+class MetaphorASTBuilderFileAlreadyUsedError(Exception):
     """Exception raised when a file is used more than once."""
     def __init__(self, filename: str, token: MetaphorToken) -> None:
         super().__init__(f"The file '{filename}' has already been used.")
@@ -20,7 +20,7 @@ class MetaphorParserFileAlreadyUsedError(Exception):
         self.token: MetaphorToken = token
 
 
-class MetaphorParserSyntaxError(Exception):
+class MetaphorASTBuilderSyntaxError(Exception):
     """Exception generated when there is a syntax error."""
     def __init__(self, message: str, filename: str, line: int, column: int, input_text: str) -> None:
         super().__init__(f"{message}: file: {filename}, line {line}, column {column}, ")
@@ -31,19 +31,19 @@ class MetaphorParserSyntaxError(Exception):
         self.input_text: str = input_text
 
 
-class MetaphorParserError(Exception):
+class MetaphorASTBuilderError(Exception):
     """Exception wrapper generated when there is a syntax error."""
-    def __init__(self, message: str, errors: List[MetaphorParserSyntaxError]) -> None:
+    def __init__(self, message: str, errors: List[MetaphorASTBuilderSyntaxError]) -> None:
         super().__init__(message)
-        self.errors: List[MetaphorParserSyntaxError] = errors
+        self.errors: List[MetaphorASTBuilderSyntaxError] = errors
 
 
-class MetaphorParser:
+class MetaphorASTBuilder:
     """
     Parser class to process tokens and build an Abstract Syntax Tree (AST).
 
     Attributes:
-        parse_errors (List[MetaphorParserSyntaxError]): List of syntax errors encountered during parsing.
+        parse_errors (List[MetaphorASTBuilderSyntaxError]): List of syntax errors encountered during parsing.
         lexers (List[MetaphorLexer | MetaphorEmbedLexer]): Stack of lexers used for parsing multiple files.
         previously_seen_files (Set[str]): Set of canonical filenames already processed.
         search_paths (List[str]): List of paths to search for included files.
@@ -51,7 +51,7 @@ class MetaphorParser:
         current_token (MetaphorToken | None): The current token being processed.
     """
     def __init__(self) -> None:
-        self.parse_errors: List[MetaphorParserSyntaxError] = []
+        self.parse_errors: List[MetaphorASTBuilderSyntaxError] = []
         self.lexers: List[MetaphorLexer | MetaphorEmbedLexer] = []
         self.previously_seen_files: Set[str] = set()
         self.search_paths: List[str] = []
@@ -125,7 +125,7 @@ class MetaphorParser:
             arguments (List[str] | None): List of command line arguments.
 
         Raises:
-            MetaphorParserError: If there are syntax errors during parsing.
+            MetaphorASTBuilderError: If there are syntax errors during parsing.
         """
         self.search_paths = search_paths
         self.embed_path = embed_path if embed_path else os.getcwd()
@@ -166,7 +166,7 @@ class MetaphorParser:
 
                 if token.type == MetaphorTokenType.END_OF_FILE:
                     if self.parse_errors:
-                        raise MetaphorParserError("parser error", self.parse_errors)
+                        raise MetaphorASTBuilderError("parser error", self.parse_errors)
 
                     return  # No return value needed
 
@@ -190,20 +190,20 @@ class MetaphorParser:
 
         except FileNotFoundError as e:
             err_token = cast(MetaphorToken, self.current_token)
-            self.parse_errors.append(MetaphorParserSyntaxError(
+            self.parse_errors.append(MetaphorASTBuilderSyntaxError(
                 f"{e}", err_token.filename, err_token.line, err_token.column, err_token.input
             ))
-            raise(MetaphorParserError("parser error", self.parse_errors)) from e
+            raise(MetaphorASTBuilderError("parser error", self.parse_errors)) from e
 
-        except MetaphorParserFileAlreadyUsedError as e:
-            self.parse_errors.append(MetaphorParserSyntaxError(
+        except MetaphorASTBuilderFileAlreadyUsedError as e:
+            self.parse_errors.append(MetaphorASTBuilderSyntaxError(
                 f"The file '{e.filename}' has already been used",
                 e.token.filename,
                 e.token.line,
                 e.token.column,
                 e.token.input
             ))
-            raise(MetaphorParserError("parser error", self.parse_errors)) from e
+            raise(MetaphorASTBuilderError("parser error", self.parse_errors)) from e
 
     def parse_file(
         self,
@@ -224,7 +224,7 @@ class MetaphorParser:
             arguments (List[str] | None): List of command line arguments.
 
         Raises:
-            MetaphorParserError: If there are syntax errors during parsing.
+            MetaphorASTBuilderError: If there are syntax errors during parsing.
         """
         try:
             self._check_file_not_loaded(filename)
@@ -232,13 +232,13 @@ class MetaphorParser:
             self.parse(parent_node, input_text, filename, search_paths, embed_path, arguments)
 
         except FileNotFoundError as e:
-            self.parse_errors.append(MetaphorParserSyntaxError(
+            self.parse_errors.append(MetaphorASTBuilderSyntaxError(
                 f"{e}", "", 0, 0, ""
             ))
-            raise(MetaphorParserError("parser error", self.parse_errors)) from e
+            raise(MetaphorASTBuilderError("parser error", self.parse_errors)) from e
 
-        except MetaphorParserError as e:
-            raise(MetaphorParserError("parser error", self.parse_errors)) from e
+        except MetaphorASTBuilderError as e:
+            raise(MetaphorASTBuilderError("parser error", self.parse_errors)) from e
 
     def get_next_token(self) -> MetaphorToken:
         """Get the next token from the active lexer."""
@@ -272,7 +272,7 @@ class MetaphorParser:
 
     def _record_syntax_error(self, token: MetaphorToken, message: str) -> None:
         """Raise a syntax error and add it to the error list."""
-        error = MetaphorParserSyntaxError(
+        error = MetaphorASTBuilderSyntaxError(
             message, token.filename, token.line, token.column, token.input
         )
         self.parse_errors.append(error)
@@ -313,7 +313,7 @@ class MetaphorParser:
         """Check we have not already loaded a file."""
         canonical_filename = os.path.realpath(filename)
         if canonical_filename in self.previously_seen_files:
-            raise MetaphorParserFileAlreadyUsedError(filename, cast(MetaphorToken, self.current_token))
+            raise MetaphorASTBuilderFileAlreadyUsedError(filename, cast(MetaphorToken, self.current_token))
 
         self.previously_seen_files.add(canonical_filename)
 

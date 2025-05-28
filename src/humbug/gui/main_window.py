@@ -34,7 +34,7 @@ from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
-    MetaphorParser, MetaphorParserError, MetaphorFormatVisitor, MetaphorRootNode,
+    MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorFormatVisitor, MetaphorRootNode,
     format_errors, format_preamble
 )
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -997,14 +997,14 @@ class MainWindow(QMainWindow):
         self._mindspace_manager.update_file_dialog_directory(file_path)
         search_path = self._mindspace_manager.mindspace_path()
 
-        metaphor_parser = MetaphorParser()
+        metaphor_ast_builder = MetaphorASTBuilder()
         try:
             syntax_tree = MetaphorRootNode()
-            metaphor_parser.parse_file(syntax_tree, file_path, [search_path], search_path, [file_path])
+            metaphor_ast_builder.parse_file(syntax_tree, file_path, [search_path], search_path, [file_path])
             formatter = MetaphorFormatVisitor()
             prompt = format_preamble() + formatter.format(syntax_tree)
 
-        except MetaphorParserError as e:
+        except MetaphorASTBuilderError as e:
             self._column_manager.show_system()
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
@@ -1243,10 +1243,10 @@ class MainWindow(QMainWindow):
         """Process the m6rc command."""
         search_path = self._mindspace_manager.mindspace_path()
 
-        metaphor_parser = MetaphorParser()
+        metaphor_ast_builder = MetaphorASTBuilder()
         try:
             syntax_tree = MetaphorRootNode()
-            metaphor_parser.parse_file(syntax_tree, file_path, [search_path], search_path, args)
+            metaphor_ast_builder.parse_file(syntax_tree, file_path, [search_path], search_path, args)
             formatter = MetaphorFormatVisitor()
             prompt = format_preamble() + formatter.format(syntax_tree)
 
@@ -1257,7 +1257,7 @@ class MainWindow(QMainWindow):
             )
             return False
 
-        except MetaphorParserError as e:
+        except MetaphorASTBuilderError as e:
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
             self._mindspace_manager.add_system_interaction(

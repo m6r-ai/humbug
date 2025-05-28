@@ -7,15 +7,15 @@ import pytest
 from humbug.metaphor import (
     MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
-    MetaphorParser, MetaphorFormatVisitor, MetaphorRootNode,
-    MetaphorParserError
+    MetaphorASTBuilder, MetaphorFormatVisitor, MetaphorRootNode,
+    MetaphorASTBuilderError
 )
 
 
 @pytest.fixture
-def parser():
-    """Provide a parser instance for tests."""
-    return MetaphorParser()
+def ast_builder():
+    """Provide an AST builder instance for tests."""
+    return MetaphorASTBuilder()
 
 
 @pytest.fixture
@@ -86,18 +86,18 @@ def create_read_only_file(tmp_path):
     os.chmod(p, stat.S_IWRITE | stat.S_IREAD)
 
 
-def test_basic_parsing(parser, temp_test_files):
+def test_basic_parsing(ast_builder, temp_test_files):
     """Test basic parsing of a valid file"""
     main_file = Path(temp_test_files) / "main.m6r"
     root = MetaphorRootNode()
-    parser.parse_file(root, str(main_file), [])
+    ast_builder.parse_file(root, str(main_file), [])
     assert len([node for node in root.children if isinstance(node, MetaphorTextNode)]) == 0
     assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
     assert len([node for node in root.children if isinstance(node, MetaphorContextNode)]) == 1
     assert len([node for node in root.children if isinstance(node, MetaphorActionNode)]) == 1
 
 
-def test_invalid_structure(parser, tmp_path):
+def test_invalid_structure(ast_builder, tmp_path):
     """Test handling of invalid document structure"""
     p = tmp_path / "invalid.m6r"
     p.write_text(
@@ -105,14 +105,14 @@ def test_invalid_structure(parser, tmp_path):
         "    Description\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Unexpected token" in str(exc_info.value.errors[0].message)
 
 
-def test_valid_keyword_parsing(parser):
+def test_valid_keyword_parsing(ast_builder):
     """Test that valid keywords are parsed correctly."""
     input_text = (
         "Role: Test\n"
@@ -120,25 +120,25 @@ def test_valid_keyword_parsing(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     roles = [node for node in root.children if isinstance(node, MetaphorRoleNode)]
     assert len(roles) == 1
     assert roles[0].value() == "Test"
 
 
-def test_invalid_keyword_error(parser):
+def test_invalid_keyword_error(ast_builder):
     """Test that invalid keywords raise appropriate error."""
     input_text = "InvalidKeyword: Test\n    Text\n"
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert "Unexpected token" in error.message
 
 
-def test_error_location_tracking(parser):
+def test_error_location_tracking(ast_builder):
     """Test that error location is correctly tracked."""
     input_text = (
         "Role: Test\n"
@@ -146,16 +146,16 @@ def test_error_location_tracking(parser):
         "  BadIndent: Wrong\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert error.line == 3
     assert "test.txt" == error.filename
 
 
-def test_keyword_empty_value(parser):
+def test_keyword_empty_value(ast_builder):
     """Test parsing keyword with no value."""
     input_text = (
         "Role:\n"
@@ -163,12 +163,12 @@ def test_keyword_empty_value(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
     assert role.value() == ""
 
 
-def test_keyword_whitespace_value(parser):
+def test_keyword_whitespace_value(ast_builder):
     """Test parsing keyword with whitespace value."""
     input_text = (
         "Role:     \n"
@@ -176,12 +176,12 @@ def test_keyword_whitespace_value(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
     assert role.value() == ""
 
 
-def test_duplicate_role_error(parser):
+def test_duplicate_role_error(ast_builder):
     """Test that duplicate Role keywords raise error."""
     input_text = (
         "Role: First\n"
@@ -190,15 +190,15 @@ def test_duplicate_role_error(parser):
         "    Text\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert "'Role' already defined" in error.message
 
 
-def test_duplicate_context_error(parser):
+def test_duplicate_context_error(ast_builder):
     """Test that duplicate Context keywords raise error."""
     input_text = (
         "Context: First\n"
@@ -207,15 +207,15 @@ def test_duplicate_context_error(parser):
         "    Text\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert "'Context' already defined" in error.message
 
 
-def test_duplicate_action_error(parser):
+def test_duplicate_action_error(ast_builder):
     """Test that duplicate Action keywords raise error."""
     input_text = (
         "Action: First\n"
@@ -224,15 +224,15 @@ def test_duplicate_action_error(parser):
         "    Text\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert "'Action' already defined" in error.message
 
 
-def test_keyword_text_preservation(parser):
+def test_keyword_text_preservation(ast_builder):
     """Test that text following keywords is preserved."""
     input_text = (
         "Role: Test Role Description\n"
@@ -240,12 +240,12 @@ def test_keyword_text_preservation(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
     assert role.value() == "Test Role Description"
 
 
-def test_text_content_preservation(parser):
+def test_text_content_preservation(ast_builder):
     """Test that indented text content is preserved."""
     input_text = (
         "Role: Test\n"
@@ -254,7 +254,7 @@ def test_text_content_preservation(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
     texts = [node for node in role.children if isinstance(node, MetaphorTextNode)]
     assert len(texts) == 2
@@ -262,16 +262,16 @@ def test_text_content_preservation(parser):
     assert texts[1].value() == "Second line"
 
 
-def test_empty_input(parser):
+def test_empty_input(ast_builder):
     """Test handling of empty input."""
     root = MetaphorRootNode()
-    parser.parse(root, "", "test.txt", [])
+    ast_builder.parse(root, "", "test.txt", [])
 
     assert len(root.children) == 0
 
 
-def test_indentation_handling(parser):
-    """Test handling of indentation through parser."""
+def test_indentation_handling(ast_builder):
+    """Test handling of indentation through ast_builder."""
     input_text = (
         "Context: Test\n"
         "    Description\n"
@@ -279,30 +279,30 @@ def test_indentation_handling(parser):
         "        Nested content\n"
     )
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     context_node = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
     nested_contexts = [node for node in context_node.children if isinstance(node, MetaphorContextNode)]
     assert len(nested_contexts) == 1
     assert len([node for node in nested_contexts[0].children if isinstance(node, MetaphorTextNode)]) == 1
 
 
-def test_incorrect_indentation(parser):
+def test_incorrect_indentation(ast_builder):
     """Test handling of incorrect indentation."""
     input_text = (
         "Role: Test\n"
         "   Bad indent\n"  # 3 spaces instead of 4
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert "indent" in error.message.lower()
 
 
-def test_keyword_handling(parser):
-    """Test keyword handling through parser."""
+def test_keyword_handling(ast_builder):
+    """Test keyword handling through ast_builder."""
     input_text = (
         "Role: Test\n"
         "    Description\n"
@@ -313,13 +313,13 @@ def test_keyword_handling(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
     assert len([node for node in root.children if isinstance(node, MetaphorContextNode)]) == 1
     assert len([node for node in root.children if isinstance(node, MetaphorActionNode)]) == 1
 
 
-def test_fenced_code_blocks_with_blanks(parser):
+def test_fenced_code_blocks_with_blanks(ast_builder):
     """Test handling of fenced code blocks with blank lines."""
     input_text = (
         "Context: Test\n"
@@ -332,7 +332,7 @@ def test_fenced_code_blocks_with_blanks(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     context = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
     text_nodes = [node for node in context.children if isinstance(node, MetaphorTextNode)]
     code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
@@ -348,7 +348,7 @@ def test_fenced_code_blocks_with_blanks(parser):
     assert "After code" in text_values
 
 
-def test_empty_lines(parser):
+def test_empty_lines(ast_builder):
     """Test handling of empty lines."""
     input_text = (
         "Role: Test\n"
@@ -359,7 +359,7 @@ def test_empty_lines(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
     text_nodes = [node for node in role.children if isinstance(node, MetaphorTextNode)]
     assert len(text_nodes) == 3
@@ -367,7 +367,7 @@ def test_empty_lines(parser):
     assert text_nodes[2].value() == "More text"
 
 
-def test_tab_characters(parser):
+def test_tab_characters(ast_builder):
     """Test handling of tab characters in input."""
     input_text = (
         "Role: Test\n"
@@ -375,15 +375,15 @@ def test_tab_characters(parser):
         "\tTabbed line\n"  # Line starting with tab
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert "[Tab]" in error.message
 
 
-def test_comment_lines(parser):
+def test_comment_lines(ast_builder):
     """Test handling of comment lines."""
     input_text = (
         "\n"
@@ -395,7 +395,7 @@ def test_comment_lines(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     role_node = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
     text_nodes = [node for node in role_node.children if isinstance(node, MetaphorTextNode)]
 
@@ -405,7 +405,7 @@ def test_comment_lines(parser):
     assert text_nodes[1].value() == "More content"
 
 
-def test_mixed_spaces_and_tab(parser):
+def test_mixed_spaces_and_tab(ast_builder):
     """Test handling of mixed tabs and spaces."""
     input_text = (
         "Role: Test\n"
@@ -413,15 +413,15 @@ def test_mixed_spaces_and_tab(parser):
         "    \t\n"  # Tab preceded by spaces
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert "[Tab]" in error.message
 
 
-def test_tab_in_content_block(parser):
+def test_tab_in_content_block(ast_builder):
     """Test handling of tabs appearing within a content block."""
     input_text = (
         "Role: Test\n"
@@ -431,14 +431,14 @@ def test_tab_in_content_block(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     role_node = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
     text_nodes = [node for node in role_node.children if isinstance(node, MetaphorTextNode)]
     assert len(text_nodes) == 3
     assert "\t" in text_nodes[1].value()  # Tab preserved in content
 
 
-def test_commented_keywords(parser):
+def test_commented_keywords(ast_builder):
     """Test that commented keywords are ignored."""
     input_text = (
         "Role: Test\n"
@@ -450,7 +450,7 @@ def test_commented_keywords(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     # Should only have one Role node since others are commented
     roles = [node for node in root.children if isinstance(node, MetaphorRoleNode)]
     assert len(roles) == 1
@@ -463,7 +463,7 @@ def test_commented_keywords(parser):
     assert text_nodes[2].value() == "Third line"
 
 
-def test_python_embedding(parser, setup_files):
+def test_python_embedding(ast_builder, setup_files):
     """Test embedding of Python files with syntax highlighting."""
     input_text = (
         "Context: Code\n"
@@ -472,7 +472,7 @@ def test_python_embedding(parser, setup_files):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     context = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
     code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
 
@@ -483,7 +483,7 @@ def test_python_embedding(parser, setup_files):
     assert "print('Hello, World!')" in code_text
 
 
-def test_multiple_file_embedding(parser, setup_files):
+def test_multiple_file_embedding(ast_builder, setup_files):
     """Test embedding multiple files using wildcards."""
     input_text = (
         "Context: JavaScript\n"
@@ -491,7 +491,7 @@ def test_multiple_file_embedding(parser, setup_files):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     formatter = MetaphorFormatVisitor()
     formatted = formatter.format(root)
 
@@ -500,22 +500,22 @@ def test_multiple_file_embedding(parser, setup_files):
     assert "describe('test'" in formatted
 
 
-def test_missing_file_handling(parser, setup_files):
+def test_missing_file_handling(ast_builder, setup_files):
     """Test handling of missing files."""
     input_text = (
         "Context: Missing\n"
         f"    Embed: {setup_files}/nonexistent.txt\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
     assert "does not match any files" in error.message
 
 
-def test_language_detection(parser, setup_files):
+def test_language_detection(ast_builder, setup_files):
     """Test correct language detection for different file types."""
     for filename, expected_lang in [
         ("test.py", "python"),
@@ -529,7 +529,7 @@ def test_language_detection(parser, setup_files):
         )
 
         root = MetaphorRootNode()
-        parser.parse(root, input_text, "test.txt", [])
+        ast_builder.parse(root, input_text, "test.txt", [])
         formatter = MetaphorFormatVisitor()
         formatted = formatter.format(root)
         assert f"```{expected_lang}" in formatted
@@ -548,14 +548,14 @@ def test_recursive_embedding(tmp_path):
     (subdir / "level1.txt").write_text("Level 1 content")
     (subsubdir / "level2.txt").write_text("Level 2 content")
 
-    parser = MetaphorParser()
+    ast_builder = MetaphorASTBuilder()
     input_text = (
         "Context: Files\n"
         f"    Embed: {tmp_path}/**/*.txt\n"
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     formatter = MetaphorFormatVisitor()
     formatted = formatter.format(root)
 
@@ -564,7 +564,7 @@ def test_recursive_embedding(tmp_path):
     assert "Level 2 content" in formatted
 
 
-def test_file_without_extension(parser, tmp_path):
+def test_file_without_extension(ast_builder, tmp_path):
     """Test embedding file with no extension."""
     # Create a file without extension
     no_ext_file = tmp_path / "noextension"
@@ -576,7 +576,7 @@ def test_file_without_extension(parser, tmp_path):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     formatter = MetaphorFormatVisitor()
     formatted = formatter.format(root)
 
@@ -585,7 +585,7 @@ def test_file_without_extension(parser, tmp_path):
     assert "Content without extension" in formatted
 
 
-def test_missing_indent_after_keyword(parser, tmp_path):
+def test_missing_indent_after_keyword(ast_builder, tmp_path):
     """Test handling of missing indent after keyword text"""
     p = tmp_path / "missing_indent.m6r"
     p.write_text(
@@ -593,23 +593,23 @@ def test_missing_indent_after_keyword(parser, tmp_path):
         "No indent here\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected indent after keyword description" in str(exc_info.value.errors[0].message)
 
 
-def test_file_not_found(parser):
+def test_file_not_found(ast_builder):
     """Test handling of non-existent file"""
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, "nonexistent.m6r", [])
+        ast_builder.parse_file(root, "nonexistent.m6r", [])
 
     assert any("File not found" in str(error.message) for error in exc_info.value.errors)
 
 
-def test_action_fenced_code_blocks(parser):
+def test_action_fenced_code_blocks(ast_builder):
     """Test handling of fenced code blocks."""
     input_text = (
         "Action: Test\n"
@@ -624,7 +624,7 @@ def test_action_fenced_code_blocks(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     action = [node for node in root.children if isinstance(node, MetaphorActionNode)][0]
     text_nodes = [node for node in action.children if isinstance(node, MetaphorTextNode)]
     code_nodes = [node for node in action.children if isinstance(node, MetaphorCodeNode)]
@@ -652,10 +652,10 @@ def test_action_unexpected_token(tmp_path):
         "        This shouldn't be here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Unexpected token: Context: in 'Action' block" in str(exc_info.value.errors[0].message)
 
@@ -672,10 +672,10 @@ def test_action_bad_outdent(tmp_path):
         "    Back to correct\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "[Bad Outdent]" in str(exc_info.value.errors[0].message)
 
@@ -688,10 +688,10 @@ def test_action_missing_indent(tmp_path):
         "No indent here"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected indent after keyword description for 'Action' block" in str(exc_info.value.errors[0].message)
 
@@ -704,10 +704,10 @@ def test_action_missing_description_and_indent(tmp_path):
         "Text without indent\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected description or indent after 'Action' keyword" in str(exc_info.value.errors[0].message)
 
@@ -722,10 +722,10 @@ def test_action_inner_unexpected(tmp_path):
         "        This shouldn't be here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Unexpected token: Role: in 'Action' block" in str(exc_info.value.errors[0].message)
 
@@ -741,10 +741,10 @@ def test_action_late_text(tmp_path):
         "    Late text is wrong here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Text must come first in an 'Action' block" in str(exc_info.value.errors[0].message)
 
@@ -762,15 +762,15 @@ def test_action_late_code(tmp_path):
         "    ```\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Code must come first in an 'Action' block" in str(exc_info.value.errors[0].message)
 
 
-def test_action_duplicate_sections(parser, tmp_path):
+def test_action_duplicate_sections(ast_builder, tmp_path):
     """Test handling of duplicate sections"""
     p = tmp_path / "duplicate.m6r"
     p.write_text(
@@ -780,14 +780,14 @@ def test_action_duplicate_sections(parser, tmp_path):
         "    Description\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "'Action' already defined" in str(exc_info.value.errors[0].message)
 
 
-def test_context_fenced_code_blocks(parser):
+def test_context_fenced_code_blocks(ast_builder):
     """Test handling of fenced code blocks."""
     input_text = (
         "Context: Test\n"
@@ -802,7 +802,7 @@ def test_context_fenced_code_blocks(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
 
     # Get the first context node using class-based filtering
     context = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
@@ -832,10 +832,10 @@ def test_context_missing_indent(tmp_path):
         "No indent here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected indent after keyword description for 'Context' block" in str(exc_info.value.errors[0].message)
 
@@ -848,10 +848,10 @@ def test_context_missing_description_and_indent(tmp_path):
         "Text without indent\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected description or indent after 'Context' keyword" in str(exc_info.value.errors[0].message)
 
@@ -866,10 +866,10 @@ def test_context_inner_unexpected(tmp_path):
         "        This shouldn't be here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Unexpected token: Action: in 'Context' block" in str(exc_info.value.errors[0].message)
 
@@ -885,10 +885,10 @@ def test_context_late_text(tmp_path):
         "    Late text is wrong here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Text must come first in a 'Context' block" in str(exc_info.value.errors[0].message)
 
@@ -906,15 +906,15 @@ def test_context_late_code(tmp_path):
         "    ```\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Code must come first in a 'Context' block" in str(exc_info.value.errors[0].message)
 
 
-def test_context_duplicate_sections(parser, tmp_path):
+def test_context_duplicate_sections(ast_builder, tmp_path):
     """Test handling of duplicate sections"""
     p = tmp_path / "duplicate.m6r"
     p.write_text(
@@ -924,14 +924,14 @@ def test_context_duplicate_sections(parser, tmp_path):
         "    Description\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "'Context' already defined" in str(exc_info.value.errors[0].message)
 
 
-def test_role_fenced_code_blocks(parser):
+def test_role_fenced_code_blocks(ast_builder):
     """Test handling of fenced code blocks."""
     input_text = (
         "Role: Test\n"
@@ -946,7 +946,7 @@ def test_role_fenced_code_blocks(parser):
     )
 
     root = MetaphorRootNode()
-    parser.parse(root, input_text, "test.txt", [])
+    ast_builder.parse(root, input_text, "test.txt", [])
     role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
     text_nodes = [node for node in role.children if isinstance(node, MetaphorTextNode)]
     code_nodes = [node for node in role.children if isinstance(node, MetaphorCodeNode)]
@@ -974,10 +974,10 @@ def test_role_unexpected_token(tmp_path):
         "        This shouldn't be here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Unexpected token: Action: in 'Role' block" in str(exc_info.value.errors[0].message)
 
@@ -990,10 +990,10 @@ def test_role_missing_indent(tmp_path):
         "No indent here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected indent after keyword description for 'Role' block" in str(exc_info.value.errors[0].message)
 
@@ -1006,10 +1006,10 @@ def test_role_missing_description_and_indent(tmp_path):
         "Text without indent\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected description or indent after 'Role' keyword" in str(exc_info.value.errors[0].message)
 
@@ -1024,10 +1024,10 @@ def test_role_inner_unexpected(tmp_path):
         "        This shouldn't be here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Unexpected token: Action: in 'Role' block" in str(exc_info.value.errors[0].message)
 
@@ -1043,10 +1043,10 @@ def test_role_late_text(tmp_path):
         "    Late text is wrong here\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Text must come first in a 'Role' block" in str(exc_info.value.errors[0].message)
 
@@ -1064,15 +1064,15 @@ def test_role_late_code(tmp_path):
         "    ```\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Code must come first in a 'Role' block" in str(exc_info.value.errors[0].message)
 
 
-def test_role_duplicate_sections(parser, tmp_path):
+def test_role_duplicate_sections(ast_builder, tmp_path):
     """Test handling of duplicate sections"""
     p = tmp_path / "duplicate.m6r"
     p.write_text(
@@ -1082,14 +1082,14 @@ def test_role_duplicate_sections(parser, tmp_path):
         "    Description\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "'Role' already defined" in str(exc_info.value.errors[0].message)
 
 
-def test_include_rel_path(parser, tmp_path):
+def test_include_rel_path(ast_builder, tmp_path):
     """Test handling of Include directive"""
     # Create main file - fixed indentation
     main_file = tmp_path / "main.m6r"
@@ -1107,7 +1107,7 @@ def test_include_rel_path(parser, tmp_path):
     )
 
     root = MetaphorRootNode()
-    parser.parse_file(root, str(main_file), [str(tmp_path)])
+    ast_builder.parse_file(root, str(main_file), [str(tmp_path)])
     assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
     context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
     assert len(context_nodes) == 1
@@ -1116,7 +1116,7 @@ def test_include_rel_path(parser, tmp_path):
     assert any(node.value() == "Content" for node in context_nodes[0].children)
 
 
-def test_include_abs_path(parser, tmp_path):
+def test_include_abs_path(ast_builder, tmp_path):
     """Test handling of Include directive"""
     # Create main file - fixed indentation
     main_file = tmp_path / "main.m6r"
@@ -1134,7 +1134,7 @@ def test_include_abs_path(parser, tmp_path):
     )
 
     root = MetaphorRootNode()
-    parser.parse_file(root, str(main_file), [str(tmp_path)])
+    ast_builder.parse_file(root, str(main_file), [str(tmp_path)])
     assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
     context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
     assert len(context_nodes) == 1
@@ -1143,7 +1143,7 @@ def test_include_abs_path(parser, tmp_path):
     assert any(node.value() == "Content" for node in context_nodes[0].children)
 
 
-def test_recursive_includes(parser, tmp_path):
+def test_recursive_includes(ast_builder, tmp_path):
     """Test handling of recursive includes"""
     file1 = tmp_path / "file1.m6r"
     file2 = tmp_path / "file2.m6r"
@@ -1161,16 +1161,16 @@ def test_recursive_includes(parser, tmp_path):
         "Include: file1.m6r\n"
     )
 
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(file1), [str(tmp_path)])
+        ast_builder.parse_file(root, str(file1), [str(tmp_path)])
 
         # Check the actual error messages in the errors list
         errors = exc_info.value.errors
         assert any("has already been used" in error.message for error in errors)
 
 
-def test_include_search_paths(parser, tmp_path):
+def test_include_search_paths(ast_builder, tmp_path):
     """Test handling of search paths for includes"""
     empty_include_dir = tmp_path / "empty_includes"
     empty_include_dir.mkdir()
@@ -1193,7 +1193,7 @@ def test_include_search_paths(parser, tmp_path):
     )
 
     root = MetaphorRootNode()
-    parser.parse_file(root, str(main_file), [str(empty_include_dir), str(include_dir)])
+    ast_builder.parse_file(root, str(main_file), [str(empty_include_dir), str(include_dir)])
     assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
     assert len([node for node in root.children if isinstance(node, MetaphorContextNode)]) == 1
 
@@ -1207,30 +1207,30 @@ def test_include_missing_filename(tmp_path):
         "    Include:\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected file name after 'Include'" in str(exc_info.value.errors[0].message)
 
 
 def test_file_permission_error(create_read_only_file):
     """Test handling of permission errors when reading files"""
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(create_read_only_file), [])
+        ast_builder.parse_file(root, str(create_read_only_file), [])
 
     assert "You do not have permission to access" in str(exc_info.value.errors[0].message)
 
 
 def test_directory_error(tmp_path):
     """Test handling of IsADirectoryError"""
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(tmp_path), [])
+        ast_builder.parse_file(root, str(tmp_path), [])
 
     assert "Is a directory" in str(exc_info.value.errors[0].message)
 
@@ -1245,15 +1245,15 @@ def test_os_error(tmp_path, monkeypatch):
     p = tmp_path / "test.m6r"
     p.write_text("Role: Test")
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "OS error" in str(exc_info.value.errors[0].message)
 
 
-def test_include_file_not_found(parser, tmp_path):
+def test_include_file_not_found(ast_builder, tmp_path):
     """Test parse_file() error handling with existing token context"""
     # Create a main file that includes a non-existent file
     main_file = tmp_path / "main.m6r"
@@ -1264,9 +1264,9 @@ def test_include_file_not_found(parser, tmp_path):
     )
 
     # This should trigger the error handling with a current_token
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(main_file), [])
+        ast_builder.parse_file(root, str(main_file), [])
 
     # Verify the error has the correct token context
     error = exc_info.value.errors[0]
@@ -1277,7 +1277,7 @@ def test_include_file_not_found(parser, tmp_path):
     assert "Include: nonexistent.m6r" in error.input_text  # Should have the failing line
 
 
-def test_include_abs_file_not_found(parser, tmp_path):
+def test_include_abs_file_not_found(ast_builder, tmp_path):
     """Test parse_file() error handling with existing token context"""
     # Create a main file that includes a non-existent file
     main_file = tmp_path / "main.m6r"
@@ -1289,9 +1289,9 @@ def test_include_abs_file_not_found(parser, tmp_path):
     )
 
     # This should trigger the error handling with a current_token
-    with pytest.raises(MetaphorParserError) as exc_info:
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(main_file), [])
+        ast_builder.parse_file(root, str(main_file), [])
 
     # Verify the error has the correct token context
     error = exc_info.value.errors[0]
@@ -1302,7 +1302,7 @@ def test_include_abs_file_not_found(parser, tmp_path):
     assert f"Include: {nonexist_file}" in error.input_text  # Should have the failing line
 
 
-def test_embed_directive(parser, tmp_path):
+def test_embed_directive(ast_builder, tmp_path):
     """Test handling of Embed directive"""
     main_file = tmp_path / "main.m6r"
     # Embed needs to be within a Context block
@@ -1322,7 +1322,7 @@ def test_embed_directive(parser, tmp_path):
     os.chdir(tmp_path)
     try:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(main_file), [])
+        ast_builder.parse_file(root, str(main_file), [])
         assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
         context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
         assert len(context_nodes) == 1
@@ -1339,7 +1339,7 @@ def test_embed_directive(parser, tmp_path):
         os.chdir(current_dir)
 
 
-def test_wildcard_embed(parser, tmp_path):
+def test_wildcard_embed(ast_builder, tmp_path):
     """Test handling of wildcard patterns in Embed directive"""
     # Create multiple test files
     (tmp_path / "test1.txt").write_text("Content 1")
@@ -1360,7 +1360,7 @@ def test_wildcard_embed(parser, tmp_path):
     os.chdir(tmp_path)
     try:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(main_file), [])
+        ast_builder.parse_file(root, str(main_file), [])
         assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
         context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
         assert len(context_nodes) == 1
@@ -1395,10 +1395,10 @@ def test_embed_missing_filename(tmp_path):
         "    Embed:\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "Expected file name or wildcard match after 'Embed' keyword" in str(exc_info.value.errors[0].message)
 
@@ -1412,10 +1412,10 @@ def test_embed_no_matches(tmp_path):
         "    Embed: nonexistent*.txt\n"
     )
 
-    parser = MetaphorParser()
-    with pytest.raises(MetaphorParserError) as exc_info:
+    ast_builder = MetaphorASTBuilder()
+    with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorRootNode()
-        parser.parse_file(root, str(p), [])
+        ast_builder.parse_file(root, str(p), [])
 
     assert "nonexistent*.txt does not match any files for 'Embed'" in str(exc_info.value.errors[0].message)
 
@@ -1448,9 +1448,9 @@ def test_recursive_embed(tmp_path):
     current_dir = os.getcwd()
     os.chdir(tmp_path)
     try:
-        parser = MetaphorParser()
+        ast_builder = MetaphorASTBuilder()
         root = MetaphorRootNode()
-        parser.parse_file(root, str(main_file), [])
+        ast_builder.parse_file(root, str(main_file), [])
 
         # Check for content from all embedded files
         context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]

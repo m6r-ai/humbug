@@ -6,7 +6,7 @@ from .metaphor_ast_node import (
     MetaphorCodeNode, MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
     MetaphorASTVisitor
 )
-from .metaphor_parser import MetaphorParser, MetaphorParserError, MetaphorParserSyntaxError
+from .metaphor_ast_builder import MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorASTBuilderSyntaxError
 from .metaphor_format_visitor import MetaphorFormatVisitor
 from .metaphor_formatters import format_errors, format_preamble
 
@@ -21,9 +21,9 @@ __all__ = [
     "MetaphorActionNode",
     "MetaphorASTVisitor",
     "MetaphorFormatVisitor",
-    "MetaphorParser",
-    "MetaphorParserError",
-    "MetaphorParserSyntaxError",
+    "MetaphorASTBuilder",
+    "MetaphorASTBuilderError",
+    "MetaphorASTBuilderSyntaxError",
     "format_errors",
     "format_preamble"
 ]

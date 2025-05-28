@@ -3,7 +3,7 @@
 import io
 from typing import List
 
-from humbug.metaphor.metaphor_parser import MetaphorParserSyntaxError
+from humbug.metaphor.metaphor_ast_builder import MetaphorASTBuilderSyntaxError
 
 
 def format_preamble() -> str:
@@ -62,7 +62,7 @@ def format_preamble() -> str:
     return preamble
 
 
-def format_errors(errors: List[MetaphorParserSyntaxError]) -> str:
+def format_errors(errors: List[MetaphorASTBuilderSyntaxError]) -> str:
     """Format a list of syntax errors as a string.
 
     Args:
