@@ -1,0 +1,91 @@
+{
+  "type": "document",
+  "children": [
+    {
+      "type": "heading",
+      "level": 1,
+      "id": "heading-1",
+      "children": [
+        {
+          "type": "text",
+          "content": "Heading 1"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "id": "heading-2",
+      "children": [
+        {
+          "type": "text",
+          "content": "Heading 2"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "id": "heading-3",
+      "children": [
+        {
+          "type": "text",
+          "content": "Heading 3"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "heading-4",
+      "children": [
+        {
+          "type": "text",
+          "content": "Heading 4"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 5,
+      "id": "heading-5",
+      "children": [
+        {
+          "type": "text",
+          "content": "Heading 5"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 6,
+      "id": "heading-6",
+      "children": [
+        {
+          "type": "text",
+          "content": "Heading 6"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "id": "heading-with-formatting",
+      "children": [
+        {
+          "type": "text",
+          "content": "Heading with "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "formatting"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
