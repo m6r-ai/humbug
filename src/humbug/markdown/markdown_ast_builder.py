@@ -193,13 +193,6 @@ class MarkdownASTBuilder:
             )
             return False
 
-    def _reset_code_block(self) -> None:
-        """
-        Reset the parser state for a completed code block.
-        """
-        self._embedded_parser_state = None
-        self._embedded_language = ProgrammingLanguage.UNKNOWN
-
     def identify_line_type(self, line: str) -> Tuple[str, Any]:
         """
         Identify the type of a markdown line.
@@ -1138,6 +1131,8 @@ class MarkdownASTBuilder:
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
         self._code_block_indents = []
+        self._embedded_parser_state = None
+        self._embedded_language = ProgrammingLanguage.UNKNOWN
 
     def _handle_text_continuation(self, text: str, line_num: int) -> bool:
         """
@@ -1312,7 +1307,6 @@ class MarkdownASTBuilder:
 
             if line_type == 'code_block_end':
                 self._finalize_code_block(line_num)
-                self._reset_code_block()
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
                 self._blank_line_count = 0
