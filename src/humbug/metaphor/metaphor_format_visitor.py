@@ -64,7 +64,6 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
 
         return results
 
-
     def visit_MetaphorRootNode(self, node: MetaphorRootNode) -> Any:  # pylint: disable=invalid-name
         """
         Visit the root node of the AST.
