@@ -1,8 +1,31 @@
 # Humbug v0.13
 
-Humbug is an extensible open-source tool designed to help you build and maintain software using AI.
+Humbug is an extensible open-source tool designed to help you design, build and maintain software using AI.
 
-To do this it uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation
+Whether you're a human or an AI, the most important things in software development are understanding the
+problem you're trying to solve and the software you've building with to solve it.  Humbug is designed to
+help you with both.
+
+For human developers, Humbug gives you a dynamic wiki-like view into your software and lets you to
+discuss any aspect of it with an AI.  You can also preview files, edit files, and run commands in the
+terminal.
+
+For AIs, Humbug lets you create complex prompts that capture all the context required to do complex design and
+implementation work.
+
+Humbug supports large language models (LLMs) from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI,
+and you have total flexibility over which one you use at any time.  You can use 2 or more at
+the same time, so if you want multiple opinions then it's easy to get them.
+
+While Humbug lets you use cloud-based tools, it runs locally on your computer.  Everything it does is captured
+in local files so you always retain complete control over your projects.  It's up to you how you structure them,
+how you handle version management, and where you run your AI tools.
+
+## Metaphor - solving the AI context problem
+
+The key to getting great results from AIs is to ensure they have the right context to work with.
+
+To do this, Humbug uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation
 language.  Metaphor is very quick to learn (just 5 keywords) and is structured to let you be clear about what you want
 your AI to do for you, so it's not left guessing or hallucinating.
 
@@ -17,9 +40,6 @@ those conversations.  It lets you control and capture any aspect of those conver
 your software and documentation.  The built-in editor and terminal also lets you update and test anything you get back from
 the AI, and provides you access to any command line tools you might want to use.
 
-Well over 80% of Humbug has been built and maintained by AI using Metaphor (the Metaphor files are in the repo), so
-it demonstrates how effective this approach can be.
-
 ![Humbug in action](./docs/humbug-v0.12-1.webp)
 
 ![Humbug in action](./docs/humbug-v0.12-2.webp)
@@ -32,11 +52,16 @@ it demonstrates how effective this approach can be.
 
 ## What does that mean in practice?
 
-Providing an AI everything it needs lets Metaphor stretch an AI model way beyond code completions.  In most versions
-there have been many 100+ line changes to the code across multiple files that were all generated from
-single Metaphor prompts.  The biggest changes have been well over 1000 lines of code each.
+Providing an AI everything it needs lets Metaphor stretch an AI model way beyond code completions.  This approach
+has been used throughout Humbug's development.
 
-The ability to use AI for large refactoring and redesign tasks also means Humbug is a codebase that can
+In most versions there have been many 100+ line changes to the code across multiple files that were all generated from
+single Metaphor prompts.  The biggest single AI-coded change was in v0.13, where 1600 lines of code were generated
+by Claude Sonnet 3.7.  That change had one bug that took 5 minutes to resolve!
+
+Well over 80% of Humbug has been built and maintained by AI using Metaphor.
+
+The ability to use AI for large refactoring and design tasks also means Humbug is a codebase that has been able to
 evolve very fast but with very little technical debt.
 
 One fun aspect of using Metaphor is you can use Humbug to become an expert on its own design.  If you use the
