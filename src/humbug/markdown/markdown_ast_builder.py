@@ -17,7 +17,7 @@ from humbug.markdown.markdown_ast_node import (
 )
 
 
-class MarkdownParserError(Exception):
+class MarkdownASTBuilderError(Exception):
     """Exception raised for errors during markdown parsing."""
 
 
@@ -81,7 +81,7 @@ class ListState:
         self.contains_blank_line = False
 
 
-class MarkdownParser:
+class MarkdownASTBuilder:
     """
     Builder class for constructing an AST from markdown text.
 
@@ -103,7 +103,7 @@ class MarkdownParser:
         self._table_separator_pattern = re.compile(r'^(\|[\s:-]+\|)$', re.MULTILINE)
         self._horizontal_rule_pattern = re.compile(r'^(?:\s*(?:[-*_])\s*){3,}$')
 
-        self._logger = logging.getLogger("MarkdownParser")
+        self._logger = logging.getLogger("MarkdownASTBuilder")
 
         # Initialize an empty document
         self._document = MarkdownDocumentNode()
@@ -1189,7 +1189,7 @@ class MarkdownParser:
             None
 
         Raises:
-            MarkdownParserError: If there's an error parsing the line
+            MarkdownASTBuilderError: If there's an error parsing the line
         """
         try:
             line_type, content = self.identify_line_type(line)
@@ -1298,7 +1298,7 @@ class MarkdownParser:
 
         except Exception as e:
             self._logger.exception("Error parsing line %d: %s", line_num, line)
-            raise MarkdownParserError(f"Failed to parse line {line_num}: {e}") from e
+            raise MarkdownASTBuilderError(f"Failed to parse line {line_num}: {e}") from e
 
     def build_ast(self, text: str) -> MarkdownDocumentNode:
         """
@@ -1311,7 +1311,7 @@ class MarkdownParser:
             The document root node
 
         Raises:
-            MarkdownParseError: If there's an error parsing the text
+            MarkdownASTBuilderError: If there's an error parsing the text
         """
         self._document = MarkdownDocumentNode(self._source_path)
         self._line_to_node_map = {}
@@ -1361,7 +1361,7 @@ class MarkdownParser:
             The updated document root node
 
         Raises:
-            MarkdownParseError: If there's an error updating the AST
+            MarkdownASTBuilderError: If there's an error updating the AST
         """
         self._source_path = path
         if previous_text is None or not self._document.children:
