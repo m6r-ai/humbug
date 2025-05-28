@@ -390,7 +390,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
             return True
 
         # No protocol or path, might be an internal reference
-        if '://' not in url and '/' not in url and '.' not in url:
+        if '://' not in url and os.path.sep not in url and '.' not in url:
             return True
 
         return False
