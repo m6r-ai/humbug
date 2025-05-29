@@ -720,27 +720,6 @@ class MarkdownASTBuilder:
 
         return new_list
 
-    def _add_paragraph_to_list_item(self, list_item: MarkdownListItemNode, content: str, line_num: int) -> None:
-        """
-        Add a paragraph to a list item, respecting the list's formatting style.
-
-        Args:
-            list_item: The list item to add content to
-            content: The text content to add
-            line_num: The line number
-
-        Returns:
-            None
-        """
-        paragraph = MarkdownParagraphNode()
-        for node in self.parse_inline_formatting(content):
-            paragraph.add_child(node)
-
-        paragraph.line_start = line_num
-        paragraph.line_end = line_num
-        list_item.add_child(paragraph)
-        self.register_node_line(paragraph, line_num)
-
     def parse_ordered_list_item(self, indent: int, number: str, content: str, line_num: int) -> None:
         """
         Parse an ordered list item and create a list item node.
@@ -761,12 +740,10 @@ class MarkdownASTBuilder:
         # Close deeper lists
         self._close_lists_at_indent(indent, False)
 
-        # If we're in a list, and we've seen a blank line, then mark the list as having blank lines
+        # If we're in a list, and we've seen a blank line, then mark the list as loose
         if self._list_stack and self._blank_line_count > 0:
-            if not self._list_stack[-1].contains_blank_line:
-                self._convert_list_items_to_paragraphs()
-
             self._list_stack[-1].contains_blank_line = True
+            self._list_stack[-1].list_node.tight = False
 
         list_node = self.find_or_create_ordered_list(indent, start_number)
         current_list = cast(ListState, self._current_list_state())
@@ -778,14 +755,15 @@ class MarkdownASTBuilder:
         # Calculate the actual content indentation for this specific marker
         current_list.marker_length = len(number) + 2  # +2 for the "." and space after number
 
-        # Check if this list has blank lines, which means we need to use paragraphs for content
-        if current_list.contains_blank_line:
-            self._add_paragraph_to_list_item(item, content, line_num)
+        # Create a paragraph for the content
+        paragraph = MarkdownParagraphNode()
+        for node in self.parse_inline_formatting(content):
+            paragraph.add_child(node)
 
-        else:
-            # Process the content with inline formatting
-            for node in self.parse_inline_formatting(content):
-                item.add_child(node)
+        paragraph.line_start = line_num
+        paragraph.line_end = line_num
+        item.add_child(paragraph)
+        self.register_node_line(paragraph, line_num)
 
         item.line_start = line_num
         item.line_end = line_num
@@ -808,12 +786,10 @@ class MarkdownASTBuilder:
         # Close deeper lists
         self._close_lists_at_indent(indent, False)
 
-        # If we're in a list, and we've seen a blank line, then mark the list as having blank lines
+        # If we're in a list, and we've seen a blank line, then mark the list as loose
         if self._list_stack and self._blank_line_count > 0:
-            if not self._list_stack[-1].contains_blank_line:
-                self._convert_list_items_to_paragraphs()
-
             self._list_stack[-1].contains_blank_line = True
+            self._list_stack[-1].list_node.tight = False
 
         list_node = self.find_or_create_unordered_list(indent)
         current_list = cast(ListState, self._current_list_state())
@@ -825,14 +801,15 @@ class MarkdownASTBuilder:
         # Calculate the actual content indentation for this specific marker
         current_list.marker_length = len(marker) + 1  # +1 for the space after marker
 
-        # Check if this list has blank lines, which means we need to use paragraphs for content
-        if current_list.contains_blank_line:
-            self._add_paragraph_to_list_item(item, content, line_num)
+        # Create a paragraph for the content
+        paragraph = MarkdownParagraphNode()
+        for node in self.parse_inline_formatting(content):
+            paragraph.add_child(node)
 
-        else:
-            # Process the content with inline formatting
-            for node in self.parse_inline_formatting(content):
-                item.add_child(node)
+        paragraph.line_start = line_num
+        paragraph.line_end = line_num
+        item.add_child(paragraph)
+        self.register_node_line(paragraph, line_num)
 
         item.line_start = line_num
         item.line_end = line_num
@@ -1160,7 +1137,7 @@ class MarkdownASTBuilder:
             self.register_node_line(self._last_paragraph, line_num)
             return True
 
-        # Case 2: Continue a list item
+        # Case 2: Continue a list item paragraph
         if self._list_stack and self._last_processed_line_type in ('unordered_list_item', 'ordered_list_item', 'blank', 'text'):
             # Get the indentation of the current line
             current_indent = len(text) - len(text.lstrip())
@@ -1169,20 +1146,16 @@ class MarkdownASTBuilder:
                 # We closed one or more lists, we should treat it as if a blank line was encountered
                 # This will ensure proper formatting when returning to an outer list
                 if self._list_stack:
-                    self._list_stack[-1].contains_blank_line = True
                     self._last_processed_line_type = 'blank'
                     self._blank_line_count = 1
 
                 # Reset the paragraph continuity as well
                 self._last_paragraph = None
 
-            else:
-                # If we've seen a blank line, then mark the list as having blank lines
-                if self._blank_line_count > 0:
-                    if not self._list_stack[-1].contains_blank_line:
-                        self._convert_list_items_to_paragraphs()
-
-                    self._list_stack[-1].contains_blank_line = True
+            # If we're continuing a list item and we've seen a blank line, mark the list as loose
+            if self._list_stack and self._blank_line_count > 0:
+                self._list_stack[-1].contains_blank_line = True
+                self._list_stack[-1].list_node.tight = False
 
             list_state = self._current_list_state()
             if not list_state or not list_state.last_item:
@@ -1190,26 +1163,35 @@ class MarkdownASTBuilder:
 
             formatted_text = text.lstrip()
 
-            # Check if the list has blank lines (uses paragraph formatting)
-            if list_state.contains_blank_line and self._last_processed_line_type == 'blank':
-                # Create a new paragraph for this continuation
-                self._add_paragraph_to_list_item(list_state.last_item, formatted_text, line_num)
-
+            # Find the paragraph within the last list item
+            last_item = list_state.last_item
+            if not last_item.children or not isinstance(last_item.children[-1], MarkdownParagraphNode):
+                # This shouldn't happen with our new design, but handle gracefully
+                # FIXME
+                print("************************* SHOULD NEVER HAPPEN *************************")
+                paragraph = MarkdownParagraphNode()
+                for node in self.parse_inline_formatting(formatted_text):
+                    paragraph.add_child(node)
+                paragraph.line_start = line_num
+                paragraph.line_end = line_num
+                last_item.add_child(paragraph)
+                self.register_node_line(paragraph, line_num)
             else:
-                # Otherwise continue inline
-                last_item: MarkdownASTNode = list_state.last_item
-                if isinstance(last_item.children[-1], MarkdownParagraphNode):
-                    last_item = last_item.children[-1]
+                # Continue the existing paragraph
+                paragraph = cast(MarkdownParagraphNode, last_item.children[-1])
 
                 # If we weren't just preceded by a line break then add a space
-                if not isinstance(last_item.children[-1], MarkdownLineBreakNode):
-                    last_item.add_child(MarkdownTextNode(" "))
+                if paragraph.children and not isinstance(paragraph.children[-1], MarkdownLineBreakNode):
+                    paragraph.add_child(MarkdownTextNode(" "))
 
                 for node in self.parse_inline_formatting(formatted_text):
-                    last_item.add_child(node)
+                    paragraph.add_child(node)
 
-            list_state.last_item.line_end = line_num
-            self.register_node_line(list_state.last_item, line_num)
+                paragraph.line_end = line_num
+                self.register_node_line(paragraph, line_num)
+
+            last_item.line_end = line_num
+            self.register_node_line(last_item, line_num)
             return True
 
         return False
@@ -1217,24 +1199,6 @@ class MarkdownASTBuilder:
     def _reset_list_state(self) -> None:
         """Reset all list tracking state."""
         self._list_stack = []
-
-    def _convert_list_items_to_paragraphs(self) -> None:
-        """Convert all existing list items in the current list to have paragraphs blocks."""
-        current_list = self._list_stack[-1]
-        for list_item in current_list.list_node.children:
-            if isinstance(list_item, MarkdownListItemNode):
-                # Convert the list item to a paragraph
-                paragraph = MarkdownParagraphNode()
-                while list_item.children:
-                    child = list_item.children[0]
-                    list_item.remove_child(child)
-                    paragraph.add_child(child)
-
-                # Update line numbers
-                paragraph.line_start = list_item.line_start
-                paragraph.line_end = list_item.line_end
-                self.register_node_line(paragraph, cast(int, list_item.line_start))
-                list_item.add_child(paragraph)
 
     def parse_line(self, line: str, line_num: int) -> None:
         """

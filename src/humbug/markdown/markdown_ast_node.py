@@ -89,6 +89,9 @@ class MarkdownOrderedListNode(MarkdownASTNode):
         # For ordered lists, we use a default of 3 characters for the marker ("1. ")
         self.content_indent = indent + 3
 
+        # Track whether this list should render tightly (without extra spacing)
+        self.tight = True
+
 
 class MarkdownUnorderedListNode(MarkdownASTNode):
     """Node representing an HTML unordered list (<ul>)."""
@@ -105,6 +108,9 @@ class MarkdownUnorderedListNode(MarkdownASTNode):
         # Content indent is typically indent + marker (e.g., "-") + space
         # For unordered lists, we use 2 characters for the marker ("- ")
         self.content_indent = indent + 2
+
+        # Track whether this list should render tightly (without extra spacing)
+        self.tight = True
 
 
 class MarkdownListItemNode(MarkdownASTNode):

@@ -129,14 +129,31 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # We're in a normal paragraph, so format it normally
         block_format = QTextBlockFormat(orig_block_format)
 
+        # Work out if we are in a tight list or not.  If we are, we're going to adjust margins accordingly.
+        tight = False
+        if node.parent:
+            parent_list_node = node.parent.parent
+            if isinstance(parent_list_node, (MarkdownOrderedListNode, MarkdownUnorderedListNode)):
+                if parent_list_node.tight:
+                    tight = True
+
         # If the previous sibling is a list, we need to add a top margin
         previous_sibling = node.previous_sibling()
         if previous_sibling and isinstance(previous_sibling, (MarkdownOrderedListNode, MarkdownUnorderedListNode)):
             block_format.setTopMargin(self._default_font_height)
 
+        # If there is no previous sibling, check if our parent is a list item.  If it is, we also need to add a top margin.
+        elif not previous_sibling and node.parent and isinstance(node.parent, MarkdownListItemNode):
+            if not tight:
+                block_format.setTopMargin(self._default_font_height)
+
         # If the next sibling is a horizontal rule, we don't need a bottom margin
         next_sibling = node.next_sibling()
         if next_sibling and isinstance(next_sibling, MarkdownHorizontalRuleNode):
+            block_format.setBottomMargin(0)
+
+        # If we are in a tight list, we don't need a bottom margin either
+        elif tight:
             block_format.setBottomMargin(0)
 
         else:
@@ -709,7 +726,11 @@ class MarkdownRenderer(MarkdownASTVisitor):
         """
         # If our next line is a list item, we don't need a line break
         next_sibling = _node.next_sibling()
+        if not next_sibling:
+            return
+
         if next_sibling and isinstance(next_sibling, MarkdownOrderedListNode | MarkdownUnorderedListNode):
+            print("********** how do we get here? **********")
             return
 
         # Insert line break character
