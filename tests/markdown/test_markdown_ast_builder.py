@@ -137,17 +137,16 @@ class TestMarkdownASTBuilder:
 - Item 3
 """
         doc = ast_builder.build_ast(markdown)
-        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
-        printer = MarkdownASTPrinter()
-        printer.visit(doc)
         assert len(doc.children) == 1
         list_node = doc.children[0]
         assert len(list_node.children) == 3
 
         # Check first item has a nested list
         first_item = list_node.children[0]
-        assert len(first_item.children) == 1
+        assert len(first_item.children) == 2
         nested_list = first_item.children[0]
+        assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+        nested_list = first_item.children[1]
         assert nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
         assert len(nested_list.children) == 2
 
@@ -291,9 +290,6 @@ Outer code block continues
 ```
 """
         doc = ast_builder.build_ast(markdown)
-        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
-        printer = MarkdownASTPrinter()
-        printer.visit(doc)
         assert len(doc.children) == 1
         code_block = doc.children[0]
         assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
