@@ -65,25 +65,26 @@ class MarkdownTextEdit(QTextEdit):
 
     def _handle_style_changed(self) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
+        self.document().setIndentWidth(self._style_manager.get_space_width() * 4)
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:
+    def mousePressEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
-        self.mousePressed.emit(event)
+        self.mousePressed.emit(e)
 
         # Check for link clicks
-        anchor = self.anchorAt(event.pos())
-        if anchor and event.button() == Qt.MouseButton.LeftButton:
+        anchor = self.anchorAt(e.pos())
+        if anchor and e.button() == Qt.MouseButton.LeftButton:
             self.linkClicked.emit(anchor)
-            event.accept()
+            e.accept()
             return
 
         # Default handling for other cases
-        super().mousePressEvent(event)
+        super().mousePressEvent(e)
 
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+    def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse release events to parent."""
-        super().mouseReleaseEvent(event)
-        self.mouseReleased.emit(event)
+        super().mouseReleaseEvent(e)
+        self.mouseReleased.emit(e)
 
     def set_has_code_block(self, has_code: bool) -> None:
         """Update word wrap mode based on whether content contains code blocks."""
@@ -106,24 +107,24 @@ class MarkdownTextEdit(QTextEdit):
         """Check if content contains code blocks."""
         return self._has_code_block
 
-    def wheelEvent(self, event: QWheelEvent) -> None:
+    def wheelEvent(self, e: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""
         # If this is a code block, handle horizontal scrolling for compatible mice
-        if self._has_code_block and event.angleDelta().x() != 0:
+        if self._has_code_block and e.angleDelta().x() != 0:
             # Get the horizontal scrollbar
             hbar = self.horizontalScrollBar()
             if hbar:
                 # Use the horizontal component directly
-                delta = event.angleDelta().x()
+                delta = e.angleDelta().x()
                 hbar.setValue(hbar.value() - delta)
 
                 # We've only handled the horizontal component - we need to let our parent
                 # handle the vertical component.
-                event.ignore()
+                e.ignore()
                 return
 
         # For all other cases, propagate the event up
-        event.ignore()
+        e.ignore()
 
     def _indent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
         """Indent a single line using soft tabs (spaces).
@@ -326,30 +327,32 @@ class MarkdownTextEdit(QTextEdit):
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:
+    def keyPressEvent(self, e: QKeyEvent) -> None:
         """Handle special key events."""
         # Is this a read-only widget?  If it is then we don't want to process certain key events,
         # leaving it to the parent to handle them.
         if self.isReadOnly():
             # Handle horizontal scrolling
-            if self._has_code_block and event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            if self._has_code_block and e.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
                 hbar = self.horizontalScrollBar()
                 if hbar and hbar.isVisible():
                     current = hbar.value()
                     step = 50  # Adjust scroll step size as needed
-                    if event.key() == Qt.Key.Key_Left:
+                    if e.key() == Qt.Key.Key_Left:
                         hbar.setValue(max(hbar.minimum(), current - step))
+
                     else:
                         hbar.setValue(min(hbar.maximum(), current + step))
-                    event.accept()
+
+                    e.accept()
                     return
 
-            if event.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown, Qt.Key.Key_Up, Qt.Key.Key_Down):
-                event.ignore()
+            if e.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown, Qt.Key.Key_Up, Qt.Key.Key_Down):
+                e.ignore()
 
             return
 
-        if event.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown):
+        if e.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown):
             # Find the scroll area viewport by walking up hierarchy
             widget: QObject = self
             viewport = None
@@ -369,7 +372,7 @@ class MarkdownTextEdit(QTextEdit):
                 cursor = self.textCursor()
                 orig_pos = cursor.position()
 
-                movement = QTextCursor.MoveOperation.Up if event.key() == Qt.Key.Key_PageUp else QTextCursor.MoveOperation.Down
+                movement = QTextCursor.MoveOperation.Up if e.key() == Qt.Key.Key_PageUp else QTextCursor.MoveOperation.Down
                 cursor.movePosition(movement, QTextCursor.MoveMode.MoveAnchor, visible_lines)
 
                 # Only set cursor if it actually moved
@@ -377,28 +380,28 @@ class MarkdownTextEdit(QTextEdit):
                     self.setTextCursor(cursor)
                     self.page_key_scroll_requested.emit()
 
-            event.accept()
+            e.accept()
             return
 
-        if event.key() == Qt.Key.Key_Home:
+        if e.key() == Qt.Key.Key_Home:
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
             self.setTextCursor(cursor)
-            event.accept()
+            e.accept()
             return
 
-        if event.key() == Qt.Key.Key_End:
+        if e.key() == Qt.Key.Key_End:
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.MoveOperation.EndOfLine)
             self.setTextCursor(cursor)
-            event.accept()
+            e.accept()
             return
 
-        if event.key() == Qt.Key.Key_Tab:
+        if e.key() == Qt.Key.Key_Tab:
             cursor = self.textCursor()
             mindspace_manager = MindspaceManager()
             if not mindspace_manager.has_mindspace():
-                super().keyPressEvent(event)
+                super().keyPressEvent(e)
                 return
 
             settings = cast(MindspaceSettings, mindspace_manager.settings())
@@ -410,11 +413,14 @@ class MarkdownTextEdit(QTextEdit):
                 if not cursor.hasSelection():
                     if settings.use_soft_tabs:
                         self._indent_single_line_soft_tabs(cursor, settings.tab_size)
+
                     else:
                         self._indent_single_line_hard_tabs(cursor)
+
                 else:
                     if settings.use_soft_tabs:
                         self._indent_block_soft_tabs(cursor, settings.tab_size)
+
                     else:
                         self._indent_block_hard_tabs(cursor)
             finally:
@@ -422,14 +428,14 @@ class MarkdownTextEdit(QTextEdit):
                 self.setTextCursor(cursor)
                 scrollbar.setValue(current_scroll)
 
-            event.accept()
+            e.accept()
             return
 
-        if event.key() == Qt.Key.Key_Backtab:  # Shift+Tab
+        if e.key() == Qt.Key.Key_Backtab:  # Shift+Tab
             cursor = self.textCursor()
             mindspace_manager = MindspaceManager()
             if not mindspace_manager.has_mindspace():
-                super().keyPressEvent(event)
+                super().keyPressEvent(e)
                 return
 
             settings = cast(MindspaceSettings, mindspace_manager.settings())
@@ -457,10 +463,10 @@ class MarkdownTextEdit(QTextEdit):
                 self.setTextCursor(cursor)
                 scrollbar.setValue(current_scroll)
 
-            event.accept()
+            e.accept()
             return
 
-        super().keyPressEvent(event)
+        super().keyPressEvent(e)
 
     def _on_content_changed(self) -> None:
         """Queue a content update instead of processing immediately."""
