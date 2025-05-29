@@ -111,27 +111,27 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING
         ),
-        "gemini-2.0-flash-exp": AIModel(
-            name="gemini-2.0-flash-exp",
+        "gemini-2.0-flash": AIModel(
+            name="gemini-2.0-flash",
             provider="google",
             context_window=1048576,
             max_output_tokens=8192,
             supports_temperature=True,
-            reasoning_capabilities=ReasoningCapability.NO_REASONING
+            reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         ),
-        "gemini-2.0-pro-exp": AIModel(
-            name="gemini-2.0-pro-exp",
+        "gemini-2.5-flash-preview-05-20": AIModel(
+            name="gemini-2.5-flash-preview-05-20",
             provider="google",
-            context_window=2097152,
-            max_output_tokens=8192,
+            context_window=1048576,
+            max_output_tokens=65536,
             supports_temperature=True,
-            reasoning_capabilities=ReasoningCapability.NO_REASONING
+            reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         ),
-        "gemini-2.5-pro-exp-03-25": AIModel(
-            name="gemini-2.5-pro-exp-03-25",
+        "gemini-2.5-pro-preview-05-06": AIModel(
+            name="gemini-2.5-pro-preview-05-06",
             provider="google",
-            context_window=1000000,
-            max_output_tokens=64000,
+            context_window=1048576,
+            max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING
         ),

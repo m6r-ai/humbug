@@ -85,6 +85,7 @@ can be used to refine the Metaphor context.
 - Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as
   ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting
   to prevent blocks being closed too soon.
+- Removed the Gemini 2.0 Pro model, but added Gemini 2.5 Flash preview.  Updated models to the latest versions.
 
 ## Features
 
