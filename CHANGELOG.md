@@ -14,6 +14,8 @@ Bug fixes:
 - If an image in a markdown file did not have a paragraph line separator from the preceding line then the formatting
   was corrupted.
 - Under some circumstances markdown lists and paragraphs interacted in odd ways and introduced rendering defects.
+- If you closed a tab then the tab label that ended up under the mouse pointer would not set the hover rendering
+  correctly.
 
 Internal structure changes:
 
