@@ -61,3 +61,6 @@ Context: System tab
 
         Context: "terminal" command
             The terminal command opens a new terminal tab.
+
+        Context: "wiki" command
+            The wiki command takes a named file or directory and opens this in a wiki tab view.
