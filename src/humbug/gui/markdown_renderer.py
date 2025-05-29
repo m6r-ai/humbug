@@ -714,7 +714,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         for child in node.children:
             self.visit(child)
 
-    def visit_MarkdownLineBreakNode(self, _node: MarkdownLineBreakNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownLineBreakNode(self, node: MarkdownLineBreakNode) -> None:  # pylint: disable=invalid-name
         """
         Render a line break node to the QTextDocument.
 
@@ -724,13 +724,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        # If our next line is a list item, we don't need a line break
-        next_sibling = _node.next_sibling()
-        if not next_sibling:
-            return
-
-        if next_sibling and isinstance(next_sibling, MarkdownOrderedListNode | MarkdownUnorderedListNode):
-            print("********** how do we get here? **********")
+        # If we don't have a sibling then we don't need to do anything
+        if not node.next_sibling():
             return
 
         # Insert line break character

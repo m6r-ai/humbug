@@ -1163,32 +1163,19 @@ class MarkdownASTBuilder:
 
             formatted_text = text.lstrip()
 
-            # Find the paragraph within the last list item
+            # Find the paragraph within the last list item and continue it
             last_item = list_state.last_item
-            if not last_item.children or not isinstance(last_item.children[-1], MarkdownParagraphNode):
-                # This shouldn't happen with our new design, but handle gracefully
-                # FIXME
-                print("************************* SHOULD NEVER HAPPEN *************************")
-                paragraph = MarkdownParagraphNode()
-                for node in self.parse_inline_formatting(formatted_text):
-                    paragraph.add_child(node)
-                paragraph.line_start = line_num
-                paragraph.line_end = line_num
-                last_item.add_child(paragraph)
-                self.register_node_line(paragraph, line_num)
-            else:
-                # Continue the existing paragraph
-                paragraph = cast(MarkdownParagraphNode, last_item.children[-1])
+            paragraph = cast(MarkdownParagraphNode, last_item.children[-1])
 
-                # If we weren't just preceded by a line break then add a space
-                if paragraph.children and not isinstance(paragraph.children[-1], MarkdownLineBreakNode):
-                    paragraph.add_child(MarkdownTextNode(" "))
+            # If we weren't just preceded by a line break then add a space
+            if paragraph.children and not isinstance(paragraph.children[-1], MarkdownLineBreakNode):
+                paragraph.add_child(MarkdownTextNode(" "))
 
-                for node in self.parse_inline_formatting(formatted_text):
-                    paragraph.add_child(node)
+            for node in self.parse_inline_formatting(formatted_text):
+                paragraph.add_child(node)
 
-                paragraph.line_end = line_num
-                self.register_node_line(paragraph, line_num)
+            paragraph.line_end = line_num
+            self.register_node_line(paragraph, line_num)
 
             last_item.line_end = line_num
             self.register_node_line(last_item, line_num)
