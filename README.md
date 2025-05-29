@@ -82,7 +82,9 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.14
 
-TBD
+- Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as
+  ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting
+  to prevent blocks being closed too soon.
 
 ## Features
 

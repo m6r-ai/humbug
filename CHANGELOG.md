@@ -2,10 +2,21 @@
 
 ## v0.14 (2025-06-xx)
 
+New features:
+
+- Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as
+  ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting
+  to prevent blocks being closed too soon.
+
 Bug fixes:
 
 - If an image in a markdown file did not have a paragraph line separator from the preceding line then the formatting
   was corrupted.
+- Under some circumstances markdown lists and paragraphs interacted in odd ways and introduced rendering defects.
+
+Internal structure changes:
+
+- Added markdown AST tests.
 
 ## v0.13 (2025-05-28)
 
