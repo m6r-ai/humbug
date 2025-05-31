@@ -1,0 +1,42 @@
+# A template for planning updates to Humbug.
+
+Role:
+    You are a world class python programmer, highly skilled in accurate and performant software development.  You
+    are going to assist me in making modifications to my application.
+
+Context:
+    # Pull in the default Python coding rules for the project.
+    Include: metaphor/python-rules.m6r
+
+    # The project only uses external dependencies if there's no other choice.  This makes it
+    # much easier for the AI to know what it's working with.
+    Context: Dependencies
+        Leverage standard library tools before custom solutions, unless specifically instructed, or
+        unless a depdency is already in use.
+
+    Context: Existing code
+        The following files are used in my application:
+
+        # Embed all the files that the AI will need to modify the code successfully.  If necessary,
+        # describe what those files are used for.
+        Embed: src/humbug/markdown/markdown_parser.py
+
+Action:
+    # Describe the details of the change required.
+    I have a markdown parser and want to construct test coverage for it.
+
+    The tests must not add any new APIs, and must be solely accessed via the public (not private) methods in the class.
+
+    I currently use pytest within my application and want to continue using it.
+
+    Markdown has many quite complex behaviours and rather than hardcoding markdown text blocks in my tests it would be
+    nice if, for any tests that are expected to pass, my tests could leverage a series of markdown files and probably
+    matching result files.
+
+    There is already a markdown visitor class that can be used for doing debugging, so perhaps something like this
+    could be used:
+
+    Embed: src/humbug/markdown/markdown_ast_printer.py
+
+    Please propose a design for this.
+
