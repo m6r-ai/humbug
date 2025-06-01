@@ -4,6 +4,7 @@ Markdown AST visitor to render the AST directly to a QTextDocument.
 
 import logging
 import os
+import re
 from typing import List, Tuple, cast
 
 from PySide6.QtCore import Qt
@@ -235,15 +236,34 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
     def visit_MarkdownTextNode(self, node: MarkdownTextNode) -> None:  # pylint: disable=invalid-name
         """
-        Render a text node to the QTextDocument.
+        Render a text node to the QTextDocument with space normalization.
 
         Args:
             node: The text node to render
-
-        Returns:
-            None
         """
-        self._cursor.insertText(node.content)  # Use the current cursor format
+        text = node.content
+
+        # First: normalize multiple spaces within this text node to single spaces
+        text = re.sub(r' {2,}', ' ', text)
+
+        # Second: handle duplicate spaces between adjacent text nodes
+        if node.parent and node.parent.children:
+            current_index = node.parent.children.index(node)
+            if current_index > 0:
+                prev_sibling = node.parent.children[current_index - 1]
+
+                # If previous sibling is a text node ending with space
+                # and current text starts with space, remove the leading space
+                if (isinstance(prev_sibling, MarkdownTextNode) and
+                    prev_sibling.content.rstrip() != prev_sibling.content and  # ends with whitespace
+                    text.startswith(' ')):
+                    text = text.lstrip(' ')
+
+        # If the text is empty after normalization, we don't need to insert anything
+        if not text:
+            return
+
+        self._cursor.insertText(text)
 
     def visit_MarkdownBoldNode(self, node: MarkdownBoldNode) -> None:  # pylint: disable=invalid-name
         """
