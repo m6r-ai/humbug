@@ -209,9 +209,6 @@ class TestMarkdownASTBuilder:
 - Item 3
 """
         doc = ast_builder.build_ast(markdown)
-        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
-        printer = MarkdownASTPrinter()
-        printer.visit(doc)
         assert len(doc.children) == 1
         list_node = doc.children[0]
         assert len(list_node.children) == 3
@@ -240,9 +237,6 @@ class TestMarkdownASTBuilder:
 - Item 3
 """
         doc = ast_builder.build_ast(markdown)
-        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
-        printer = MarkdownASTPrinter()
-        printer.visit(doc)
         assert len(doc.children) == 1
         list_node = doc.children[0]
         assert len(list_node.children) == 3
@@ -835,9 +829,6 @@ class TestTableFormatting:
 |:-----|:------:|------:|"""
 
         doc = ast_builder.build_ast(table_markdown)
-        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
-        printer = MarkdownASTPrinter()
-        printer.visit(doc)
         assert len(doc.children) == 2
         line0 = doc.children[0]
         assert line0.__class__.__name__ == "MarkdownParagraphNode"
@@ -851,9 +842,6 @@ class TestTableFormatting:
         table_markdown = """|:-----|:------:|------:|"""
 
         doc = ast_builder.build_ast(table_markdown)
-        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
-        printer = MarkdownASTPrinter()
-        printer.visit(doc)
         assert len(doc.children) == 1
         line0 = doc.children[0]
         assert line0.__class__.__name__ == "MarkdownParagraphNode"
@@ -893,7 +881,7 @@ class TestTableFormatting:
     def test_table_edge_cases(self, ast_builder):
         """Test table parsing edge cases."""
         # Table with missing cells
-        uneven_table = """| Col1 | Col2 | Col3 |
+        uneven_table = """| Col1 | Col2 | Col3 | Col4 |
 |------|------|------|
 | A1   | A2   |
 | B1   | B2   | B3   | B4 |"""
