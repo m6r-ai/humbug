@@ -20,10 +20,6 @@ from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
-class MarkdownASTBuilderError(Exception):
-    """Exception raised for errors during markdown parsing."""
-
-
 class TableBufferState:
     """Class to track and buffer table elements during parsing."""
 
@@ -199,9 +195,6 @@ class MarkdownASTBuilder:
             'heading', 'unordered_list_item', 'ordered_list_item', 'blank', 'text',
             'code_block_start', 'code_block_end', 'code_block_content',
             'table_row', 'table_separator', 'line_break', 'horizontal_rule'
-
-        Raises:
-            None
         """
         # Handle code block state
         lstripped_line = line.lstrip()
@@ -343,9 +336,6 @@ class MarkdownASTBuilder:
 
         Returns:
             A list of AST nodes representing the formatted text
-
-        Raises:
-            None
         """
         # Check if text has trailing line break
         has_line_break = text.endswith('  ')
@@ -1011,9 +1001,6 @@ class MarkdownASTBuilder:
 
         Returns:
             None
-
-        Raises:
-            None
         """
         if line_num not in self._line_to_node_map:
             self._line_to_node_map[line_num] = []
@@ -1141,118 +1128,110 @@ class MarkdownASTBuilder:
 
         Returns:
             None
-
-        Raises:
-            MarkdownASTBuilderError: If there's an error parsing the line
         """
-        try:
-            line_type, content = self.identify_line_type(line)
+        line_type, content = self.identify_line_type(line)
 
-            # Reset paragraph tracking if not continuing text
-            if line_type not in ('text', 'blank', 'line_break'):
-                self._last_paragraph = None
+        # Reset paragraph tracking if not continuing text
+        if line_type not in ('text', 'blank', 'line_break'):
+            self._last_paragraph = None
 
-            # Handle table ends when a non-table line is encountered
-            if self._table_buffer.is_in_potential_table and line_type not in ('table_row', 'table_separator'):
-                # Check if we have a complete table to create
-                if self._table_buffer.is_valid_table():
-                    self._create_table_from_buffer()
+        # Handle table ends when a non-table line is encountered
+        if self._table_buffer.is_in_potential_table and line_type not in ('table_row', 'table_separator'):
+            # Check if we have a complete table to create
+            if self._table_buffer.is_valid_table():
+                self._create_table_from_buffer()
 
-                else:
-                    # Not a valid table, render as regular text
-                    self._handle_incomplete_table()
+            else:
+                # Not a valid table, render as regular text
+                self._handle_incomplete_table()
 
-            if line_type == 'line_break':
-                self._document.add_child(MarkdownLineBreakNode())
-                return
+        if line_type == 'line_break':
+            self._document.add_child(MarkdownLineBreakNode())
+            return
 
-            if line_type == 'blank':
-                self._blank_line_count += 1
-                self._last_processed_line_type = line_type
-                return
+        if line_type == 'blank':
+            self._blank_line_count += 1
+            self._last_processed_line_type = line_type
+            return
 
-            if line_type == 'unordered_list_item':
-                indent, marker, text = content
-                self._parse_unordered_list_item(indent, marker, text, line_num)
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
+        if line_type == 'unordered_list_item':
+            indent, marker, text = content
+            self._parse_unordered_list_item(indent, marker, text, line_num)
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
 
-            if line_type == 'ordered_list_item':
-                indent, number, text = content
-                self._parse_ordered_list_item(indent, number, text, line_num)
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
+        if line_type == 'ordered_list_item':
+            indent, number, text = content
+            self._parse_ordered_list_item(indent, number, text, line_num)
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
 
-            if line_type == 'code_block_start':
-                self._in_code_block = True
-                self._code_block_language = content
-                self._code_block_content = []
-                self._code_block_start_line = line_num
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
+        if line_type == 'code_block_start':
+            self._in_code_block = True
+            self._code_block_language = content
+            self._code_block_content = []
+            self._code_block_start_line = line_num
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
 
-            if line_type == 'code_block_content':
-                self._code_block_content.append(content)
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
+        if line_type == 'code_block_content':
+            self._code_block_content.append(content)
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
 
-            if line_type == 'code_block_end':
-                self._finalize_code_block(line_num)
-                self._reset_list_state()
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
-
-            # Handle table-related lines
-            if line_type == 'table_row':
-                self._handle_table_row(content, line_num)
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
-
-            if line_type == 'table_separator':
-                self._handle_table_separator(content, line_num)
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
-
-            # Process other line types
-            if line_type == 'heading':
-                level, heading_text = content
-                self._parse_heading(level, heading_text, line_num)
-                self._reset_list_state()
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
-
-            if line_type == 'horizontal_rule':
-                horizontal_rule = self._parse_horizontal_rule(line_num)
-                self._document.add_child(horizontal_rule)
-                self._reset_list_state()
-                self._last_processed_line_type = line_type
-                self._blank_line_count = 0
-                return
-
-            # We have text left
-            # Try to handle as a continuation first
-            if self._handle_text_continuation(content, line_num):
-                self._last_processed_line_type = line_type
-                return
-
-            # Regular paragraph
-            paragraph = self._parse_text(content, line_num)
-            self._last_paragraph = paragraph
+        if line_type == 'code_block_end':
+            self._finalize_code_block(line_num)
             self._reset_list_state()
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
+            return
 
-        except Exception as e:
-            self._logger.exception("Error parsing line %d: %s", line_num, line)
-            raise MarkdownASTBuilderError(f"Failed to parse line {line_num}: {e}") from e
+        # Handle table-related lines
+        if line_type == 'table_row':
+            self._handle_table_row(content, line_num)
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
+
+        if line_type == 'table_separator':
+            self._handle_table_separator(content, line_num)
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
+
+        # Process other line types
+        if line_type == 'heading':
+            level, heading_text = content
+            self._parse_heading(level, heading_text, line_num)
+            self._reset_list_state()
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
+
+        if line_type == 'horizontal_rule':
+            horizontal_rule = self._parse_horizontal_rule(line_num)
+            self._document.add_child(horizontal_rule)
+            self._reset_list_state()
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
+
+        # We have text left
+        # Try to handle as a continuation first
+        if self._handle_text_continuation(content, line_num):
+            self._last_processed_line_type = line_type
+            return
+
+        # Regular paragraph
+        paragraph = self._parse_text(content, line_num)
+        self._last_paragraph = paragraph
+        self._reset_list_state()
+        self._last_processed_line_type = line_type
+        self._blank_line_count = 0
 
     def build_ast(self, text: str) -> MarkdownDocumentNode:
         """
@@ -1263,9 +1242,6 @@ class MarkdownASTBuilder:
 
         Returns:
             The document root node
-
-        Raises:
-            MarkdownASTBuilderError: If there's an error parsing the text
         """
         self._document = MarkdownDocumentNode(self._source_path)
         self._line_to_node_map = {}
@@ -1313,9 +1289,6 @@ class MarkdownASTBuilder:
 
         Returns:
             The updated document root node
-
-        Raises:
-            MarkdownASTBuilderError: If there's an error updating the AST
         """
         self._source_path = path
         if previous_text is None or not self._document.children:

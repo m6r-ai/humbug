@@ -8,8 +8,8 @@ to HTML while preserving code blocks and handling streaming text updates.
 import logging
 from typing import List, Tuple, cast
 
-from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownASTBuilderError
-from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode
+from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
+from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode
 from humbug.syntax.programming_language import ProgrammingLanguage
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -56,22 +56,14 @@ class MarkdownConverter:
         Raises:
             None
         """
-        try:
-            self._source_path = path
+        self._source_path = path
 
-            # Update the AST based on the changes
-            self.ast_builder.update_ast(text, self.current_text, path)
-            self.current_text = text
+        # Update the AST based on the changes
+        self.ast_builder.update_ast(text, self.current_text, path)
+        self.current_text = text
 
-            # Extract content sections from the AST document
-            return self._extract_sections_from_ast(self.ast_builder.document())
-
-        except MarkdownASTBuilderError as e:
-            self._logger.exception("Error converting markdown")
-            # Return a single error section with a text node
-            error_node = MarkdownDocumentNode()
-            error_node.add_child(MarkdownTextNode(f"Error converting markdown: {e}"))
-            return [(error_node, None)]
+        # Extract content sections from the AST document
+        return self._extract_sections_from_ast(self.ast_builder.document())
 
     def _extract_sections_from_ast(self, document: MarkdownASTNode) -> List[Tuple[MarkdownASTNode, ProgrammingLanguage | None]]:
         """
