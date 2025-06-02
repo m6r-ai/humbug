@@ -167,8 +167,7 @@ class MarkdownASTBuilder:
 
         # Get or create parser for this language
         parser = ParserRegistry.create_parser(language)
-        if not parser:
-            return False
+        assert parser is not None, f"No parser registered for language: {language.name}"
 
         # If language changed, reset state
         if language != self._embedded_language:
@@ -217,6 +216,7 @@ class MarkdownASTBuilder:
             # Check if our embedded parser indicates this should be a continuation
             if self._code_block_language:
                 language = ProgrammingLanguageUtils.from_name(self._code_block_language)
+                assert language != ProgrammingLanguage.UNKNOWN, "Unknown programming language in code block"
                 if self._should_parse_code_block_as_continuation(language, line):
                     return 'code_block_content', line
 
@@ -224,8 +224,8 @@ class MarkdownASTBuilder:
             # this block or nesting another.
             code_block_match = self._code_block_pattern.match(lstripped_line)
             if code_block_match:
-                language = code_block_match.group(1)
-                if language is not None or indent > self._code_block_indents[-1]:
+                language_name = code_block_match.group(1)
+                if language_name is not None or indent > self._code_block_indents[-1]:
                     self._code_block_nesting_level += 1
                     self._code_block_indents.append(indent)
                     return 'code_block_content', line
@@ -240,10 +240,10 @@ class MarkdownASTBuilder:
         # Check for code block start
         code_block_match = self._code_block_pattern.match(lstripped_line)
         if code_block_match:
-            language = code_block_match.group(1) or ""
+            language_name = code_block_match.group(1) or ""
             self._code_block_nesting_level = 1
             self._code_block_indents.append(indent)
-            return 'code_block_start', language
+            return 'code_block_start', language_name
 
         # Check for a line break
         if indent >= 2 and not lstripped_line:
@@ -315,6 +315,7 @@ class MarkdownASTBuilder:
                 paren_count -= 1
                 if paren_count == 0:
                     return pos
+
             pos += 1
 
         return -1
@@ -564,7 +565,7 @@ class MarkdownASTBuilder:
 
         heading.line_start = line_num
         heading.line_end = line_num
-        self.register_node_line(heading, line_num)
+        self._register_node_line(heading, line_num)
 
         self._document.add_child(heading)
 
@@ -582,7 +583,7 @@ class MarkdownASTBuilder:
 
         paragraph.line_start = line_num
         paragraph.line_end = line_num
-        self.register_node_line(paragraph, line_num)
+        self._register_node_line(paragraph, line_num)
 
         self._document.add_child(paragraph)
         return paragraph
@@ -655,7 +656,7 @@ class MarkdownASTBuilder:
         # If no list items found, use the document
         return self._document
 
-    def find_or_create_ordered_list(self, indent: int, start_number: int) -> MarkdownOrderedListNode:
+    def _find_or_create_ordered_list(self, indent: int, start_number: int) -> MarkdownOrderedListNode:
         """
         Find or create an ordered list at the given indent level with specified start number.
 
@@ -688,7 +689,7 @@ class MarkdownASTBuilder:
 
         return new_list
 
-    def find_or_create_unordered_list(self, indent: int) -> MarkdownUnorderedListNode:
+    def _find_or_create_unordered_list(self, indent: int) -> MarkdownUnorderedListNode:
         """
         Find or create an unordered list at the given indent level.
 
@@ -741,7 +742,7 @@ class MarkdownASTBuilder:
             self._list_stack[-1].contains_blank_line = True
             self._list_stack[-1].list_node.tight = False
 
-        list_node = self.find_or_create_ordered_list(indent, start_number)
+        list_node = self._find_or_create_ordered_list(indent, start_number)
         current_list = cast(ListState, self._current_list_state())
 
         # Create the list item
@@ -759,11 +760,11 @@ class MarkdownASTBuilder:
         paragraph.line_start = line_num
         paragraph.line_end = line_num
         item.add_child(paragraph)
-        self.register_node_line(paragraph, line_num)
+        self._register_node_line(paragraph, line_num)
 
         item.line_start = line_num
         item.line_end = line_num
-        self.register_node_line(item, line_num)
+        self._register_node_line(item, line_num)
 
         # Update tracking variables
         current_list.last_item = item
@@ -787,7 +788,7 @@ class MarkdownASTBuilder:
             self._list_stack[-1].contains_blank_line = True
             self._list_stack[-1].list_node.tight = False
 
-        list_node = self.find_or_create_unordered_list(indent)
+        list_node = self._find_or_create_unordered_list(indent)
         current_list = cast(ListState, self._current_list_state())
 
         # Create the list item
@@ -805,11 +806,11 @@ class MarkdownASTBuilder:
         paragraph.line_start = line_num
         paragraph.line_end = line_num
         item.add_child(paragraph)
-        self.register_node_line(paragraph, line_num)
+        self._register_node_line(paragraph, line_num)
 
         item.line_start = line_num
         item.line_end = line_num
-        self.register_node_line(item, line_num)
+        self._register_node_line(item, line_num)
 
         # Update tracking variables
         current_list.last_item = item
@@ -828,7 +829,7 @@ class MarkdownASTBuilder:
         horizontal_rule = MarkdownHorizontalRuleNode()
         horizontal_rule.line_start = line_num
         horizontal_rule.line_end = line_num
-        self.register_node_line(horizontal_rule, line_num)
+        self._register_node_line(horizontal_rule, line_num)
 
         return horizontal_rule
 
@@ -961,7 +962,7 @@ class MarkdownASTBuilder:
                 row_node.add_child(cell_node)
 
             header_node.add_child(row_node)
-            self.register_node_line(row_node, row_line)
+            self._register_node_line(row_node, row_line)
 
         # Set header end line
         header_node.line_end = self._table_buffer.start_line + len(self._table_buffer.header_rows) - 1
@@ -992,7 +993,7 @@ class MarkdownASTBuilder:
                 row_node.add_child(cell_node)
 
             body_node.add_child(row_node)
-            self.register_node_line(row_node, row_line)
+            self._register_node_line(row_node, row_line)
 
         body_node.line_end = self._table_buffer.current_line
 
@@ -1001,7 +1002,7 @@ class MarkdownASTBuilder:
 
         # Register table with line mappings
         for i in range(self._table_buffer.start_line, self._table_buffer.current_line + 1):
-            self.register_node_line(table_node, i)
+            self._register_node_line(table_node, i)
 
         # Reset table buffer
         self._table_buffer.reset()
@@ -1053,7 +1054,7 @@ class MarkdownASTBuilder:
         # Reset table buffer
         self._table_buffer.reset()
 
-    def register_node_line(self, node: MarkdownASTNode, line_num: int) -> None:
+    def _register_node_line(self, node: MarkdownASTNode, line_num: int) -> None:
         """
         Register a node with a line number for later reference.
 
@@ -1095,7 +1096,7 @@ class MarkdownASTBuilder:
 
         # Register code block with all lines it spans
         for i in range(self._code_block_start_line, end_line + 1):
-            self.register_node_line(code_block, i)
+            self._register_node_line(code_block, i)
 
         # Reset code block state
         self._in_code_block = False
@@ -1130,7 +1131,7 @@ class MarkdownASTBuilder:
                 self._last_paragraph.add_child(node)
 
             self._last_paragraph.line_end = line_num
-            self.register_node_line(self._last_paragraph, line_num)
+            self._register_node_line(self._last_paragraph, line_num)
             return True
 
         # Case 2: Continue a list item paragraph
@@ -1171,10 +1172,10 @@ class MarkdownASTBuilder:
                 paragraph.add_child(node)
 
             paragraph.line_end = line_num
-            self.register_node_line(paragraph, line_num)
+            self._register_node_line(paragraph, line_num)
 
             last_item.line_end = line_num
-            self.register_node_line(last_item, line_num)
+            self._register_node_line(last_item, line_num)
             return True
 
         return False
@@ -1183,7 +1184,7 @@ class MarkdownASTBuilder:
         """Reset all list tracking state."""
         self._list_stack = []
 
-    def parse_line(self, line: str, line_num: int) -> None:
+    def _parse_line(self, line: str, line_num: int) -> None:
         """
         Parse a single line and add the resulting nodes to the AST.
 
@@ -1338,7 +1339,7 @@ class MarkdownASTBuilder:
         # Parse line by line
         lines = text.split('\n')
         for i, line in enumerate(lines):
-            self.parse_line(line, i)
+            self._parse_line(line, i)
 
         # Check for any buffered table content at the end of the document
         if self._table_buffer.is_in_potential_table:

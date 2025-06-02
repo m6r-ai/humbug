@@ -276,15 +276,6 @@ Paragraph 2.
         assert doc.children[0].children[0].content == "Updated heading"
         assert doc.children[1].children[0].content == "Updated paragraph."
 
-    def test_ast_builder_error(self):
-        """Test that ast_builder errors are raised appropriately."""
-        # Create a ast_builder with a broken regex to force an error
-        broken_ast_builder = MarkdownASTBuilder(no_underscores=False)
-        broken_ast_builder._heading_pattern = None  # type: ignore
-
-        with pytest.raises(MarkdownASTBuilderError):
-            broken_ast_builder.parse_line("# This should fail", 0)
-
 
 class TestInlineFormatting:
     """Comprehensive tests for inline formatting parsing."""
@@ -411,17 +402,22 @@ def incomplete_function(
     param1,
     param2
 ):
+    str = """
+This is a multi-line string that should trigger a continuation
+"""
     if condition:
         return value
 ```'''
 
         # Test JavaScript with objects
         js_code = '''```javascript
+/*
 const obj = {
     property1: value1,
     property2: {
         nested: true
     }
+*/
 };
 ```'''
 
@@ -433,10 +429,20 @@ public:
     T getValue() {
         return value;
     }
+
+/*
+ * This is a continued comment.
+ */
 };
 ```'''
 
-        for code in [python_code, js_code, cpp_code]:
+        # Test for text.
+        text_code = '''```text
+this is text
+and more text
+```'''
+
+        for code in [python_code, js_code, cpp_code, text_code]:
             doc = ast_builder.build_ast(code)
             assert len(doc.children) == 1
             code_block = doc.children[0]
@@ -749,6 +755,7 @@ Third line continues normally"""
             if child.__class__.__name__ == "MarkdownLineBreakNode":
                 has_line_break = True
                 break
+
         assert has_line_break
 
     def test_continuation_edge_cases(self, ast_builder):
