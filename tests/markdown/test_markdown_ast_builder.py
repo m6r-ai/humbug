@@ -172,6 +172,68 @@ class TestMarkdownASTBuilder:
         assert nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
         assert len(nested_list.children) == 2
 
+    def test_nested_list2(self, ast_builder):
+        """Test parsing a nested list."""
+        markdown = """
+- Item 1
+  - Nested 1.1
+  - Nested 1.2
+  1. Nested n.1
+  2. Nested n.2
+- Item 2
+- Item 3
+"""
+        doc = ast_builder.build_ast(markdown)
+        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
+        printer = MarkdownASTPrinter()
+        printer.visit(doc)
+        assert len(doc.children) == 1
+        list_node = doc.children[0]
+        assert len(list_node.children) == 3
+
+        # Check first item has a nested list
+        first_item = list_node.children[0]
+        assert len(first_item.children) == 3
+        nested_list = first_item.children[0]
+        assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+        first_nested_list = first_item.children[1]
+        assert first_nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+        assert len(first_nested_list.children) == 2
+        second_nested_list = first_item.children[2]
+        assert second_nested_list.__class__.__name__ == "MarkdownOrderedListNode"
+        assert len(second_nested_list.children) == 2
+
+    def test_nested_list3(self, ast_builder):
+        """Test parsing a nested list."""
+        markdown = """
+- Item 1
+  1. Nested n.1
+  2. Nested n.2
+  - Nested 1.1
+  - Nested 1.2
+- Item 2
+- Item 3
+"""
+        doc = ast_builder.build_ast(markdown)
+        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
+        printer = MarkdownASTPrinter()
+        printer.visit(doc)
+        assert len(doc.children) == 1
+        list_node = doc.children[0]
+        assert len(list_node.children) == 3
+
+        # Check first item has a nested list
+        first_item = list_node.children[0]
+        assert len(first_item.children) == 3
+        nested_list = first_item.children[0]
+        assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+        first_nested_list = first_item.children[1]
+        assert first_nested_list.__class__.__name__ == "MarkdownOrderedListNode"
+        assert len(first_nested_list.children) == 2
+        second_nested_list = first_item.children[2]
+        assert second_nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+        assert len(second_nested_list.children) == 2
+
     def test_code_block(self, ast_builder):
         """Test parsing a code block."""
         markdown = """```python
@@ -365,6 +427,7 @@ class TestInlineFormatting:
                 image = paragraph.children[0]
                 assert image.__class__.__name__ == "MarkdownImageNode"
                 assert '(' in image.url and ')' in image.url
+
             else:
                 # Link
                 link = paragraph.children[0]
@@ -389,6 +452,23 @@ class TestInlineFormatting:
             assert code_node.__class__.__name__ == "MarkdownInlineCodeNode"
             # Content should be preserved as-is without formatting
             assert "**" in code_node.content or "*" in code_node.content or "__" in code_node.content or "_" in code_node.content or "[" in code_node.content
+
+    def test_incomplete_link_info(self, ast_builder):
+        """Test handling of links with incomplete or malformed information."""
+        test_cases = [
+            "[Incomplete link](http://example.com",
+            "[Incomplete link(http://example.com",
+            "[Link with empty URL](",
+            "![Incomplete image](image.jpg",
+            "![Incomplete image(image.jpg",
+        ]
+
+        for markdown in test_cases:
+            doc = ast_builder.build_ast(markdown)
+            paragraph = doc.children[0]
+            assert len(paragraph.children) == 1
+            image = paragraph.children[0]
+            assert image.__class__.__name__ == "MarkdownTextNode"
 
 
 class TestCodeBlockContinuation:
@@ -639,6 +719,23 @@ class TestTableFormatting:
         assert body_left_cell.alignment == "left"
         assert body_center_cell.alignment == "center"
         assert body_right_cell.alignment == "right"
+
+    def test_incomplete_table_alignment_variations(self, ast_builder):
+        """Test different table column alignments."""
+        table_markdown = """| Left | Center | Right |
+|:-----|:------:|------:|"""
+
+        doc = ast_builder.build_ast(table_markdown)
+        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
+        printer = MarkdownASTPrinter()
+        printer.visit(doc)
+        assert len(doc.children) == 2
+        line0 = doc.children[0]
+        assert line0.__class__.__name__ == "MarkdownParagraphNode"
+        assert line0.children[0].content == "| Left | Center | Right |"
+        line1 = doc.children[1]
+        assert line1.__class__.__name__ == "MarkdownParagraphNode"
+        assert line1.children[0].content == "|:-----|:------:|------:|"
 
     def test_table_with_complex_content(self, ast_builder):
         """Test tables containing formatted text."""

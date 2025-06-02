@@ -30,8 +30,10 @@ class TableBufferState:
     def __init__(self) -> None:
         """Initialize the table buffer state."""
         # Buffer for table rows before commitment
-        self.header_rows: List[List[str]] = []
+        self.header_row: List[str] = []
+        self.header_line: str = ""
         self.separator_row: List[str] = []
+        self.separator_line: str = ""
         self.body_rows: List[List[str]] = []
 
         # Table state
@@ -45,8 +47,10 @@ class TableBufferState:
 
     def reset(self) -> None:
         """Reset the table buffer state."""
-        self.header_rows = []
+        self.header_row = []
+        self.header_line = ""
         self.separator_row = []
+        self.separator_line = ""
         self.body_rows = []
         self.is_in_potential_table = False
         self.is_confirmed_table = False
@@ -61,7 +65,7 @@ class TableBufferState:
         Returns:
             True if we have a header row, separator row, and at least one body row
         """
-        return (len(self.header_rows) > 0 and
+        return (len(self.header_row) > 0 and
                 len(self.separator_row) > 0 and
                 len(self.body_rows) > 0)
 
@@ -588,15 +592,6 @@ class MarkdownASTBuilder:
         """
         return self._list_stack[-1] if self._list_stack else None
 
-    def _parent_list_state(self) -> ListState | None:
-        """
-        Return the parent list state or None if there's no parent.
-
-        Returns:
-            The parent list state or None
-        """
-        return self._list_stack[-2] if len(self._list_stack) > 1 else None
-
     def _close_lists_at_indent(self, indent: int, consider_marker: bool) -> bool:
         """
         Close all lists deeper than the given indent level.
@@ -860,25 +855,24 @@ class MarkdownASTBuilder:
         Returns:
             None
         """
-        # If this is the first potential table row
-        if not self._table_buffer.is_in_potential_table:
+        # Is this a body row?
+        if self._table_buffer.is_confirmed_table:
+            cells = [cell.strip() for cell in line.split('|')[1:-1]]
+            self._table_buffer.body_rows.append(cells)
+            self._table_buffer.current_line = line_num
+            return
+
+        # Is this another header row?  If yes, we can't have two, so emit the last one as text
+        if self._table_buffer.is_in_potential_table:
+            self._parse_text(self._table_buffer.header_line, self._table_buffer.start_line)
+
+        else:
             self._table_buffer.is_in_potential_table = True
             self._table_buffer.start_line = line_num
 
-            # Store this as a header row
-            cells = [cell.strip() for cell in line.split('|')[1:-1]]
-            self._table_buffer.header_rows.append(cells)
-
-        elif self._table_buffer.is_confirmed_table:
-            # This is a body row
-            cells = [cell.strip() for cell in line.split('|')[1:-1]]
-            self._table_buffer.body_rows.append(cells)
-
-        else:
-            # This is another potential header row
-            cells = [cell.strip() for cell in line.split('|')[1:-1]]
-            self._table_buffer.header_rows.append(cells)
-
+        cells = [cell.strip() for cell in line.split('|')[1:-1]]
+        self._table_buffer.header_row = cells
+        self._table_buffer.header_line = line
         self._table_buffer.current_line = line_num
 
     def _handle_table_separator(self, line: str, line_num: int) -> None:
@@ -901,6 +895,7 @@ class MarkdownASTBuilder:
         # Store the separator row
         cells = [cell.strip() for cell in line.split('|')[1:-1]]
         self._table_buffer.separator_row = cells
+        self._table_buffer.separator_line = line
 
         # Parse alignments
         self._table_buffer.alignments = self._parse_table_separator(line)
@@ -931,35 +926,34 @@ class MarkdownASTBuilder:
         table_node.add_child(body_node)
 
         # Process header rows
-        for i, row_cells in enumerate(self._table_buffer.header_rows):
-            row_node = MarkdownTableRowNode()
-            row_line = self._table_buffer.start_line + i
-            row_node.line_start = row_line
-            row_node.line_end = row_line
+        row_node = MarkdownTableRowNode()
+        row_line = self._table_buffer.start_line
+        row_node.line_start = row_line
+        row_node.line_end = row_line
 
-            for j, cell_content in enumerate(row_cells):
-                # Determine alignment
-                alignment = 'left'
-                if j < len(self._table_buffer.alignments):
-                    alignment = self._table_buffer.alignments[j]
+        for j, cell_content in enumerate(self._table_buffer.header_row):
+            # Determine alignment
+            alignment = 'left'
+            if j < len(self._table_buffer.alignments):
+                alignment = self._table_buffer.alignments[j]
 
-                # Create cell
-                cell_node = MarkdownTableCellNode(is_header=True, alignment=alignment)
+            # Create cell
+            cell_node = MarkdownTableCellNode(is_header=True, alignment=alignment)
 
-                # Add content to cell
-                for text_node in self._parse_inline_formatting(cell_content):
-                    cell_node.add_child(text_node)
+            # Add content to cell
+            for text_node in self._parse_inline_formatting(cell_content):
+                cell_node.add_child(text_node)
 
-                row_node.add_child(cell_node)
+            row_node.add_child(cell_node)
 
-            header_node.add_child(row_node)
-            self._register_node_line(row_node, row_line)
+        header_node.add_child(row_node)
+        self._register_node_line(row_node, row_line)
 
         # Set header end line
-        header_node.line_end = self._table_buffer.start_line + len(self._table_buffer.header_rows) - 1
+        header_node.line_end = self._table_buffer.start_line
 
         # Process body rows
-        body_start_line = self._table_buffer.start_line + len(self._table_buffer.header_rows) + 1
+        body_start_line = self._table_buffer.start_line + 1
         body_node.line_start = body_start_line
 
         for i, row_cells in enumerate(self._table_buffer.body_rows):
@@ -1007,40 +1001,12 @@ class MarkdownASTBuilder:
             None
         """
         # Render header rows as regular text
-        for i, row in enumerate(self._table_buffer.header_rows):
-            line_num = self._table_buffer.start_line + i
-            # Convert back to text line
-            line_text = '|' + '|'.join(row) + '|'
-            self._parse_text(line_text, line_num)
+        if self._table_buffer.header_row:
+            self._parse_text(self._table_buffer.header_line, self._table_buffer.start_line)
 
         # Handle separator if present
         if self._table_buffer.separator_row:
-            line_num = self._table_buffer.start_line + len(self._table_buffer.header_rows)
-            # Reconstruct separator line
-            parts = []
-            for alignment in self._table_buffer.alignments:
-                if alignment == 'center':
-                    parts.append(':---:')
-
-                elif alignment == 'right':
-                    parts.append('---:')
-
-                else:
-                    parts.append('---')
-
-            line_text = '|' + '|'.join(parts) + '|'
-            self._parse_text(line_text, line_num)
-
-        # Handle any body rows
-        body_start = self._table_buffer.start_line + len(self._table_buffer.header_rows)
-        if self._table_buffer.separator_row:
-            body_start += 1
-
-        for i, row in enumerate(self._table_buffer.body_rows):
-            line_num = body_start + i
-            # Convert back to text line
-            line_text = '|' + '|'.join(row) + '|'
-            self._parse_text(line_text, line_num)
+            self._parse_text(self._table_buffer.separator_line, self._table_buffer.start_line + 1)
 
         # Reset table buffer
         self._table_buffer.reset()
