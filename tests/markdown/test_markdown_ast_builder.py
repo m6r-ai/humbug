@@ -1082,3 +1082,582 @@ Outer code block continues
         # Should handle empty elements gracefully without crashing
         assert doc is not None
         assert len(doc.children) >= 0
+
+class TestUpdateAST:
+    """Comprehensive tests for the update_ast method."""
+
+    @pytest.fixture
+    def ast_builder(self):
+        """Fixture providing a markdown AST builder instance."""
+        return MarkdownASTBuilder(no_underscores=False)
+
+    def test_first_update_with_none_previous(self, ast_builder):
+        """Test update_ast when previous_text is None (first update)."""
+        text = "# Initial heading\n\nInitial paragraph."
+
+        # First update with None previous text should build from scratch
+        doc = ast_builder.update_ast(text, None)
+
+        assert doc is not None
+        assert len(doc.children) == 2
+        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[0].children[0].content == "Initial heading"
+        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+        assert doc.children[1].children[0].content == "Initial paragraph."
+
+    def test_update_with_empty_document(self, ast_builder):
+        """Test update_ast when document is empty."""
+        previous = ""
+        new_text = "# New heading"
+
+        # Build empty document first
+        ast_builder.build_ast(previous)
+
+        # Update with new content
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 1
+        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[0].children[0].content == "New heading"
+
+    def test_update_to_empty_document(self, ast_builder):
+        """Test update_ast when updating to empty content."""
+        previous = "# Heading to remove\n\nParagraph to remove."
+        new_text = ""
+
+        # Build initial document
+        ast_builder.build_ast(previous)
+
+        # Update to empty
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 0
+
+    def test_simple_text_change(self, ast_builder):
+        """Test simple text content changes."""
+        previous = "# Original heading\n\nOriginal paragraph."
+        new_text = "# Updated heading\n\nUpdated paragraph."
+
+        # Build original
+        ast_builder.build_ast(previous)
+
+        # Update
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert doc.children[0].children[0].content == "Updated heading"
+        assert doc.children[1].children[0].content == "Updated paragraph."
+
+    def test_heading_level_change(self, ast_builder):
+        """Test changing heading levels."""
+        previous = "# Level 1\n## Level 2\n### Level 3"
+        new_text = "## Level 2\n# Level 1\n#### Level 4"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 3
+        assert doc.children[0].level == 2
+        assert doc.children[1].level == 1
+        assert doc.children[2].level == 4
+
+    def test_structure_type_change(self, ast_builder):
+        """Test changing element types (heading to paragraph, etc.)."""
+        previous = "# Heading\n\nParagraph\n\n- List item"
+        new_text = "Regular text\n\n## New heading\n\nNew paragraph"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 3
+        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+        assert doc.children[1].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[1].level == 2
+        assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
+
+    def test_add_content_beginning(self, ast_builder):
+        """Test adding content at the beginning."""
+        previous = "# Existing heading\n\nExisting paragraph."
+        new_text = "# New first heading\n\nNew paragraph.\n\n# Existing heading\n\nExisting paragraph."
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 4
+        assert doc.children[0].children[0].content == "New first heading"
+        assert doc.children[2].children[0].content == "Existing heading"
+
+    def test_add_content_middle(self, ast_builder):
+        """Test adding content in the middle."""
+        previous = "# First\n\n# Third"
+        new_text = "# First\n\n# Second\n\n# Third"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 3
+        assert doc.children[0].children[0].content == "First"
+        assert doc.children[1].children[0].content == "Second"
+        assert doc.children[2].children[0].content == "Third"
+
+    def test_add_content_end(self, ast_builder):
+        """Test adding content at the end."""
+        previous = "# Existing heading"
+        new_text = "# Existing heading\n\n# New ending"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 2
+        assert doc.children[0].children[0].content == "Existing heading"
+        assert doc.children[1].children[0].content == "New ending"
+
+    def test_remove_content_beginning(self, ast_builder):
+        """Test removing content from the beginning."""
+        previous = "# Remove me\n\n# Keep me\n\nKeep this paragraph."
+        new_text = "# Keep me\n\nKeep this paragraph."
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 2
+        assert doc.children[0].children[0].content == "Keep me"
+        assert doc.children[1].children[0].content == "Keep this paragraph."
+
+    def test_remove_content_middle(self, ast_builder):
+        """Test removing content from the middle."""
+        previous = "# First\n\n# Remove me\n\n# Last"
+        new_text = "# First\n\n# Last"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 2
+        assert doc.children[0].children[0].content == "First"
+        assert doc.children[1].children[0].content == "Last"
+
+    def test_remove_content_end(self, ast_builder):
+        """Test removing content from the end."""
+        previous = "# Keep me\n\n# Remove me"
+        new_text = "# Keep me"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 1
+        assert doc.children[0].children[0].content == "Keep me"
+
+    def test_list_modifications(self, ast_builder):
+        """Test modifications to list structures."""
+        previous = """- Item 1
+- Item 2
+- Item 3"""
+
+        new_text = """- Modified Item 1
+- Item 2
+- Item 3
+- New Item 4"""
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        list_node = doc.children[0]
+        assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
+        assert len(list_node.children) == 4
+
+        # Check first item was modified
+        first_item = list_node.children[0]
+        first_paragraph = first_item.children[0]
+        assert first_paragraph.children[0].content == "Modified Item 1"
+
+    def test_list_type_change(self, ast_builder):
+        """Test changing list types (unordered to ordered)."""
+        previous = """- Item 1
+- Item 2
+- Item 3"""
+
+        new_text = """1. Item 1
+2. Item 2
+3. Item 3"""
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        list_node = doc.children[0]
+        assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+        assert len(list_node.children) == 3
+
+    def test_nested_list_modifications(self, ast_builder):
+        """Test modifications to nested list structures."""
+        previous = """- Item 1
+  - Nested 1
+  - Nested 2
+- Item 2"""
+
+        new_text = """- Item 1
+  - Nested 1
+  - Modified Nested 2
+  - New Nested 3
+- Item 2
+- New Item 3"""
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        main_list = doc.children[0]
+        assert len(main_list.children) == 3
+
+        # Check nested list was modified
+        first_item = main_list.children[0]
+        nested_list = first_item.children[1]
+        assert len(nested_list.children) == 3
+
+    def test_table_modifications(self, ast_builder):
+        """Test modifications to table structures."""
+        previous = """| Col1 | Col2 |
+|------|------|
+| A1   | A2   |
+| B1   | B2   |"""
+
+        new_text = """| Col1 | Col2 | Col3 |
+|------|------|------|
+| A1   | A2   | A3   |
+| B1   | B2   | B3   |
+| C1   | C2   | C3   |"""
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        table = doc.children[0]
+        assert table.__class__.__name__ == "MarkdownTableNode"
+
+        # Check header has 3 columns
+        header = table.children[0]
+        header_row = header.children[0]
+        assert len(header_row.children) == 3
+
+        # Check body has 3 rows
+        body = table.children[1]
+        assert len(body.children) == 3
+
+    def test_table_to_paragraph_conversion(self, ast_builder):
+        """Test converting table to paragraphs by removing separator."""
+        previous = """| Col1 | Col2 |
+|------|------|
+| A1   | A2   |"""
+
+        new_text = """| Col1 | Col2 |
+| A1   | A2   |"""
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        # Should be converted to paragraphs
+        assert len(doc.children) == 2
+        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+
+    def test_code_block_modifications(self, ast_builder):
+        """Test modifications to code blocks."""
+        previous = """```python
+def old_function():
+    return "old"
+```"""
+
+        new_text = """```python
+def new_function():
+    return "new"
+
+def another_function():
+    return "another"
+```"""
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        code_block = doc.children[0]
+        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+        assert "new_function" in code_block.content
+        assert "another_function" in code_block.content
+
+    def test_code_block_language_change(self, ast_builder):
+        """Test changing code block language."""
+        previous = """```python
+print("hello")
+```"""
+
+        new_text = """```javascript
+console.log("hello");
+```"""
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        code_block = doc.children[0]
+        assert code_block.language == "javascript"
+        assert code_block.content.strip() == 'console.log("hello");'
+
+    def test_inline_formatting_changes(self, ast_builder):
+        """Test changes to inline formatting."""
+        previous = "This has **bold** text."
+        new_text = "This has *italic* text."
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        paragraph = doc.children[0]
+        formatting_node = paragraph.children[1]
+        assert formatting_node.__class__.__name__ == "MarkdownEmphasisNode"
+
+    def test_link_modifications(self, ast_builder):
+        """Test modifications to links."""
+        previous = "Visit [old site](http://old.com) for info."
+        new_text = "Visit [new site](http://new.com) for info."
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        paragraph = doc.children[0]
+        link = paragraph.children[1]
+        assert link.__class__.__name__ == "MarkdownLinkNode"
+        assert link.url == "http://new.com"
+        assert link.children[0].content == "new site"
+
+    def test_image_modifications(self, ast_builder):
+        """Test modifications to images."""
+        previous = "![old alt](old.jpg)"
+        new_text = "![new alt](new.jpg \"New title\")"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        paragraph = doc.children[0]
+        image = paragraph.children[0]
+        assert image.__class__.__name__ == "MarkdownImageNode"
+        assert image.url == "new.jpg"
+        assert image.alt_text == "new alt"
+        assert image.title == "New title"
+
+    def test_horizontal_rule_changes(self, ast_builder):
+        """Test changes involving horizontal rules."""
+        previous = "Before\n\n---\n\nAfter"
+        new_text = "Before\n\nMiddle\n\nAfter"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        assert len(doc.children) == 3
+        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+        assert doc.children[1].children[0].content == "Middle"
+        assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
+
+    def test_multiple_updates_sequence(self, ast_builder):
+        """Test a sequence of multiple updates."""
+        # Start with simple content
+        content1 = "# Initial"
+        doc = ast_builder.update_ast(content1, None)
+        assert len(doc.children) == 1
+
+        # Add content
+        content2 = "# Initial\n\nAdded paragraph."
+        doc = ast_builder.update_ast(content2, content1)
+        assert len(doc.children) == 2
+
+        # Modify content
+        content3 = "# Modified\n\nAdded paragraph."
+        doc = ast_builder.update_ast(content3, content2)
+        assert doc.children[0].children[0].content == "Modified"
+
+        # Remove content
+        content4 = "# Modified"
+        doc = ast_builder.update_ast(content4, content3)
+        assert len(doc.children) == 1
+
+    def test_line_break_modifications(self, ast_builder):
+        """Test modifications involving line breaks."""
+        previous = "Line 1  \nLine 2\nLine 3"
+        new_text = "Line 1\nLine 2  \nLine 3"
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        paragraph = doc.children[0]
+        # Should have line break in different position
+        has_line_break = any(
+            child.__class__.__name__ == "MarkdownLineBreakNode"
+            for child in paragraph.children
+        )
+        assert has_line_break
+
+    def test_source_path_preservation(self, ast_builder):
+        """Test that source path is preserved during updates."""
+        previous = "# Heading"
+        new_text = "# Updated heading"
+
+        # Build with source path
+        doc = ast_builder.update_ast(previous, None, path="/test/path.md")
+        assert doc.source_path == "/test/path.md"
+
+        # Update should preserve path
+        doc = ast_builder.update_ast(new_text, previous, path="/test/path.md")
+        assert doc.source_path == "/test/path.md"
+
+    def test_complex_document_update(self, ast_builder):
+        """Test updating a complex document with multiple element types."""
+        previous = """# Document Title
+
+Introduction paragraph with **bold** and *italic* text.
+
+## Section 1
+
+- List item 1
+- List item 2
+  - Nested item
+
+Here's a [link](http://example.com) and an image:
+![Alt text](image.jpg)
+
+```python
+def hello():
+    print("world")
+```
+
+| Col1 | Col2 |
+|------|------|
+| A    | B    |
+
+---
+
+Final paragraph."""
+
+        new_text = """# Updated Document Title
+
+Modified introduction paragraph with **bold** text only.
+
+## Modified Section 1
+
+1. Ordered item 1
+2. Ordered item 2
+   - Mixed nested item
+
+Here's an updated [link](http://newexample.com):
+
+```javascript
+function hello() {
+    console.log("world");
+}
+```
+
+| Col1 | Col2 | Col3 |
+|------|------|------|
+| A    | B    | C    |
+| D    | E    | F    |
+
+Updated final paragraph."""
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        # Verify structure changes
+        assert len(doc.children) > 5  # Should have multiple elements
+
+        # Check title was updated
+        title = doc.children[0]
+        assert title.children[0].content == "Updated Document Title"
+
+        # Check list type changed to ordered
+        list_element = None
+        for child in doc.children:
+            if child.__class__.__name__ == "MarkdownOrderedListNode":
+                list_element = child
+                break
+        assert list_element is not None
+
+        # Check code block language changed
+        code_element = None
+        for child in doc.children:
+            if child.__class__.__name__ == "MarkdownCodeBlockNode":
+                code_element = child
+                break
+        assert code_element is not None
+        assert code_element.language == "javascript"
+
+    def test_whitespace_only_changes(self, ast_builder):
+        """Test updates that only change whitespace."""
+        previous = "#Heading\nParagraph."
+        new_text = "# Heading\n\nParagraph."
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        # Structure should be the same but properly formatted
+        assert len(doc.children) == 2
+        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+
+    def test_identical_content_update(self, ast_builder):
+        """Test updating with identical content."""
+        content = "# Same heading\n\nSame paragraph."
+
+        ast_builder.build_ast(content)
+        original_doc = ast_builder.document()
+
+        doc = ast_builder.update_ast(content, content)
+
+        # Should return same structure
+        assert len(doc.children) == len(original_doc.children)
+        assert doc.children[0].children[0].content == "Same heading"
+
+    def test_update_with_malformed_content(self, ast_builder):
+        """Test updates with malformed markdown content."""
+        previous = "# Valid heading"
+        new_text = "**Unclosed bold\n`Unclosed code\n[Unclosed link("
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        # Should handle malformed content gracefully
+        assert doc is not None
+        assert len(doc.children) >= 1
+
+    def test_very_large_content_change(self, ast_builder):
+        """Test updating with very large content changes."""
+        # Create large previous content
+        previous_lines = []
+        for i in range(100):
+            previous_lines.append(f"# Heading {i}")
+            previous_lines.append(f"Paragraph {i} content.")
+            previous_lines.append("")
+        previous = "\n".join(previous_lines)
+
+        # Create completely different large content
+        new_lines = []
+        for i in range(150):
+            new_lines.append(f"## New Heading {i}")
+            new_lines.append(f"- List item {i}")
+            new_lines.append("")
+        new_text = "\n".join(new_lines)
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        # Should handle large changes without error
+        assert doc is not None
+        assert len(doc.children) > 100
+
+    def test_update_preserves_line_mapping(self, ast_builder):
+        """Test that line mapping is properly updated."""
+        previous = "# Line 0\n\nLine 2 paragraph."
+        new_text = "# Line 0\n\n## Line 2 heading\n\nLine 4 paragraph."
+
+        ast_builder.build_ast(previous)
+        doc = ast_builder.update_ast(new_text, previous)
+
+        # Verify line mapping exists and has correct entries
+        assert hasattr(ast_builder, '_line_to_node_map')
+        assert len(ast_builder._line_to_node_map) > 0
+
+        # Check specific line mappings
+        assert 0 in ast_builder._line_to_node_map  # First heading
+        assert 2 in ast_builder._line_to_node_map  # Second heading
+        assert 4 in ast_builder._line_to_node_map  # Paragraph
