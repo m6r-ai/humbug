@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -62,7 +61,8 @@ class SwiftParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
-            prev_parser_state = cast(SwiftParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, SwiftParserState), \
+                f"Expected SwiftParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             in_closure = prev_parser_state.in_closure
             closure_brace_count = prev_parser_state.closure_brace_count

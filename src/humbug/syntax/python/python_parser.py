@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -48,7 +47,8 @@ class PythonParser(Parser):
         in_import = False
         prev_lexer_state = None
         if prev_parser_state:
-            prev_parser_state = cast(PythonParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, PythonParserState), \
+                f"Expected PythonParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

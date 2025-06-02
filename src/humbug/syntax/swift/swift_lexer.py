@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, cast
+from typing import Callable
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -56,14 +56,12 @@ class SwiftLexer(Lexer):
 
         Returns:
             The updated lexer state after processing
-
-        Raises:
-            TypeError: If the previous lexer state is not None and not a SwiftLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            prev_lexer_state = cast(SwiftLexerState, prev_lexer_state)
+            assert isinstance(prev_lexer_state, SwiftLexerState), \
+                f"Expected SwiftLexerState, got {type(prev_lexer_state).__name__}"
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_multiline_string = prev_lexer_state.in_multiline_string
 

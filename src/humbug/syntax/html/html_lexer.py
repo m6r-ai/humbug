@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, cast
+from typing import Callable
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -58,14 +58,12 @@ class HTMLLexer(Lexer):
 
         Returns:
             The updated lexer state after processing
-
-        Raises:
-            TypeError: If the previous lexer state is not None and not an HTMLLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            prev_lexer_state = cast(HTMLLexerState, prev_lexer_state)
+            assert isinstance(prev_lexer_state, HTMLLexerState), \
+                f"Expected HTMLLexerState, got {type(prev_lexer_state).__name__}"
             self._in_tag = prev_lexer_state.in_tag
             self._tag_name = prev_lexer_state.tag_name
             self._seen_equals = prev_lexer_state.seen_equals
@@ -75,8 +73,10 @@ class HTMLLexer(Lexer):
 
         if self._in_comment:
             self._read_html_comment(0)
+
         elif self._in_script:
             self._read_script_block()
+
         elif self._in_style:
             self._read_style_block()
 

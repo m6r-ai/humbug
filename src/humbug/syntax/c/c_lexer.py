@@ -55,16 +55,12 @@ class CLexer(Lexer):
 
         Returns:
             The updated lexer state after processing
-
-        Raises:
-            TypeError: If the previous lexer state is not None and not a CLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            if not isinstance(prev_lexer_state, CLexerState):
-                raise TypeError(f"Expected CLexerState, got {type(prev_lexer_state).__name__}")
-
+            assert isinstance(prev_lexer_state, CLexerState), \
+                f"Expected CLexerState, got {type(prev_lexer_state).__name__}"
             self._in_block_comment = prev_lexer_state.in_block_comment
 
         if self._in_block_comment:

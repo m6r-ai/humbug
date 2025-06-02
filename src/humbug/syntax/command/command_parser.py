@@ -20,7 +20,7 @@ class CommandParser(Parser):
         super().__init__()
         self._command_registry = SystemCommandRegistry()
 
-    def parse(self, _prev_parser_state: ParserState | None, input_str: str) -> None:
+    def parse(self, prev_parser_state: ParserState | None, input_str: str) -> None:
         """
         Parse the input string using the provided parser state.
 

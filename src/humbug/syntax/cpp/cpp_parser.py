@@ -4,7 +4,6 @@ C++ parser
 This module implements a parser for C++ code, extending the functionality of the C parser.
 """
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.c.c_parser import CParser, CParserState
 from humbug.syntax.cpp.cpp_lexer import CppLexer
@@ -51,7 +50,8 @@ class CppParser(CParser):
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:
-            prev_parser_state = cast(CppParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, CppParserState), \
+                f"Expected CppParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

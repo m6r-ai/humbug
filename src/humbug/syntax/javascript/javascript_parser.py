@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.javascript.javascript_lexer import JavaScriptLexer
 from humbug.syntax.lexer import TokenType
@@ -47,7 +46,8 @@ class JavaScriptParser(Parser):
         in_element = False
         prev_lexer_state = None
         if prev_parser_state:
-            prev_parser_state = cast(JavaScriptParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, JavaScriptParserState), \
+                f"Expected JavaScriptParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

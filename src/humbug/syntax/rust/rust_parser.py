@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -52,7 +51,8 @@ class RustParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
-            prev_parser_state = cast(RustParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, RustParserState), \
+                f"Expected RustParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             in_generic_params = prev_parser_state.in_generic_params
             generic_depth = prev_parser_state.generic_depth

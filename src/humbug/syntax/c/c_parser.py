@@ -45,9 +45,6 @@ class CParser(Parser):
         Returns:
             The updated CParserState after parsing
 
-        Raises:
-            TypeError: If prev_parser_state is not None and not a CParserState instance
-
         Note:
             The parser converts identifier tokens to FUNCTION_OR_METHOD tokens
             when they're followed by parentheses, and to ELEMENT tokens when
@@ -57,9 +54,8 @@ class CParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state is not None:
-            if not isinstance(prev_parser_state, CParserState):
-                raise TypeError(f"Expected CParserState, got {type(prev_parser_state).__name__}")
-
+            assert isinstance(prev_parser_state, CParserState), \
+                f"Expected CParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

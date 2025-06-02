@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import cast, List
+from typing import List
 
 from humbug.syntax.csharp.csharp_lexer import CSharpLexer
 from humbug.syntax.lexer import Token, TokenType
@@ -50,9 +50,6 @@ class CSharpParser(Parser):
 
         Returns:
             The updated parser state after parsing
-
-        Raises:
-            None
         """
         in_element = False
         in_generic = False
@@ -63,7 +60,8 @@ class CSharpParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
-            prev_parser_state = cast(CSharpParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, CSharpParserState), \
+                f"Expected CSharpParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             in_generic = prev_parser_state.in_generic
             generic_depth = prev_parser_state.generic_depth

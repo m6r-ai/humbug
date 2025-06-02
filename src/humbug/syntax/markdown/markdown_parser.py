@@ -115,9 +115,6 @@ class MarkdownParser(Parser):
         Returns:
             The updated parser state after parsing
 
-        Raises:
-            TypeError: If prev_parser_state is not None and not a MarkdownParserState instance
-
         Note:
             Handles transitions between regular conversation content and code fence blocks,
             delegating code blocks to appropriate language parsers.
@@ -133,9 +130,8 @@ class MarkdownParser(Parser):
         block_type = None
 
         if prev_parser_state is not None:
-            if not isinstance(prev_parser_state, MarkdownParserState):
-                raise TypeError(f"Expected MarkdownParserState, got {type(prev_parser_state).__name__}")
-
+            assert isinstance(prev_parser_state, MarkdownParserState), \
+                f"Expected MarkdownParserState, got {type(prev_parser_state).__name__}"
             in_fence_block = prev_parser_state.in_fence_block
             fence_depth = prev_parser_state.fence_depth
             language = prev_parser_state.language

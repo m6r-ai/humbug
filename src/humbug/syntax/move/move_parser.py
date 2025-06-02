@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.move.move_lexer import MoveLexer
@@ -56,7 +55,8 @@ class MoveParser(Parser):
         in_module_access = False
         prev_lexer_state = None
         if prev_parser_state:
-            prev_parser_state = cast(MoveParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, MoveParserState), \
+                f"Expected MoveParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             in_module_access = prev_parser_state.in_module_access
             prev_lexer_state = prev_parser_state.lexer_state

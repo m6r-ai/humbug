@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.html.html_lexer import HTMLLexer
 from humbug.syntax.lexer import TokenType
@@ -87,7 +86,8 @@ class HTMLParser(Parser):
         prev_lexer_state = None
         embedded_parser_state = None
         if prev_parser_state:
-            prev_parser_state = cast(HTMLParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, HTMLParserState), \
+                f"Expected HTMLParserState, got {type(prev_parser_state).__name__}"
             prev_lexer_state = prev_parser_state.lexer_state
             embedded_parser_state = prev_parser_state.embedded_parser_state
 
@@ -97,8 +97,10 @@ class HTMLParser(Parser):
         continuation_state = 0
         if lexer_state.in_comment:
             continuation_state = 1
+
         elif lexer_state.in_script:
             continuation_state = 2
+
         elif lexer_state.in_style:
             continuation_state = 3
 

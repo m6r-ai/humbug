@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -44,7 +43,8 @@ class SchemeParser(Parser):
         continuation_state = 0
 
         if prev_parser_state:
-            prev_parser_state = cast(SchemeParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, SchemeParserState), \
+                f"Expected SchemeParserState, got {type(prev_parser_state).__name__}"
             in_vector = prev_parser_state.in_vector
             prev_lexer_state = prev_parser_state.lexer_state
             continuation_state = prev_parser_state.continuation_state

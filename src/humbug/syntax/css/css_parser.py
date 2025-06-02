@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.css.css_lexer import CSSLexer
 from humbug.syntax.lexer import TokenType
@@ -44,7 +43,8 @@ class CSSParser(Parser):
         """
         prev_lexer_state = None
         if prev_parser_state:
-            prev_parser_state = cast(CSSParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, CSSParserState), \
+                f"Expected CSSParserState, got {type(prev_parser_state).__name__}"
             prev_lexer_state = prev_parser_state.lexer_state
 
         lexer = CSSLexer()

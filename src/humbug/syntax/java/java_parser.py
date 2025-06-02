@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.java.java_lexer import JavaLexer
 from humbug.syntax.lexer import Token, TokenType
@@ -56,7 +55,8 @@ class JavaParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
-            prev_parser_state = cast(JavaParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, JavaParserState), \
+                f"Expected JavaParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             in_generic = prev_parser_state.in_generic
             generic_depth = prev_parser_state.generic_depth

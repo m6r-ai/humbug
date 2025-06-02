@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.lexer import Token, TokenType
 from humbug.syntax.kotlin.kotlin_lexer import KotlinLexer
@@ -60,7 +59,8 @@ class KotlinParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
-            prev_parser_state = cast(KotlinParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, KotlinParserState), \
+                f"Expected KotlinParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             in_lambda = prev_parser_state.in_lambda
             lambda_brace_count = prev_parser_state.lambda_brace_count

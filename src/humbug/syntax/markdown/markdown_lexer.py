@@ -15,7 +15,7 @@ class MarkdownLexer(Lexer):
         super().__init__()
         self._first_token = True
 
-    def lex(self, _prev_lexer_state: LexerState | None, input_str: str) -> None:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> None:
         """
         Lex all the tokens in the input.
 

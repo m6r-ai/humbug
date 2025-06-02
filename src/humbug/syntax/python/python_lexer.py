@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, cast
+from typing import Callable
 
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
@@ -52,14 +52,12 @@ class PythonLexer(Lexer):
 
         Returns:
             The updated lexer state after processing
-
-        Raises:
-            TypeError: If the previous lexer state is not None and not a PythonLexerState instance
         """
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state:
-            prev_lexer_state = cast(PythonLexerState, prev_lexer_state)
+            assert isinstance(prev_lexer_state, PythonLexerState), \
+                f"Expected PythonLexerState, got {type(prev_lexer_state).__name__}"
             self._in_docstring = prev_lexer_state.in_docstring
             self._docstring_quote = prev_lexer_state.docstring_quote
 

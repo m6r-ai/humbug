@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import cast
 
 from humbug.syntax.go.go_lexer import GoLexer
 from humbug.syntax.lexer import TokenType
@@ -57,7 +56,8 @@ class GoParser(Parser):
         prev_lexer_state = None
 
         if prev_parser_state:
-            prev_parser_state = cast(GoParserState, prev_parser_state)
+            assert isinstance(prev_parser_state, GoParserState), \
+                f"Expected GoParserState, got {type(prev_parser_state).__name__}"
             in_element = prev_parser_state.in_element
             in_struct_literal = prev_parser_state.in_struct_literal
             prev_lexer_state = prev_parser_state.lexer_state

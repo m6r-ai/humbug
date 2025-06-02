@@ -174,23 +174,14 @@ class MarkdownASTBuilder:
             self._embedded_parser_state = None
             self._embedded_language = language
 
-        try:
-            # Parse the line and check if we're in a continuation
-            new_state = parser.parse(self._embedded_parser_state, line_content)
+        # Parse the line and check if we're in a continuation
+        new_state = parser.parse(self._embedded_parser_state, line_content)
 
-            # Update stored state
-            self._embedded_parser_state = new_state
+        # Update stored state
+        self._embedded_parser_state = new_state
 
-            # Return whether we're in a continuation
-            return new_state is not None and new_state.parsing_continuation
-
-        except Exception as e:
-            self._logger.warning(
-                "Error checking continuation for %s: %s",
-                language.name,
-                str(e)
-            )
-            return False
+        # Return whether we're in a continuation
+        return new_state is not None and new_state.parsing_continuation
 
     def identify_line_type(self, line: str) -> Tuple[str, Any]:
         """
