@@ -5,6 +5,11 @@ import os
 import pytest
 
 from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder, MarkdownASTBuilderError
+
+# pylint: disable=unused-import
+import humbug.syntax.parser_imports
+# pylint: enable=unused-import
+
 from test_utils import (
     find_test_files,
     parse_and_compare

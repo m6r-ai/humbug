@@ -11,30 +11,8 @@ from PySide6.QtCore import QObject, QEvent
 from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 
 from humbug.gui.main_window import MainWindow
-
-# Import parsers to ensure we register them
 # pylint: disable=unused-import
-from humbug.syntax.c.c_parser import CParser
-from humbug.syntax.cpp.cpp_parser import CppParser
-from humbug.syntax.csharp.csharp_parser import CSharpParser
-from humbug.syntax.css.css_parser import CSSParser
-from humbug.syntax.go.go_parser import GoParser
-from humbug.syntax.html.html_parser import HTMLParser
-from humbug.syntax.java.java_parser import JavaParser
-from humbug.syntax.javascript.javascript_parser import JavaScriptParser
-from humbug.syntax.json.json_parser import JSONParser
-from humbug.syntax.kotlin.kotlin_parser import KotlinParser
-from humbug.syntax.markdown.markdown_parser import MarkdownParser
-from humbug.syntax.metaphor.metaphor_parser import MetaphorParser
-from humbug.syntax.move.move_parser import MoveParser
-from humbug.syntax.python.python_parser import PythonParser
-from humbug.syntax.rust.rust_parser import RustParser
-from humbug.syntax.scheme.scheme_parser import SchemeParser
-from humbug.syntax.solidity.solidity_parser import SolidityParser
-from humbug.syntax.swift.swift_parser import SwiftParser
-from humbug.syntax.text.text_parser import TextParser
-from humbug.syntax.typescript.typescript_parser import TypeScriptParser
-from humbug.syntax.parser_registry import ParserRegistry
+import humbug.syntax.parser_imports
 # pylint: enable=unused-import
 
 
@@ -64,16 +42,16 @@ class HumbugApplication(QApplication):
         super().__init__(argv)
         self._start_time = time.monotonic()
 
-    def notify(self, receiver: QObject, event: QEvent) -> bool:
-        event_type = event.type()
-        receiver_name = receiver.objectName()
+    def notify(self, arg__1: QObject, arg__2: QEvent) -> bool:
+        event_type = arg__2.type()
+        receiver_name = arg__1.objectName()
         start = time.monotonic()
-        ret = QApplication.notify(self, receiver, event)
+        ret = QApplication.notify(self, arg__1, arg__2)
         end = time.monotonic()
         elapsed_time = (end - start) * 1000
         if elapsed_time > 20:
             rel_end = end - self._start_time
-            print(f"{rel_end:.3f}: event {event}, type {event_type}, object {receiver_name}, took {elapsed_time:.3f} msec")
+            print(f"{rel_end:.3f}: event {arg__2}, type {event_type}, object {receiver_name}, took {elapsed_time:.3f} msec")
 
         return ret
 
