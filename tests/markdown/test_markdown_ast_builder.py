@@ -120,6 +120,31 @@ class TestMarkdownASTBuilder:
         assert bold_node.children[0].content == "bold with "
         assert bold_node.children[1].__class__.__name__ == "MarkdownEmphasisNode"
 
+    def test_headings(self, ast_builder):
+        """Test parsing different levels of headings."""
+        markdown = """
+# Heading A
+## Heading 1
+# Heading B
+## Heading 1
+### 3rd level
+### Another 3rd level
+"""
+        doc = ast_builder.build_ast(markdown)
+        assert len(doc.children) == 6
+        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[0].level == 1
+        assert doc.children[1].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[1].level == 2
+        assert doc.children[2].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[2].level == 1
+        assert doc.children[3].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[3].level == 2
+        assert doc.children[4].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[4].level == 3
+        assert doc.children[5].__class__.__name__ == "MarkdownHeadingNode"
+        assert doc.children[5].level == 3
+
     def test_unordered_list(self, ast_builder):
         """Test parsing an unordered list."""
         markdown = """
@@ -567,8 +592,45 @@ Outer code block continues
 class TestListHandling:
     """Tests for advanced list functionality."""
 
-    def test_loose_vs_tight_lists(self, ast_builder):
-        """Test detection of loose vs tight lists."""
+    def test_loose_vs_tight_ordered_lists(self, ast_builder):
+        """Test detection of loose vs tight ordered lists."""
+        # Tight list (no blank lines)
+        tight_list = """1. Item 1
+2. Item 2
+3. Item 3"""
+
+        # Loose list (with blank lines)
+        loose_list = """1. Item 1
+
+2. Item 2
+
+3. Item 3"""
+
+        # Mixed scenario - becomes loose due to blank line
+        mixed_list = """1. Item 1
+2. Item 2
+
+3. Item 3"""
+
+        # Test tight list
+        doc = ast_builder.build_ast(tight_list)
+        assert len(doc.children) == 1
+        list_node = doc.children[0]
+        assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+        assert list_node.tight is True
+
+        # Test loose list
+        doc = ast_builder.build_ast(loose_list)
+        list_node = doc.children[0]
+        assert list_node.tight is False
+
+        # Test mixed list
+        doc = ast_builder.build_ast(mixed_list)
+        list_node = doc.children[0]
+        assert list_node.tight is False
+
+    def test_loose_vs_tight_unordered_lists(self, ast_builder):
+        """Test detection of loose vs tight unordered lists."""
         # Tight list (no blank lines)
         tight_list = """- Item 1
 - Item 2
@@ -679,6 +741,24 @@ Not a list item
         assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
         assert list_node.start == 5
 
+        complex_lists_with_continuation = """- First list item
+  continues on this line
+  and this line too
+  1. Indented
+  2. Indented
+  And back here
+- Second list item  
+  also continues"""
+
+        doc = ast_builder.build_ast(complex_lists_with_continuation)
+        assert len(doc.children) == 1
+        list_node = doc.children[0]
+
+        # First item should have continued text
+        first_item = list_node.children[0]
+        first_paragraph = first_item.children[0]
+        assert "continues on this line" in first_paragraph.children[2].content
+
 
 class TestTableFormatting:
     """Tests for table alignment and formatting."""
@@ -720,6 +800,35 @@ class TestTableFormatting:
         assert body_center_cell.alignment == "center"
         assert body_right_cell.alignment == "right"
 
+    def test_double_header_row(self, ast_builder):
+        """Test different table column alignments."""
+        table_markdown = """| Left | Center | Right |
+| Lef2 | Cen2   | Rig2  |
+|------|--------|-------|
+| L1   | C1     | R1    |
+| L2   | C2     | R2    |"""
+
+        doc = ast_builder.build_ast(table_markdown)
+        assert len(doc.children) == 2
+        text = doc.children[0]
+        assert text.__class__.__name__ == "MarkdownParagraphNode"
+
+        table = doc.children[1]
+        assert table.__class__.__name__ == "MarkdownTableNode"
+
+        # Check header row for alignment
+        header = table.children[0]
+        header_row = header.children[0]
+
+        # Verify alignment is set correctly on cells
+        left_cell = header_row.children[0]
+        center_cell = header_row.children[1]
+        right_cell = header_row.children[2]
+
+        assert left_cell.children[0].content == "Lef2"
+        assert center_cell.children[0].content == "Cen2"
+        assert right_cell.children[0].content == "Rig2"
+
     def test_incomplete_table_alignment_variations(self, ast_builder):
         """Test different table column alignments."""
         table_markdown = """| Left | Center | Right |
@@ -736,6 +845,19 @@ class TestTableFormatting:
         line1 = doc.children[1]
         assert line1.__class__.__name__ == "MarkdownParagraphNode"
         assert line1.children[0].content == "|:-----|:------:|------:|"
+
+    def test_solitary_table_separator(self, ast_builder):
+        """Test different table column alignments."""
+        table_markdown = """|:-----|:------:|------:|"""
+
+        doc = ast_builder.build_ast(table_markdown)
+        from humbug.markdown.markdown_ast_printer import MarkdownASTPrinter
+        printer = MarkdownASTPrinter()
+        printer.visit(doc)
+        assert len(doc.children) == 1
+        line0 = doc.children[0]
+        assert line0.__class__.__name__ == "MarkdownParagraphNode"
+        assert line0.children[0].content == "|:-----|:------:|------:|"
 
     def test_table_with_complex_content(self, ast_builder):
         """Test tables containing formatted text."""

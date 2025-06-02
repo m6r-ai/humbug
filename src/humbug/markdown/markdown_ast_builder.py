@@ -630,17 +630,8 @@ class MarkdownASTBuilder:
 
         # Find the last list item of the deepest list to be the parent
         current_list = self._list_stack[-1]
-        if current_list.last_item:
-            return current_list.last_item
-
-        # If there's no list item yet, go up the stack
-        for i in range(len(self._list_stack) - 2, -1, -1):
-            list_state = self._list_stack[i]
-            if list_state.last_item:
-                return list_state.last_item
-
-        # If no list items found, use the document
-        return self._document
+        assert current_list.last_item is not None, "Current list state should have a last item"
+        return current_list.last_item
 
     def _find_or_create_ordered_list(self, indent: int, start_number: int) -> MarkdownOrderedListNode:
         """
@@ -667,38 +658,6 @@ class MarkdownASTBuilder:
 
         # Create new ordered list
         new_list = MarkdownOrderedListNode(indent, start_number)
-        parent.add_child(new_list)
-
-        # Create and add list state
-        list_state = ListState(new_list, indent)
-        self._list_stack.append(list_state)
-
-        return new_list
-
-    def _find_or_create_unordered_list(self, indent: int) -> MarkdownUnorderedListNode:
-        """
-        Find or create an unordered list at the given indent level.
-
-        Args:
-            indent: The indentation level
-
-        Returns:
-            The created unordered list node
-        """
-        # Check if we already have an unordered list at this level
-        if self._list_stack and self._list_stack[-1].indent == indent:
-            list_state = self._list_stack[-1]
-            if isinstance(list_state.list_node, MarkdownUnorderedListNode):
-                return list_state.list_node
-
-            # Different list type, close it
-            self._list_stack.pop()
-
-        # Find parent
-        parent = self._find_parent_for_list()
-
-        # Create new unordered list
-        new_list = MarkdownUnorderedListNode(indent)
         parent.add_child(new_list)
 
         # Create and add list state
@@ -755,6 +714,38 @@ class MarkdownASTBuilder:
         # Update tracking variables
         current_list.last_item = item
         self._last_processed_line_type = 'ordered_list_item'
+
+    def _find_or_create_unordered_list(self, indent: int) -> MarkdownUnorderedListNode:
+        """
+        Find or create an unordered list at the given indent level.
+
+        Args:
+            indent: The indentation level
+
+        Returns:
+            The created unordered list node
+        """
+        # Check if we already have an unordered list at this level
+        if self._list_stack and self._list_stack[-1].indent == indent:
+            list_state = self._list_stack[-1]
+            if isinstance(list_state.list_node, MarkdownUnorderedListNode):
+                return list_state.list_node
+
+            # Different list type, close it
+            self._list_stack.pop()
+
+        # Find parent
+        parent = self._find_parent_for_list()
+
+        # Create new unordered list
+        new_list = MarkdownUnorderedListNode(indent)
+        parent.add_child(new_list)
+
+        # Create and add list state
+        list_state = ListState(new_list, indent)
+        self._list_stack.append(list_state)
+
+        return new_list
 
     def _parse_unordered_list_item(self, indent: int, marker: str, content: str, line_num: int) -> None:
         """
@@ -1001,8 +992,7 @@ class MarkdownASTBuilder:
             None
         """
         # Render header rows as regular text
-        if self._table_buffer.header_row:
-            self._parse_text(self._table_buffer.header_line, self._table_buffer.start_line)
+        self._parse_text(self._table_buffer.header_line, self._table_buffer.start_line)
 
         # Handle separator if present
         if self._table_buffer.separator_row:
