@@ -75,18 +75,6 @@ class MetaphorASTNode(ASTNode):
         """
         return [cast(MetaphorASTNode, child) for child in self.children if isinstance(child, node_class)]
 
-    def accept(self, visitor: 'MetaphorASTVisitor') -> Any:
-        """
-        Accept a visitor to process this node.
-
-        Args:
-            visitor: The visitor to accept
-
-        Returns:
-            The result of the visitor's visit method
-        """
-        return visitor.visit(self)
-
 
 class MetaphorRootNode(MetaphorASTNode):
     """Root node of a Metaphor AST representing an entire document."""

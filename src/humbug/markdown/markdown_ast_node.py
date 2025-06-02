@@ -5,8 +5,6 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
-from typing import Any
-
 from humbug.ast.ast import ASTNode, ASTVisitor
 
 
@@ -20,18 +18,6 @@ class MarkdownASTNode(ASTNode):
         # Source range information to support incremental updating
         self.line_start: int | None = None
         self.line_end: int | None = None
-
-    def accept(self, visitor: 'MarkdownASTVisitor') -> Any:
-        """
-        Accept a visitor to process this node.
-
-        Args:
-            visitor: The visitor to accept
-
-        Returns:
-            The result of the visitor's visit method
-        """
-        return visitor.visit(self)
 
 
 class MarkdownASTVisitor(ASTVisitor):
