@@ -338,7 +338,7 @@ class MarkdownASTBuilder:
 
         return url_title.strip(), None
 
-    def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:
+    def _parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:
         """
         Parse inline formatting (bold, italic, inline code) in text and create appropriate AST nodes.
 
@@ -410,7 +410,7 @@ class MarkdownASTBuilder:
                         link_node = MarkdownLinkNode(url, title)
 
                         # Process the content inside the link text recursively
-                        for child_node in self.parse_inline_formatting(link_text):
+                        for child_node in self._parse_inline_formatting(link_text):
                             link_node.add_child(child_node)
 
                         nodes.append(link_node)
@@ -458,7 +458,7 @@ class MarkdownASTBuilder:
                     bold_node = MarkdownBoldNode()
 
                     # Process the content inside the bold
-                    for child_node in self.parse_inline_formatting(bold_content):
+                    for child_node in self._parse_inline_formatting(bold_content):
                         bold_node.add_child(child_node)
 
                     nodes.append(bold_node)
@@ -489,7 +489,7 @@ class MarkdownASTBuilder:
                     emphasis_node = MarkdownEmphasisNode()
 
                     # Process the content inside the emphasis
-                    for child_node in self.parse_inline_formatting(italic_content):
+                    for child_node in self._parse_inline_formatting(italic_content):
                         emphasis_node.add_child(child_node)
 
                     nodes.append(emphasis_node)
@@ -537,7 +537,7 @@ class MarkdownASTBuilder:
 
         return text
 
-    def parse_heading(self, level: int, content: str, line_num: int) -> None:
+    def _parse_heading(self, level: int, content: str, line_num: int) -> None:
         """
         Parse a heading line and create a heading node.
 
@@ -559,7 +559,7 @@ class MarkdownASTBuilder:
             anchor_id = f"{anchor_id}-{self._used_header_ids[anchor_id]}"
 
         heading = MarkdownHeadingNode(level, anchor_id)
-        for node in self.parse_inline_formatting(content):
+        for node in self._parse_inline_formatting(content):
             heading.add_child(node)
 
         heading.line_start = line_num
@@ -568,7 +568,7 @@ class MarkdownASTBuilder:
 
         self._document.add_child(heading)
 
-    def parse_text(self, text: str, line_num: int) -> MarkdownParagraphNode:
+    def _parse_text(self, text: str, line_num: int) -> MarkdownParagraphNode:
         """
         Parse a text line and create a paragraph node.
 
@@ -577,7 +577,7 @@ class MarkdownASTBuilder:
             line_num: The line number
         """
         paragraph = MarkdownParagraphNode()
-        for node in self.parse_inline_formatting(text):
+        for node in self._parse_inline_formatting(text):
             paragraph.add_child(node)
 
         paragraph.line_start = line_num
@@ -720,7 +720,7 @@ class MarkdownASTBuilder:
 
         return new_list
 
-    def parse_ordered_list_item(self, indent: int, number: str, content: str, line_num: int) -> None:
+    def _parse_ordered_list_item(self, indent: int, number: str, content: str, line_num: int) -> None:
         """
         Parse an ordered list item and create a list item node.
 
@@ -731,11 +731,7 @@ class MarkdownASTBuilder:
             line_num: The line number
         """
         # Extract the starting number
-        try:
-            start_number = int(number)
-
-        except ValueError:
-            start_number = 1
+        start_number = int(number)
 
         # Close deeper lists
         self._close_lists_at_indent(indent, False)
@@ -757,7 +753,7 @@ class MarkdownASTBuilder:
 
         # Create a paragraph for the content
         paragraph = MarkdownParagraphNode()
-        for node in self.parse_inline_formatting(content):
+        for node in self._parse_inline_formatting(content):
             paragraph.add_child(node)
 
         paragraph.line_start = line_num
@@ -773,7 +769,7 @@ class MarkdownASTBuilder:
         current_list.last_item = item
         self._last_processed_line_type = 'ordered_list_item'
 
-    def parse_unordered_list_item(self, indent: int, marker: str, content: str, line_num: int) -> None:
+    def _parse_unordered_list_item(self, indent: int, marker: str, content: str, line_num: int) -> None:
         """
         Parse an unordered list item and create a list item node.
 
@@ -803,7 +799,7 @@ class MarkdownASTBuilder:
 
         # Create a paragraph for the content
         paragraph = MarkdownParagraphNode()
-        for node in self.parse_inline_formatting(content):
+        for node in self._parse_inline_formatting(content):
             paragraph.add_child(node)
 
         paragraph.line_start = line_num
@@ -819,7 +815,7 @@ class MarkdownASTBuilder:
         current_list.last_item = item
         self._last_processed_line_type = 'unordered_list_item'
 
-    def parse_horizontal_rule(self, line_num: int) -> MarkdownHorizontalRuleNode:
+    def _parse_horizontal_rule(self, line_num: int) -> MarkdownHorizontalRuleNode:
         """
         Parse a horizontal rule line and create a horizontal rule node.
 
@@ -907,7 +903,7 @@ class MarkdownASTBuilder:
         # If we're not already in a potential table, ignore it
         if not self._table_buffer.is_in_potential_table:
             # Treat as normal text
-            self.parse_text(line, line_num)
+            self._parse_text(line, line_num)
             return
 
         # Store the separator row
@@ -959,7 +955,7 @@ class MarkdownASTBuilder:
                 cell_node = MarkdownTableCellNode(is_header=True, alignment=alignment)
 
                 # Add content to cell
-                for text_node in self.parse_inline_formatting(cell_content):
+                for text_node in self._parse_inline_formatting(cell_content):
                     cell_node.add_child(text_node)
 
                 row_node.add_child(cell_node)
@@ -990,7 +986,7 @@ class MarkdownASTBuilder:
                 cell_node = MarkdownTableCellNode(is_header=False, alignment=alignment)
 
                 # Add content to cell
-                for text_node in self.parse_inline_formatting(cell_content):
+                for text_node in self._parse_inline_formatting(cell_content):
                     cell_node.add_child(text_node)
 
                 row_node.add_child(cell_node)
@@ -1023,7 +1019,7 @@ class MarkdownASTBuilder:
             line_num = self._table_buffer.start_line + i
             # Convert back to text line
             line_text = '|' + '|'.join(row) + '|'
-            self.parse_text(line_text, line_num)
+            self._parse_text(line_text, line_num)
 
         # Handle separator if present
         if self._table_buffer.separator_row:
@@ -1041,7 +1037,7 @@ class MarkdownASTBuilder:
                     parts.append('---')
 
             line_text = '|' + '|'.join(parts) + '|'
-            self.parse_text(line_text, line_num)
+            self._parse_text(line_text, line_num)
 
         # Handle any body rows
         body_start = self._table_buffer.start_line + len(self._table_buffer.header_rows)
@@ -1052,7 +1048,7 @@ class MarkdownASTBuilder:
             line_num = body_start + i
             # Convert back to text line
             line_text = '|' + '|'.join(row) + '|'
-            self.parse_text(line_text, line_num)
+            self._parse_text(line_text, line_num)
 
         # Reset table buffer
         self._table_buffer.reset()
@@ -1130,7 +1126,7 @@ class MarkdownASTBuilder:
             if not isinstance(self._last_paragraph.children[-1], MarkdownLineBreakNode):
                 self._last_paragraph.add_child(MarkdownTextNode(" "))
 
-            for node in self.parse_inline_formatting(text):
+            for node in self._parse_inline_formatting(text):
                 self._last_paragraph.add_child(node)
 
             self._last_paragraph.line_end = line_num
@@ -1171,7 +1167,7 @@ class MarkdownASTBuilder:
             if paragraph.children and not isinstance(paragraph.children[-1], MarkdownLineBreakNode):
                 paragraph.add_child(MarkdownTextNode(" "))
 
-            for node in self.parse_inline_formatting(formatted_text):
+            for node in self._parse_inline_formatting(formatted_text):
                 paragraph.add_child(node)
 
             paragraph.line_end = line_num
@@ -1229,14 +1225,14 @@ class MarkdownASTBuilder:
 
             if line_type == 'unordered_list_item':
                 indent, marker, text = content
-                self.parse_unordered_list_item(indent, marker, text, line_num)
+                self._parse_unordered_list_item(indent, marker, text, line_num)
                 self._last_processed_line_type = line_type
                 self._blank_line_count = 0
                 return
 
             if line_type == 'ordered_list_item':
                 indent, number, text = content
-                self.parse_ordered_list_item(indent, number, text, line_num)
+                self._parse_ordered_list_item(indent, number, text, line_num)
                 self._last_processed_line_type = line_type
                 self._blank_line_count = 0
                 return
@@ -1279,14 +1275,14 @@ class MarkdownASTBuilder:
             # Process other line types
             if line_type == 'heading':
                 level, heading_text = content
-                self.parse_heading(level, heading_text, line_num)
+                self._parse_heading(level, heading_text, line_num)
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
                 self._blank_line_count = 0
                 return
 
             if line_type == 'horizontal_rule':
-                horizontal_rule = self.parse_horizontal_rule(line_num)
+                horizontal_rule = self._parse_horizontal_rule(line_num)
                 self._document.add_child(horizontal_rule)
                 self._reset_list_state()
                 self._last_processed_line_type = line_type
@@ -1300,7 +1296,7 @@ class MarkdownASTBuilder:
                 return
 
             # Regular paragraph
-            paragraph = self.parse_text(content, line_num)
+            paragraph = self._parse_text(content, line_num)
             self._last_paragraph = paragraph
             self._reset_list_state()
             self._last_processed_line_type = line_type
