@@ -82,6 +82,8 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.14
 
+- When you select a tab, or open a new one, that has a representation in the mindspace tree view then the matching
+  entry in the tree will be expanded, selected, and scrolled into view.
 - Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as
   ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting
   to prevent blocks being closed too soon.
