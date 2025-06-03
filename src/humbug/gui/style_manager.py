@@ -75,7 +75,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#e0e0e0"
             },
             ColorRole.BACKGROUND_SECONDARY: {
-                ColorMode.DARK: "#181818",
+                ColorMode.DARK: "#141414",
                 ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.BACKGROUND_DIALOG: {

@@ -134,7 +134,7 @@ class WikiMarkdownContent(WikiContent):
                 text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
                 if self._contained:
                     tab_background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-                    background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
+                    background_color = self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
 
                 else:
                     tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
