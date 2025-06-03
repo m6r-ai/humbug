@@ -19,7 +19,7 @@ Bug fixes:
 
 Internal structure changes:
 
-- Added markdown AST tests.
+- Added comprehensive markdown AST tests.
 
 ## v0.13 (2025-05-28)
 
