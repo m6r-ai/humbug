@@ -329,6 +329,7 @@ class MainWindow(QMainWindow):
 
         # Create tab manager in splitter
         self._column_manager = ColumnManager(self)
+        self._column_manager.tab_changed.connect(self._handle_tab_changed)
         self._splitter.addWidget(self._column_manager)
 
         # Set initial file tree width
@@ -594,6 +595,12 @@ class MainWindow(QMainWindow):
         """
         self._style_manager.set_color_mode(theme)
 
+    def _handle_tab_changed(self) -> None:
+        """Handle tab change events."""
+        path = self._column_manager.current_tab_path()
+        if path:
+            self._file_tree.reveal_and_select_file(path)
+
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
         self._status_message_label.setText(message.text)
@@ -742,7 +749,9 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            self._column_manager.restore_state(saved_state)
+            restored_paths = self._column_manager.restore_state(saved_state)
+            for path in restored_paths:
+                self._file_tree.reveal_and_select_file(path)
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
@@ -842,6 +851,7 @@ class MainWindow(QMainWindow):
         """Open file in editor tab."""
         try:
             self._column_manager.open_file(path)
+            self._file_tree.reveal_and_select_file(path)
 
         except OSError as e:
             strings = self._language_manager.strings()
@@ -854,11 +864,13 @@ class MainWindow(QMainWindow):
 
     def _save_file(self) -> None:
         """Save the current file."""
-        self._column_manager.save_file()
+        path = self._column_manager.save_file()
+        self._file_tree.reveal_and_select_file(path)
 
     def _save_file_as(self) -> None:
         """Save the current file with a new name."""
-        self._column_manager.save_file_as()
+        path = self._column_manager.save_file_as()
+        self._file_tree.reveal_and_select_file(path)
 
     def _open_wiki(self) -> None:
         """Open the wiki page in a new tab."""
@@ -1047,6 +1059,7 @@ class MainWindow(QMainWindow):
         """Open an existing conversation file."""
         try:
             self._column_manager.open_conversation(path)
+            self._file_tree.reveal_and_select_file(path)
 
         except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
@@ -1228,8 +1241,14 @@ class MainWindow(QMainWindow):
     def _process_edit_command(self, file_path: str) -> bool:
         """Process the edit command."""
         self._column_manager.protect_current_tab(True)
-        self._column_manager.open_file(file_path)
-        self._column_manager.protect_current_tab(False)
+
+        try:
+            self._column_manager.open_file(file_path)
+            self._file_tree.reveal_and_select_file(file_path)
+
+        finally:
+            self._column_manager.protect_current_tab(False)
+
         return True
 
     def _process_m6rc_command(
@@ -1295,13 +1314,24 @@ class MainWindow(QMainWindow):
     def _process_terminal_command(self) -> bool:
         """Process the terminal command."""
         self._column_manager.protect_current_tab(True)
-        self._column_manager.new_terminal()
-        self._column_manager.protect_current_tab(False)
+
+        try:
+            self._column_manager.new_terminal()
+
+        finally:
+            self._column_manager.protect_current_tab(False)
+
         return True
 
     def _process_wiki_command(self, path: str) -> bool:
         """Process the wiki command."""
         self._column_manager.protect_current_tab(True)
-        self._column_manager.open_wiki_page(path)
-        self._column_manager.protect_current_tab(False)
+
+        try:
+            self._column_manager.open_wiki_page(path)
+            self._file_tree.reveal_and_select_file(path)
+
+        finally:
+            self._column_manager.protect_current_tab(False)
+
         return True

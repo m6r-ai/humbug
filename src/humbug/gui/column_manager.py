@@ -67,6 +67,7 @@ class ColumnManager(QWidget):
     """Manages multiple tabs across multiple columns."""
 
     status_message = Signal(StatusMessage)
+    tab_changed = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab manager."""
@@ -441,7 +442,7 @@ class ColumnManager(QWidget):
             self._column_splitter.setSizes([column_width] * (len(self._tab_columns) + 1))
 
     def _update_tabs(self) -> None:
-        # Update current states for all tabs
+        """ Update the state of all tabs and their labels. """
         for tab_id, label in self._tab_labels.items():
             tab = self._tabs[tab_id]
             column = self._find_column_for_tab(tab)
@@ -473,6 +474,7 @@ class ColumnManager(QWidget):
         self._current_status_tab = current_tab
         current_tab.update_status()
         current_tab.setFocus()
+        self.tab_changed.emit()
 
     def _handle_tab_changed(self, _index: int) -> None:
         """
@@ -674,6 +676,19 @@ class ColumnManager(QWidget):
                 label.set_text(current_text[:-1])
 
             self.adjustSize()
+
+    def current_tab_path(self) -> str:
+        """
+        Get the path of the currently active tab.
+
+        Returns:
+            The path of the current tab, or an empty string if no tab is active
+        """
+        current_tab = self._get_current_tab()
+        if not current_tab:
+            return ""
+
+        return current_tab.path()
 
     def can_split_column(self) -> bool:
         """Can the current column be split in two?"""
@@ -1227,8 +1242,17 @@ class ColumnManager(QWidget):
 
         return os.path.basename(state.path)
 
-    def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
-        """Restore state for a single column of tabs."""
+    def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> List[str]:
+        """
+        Restore state for a single column of tabs.
+        Args:
+            column_index: Index of the column to restore
+            tab_states: List of tab states to restore in this column
+        Returns:
+            List of restored tab paths
+        """
+        paths = []
+
         for state_dict in tab_states:
             try:
                 state = TabState.from_dict(state_dict)
@@ -1242,9 +1266,15 @@ class ColumnManager(QWidget):
                 title = self._get_tab_title(tab, state)
                 self._add_tab(tab, title)
 
+                path = tab.path()
+                if path:
+                    paths.append(path)
+
             except Exception as e:
                 self._logger.exception("Failed to restore tab manager state: %s", str(e))
                 continue
+
+        return paths
 
     def _deferred_set_active_column(self, active_column_index: int, active_tab_ids: List[str]) -> None:
         """
@@ -1268,8 +1298,14 @@ class ColumnManager(QWidget):
         # Update tab states to show correct active highlighting
         self._update_tabs()
 
-    def restore_state(self, saved_state: Dict) -> None:
-        """Restore tabs and active states from saved state."""
+    def restore_state(self, saved_state: Dict) -> List[str]:
+        """
+        Restore tabs and active states from saved state.
+        Args:
+            saved_state: Dictionary containing saved state of columns and tabs
+        Returns:
+            List of restored tab paths
+        """
         saved_columns = saved_state.get('columns', [])
         active_column_index = saved_state.get('active_column_index', 0)
 
@@ -1279,9 +1315,11 @@ class ColumnManager(QWidget):
             self._create_column(index)
 
         # First pass: restore all tabs in all columns
+        restored_paths = []
         for column_index, column_state in enumerate(saved_columns):
             tab_states = column_state.get('tabs', [])
-            self._restore_column_state(column_index, tab_states)
+            paths = self._restore_column_state(column_index, tab_states)
+            restored_paths.extend(paths)
 
         # Second pass: set active tabs in each column
         active_tab_ids = []
@@ -1298,6 +1336,8 @@ class ColumnManager(QWidget):
 
         # Defer setting the active column to ensure it's not overridden by other UI operations
         QTimer.singleShot(0, lambda: self._deferred_set_active_column(active_column_index, active_tab_ids))
+
+        return restored_paths
 
     def _handle_style_changed(self) -> None:
         """
@@ -1500,14 +1540,16 @@ class ColumnManager(QWidget):
 
         return tab.can_save()
 
-    def save_file(self) -> None:
+    def save_file(self) -> str:
         """Save the current file."""
         current_tab = self._get_current_tab()
         if not isinstance(current_tab, EditorTab):
-            return
+            return ""
 
         current_tab.save()
         self._update_editor_tab_label(current_tab)
+
+        return current_tab.path()
 
     def can_save_file_as(self) -> bool:
         """Check if the current file can be saved as a new file."""
@@ -1517,14 +1559,16 @@ class ColumnManager(QWidget):
 
         return tab.can_save_as()
 
-    def save_file_as(self) -> None:
+    def save_file_as(self) -> str:
         """Save the current file with a new name."""
         current_tab = self._get_current_tab()
         if not isinstance(current_tab, EditorTab):
-            return
+            return ""
 
         current_tab.save_as()
         self._update_editor_tab_label(current_tab)
+
+        return current_tab.path()
 
     def _update_editor_tab_label(self, tab: EditorTab) -> None:
         """

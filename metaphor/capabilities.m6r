@@ -108,27 +108,23 @@ Context: Capabilities
                 If the user clicks the right mouse button while a file is highlighted then they will be
                 given a pop-up menu.
 
-                Context: Pop-up menu
-                    If the user clicks the right mouse button while a file is highlighted then they will be
-                    given a pop-up menu.
+                Context: File deletion
+                    If the user selects "Delete File" then the system will confirm they
+                    want to delete it via a message box.  The message box will warn that deleting the file
+                    will also close any tabs based on the file and will discard any unsaved changes.  If the
+                    user agrees then the tabs will be closed and the file deleted.  If the user does not
+                    agree then the action will be cancelled.
 
-                    Context: File deletion
-                        If the user selects "Delete File" then the system will confirm they
-                        want to delete it via a message box.  The message box will warn that deleting the file
-                        will also close any tabs based on the file and will discard any unsaved changes.  If the
-                        user agrees then the tabs will be closed and the file deleted.  If the user does not
-                        agree then the action will be cancelled.
+                Context: Rename file
+                    If the user selects "Rename File" then the system will pop up a dialog box
+                    that allows them to rename the file to any name that is not already used.
 
-                    Context: Rename file
-                        If the user selects "Rename File" then the system will pop up a dialog box
-                        that allows them to rename the file to any name that is not already used.
+                Context: Create new file
+                    The pop-up menu supports creating new files based on syntax-highlighted file types.
+                    New files are created using templates supported by the application's syntax highlighters.
 
-                    Context: Create new file
-                        The pop-up menu supports creating new files based on syntax-highlighted file types.
-                        New files are created using templates supported by the application's syntax highlighters.
-
-                        When a file type is selected, a new file is created in the current directory
-                        with a default name and the chosen file extension.
+                    When a file type is selected, a new file is created in the current directory
+                    with a default name and the chosen file extension.
 
                 Context: Rename conversation
                     If the user selects "Rename Conversation" then the system will pop up a dialog box
@@ -146,6 +142,14 @@ Context: Capabilities
                 - All colors follow the dark/light mode selection
                 - Font sizes scale with application zoom level
                 - Padding and spacing match the theme metrics
+
+            Context: Automatic view changes
+                When the user opens a file or directory, either via a menu or via the system shell, the matching
+                file or directory will be expanded in the tree view.  The newly opened element will also be
+                selected.
+
+                When the user changes the current active tab by selecting a new one, if the tab is associated with
+                an element in the tree view then that element will be selected too.
 
         Context: Tab view
             The tabbed interface has tabs that correspond to either conversations being

@@ -98,6 +98,94 @@ class MindspaceFileTree(QWidget):
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
+    def reveal_and_select_file(self, file_path: str) -> None:
+        """
+        Expand the tree to show the given file and select it.
+
+        Args:
+            file_path: Absolute path to the file to reveal and select
+        """
+        # Validate that we have a mindspace loaded
+        if not self._mindspace_path:
+            return
+
+        # Normalize the file path
+        normalized_path = os.path.normpath(file_path)
+
+        # Ensure the file path is within the mindspace
+        if not normalized_path.startswith(self._mindspace_path):
+            return
+
+        # Check if the file exists
+        if not os.path.exists(normalized_path):
+            return
+
+        # Expand to the file and select it
+        target_index = self._expand_to_path(normalized_path)
+        if target_index is None:
+            return
+
+        if not target_index.isValid():
+            return
+
+        self._tree_view.clearSelection()
+        self._tree_view.setCurrentIndex(target_index)
+        self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.PositionAtCenter)
+
+    def _expand_to_path(self, file_path: str) -> QModelIndex | None:
+        """
+        Expand tree nodes to reveal the given file path.
+
+        Args:
+            file_path: Absolute path to expand to
+
+        Returns:
+            QModelIndex of the target file if found, None otherwise
+        """
+        if not self._mindspace_path:
+            return None
+
+        # Build list of paths from mindspace root to target file
+        paths_to_expand = []
+        current_path = file_path
+
+        while current_path and current_path != self._mindspace_path:
+            paths_to_expand.append(current_path)
+            parent_path = os.path.dirname(current_path)
+            # Prevent infinite loop if we can't go up further
+            if parent_path == current_path:
+                break
+
+            current_path = parent_path
+
+        # Reverse the list so we expand from root to leaf
+        paths_to_expand.reverse()
+
+        # Start from the mindspace root index
+        current_index = self._filter_model.mapFromSource(
+            self._fs_model.index(self._mindspace_path)
+        )
+
+        # Expand each directory in the path
+        for path in paths_to_expand:
+            # Get the source index for this path
+            source_index = self._fs_model.index(path)
+            if not source_index.isValid():
+                return None
+
+            # Map to filter model
+            filter_index = self._filter_model.mapFromSource(source_index)
+            if not filter_index.isValid():
+                return None
+
+            # If this is a directory, expand it
+            if os.path.isdir(path):
+                self._tree_view.expand(filter_index)
+
+            current_index = filter_index
+
+        return current_index
+
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
         # Get the index at the clicked position
@@ -355,7 +443,7 @@ class MindspaceFileTree(QWidget):
                 margin: 0px;
             }}
             QTreeView::item:selected {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
             QTreeView::item:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
