@@ -365,9 +365,9 @@ class SettingsCombo(SettingsField):
         min_height = int(30 * zoom_factor)
         self._combo.setMinimumHeight(min_height)
 
-    def setEnabled(self, enabled: bool) -> None:
+    def setEnabled(self, arg__1: bool) -> None:
         """Enable or disable the combo box."""
-        self._combo.setEnabled(enabled)
+        self._combo.setEnabled(arg__1)
 
 
 class SettingsSpinBox(SettingsField):
@@ -567,12 +567,13 @@ class SettingsTextField(SettingsField):
 
     def get_value(self) -> str:
         """Get the current text field value."""
-        return self._text_field.text()
+        return self._text_field.text().strip("\n\r")
 
     def set_value(self, value: str) -> None:
         """Set the text field value."""
-        self._text_field.setText(value)
-        self._initial_value = value
+        text = value.strip("\n\r")
+        self._text_field.setText(text)
+        self._initial_value = text
 
     def _handle_style_changed(self) -> None:
         """Update text field styling."""
