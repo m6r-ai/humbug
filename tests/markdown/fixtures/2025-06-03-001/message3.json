@@ -1,0 +1,4549 @@
+{
+  "type": "document",
+  "children": [
+    {
+      "type": "heading",
+      "level": 1,
+      "id": "action-review-code",
+      "children": [
+        {
+          "type": "text",
+          "content": "Action: Review code"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "id": "h-1-summary-of-how-the-software-works",
+      "children": [
+        {
+          "type": "text",
+          "content": "1. Summary of How the Software Works"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "The file "
+        },
+        {
+          "type": "inline_code",
+          "content": "/Users/dave/github/m6r/humbug/src/humbug/markdown/markdown_parser.py"
+        },
+        {
+          "type": "text",
+          "content": " implements a Markdown parser in Python. Its main purpose is to parse Markdown text and build an Abstract Syntax Tree (AST) representing the structure and formatting of the document."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "High-level overview:"
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "AST Construction:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " The parser analyzes Markdown source line by line, classifies each line (heading, list item, paragraph, code block, table row, etc.), and builds corresponding AST nodes."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Inline Formatting:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " The parser recognizes and processes inline elements (bold, italics, links, images, inline code) using a recursive descent approach."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Block Elements:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " Handles block-level elements: headings, lists (ordered/unordered), code blocks (with language detection and possible nesting), tables (with buffering and alignment), horizontal rules, and paragraphs."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "State Tracking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " Maintains various parsing state machines for lists, tables, code blocks, and paragraphs to accurately reflect Markdown\u2019s flexible syntax."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Line Mapping:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " Associates parsed AST nodes with line numbers for incremental updates and error reporting."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Incremental Parsing:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " Provides an "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "update_ast"
+                },
+                {
+                  "type": "text",
+                  "content": " method for incremental re-parsing, though currently this mostly falls back to a full re-parse."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Error Handling:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " Uses custom exceptions to signal parsing errors, with logging for debugging."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "id": "h-2-file-by-file-review",
+      "children": [
+        {
+          "type": "text",
+          "content": "2. File-by-File Review"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "id": "file-usersdavegithubm6rhumbugsrchumbugmarkdownmarkdownparserpy",
+      "children": [
+        {
+          "type": "text",
+          "content": "File: "
+        },
+        {
+          "type": "inline_code",
+          "content": "/Users/dave/github/m6r/humbug/src/humbug/markdown/markdown_parser.py"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "review--recommendations",
+      "children": [
+        {
+          "type": "text",
+          "content": "Review & Recommendations"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "Below are detailed review items, each with:"
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Description of the issue or suggestion"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Relevant guideline(s)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested code change"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " (if applicable)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking of importance (1-4)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-21-type-hint-consistency-and-python-version-compatibility",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.1. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Type Hint Consistency and Python Version Compatibility"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Uses PEP 604 ("
+                },
+                {
+                  "type": "inline_code",
+                  "content": "str | None"
+                },
+                {
+                  "type": "text",
+                  "content": ") type hints, which require Python 3.10+. If the codebase is intended to support earlier Python versions (3.7\u20133.9), this will break compatibility. PEP 484 ("
+                },
+                {
+                  "type": "inline_code",
+                  "content": "Optional[str]"
+                },
+                {
+                  "type": "text",
+                  "content": ") is more widely supported."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Python Code Style and Readability"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Use type hints consistently."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Extra Questions"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Is the code compliant with relevant regulations or standards?"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "If Python >= 3.10 is required, document this clearly. Otherwise, use "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "Optional[str]"
+                },
+                {
+                  "type": "text",
+                  "content": " from "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "typing"
+                },
+                {
+                  "type": "text",
+                  "content": "."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 2 (Major) if compatibility is required, 4 (Observation) if 3.10+ is mandated."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Example:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "from typing import Optional\n\nself._source_path: Optional[str] = None"
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-22-docstring-completeness-and-examples",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.2. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Docstring Completeness and Examples"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Many methods have good docstrings, but some (especially private methods or those with tricky logic, e.g., "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "_handle_text_continuation"
+                },
+                {
+                  "type": "text",
+                  "content": ", "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "_convert_list_items_to_paragraphs"
+                },
+                {
+                  "type": "text",
+                  "content": ", "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "_handle_incomplete_table"
+                },
+                {
+                  "type": "text",
+                  "content": ") lack usage examples. Complex inline parsing could use more explanation."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Python Code Style and Readability"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Have docstrings for modules, classes, and functions. Include examples in docstrings for complex functionality."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Add examples to docstrings for complex methods (e.g., "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "parse_inline_formatting"
+                },
+                {
+                  "type": "text",
+                  "content": ", "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "identify_line_type"
+                },
+                {
+                  "type": "text",
+                  "content": ")."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 3 (Minor)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Example:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:\n    \"\"\"\n    Parse inline formatting (bold, italic, inline code) in text and create appropriate AST nodes.\n\n    Example:\n        Input: \"This is **bold** and _italic_\"\n        Output: [\n            MarkdownTextNode(\"This is \"),\n            MarkdownBoldNode([MarkdownTextNode(\"bold\")]),\n            MarkdownTextNode(\" and \"),\n            MarkdownEmphasisNode([MarkdownTextNode(\"italic\")])\n        ]\n    ...\n    \"\"\""
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-23-exception-handling-granularity",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.3. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Exception Handling Granularity"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "In "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "parse_line"
+                },
+                {
+                  "type": "text",
+                  "content": ", a blanket "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "except Exception as e"
+                },
+                {
+                  "type": "text",
+                  "content": " is used, which is generally discouraged as it can mask system exit, keyboard interrupts, etc."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Error Handling"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Detect and handle all exception or failure conditions. Use specific exceptions."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Catch more specific exceptions, or at minimum, avoid catching "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "BaseException"
+                },
+                {
+                  "type": "text",
+                  "content": "."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 2 (Major)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Example:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "try:\n    ...\nexcept (ValueError, AttributeError, SomeCustomException) as e:\n    ..."
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-24-logging-usage",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.4. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Logging Usage"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Logging is used for error reporting, but the logger is named "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "\"ASTBuilder\""
+                },
+                {
+                  "type": "text",
+                  "content": ", which may be outdated or misleading if the class is now called "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "MarkdownParser"
+                },
+                {
+                  "type": "text",
+                  "content": ". Also, logging is only used for exceptions."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Error Handling"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Log errors appropriately."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Code Organization"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Maintain consistent naming conventions."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Rename logger to "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "\"MarkdownParser\""
+                },
+                {
+                  "type": "text",
+                  "content": " and consider adding debug logs for major parsing events (start/end of code block, table, etc.)."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 4 (Observation)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-25-complexity-in-parseinlineformatting",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.5. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Complexity in "
+            },
+            {
+              "type": "inline_code",
+              "content": "parse_inline_formatting"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "The method is large, deeply nested, and manually implements a state machine for inline parsing. It is difficult to read and maintain, and could be decomposed for clarity."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Code Smells"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Large functions, deep nesting, complex boolean logic."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Code Organization"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Keep functions focused and under 50 lines."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "KISS"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Strive for simplicity."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Break out each inline element (image, link, code, bold, italic) parsing into helper methods. Consider using a parser combinator, or at least flatten the function."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 2 (Major)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Example Refactor (outline):"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:\n    # ... state machine loop ...\n    if self._is_image_start(text, i):\n        node, new_i = self._parse_image(text, i)\n        nodes.append(node)\n        i = new_i\n        continue\n    # ... etc ..."
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-26-mutable-default-arguments",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.6. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Mutable Default Arguments"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "None detected in this file, but ensure future functions never use mutable defaults. (Currently, all mutable state is on "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "self"
+                },
+                {
+                  "type": "text",
+                  "content": " or explicitly initialized.)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Python Code Style and Readability"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Avoid using mutable default arguments in function definitions."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "No change needed."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 4 (Observation)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-27-use-of-magic-numbersstrings",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.7. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Use of Magic Numbers/Strings"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Some constants (e.g., regex patterns, indentation values, list marker lengths) are sprinkled in the code. Magic numbers like \"2\" for marker lengths are used directly."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Code Smells"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Magic numbers/strings."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Define named constants for such values at the top of the file or within the class."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 3 (Minor)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Example:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "LIST_MARKER_DOT_SPACE_LENGTH = 2\n...\ncurrent_list.marker_length = len(number) + LIST_MARKER_DOT_SPACE_LENGTH"
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-28-repetition-in-table-parsing",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.8. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Repetition in Table Parsing"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Table row handling and cell processing logic is duplicated for headers and body rows."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "DRY"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Eliminate code duplication."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Abstract table row/cell creation into a helper method."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 3 (Minor)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-29-performance-inefficient-line-parsing-in-updateast",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.9. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Performance: Inefficient Line Parsing in "
+            },
+            {
+              "type": "inline_code",
+              "content": "update_ast"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "The incremental update logic computes a diff but always falls back to a full re-parse. This is inefficient for large documents."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Performance Considerations"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Be mindful of the time complexity of operations on large datasets."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Implement incremental AST update for changed regions only, if possible."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 3 (Minor), but could be 2 (Major) in performance-critical apps."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-210-security-input-validation-and-injection",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.10. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Security: Input Validation and Injection"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "No direct user input is being executed, but in case the parser is exposed via an API, ensure Markdown is sanitized before rendering or executing any output."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Security Best Practices"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Sanitize all user inputs."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Add usage notes or comments warning downstream users not to trust rendered Markdown or AST node content."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 4 (Observation) unless this code is part of a web server, in which case higher."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-211-use-of-any-in-typing",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.11. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Use of "
+            },
+            {
+              "type": "inline_code",
+              "content": "Any"
+            },
+            {
+              "type": "text",
+              "content": " in Typing"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "The "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "identify_line_type"
+                },
+                {
+                  "type": "text",
+                  "content": " method returns "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "Tuple[str, Any]"
+                },
+                {
+                  "type": "text",
+                  "content": ", which is not type-safe. This makes it hard to reason about downstream code."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Python Code Style and Readability"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Use type hints for function arguments and return values."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Code Smells"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Primitive obsession."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Define a "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "NamedTuple"
+                },
+                {
+                  "type": "text",
+                  "content": " or "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "TypedDict"
+                },
+                {
+                  "type": "text",
+                  "content": " for return values."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 3 (Minor)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Example:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "from typing import NamedTuple, Optional, Union\n\nclass LineTypeResult(NamedTuple):\n    line_type: str\n    content: Optional[Union[str, tuple]]"
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-212-long-functions",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.12. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Long Functions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Several functions (notably "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "parse_line"
+                },
+                {
+                  "type": "text",
+                  "content": ", "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "parse_inline_formatting"
+                },
+                {
+                  "type": "text",
+                  "content": ", "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "build_ast"
+                },
+                {
+                  "type": "text",
+                  "content": ") exceed 50 lines."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Python Code Style and Readability"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Keep functions focused and under 50 lines when possible."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Break long functions into smaller logical units."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 3 (Minor)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-213-error-message-exposure",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.13. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Error Message Exposure"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Error messages in "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "MarkdownParserError"
+                },
+                {
+                  "type": "text",
+                  "content": " may include input lines, which could expose sensitive information depending on the context."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Error Handling"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Ensure error messages do not expose sensitive information."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "If used in sensitive environments, redact or sanitize error messages."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 4 (Observation)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-214-separation-of-concerns",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.14. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Separation of Concerns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "The parser mixes AST construction, parsing, and some document management (line mapping, etc.) in a single class."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Code Organization"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Separate concerns (business logic, data access, presentation)."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Consider splitting into a parser, an AST builder, and a document manager if the project grows."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 4 (Observation)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-215-use-of-cast",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.15. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Use of "
+            },
+            {
+              "type": "inline_code",
+              "content": "cast"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Frequent use of "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "cast"
+                },
+                {
+                  "type": "text",
+                  "content": " hints at places where type inference or better structure could avoid casts."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Python Code Style and Readability"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Use type hints consistently and avoid type casts where possible."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Restructure code to reduce the need for casting."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 4 (Observation)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-216-unit-tests",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.16. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Unit Tests"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "No unit tests are included in this file, nor is their presence mentioned. Ensure comprehensive test coverage, especially for edge cases."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Extra Questions"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Is the error handling comprehensive? Would another developer be able to maintain this?"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Add or reference unit tests for all parsing logic."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 1 (Critical) if missing entirely; 4 (Observation) if covered elsewhere."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-217-explicit-imports-for-used-classes",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.17. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Explicit Imports for Used Classes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "All AST node classes are imported as a block, which is fine, but if not all are used, could bloat the module."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "YAGNI"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Avoid adding functionality until it is necessary."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Only import what is used, or at least add a comment if the full import is intentional for extensibility."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 4 (Observation)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "id": "h-218-line-length",
+      "children": [
+        {
+          "type": "text",
+          "content": "2.18. "
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Line Length"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Issue:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Most lines are <132 chars as recommended, but a few approach this limit, especially in docstrings and argument lists."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 2,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "emphasis",
+                          "children": [
+                            {
+                              "type": "text",
+                              "content": "Python Code Style and Readability"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "content": ": Limit line length to less than 132 characters."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Suggested Change:"
+                    }
+                  ]
+                },
+                {
+                  "type": "linebreak"
+                },
+                {
+                  "type": "text",
+                  "content": "Break up long lines for readability."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "bold",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Ranking:"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " 4 (Observation)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "id": "h-3-example-refactor-parseinlineformatting",
+      "children": [
+        {
+          "type": "text",
+          "content": "3. Example Refactor: "
+        },
+        {
+          "type": "inline_code",
+          "content": "parse_inline_formatting"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Current:"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "content": " "
+        },
+        {
+          "type": "text",
+          "content": "A single large method with nested logic for all inline parsing."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "content": "Suggested:"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "content": " "
+        },
+        {
+          "type": "text",
+          "content": "Break into smaller helper functions for each inline type."
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:\n    \"\"\"\n    Parse inline formatting (bold, italic, inline code) in text and create appropriate AST nodes.\n    \"\"\"\n    i = 0\n    nodes = []\n    while i < len(text):\n        if self._is_image_start(text, i):\n            node, i = self._parse_image(text, i)\n            nodes.append(node)\n        elif self._is_link_start(text, i):\n            node, i = self._parse_link(text, i)\n            nodes.append(node)\n        elif self._is_inline_code_start(text, i):\n            node, i = self._parse_inline_code(text, i)\n            nodes.append(node)\n        elif self._is_bold_start(text, i):\n            node, i = self._parse_bold(text, i)\n            nodes.append(node)\n        elif self._is_italic_start(text, i):\n            node, i = self._parse_italic(text, i)\n            nodes.append(node)\n        else:\n            # Accumulate plain text until next formatting\n            start = i\n            while i < len(text) and not self._is_formatting_start(text, i):\n                i += 1\n            nodes.append(MarkdownTextNode(text[start:i]))\n    return nodes"
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "Each "
+        },
+        {
+          "type": "inline_code",
+          "content": "_parse_*"
+        },
+        {
+          "type": "text",
+          "content": " and "
+        },
+        {
+          "type": "inline_code",
+          "content": "_is_*_start"
+        },
+        {
+          "type": "text",
+          "content": " helper can focus on just one kind of element."
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "id": "h-4-summary-table",
+      "children": [
+        {
+          "type": "text",
+          "content": "4. Summary Table"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "children": [
+        {
+          "type": "table_header",
+          "children": [
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": true,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Review Item"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": true,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Guideline(s)"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": true,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Importance"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "table_body",
+          "children": [
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Type hint compatibility"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Python code style, compliance"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "2/4"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Docstring completeness/examples"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Python code style"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "3"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Exception handling granularity"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Error handling"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "2"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Logging usage"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Error handling, code organization"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "4"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Complexity in parse"
+                    },
+                    {
+                      "type": "emphasis",
+                      "children": [
+                        {
+                          "type": "text",
+                          "content": "inline"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "content": "formatting"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Code smells, KISS, code organization"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "2"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Mutable default arguments"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Python code style"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "4"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Magic numbers/strings"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Code smells"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "3"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Table parsing repetition"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "DRY"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "3"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Performance of incremental parsing"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Performance considerations"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "3/2"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Security/input validation"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Security best practices"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "4/1"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Use of Any in typing"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Python code style, code smells"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "3"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Long functions"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Python code style"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "3"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Error message exposure"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Error handling"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "4"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Separation of concerns"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Code organization"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "4"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Use of cast"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Python code style"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "4"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Unit tests"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Maintainability, error handling"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "1/4"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Explicit imports"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "YAGNI"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "4"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "table_row",
+              "children": [
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Line length"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Python code style"
+                    }
+                  ]
+                },
+                {
+                  "type": "table_cell",
+                  "is_header": false,
+                  "alignment": "left",
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "4"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontal_rule"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "id": "h-5-conclusion",
+      "children": [
+        {
+          "type": "text",
+          "content": "5. Conclusion"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "The core parser is well-structured, and the code generally follows many best practices. The most important improvements would be:"
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Refactoring complex and long methods (especially inline parsing)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Ensuring type hint compatibility and safety"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Improving exception handling specificity"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Adding or documenting comprehensive unit test coverage"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "Other changes are mostly minor or stylistic. The parser is a solid base, but could be made easier to maintain and extend with these adjustments."
+        }
+      ]
+    }
+  ]
+}

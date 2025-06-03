@@ -1,0 +1,212 @@
+{
+  "type": "document",
+  "children": [
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "The part of the code that triggers the use of the text fixture files is in the main test file ("
+        },
+        {
+          "type": "inline_code",
+          "content": "test_markdown_parser.py"
+        },
+        {
+          "type": "text",
+          "content": "), specifically this parameterized test:"
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "@pytest.mark.parametrize(\"markdown_path,expected_json_path\", find_test_files())\ndef test_parse_fixture_files(self, markdown_path, expected_json_path):\n    \"\"\"Test parsing markdown files against expected JSON outputs.\"\"\"\n    is_match, diff = parse_and_compare(markdown_path, expected_json_path)\n    assert is_match, f\"AST mismatch for {os.path.basename(markdown_path)}:\\n{diff}\""
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "This test works in the following way:"
+        }
+      ]
+    },
+    {
+      "type": "ordered_list",
+      "indent": 0,
+      "start": 1,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "The "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "find_test_files()"
+                },
+                {
+                  "type": "text",
+                  "content": " function (from "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "test_utils.py"
+                },
+                {
+                  "type": "text",
+                  "content": ") scans the fixtures directory for all markdown files (.md) that have corresponding JSON files (.json)."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "inline_code",
+                  "content": "pytest.mark.parametrize"
+                },
+                {
+                  "type": "text",
+                  "content": " creates a separate test case for each pair of files found."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "For each test case, "
+                },
+                {
+                  "type": "inline_code",
+                  "content": "parse_and_compare()"
+                },
+                {
+                  "type": "text",
+                  "content": " is called, which:"
+                }
+              ]
+            },
+            {
+              "type": "unordered_list",
+              "indent": 3,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "text",
+                          "content": "Loads the markdown file"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "text",
+                          "content": "Parses it with the MarkdownParser"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "text",
+                          "content": "Serializes the resulting AST"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "text",
+                          "content": "Loads the expected JSON file"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "text",
+                          "content": "Compares the actual AST with the expected one"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "If the ASTs don't match, the test fails with a detailed diff showing the differences."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "This approach allows you to add new test cases simply by creating new pairs of .md and .json files in the fixtures directory, without modifying any code. The test runner will automatically discover and execute tests for all fixture files."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "type": "document",
+  "children": [
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "This is a test"
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Here's an outer list."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "And a second item."
+                }
+              ]
+            },
+            {
+              "type": "ordered_list",
+              "indent": 2,
+              "start": 1,
+              "children": [
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "text",
+                          "content": "Here's a list item"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "list_item",
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "children": [
+                        {
+                          "type": "text",
+                          "content": "Here's another one"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "     # Now we have some code\n     for i in range(10):\n         print(f\"{i}\")"
+    },
+    {
+      "type": "ordered_list",
+      "indent": 2,
+      "start": 3,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Here's a third list item"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "unordered_list",
+      "indent": 0,
+      "children": [
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "A third outer item"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list_item",
+          "children": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "type": "text",
+                  "content": "and a fourth one."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "    print(f\"\"\"```\n    print(\"hello\")\n```\n\"\"\")\n    x = x + 2"
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "More text please!"
+        }
+      ]
+    }
+  ]
+}
