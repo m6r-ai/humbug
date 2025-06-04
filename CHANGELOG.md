@@ -18,6 +18,8 @@ Bug fixes:
 - Under some circumstances markdown lists and paragraphs interacted in odd ways and introduced rendering defects.
 - If you closed a tab then the tab label that ended up under the mouse pointer would not set the hover rendering
   correctly.
+- When processing Metaphor files that have code fences inside embedded code blocks we could exit the code parsing
+  too early, corrupting the output.
 
 Internal structure changes:
 
