@@ -22,6 +22,7 @@ Bug fixes:
 Internal structure changes:
 
 - Added comprehensive markdown AST tests.
+- Updated the Metaphor AST tests to introduce the smae sort of example-based tests as markdown.
 
 ## v0.13 (2025-05-28)
 
