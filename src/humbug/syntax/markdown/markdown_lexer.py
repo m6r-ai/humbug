@@ -11,10 +11,6 @@ class MarkdownLexer(Lexer):
     headings, blockquotes, lists, and inline formatting.
     """
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._first_token = True
-
     def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> None:
         """
         Lex all the tokens in the input.
@@ -51,17 +47,13 @@ class MarkdownLexer(Lexer):
             return self._read_heading
 
         if ch in ('*', '-', '+'):
-            # Check if this might be a list marker
-            if ((self._position + 1) < self._input_len and
-                self._is_whitespace(self._input[self._position + 1])):
-                return self._read_unordered_list
+            return self._read_unordered_list
 
         if self._is_digit(ch):
-            # Check if this might be an ordered list marker
             return self._read_ordered_list
 
-        # If we get here, it's not a block element, so mark that we've seen the first token
-        self._first_token = False
+        if ch == '|':
+            return self._read_table
 
         if ch == '`':
             return self._read_backtick
@@ -96,10 +88,21 @@ class MarkdownLexer(Lexer):
         """
         pos = self._position + 1
 
-        # Skip the whitespace after the marker
+        # Do we have whitespace after the marker?  If yes, it's a valid list marker
         if pos < self._input_len and self._is_whitespace(self._input[pos]):
             self._tokens.append(Token(
                 type=TokenType.LIST_MARKER,
+                value=self._input[self._position:],
+                start=self._position
+            ))
+            self._position = self._input_len
+            return
+
+        # Do we have 3 or more of the same marker?  If yes, it's a horizontal rule
+        marker = self._input[self._position]
+        if (pos + 1 < self._input_len and self._input[pos] == marker and self._input[pos + 1] == marker):
+            self._tokens.append(Token(
+                type=TokenType.HORIZONTAL_RULE,
                 value=self._input[self._position:],
                 start=self._position
             ))
@@ -136,6 +139,17 @@ class MarkdownLexer(Lexer):
 
         # Not a valid ordered list marker, reset and read as text
         self._read_text()
+
+    def _read_table(self) -> None:
+        """
+        Read a table token.
+        """
+        self._tokens.append(Token(
+            type=TokenType.TABLE,
+            value=self._input[self._position:],
+            start=self._position
+        ))
+        self._position = self._input_len
 
     def _read_text(self) -> None:
         """
