@@ -1,0 +1,83 @@
+{
+  "type": "root",
+  "children": [
+    {
+      "type": "role",
+      "label": "",
+      "children": [
+        {
+          "type": "text",
+          "content": "You are a world class python programmer."
+        },
+        {
+          "type": "text",
+          "content": ""
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "label": "",
+      "children": [
+        {
+          "type": "text",
+          "content": "Here is some code I would like you to consider:"
+        },
+        {
+          "type": "text",
+          "content": ""
+        },
+        {
+          "type": "code",
+          "content": "```python"
+        },
+        {
+          "type": "code",
+          "content": "    print(\"\"\"```python"
+        },
+        {
+          "type": "code",
+          "content": "Context: code"
+        },
+        {
+          "type": "code",
+          "content": "    This is something"
+        },
+        {
+          "type": "code",
+          "content": "```"
+        },
+        {
+          "type": "code",
+          "content": "Action:"
+        },
+        {
+          "type": "code",
+          "content": "    Do a thing"
+        },
+        {
+          "type": "code",
+          "content": "\"\"\")"
+        },
+        {
+          "type": "code",
+          "content": "```"
+        },
+        {
+          "type": "text",
+          "content": ""
+        }
+      ]
+    },
+    {
+      "type": "action",
+      "label": "",
+      "children": [
+        {
+          "type": "text",
+          "content": "Review this code and tell me what it does."
+        }
+      ]
+    }
+  ]
+}

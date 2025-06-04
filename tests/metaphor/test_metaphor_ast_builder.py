@@ -11,6 +11,10 @@ from humbug.metaphor import (
     MetaphorASTBuilderError
 )
 
+# pylint: disable=unused-import
+import humbug.syntax.parser_imports
+# pylint: enable=unused-import
+
 from metaphor_test_utils import (
     find_test_files,
     parse_and_compare,

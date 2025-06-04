@@ -1,0 +1,18 @@
+Role:
+    You are a world class python programmer.
+
+Context:
+    Here is some code I would like you to consider:
+
+    ```python
+        print("""```python
+    Context: code
+        This is something
+    ```
+    Action:
+        Do a thing
+    """)
+    ```
+
+Action:
+    Review this code and tell me what it does.

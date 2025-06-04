@@ -1,6 +1,9 @@
-from typing import Dict, List, Final
+from typing import Dict, List, Final, Any
 
 from humbug.metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
+from humbug.syntax.parser_registry import ParserRegistry
+from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class MetaphorLexer:
@@ -13,7 +16,8 @@ class MetaphorLexer:
     - Text content
     - Include/Embed directives
 
-    This lexer handles proper indentation, text block detection, and keyword parsing.
+    This lexer handles proper indentation, text block detection, and keyword parsing,
+    including nested code blocks with proper continuation detection.
     """
 
     # Constants for language elements
@@ -43,6 +47,14 @@ class MetaphorLexer:
         self.tokens: List[MetaphorToken] = []
         self.current_line: int = 1
         self.input: str = input_text
+
+        # Code block state tracking
+        self._code_block_language: str = ""
+        self._embedded_parser_state: Any = None
+        self._embedded_language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
+        self._code_block_nesting_level: int = 0
+        self._code_block_indents: List[int] = []
+
         self._tokenize()
 
     def get_next_token(self) -> MetaphorToken:
@@ -51,6 +63,43 @@ class MetaphorLexer:
             return self.tokens.pop(0)
 
         return MetaphorToken(MetaphorTokenType.END_OF_FILE, "", "", self.filename, self.current_line, 1)
+
+    def _should_parse_code_block_as_continuation(
+        self,
+        language: ProgrammingLanguage,
+        line_content: str
+    ) -> bool:
+        """
+        Check if a line should be parsed as a continuation by the embedded parser.
+
+        Args:
+            language: The programming language of the code block
+            line_content: The content of the line to check
+
+        Returns:
+            True if this line should be treated as a continuation
+        """
+        if language == ProgrammingLanguage.TEXT:
+            return False
+
+        # Get or create parser for this language
+        parser = ParserRegistry.create_parser(language)
+        if parser is None:
+            return False
+
+        # If language changed, reset state
+        if language != self._embedded_language:
+            self._embedded_parser_state = None
+            self._embedded_language = language
+
+        # Parse the line and check if we're in a continuation
+        new_state = parser.parse(self._embedded_parser_state, line_content)
+
+        # Update stored state
+        self._embedded_parser_state = new_state
+
+        # Return whether we're in a continuation
+        return new_state is not None and new_state.parsing_continuation
 
     def _tokenize(self) -> None:
         """
@@ -108,25 +157,73 @@ class MetaphorLexer:
             if not stripped_line:
                 return
 
-        # Does this line start with a code fence?
-        in_fenced_code = self.in_fenced_code
+        # Handle code block state
+        if self.in_fenced_code:
+            # Check if our embedded parser indicates this should be a continuation
+            if self._code_block_language:
+                language = ProgrammingLanguageUtils.from_name(self._code_block_language)
+                if language != ProgrammingLanguage.UNKNOWN:
+                    if self._should_parse_code_block_as_continuation(language, line):
+                        self._handle_text_line(line, start_column)
+                        return
+
+            # If not a continuation and it's a code fence, check for nesting or closing
+            if stripped_line.startswith('```'):
+                # Check if this is a nested fence (indented more than the opening fence)
+                if start_column > self._code_block_indents[-1]:
+                    self._code_block_nesting_level += 1
+                    self._code_block_indents.append(start_column)
+                    self._handle_text_line(line, start_column)
+                    return
+
+                # This is closing the current fence
+                self._code_block_indents.pop()
+                self._code_block_nesting_level -= 1
+
+                if self._code_block_nesting_level == 0:
+                    # This closes the outer-most fence
+                    self._handle_text_line(line, start_column)
+                    self.in_fenced_code = False
+
+                    # Reset code block state
+                    self._code_block_language = ""
+                    self._embedded_parser_state = None
+                    self._embedded_language = ProgrammingLanguage.UNKNOWN
+                    return
+
+                # This closes a nested fence
+                self._handle_text_line(line, start_column)
+                return
+
+            # Regular content within code block
+            self._handle_text_line(line, start_column)
+            return
+
+        # Handle code fence start when not in code block
         if stripped_line.startswith('```'):
             self.in_fenced_code = True
-            in_fenced_code = not in_fenced_code
+            self._code_block_nesting_level = 1
+            self._code_block_indents = [start_column]
+
+            # Extract language if present
+            language_match = stripped_line[3:].strip()
+            if language_match:
+                self._code_block_language = language_match
+
+            # Generate the opening token
+            self._handle_text_line(line, start_column)
+            return
 
         # If we're not in a fenced code block then look for keywords.
-        if not self.in_fenced_code:
-            words = stripped_line.split(maxsplit=1)
-            first_word = words[0].capitalize()
+        words = stripped_line.split(maxsplit=1)
+        first_word = words[0].capitalize()
 
-            if first_word in self.KEYWORDS:
-                self._handle_keyword_line(line, words, first_word, start_column)
-                self.in_fenced_code = in_fenced_code
-                return
+        if first_word in self.KEYWORDS:
+            self._handle_keyword_line(line, words, first_word, start_column)
+            return
 
         # Treat this as a text block.
         self._handle_text_line(line, start_column)
-        self.in_fenced_code = in_fenced_code
 
     def _handle_tab_character(self, line: str, column: int) -> None:
         """
@@ -220,6 +317,12 @@ class MetaphorLexer:
         self.in_text_block = True
 
     def _handle_blank_line(self, start_column: int) -> None:
+        """
+        Handle a blank line.
+
+        Args:
+            start_column: The starting column of the content
+        """
         token_type = MetaphorTokenType.CODE if self.in_fenced_code else MetaphorTokenType.TEXT
         self.tokens.append(
             MetaphorToken(
@@ -231,6 +334,12 @@ class MetaphorLexer:
                 column=start_column
             )
         )
+
+        # Also update parser state for blank lines in code blocks
+        if self.in_fenced_code and self._code_block_language:
+            language = ProgrammingLanguageUtils.from_name(self._code_block_language)
+            if language != ProgrammingLanguage.UNKNOWN:
+                self._should_parse_code_block_as_continuation(language, "")
 
     def _process_indentation(self, line: str, start_column: int) -> None:
         """
