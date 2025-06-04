@@ -349,7 +349,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         # If we are inside a link, then keep the link color, otherwise set the code color
         if not node.parent or not isinstance(node.parent, MarkdownLinkNode):
-            code_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_INLINE_CODE))
+            code_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_12))
 
         self._cursor.setCharFormat(code_format)
 

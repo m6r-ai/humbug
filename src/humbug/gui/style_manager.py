@@ -290,95 +290,91 @@ class StyleManager(QObject):
             },
 
             # Syntax highlighting
-            ColorRole.SYNTAX_ADDRESS: {
-                ColorMode.DARK: "#80e0d0",
-                ColorMode.LIGHT: "#007070"
-            },
-            ColorRole.SYNTAX_CODE: {
-                ColorMode.DARK: "#f0f0f0",
-                ColorMode.LIGHT: "#202020"
-            },
-            ColorRole.SYNTAX_COMMENT: {
-                ColorMode.DARK: "#68b068",
-                ColorMode.LIGHT: "#407040"
-            },
-            ColorRole.SYNTAX_CSS_AT_RULE: {
-                ColorMode.DARK: "#ffc0eb",
-                ColorMode.LIGHT: "#c000a0"
-            },
-            ColorRole.SYNTAX_DOCTYPE: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#606060"
-            },
-            ColorRole.SYNTAX_ELEMENT: {
-                ColorMode.DARK: "#90e0e8",
-                ColorMode.LIGHT: "#0080a0"
-            },
             ColorRole.SYNTAX_ERROR: {
                 ColorMode.DARK: "#ff0000",
                 ColorMode.LIGHT: "#ff0000"
             },
-            ColorRole.SYNTAX_FUNCTION_OR_METHOD: {
-                ColorMode.DARK: "#e0e080",
-                ColorMode.LIGHT: "#806000"
+            ColorRole.SYNTAX_01: {
+                ColorMode.DARK: "#80e0d0",
+                ColorMode.LIGHT: "#007070"
             },
-            ColorRole.SYNTAX_HEADING: {
-                ColorMode.DARK: "#b090f0",
-                ColorMode.LIGHT: "#5040c0"
+            ColorRole.SYNTAX_02: {
+                ColorMode.DARK: "#f0f0f0",
+                ColorMode.LIGHT: "#202020"
             },
-            ColorRole.SYNTAX_HTML_ATTRIBUTE: {
-                ColorMode.DARK: "#90e0e8",
-                ColorMode.LIGHT: "#0080a0"
+            ColorRole.SYNTAX_03: {
+                ColorMode.DARK: "#68b068",
+                ColorMode.LIGHT: "#407040"
             },
-            ColorRole.SYNTAX_HTML_TAG: {
-                ColorMode.DARK: "#ffc0eb",
+            ColorRole.SYNTAX_04: {
+                ColorMode.DARK: "#ffa0eb",
                 ColorMode.LIGHT: "#c000a0"
             },
-            ColorRole.SYNTAX_IDENTIFIER: {
-                ColorMode.DARK: "#80b0f0",
-                ColorMode.LIGHT: "#0060c0"
-            },
-            ColorRole.SYNTAX_INLINE_CODE: {
-                ColorMode.DARK: "#f08080",
-                ColorMode.LIGHT: "#c03030"
-            },
-            ColorRole.SYNTAX_KEYWORD: {
-                ColorMode.DARK: "#ffc0eb",
-                ColorMode.LIGHT: "#c080a0"
-            },
-            ColorRole.SYNTAX_LANGUAGE: {
-                ColorMode.DARK: "#f0e060",
-                ColorMode.LIGHT: "#a09040"
-            },
-            ColorRole.SYNTAX_LIST_MARKER: {
-                ColorMode.DARK: "#90e0e8",
-                ColorMode.LIGHT: "#0080a0"
-            },
-            ColorRole.SYNTAX_NUMBER: {
-                ColorMode.DARK: "#88d048",
-                ColorMode.LIGHT: "#508020"
-            },
-            ColorRole.SYNTAX_OPERATOR: {
-                ColorMode.DARK: "#c0c0c0",
-                ColorMode.LIGHT: "#404040"
-            },
-            ColorRole.SYNTAX_PREPROCESSOR: {
+            ColorRole.SYNTAX_05: {
                 ColorMode.DARK: "#808080",
                 ColorMode.LIGHT: "#606060"
             },
-            ColorRole.SYNTAX_REGEXP: {
+            ColorRole.SYNTAX_06: {
+                ColorMode.DARK: "#90e0e8",
+                ColorMode.LIGHT: "#0080a0"
+            },
+            ColorRole.SYNTAX_07: {
+                ColorMode.DARK: "#e0e080",
+                ColorMode.LIGHT: "#806000"
+            },
+            ColorRole.SYNTAX_08: {
+                ColorMode.DARK: "#b090f0",
+                ColorMode.LIGHT: "#5040c0"
+            },
+            ColorRole.SYNTAX_09: {
+                ColorMode.DARK: "#90e0e8",
+                ColorMode.LIGHT: "#0080a0"
+            },
+            ColorRole.SYNTAX_10: {
+                ColorMode.DARK: "#d070d0",
+                ColorMode.LIGHT: "#a000a0"
+            },
+            ColorRole.SYNTAX_11: {
+                ColorMode.DARK: "#80b0f0",
+                ColorMode.LIGHT: "#0060c0"
+            },
+            ColorRole.SYNTAX_12: {
+                ColorMode.DARK: "#f08080",
+                ColorMode.LIGHT: "#c03030"
+            },
+            ColorRole.SYNTAX_13: {
+                ColorMode.DARK: "#ffc0eb",
+                ColorMode.LIGHT: "#c080a0"
+            },
+            ColorRole.SYNTAX_14: {
+                ColorMode.DARK: "#f0e060",
+                ColorMode.LIGHT: "#a09040"
+            },
+            ColorRole.SYNTAX_15: {
+                ColorMode.DARK: "#70e0e8",
+                ColorMode.LIGHT: "#2090a0"
+            },
+            ColorRole.SYNTAX_16: {
+                ColorMode.DARK: "#88d048",
+                ColorMode.LIGHT: "#508020"
+            },
+            ColorRole.SYNTAX_17: {
+                ColorMode.DARK: "#c0c0c0",
+                ColorMode.LIGHT: "#404040"
+            },
+            ColorRole.SYNTAX_18: {
+                ColorMode.DARK: "#80b080",
+                ColorMode.LIGHT: "#609060"
+            },
+            ColorRole.SYNTAX_19: {
                 ColorMode.DARK: "#c87050",
                 ColorMode.LIGHT: "#a04020"
             },
-            ColorRole.SYNTAX_STRING: {
+            ColorRole.SYNTAX_20: {
                 ColorMode.DARK: "#c05040",
                 ColorMode.LIGHT: "#803828"
              },
-            ColorRole.SYNTAX_TEXT: {
-                ColorMode.DARK: "#c8c8c8",
-                ColorMode.LIGHT: "#484848"
-            },
-            ColorRole.SYNTAX_TYPE: {
+            ColorRole.SYNTAX_21: {
                 ColorMode.DARK: "#30c090",
                 ColorMode.LIGHT: "#24906c"
             },
@@ -455,75 +451,75 @@ class StyleManager(QObject):
     def _initialize_highlights(self) -> None:
         # Mapping from token type to colour
         colour_mapping = {
-            TokenType.ADDRESS: ColorRole.SYNTAX_ADDRESS,
-            TokenType.ANNOTATION: ColorRole.SYNTAX_HEADING,
-            TokenType.ARGUMENT: ColorRole.SYNTAX_IDENTIFIER,
-            TokenType.ATTRIBUTE: ColorRole.SYNTAX_HEADING,
-            TokenType.BACKTICK: ColorRole.SYNTAX_INLINE_CODE,
-            TokenType.BOOLEAN: ColorRole.SYNTAX_NUMBER,
-            TokenType.BOLD: ColorRole.SYNTAX_TYPE,
-            TokenType.BOLD_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.BOLD_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.BLOCKQUOTE: ColorRole.SYNTAX_KEYWORD,
-            TokenType.CHARACTER: ColorRole.SYNTAX_STRING,
-            TokenType.CODE: ColorRole. SYNTAX_CODE,
-            TokenType.COMMAND: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.COMMENT: ColorRole.SYNTAX_COMMENT,
-            TokenType.CSS_AT_RULE: ColorRole.SYNTAX_CSS_AT_RULE,
-            TokenType.DIMENSION: ColorRole.SYNTAX_NUMBER,
-            TokenType.DOC_COMMENT: ColorRole.SYNTAX_COMMENT,
-            TokenType.DOCTYPE: ColorRole.SYNTAX_DOCTYPE,
-            TokenType.DIRECTIVE: ColorRole.SYNTAX_PREPROCESSOR,
-            TokenType.ELEMENT: ColorRole.SYNTAX_ELEMENT,
+            TokenType.ADDRESS: ColorRole.SYNTAX_01,
+            TokenType.ANNOTATION: ColorRole.SYNTAX_08,
+            TokenType.ARGUMENT: ColorRole.SYNTAX_11,
+            TokenType.ATTRIBUTE: ColorRole.SYNTAX_08,
+            TokenType.BACKTICK: ColorRole.SYNTAX_12,
+            TokenType.BOOLEAN: ColorRole.SYNTAX_16,
+            TokenType.BOLD: ColorRole.SYNTAX_21,
+            TokenType.BOLD_END: ColorRole.SYNTAX_07,
+            TokenType.BOLD_START: ColorRole.SYNTAX_07,
+            TokenType.BLOCKQUOTE: ColorRole.SYNTAX_13,
+            TokenType.CHARACTER: ColorRole.SYNTAX_20,
+            TokenType.CODE: ColorRole. SYNTAX_02,
+            TokenType.COMMAND: ColorRole.SYNTAX_07,
+            TokenType.COMMENT: ColorRole.SYNTAX_03,
+            TokenType.CSS_AT_RULE: ColorRole.SYNTAX_04,
+            TokenType.DIMENSION: ColorRole.SYNTAX_16,
+            TokenType.DOC_COMMENT: ColorRole.SYNTAX_03,
+            TokenType.DOCTYPE: ColorRole.SYNTAX_05,
+            TokenType.DIRECTIVE: ColorRole.SYNTAX_18,
+            TokenType.ELEMENT: ColorRole.SYNTAX_06,
             TokenType.ERROR: ColorRole.SYNTAX_ERROR,
-            TokenType.FENCE: ColorRole.SYNTAX_LANGUAGE,
-            TokenType.FENCE_END: ColorRole.SYNTAX_LANGUAGE,
-            TokenType.FENCE_START: ColorRole.SYNTAX_LANGUAGE,
-            TokenType.FUNCTION_OR_METHOD: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.GENERIC_END: ColorRole.SYNTAX_OPERATOR,
-            TokenType.GENERIC_START: ColorRole.SYNTAX_OPERATOR,
-            TokenType.GENERIC_TYPE: ColorRole.SYNTAX_TYPE,
-            TokenType.HASH: ColorRole.SYNTAX_IDENTIFIER,
-            TokenType.HEADING: ColorRole.SYNTAX_HEADING,
-            TokenType.HEX: ColorRole.SYNTAX_NUMBER,
-            TokenType.HORIZONTAL_RULE: ColorRole.SYNTAX_TYPE,
-            TokenType.HTML_ATTRIBUTE: ColorRole.SYNTAX_HTML_ATTRIBUTE,
-            TokenType.HTML_TAG: ColorRole.SYNTAX_HTML_TAG,
-            TokenType.IDENTIFIER: ColorRole.SYNTAX_IDENTIFIER,
-            TokenType.IMAGE_ALT_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.IMAGE_ALT_TEXT: ColorRole.SYNTAX_NUMBER,
-            TokenType.IMAGE_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.IMAGE_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.IMAGE_URL: ColorRole.SYNTAX_STRING,
-            TokenType.INLINE_CODE: ColorRole.SYNTAX_INLINE_CODE,
-            TokenType.INLINE_CODE_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.INLINE_CODE_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.ITALIC: ColorRole.SYNTAX_HTML_ATTRIBUTE,
-            TokenType.ITALIC_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.ITALIC_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.KEYWORD: ColorRole.SYNTAX_KEYWORD,
-            TokenType.LANGUAGE: ColorRole.SYNTAX_LANGUAGE,
-            TokenType.LIFETIME: ColorRole.SYNTAX_OPERATOR,
-            TokenType.LINK_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.LINK_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.LINK_TEXT: ColorRole.SYNTAX_NUMBER,
-            TokenType.LINK_TEXT_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.LINK_URL: ColorRole.SYNTAX_STRING,
-            TokenType.LIST_MARKER: ColorRole.SYNTAX_LIST_MARKER,
-            TokenType.LPAREN: ColorRole.SYNTAX_OPERATOR,
-            TokenType.NUMBER: ColorRole.SYNTAX_NUMBER,
-            TokenType.OPERATOR: ColorRole.SYNTAX_OPERATOR,
-            TokenType.OPTION: ColorRole.SYNTAX_HTML_TAG,
-            TokenType.OPTION_VALUE: ColorRole.SYNTAX_HEADING,
-            TokenType.PREPROCESSOR: ColorRole.SYNTAX_PREPROCESSOR,
-            TokenType.REGEXP: ColorRole.SYNTAX_REGEXP,
-            TokenType.RPAREN: ColorRole.SYNTAX_OPERATOR,
-            TokenType.RUNE: ColorRole.SYNTAX_STRING,
-            TokenType.STRING: ColorRole.SYNTAX_STRING,
-            TokenType.TABLE: ColorRole.SYNTAX_COMMENT,
-            TokenType.TEXT: ColorRole.SYNTAX_TEXT,
-            TokenType.TYPE: ColorRole.SYNTAX_TYPE,
-            TokenType.XML_DOC: ColorRole.SYNTAX_COMMENT
+            TokenType.FENCE: ColorRole.SYNTAX_14,
+            TokenType.FENCE_END: ColorRole.SYNTAX_14,
+            TokenType.FENCE_START: ColorRole.SYNTAX_14,
+            TokenType.FUNCTION_OR_METHOD: ColorRole.SYNTAX_07,
+            TokenType.GENERIC_END: ColorRole.SYNTAX_17,
+            TokenType.GENERIC_START: ColorRole.SYNTAX_17,
+            TokenType.GENERIC_TYPE: ColorRole.SYNTAX_21,
+            TokenType.HASH: ColorRole.SYNTAX_11,
+            TokenType.HEADING: ColorRole.SYNTAX_08,
+            TokenType.HEX: ColorRole.SYNTAX_16,
+            TokenType.HORIZONTAL_RULE: ColorRole.SYNTAX_21,
+            TokenType.HTML_ATTRIBUTE: ColorRole.SYNTAX_09,
+            TokenType.HTML_TAG: ColorRole.SYNTAX_10,
+            TokenType.IDENTIFIER: ColorRole.SYNTAX_11,
+            TokenType.IMAGE_ALT_END: ColorRole.SYNTAX_07,
+            TokenType.IMAGE_ALT_TEXT: ColorRole.SYNTAX_16,
+            TokenType.IMAGE_END: ColorRole.SYNTAX_07,
+            TokenType.IMAGE_START: ColorRole.SYNTAX_07,
+            TokenType.IMAGE_URL: ColorRole.SYNTAX_20,
+            TokenType.INLINE_CODE: ColorRole.SYNTAX_12,
+            TokenType.INLINE_CODE_END: ColorRole.SYNTAX_07,
+            TokenType.INLINE_CODE_START: ColorRole.SYNTAX_07,
+            TokenType.ITALIC: ColorRole.SYNTAX_09,
+            TokenType.ITALIC_END: ColorRole.SYNTAX_07,
+            TokenType.ITALIC_START: ColorRole.SYNTAX_07,
+            TokenType.KEYWORD: ColorRole.SYNTAX_13,
+            TokenType.LANGUAGE: ColorRole.SYNTAX_14,
+            TokenType.LIFETIME: ColorRole.SYNTAX_17,
+            TokenType.LINK_END: ColorRole.SYNTAX_07,
+            TokenType.LINK_START: ColorRole.SYNTAX_07,
+            TokenType.LINK_TEXT: ColorRole.SYNTAX_16,
+            TokenType.LINK_TEXT_END: ColorRole.SYNTAX_07,
+            TokenType.LINK_URL: ColorRole.SYNTAX_20,
+            TokenType.LIST_MARKER: ColorRole.SYNTAX_15,
+            TokenType.LPAREN: ColorRole.SYNTAX_17,
+            TokenType.NUMBER: ColorRole.SYNTAX_16,
+            TokenType.OPERATOR: ColorRole.SYNTAX_17,
+            TokenType.OPTION: ColorRole.SYNTAX_10,
+            TokenType.OPTION_VALUE: ColorRole.SYNTAX_08,
+            TokenType.PREPROCESSOR: ColorRole.SYNTAX_18,
+            TokenType.REGEXP: ColorRole.SYNTAX_19,
+            TokenType.RPAREN: ColorRole.SYNTAX_17,
+            TokenType.RUNE: ColorRole.SYNTAX_20,
+            TokenType.STRING: ColorRole.SYNTAX_20,
+            TokenType.TABLE: ColorRole.SYNTAX_03,
+            TokenType.TEXT: ColorRole.SYNTAX_17,
+            TokenType.TYPE: ColorRole.SYNTAX_21,
+            TokenType.XML_DOC: ColorRole.SYNTAX_03
         }
 
         for token_type, role in colour_mapping.items():
@@ -543,37 +539,37 @@ class StyleManager(QObject):
     def _initialize_proportional_highlights(self) -> None:
         # Mapping from token type to colour
         colour_mapping = {
-            TokenType.BOLD: ColorRole.SYNTAX_TYPE,
-            TokenType.BOLD_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.BOLD_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.BLOCKQUOTE: ColorRole.SYNTAX_KEYWORD,
-            TokenType.FENCE: ColorRole.SYNTAX_LANGUAGE,
-            TokenType.HEADING: ColorRole.SYNTAX_HEADING,
-            TokenType.IMAGE_ALT_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.IMAGE_ALT_TEXT: ColorRole.SYNTAX_NUMBER,
-            TokenType.IMAGE_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.IMAGE_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.IMAGE_URL: ColorRole.SYNTAX_STRING,
-            TokenType.INLINE_CODE_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.INLINE_CODE_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.ITALIC: ColorRole.SYNTAX_HTML_ATTRIBUTE,
-            TokenType.ITALIC_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.ITALIC_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.LINK_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.LINK_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.LINK_TEXT: ColorRole.SYNTAX_NUMBER,
-            TokenType.LINK_TEXT_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
-            TokenType.LINK_URL: ColorRole.SYNTAX_STRING,
-            TokenType.LIST_MARKER: ColorRole.SYNTAX_LIST_MARKER,
-            TokenType.TABLE: ColorRole.SYNTAX_COMMENT,
-            TokenType.TEXT: ColorRole.SYNTAX_TEXT
+            TokenType.BOLD: ColorRole.SYNTAX_21,
+            TokenType.BOLD_END: ColorRole.SYNTAX_07,
+            TokenType.BOLD_START: ColorRole.SYNTAX_07,
+            TokenType.BLOCKQUOTE: ColorRole.SYNTAX_13,
+            TokenType.FENCE: ColorRole.SYNTAX_14,
+            TokenType.HEADING: ColorRole.SYNTAX_08,
+            TokenType.IMAGE_ALT_END: ColorRole.SYNTAX_07,
+            TokenType.IMAGE_ALT_TEXT: ColorRole.SYNTAX_16,
+            TokenType.IMAGE_END: ColorRole.SYNTAX_07,
+            TokenType.IMAGE_START: ColorRole.SYNTAX_07,
+            TokenType.IMAGE_URL: ColorRole.SYNTAX_20,
+            TokenType.INLINE_CODE_END: ColorRole.SYNTAX_07,
+            TokenType.INLINE_CODE_START: ColorRole.SYNTAX_07,
+            TokenType.ITALIC: ColorRole.SYNTAX_09,
+            TokenType.ITALIC_END: ColorRole.SYNTAX_07,
+            TokenType.ITALIC_START: ColorRole.SYNTAX_07,
+            TokenType.LINK_END: ColorRole.SYNTAX_07,
+            TokenType.LINK_START: ColorRole.SYNTAX_07,
+            TokenType.LINK_TEXT: ColorRole.SYNTAX_16,
+            TokenType.LINK_TEXT_END: ColorRole.SYNTAX_07,
+            TokenType.LINK_URL: ColorRole.SYNTAX_20,
+            TokenType.LIST_MARKER: ColorRole.SYNTAX_15,
+            TokenType.TABLE: ColorRole.SYNTAX_03,
+            TokenType.TEXT: ColorRole.SYNTAX_17
         }
 
         for token_type, role in colour_mapping.items():
             text_format = self._create_proportional_highlight(role)
             self._proportional_highlights[token_type] = text_format
 
-        self._proportional_highlights[TokenType.INLINE_CODE] = self._create_highlight(ColorRole.SYNTAX_INLINE_CODE)
+        self._proportional_highlights[TokenType.INLINE_CODE] = self._create_highlight(ColorRole.SYNTAX_12)
         self._error_proportional_highlight = self._create_proportional_highlight(ColorRole.SYNTAX_ERROR)
 
     def _create_proportional_highlight(self, role: ColorRole) -> QTextCharFormat:

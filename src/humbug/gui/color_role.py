@@ -87,29 +87,28 @@ class ColorRole(Enum):
     LINE_NUMBER = auto()                # Line number
 
     # Syntax highlighting
-    SYNTAX_ADDRESS = auto()
-    SYNTAX_CODE = auto()
-    SYNTAX_COMMENT = auto()
-    SYNTAX_CSS_AT_RULE = auto()
-    SYNTAX_DOCTYPE = auto()
-    SYNTAX_ELEMENT = auto()
-    SYNTAX_ERROR = auto()
-    SYNTAX_FUNCTION_OR_METHOD = auto()
-    SYNTAX_HEADING = auto()
-    SYNTAX_HTML_ATTRIBUTE = auto()
-    SYNTAX_HTML_TAG = auto()
-    SYNTAX_IDENTIFIER = auto()
-    SYNTAX_INLINE_CODE = auto()
-    SYNTAX_KEYWORD = auto()
-    SYNTAX_LANGUAGE = auto()
-    SYNTAX_LIST_MARKER = auto()
-    SYNTAX_NUMBER = auto()
-    SYNTAX_OPERATOR = auto()
-    SYNTAX_PREPROCESSOR = auto()
-    SYNTAX_REGEXP = auto()
-    SYNTAX_STRING = auto()
-    SYNTAX_TEXT = auto()
-    SYNTAX_TYPE = auto()
+    SYNTAX_ERROR = auto()               # Red
+    SYNTAX_01 = auto()                  # Cyan
+    SYNTAX_02 = auto()                  # White
+    SYNTAX_03 = auto()                  # Light green
+    SYNTAX_04 = auto()                  # Light pink
+    SYNTAX_05 = auto()                  # Mid grey
+    SYNTAX_06 = auto()                  # Light blue
+    SYNTAX_07 = auto()                  # Light yellow
+    SYNTAX_08 = auto()                  # Lilac
+    SYNTAX_09 = auto()                  # Light cyan
+    SYNTAX_10 = auto()                  # Mid purple
+    SYNTAX_11 = auto()                  # Mid blue
+    SYNTAX_12 = auto()                  # Light red
+    SYNTAX_13 = auto()                  # Light purple
+    SYNTAX_14 = auto()                  # Gold
+    SYNTAX_15 = auto()                  # Teal
+    SYNTAX_16 = auto()                  # Lime green
+    SYNTAX_17 = auto()                  # Light grey
+    SYNTAX_18 = auto()                  # Mid grey/green
+    SYNTAX_19 = auto()                  # Mid orange
+    SYNTAX_20 = auto()                  # Dark orange
+    SYNTAX_21 = auto()                  # Green
 
     # Terminal basic colors
     TERM_BLACK = auto()
