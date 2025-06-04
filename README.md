@@ -1,4 +1,4 @@
-# Humbug v0.14
+# Humbug v0.15
 
 Humbug is an extensible open-source tool designed to help you design, build and maintain software using AI.
 
@@ -80,17 +80,9 @@ explore interactively, update the context and iterate.  You can go further than 
 have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
 can be used to refine the Metaphor context.
 
-## What's new in v0.14
+## What's new in v0.15
 
-- When you select a tab, or open a new one, that has a representation in the mindspace tree view then the matching
-  entry in the tree will be expanded, selected, and scrolled into view.
-- Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as
-  ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting
-  to prevent blocks being closed too soon.
-- Removed the Gemini 2.0 Pro model, but added Gemini 2.5 Flash preview.  Updated models to the latest versions.
-- The markdown syntax highlighter has been extended to cover tables and inline attributes.
-- The wiki pages now provide metadata about file and directory size, modification timestamps, and file permissions.
-- Tabs are now tracked on an MRU basis so when the current tab is closed, the most recently active tab becomes active.
+TBD
 
 ## Features
 
