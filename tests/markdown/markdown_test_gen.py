@@ -13,7 +13,7 @@ from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
 import humbug.syntax.parser_imports
 # pylint: enable=unused-import
 
-from tests.markdown.ast_serializer import save_ast_to_json
+from tests.markdown.markdown_ast_serializer import save_ast_to_json
 
 
 def main():
