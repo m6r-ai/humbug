@@ -84,8 +84,7 @@ class MetaphorLexer:
 
         # Get or create parser for this language
         parser = ParserRegistry.create_parser(language)
-        if parser is None:
-            return False
+        assert parser is not None, f"No parser found for language: {language}"
 
         # If language changed, reset state
         if language != self._embedded_language:
