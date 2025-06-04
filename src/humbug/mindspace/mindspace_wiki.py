@@ -3,6 +3,8 @@
 from enum import Enum, auto
 import logging
 import os
+import stat
+from datetime import datetime
 from typing import List, Tuple, cast
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -60,6 +62,131 @@ class MindspaceWiki:
         except Exception as e:
             raise MindspaceWikiIOError(f"Failed to read wiki content: {str(e)}") from e
 
+    def _get_file_size_bytes(self, file_path: str) -> int:
+        """
+        Get file size in bytes.
+
+        Args:
+            file_path: Path to the file or directory
+
+        Returns:
+            File size in bytes
+
+        Raises:
+            MindspaceWikiIOError: If file size cannot be accessed
+        """
+        try:
+            file_stat = os.stat(file_path)
+            return file_stat.st_size
+
+        except OSError as e:
+            self._logger.warning("Failed to get size for %s: %s", file_path, str(e))
+            raise MindspaceWikiIOError(f"Failed to get size for {file_path}: {str(e)}") from e
+
+    def _get_file_permissions(self, file_path: str) -> str:
+        """
+        Get file permissions in Unix-style format.
+
+        Args:
+            file_path: Path to the file or directory
+
+        Returns:
+            Formatted permissions string (e.g., 'rwxr-xr-x')
+
+        Raises:
+            MindspaceWikiIOError: If file permissions cannot be accessed
+        """
+        try:
+            file_stat = os.stat(file_path)
+            return self._format_permissions(file_stat.st_mode)
+
+        except OSError as e:
+            self._logger.warning("Failed to get permissions for %s: %s", file_path, str(e))
+            raise MindspaceWikiIOError(f"Failed to get permissions for {file_path}: {str(e)}") from e
+
+    def _get_file_modification_time(self, file_path: str) -> str:
+        """
+        Get formatted file modification time.
+
+        Args:
+            file_path: Path to the file or directory
+
+        Returns:
+            Formatted modification time string
+
+        Raises:
+            MindspaceWikiIOError: If file modification time cannot be accessed
+        """
+        try:
+            file_stat = os.stat(file_path)
+            mod_time = datetime.fromtimestamp(file_stat.st_mtime)
+            return mod_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        except OSError as e:
+            self._logger.warning("Failed to get modification time for %s: %s", file_path, str(e))
+            raise MindspaceWikiIOError(f"Failed to get modification time for {file_path}: {str(e)}") from e
+
+    def _format_permissions(self, mode: int) -> str:
+        """
+        Format file permissions in Unix-style format.
+
+        Args:
+            mode: File mode from os.stat()
+
+        Returns:
+            Formatted permissions string (e.g., 'rwxr-xr-x')
+        """
+        permissions = ""
+
+        # Owner permissions
+        permissions += 'r' if mode & stat.S_IRUSR else '-'
+        permissions += 'w' if mode & stat.S_IWUSR else '-'
+        permissions += 'x' if mode & stat.S_IXUSR else '-'
+
+        # Group permissions
+        permissions += 'r' if mode & stat.S_IRGRP else '-'
+        permissions += 'w' if mode & stat.S_IWGRP else '-'
+        permissions += 'x' if mode & stat.S_IXGRP else '-'
+
+        # Other permissions
+        permissions += 'r' if mode & stat.S_IROTH else '-'
+        permissions += 'w' if mode & stat.S_IWOTH else '-'
+        permissions += 'x' if mode & stat.S_IXOTH else '-'
+
+        return permissions
+
+    def _calculate_max_size_width(self, directory_path: str, entries: List[str]) -> int:
+        """
+        Calculate the maximum width needed for displaying file sizes in bytes.
+
+        Args:
+            directory_path: Path to the directory
+            entries: List of entries in the directory
+
+        Returns:
+            Maximum width needed for size formatting
+        """
+        max_width = 0
+
+        # Include ".." entry
+        try:
+            parent_path = os.path.dirname(directory_path)
+            size = self._get_file_size_bytes(parent_path)
+            max_width = max(max_width, len(str(size)))
+        except MindspaceWikiIOError:
+            pass
+
+        # Check all entries in the directory
+        for entry in entries:
+            full_path = os.path.join(directory_path, entry)
+            try:
+                size = self._get_file_size_bytes(full_path)
+                max_width = max(max_width, len(str(size)))
+            except MindspaceWikiIOError:
+                pass
+
+        return max_width
+
     def _generate_directory_content(self, directory_path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
         """
         Generate wiki content for a directory.
@@ -83,9 +210,9 @@ class MindspaceWiki:
 
             # Start with a heading
             lines = [
-                f"# {dir_name}"
+                f"# {dir_name}",
                 "",
-                f"Path: `{rel_path}`"
+                f"**Path**: {rel_path}"
             ]
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
@@ -93,7 +220,6 @@ class MindspaceWiki:
             files = [".."]
 
             for entry in entries:
-                full_path = os.path.join(directory_path, entry)
                 files.append(entry)
 
             files.sort()
@@ -105,20 +231,47 @@ class MindspaceWiki:
                 ]
                 contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(md_lines)))
 
+                # Calculate maximum size width for proper alignment
+                max_size_width = self._calculate_max_size_width(directory_path, entries)
+
                 lines = []
-                lines.append(f"`{os.path.basename(directory_path)}{os.path.sep}`  ")
-                lines.append("`╷`  ")
 
                 for i in range(len(files) - 1):
                     f = files[i]
                     full_path = os.path.abspath(os.path.join(directory_path, f))
                     suffix = os.path.sep if os.path.isdir(full_path) else ""
-                    lines.append(f"`├── ` [`{f}{suffix}`]({full_path})  ")
+
+                    # Get metadata for the file/directory
+                    try:
+                        size = self._get_file_size_bytes(full_path)
+                        permissions = self._get_file_permissions(full_path)
+                        mod_time = self._get_file_modification_time(full_path)
+
+                        # Format with proper spacing alignment
+                        size_str = str(size).rjust(max_size_width)
+                        lines.append(f"`{permissions}  {size_str}  {mod_time}  `[`{f}{suffix}`]({full_path})  ")
+
+                    except MindspaceWikiIOError:
+                        # Fallback without metadata if we can't get it
+                        lines.append(f"[`{f}{suffix}`]({full_path})  ")
 
                 f = files[-1]
                 full_path = os.path.abspath(os.path.join(directory_path, f))
                 suffix = os.path.sep if os.path.isdir(full_path) else ""
-                lines.append(f"`└── ` [`{f}{suffix}`]({full_path})")
+
+                # Get metadata for the last file/directory
+                try:
+                    size = self._get_file_size_bytes(full_path)
+                    permissions = self._get_file_permissions(full_path)
+                    mod_time = self._get_file_modification_time(full_path)
+
+                    # Format with proper spacing alignment
+                    size_str = str(size).rjust(max_size_width)
+                    lines.append(f"`{permissions}  {size_str}  {mod_time}  `[`{f}{suffix}`]({full_path})")
+
+                except MindspaceWikiIOError:
+                    # Fallback without metadata if we can't get it
+                    lines.append(f"[`{f}{suffix}`]({full_path})")
 
                 contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
 
@@ -166,12 +319,29 @@ class MindspaceWiki:
 
             contents: List[Tuple[MindspaceWikiContentType, str]] = []
 
-            # Generate markdown
+            # Generate markdown with metadata
             lines = [
                 f"# {file_name}",
                 "",
-                f"Path: `{rel_path}`"
+                f"**Path**: {rel_path}  "
             ]
+
+            # Add file metadata on separate lines
+            try:
+                size = self._get_file_size_bytes(file_path)
+                permissions = self._get_file_permissions(file_path)
+                mod_time = self._get_file_modification_time(file_path)
+
+                lines.extend([
+                    f"**Size**: {size}  ",
+                    f"**Permissions**: {permissions}  ",
+                    f"**Modified**: {mod_time}"
+                ])
+
+            except MindspaceWikiIOError as e:
+                self._logger.warning("Could not retrieve metadata for %s: %s", file_path, str(e))
+                lines.append("Metadata: `<unavailable>`")
+
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
             file_type = self.get_file_type(file_path)
