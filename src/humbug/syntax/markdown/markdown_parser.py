@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import re
 from typing import List, cast
 
 from humbug.syntax.lexer import TokenType, Token
@@ -22,6 +23,9 @@ class MarkdownParserState(ParserState):
         in_list_item: Indicates if we're currently in a list item
         list_indent_stack: Stack of indentation levels for nested lists
         block_type: The type of block element we're in (heading, blockquote, list)
+        inline_formatting_stack: Stack tracking nested inline formatting
+        in_link: Indicates if we're currently in a link
+        in_image: Indicates if we're currently in an image
     """
     in_fence_block: bool = False
     fence_depth: int = 0
@@ -30,6 +34,9 @@ class MarkdownParserState(ParserState):
     in_list_item: bool = False
     list_indent_stack: List[int] | None = None
     block_type: TokenType | None = None
+    inline_formatting_stack: List[str] = field(default_factory=list)
+    in_link: bool = False
+    in_image: bool = False
 
     def __post_init__(self) -> None:
         """Initialize mutable default attributes."""
@@ -104,6 +111,222 @@ class MarkdownParser(Parser):
                     start=token.start
                 )
 
+    def _find_closing_paren(self, text: str, start_pos: int) -> int:
+        """
+        Find matching closing parenthesis, handling nested parentheses.
+
+        Args:
+            text: The text to search in
+            start_pos: The position after the opening parenthesis
+
+        Returns:
+            The position of the closing parenthesis, or -1 if not found
+        """
+        paren_count = 1
+        pos = start_pos
+
+        while pos < len(text):
+            if text[pos] == '(':
+                paren_count += 1
+
+            elif text[pos] == ')':
+                paren_count -= 1
+                if paren_count == 0:
+                    return pos
+            pos += 1
+
+        return -1
+
+    def _parse_inline_formatting_in_text(self, text_token: Token, block_type: TokenType | None) -> List[Token]:
+        """
+        Parse a text token for inline formatting and return a list of tokens.
+
+        Args:
+            text_token: The original text token to parse
+            block_type: The block-level type to apply to non-formatted text
+
+        Returns:
+            List of tokens with inline formatting broken out
+        """
+        text = text_token.value
+        tokens: List[Token] = []
+        i = 0
+        current_text_start = 0
+        base_position = text_token.start
+
+        def add_text_token(start_idx: int, end_idx: int) -> None:
+            """Add a text token with the appropriate block type."""
+            if start_idx < end_idx:
+                content = text[start_idx:end_idx]
+                token_type = block_type if block_type else TokenType.TEXT
+                tokens.append(Token(
+                    type=token_type,
+                    value=content,
+                    start=base_position + start_idx
+                ))
+
+        while i < len(text):
+            # Check for image (highest precedence due to '!' prefix)
+            if text[i] == '!' and i + 1 < len(text) and text[i + 1] == '[':
+                # Add any accumulated text
+                add_text_token(current_text_start, i)
+
+                # Parse image: ![alt](url)
+                alt_end = text.find('](', i + 2)
+                if alt_end != -1:
+                    url_end = self._find_closing_paren(text, alt_end + 2)
+                    if url_end != -1:
+                        # Image start
+                        tokens.append(Token(TokenType.IMAGE_START, '![', base_position + i))
+
+                        # Alt text
+                        alt_text = text[i + 2:alt_end]
+                        if alt_text:
+                            alt_tokens = self._parse_inline_formatting_in_text(
+                                Token(TokenType.IMAGE_ALT_TEXT, alt_text, base_position + i + 2),
+                                TokenType.IMAGE_ALT_TEXT
+                            )
+                            tokens.extend(alt_tokens)
+
+                        # Alt end / URL start
+                        tokens.append(Token(TokenType.IMAGE_ALT_END, '](', base_position + alt_end))
+
+                        # URL
+                        url_text = text[alt_end + 2:url_end]
+                        tokens.append(Token(TokenType.IMAGE_URL, url_text, base_position + alt_end + 2))
+
+                        # Image end
+                        tokens.append(Token(TokenType.IMAGE_END, ')', base_position + url_end))
+
+                        i = url_end + 1
+                        current_text_start = i
+                        continue
+
+            # Check for link
+            elif text[i] == '[':
+                # Add any accumulated text
+                add_text_token(current_text_start, i)
+
+                # Parse link: [text](url)
+                text_end = text.find('](', i + 1)
+                if text_end != -1:
+                    url_end = self._find_closing_paren(text, text_end + 2)
+                    if url_end != -1:
+                        # Link start
+                        tokens.append(Token(TokenType.LINK_START, '[', base_position + i))
+
+                        # Link text (may contain nested formatting)
+                        link_text = text[i + 1:text_end]
+                        if link_text:
+                            link_tokens = self._parse_inline_formatting_in_text(
+                                Token(TokenType.LINK_TEXT, link_text, base_position + i + 1),
+                                TokenType.LINK_TEXT
+                            )
+                            tokens.extend(link_tokens)
+
+                        # Link text end / URL start
+                        tokens.append(Token(TokenType.LINK_TEXT_END, '](', base_position + text_end))
+
+                        # URL
+                        url_text = text[text_end + 2:url_end]
+                        tokens.append(Token(TokenType.LINK_URL, url_text, base_position + text_end + 2))
+
+                        # Link end
+                        tokens.append(Token(TokenType.LINK_END, ')', base_position + url_end))
+
+                        i = url_end + 1
+                        current_text_start = i
+                        continue
+
+            # Check for inline code
+            elif text[i] == '`':
+                # Add any accumulated text
+                add_text_token(current_text_start, i)
+
+                # Find closing backtick
+                code_end = text.find('`', i + 1)
+                if code_end != -1:
+                    # Code start
+                    tokens.append(Token(TokenType.INLINE_CODE_START, '`', base_position + i))
+
+                    # Code content
+                    code_content = text[i + 1:code_end]
+                    if code_content:
+                        tokens.append(Token(TokenType.INLINE_CODE, code_content, base_position + i + 1))
+
+                    # Code end
+                    tokens.append(Token(TokenType.INLINE_CODE_END, '`', base_position + code_end))
+
+                    i = code_end + 1
+                    current_text_start = i
+                    continue
+
+            # Check for bold (**text** or __text__)
+            elif (i + 1 < len(text) and
+                  ((text[i:i+2] == '**') or (text[i:i+2] == '__'))):
+                # Add any accumulated text
+                add_text_token(current_text_start, i)
+
+                marker = text[i:i+2]
+                bold_end = text.find(marker, i + 2)
+                if bold_end != -1:
+                    # Bold start
+                    tokens.append(Token(TokenType.BOLD_START, marker, base_position + i))
+
+                    # Bold content (may contain nested formatting)
+                    bold_content = text[i + 2:bold_end]
+                    if bold_content:
+                        bold_tokens = self._parse_inline_formatting_in_text(
+                            Token(TokenType.BOLD, bold_content, base_position + i + 2),
+                            TokenType.BOLD
+                        )
+                        tokens.extend(bold_tokens)
+
+                    # Bold end
+                    tokens.append(Token(TokenType.BOLD_END, marker, base_position + bold_end))
+
+                    i = bold_end + 2
+                    current_text_start = i
+                    continue
+
+            # Check for italic (*text* or _text_)
+            elif (text[i] in ('*', '_') and
+                  (i == 0 or text[i-1] != text[i])):  # Avoid mistaking ** as *
+                # Add any accumulated text
+                add_text_token(current_text_start, i)
+
+                marker = text[i]
+                italic_end = text.find(marker, i + 1)
+                if (italic_end != -1 and
+                    (italic_end + 1 >= len(text) or text[italic_end + 1] != marker)):  # Avoid **
+
+                    # Italic start
+                    tokens.append(Token(TokenType.ITALIC_START, marker, base_position + i))
+
+                    # Italic content (may contain nested formatting)
+                    italic_content = text[i + 1:italic_end]
+                    if italic_content:
+                        italic_tokens = self._parse_inline_formatting_in_text(
+                            Token(TokenType.ITALIC, italic_content, base_position + i + 1),
+                            TokenType.ITALIC
+                        )
+                        tokens.extend(italic_tokens)
+
+                    # Italic end
+                    tokens.append(Token(TokenType.ITALIC_END, marker, base_position + italic_end))
+
+                    i = italic_end + 1
+                    current_text_start = i
+                    continue
+
+            # No formatting found, move to next character
+            i += 1
+
+        # Add any remaining text
+        add_text_token(current_text_start, len(text))
+
+        return tokens
+
     def parse(self, prev_parser_state: ParserState | None, input_str: str) -> MarkdownParserState:
         """
         Parse conversation content including embedded code blocks.
@@ -147,23 +370,13 @@ class MarkdownParser(Parser):
             lexer = MarkdownLexer()
             lexer.lex(None, input_str)
 
-            seen_text = False
-
             # Collect all tokens from the lexer
+            print("----------------------------")
             while True:
                 token = lexer.get_next_token()
+                print(f"Processing token: {token}")
                 if not token:
                     break
-
-                # If we've already processed something interesting on this line, run to the end of it
-                if seen_text:
-                    if block_type is not None:
-                        token.type = block_type
-
-                    self._tokens.append(token)
-                    continue
-
-                seen_text = True
 
                 if token.type == TokenType.FENCE:
                     if in_fence_block:
@@ -213,8 +426,10 @@ class MarkdownParser(Parser):
 
                 if token.type == TokenType.LIST_MARKER:
                     # We've found a list marker - determine its nesting level
-                    next_token = lexer.peek_next_token()
-                    current_indent = 0 if not next_token else next_token.start
+                    matches = list(re.finditer(r'\S+', token.value))
+                    assert len(matches) >= 2, "List marker must have at least two elements (marker and text)"
+                    second_word_match = matches[1]
+                    current_indent = second_word_match.start() + token.start
 
                     # Handle nesting level logic
                     if not in_list_item:
@@ -273,6 +488,21 @@ class MarkdownParser(Parser):
                     in_list_item = False
 
                 self._tokens.append(token)
+
+            # After collecting all tokens from lexer, process inline formatting
+            if not parse_embedded:
+                processed_tokens = []
+                for token in self._tokens:
+                    if token.type  in (TokenType.TEXT, TokenType.HEADING, TokenType.BLOCKQUOTE, TokenType.LIST_MARKER):
+                        # Parse inline formatting in this token
+                        inline_tokens = self._parse_inline_formatting_in_text(token, token.type)
+                        print(f"Processing inline formatting in token: {token.value} -> {inline_tokens}")
+                        processed_tokens.extend(inline_tokens)
+
+                    else:
+                        processed_tokens.append(token)
+
+                self._tokens = processed_tokens
 
         # Create and return parser state
         parser_state = MarkdownParserState()

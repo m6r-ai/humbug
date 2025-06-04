@@ -28,7 +28,6 @@ class MarkdownLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
-        self._first_token = True
         self._inner_lex()
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
@@ -44,29 +43,25 @@ class MarkdownLexer(Lexer):
         if self._is_whitespace(ch):
             return self._read_whitespace
 
-        # Check for block elements only if this is the first non-whitespace token on the line
-        # Note: Since newlines are stripped, we're only checking first_token flag
-        if self._first_token:
-            # First check for indentation
-            # Now check for block elements
-            if ch == '>':
-                return self._read_blockquote
+        # Check for block elements
+        if ch == '>':
+            return self._read_blockquote
 
-            if ch == '#':
-                return self._read_heading
+        if ch == '#':
+            return self._read_heading
 
-            if ch in ('*', '-', '+'):
-                # Check if this might be a list marker
-                if ((self._position + 1) < self._input_len and
-                    self._is_whitespace(self._input[self._position + 1])):
-                    return self._read_unordered_list
+        if ch in ('*', '-', '+'):
+            # Check if this might be a list marker
+            if ((self._position + 1) < self._input_len and
+                self._is_whitespace(self._input[self._position + 1])):
+                return self._read_unordered_list
 
-            if self._is_digit(ch):
-                # Check if this might be an ordered list marker
-                return self._read_ordered_list
+        if self._is_digit(ch):
+            # Check if this might be an ordered list marker
+            return self._read_ordered_list
 
-            # If we get here, it's not a block element, so mark that we've seen the first token
-            self._first_token = False
+        # If we get here, it's not a block element, so mark that we've seen the first token
+        self._first_token = False
 
         if ch == '`':
             return self._read_backtick
@@ -77,125 +72,81 @@ class MarkdownLexer(Lexer):
         """
         Read a blockquote token.
         """
-        start = self._position
-        self._position += 1  # Skip the > character
-
-        # Skip one whitespace after > if present
-        if self._position < self._input_len and self._is_whitespace(self._input[self._position]):
-            self._position += 1
-
         self._tokens.append(Token(
             type=TokenType.BLOCKQUOTE,
-            value=">",
-            start=start
+            value=self._input[self._position:],
+            start=self._position
         ))
+        self._position = self._input_len
 
     def _read_heading(self) -> None:
         """
         Read a heading token.
         """
-        start = self._position
-        level = 0
-
-        # Count # characters (up to 6)
-        while (self._position < self._input_len and
-               self._input[self._position] == '#' and
-               level < 6):
-            level += 1
-            self._position += 1
-
-        # A heading must be followed by a space to be valid
-        if self._position < self._input_len and self._is_whitespace(self._input[self._position]):
-            # Skip the whitespace
-            self._position += 1
-
-            self._tokens.append(Token(
-                type=TokenType.HEADING,
-                value="#" * level,
-                start=start
-            ))
-        else:
-            # Not a valid heading, treat as text
-            self._position = start
-            self._read_text()
+        self._tokens.append(Token(
+            type=TokenType.HEADING,
+            value=self._input[self._position:],
+            start=self._position
+        ))
+        self._position = self._input_len
 
     def _read_unordered_list(self) -> None:
         """
         Read an unordered list item token.
         """
-        start = self._position
-        marker = self._input[self._position]
-        self._position += 1  # Skip the marker character (* - +)
+        pos = self._position + 1
 
         # Skip the whitespace after the marker
-        if self._position < self._input_len and self._is_whitespace(self._input[self._position]):
-            self._position += 1
-
+        if pos < self._input_len and self._is_whitespace(self._input[pos]):
             self._tokens.append(Token(
                 type=TokenType.LIST_MARKER,
-                value=marker,
-                start=start
+                value=self._input[self._position:],
+                start=self._position
             ))
-        else:
-            # Not a valid list marker, treat as text
-            self._position = start
-            self._read_text()
+            self._position = self._input_len
+            return
+
+        # Not a valid list marker, treat as text
+        self._read_text()
 
     def _read_ordered_list(self) -> None:
         """
         Check if the current position contains an ordered list marker.
         If yes, read it; otherwise read as text.
         """
-        # Save the current position to backtrack if needed
-        start_pos = self._position
+        pos = self._position + 1
 
         # Read digits
-        while (self._position < self._input_len and
-               self._is_digit(self._input[self._position])):
-            self._position += 1
+        while (pos < self._input_len and self._is_digit(self._input[pos])):
+            pos += 1
 
         # Check for . or ) followed by whitespace
-        if (self._position < self._input_len and
-                self._input[self._position] in ('.', ')') and
-                (self._position + 1) < self._input_len and
-                self._is_whitespace(self._input[self._position + 1])):
+        if (pos < self._input_len and
+                self._input[pos] in ('.', ')') and
+                (pos + 1) < self._input_len and
+                self._is_whitespace(self._input[pos + 1])):
             # It's a valid ordered list marker
-            self._position += 1  # Move past . or )
-            marker_value = self._input[start_pos:self._position]
-
-            # Skip the whitespace after the marker
-            self._position += 1
-
             self._tokens.append(Token(
                 type=TokenType.LIST_MARKER,
-                value=marker_value,
-                start=start_pos
+                value=self._input[self._position:],
+                start=self._position
             ))
-        else:
-            # Not a valid ordered list marker, reset and read as text
-            self._position = start_pos
-            self._read_text()
+            self._position = self._input_len
+            return
+
+        # Not a valid ordered list marker, reset and read as text
+        self._read_text()
 
     def _read_text(self) -> None:
         """
-        Read a text token.
+        Read a text line.
         """
-        start = self._position
-        self._position += 1
-
-        while self._position < self._input_len:
-            ch = self._input[self._position]
-
-            if ch == '`':
-                break
-
-            if (not self._is_letter_or_digit_or_underscore(ch)) and (ch != '-') and (ch != '+'):
-                break
-
-            self._position += 1
-
-        text_value = self._input[start:self._position]
-        self._tokens.append(Token(type=TokenType.TEXT, value=text_value, start=start))
+        self._tokens.append(Token(
+            type=TokenType.TEXT,
+            value=self._input[self._position:],
+            start=self._position
+        ))
+        self._position = self._input_len
 
     def _read_backtick(self) -> None:
         """
