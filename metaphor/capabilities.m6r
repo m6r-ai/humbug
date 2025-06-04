@@ -202,6 +202,10 @@ Context: Capabilities
                 - Use a transparent background when not hovered
                 - Highlighted in red when the mouse hovers over the close button itself.
 
+            Context: Tab ordering
+                The order of use of each tab in a column will be tracked in an MRU list per column.  When the current
+                tab is deleted, the most recently used tab in the column will be activated in its place.
+
             Context: Syntax highlighting
                 Code blocks and inline code will be syntax highlighted based on the programming language
                 or data format.
