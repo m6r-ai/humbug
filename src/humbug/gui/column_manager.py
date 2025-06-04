@@ -79,6 +79,9 @@ class ColumnManager(QWidget):
 
         self._language_manager = LanguageManager()
 
+        # Track MRU order for each column
+        self._column_mru_order: Dict[ColumnWidget, List[str]] = {}
+
         # Create main layout
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -136,6 +139,49 @@ class ColumnManager(QWidget):
         """Set whether to protect the current tab from being overwritten."""
         self._protect_current_tab = protect
 
+    def _update_mru_order(self, tab: TabBase, column: ColumnWidget) -> None:
+        """
+        Update the MRU order when a tab is activated.
+
+        Args:
+            tab: The tab that was activated
+            column: The column containing the tab
+        """
+        tab_id = tab.tab_id()
+        mru_list = self._column_mru_order[column]
+
+        # Remove tab_id if it already exists in the list
+        if tab_id in mru_list:
+            mru_list.remove(tab_id)
+
+        # Add to front of list (most recent)
+        mru_list.insert(0, tab_id)
+
+    def _get_next_mru_tab(self, column: ColumnWidget, excluding_tab_id: str | None = None) -> TabBase | None:
+        """
+        Get the next most recently used tab in a column.
+
+        Args:
+            column: The column to search in
+            excluding_tab_id: Tab ID to exclude from selection
+
+        Returns:
+            The next MRU tab or None if no suitable tab found
+        """
+        mru_list = self._column_mru_order[column]
+
+        for tab_id in mru_list:
+            if excluding_tab_id and tab_id == excluding_tab_id:
+                continue
+
+            if tab_id in self._tabs:
+                tab = self._tabs[tab_id]
+                # Verify tab is still in this column
+                if self._find_column_for_tab(tab) == column:
+                    return tab
+
+        return None
+
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
         Create TabData instance and connect signals.
@@ -166,6 +212,12 @@ class ColumnManager(QWidget):
             column: Column containing the tab
         """
         tab_id = tab.tab_id()
+
+        # Remove from MRU order
+        mru_list = self._column_mru_order[column]
+        if tab_id in mru_list:
+            mru_list.remove(tab_id)
+
         tab_label = self._tab_labels.pop(tab_id)
         del self._tabs[tab_id]
         index = column.indexOf(tab)
@@ -188,6 +240,9 @@ class ColumnManager(QWidget):
         column.tabBar().setTabButton(index, QTabBar.ButtonPosition.LeftSide, tab_data.label)
         column.setCurrentWidget(tab_data.tab)
 
+        # Update MRU order for the new tab
+        self._update_mru_order(tab_data.tab, column)
+
     def _move_tab_between_columns(
         self,
         tab: TabBase,
@@ -206,6 +261,11 @@ class ColumnManager(QWidget):
         tab_state = tab.get_state(True)
         tab_id = tab.tab_id()
         tab_title = self._tab_labels[tab_id].text()
+
+        # Remove from source column's MRU order
+        source_mru = self._column_mru_order[source_column]
+        if tab_id in source_mru:
+            source_mru.remove(tab_id)
 
         # Remove from source
         self._remove_tab_from_column(tab, source_column)
@@ -387,6 +447,8 @@ class ColumnManager(QWidget):
         self._column_splitter.insertWidget(index, tab_widget)
         self._tab_columns.insert(index, tab_widget)
 
+        self._column_mru_order[tab_widget] = []
+
         return tab_widget
 
     def _handle_tab_merge(self, dragged_tab_id: str, target_tab_id: str) -> None:
@@ -430,6 +492,9 @@ class ColumnManager(QWidget):
             column_number: Index of the column to remove
             column: Column widget to remove
         """
+        if column in self._column_mru_order:
+            del self._column_mru_order[column]
+
         del self._tab_columns[column_number]
         column.deleteLater()
 
@@ -485,7 +550,14 @@ class ColumnManager(QWidget):
         """
         # Find which column triggered the change
         sender = self.sender()
-        self._active_column = cast(ColumnWidget, sender)
+        column = cast(ColumnWidget, sender)
+        self._active_column = column
+
+        # Update MRU order for the newly selected tab
+        current_tab = self._get_current_tab()
+        if current_tab:
+            self._update_mru_order(current_tab, column)
+
         self._update_tabs()
 
     def _handle_tab_activated(self, tab: TabBase) -> None:
@@ -505,6 +577,7 @@ class ColumnManager(QWidget):
 
         # Update active column
         self._active_column = column
+        self._update_mru_order(tab, column)
         self._update_tabs()
 
     def _handle_column_activated(self, column: ColumnWidget) -> None:
@@ -598,7 +671,17 @@ class ColumnManager(QWidget):
         if column is None:
             return
 
+        # Before removing, select the next MRU tab if this was the active tab
+        was_current = column.currentWidget() == tab
+        next_tab = None
+
+        if was_current and column.count() > 1:
+            next_tab = self._get_next_mru_tab(column, excluding_tab_id=tab_id)
+            if next_tab:
+                column.setCurrentWidget(next_tab)
+
         self._remove_tab_from_column(tab, column)
+
         # If we closed the last tab in the column, close the column unless it's the last column
         if column.count() == 0:
             if len(self._tab_columns) > 1:
@@ -652,6 +735,7 @@ class ColumnManager(QWidget):
 
         column.setCurrentWidget(tab)
         self._active_column = column
+        self._update_mru_order(tab, column)
         self._update_tabs()
 
     def _handle_tab_modified(self, tab_id: str, modified: bool) -> None:
@@ -1711,7 +1795,7 @@ class ColumnManager(QWidget):
         tab.navigate_next_bookmark()
 
     def can_navigate_previous_bookmark(self) -> bool:
-        """Can we move to the next bookmark?"""
+        """Can we move to the previous bookmark?"""
         tab = self._get_current_tab()
         if not isinstance(tab, ConversationTab):
             return False
@@ -1719,7 +1803,7 @@ class ColumnManager(QWidget):
         return tab.can_navigate_previous_bookmark()
 
     def navigate_previous_bookmark(self) -> None:
-        """Handle navigating to the next bookmark."""
+        """Handle navigating to the previous bookmark."""
         tab = self._get_current_tab()
         if not isinstance(tab, ConversationTab):
             return
