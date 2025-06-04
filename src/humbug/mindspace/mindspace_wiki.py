@@ -211,9 +211,25 @@ class MindspaceWiki:
             # Start with a heading
             lines = [
                 f"# {dir_name}",
-                "",
-                f"**Path**: {rel_path}"
+                ""
             ]
+
+            # Add file metadata on separate lines
+            try:
+                size = self._get_file_size_bytes(directory_path)
+                permissions = self._get_file_permissions(directory_path)
+                mod_time = self._get_file_modification_time(directory_path)
+
+                lines.extend([
+                    f"**Permissions**: {permissions}  ",
+                    f"**Size**: {size}  ",
+                    f"**Modified**: {mod_time}  ",
+                    f"**Path**: {rel_path}"
+                ])
+
+            except MindspaceWikiIOError as e:
+                self._logger.warning("Could not retrieve metadata for %s: %s", file_path, str(e))
+
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
             # Sort entries - directories first, then files
@@ -322,8 +338,7 @@ class MindspaceWiki:
             # Generate markdown with metadata
             lines = [
                 f"# {file_name}",
-                "",
-                f"**Path**: {rel_path}  "
+                ""
             ]
 
             # Add file metadata on separate lines
@@ -333,14 +348,14 @@ class MindspaceWiki:
                 mod_time = self._get_file_modification_time(file_path)
 
                 lines.extend([
-                    f"**Size**: {size}  ",
                     f"**Permissions**: {permissions}  ",
-                    f"**Modified**: {mod_time}"
+                    f"**Size**: {size}  ",
+                    f"**Modified**: {mod_time}  ",
+                    f"**Path**: {rel_path}"
                 ])
 
             except MindspaceWikiIOError as e:
                 self._logger.warning("Could not retrieve metadata for %s: %s", file_path, str(e))
-                lines.append("Metadata: `<unavailable>`")
 
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
