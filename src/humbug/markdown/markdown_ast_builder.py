@@ -455,8 +455,7 @@ class MarkdownASTBuilder:
 
             # Check for italic formatting
             elif (text[i] == '*' or (text[i] == '_' and not self._no_underscores)) and (
-                    i == 0 or text[i-1] != text[i]):  # Avoid mistaking ** as *
-
+                    i == 0 or text[i-1] != text[i]):
                 # Determine which marker we're using
                 marker = text[i]
 

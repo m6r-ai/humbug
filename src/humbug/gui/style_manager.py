@@ -543,10 +543,29 @@ class StyleManager(QObject):
     def _initialize_proportional_highlights(self) -> None:
         # Mapping from token type to colour
         colour_mapping = {
+            TokenType.BOLD: ColorRole.SYNTAX_TYPE,
+            TokenType.BOLD_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.BOLD_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
             TokenType.BLOCKQUOTE: ColorRole.SYNTAX_KEYWORD,
             TokenType.FENCE: ColorRole.SYNTAX_LANGUAGE,
             TokenType.HEADING: ColorRole.SYNTAX_HEADING,
+            TokenType.IMAGE_ALT_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.IMAGE_ALT_TEXT: ColorRole.SYNTAX_NUMBER,
+            TokenType.IMAGE_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.IMAGE_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.IMAGE_URL: ColorRole.SYNTAX_STRING,
+            TokenType.INLINE_CODE_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.INLINE_CODE_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.ITALIC: ColorRole.SYNTAX_HTML_ATTRIBUTE,
+            TokenType.ITALIC_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.ITALIC_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.LINK_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.LINK_START: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.LINK_TEXT: ColorRole.SYNTAX_NUMBER,
+            TokenType.LINK_TEXT_END: ColorRole.SYNTAX_FUNCTION_OR_METHOD,
+            TokenType.LINK_URL: ColorRole.SYNTAX_STRING,
             TokenType.LIST_MARKER: ColorRole.SYNTAX_LIST_MARKER,
+            TokenType.TABLE: ColorRole.SYNTAX_COMMENT,
             TokenType.TEXT: ColorRole.SYNTAX_TEXT
         }
 
@@ -554,6 +573,7 @@ class StyleManager(QObject):
             text_format = self._create_proportional_highlight(role)
             self._proportional_highlights[token_type] = text_format
 
+        self._proportional_highlights[TokenType.INLINE_CODE] = self._create_highlight(ColorRole.SYNTAX_INLINE_CODE)
         self._error_proportional_highlight = self._create_proportional_highlight(ColorRole.SYNTAX_ERROR)
 
     def _create_proportional_highlight(self, role: ColorRole) -> QTextCharFormat:

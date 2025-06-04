@@ -264,7 +264,7 @@ class MarkdownParser(Parser):
             # Check for bold (**text** or __text__)
             elif (i + 2 < len(text) and
                     ((text[i:i+2] == '**') or (text[i:i+2] == '__' and (i == 0 or text[i - 1].isspace()))) and
-                    not text[i+2].isspace()):
+                    not text[i+2].isspace()):  # pylint: disable=too-many-boolean-expressions
                 # Add any accumulated text
                 add_text_token(current_text_start, i)
 
@@ -293,7 +293,8 @@ class MarkdownParser(Parser):
             # Check for italic (*text* or _text_)
             elif (i + 1 < len(text) and
                     ((text[i] == '*') or (text[i] == '_' and (i == 0 or text[i - 1].isspace()))) and
-                    not text[i + 1].isspace()):
+                    not text[i + 1].isspace() and
+                    (i == 0 or text[i-1] != text[i])):  # pylint: disable=too-many-boolean-expressions
                 # Add any accumulated text
                 add_text_token(current_text_start, i)
 
