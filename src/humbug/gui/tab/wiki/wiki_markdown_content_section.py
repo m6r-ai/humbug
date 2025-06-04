@@ -16,7 +16,6 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.markdown_block_data import HeadingBlockData
 from humbug.gui.markdown_renderer import MarkdownRenderer
 from humbug.gui.markdown_text_edit import MarkdownTextEdit
-from humbug.gui.tab.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
 from humbug.language.language_manager import LanguageManager
 from humbug.markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
@@ -120,7 +119,7 @@ class WikiMarkdownContentSection(QFrame):
         self._text_area.viewport().installEventFilter(self)
 
         # Add appropriate highlighter
-        self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
+        self._highlighter: ConversationLanguageHighlighter | None = None
         self.set_language(language)
 
         self._mouse_left_button_pressed = False

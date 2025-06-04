@@ -173,11 +173,13 @@ class MarkdownLexer(Lexer):
         if self._input[self._position:].startswith('```'):
             self._position += 3
             self._tokens.append(Token(type=TokenType.FENCE, value='```', start=start))
+            if self._position < self._input_len:
+                self._tokens.append(Token(type=TokenType.TEXT, value=self._input[self._position:], start=self._position))
+
             return
 
-        # Single backtick - could be inline code
-        self._position += 1
-        self._tokens.append(Token(type=TokenType.BACKTICK, value='`', start=start))
+        # Not a code fence, so treat as text at this level
+        self._read_text()
 
     def _read_whitespace(self) -> None:
         """
