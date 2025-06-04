@@ -262,8 +262,9 @@ class MarkdownParser(Parser):
                     continue
 
             # Check for bold (**text** or __text__)
-            elif (i + 1 < len(text) and
-                  ((text[i:i+2] == '**') or (text[i:i+2] == '__'))):
+            elif (i + 2 < len(text) and
+                    ((text[i:i+2] == '**') or (text[i:i+2] == '__' and (i == 0 or text[i - 1].isspace()))) and
+                    not text[i+2].isspace()):
                 # Add any accumulated text
                 add_text_token(current_text_start, i)
 
@@ -290,8 +291,9 @@ class MarkdownParser(Parser):
                     continue
 
             # Check for italic (*text* or _text_)
-            elif (text[i] in ('*', '_') and
-                  (i == 0 or text[i-1] != text[i])):  # Avoid mistaking ** as *
+            elif (i + 1 < len(text) and
+                    ((text[i] == '*') or (text[i] == '_' and (i == 0 or text[i - 1].isspace()))) and
+                    not text[i + 1].isspace()):
                 # Add any accumulated text
                 add_text_token(current_text_start, i)
 
@@ -371,10 +373,8 @@ class MarkdownParser(Parser):
             lexer.lex(None, input_str)
 
             # Collect all tokens from the lexer
-            print("----------------------------")
             while True:
                 token = lexer.get_next_token()
-                print(f"Processing token: {token}")
                 if not token:
                     break
 
@@ -496,7 +496,6 @@ class MarkdownParser(Parser):
                     if token.type  in (TokenType.TEXT, TokenType.HEADING, TokenType.BLOCKQUOTE, TokenType.LIST_MARKER):
                         # Parse inline formatting in this token
                         inline_tokens = self._parse_inline_formatting_in_text(token, token.type)
-                        print(f"Processing inline formatting in token: {token.value} -> {inline_tokens}")
                         processed_tokens.extend(inline_tokens)
 
                     else:
