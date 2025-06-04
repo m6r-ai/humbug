@@ -28,101 +28,106 @@ def ast_builder_no_underscores():
     return MarkdownASTBuilder(no_underscores=True)
 
 
-class TestMarkdownASTBuilder:
-    """Tests for the MarkdownASTBuilder class."""
+@pytest.mark.parametrize("markdown_path,expected_json_path", find_test_files())
+def test_parse_fixture_files(markdown_path, expected_json_path):
+    """Test parsing markdown files against expected JSON outputs."""
+    is_match, diff = parse_and_compare(markdown_path, expected_json_path)
+    assert is_match, f"AST mismatch for {os.path.basename(markdown_path)}:\n{diff}"
 
-    @pytest.mark.parametrize("markdown_path,expected_json_path", find_test_files())
-    def test_parse_fixture_files(self, markdown_path, expected_json_path):
-        """Test parsing markdown files against expected JSON outputs."""
-        is_match, diff = parse_and_compare(markdown_path, expected_json_path)
-        assert is_match, f"AST mismatch for {os.path.basename(markdown_path)}:\n{diff}"
 
-    def test_empty_document(self, ast_builder):
-        """Test parsing an empty document."""
-        doc = ast_builder.build_ast("")
-        assert doc is not None
-        assert len(doc.children) == 0
+def test_empty_document(ast_builder):
+    """Test parsing an empty document."""
+    doc = ast_builder.build_ast("")
+    assert doc is not None
+    assert len(doc.children) == 0
 
-    def test_document_property(self, ast_builder):
-        """Test the document property returns the current document."""
-        # Test with empty document
-        initial_doc = ast_builder.document()
-        assert initial_doc is not None
-        assert len(initial_doc.children) == 0
 
-        # Test after parsing content
-        ast_builder.build_ast("# Test Heading")
-        updated_doc = ast_builder.document()
-        assert updated_doc is not None
-        assert len(updated_doc.children) == 1
-        assert updated_doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+def test_document_property(ast_builder):
+    """Test the document property returns the current document."""
+    # Test with empty document
+    initial_doc = ast_builder.document()
+    assert initial_doc is not None
+    assert len(initial_doc.children) == 0
 
-        # Verify same document instance is returned
-        assert updated_doc is ast_builder.document()
+    # Test after parsing content
+    ast_builder.build_ast("# Test Heading")
+    updated_doc = ast_builder.document()
+    assert updated_doc is not None
+    assert len(updated_doc.children) == 1
+    assert updated_doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
 
-    def test_simple_paragraph(self, ast_builder):
-        """Test parsing a simple paragraph."""
-        doc = ast_builder.build_ast("This is a paragraph.")
-        assert doc is not None
-        assert len(doc.children) == 1
-        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-        assert len(doc.children[0].children) == 1
-        assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
-        assert doc.children[0].children[0].content == "This is a paragraph."
+    # Verify same document instance is returned
+    assert updated_doc is ast_builder.document()
 
-    def test_heading(self, ast_builder):
-        """Test parsing a heading."""
-        doc = ast_builder.build_ast("# Heading 1")
-        assert doc is not None
-        assert len(doc.children) == 1
-        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[0].level == 1
-        assert len(doc.children[0].children) == 1
-        assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
-        assert doc.children[0].children[0].content == "Heading 1"
 
-    def test_bold_text(self, ast_builder):
-        """Test parsing bold text."""
-        doc = ast_builder.build_ast("This is **bold** text.")
-        assert doc is not None
-        assert len(doc.children) == 1
-        paragraph = doc.children[0]
-        assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
-        assert len(paragraph.children) == 3
-        assert paragraph.children[0].__class__.__name__ == "MarkdownTextNode"
-        assert paragraph.children[0].content == "This is "
-        assert paragraph.children[1].__class__.__name__ == "MarkdownBoldNode"
-        assert paragraph.children[1].children[0].__class__.__name__ == "MarkdownTextNode"
-        assert paragraph.children[1].children[0].content == "bold"
-        assert paragraph.children[2].__class__.__name__ == "MarkdownTextNode"
-        assert paragraph.children[2].content == " text."
+def test_simple_paragraph(ast_builder):
+    """Test parsing a simple paragraph."""
+    doc = ast_builder.build_ast("This is a paragraph.")
+    assert doc is not None
+    assert len(doc.children) == 1
+    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+    assert len(doc.children[0].children) == 1
+    assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
+    assert doc.children[0].children[0].content == "This is a paragraph."
 
-    def test_underscore_formatting(self, ast_builder, ast_builder_no_underscores):
-        """Test underscore formatting behavior."""
-        # With underscores enabled
-        doc = ast_builder.build_ast("_italic_ and __bold__")
-        assert doc.children[0].children[0].__class__.__name__ == "MarkdownEmphasisNode"
-        assert doc.children[0].children[2].__class__.__name__ == "MarkdownBoldNode"
 
-        # With underscores disabled
-        doc = ast_builder_no_underscores.build_ast("_italic_ and __bold__")
-        assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
-        assert doc.children[0].children[0].content == "_italic_ and __bold__"
+def test_heading(ast_builder):
+    """Test parsing a heading."""
+    doc = ast_builder.build_ast("# Heading 1")
+    assert doc is not None
+    assert len(doc.children) == 1
+    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].level == 1
+    assert len(doc.children[0].children) == 1
+    assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
+    assert doc.children[0].children[0].content == "Heading 1"
 
-    def test_nested_formatting(self, ast_builder):
-        """Test nested formatting."""
-        doc = ast_builder.build_ast("This is **bold with *italic* inside**.")
-        paragraph = doc.children[0]
-        bold_node = paragraph.children[1]
-        assert bold_node.__class__.__name__ == "MarkdownBoldNode"
-        assert len(bold_node.children) == 3
-        assert bold_node.children[0].__class__.__name__ == "MarkdownTextNode"
-        assert bold_node.children[0].content == "bold with "
-        assert bold_node.children[1].__class__.__name__ == "MarkdownEmphasisNode"
 
-    def test_headings(self, ast_builder):
-        """Test parsing different levels of headings."""
-        markdown = """
+def test_bold_text(ast_builder):
+    """Test parsing bold text."""
+    doc = ast_builder.build_ast("This is **bold** text.")
+    assert doc is not None
+    assert len(doc.children) == 1
+    paragraph = doc.children[0]
+    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert len(paragraph.children) == 3
+    assert paragraph.children[0].__class__.__name__ == "MarkdownTextNode"
+    assert paragraph.children[0].content == "This is "
+    assert paragraph.children[1].__class__.__name__ == "MarkdownBoldNode"
+    assert paragraph.children[1].children[0].__class__.__name__ == "MarkdownTextNode"
+    assert paragraph.children[1].children[0].content == "bold"
+    assert paragraph.children[2].__class__.__name__ == "MarkdownTextNode"
+    assert paragraph.children[2].content == " text."
+
+
+def test_underscore_formatting(ast_builder, ast_builder_no_underscores):
+    """Test underscore formatting behavior."""
+    # With underscores enabled
+    doc = ast_builder.build_ast("_italic_ and __bold__")
+    assert doc.children[0].children[0].__class__.__name__ == "MarkdownEmphasisNode"
+    assert doc.children[0].children[2].__class__.__name__ == "MarkdownBoldNode"
+
+    # With underscores disabled
+    doc = ast_builder_no_underscores.build_ast("_italic_ and __bold__")
+    assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
+    assert doc.children[0].children[0].content == "_italic_ and __bold__"
+
+
+def test_nested_formatting(ast_builder):
+    """Test nested formatting."""
+    doc = ast_builder.build_ast("This is **bold with *italic* inside**.")
+    paragraph = doc.children[0]
+    bold_node = paragraph.children[1]
+    assert bold_node.__class__.__name__ == "MarkdownBoldNode"
+    assert len(bold_node.children) == 3
+    assert bold_node.children[0].__class__.__name__ == "MarkdownTextNode"
+    assert bold_node.children[0].content == "bold with "
+    assert bold_node.children[1].__class__.__name__ == "MarkdownEmphasisNode"
+
+
+def test_headings(ast_builder):
+    """Test parsing different levels of headings."""
+    markdown = """
 # Heading A
 ## Heading 1
 # Heading B
@@ -130,76 +135,80 @@ class TestMarkdownASTBuilder:
 ### 3rd level
 ### Another 3rd level
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 6
-        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[0].level == 1
-        assert doc.children[1].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[1].level == 2
-        assert doc.children[2].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[2].level == 1
-        assert doc.children[3].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[3].level == 2
-        assert doc.children[4].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[4].level == 3
-        assert doc.children[5].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[5].level == 3
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 6
+    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].level == 1
+    assert doc.children[1].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[1].level == 2
+    assert doc.children[2].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[2].level == 1
+    assert doc.children[3].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[3].level == 2
+    assert doc.children[4].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[4].level == 3
+    assert doc.children[5].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[5].level == 3
 
-    def test_unordered_list(self, ast_builder):
-        """Test parsing an unordered list."""
-        markdown = """
+
+def test_unordered_list(ast_builder):
+    """Test parsing an unordered list."""
+    markdown = """
 - Item 1
 - Item 2
 - Item 3
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
-        assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
-        assert len(list_node.children) == 3
-        for item in list_node.children:
-            assert item.__class__.__name__ == "MarkdownListItemNode"
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert len(list_node.children) == 3
+    for item in list_node.children:
+        assert item.__class__.__name__ == "MarkdownListItemNode"
 
-    def test_ordered_list(self, ast_builder):
-        """Test parsing an ordered list."""
-        markdown = """
+
+def test_ordered_list(ast_builder):
+    """Test parsing an ordered list."""
+    markdown = """
 1. First item
 2. Second item
 3. Third item
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
-        assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
-        assert len(list_node.children) == 3
-        assert list_node.start == 1
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+    assert len(list_node.children) == 3
+    assert list_node.start == 1
 
-    def test_nested_list(self, ast_builder):
-        """Test parsing a nested list."""
-        markdown = """
+
+def test_nested_list(ast_builder):
+    """Test parsing a nested list."""
+    markdown = """
 - Item 1
   - Nested 1.1
   - Nested 1.2
 - Item 2
 - Item 3
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
-        assert len(list_node.children) == 3
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert len(list_node.children) == 3
 
-        # Check first item has a nested list
-        first_item = list_node.children[0]
-        assert len(first_item.children) == 2
-        nested_list = first_item.children[0]
-        assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
-        nested_list = first_item.children[1]
-        assert nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
-        assert len(nested_list.children) == 2
+    # Check first item has a nested list
+    first_item = list_node.children[0]
+    assert len(first_item.children) == 2
+    nested_list = first_item.children[0]
+    assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+    nested_list = first_item.children[1]
+    assert nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert len(nested_list.children) == 2
 
-    def test_nested_list2(self, ast_builder):
-        """Test parsing a nested list."""
-        markdown = """
+
+def test_nested_list2(ast_builder):
+    """Test parsing a nested list."""
+    markdown = """
 - Item 1
   - Nested 1.1
   - Nested 1.2
@@ -208,26 +217,27 @@ class TestMarkdownASTBuilder:
 - Item 2
 - Item 3
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
-        assert len(list_node.children) == 3
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert len(list_node.children) == 3
 
-        # Check first item has a nested list
-        first_item = list_node.children[0]
-        assert len(first_item.children) == 3
-        nested_list = first_item.children[0]
-        assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
-        first_nested_list = first_item.children[1]
-        assert first_nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
-        assert len(first_nested_list.children) == 2
-        second_nested_list = first_item.children[2]
-        assert second_nested_list.__class__.__name__ == "MarkdownOrderedListNode"
-        assert len(second_nested_list.children) == 2
+    # Check first item has a nested list
+    first_item = list_node.children[0]
+    assert len(first_item.children) == 3
+    nested_list = first_item.children[0]
+    assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+    first_nested_list = first_item.children[1]
+    assert first_nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert len(first_nested_list.children) == 2
+    second_nested_list = first_item.children[2]
+    assert second_nested_list.__class__.__name__ == "MarkdownOrderedListNode"
+    assert len(second_nested_list.children) == 2
 
-    def test_nested_list3(self, ast_builder):
-        """Test parsing a nested list."""
-        markdown = """
+
+def test_nested_list3(ast_builder):
+    """Test parsing a nested list."""
+    markdown = """
 - Item 1
   1. Nested n.1
   2. Nested n.2
@@ -236,267 +246,271 @@ class TestMarkdownASTBuilder:
 - Item 2
 - Item 3
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
-        assert len(list_node.children) == 3
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert len(list_node.children) == 3
 
-        # Check first item has a nested list
-        first_item = list_node.children[0]
-        assert len(first_item.children) == 3
-        nested_list = first_item.children[0]
-        assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
-        first_nested_list = first_item.children[1]
-        assert first_nested_list.__class__.__name__ == "MarkdownOrderedListNode"
-        assert len(first_nested_list.children) == 2
-        second_nested_list = first_item.children[2]
-        assert second_nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
-        assert len(second_nested_list.children) == 2
+    # Check first item has a nested list
+    first_item = list_node.children[0]
+    assert len(first_item.children) == 3
+    nested_list = first_item.children[0]
+    assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+    first_nested_list = first_item.children[1]
+    assert first_nested_list.__class__.__name__ == "MarkdownOrderedListNode"
+    assert len(first_nested_list.children) == 2
+    second_nested_list = first_item.children[2]
+    assert second_nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert len(second_nested_list.children) == 2
 
-    def test_code_block(self, ast_builder):
-        """Test parsing a code block."""
-        markdown = """```python
+
+def test_code_block(ast_builder):
+    """Test parsing a code block."""
+    markdown = """```python
 def hello():
-    print("Hello, world!")
+print("Hello, world!")
 ```"""
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        code_block = doc.children[0]
-        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
-        assert code_block.language == "python"
-        assert "def hello():" in code_block.content
-        assert "print(\"Hello, world!\")" in code_block.content
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert code_block.language == "python"
+    assert "def hello():" in code_block.content
+    assert "print(\"Hello, world!\")" in code_block.content
 
-    def test_table(self, ast_builder):
-        """Test parsing a table."""
-        markdown = """
+
+def test_table(ast_builder):
+    """Test parsing a table."""
+    markdown = """
 | Header 1 | Header 2 |
 |----------|----------|
 | Cell 1   | Cell 2   |
 | Cell 3   | Cell 4   |
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        table = doc.children[0]
-        assert table.__class__.__name__ == "MarkdownTableNode"
-        assert len(table.children) == 2
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    table = doc.children[0]
+    assert table.__class__.__name__ == "MarkdownTableNode"
+    assert len(table.children) == 2
 
-        # Check header
-        header = table.children[0]
-        assert header.__class__.__name__ == "MarkdownTableHeaderNode"
-        assert len(header.children) == 1  # One row
+    # Check header
+    header = table.children[0]
+    assert header.__class__.__name__ == "MarkdownTableHeaderNode"
+    assert len(header.children) == 1  # One row
 
-        # Check body
-        body = table.children[1]
-        assert body.__class__.__name__ == "MarkdownTableBodyNode"
-        assert len(body.children) == 2  # Two rows
+    # Check body
+    body = table.children[1]
+    assert body.__class__.__name__ == "MarkdownTableBodyNode"
+    assert len(body.children) == 2  # Two rows
 
-    def test_horizontal_rule(self, ast_builder):
-        """Test parsing a horizontal rule."""
-        markdown = """
+def test_horizontal_rule(ast_builder):
+    """Test parsing a horizontal rule."""
+    markdown = """
 Before rule
 
 ---
 
 After rule
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 3
-        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[1].__class__.__name__ == "MarkdownHorizontalRuleNode"
-        assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 3
+    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownHorizontalRuleNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
 
-    def test_link(self, ast_builder):
-        """Test parsing a link."""
-        doc = ast_builder.build_ast("Here is a [link](https://example.com) to a website.")
-        paragraph = doc.children[0]
-        assert len(paragraph.children) == 3
-        link = paragraph.children[1]
-        assert link.__class__.__name__ == "MarkdownLinkNode"
-        assert link.url == "https://example.com"
-        assert len(link.children) == 1
-        assert link.children[0].content == "link"
 
-    def test_image(self, ast_builder):
-        """Test parsing an image."""
-        doc = ast_builder.build_ast("![Alt text](image.jpg \"Image title\")")
-        paragraph = doc.children[0]
-        image = paragraph.children[0]
-        assert image.__class__.__name__ == "MarkdownImageNode"
-        assert image.url == "image.jpg"
-        assert image.alt_text == "Alt text"
-        assert image.title == "Image title"
+def test_link(ast_builder):
+    """Test parsing a link."""
+    doc = ast_builder.build_ast("Here is a [link](https://example.com) to a website.")
+    paragraph = doc.children[0]
+    assert len(paragraph.children) == 3
+    link = paragraph.children[1]
+    assert link.__class__.__name__ == "MarkdownLinkNode"
+    assert link.url == "https://example.com"
+    assert len(link.children) == 1
+    assert link.children[0].content == "link"
 
-    def test_line_to_node_mapping(self, ast_builder):
-        """Test the line to node mapping functionality."""
-        markdown = """# Heading
+
+def test_image(ast_builder):
+    """Test parsing an image."""
+    doc = ast_builder.build_ast("![Alt text](image.jpg \"Image title\")")
+    paragraph = doc.children[0]
+    image = paragraph.children[0]
+    assert image.__class__.__name__ == "MarkdownImageNode"
+    assert image.url == "image.jpg"
+    assert image.alt_text == "Alt text"
+    assert image.title == "Image title"
+
+
+def test_line_to_node_mapping(ast_builder):
+    """Test the line to node mapping functionality."""
+    markdown = """# Heading
 
 Paragraph 1.
 
 Paragraph 2.
 """
-        ast_builder.build_ast(markdown)
+    ast_builder.build_ast(markdown)
 
-        # Check mapping exists for each line
-        assert 0 in ast_builder._line_to_node_map  # Heading
-        assert 2 in ast_builder._line_to_node_map  # Paragraph 1
-        assert 4 in ast_builder._line_to_node_map  # Paragraph 2
-
-    def test_update_ast(self, ast_builder):
-        """Test updating an AST incrementally."""
-        original = "# Original heading\n\nOriginal paragraph."
-        updated = "# Updated heading\n\nUpdated paragraph."
-
-        # Build original AST
-        ast_builder.build_ast(original)
-
-        # Update AST
-        doc = ast_builder.update_ast(updated, original)
-
-        # Check that the AST was updated
-        assert doc.children[0].children[0].content == "Updated heading"
-        assert doc.children[1].children[0].content == "Updated paragraph."
+    # Check mapping exists for each line
+    assert 0 in ast_builder._line_to_node_map  # Heading
+    assert 2 in ast_builder._line_to_node_map  # Paragraph 1
+    assert 4 in ast_builder._line_to_node_map  # Paragraph 2
 
 
-class TestInlineFormatting:
-    """Comprehensive tests for inline formatting parsing."""
+def test_update_ast(ast_builder):
+    """Test updating an AST incrementally."""
+    original = "# Original heading\n\nOriginal paragraph."
+    updated = "# Updated heading\n\nUpdated paragraph."
 
-    def test_complex_nested_formatting(self, ast_builder):
-        """Test deeply nested and complex formatting combinations."""
-        test_cases = [
-            # Nested formatting
-            "**Bold with *italic* and `code` inside**",
-            "*Italic with **bold** inside*",
-            "`Code with **bold** inside`",
+    # Build original AST
+    ast_builder.build_ast(original)
 
-            # Adjacent formatting
-            "**Bold**_italic_`code`",
-            "*italic*`code`**bold**",
+    # Update AST
+    doc = ast_builder.update_ast(updated, original)
 
-            # Formatting with links
-            "**Bold [link](url) text**",
-            "*Italic ![image](url) text*",
-            "[Link with **bold** text](url)",
+    # Check that the AST was updated
+    assert doc.children[0].children[0].content == "Updated heading"
+    assert doc.children[1].children[0].content == "Updated paragraph."
 
-            # Complex nesting
-            "***Bold italic*** text",
-            "**Bold *with italic* and more bold**",
-            "*Italic **with bold** and more italic*",
-        ]
 
-        for markdown in test_cases:
-            doc = ast_builder.build_ast(markdown)
-            # Verify document parses without errors
-            assert doc is not None
-            assert len(doc.children) >= 1
-            paragraph = doc.children[0]
-            assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+def test_complex_nested_formatting(ast_builder):
+    """Test deeply nested and complex formatting combinations."""
+    test_cases = [
+        # Nested formatting
+        "**Bold with *italic* and `code` inside**",
+        "*Italic with **bold** inside*",
+        "`Code with **bold** inside`",
 
-    def test_malformed_formatting_edge_cases(self, ast_builder):
-        """Test handling of malformed or incomplete formatting."""
-        test_cases = [
-            # Unclosed formatting
-            "**Unclosed bold",
-            "*Unclosed italic",
-            "`Unclosed code",
-            "__Unclosed underscore bold",
-            "_Unclosed underscore italic",
+        # Adjacent formatting
+        "**Bold**_italic_`code`",
+        "*italic*`code`**bold**",
 
-            # Empty formatting
-            "****",
-            "**",
-            "``",
-            "____",
-            "__",
+        # Formatting with links
+        "**Bold [link](url) text**",
+        "*Italic ![image](url) text*",
+        "[Link with **bold** text](url)",
 
-            # Mismatched formatting
-            "**Bold with *italic**",
-            "*Italic with **bold*",
+        # Complex nesting
+        "***Bold italic*** text",
+        "**Bold *with italic* and more bold**",
+        "*Italic **with bold** and more italic*",
+    ]
 
-            # Formatting at boundaries
-            "**start bold",
-            "end bold**",
-            "*start italic",
-            "end italic*",
-        ]
+    for markdown in test_cases:
+        doc = ast_builder.build_ast(markdown)
+        # Verify document parses without errors
+        assert doc is not None
+        assert len(doc.children) >= 1
+        paragraph = doc.children[0]
+        assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
 
-        for markdown in test_cases:
-            doc = ast_builder.build_ast(markdown)
-            # Verify document parses without errors
-            assert doc is not None
-            assert len(doc.children) >= 1
 
-    def test_complex_link_parentheses(self, ast_builder):
-        """Test links with nested parentheses in URLs (tests _find_closing_parenthesis)."""
-        test_cases = [
-            "[Link](http://example.com/path(with)parentheses)",
-            "[Link](http://example.com/path(nested(deep)parentheses))",
-            "[Link](url(a(b(c)b)a))",
-            "![Image](image(1).jpg)",
-            "![Image](path/to/image(version)(2).png)",
-            "[Complex](http://site.com/api/func(param1(nested)param2))",
-        ]
+def test_malformed_formatting_edge_cases(ast_builder):
+    """Test handling of malformed or incomplete formatting."""
+    test_cases = [
+        # Unclosed formatting
+        "**Unclosed bold",
+        "*Unclosed italic",
+        "`Unclosed code",
+        "__Unclosed underscore bold",
+        "_Unclosed underscore italic",
 
-        for markdown in test_cases:
-            doc = ast_builder.build_ast(markdown)
-            paragraph = doc.children[0]
+        # Empty formatting
+        "****",
+        "**",
+        "``",
+        "____",
+        "__",
 
-            if markdown.startswith('!'):
-                # Image
-                image = paragraph.children[0]
-                assert image.__class__.__name__ == "MarkdownImageNode"
-                assert '(' in image.url and ')' in image.url
+        # Mismatched formatting
+        "**Bold with *italic**",
+        "*Italic with **bold*",
 
-            else:
-                # Link
-                link = paragraph.children[0]
-                assert link.__class__.__name__ == "MarkdownLinkNode"
-                assert '(' in link.url and ')' in link.url
+        # Formatting at boundaries
+        "**start bold",
+        "end bold**",
+        "*start italic",
+        "end italic*",
+    ]
 
-    def test_inline_code_with_formatting_inside(self, ast_builder):
-        """Test inline code that contains formatting characters."""
-        test_cases = [
-            "`code with **asterisks**`",
-            "`code with *single asterisk*`",
-            "`code with __underscores__`",
-            "`code with _single underscore_`",
-            "`code with [brackets](url)`",
-            "`code with ![image](url)`",
-        ]
+    for markdown in test_cases:
+        doc = ast_builder.build_ast(markdown)
+        # Verify document parses without errors
+        assert doc is not None
+        assert len(doc.children) >= 1
 
-        for markdown in test_cases:
-            doc = ast_builder.build_ast(markdown)
-            paragraph = doc.children[0]
-            code_node = paragraph.children[0]
-            assert code_node.__class__.__name__ == "MarkdownInlineCodeNode"
-            # Content should be preserved as-is without formatting
-            assert "**" in code_node.content or "*" in code_node.content or "__" in code_node.content or "_" in code_node.content or "[" in code_node.content
 
-    def test_incomplete_link_info(self, ast_builder):
-        """Test handling of links with incomplete or malformed information."""
-        test_cases = [
-            "[Incomplete link](http://example.com",
-            "[Incomplete link(http://example.com",
-            "[Link with empty URL](",
-            "![Incomplete image](image.jpg",
-            "![Incomplete image(image.jpg",
-        ]
+def test_complex_link_parentheses(ast_builder):
+    """Test links with nested parentheses in URLs (tests _find_closing_parenthesis)."""
+    test_cases = [
+        "[Link](http://example.com/path(with)parentheses)",
+        "[Link](http://example.com/path(nested(deep)parentheses))",
+        "[Link](url(a(b(c)b)a))",
+        "![Image](image(1).jpg)",
+        "![Image](path/to/image(version)(2).png)",
+        "[Complex](http://site.com/api/func(param1(nested)param2))",
+    ]
 
-        for markdown in test_cases:
-            doc = ast_builder.build_ast(markdown)
-            paragraph = doc.children[0]
-            assert len(paragraph.children) == 1
+    for markdown in test_cases:
+        doc = ast_builder.build_ast(markdown)
+        paragraph = doc.children[0]
+
+        if markdown.startswith('!'):
+            # Image
             image = paragraph.children[0]
-            assert image.__class__.__name__ == "MarkdownTextNode"
+            assert image.__class__.__name__ == "MarkdownImageNode"
+            assert '(' in image.url and ')' in image.url
+
+        else:
+            # Link
+            link = paragraph.children[0]
+            assert link.__class__.__name__ == "MarkdownLinkNode"
+            assert '(' in link.url and ')' in link.url
 
 
-class TestCodeBlockContinuation:
-    """Tests for code block continuation logic."""
+def test_inline_code_with_formatting_inside(ast_builder):
+    """Test inline code that contains formatting characters."""
+    test_cases = [
+        "`code with **asterisks**`",
+        "`code with *single asterisk*`",
+        "`code with __underscores__`",
+        "`code with _single underscore_`",
+        "`code with [brackets](url)`",
+        "`code with ![image](url)`",
+    ]
 
-    def test_code_block_with_programming_languages(self, ast_builder):
-        """Test code blocks with various programming languages."""
-        # Test Python with incomplete statements that should continue
-        python_code = '''```python
+    for markdown in test_cases:
+        doc = ast_builder.build_ast(markdown)
+        paragraph = doc.children[0]
+        code_node = paragraph.children[0]
+        assert code_node.__class__.__name__ == "MarkdownInlineCodeNode"
+        # Content should be preserved as-is without formatting
+        assert "**" in code_node.content or "*" in code_node.content or "__" in code_node.content or "_" in code_node.content or "[" in code_node.content
+
+
+def test_incomplete_link_info(ast_builder):
+    """Test handling of links with incomplete or malformed information."""
+    test_cases = [
+        "[Incomplete link](http://example.com",
+        "[Incomplete link(http://example.com",
+        "[Link with empty URL](",
+        "![Incomplete image](image.jpg",
+        "![Incomplete image(image.jpg",
+    ]
+
+    for markdown in test_cases:
+        doc = ast_builder.build_ast(markdown)
+        paragraph = doc.children[0]
+        assert len(paragraph.children) == 1
+        image = paragraph.children[0]
+        assert image.__class__.__name__ == "MarkdownTextNode"
+
+
+def test_code_block_with_programming_languages(ast_builder):
+    """Test code blocks with various programming languages."""
+    # Test Python with incomplete statements that should continue
+    python_code = '''```python
 def incomplete_function(
     param1,
     param2
@@ -508,8 +522,8 @@ This is a multi-line string that should trigger a continuation
         return value
 ```'''
 
-        # Test JavaScript with objects
-        js_code = '''```javascript
+    # Test JavaScript with objects
+    js_code = '''```javascript
 /*
 const obj = {
     property1: value1,
@@ -520,8 +534,8 @@ const obj = {
 };
 ```'''
 
-        # Test C++ with templates
-        cpp_code = '''```cpp
+    # Test C++ with templates
+    cpp_code = '''```cpp
 template<typename T>
 class MyClass {
 public:
@@ -535,23 +549,24 @@ public:
 };
 ```'''
 
-        # Test for text.
-        text_code = '''```text
+    # Test for text.
+    text_code = '''```text
 this is text
 and more text
 ```'''
 
-        for code in [python_code, js_code, cpp_code, text_code]:
-            doc = ast_builder.build_ast(code)
-            assert len(doc.children) == 1
-            code_block = doc.children[0]
-            assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
-            assert len(code_block.content.strip()) > 0
+    for code in [python_code, js_code, cpp_code, text_code]:
+        doc = ast_builder.build_ast(code)
+        assert len(doc.children) == 1
+        code_block = doc.children[0]
+        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+        assert len(code_block.content.strip()) > 0
 
-    def test_code_block_continuation_edge_cases(self, ast_builder):
-        """Test edge cases in code block continuation parsing."""
-        # Code block with nested fences
-        nested_fences = '''```
+
+def test_code_block_continuation_edge_cases(ast_builder):
+    """Test edge cases in code block continuation parsing."""
+    # Code block with nested fences
+    nested_fences = '''```
 Outer code block
   ```
   Nested code block
@@ -559,110 +574,109 @@ Outer code block
 Outer code block continues
 ```'''
 
-        doc = ast_builder.build_ast(nested_fences)
-        assert len(doc.children) == 1
-        code_block = doc.children[0]
-        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
-        assert "Nested code block" in code_block.content
+    doc = ast_builder.build_ast(nested_fences)
+    assert len(doc.children) == 1
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert "Nested code block" in code_block.content
 
-    def test_code_block_with_mixed_content(self, ast_builder):
-        """Test code blocks containing markdown-like content."""
-        code_with_markdown = '''```
+
+def test_code_block_with_mixed_content(ast_builder):
+    """Test code blocks containing markdown-like content."""
+    code_with_markdown = '''```
 # This looks like a heading
 - This looks like a list
 **This looks like bold**
 [This looks like a link](url)
 ```'''
 
-        doc = ast_builder.build_ast(code_with_markdown)
-        assert len(doc.children) == 1
-        code_block = doc.children[0]
-        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
-        # Content should be preserved as-is
-        assert "# This looks like a heading" in code_block.content
-        assert "- This looks like a list" in code_block.content
+    doc = ast_builder.build_ast(code_with_markdown)
+    assert len(doc.children) == 1
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    # Content should be preserved as-is
+    assert "# This looks like a heading" in code_block.content
+    assert "- This looks like a list" in code_block.content
 
 
-class TestListHandling:
-    """Tests for advanced list functionality."""
-
-    def test_loose_vs_tight_ordered_lists(self, ast_builder):
-        """Test detection of loose vs tight ordered lists."""
-        # Tight list (no blank lines)
-        tight_list = """1. Item 1
+def test_loose_vs_tight_ordered_lists(ast_builder):
+    """Test detection of loose vs tight ordered lists."""
+    # Tight list (no blank lines)
+    tight_list = """1. Item 1
 2. Item 2
 3. Item 3"""
 
-        # Loose list (with blank lines)
-        loose_list = """1. Item 1
+    # Loose list (with blank lines)
+    loose_list = """1. Item 1
 
 2. Item 2
 
 3. Item 3"""
 
-        # Mixed scenario - becomes loose due to blank line
-        mixed_list = """1. Item 1
+    # Mixed scenario - becomes loose due to blank line
+    mixed_list = """1. Item 1
 2. Item 2
 
 3. Item 3"""
 
-        # Test tight list
-        doc = ast_builder.build_ast(tight_list)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
-        assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
-        assert list_node.tight is True
+    # Test tight list
+    doc = ast_builder.build_ast(tight_list)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+    assert list_node.tight is True
 
-        # Test loose list
-        doc = ast_builder.build_ast(loose_list)
-        list_node = doc.children[0]
-        assert list_node.tight is False
+    # Test loose list
+    doc = ast_builder.build_ast(loose_list)
+    list_node = doc.children[0]
+    assert list_node.tight is False
 
-        # Test mixed list
-        doc = ast_builder.build_ast(mixed_list)
-        list_node = doc.children[0]
-        assert list_node.tight is False
+    # Test mixed list
+    doc = ast_builder.build_ast(mixed_list)
+    list_node = doc.children[0]
+    assert list_node.tight is False
 
-    def test_loose_vs_tight_unordered_lists(self, ast_builder):
-        """Test detection of loose vs tight unordered lists."""
-        # Tight list (no blank lines)
-        tight_list = """- Item 1
+
+def test_loose_vs_tight_unordered_lists(ast_builder):
+    """Test detection of loose vs tight unordered lists."""
+    # Tight list (no blank lines)
+    tight_list = """- Item 1
 - Item 2
 - Item 3"""
 
-        # Loose list (with blank lines)
-        loose_list = """- Item 1
+    # Loose list (with blank lines)
+    loose_list = """- Item 1
 
-- Item 2
-
-- Item 3"""
-
-        # Mixed scenario - becomes loose due to blank line
-        mixed_list = """- Item 1
 - Item 2
 
 - Item 3"""
 
-        # Test tight list
-        doc = ast_builder.build_ast(tight_list)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
-        assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
-        assert list_node.tight is True
+    # Mixed scenario - becomes loose due to blank line
+    mixed_list = """- Item 1
+- Item 2
 
-        # Test loose list
-        doc = ast_builder.build_ast(loose_list)
-        list_node = doc.children[0]
-        assert list_node.tight is False
+- Item 3"""
 
-        # Test mixed list
-        doc = ast_builder.build_ast(mixed_list)
-        list_node = doc.children[0]
-        assert list_node.tight is False
+    # Test tight list
+    doc = ast_builder.build_ast(tight_list)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert list_node.tight is True
 
-    def test_complex_nested_list_structures(self, ast_builder):
-        """Test complex nested list scenarios."""
-        complex_nested = """- Level 1 Item 1
+    # Test loose list
+    doc = ast_builder.build_ast(loose_list)
+    list_node = doc.children[0]
+    assert list_node.tight is False
+
+    # Test mixed list
+    doc = ast_builder.build_ast(mixed_list)
+    list_node = doc.children[0]
+    assert list_node.tight is False
+
+def test_complex_nested_list_structures(ast_builder):
+    """Test complex nested list scenarios."""
+    complex_nested = """- Level 1 Item 1
   - Level 2 Item 1
     - Level 3 Item 1
     - Level 3 Item 2
@@ -672,70 +686,71 @@ class TestListHandling:
   2. Ordered nested item 2
 - Level 1 Item 3"""
 
-        doc = ast_builder.build_ast(complex_nested)
-        assert len(doc.children) == 1
-        main_list = doc.children[0]
-        assert main_list.__class__.__name__ == "MarkdownUnorderedListNode"
-        assert len(main_list.children) == 3
+    doc = ast_builder.build_ast(complex_nested)
+    assert len(doc.children) == 1
+    main_list = doc.children[0]
+    assert main_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert len(main_list.children) == 3
 
-        # Check first item has nested unordered list
-        first_item = main_list.children[0]
-        assert len(first_item.children) == 2  # paragraph + nested list
-        nested_list = first_item.children[1]
-        assert nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    # Check first item has nested unordered list
+    first_item = main_list.children[0]
+    assert len(first_item.children) == 2  # paragraph + nested list
+    nested_list = first_item.children[1]
+    assert nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
 
-        # Check second item has nested ordered list
-        second_item = main_list.children[1]
-        assert len(second_item.children) == 2  # paragraph + nested list
-        ordered_nested = second_item.children[1]
-        assert ordered_nested.__class__.__name__ == "MarkdownOrderedListNode"
+    # Check second item has nested ordered list
+    second_item = main_list.children[1]
+    assert len(second_item.children) == 2  # paragraph + nested list
+    ordered_nested = second_item.children[1]
+    assert ordered_nested.__class__.__name__ == "MarkdownOrderedListNode"
 
-    def test_list_continuation_and_interruption(self, ast_builder):
-        """Test text continuation within lists and list interruption."""
-        # List with continued text
-        list_with_continuation = """- First list item
+def test_list_continuation_and_interruption(ast_builder):
+    """Test text continuation within lists and list interruption."""
+    # List with continued text
+    list_with_continuation = """- First list item
   continues on this line
   and this line too
 - Second list item
   also continues"""
 
-        doc = ast_builder.build_ast(list_with_continuation)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
+    doc = ast_builder.build_ast(list_with_continuation)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
 
-        # First item should have continued text
-        first_item = list_node.children[0]
-        first_paragraph = first_item.children[0]
-        assert "continues on this line" in first_paragraph.children[2].content
+    # First item should have continued text
+    first_item = list_node.children[0]
+    first_paragraph = first_item.children[0]
+    assert "continues on this line" in first_paragraph.children[2].content
 
-        # List interrupted by other content
-        interrupted_list = """- Item 1
+    # List interrupted by other content
+    interrupted_list = """- Item 1
 - Item 2
 
 Not a list item
 
 - Item 3"""
 
-        doc = ast_builder.build_ast(interrupted_list)
-        # Should create two separate lists with paragraph in between
-        assert len(doc.children) == 3
-        assert doc.children[0].__class__.__name__ == "MarkdownUnorderedListNode"
-        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[2].__class__.__name__ == "MarkdownUnorderedListNode"
+    doc = ast_builder.build_ast(interrupted_list)
+    # Should create two separate lists with paragraph in between
+    assert len(doc.children) == 3
+    assert doc.children[0].__class__.__name__ == "MarkdownUnorderedListNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownUnorderedListNode"
 
-    def test_ordered_list_with_custom_start(self, ast_builder):
-        """Test ordered lists with non-standard start numbers."""
-        custom_start = """5. Fifth item
+
+def test_ordered_list_with_custom_start(ast_builder):
+    """Test ordered lists with non-standard start numbers."""
+    custom_start = """5. Fifth item
 6. Sixth item
 7. Seventh item"""
 
-        doc = ast_builder.build_ast(custom_start)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
-        assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
-        assert list_node.start == 5
+    doc = ast_builder.build_ast(custom_start)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+    assert list_node.start == 5
 
-        complex_lists_with_continuation = """- First list item
+    complex_lists_with_continuation = """- First list item
   continues on this line
   and this line too
   1. Indented
@@ -744,231 +759,233 @@ Not a list item
 - Second list item  
   also continues"""
 
-        doc = ast_builder.build_ast(complex_lists_with_continuation)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
+    doc = ast_builder.build_ast(complex_lists_with_continuation)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
 
-        # First item should have continued text
-        first_item = list_node.children[0]
-        first_paragraph = first_item.children[0]
-        assert "continues on this line" in first_paragraph.children[2].content
+    # First item should have continued text
+    first_item = list_node.children[0]
+    first_paragraph = first_item.children[0]
+    assert "continues on this line" in first_paragraph.children[2].content
 
 
-class TestTableFormatting:
-    """Tests for table alignment and formatting."""
-
-    def test_table_alignment_variations(self, ast_builder):
-        """Test different table column alignments."""
-        table_markdown = """| Left | Center | Right |
+def test_table_alignment_variations(ast_builder):
+    """Test different table column alignments."""
+    table_markdown = """| Left | Center | Right |
 |:-----|:------:|------:|
 | L1   | C1     | R1    |
 | L2   | C2     | R2    |"""
 
-        doc = ast_builder.build_ast(table_markdown)
-        assert len(doc.children) == 1
-        table = doc.children[0]
-        assert table.__class__.__name__ == "MarkdownTableNode"
+    doc = ast_builder.build_ast(table_markdown)
+    assert len(doc.children) == 1
+    table = doc.children[0]
+    assert table.__class__.__name__ == "MarkdownTableNode"
 
-        # Check header row for alignment
-        header = table.children[0]
-        header_row = header.children[0]
+    # Check header row for alignment
+    header = table.children[0]
+    header_row = header.children[0]
 
-        # Verify alignment is set correctly on cells
-        left_cell = header_row.children[0]
-        center_cell = header_row.children[1]
-        right_cell = header_row.children[2]
+    # Verify alignment is set correctly on cells
+    left_cell = header_row.children[0]
+    center_cell = header_row.children[1]
+    right_cell = header_row.children[2]
 
-        assert left_cell.alignment == "left"
-        assert center_cell.alignment == "center"
-        assert right_cell.alignment == "right"
+    assert left_cell.alignment == "left"
+    assert center_cell.alignment == "center"
+    assert right_cell.alignment == "right"
 
-        # Check body row alignment matches
-        body = table.children[1]
-        body_row = body.children[0]
+    # Check body row alignment matches
+    body = table.children[1]
+    body_row = body.children[0]
 
-        body_left_cell = body_row.children[0]
-        body_center_cell = body_row.children[1]
-        body_right_cell = body_row.children[2]
+    body_left_cell = body_row.children[0]
+    body_center_cell = body_row.children[1]
+    body_right_cell = body_row.children[2]
 
-        assert body_left_cell.alignment == "left"
-        assert body_center_cell.alignment == "center"
-        assert body_right_cell.alignment == "right"
+    assert body_left_cell.alignment == "left"
+    assert body_center_cell.alignment == "center"
+    assert body_right_cell.alignment == "right"
 
-    def test_double_header_row(self, ast_builder):
-        """Test different table column alignments."""
-        table_markdown = """| Left | Center | Right |
+
+def test_double_header_row(ast_builder):
+    """Test different table column alignments."""
+    table_markdown = """| Left | Center | Right |
 | Lef2 | Cen2   | Rig2  |
 |------|--------|-------|
 | L1   | C1     | R1    |
 | L2   | C2     | R2    |"""
 
-        doc = ast_builder.build_ast(table_markdown)
-        assert len(doc.children) == 2
-        text = doc.children[0]
-        assert text.__class__.__name__ == "MarkdownParagraphNode"
+    doc = ast_builder.build_ast(table_markdown)
+    assert len(doc.children) == 2
+    text = doc.children[0]
+    assert text.__class__.__name__ == "MarkdownParagraphNode"
 
-        table = doc.children[1]
-        assert table.__class__.__name__ == "MarkdownTableNode"
+    table = doc.children[1]
+    assert table.__class__.__name__ == "MarkdownTableNode"
 
-        # Check header row for alignment
-        header = table.children[0]
-        header_row = header.children[0]
+    # Check header row for alignment
+    header = table.children[0]
+    header_row = header.children[0]
 
-        # Verify alignment is set correctly on cells
-        left_cell = header_row.children[0]
-        center_cell = header_row.children[1]
-        right_cell = header_row.children[2]
+    # Verify alignment is set correctly on cells
+    left_cell = header_row.children[0]
+    center_cell = header_row.children[1]
+    right_cell = header_row.children[2]
 
-        assert left_cell.children[0].content == "Lef2"
-        assert center_cell.children[0].content == "Cen2"
-        assert right_cell.children[0].content == "Rig2"
+    assert left_cell.children[0].content == "Lef2"
+    assert center_cell.children[0].content == "Cen2"
+    assert right_cell.children[0].content == "Rig2"
 
-    def test_incomplete_table_alignment_variations(self, ast_builder):
-        """Test different table column alignments."""
-        table_markdown = """| Left | Center | Right |
+
+def test_incomplete_table_alignment_variations(ast_builder):
+    """Test different table column alignments."""
+    table_markdown = """| Left | Center | Right |
 |:-----|:------:|------:|"""
 
-        doc = ast_builder.build_ast(table_markdown)
-        assert len(doc.children) == 2
-        line0 = doc.children[0]
-        assert line0.__class__.__name__ == "MarkdownParagraphNode"
-        assert line0.children[0].content == "| Left | Center | Right |"
-        line1 = doc.children[1]
-        assert line1.__class__.__name__ == "MarkdownParagraphNode"
-        assert line1.children[0].content == "|:-----|:------:|------:|"
+    doc = ast_builder.build_ast(table_markdown)
+    assert len(doc.children) == 2
+    line0 = doc.children[0]
+    assert line0.__class__.__name__ == "MarkdownParagraphNode"
+    assert line0.children[0].content == "| Left | Center | Right |"
+    line1 = doc.children[1]
+    assert line1.__class__.__name__ == "MarkdownParagraphNode"
+    assert line1.children[0].content == "|:-----|:------:|------:|"
 
-    def test_solitary_table_separator(self, ast_builder):
-        """Test different table column alignments."""
-        table_markdown = """|:-----|:------:|------:|"""
 
-        doc = ast_builder.build_ast(table_markdown)
-        assert len(doc.children) == 1
-        line0 = doc.children[0]
-        assert line0.__class__.__name__ == "MarkdownParagraphNode"
-        assert line0.children[0].content == "|:-----|:------:|------:|"
+def test_solitary_table_separator(ast_builder):
+    """Test different table column alignments."""
+    table_markdown = """|:-----|:------:|------:|"""
 
-    def test_table_with_complex_content(self, ast_builder):
-        """Test tables containing formatted text."""
-        complex_table = """| **Bold** | *Italic* | `Code` |
+    doc = ast_builder.build_ast(table_markdown)
+    assert len(doc.children) == 1
+    line0 = doc.children[0]
+    assert line0.__class__.__name__ == "MarkdownParagraphNode"
+    assert line0.children[0].content == "|:-----|:------:|------:|"
+
+
+def test_table_with_complex_content(ast_builder):
+    """Test tables containing formatted text."""
+    complex_table = """| **Bold** | *Italic* | `Code` |
 |----------|----------|--------|
 | **B1**   | *I1*     | `C1`   |
 | [Link](url) | ![Image](img.jpg) | Normal |"""
 
-        doc = ast_builder.build_ast(complex_table)
-        assert len(doc.children) == 1
-        table = doc.children[0]
-        assert table.__class__.__name__ == "MarkdownTableNode"
+    doc = ast_builder.build_ast(complex_table)
+    assert len(doc.children) == 1
+    table = doc.children[0]
+    assert table.__class__.__name__ == "MarkdownTableNode"
 
-        # Check header contains formatted content
-        header = table.children[0]
-        header_row = header.children[0]
+    # Check header contains formatted content
+    header = table.children[0]
+    header_row = header.children[0]
 
-        # First header cell should contain bold text
-        bold_cell = header_row.children[0]
-        assert len(bold_cell.children) == 1
-        assert bold_cell.children[0].__class__.__name__ == "MarkdownBoldNode"
+    # First header cell should contain bold text
+    bold_cell = header_row.children[0]
+    assert len(bold_cell.children) == 1
+    assert bold_cell.children[0].__class__.__name__ == "MarkdownBoldNode"
 
-        # Second header cell should contain italic text
-        italic_cell = header_row.children[1]
-        assert len(italic_cell.children) == 1
-        assert italic_cell.children[0].__class__.__name__ == "MarkdownEmphasisNode"
+    # Second header cell should contain italic text
+    italic_cell = header_row.children[1]
+    assert len(italic_cell.children) == 1
+    assert italic_cell.children[0].__class__.__name__ == "MarkdownEmphasisNode"
 
-        # Third header cell should contain code
-        code_cell = header_row.children[2]
-        assert len(code_cell.children) == 1
-        assert code_cell.children[0].__class__.__name__ == "MarkdownInlineCodeNode"
+    # Third header cell should contain code
+    code_cell = header_row.children[2]
+    assert len(code_cell.children) == 1
+    assert code_cell.children[0].__class__.__name__ == "MarkdownInlineCodeNode"
 
-    def test_table_edge_cases(self, ast_builder):
-        """Test table parsing edge cases."""
-        # Table with missing cells
-        uneven_table = """| Col1 | Col2 | Col3 | Col4 |
+
+def test_table_edge_cases(ast_builder):
+    """Test table parsing edge cases."""
+    # Table with missing cells
+    uneven_table = """| Col1 | Col2 | Col3 | Col4 |
 |------|------|------|
 | A1   | A2   |
 | B1   | B2   | B3   | B4 |"""
 
-        doc = ast_builder.build_ast(uneven_table)
-        assert len(doc.children) == 1
-        table = doc.children[0]
-        assert table.__class__.__name__ == "MarkdownTableNode"
+    doc = ast_builder.build_ast(uneven_table)
+    assert len(doc.children) == 1
+    table = doc.children[0]
+    assert table.__class__.__name__ == "MarkdownTableNode"
 
-        # Should handle uneven rows gracefully
-        body = table.children[1]
-        assert len(body.children) == 2  # Two body rows
+    # Should handle uneven rows gracefully
+    body = table.children[1]
+    assert len(body.children) == 2  # Two body rows
 
 
-class TestTextContinuation:
-    """Tests for text continuation logic."""
-
-    def test_paragraph_continuation(self, ast_builder):
-        """Test paragraph continuation across multiple lines."""
-        paragraph_continuation = """This is the first line
+def test_paragraph_continuation(ast_builder):
+    """Test paragraph continuation across multiple lines."""
+    paragraph_continuation = """This is the first line
 and this continues the same paragraph
 with even more text on this line."""
 
-        doc = ast_builder.build_ast(paragraph_continuation)
-        assert len(doc.children) == 1
-        paragraph = doc.children[0]
-        assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    doc = ast_builder.build_ast(paragraph_continuation)
+    assert len(doc.children) == 1
+    paragraph = doc.children[0]
+    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
 
-        # Should contain all text with spaces between lines
-        full_text = ""
-        for child in paragraph.children:
-            if child.__class__.__name__ == "MarkdownTextNode":
-                full_text += child.content
+    # Should contain all text with spaces between lines
+    full_text = ""
+    for child in paragraph.children:
+        if child.__class__.__name__ == "MarkdownTextNode":
+            full_text += child.content
 
-        assert "This is the first line" in full_text
-        assert "and this continues" in full_text
-        assert "with even more text" in full_text
+    assert "This is the first line" in full_text
+    assert "and this continues" in full_text
+    assert "with even more text" in full_text
 
-    def test_list_item_continuation(self, ast_builder):
-        """Test text continuation within list items."""
-        list_continuation = """- First list item
+
+def test_list_item_continuation(ast_builder):
+    """Test text continuation within list items."""
+    list_continuation = """- First list item
   continues on this line
   and continues further
 - Second list item
   also continues here"""
 
-        doc = ast_builder.build_ast(list_continuation)
-        assert len(doc.children) == 1
-        list_node = doc.children[0]
+    doc = ast_builder.build_ast(list_continuation)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
 
-        # First item should contain continued text
-        first_item = list_node.children[0]
-        first_paragraph = first_item.children[0]
+    # First item should contain continued text
+    first_item = list_node.children[0]
+    first_paragraph = first_item.children[0]
 
-        # Extract all text content
-        full_text = ""
-        for child in first_paragraph.children:
-            if child.__class__.__name__ == "MarkdownTextNode":
-                full_text += child.content
+    # Extract all text content
+    full_text = ""
+    for child in first_paragraph.children:
+        if child.__class__.__name__ == "MarkdownTextNode":
+            full_text += child.content
 
-        assert "First list item" in full_text
-        assert "continues on this line" in full_text
-        assert "and continues further" in full_text
+    assert "First list item" in full_text
+    assert "continues on this line" in full_text
+    assert "and continues further" in full_text
 
-    def test_continuation_with_line_breaks(self, ast_builder):
-        """Test text continuation with explicit line breaks."""
-        text_with_breaks = """First line  
+
+def test_continuation_with_line_breaks(ast_builder):
+    """Test text continuation with explicit line breaks."""
+    text_with_breaks = """First line  
 Second line with break
 Third line continues normally"""
 
-        doc = ast_builder.build_ast(text_with_breaks)
-        assert len(doc.children) == 1
-        paragraph = doc.children[0]
+    doc = ast_builder.build_ast(text_with_breaks)
+    assert len(doc.children) == 1
+    paragraph = doc.children[0]
 
-        # Should contain line break node
-        has_line_break = False
-        for child in paragraph.children:
-            if child.__class__.__name__ == "MarkdownLineBreakNode":
-                has_line_break = True
-                break
+    # Should contain line break node
+    has_line_break = False
+    for child in paragraph.children:
+        if child.__class__.__name__ == "MarkdownLineBreakNode":
+            has_line_break = True
+            break
 
-        assert has_line_break
+    assert has_line_break
 
-    def test_continuation_edge_cases(self, ast_builder):
-        """Test edge cases in text continuation."""
-        # Continuation after different elements
-        mixed_continuation = """# Heading
+
+def test_continuation_edge_cases(ast_builder):
+    """Test edge cases in text continuation."""
+    # Continuation after different elements
+    mixed_continuation = """# Heading
 
 Paragraph starts here
 and continues on next line
@@ -979,34 +996,32 @@ and continues on next line
 Another paragraph
 continues normally"""
 
-        doc = ast_builder.build_ast(mixed_continuation)
-        # Should have heading, paragraph, list, line break, and another paragraph
-        assert len(doc.children) == 5
-        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[2].__class__.__name__ == "MarkdownUnorderedListNode"
-        assert doc.children[3].__class__.__name__ == "MarkdownLineBreakNode"
-        assert doc.children[4].__class__.__name__ == "MarkdownParagraphNode"
+    doc = ast_builder.build_ast(mixed_continuation)
+    # Should have heading, paragraph, list, line break, and another paragraph
+    assert len(doc.children) == 5
+    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownUnorderedListNode"
+    assert doc.children[3].__class__.__name__ == "MarkdownLineBreakNode"
+    assert doc.children[4].__class__.__name__ == "MarkdownParagraphNode"
 
 
-class TestEdgeCases:
-    """Tests for edge cases and error conditions."""
-
-    def test_unclosed_code_block(self, ast_builder):
-        """Test handling of unclosed code blocks."""
-        markdown = """```python
+def test_unclosed_code_block(ast_builder):
+    """Test handling of unclosed code blocks."""
+    markdown = """```python
 def unclosed_function():
     print("This code block is not closed")
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        code_block = doc.children[0]
-        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
-        assert code_block.language == "python"
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert code_block.language == "python"
 
-    def test_nested_code_blocks(self, ast_builder):
-        """Test handling of nested code blocks."""
-        markdown = """```
+
+def test_nested_code_blocks(ast_builder):
+    """Test handling of nested code blocks."""
+    markdown = """```
 Outer code block
   ```
   Nested code block
@@ -1014,53 +1029,57 @@ Outer code block
 Outer code block continues
 ```
 """
-        doc = ast_builder.build_ast(markdown)
-        assert len(doc.children) == 1
-        code_block = doc.children[0]
-        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
-        assert "Nested code block" in code_block.content
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert "Nested code block" in code_block.content
 
-    def test_incomplete_table(self, ast_builder):
-        """Test handling of incomplete tables."""
-        markdown = """
+
+def test_incomplete_table(ast_builder):
+    """Test handling of incomplete tables."""
+    markdown = """
 | Header 1 | Header 2 |
 |----------|----------|
 """
-        doc = ast_builder.build_ast(markdown)
-        # The AST builder should not create a table without any body rows
-        assert len(doc.children) == 2
-        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    doc = ast_builder.build_ast(markdown)
+    # The AST builder should not create a table without any body rows
+    assert len(doc.children) == 2
+    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
 
-    def test_invalid_table_separator(self, ast_builder):
-        """Test handling of invalid table separators."""
-        markdown = """
+
+def test_invalid_table_separator(ast_builder):
+    """Test handling of invalid table separators."""
+    markdown = """
 | Header 1 | Header 2 |
 | Invalid | Separator |
 | Cell 1   | Cell 2   |
 """
-        doc = ast_builder.build_ast(markdown)
-        # Should be treated as paragraphs
-        assert len(doc.children) == 3
-        assert all(child.__class__.__name__ == "MarkdownParagraphNode" for child in doc.children)
+    doc = ast_builder.build_ast(markdown)
+    # Should be treated as paragraphs
+    assert len(doc.children) == 3
+    assert all(child.__class__.__name__ == "MarkdownParagraphNode" for child in doc.children)
 
-    def test_mixed_list_markers(self, ast_builder):
-        """Test lists with mixed markers."""
-        mixed_markers = """- Item with dash
+
+def test_mixed_list_markers(ast_builder):
+    """Test lists with mixed markers."""
+    mixed_markers = """- Item with dash
 * Item with asterisk
 + Item with plus
 - Back to dash"""
 
-        doc = ast_builder.build_ast(mixed_markers)
-        # Should create separate lists for different markers
-        assert len(doc.children) >= 1
-        # All should be unordered lists
-        for child in doc.children:
-            assert child.__class__.__name__ == "MarkdownUnorderedListNode"
+    doc = ast_builder.build_ast(mixed_markers)
+    # Should create separate lists for different markers
+    assert len(doc.children) >= 1
+    # All should be unordered lists
+    for child in doc.children:
+        assert child.__class__.__name__ == "MarkdownUnorderedListNode"
 
-    def test_empty_elements(self, ast_builder):
-        """Test handling of empty elements."""
-        empty_elements = """
+
+def test_empty_elements(ast_builder):
+    """Test handling of empty elements."""
+    empty_elements = """
 
 
 # 
@@ -1078,292 +1097,308 @@ Outer code block continues
 |-|
 | |
 """
-        doc = ast_builder.build_ast(empty_elements)
-        # Should handle empty elements gracefully without crashing
-        assert doc is not None
-        assert len(doc.children) >= 0
+    doc = ast_builder.build_ast(empty_elements)
+    # Should handle empty elements gracefully without crashing
+    assert doc is not None
+    assert len(doc.children) >= 0
 
-class TestUpdateAST:
-    """Comprehensive tests for the update_ast method."""
 
-    @pytest.fixture
-    def ast_builder(self):
-        """Fixture providing a markdown AST builder instance."""
-        return MarkdownASTBuilder(no_underscores=False)
+@pytest.fixture
+def ast_builder():
+    """Fixture providing a markdown AST builder instance."""
+    return MarkdownASTBuilder(no_underscores=False)
 
-    def test_first_update_with_none_previous(self, ast_builder):
-        """Test update_ast when previous_text is None (first update)."""
-        text = "# Initial heading\n\nInitial paragraph."
 
-        # First update with None previous text should build from scratch
-        doc = ast_builder.update_ast(text, None)
+def test_first_update_with_none_previous(ast_builder):
+    """Test update_ast when previous_text is None (first update)."""
+    text = "# Initial heading\n\nInitial paragraph."
 
-        assert doc is not None
-        assert len(doc.children) == 2
-        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[0].children[0].content == "Initial heading"
-        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[1].children[0].content == "Initial paragraph."
+    # First update with None previous text should build from scratch
+    doc = ast_builder.update_ast(text, None)
 
-    def test_update_with_empty_document(self, ast_builder):
-        """Test update_ast when document is empty."""
-        previous = ""
-        new_text = "# New heading"
+    assert doc is not None
+    assert len(doc.children) == 2
+    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].children[0].content == "Initial heading"
+    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[1].children[0].content == "Initial paragraph."
 
-        # Build empty document first
-        ast_builder.build_ast(previous)
 
-        # Update with new content
-        doc = ast_builder.update_ast(new_text, previous)
+def test_update_with_empty_document(ast_builder):
+    """Test update_ast when document is empty."""
+    previous = ""
+    new_text = "# New heading"
 
-        assert len(doc.children) == 1
-        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[0].children[0].content == "New heading"
+    # Build empty document first
+    ast_builder.build_ast(previous)
 
-    def test_update_to_empty_document(self, ast_builder):
-        """Test update_ast when updating to empty content."""
-        previous = "# Heading to remove\n\nParagraph to remove."
-        new_text = ""
+    # Update with new content
+    doc = ast_builder.update_ast(new_text, previous)
 
-        # Build initial document
-        ast_builder.build_ast(previous)
+    assert len(doc.children) == 1
+    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].children[0].content == "New heading"
 
-        # Update to empty
-        doc = ast_builder.update_ast(new_text, previous)
 
-        assert len(doc.children) == 0
+def test_update_to_empty_document(ast_builder):
+    """Test update_ast when updating to empty content."""
+    previous = "# Heading to remove\n\nParagraph to remove."
+    new_text = ""
 
-    def test_simple_text_change(self, ast_builder):
-        """Test simple text content changes."""
-        previous = "# Original heading\n\nOriginal paragraph."
-        new_text = "# Updated heading\n\nUpdated paragraph."
+    # Build initial document
+    ast_builder.build_ast(previous)
 
-        # Build original
-        ast_builder.build_ast(previous)
+    # Update to empty
+    doc = ast_builder.update_ast(new_text, previous)
 
-        # Update
-        doc = ast_builder.update_ast(new_text, previous)
+    assert len(doc.children) == 0
 
-        assert doc.children[0].children[0].content == "Updated heading"
-        assert doc.children[1].children[0].content == "Updated paragraph."
 
-    def test_heading_level_change(self, ast_builder):
-        """Test changing heading levels."""
-        previous = "# Level 1\n## Level 2\n### Level 3"
-        new_text = "## Level 2\n# Level 1\n#### Level 4"
+def test_simple_text_change(ast_builder):
+    """Test simple text content changes."""
+    previous = "# Original heading\n\nOriginal paragraph."
+    new_text = "# Updated heading\n\nUpdated paragraph."
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    # Build original
+    ast_builder.build_ast(previous)
 
-        assert len(doc.children) == 3
-        assert doc.children[0].level == 2
-        assert doc.children[1].level == 1
-        assert doc.children[2].level == 4
+    # Update
+    doc = ast_builder.update_ast(new_text, previous)
 
-    def test_structure_type_change(self, ast_builder):
-        """Test changing element types (heading to paragraph, etc.)."""
-        previous = "# Heading\n\nParagraph\n\n- List item"
-        new_text = "Regular text\n\n## New heading\n\nNew paragraph"
+    assert doc.children[0].children[0].content == "Updated heading"
+    assert doc.children[1].children[0].content == "Updated paragraph."
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
 
-        assert len(doc.children) == 3
-        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[1].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[1].level == 2
-        assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
+def test_heading_level_change(ast_builder):
+    """Test changing heading levels."""
+    previous = "# Level 1\n## Level 2\n### Level 3"
+    new_text = "## Level 2\n# Level 1\n#### Level 4"
 
-    def test_add_content_beginning(self, ast_builder):
-        """Test adding content at the beginning."""
-        previous = "# Existing heading\n\nExisting paragraph."
-        new_text = "# New first heading\n\nNew paragraph.\n\n# Existing heading\n\nExisting paragraph."
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    assert len(doc.children) == 3
+    assert doc.children[0].level == 2
+    assert doc.children[1].level == 1
+    assert doc.children[2].level == 4
 
-        assert len(doc.children) == 4
-        assert doc.children[0].children[0].content == "New first heading"
-        assert doc.children[2].children[0].content == "Existing heading"
 
-    def test_add_content_middle(self, ast_builder):
-        """Test adding content in the middle."""
-        previous = "# First\n\n# Third"
-        new_text = "# First\n\n# Second\n\n# Third"
+def test_structure_type_change(ast_builder):
+    """Test changing element types (heading to paragraph, etc.)."""
+    previous = "# Heading\n\nParagraph\n\n- List item"
+    new_text = "Regular text\n\n## New heading\n\nNew paragraph"
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        assert len(doc.children) == 3
-        assert doc.children[0].children[0].content == "First"
-        assert doc.children[1].children[0].content == "Second"
-        assert doc.children[2].children[0].content == "Third"
+    assert len(doc.children) == 3
+    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[1].level == 2
+    assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
 
-    def test_add_content_end(self, ast_builder):
-        """Test adding content at the end."""
-        previous = "# Existing heading"
-        new_text = "# Existing heading\n\n# New ending"
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+def test_add_content_beginning(ast_builder):
+    """Test adding content at the beginning."""
+    previous = "# Existing heading\n\nExisting paragraph."
+    new_text = "# New first heading\n\nNew paragraph.\n\n# Existing heading\n\nExisting paragraph."
 
-        assert len(doc.children) == 2
-        assert doc.children[0].children[0].content == "Existing heading"
-        assert doc.children[1].children[0].content == "New ending"
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-    def test_remove_content_beginning(self, ast_builder):
-        """Test removing content from the beginning."""
-        previous = "# Remove me\n\n# Keep me\n\nKeep this paragraph."
-        new_text = "# Keep me\n\nKeep this paragraph."
+    assert len(doc.children) == 4
+    assert doc.children[0].children[0].content == "New first heading"
+    assert doc.children[2].children[0].content == "Existing heading"
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
 
-        assert len(doc.children) == 2
-        assert doc.children[0].children[0].content == "Keep me"
-        assert doc.children[1].children[0].content == "Keep this paragraph."
+def test_add_content_middle(ast_builder):
+    """Test adding content in the middle."""
+    previous = "# First\n\n# Third"
+    new_text = "# First\n\n# Second\n\n# Third"
 
-    def test_remove_content_middle(self, ast_builder):
-        """Test removing content from the middle."""
-        previous = "# First\n\n# Remove me\n\n# Last"
-        new_text = "# First\n\n# Last"
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    assert len(doc.children) == 3
+    assert doc.children[0].children[0].content == "First"
+    assert doc.children[1].children[0].content == "Second"
+    assert doc.children[2].children[0].content == "Third"
 
-        assert len(doc.children) == 2
-        assert doc.children[0].children[0].content == "First"
-        assert doc.children[1].children[0].content == "Last"
 
-    def test_remove_content_end(self, ast_builder):
-        """Test removing content from the end."""
-        previous = "# Keep me\n\n# Remove me"
-        new_text = "# Keep me"
+def test_add_content_end(ast_builder):
+    """Test adding content at the end."""
+    previous = "# Existing heading"
+    new_text = "# Existing heading\n\n# New ending"
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        assert len(doc.children) == 1
-        assert doc.children[0].children[0].content == "Keep me"
+    assert len(doc.children) == 2
+    assert doc.children[0].children[0].content == "Existing heading"
+    assert doc.children[1].children[0].content == "New ending"
 
-    def test_list_modifications(self, ast_builder):
-        """Test modifications to list structures."""
-        previous = """- Item 1
+
+def test_remove_content_beginning(ast_builder):
+    """Test removing content from the beginning."""
+    previous = "# Remove me\n\n# Keep me\n\nKeep this paragraph."
+    new_text = "# Keep me\n\nKeep this paragraph."
+
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
+
+    assert len(doc.children) == 2
+    assert doc.children[0].children[0].content == "Keep me"
+    assert doc.children[1].children[0].content == "Keep this paragraph."
+
+
+def test_remove_content_middle(ast_builder):
+    """Test removing content from the middle."""
+    previous = "# First\n\n# Remove me\n\n# Last"
+    new_text = "# First\n\n# Last"
+
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
+
+    assert len(doc.children) == 2
+    assert doc.children[0].children[0].content == "First"
+    assert doc.children[1].children[0].content == "Last"
+
+
+def test_remove_content_end(ast_builder):
+    """Test removing content from the end."""
+    previous = "# Keep me\n\n# Remove me"
+    new_text = "# Keep me"
+
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
+
+    assert len(doc.children) == 1
+    assert doc.children[0].children[0].content == "Keep me"
+
+
+def test_list_modifications(ast_builder):
+    """Test modifications to list structures."""
+    previous = """- Item 1
 - Item 2
 - Item 3"""
 
-        new_text = """- Modified Item 1
+    new_text = """- Modified Item 1
 - Item 2
 - Item 3
 - New Item 4"""
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        list_node = doc.children[0]
-        assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
-        assert len(list_node.children) == 4
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert len(list_node.children) == 4
 
-        # Check first item was modified
-        first_item = list_node.children[0]
-        first_paragraph = first_item.children[0]
-        assert first_paragraph.children[0].content == "Modified Item 1"
+    # Check first item was modified
+    first_item = list_node.children[0]
+    first_paragraph = first_item.children[0]
+    assert first_paragraph.children[0].content == "Modified Item 1"
 
-    def test_list_type_change(self, ast_builder):
-        """Test changing list types (unordered to ordered)."""
-        previous = """- Item 1
+
+def test_list_type_change(ast_builder):
+    """Test changing list types (unordered to ordered)."""
+    previous = """- Item 1
 - Item 2
 - Item 3"""
 
-        new_text = """1. Item 1
+    new_text = """1. Item 1
 2. Item 2
 3. Item 3"""
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        list_node = doc.children[0]
-        assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
-        assert len(list_node.children) == 3
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+    assert len(list_node.children) == 3
 
-    def test_nested_list_modifications(self, ast_builder):
-        """Test modifications to nested list structures."""
-        previous = """- Item 1
+
+def test_nested_list_modifications(ast_builder):
+    """Test modifications to nested list structures."""
+    previous = """- Item 1
   - Nested 1
   - Nested 2
 - Item 2"""
 
-        new_text = """- Item 1
+    new_text = """- Item 1
   - Nested 1
   - Modified Nested 2
   - New Nested 3
 - Item 2
 - New Item 3"""
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        main_list = doc.children[0]
-        assert len(main_list.children) == 3
+    main_list = doc.children[0]
+    assert len(main_list.children) == 3
 
-        # Check nested list was modified
-        first_item = main_list.children[0]
-        nested_list = first_item.children[1]
-        assert len(nested_list.children) == 3
+    # Check nested list was modified
+    first_item = main_list.children[0]
+    nested_list = first_item.children[1]
+    assert len(nested_list.children) == 3
 
-    def test_table_modifications(self, ast_builder):
-        """Test modifications to table structures."""
-        previous = """| Col1 | Col2 |
+
+def test_table_modifications(ast_builder):
+    """Test modifications to table structures."""
+    previous = """| Col1 | Col2 |
 |------|------|
 | A1   | A2   |
 | B1   | B2   |"""
 
-        new_text = """| Col1 | Col2 | Col3 |
+    new_text = """| Col1 | Col2 | Col3 |
 |------|------|------|
 | A1   | A2   | A3   |
 | B1   | B2   | B3   |
 | C1   | C2   | C3   |"""
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        table = doc.children[0]
-        assert table.__class__.__name__ == "MarkdownTableNode"
+    table = doc.children[0]
+    assert table.__class__.__name__ == "MarkdownTableNode"
 
-        # Check header has 3 columns
-        header = table.children[0]
-        header_row = header.children[0]
-        assert len(header_row.children) == 3
+    # Check header has 3 columns
+    header = table.children[0]
+    header_row = header.children[0]
+    assert len(header_row.children) == 3
 
-        # Check body has 3 rows
-        body = table.children[1]
-        assert len(body.children) == 3
+    # Check body has 3 rows
+    body = table.children[1]
+    assert len(body.children) == 3
 
-    def test_table_to_paragraph_conversion(self, ast_builder):
-        """Test converting table to paragraphs by removing separator."""
-        previous = """| Col1 | Col2 |
+
+def test_table_to_paragraph_conversion(ast_builder):
+    """Test converting table to paragraphs by removing separator."""
+    previous = """| Col1 | Col2 |
 |------|------|
 | A1   | A2   |"""
 
-        new_text = """| Col1 | Col2 |
+    new_text = """| Col1 | Col2 |
 | A1   | A2   |"""
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        # Should be converted to paragraphs
-        assert len(doc.children) == 2
-        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    # Should be converted to paragraphs
+    assert len(doc.children) == 2
+    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
 
-    def test_code_block_modifications(self, ast_builder):
-        """Test modifications to code blocks."""
-        previous = """```python
+
+def test_code_block_modifications(ast_builder):
+    """Test modifications to code blocks."""
+    previous = """```python
 def old_function():
     return "old"
 ```"""
 
-        new_text = """```python
+    new_text = """```python
 def new_function():
     return "new"
 
@@ -1371,140 +1406,149 @@ def another_function():
     return "another"
 ```"""
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        code_block = doc.children[0]
-        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
-        assert "new_function" in code_block.content
-        assert "another_function" in code_block.content
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert "new_function" in code_block.content
+    assert "another_function" in code_block.content
 
-    def test_code_block_language_change(self, ast_builder):
-        """Test changing code block language."""
-        previous = """```python
+
+def test_code_block_language_change(ast_builder):
+    """Test changing code block language."""
+    previous = """```python
 print("hello")
 ```"""
 
-        new_text = """```javascript
+    new_text = """```javascript
 console.log("hello");
 ```"""
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        code_block = doc.children[0]
-        assert code_block.language == "javascript"
-        assert code_block.content.strip() == 'console.log("hello");'
+    code_block = doc.children[0]
+    assert code_block.language == "javascript"
+    assert code_block.content.strip() == 'console.log("hello");'
 
-    def test_inline_formatting_changes(self, ast_builder):
-        """Test changes to inline formatting."""
-        previous = "This has **bold** text."
-        new_text = "This has *italic* text."
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+def test_inline_formatting_changes(ast_builder):
+    """Test changes to inline formatting."""
+    previous = "This has **bold** text."
+    new_text = "This has *italic* text."
 
-        paragraph = doc.children[0]
-        formatting_node = paragraph.children[1]
-        assert formatting_node.__class__.__name__ == "MarkdownEmphasisNode"
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-    def test_link_modifications(self, ast_builder):
-        """Test modifications to links."""
-        previous = "Visit [old site](http://old.com) for info."
-        new_text = "Visit [new site](http://new.com) for info."
+    paragraph = doc.children[0]
+    formatting_node = paragraph.children[1]
+    assert formatting_node.__class__.__name__ == "MarkdownEmphasisNode"
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
 
-        paragraph = doc.children[0]
-        link = paragraph.children[1]
-        assert link.__class__.__name__ == "MarkdownLinkNode"
-        assert link.url == "http://new.com"
-        assert link.children[0].content == "new site"
+def test_link_modifications(ast_builder):
+    """Test modifications to links."""
+    previous = "Visit [old site](http://old.com) for info."
+    new_text = "Visit [new site](http://new.com) for info."
 
-    def test_image_modifications(self, ast_builder):
-        """Test modifications to images."""
-        previous = "![old alt](old.jpg)"
-        new_text = "![new alt](new.jpg \"New title\")"
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    paragraph = doc.children[0]
+    link = paragraph.children[1]
+    assert link.__class__.__name__ == "MarkdownLinkNode"
+    assert link.url == "http://new.com"
+    assert link.children[0].content == "new site"
 
-        paragraph = doc.children[0]
-        image = paragraph.children[0]
-        assert image.__class__.__name__ == "MarkdownImageNode"
-        assert image.url == "new.jpg"
-        assert image.alt_text == "new alt"
-        assert image.title == "New title"
 
-    def test_horizontal_rule_changes(self, ast_builder):
-        """Test changes involving horizontal rules."""
-        previous = "Before\n\n---\n\nAfter"
-        new_text = "Before\n\nMiddle\n\nAfter"
+def test_image_modifications(ast_builder):
+    """Test modifications to images."""
+    previous = "![old alt](old.jpg)"
+    new_text = "![new alt](new.jpg \"New title\")"
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        assert len(doc.children) == 3
-        assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
-        assert doc.children[1].children[0].content == "Middle"
-        assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
+    paragraph = doc.children[0]
+    image = paragraph.children[0]
+    assert image.__class__.__name__ == "MarkdownImageNode"
+    assert image.url == "new.jpg"
+    assert image.alt_text == "new alt"
+    assert image.title == "New title"
 
-    def test_multiple_updates_sequence(self, ast_builder):
-        """Test a sequence of multiple updates."""
-        # Start with simple content
-        content1 = "# Initial"
-        doc = ast_builder.update_ast(content1, None)
-        assert len(doc.children) == 1
 
-        # Add content
-        content2 = "# Initial\n\nAdded paragraph."
-        doc = ast_builder.update_ast(content2, content1)
-        assert len(doc.children) == 2
+def test_horizontal_rule_changes(ast_builder):
+    """Test changes involving horizontal rules."""
+    previous = "Before\n\n---\n\nAfter"
+    new_text = "Before\n\nMiddle\n\nAfter"
 
-        # Modify content
-        content3 = "# Modified\n\nAdded paragraph."
-        doc = ast_builder.update_ast(content3, content2)
-        assert doc.children[0].children[0].content == "Modified"
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        # Remove content
-        content4 = "# Modified"
-        doc = ast_builder.update_ast(content4, content3)
-        assert len(doc.children) == 1
+    assert len(doc.children) == 3
+    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[1].children[0].content == "Middle"
+    assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
 
-    def test_line_break_modifications(self, ast_builder):
-        """Test modifications involving line breaks."""
-        previous = "Line 1  \nLine 2\nLine 3"
-        new_text = "Line 1\nLine 2  \nLine 3"
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+def test_multiple_updates_sequence(ast_builder):
+    """Test a sequence of multiple updates."""
+    # Start with simple content
+    content1 = "# Initial"
+    doc = ast_builder.update_ast(content1, None)
+    assert len(doc.children) == 1
 
-        paragraph = doc.children[0]
-        # Should have line break in different position
-        has_line_break = any(
-            child.__class__.__name__ == "MarkdownLineBreakNode"
-            for child in paragraph.children
-        )
-        assert has_line_break
+    # Add content
+    content2 = "# Initial\n\nAdded paragraph."
+    doc = ast_builder.update_ast(content2, content1)
+    assert len(doc.children) == 2
 
-    def test_source_path_preservation(self, ast_builder):
-        """Test that source path is preserved during updates."""
-        previous = "# Heading"
-        new_text = "# Updated heading"
+    # Modify content
+    content3 = "# Modified\n\nAdded paragraph."
+    doc = ast_builder.update_ast(content3, content2)
+    assert doc.children[0].children[0].content == "Modified"
 
-        # Build with source path
-        doc = ast_builder.update_ast(previous, None, path="/test/path.md")
-        assert doc.source_path == "/test/path.md"
+    # Remove content
+    content4 = "# Modified"
+    doc = ast_builder.update_ast(content4, content3)
+    assert len(doc.children) == 1
 
-        # Update should preserve path
-        doc = ast_builder.update_ast(new_text, previous, path="/test/path.md")
-        assert doc.source_path == "/test/path.md"
 
-    def test_complex_document_update(self, ast_builder):
-        """Test updating a complex document with multiple element types."""
-        previous = """# Document Title
+def test_line_break_modifications(ast_builder):
+    """Test modifications involving line breaks."""
+    previous = "Line 1  \nLine 2\nLine 3"
+    new_text = "Line 1\nLine 2  \nLine 3"
+
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
+
+    paragraph = doc.children[0]
+    # Should have line break in different position
+    has_line_break = any(
+        child.__class__.__name__ == "MarkdownLineBreakNode"
+        for child in paragraph.children
+    )
+    assert has_line_break
+
+
+def test_source_path_preservation(ast_builder):
+    """Test that source path is preserved during updates."""
+    previous = "# Heading"
+    new_text = "# Updated heading"
+
+    # Build with source path
+    doc = ast_builder.update_ast(previous, None, path="/test/path.md")
+    assert doc.source_path == "/test/path.md"
+
+    # Update should preserve path
+    doc = ast_builder.update_ast(new_text, previous, path="/test/path.md")
+    assert doc.source_path == "/test/path.md"
+
+
+def test_complex_document_update(ast_builder):
+    """Test updating a complex document with multiple element types."""
+    previous = """# Document Title
 
 Introduction paragraph with **bold** and *italic* text.
 
@@ -1530,7 +1574,7 @@ def hello():
 
 Final paragraph."""
 
-        new_text = """# Updated Document Title
+    new_text = """# Updated Document Title
 
 Modified introduction paragraph with **bold** text only.
 
@@ -1555,109 +1599,114 @@ function hello() {
 
 Updated final paragraph."""
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        # Verify structure changes
-        assert len(doc.children) > 5  # Should have multiple elements
+    # Verify structure changes
+    assert len(doc.children) > 5  # Should have multiple elements
 
-        # Check title was updated
-        title = doc.children[0]
-        assert title.children[0].content == "Updated Document Title"
+    # Check title was updated
+    title = doc.children[0]
+    assert title.children[0].content == "Updated Document Title"
 
-        # Check list type changed to ordered
-        list_element = None
-        for child in doc.children:
-            if child.__class__.__name__ == "MarkdownOrderedListNode":
-                list_element = child
-                break
-        assert list_element is not None
+    # Check list type changed to ordered
+    list_element = None
+    for child in doc.children:
+        if child.__class__.__name__ == "MarkdownOrderedListNode":
+            list_element = child
+            break
+    assert list_element is not None
 
-        # Check code block language changed
-        code_element = None
-        for child in doc.children:
-            if child.__class__.__name__ == "MarkdownCodeBlockNode":
-                code_element = child
-                break
-        assert code_element is not None
-        assert code_element.language == "javascript"
+    # Check code block language changed
+    code_element = None
+    for child in doc.children:
+        if child.__class__.__name__ == "MarkdownCodeBlockNode":
+            code_element = child
+            break
+    assert code_element is not None
+    assert code_element.language == "javascript"
 
-    def test_whitespace_only_changes(self, ast_builder):
-        """Test updates that only change whitespace."""
-        previous = "#Heading\nParagraph."
-        new_text = "# Heading\n\nParagraph."
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+def test_whitespace_only_changes(ast_builder):
+    """Test updates that only change whitespace."""
+    previous = "#Heading\nParagraph."
+    new_text = "# Heading\n\nParagraph."
 
-        # Structure should be the same but properly formatted
-        assert len(doc.children) == 2
-        assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
-        assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-    def test_identical_content_update(self, ast_builder):
-        """Test updating with identical content."""
-        content = "# Same heading\n\nSame paragraph."
+    # Structure should be the same but properly formatted
+    assert len(doc.children) == 2
+    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
 
-        ast_builder.build_ast(content)
-        original_doc = ast_builder.document()
 
-        doc = ast_builder.update_ast(content, content)
+def test_identical_content_update(ast_builder):
+    """Test updating with identical content."""
+    content = "# Same heading\n\nSame paragraph."
 
-        # Should return same structure
-        assert len(doc.children) == len(original_doc.children)
-        assert doc.children[0].children[0].content == "Same heading"
+    ast_builder.build_ast(content)
+    original_doc = ast_builder.document()
 
-    def test_update_with_malformed_content(self, ast_builder):
-        """Test updates with malformed markdown content."""
-        previous = "# Valid heading"
-        new_text = "**Unclosed bold\n`Unclosed code\n[Unclosed link("
+    doc = ast_builder.update_ast(content, content)
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    # Should return same structure
+    assert len(doc.children) == len(original_doc.children)
+    assert doc.children[0].children[0].content == "Same heading"
 
-        # Should handle malformed content gracefully
-        assert doc is not None
-        assert len(doc.children) >= 1
 
-    def test_very_large_content_change(self, ast_builder):
-        """Test updating with very large content changes."""
-        # Create large previous content
-        previous_lines = []
-        for i in range(100):
-            previous_lines.append(f"# Heading {i}")
-            previous_lines.append(f"Paragraph {i} content.")
-            previous_lines.append("")
-        previous = "\n".join(previous_lines)
+def test_update_with_malformed_content(ast_builder):
+    """Test updates with malformed markdown content."""
+    previous = "# Valid heading"
+    new_text = "**Unclosed bold\n`Unclosed code\n[Unclosed link("
 
-        # Create completely different large content
-        new_lines = []
-        for i in range(150):
-            new_lines.append(f"## New Heading {i}")
-            new_lines.append(f"- List item {i}")
-            new_lines.append("")
-        new_text = "\n".join(new_lines)
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    # Should handle malformed content gracefully
+    assert doc is not None
+    assert len(doc.children) >= 1
 
-        # Should handle large changes without error
-        assert doc is not None
-        assert len(doc.children) > 100
 
-    def test_update_preserves_line_mapping(self, ast_builder):
-        """Test that line mapping is properly updated."""
-        previous = "# Line 0\n\nLine 2 paragraph."
-        new_text = "# Line 0\n\n## Line 2 heading\n\nLine 4 paragraph."
+def test_very_large_content_change(ast_builder):
+    """Test updating with very large content changes."""
+    # Create large previous content
+    previous_lines = []
+    for i in range(100):
+        previous_lines.append(f"# Heading {i}")
+        previous_lines.append(f"Paragraph {i} content.")
+        previous_lines.append("")
+    previous = "\n".join(previous_lines)
 
-        ast_builder.build_ast(previous)
-        doc = ast_builder.update_ast(new_text, previous)
+    # Create completely different large content
+    new_lines = []
+    for i in range(150):
+        new_lines.append(f"## New Heading {i}")
+        new_lines.append(f"- List item {i}")
+        new_lines.append("")
+    new_text = "\n".join(new_lines)
 
-        # Verify line mapping exists and has correct entries
-        assert hasattr(ast_builder, '_line_to_node_map')
-        assert len(ast_builder._line_to_node_map) > 0
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
 
-        # Check specific line mappings
-        assert 0 in ast_builder._line_to_node_map  # First heading
-        assert 2 in ast_builder._line_to_node_map  # Second heading
-        assert 4 in ast_builder._line_to_node_map  # Paragraph
+    # Should handle large changes without error
+    assert doc is not None
+    assert len(doc.children) > 100
+
+
+def test_update_preserves_line_mapping(ast_builder):
+    """Test that line mapping is properly updated."""
+    previous = "# Line 0\n\nLine 2 paragraph."
+    new_text = "# Line 0\n\n## Line 2 heading\n\nLine 4 paragraph."
+
+    ast_builder.build_ast(previous)
+    doc = ast_builder.update_ast(new_text, previous)
+
+    # Verify line mapping exists and has correct entries
+    assert hasattr(ast_builder, '_line_to_node_map')
+    assert len(ast_builder._line_to_node_map) > 0
+
+    # Check specific line mappings
+    assert 0 in ast_builder._line_to_node_map  # First heading
+    assert 2 in ast_builder._line_to_node_map  # Second heading
+    assert 4 in ast_builder._line_to_node_map  # Paragraph

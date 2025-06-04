@@ -1,0 +1,47 @@
+{
+  "type": "root",
+  "children": [
+    {
+      "type": "role",
+      "label": "",
+      "children": [
+        {
+          "type": "text",
+          "content": "You are a helpful assistant"
+        },
+        {
+          "type": "text",
+          "content": ""
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "label": "",
+      "children": [
+        {
+          "type": "text",
+          "content": "I am testing some software"
+        },
+        {
+          "type": "text",
+          "content": ""
+        }
+      ]
+    },
+    {
+      "type": "action",
+      "label": "",
+      "children": [
+        {
+          "type": "text",
+          "content": "Please give me a 10x2 table with numbers in English in one column"
+        },
+        {
+          "type": "text",
+          "content": "and numbers in Arabic and their pronunciations in the other."
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,12 @@ from humbug.metaphor import (
     MetaphorASTBuilderError
 )
 
+from metaphor_test_utils import (
+    find_test_files,
+    parse_and_compare,
+    parse_metaphor_text
+)
+
 
 @pytest.fixture
 def ast_builder():
@@ -1474,3 +1480,9 @@ def test_recursive_embed(tmp_path):
 
     finally:
         os.chdir(current_dir)
+
+@pytest.mark.parametrize("metaphor_path,expected_json_path", find_test_files())
+def test_parse_fixture_files(metaphor_path, expected_json_path):
+    """Test parsing Metaphor files against expected JSON outputs."""
+    is_match, diff = parse_and_compare(metaphor_path, expected_json_path)
+    assert is_match, f"AST mismatch for {os.path.basename(metaphor_path)}:\n{diff}"
