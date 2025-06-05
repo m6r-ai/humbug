@@ -7,7 +7,7 @@ New features:
 - You can now create a new file by right clicking in the mindspace tree.
 - You can now create a new folder by right clicking in the mindspace tree.
 - You can now delete an empty folder by right clicking in the mindspace tree.
-- You can now edit the `.conv` conversation files by right clicking in the mindspace tree. 
+- You can now edit the `.conv` conversation files by right clicking in the mindspace tree.
 
 Bug fixes:
 
