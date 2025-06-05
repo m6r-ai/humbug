@@ -633,10 +633,10 @@ class MindspaceFileTree(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
             }}
             QLabel {{
-                color: {self._style_manager.get_color_str(ColorRole.TAB_INACTIVE)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
-                padding: 8px;
+                padding: 5px 6px 5px 6px;
             }}
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
