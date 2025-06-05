@@ -228,7 +228,7 @@ class MindspaceWiki:
                 ])
 
             except MindspaceWikiIOError as e:
-                self._logger.warning("Could not retrieve metadata for %s: %s", file_path, str(e))
+                self._logger.warning("Could not retrieve metadata for %s: %s", directory_path, str(e))
 
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
 
