@@ -8,6 +8,7 @@ class ColorRole(Enum):
     # Background colours
     BACKGROUND_PRIMARY = auto()         # Main window background
     BACKGROUND_SECONDARY = auto()       # Secondary elements background
+    BACKGROUND_TERTIARY = auto()        # Tertiary elements background
     BACKGROUND_DIALOG = auto()          # Dialog box background
 
     # Text colours

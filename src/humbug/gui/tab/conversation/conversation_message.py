@@ -292,7 +292,7 @@ class ConversationMessage(QFrame):
                     ColorRole.MESSAGE_USER_BACKGROUND if style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
                 )
                 color = (
-                    self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY) if language is not None
+                    self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY) if language is not None
                     else background_color
                 )
                 factor = self._style_manager.zoom_factor()
@@ -506,7 +506,7 @@ class ConversationMessage(QFrame):
         # Apply styling to all sections
         for section in self._sections:
             language = section.language()
-            color = self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY) if language is not None else background_color
+            color = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY) if language is not None else background_color
             section.apply_style(text_color, color, font)
 
         # Determine border color based on state (focused takes precedence over bookmarked)
