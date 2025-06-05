@@ -337,6 +337,8 @@ class MindspaceFileTree(QWidget):
             with open(new_file_path, 'w', encoding='utf-8') as f:
                 f.write("")  # Create empty file
 
+            self.file_edited.emit(new_file_path)
+
         except OSError as e:
             self._logger.error("Failed to create file '%s': %s", new_file_path, str(e))
             strings = self._language_manager.strings()

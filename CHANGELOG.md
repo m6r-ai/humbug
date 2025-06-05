@@ -2,6 +2,12 @@
 
 ## v0.15 (2025-06-xx)
 
+New features:
+
+- You can now create a new file in the mindspace tree.
+- You can now create a new folder in the mindspace tree.
+- You can now delete an empty folder in the mindspace tree.
+
 Bug fixes:
 
 - The `m6rc` command would search the current working directory before the mindspace when including files.  It should not

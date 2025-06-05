@@ -82,7 +82,9 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.15
 
-TBD
+- You can now create a new file in the mindspace tree.
+- You can now create a new folder in the mindspace tree.
+- You can now delete an empty folder in the mindspace tree.
 
 ## Features
 
