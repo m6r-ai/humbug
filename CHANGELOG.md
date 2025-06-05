@@ -2,7 +2,10 @@
 
 ## v0.15 (2025-06-xx)
 
-TBD
+Bug fixes:
+
+- The `m6rc` command would search the current working directory before the mindspace when including files.  It should not
+  take any notice of the CWD.
 
 ## v0.14 (2025-06-04)
 
