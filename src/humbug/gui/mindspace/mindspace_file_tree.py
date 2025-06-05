@@ -246,10 +246,8 @@ class MindspaceFileTree(QWidget):
 
             else:
                 # File context menu
-                edit_action = None if is_conv else menu.addAction(strings.edit)
-                rename_action = menu.addAction(
-                    strings.rename_conversation if is_conv else strings.rename
-                )
+                edit_action = menu.addAction(strings.edit)
+                rename_action = menu.addAction(strings.rename)
                 delete_action = menu.addAction(strings.delete)
                 new_file_action = None
                 new_folder_action = None

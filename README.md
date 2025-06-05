@@ -82,9 +82,10 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.15
 
-- You can now create a new file in the mindspace tree.
-- You can now create a new folder in the mindspace tree.
-- You can now delete an empty folder in the mindspace tree.
+- You can now create a new file by right clicking in the mindspace tree.
+- You can now create a new folder by right clicking in the mindspace tree.
+- You can now delete an empty folder by right clicking in the mindspace tree.
+- You can now edit the `.conv` conversation files by right clicking in the mindspace tree. 
 
 ## Features
 
