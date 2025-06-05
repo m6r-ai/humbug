@@ -6,6 +6,7 @@ Bug fixes:
 
 - The `m6rc` command would search the current working directory before the mindspace when including files.  It should not
   take any notice of the CWD.
+- Fixed a problem in the JSON lexer that could result in a crash.
 
 ## v0.14 (2025-06-04)
 
