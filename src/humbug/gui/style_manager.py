@@ -79,8 +79,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.BACKGROUND_TERTIARY: {
-                ColorMode.DARK: "#1a1a1a",
-                ColorMode.LIGHT: "#f0f0f0"
+                ColorMode.DARK: "#242424",
+                ColorMode.LIGHT: "#f8f8f8"
             },
             ColorRole.BACKGROUND_DIALOG: {
                 ColorMode.DARK: "#282828",
@@ -131,7 +131,7 @@ class StyleManager(QObject):
 
             # Tab colours
             ColorRole.TAB_BACKGROUND_ACTIVE: {
-                ColorMode.DARK: "#202020",
+                ColorMode.DARK: "#1e1e1e",
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TAB_INACTIVE: {
