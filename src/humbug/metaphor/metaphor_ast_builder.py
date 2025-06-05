@@ -279,12 +279,17 @@ class MetaphorASTBuilder:
 
     def _find_file_path(self, filename: str) -> str:
         """Try to find a valid path for a file, given all the search path options"""
+        if os.path.isabs(filename):
+            if Path(filename).exists():
+                return filename
+
+            raise FileNotFoundError(f"File not found: {filename}")
+
         # If we don't have an absolute path then we can try search paths.
-        if not os.path.isabs(filename):
-            for path in self._search_paths:
-                try_name = os.path.join(path, filename)
-                if Path(try_name).exists():
-                    return try_name
+        for path in self._search_paths:
+            try_name = os.path.join(path, filename)
+            if Path(try_name).exists():
+                return try_name
 
         raise FileNotFoundError(f"File not found: {filename}")
 
