@@ -1,5 +1,6 @@
 """File tree view implementation for mindspace files."""
 
+import logging
 import os
 
 from PySide6.QtWidgets import (
@@ -13,6 +14,8 @@ from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.gui.mindspace.mindspace_conversation_rename_dialog import MindspaceConversationRenameDialog
 from humbug.gui.mindspace.mindspace_file_model import MindspaceFileModel
 from humbug.gui.mindspace.mindspace_file_rename_dialog import MindspaceFileRenameDialog
+from humbug.gui.mindspace.mindspace_new_folder_dialog import MindspaceNewFolderDialog
+from humbug.gui.mindspace.mindspace_new_file_dialog import MindspaceNewFileDialog
 from humbug.gui.mindspace.mindspace_file_tree_icon_provider import MindspaceFileTreeIconProvider
 from humbug.gui.mindspace.mindspace_file_tree_style import MindspaceFileTreeStyle
 from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
@@ -33,6 +36,7 @@ class MindspaceFileTree(QWidget):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
+        self._logger = logging.getLogger("MindspaceFileTree")
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -203,31 +207,145 @@ class MindspaceFileTree(QWidget):
             is_dir = os.path.isdir(path)
             is_conv = path.lower().endswith('.conv')
 
-            # Create actions
-            edit_action = None if is_dir or is_conv else menu.addAction(strings.edit)
-            rename_action = menu.addAction(
-                strings.rename_conversation if not is_dir and is_conv else strings.rename
-            )
-            delete_action = None if is_dir else menu.addAction(strings.delete)
+            # Create actions based on item type
+            if is_dir:
+                # Directory context menu
+                new_folder_action = menu.addAction(strings.new_folder)
+                new_file_action = menu.addAction(strings.new_file)
+                rename_action = menu.addAction(strings.rename)
+                delete_action = menu.addAction(strings.delete)
+                edit_action = None
+
+            else:
+                # File context menu
+                edit_action = None if is_conv else menu.addAction(strings.edit)
+                rename_action = menu.addAction(
+                    strings.rename_conversation if is_conv else strings.rename
+                )
+                delete_action = menu.addAction(strings.delete)
+                new_file_action = None
+                new_folder_action = None
 
             # Execute the menu
             action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
             if action:
-                if action == edit_action:
-                    self._handle_edit_file(path)
-                    return
-
-                if action == rename_action:
-                    if not is_dir and is_conv:
-                        self._handle_rename_conversation(path)
+                if is_dir:
+                    if action == new_folder_action:
+                        self._handle_new_folder(path)
                         return
 
-                    self._handle_rename_file(path)
-                    return
+                    if action == new_file_action:
+                        self._handle_new_file(path)
+                        return
 
-                if action == delete_action:
-                    self._handle_delete_file(path)
+                    if action == rename_action:
+                        self._handle_rename_file(path)
+                        return
+
+                    if action == delete_action:
+                        self._handle_delete_folder(path)
+                        return
+
+                else:
+                    if action == edit_action:
+                        self._handle_edit_file(path)
+                        return
+
+                    if action == rename_action:
+                        if is_conv:
+                            self._handle_rename_conversation(path)
+
+                        else:
+                            self._handle_rename_file(path)
+                        return
+
+                    if action == delete_action:
+                        self._handle_delete_file(path)
+                        return
+
+    def _handle_new_folder(self, parent_path: str) -> None:
+        """Handle request to create a new folder.
+
+        Args:
+            parent_path: Path to the parent directory where folder will be created
+        """
+        dialog = MindspaceNewFolderDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        folder_name = dialog.get_name()
+        if not folder_name:
+            return
+
+        new_folder_path = os.path.join(parent_path, folder_name)
+
+        try:
+            # Check if folder already exists
+            if os.path.exists(new_folder_path):
+                strings = self._language_manager.strings()
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.WARNING,
+                    strings.file_creation_error_title,
+                    strings.rename_error_exists
+                )
+                return
+
+            # Create the folder
+            os.makedirs(new_folder_path)
+
+        except OSError as e:
+            self._logger.error("Failed to create folder '%s': %s", new_folder_path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.file_creation_error_title,
+                strings.error_creating_folder.format(str(e))
+            )
+
+    def _handle_new_file(self, parent_path: str) -> None:
+        """Handle request to create a new file.
+
+        Args:
+            parent_path: Path to the parent directory where file will be created
+        """
+        dialog = MindspaceNewFileDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        file_name = dialog.get_name()
+        if not file_name:
+            return
+
+        new_file_path = os.path.join(parent_path, file_name)
+
+        try:
+            # Check if file already exists
+            if os.path.exists(new_file_path):
+                strings = self._language_manager.strings()
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.WARNING,
+                    strings.file_creation_error_title,
+                    strings.rename_error_exists
+                )
+                return
+
+            # Create the file
+            with open(new_file_path, 'w', encoding='utf-8') as f:
+                f.write("")  # Create empty file
+
+        except OSError as e:
+            self._logger.error("Failed to create file '%s': %s", new_file_path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.file_creation_error_title,
+                strings.file_creation_error.format(str(e))
+            )
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""
@@ -264,6 +382,7 @@ class MindspaceFileTree(QWidget):
                 self.file_renamed.emit(path, new_path)
 
             except OSError as e:
+                self._logger.error("Failed to rename '%s' to '%s': %s", path, new_path, str(e))
                 MessageBox.show_message(
                     self,
                     MessageBoxType.WARNING,
@@ -315,6 +434,7 @@ class MindspaceFileTree(QWidget):
             os.rename(path, new_path)
 
         except OSError as e:
+            self._logger.error("Failed to rename conversation '%s' to '%s': %s", path, new_path, str(e))
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -336,7 +456,7 @@ class MindspaceFileTree(QWidget):
             self,
             MessageBoxType.WARNING,
             strings.confirm_delete_title,
-            strings.confirm_delete_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
+            strings.confirm_delete_item_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
             [MessageBoxButton.YES, MessageBoxButton.NO],
             True
         )
@@ -350,6 +470,62 @@ class MindspaceFileTree(QWidget):
                 os.remove(path)
 
             except OSError as e:
+                self._logger.error("Failed to delete file '%s': %s", path, str(e))
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.file_error_title,
+                    strings.error_deleting_file.format(str(e)),
+                    [MessageBoxButton.OK]
+                )
+
+    def _handle_delete_folder(self, path: str) -> None:
+        """Handle request to delete a folder.
+
+        Args:
+            path: Path to the folder to delete
+        """
+        strings = self._language_manager.strings()
+
+        # Check if folder is empty
+        try:
+            if os.listdir(path):
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.WARNING,
+                    strings.confirm_delete_title,
+                    strings.error_folder_not_empty,
+                    [MessageBoxButton.OK]
+                )
+                return
+        except OSError as e:
+            self._logger.error("Failed to check if folder '%s' is empty: %s", path, str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.file_error_title,
+                strings.error_deleting_file.format(str(e)),
+                [MessageBoxButton.OK]
+            )
+            return
+
+        # Show confirmation dialog
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.WARNING,
+            strings.confirm_delete_title,
+            strings.confirm_delete_item_message.format(os.path.basename(path)),
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            True
+        )
+
+        if result == MessageBoxButton.YES:
+            try:
+                # Delete the empty folder
+                os.rmdir(path)
+
+            except OSError as e:
+                self._logger.error("Failed to delete folder '%s': %s", path, str(e))
                 MessageBox.show_message(
                     self,
                     MessageBoxType.CRITICAL,

@@ -229,6 +229,15 @@ def get_english_strings() -> LanguageStrings:
         file_creation_error_title="File Creation Error",
         file_creation_error="Could not create file: ",
 
+        # File and folder creation
+        new_folder="New Folder",
+        new_folder_title="Create New Folder",
+        folder_name="Folder name",
+        new_file_title="Create New File",
+        confirm_delete_item_message="Are you sure you want to delete {0}?",
+        error_folder_not_empty="Cannot delete folder: folder is not empty.",
+        error_creating_folder="Could not create folder: {0}",
+
         # Tool tips
         tooltip_copy_contents="Copy all contents",
         tooltip_save_contents="Save contents to a file",

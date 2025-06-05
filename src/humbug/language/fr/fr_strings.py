@@ -111,7 +111,7 @@ def get_french_strings() -> LanguageStrings:
         m6r_backend="M6R",
         mistral_backend="Mistral",
         openai_backend="OpenAI",
-        ollama_backend="Ollama (local)",
+        ollama_backend="Ollama",
         xai_backend="xAI",
 
         # User Settings dialog - other settings
@@ -228,6 +228,15 @@ def get_french_strings() -> LanguageStrings:
         rename_error_generic="Impossible de renommer le fichier : ",
         file_creation_error_title="Erreur de création de fichier",
         file_creation_error="Impossible de créer le fichier : ",
+
+        # File and folder creation
+        new_folder="Nouveau Dossier",
+        new_folder_title="Créer un Nouveau Dossier",
+        folder_name="Nom du dossier",
+        new_file_title="Créer un Nouveau Fichier",
+        confirm_delete_item_message="Êtes-vous sûr de vouloir supprimer {0} ?",
+        error_folder_not_empty="Impossible de supprimer le dossier : le dossier n'est pas vide.",
+        error_creating_folder="Impossible de créer le dossier : {0}",
 
         # Tool tips
         tooltip_copy_contents="Copier tout le contenu",

@@ -221,6 +221,15 @@ class LanguageStrings:
     file_creation_error_title: str
     file_creation_error: str
 
+    # File and folder creation
+    new_folder: str
+    new_folder_title: str
+    folder_name: str
+    new_file_title: str
+    confirm_delete_item_message: str  # Generic message for file/folder deletion
+    error_folder_not_empty: str
+    error_creating_folder: str
+
     # Tool tips
     tooltip_copy_contents: str
     tooltip_save_contents: str

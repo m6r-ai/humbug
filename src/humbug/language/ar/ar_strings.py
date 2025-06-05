@@ -111,7 +111,7 @@ def get_arabic_strings() -> LanguageStrings:
         m6r_backend="M6R",
         mistral_backend="ميسترال",
         openai_backend="أوبن إي آي",
-        ollama_backend="أولاما (محلي)",
+        ollama_backend="أولاما",
         xai_backend="xAI",
 
         # User Settings dialog - other settings
@@ -228,6 +228,15 @@ def get_arabic_strings() -> LanguageStrings:
         rename_error_generic="تعذر إعادة تسمية الملف: ",
         file_creation_error_title="خطأ في إنشاء الملف",
         file_creation_error="تعذر إنشاء الملف: ",
+
+        # File and folder creation
+        new_folder="مجلد جديد",
+        new_folder_title="إنشاء مجلد جديد",
+        folder_name="اسم المجلد",
+        new_file_title="إنشاء ملف جديد",
+        confirm_delete_item_message="هل أنت متأكد من حذف {0}؟",
+        error_folder_not_empty="لا يمكن حذف المجلد: المجلد ليس فارغاً.",
+        error_creating_folder="تعذر إنشاء المجلد: {0}",
 
         # Tool tips
         tooltip_copy_contents="نسخ جميع المحتويات",
