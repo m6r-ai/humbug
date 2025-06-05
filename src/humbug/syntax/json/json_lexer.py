@@ -137,9 +137,10 @@ class JSONLexer(Lexer):
                 self._input[self._position] == '0' and
                 self._position + 1 < self._input_len and
                 self._is_digit(self._input[self._position + 1])):
+            self._position += 2
             self._tokens.append(Token(
                 type=TokenType.ERROR,
-                value=self._input[start:self._position + 2],
+                value=self._input[start:self._position],
                 start=start
             ))
             return
@@ -197,9 +198,9 @@ class JSONLexer(Lexer):
         if self._position >= self._input_len or not self._is_digit(self._input[self._position]):
             return False
 
-        while (self._position < self._input_len and
-               self._is_digit(self._input[self._position])):
+        while (self._position < self._input_len and self._is_digit(self._input[self._position])):
             self._position += 1
+
         return True
 
     def _read_keyword(self) -> None:
