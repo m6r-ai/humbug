@@ -90,9 +90,9 @@ Context: Capabilities
             - Directories are shown before files in the tree
             - Files and directories are sorted alphabetically within their sections
             - The tree supports keyboard navigation using arrow keys
-            - Double-clicking or pressing Enter on a file opens it in a new editor tab, unless the file
+            - Double-clicking or pressing Enter on a file opens it in a new wiki tab, unless the file
               is a conversation file ("*.conv") in which case it is opened as a new conversation.
-            - Dragging a file into the tab column view opens it in a new editor tab, unless the file is
+            - Dragging a file into the tab column view opens it in a new wiki tab, unless the file is
               a conversation file ("*.conv") in which case it is opened as a new conversation.
             - If the file is already open, its tab becomes active instead
             - Directory nodes can be expanded/collapsed using arrow keys or mouse
@@ -104,31 +104,62 @@ Context: Capabilities
                 If the user mouses over a file or directory item then this will pop open a tooltip that
                 will display the full path name of the item moused-over.
 
-            Context: Pop-up menu
+            Context: Mindspace label pop-up menu
+                If the user clicks the right mouse button while pointing at the mindspace label then they
+                will be given a pop-up menu.
+
+                Context: New folder
+                    Clicking "New Folder" will pop up a dialog prompting the user for a folder name.  On
+                    doing this and click OK a matching new folder will be created at the root of the mindspace.
+
+                Context: New file
+                    Clicking "New File" will pop up a dialog prompting the user for a file name.  On
+                    doing this and click OK a matching new file will be created at the root of the mindspace,
+                    and it will also be opened in an editor tab.
+
+            Context: File pop-up menu
                 If the user clicks the right mouse button while a file is highlighted then they will be
                 given a pop-up menu.
 
-                Context: File deletion
-                    If the user selects "Delete File" then the system will confirm they
-                    want to delete it via a message box.  The message box will warn that deleting the file
-                    will also close any tabs based on the file and will discard any unsaved changes.  If the
-                    user agrees then the tabs will be closed and the file deleted.  If the user does not
-                    agree then the action will be cancelled.
+                Context: Edit
+                    If the user selects "Edit" then the system will open the file in an editor tab.
 
-                Context: Rename file
-                    If the user selects "Rename File" then the system will pop up a dialog box
+                Context: Rename
+                    If the user selects "Rename" then the system will pop up a dialog box
                     that allows them to rename the file to any name that is not already used.
 
-                Context: Create new file
-                    The pop-up menu supports creating new files based on syntax-highlighted file types.
-                    New files are created using templates supported by the application's syntax highlighters.
+                Context: Delete
+                    If the user selects "Delete" then the system will confirm they want to delete the file
+                    via a message box.  The message box will warn that deleting the file will also close
+                    any tabs based on the file and will discard any unsaved changes.  If the user agrees
+                    then the tabs will be closed and the file deleted.  If the user does not
+                    agree then the action will be cancelled.
 
-                    When a file type is selected, a new file is created in the current directory
-                    with a default name and the chosen file extension.
+            Context: Directory pop-up menu
+                If the user clicks the right mouse button while a directory/folder is highlighted then they
+                will be given a pop-up menu.
 
-                Context: Rename conversation
-                    If the user selects "Rename Conversation" then the system will pop up a dialog box
-                    that allows them to rename the conversation to any name that is not already used.
+                Context: New folder
+                    Clicking "New Folder" will pop up a dialog prompting the user for a folder name.  On
+                    doing this and click OK a matching new folder will be created.
+
+                Context: New file
+                    Clicking "New File" will pop up a dialog prompting the user for a file name.  On
+                    doing this and click OK a matching new file will be created and it will also be opened
+                    in an editor tab.
+
+                Context: Rename
+                    If the user selects "Rename" then the system will pop up a dialog box
+                    that allows them to rename the folder to any name that is not already used.
+
+                Context: Delete
+                    If the user selects "Delete" then the system will confirm they want to delete the folder
+                    via a message box.  The message box will warn that deleting the folder will also close
+                    any tabs based on the folder and will discard any unsaved changes.  If the user agrees
+                    then the tabs will be closed and the folder deleted.  If the user does not
+                    agree then the action will be cancelled.
+
+                    Only empty folders may be deleted.
 
             Context: File tree styling
                 The file tree view must maintain consistent styling:
