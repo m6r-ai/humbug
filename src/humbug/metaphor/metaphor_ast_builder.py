@@ -279,9 +279,6 @@ class MetaphorASTBuilder:
 
     def _find_file_path(self, filename: str) -> str:
         """Try to find a valid path for a file, given all the search path options"""
-        if Path(filename).exists():
-            return filename
-
         # If we don't have an absolute path then we can try search paths.
         if not os.path.isabs(filename):
             for path in self._search_paths:
