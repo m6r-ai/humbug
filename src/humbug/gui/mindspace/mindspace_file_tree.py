@@ -50,9 +50,11 @@ class MindspaceFileTree(QWidget):
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
 
-        # Create mindspace label
+        # Create mindspace label with context menu support
         self._mindspace_label = QLabel()
         self._mindspace_label.setContentsMargins(0, 0, 0, 0)
+        self._mindspace_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._mindspace_label.customContextMenuRequested.connect(self._show_mindspace_context_menu)
         header_layout.addWidget(self._mindspace_label)
 
         # Create a spacer widget
@@ -189,6 +191,32 @@ class MindspaceFileTree(QWidget):
             current_index = filter_index
 
         return current_index
+
+    def _show_mindspace_context_menu(self, position: QPoint) -> None:
+        """Show context menu for the mindspace label."""
+        # Only show menu if a mindspace is active
+        if not self._mindspace_path:
+            return
+
+        # Create context menu
+        menu = QMenu(self)
+        strings = self._language_manager.strings()
+
+        # Create actions for mindspace root level
+        new_folder_action = menu.addAction(strings.new_folder)
+        new_file_action = menu.addAction(strings.new_file)
+
+        # Execute the menu
+        action = menu.exec_(self._mindspace_label.mapToGlobal(position))
+
+        if action:
+            if action == new_folder_action:
+                self._handle_new_folder(self._mindspace_path)
+                return
+
+            if action == new_file_action:
+                self._handle_new_file(self._mindspace_path)
+                return
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
