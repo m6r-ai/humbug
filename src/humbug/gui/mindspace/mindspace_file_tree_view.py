@@ -4,12 +4,14 @@ import os
 from typing import cast
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
-from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint
+from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal
 from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent
 
 
 class MindspaceFileTreeView(QTreeView):
     """Custom tree view with drag and drop support."""
+
+    file_dropped = Signal(str, str)  # dragged_path, target_path
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the tree view."""
@@ -129,11 +131,28 @@ class MindspaceFileTreeView(QTreeView):
 
         dragged_path = mime_data.decode()
 
-        # Check if this is a valid drop target
-        if not self._is_valid_drop_target(dragged_path, target_path):
+        # Can't drop a parent folder into one of its children
+        if target_path.startswith(dragged_path + os.sep):
             event.ignore()
             return
 
+        # If the target is not a directory, ignore the event
+        if not os.path.isdir(target_path):
+            event.ignore()
+            return
+
+        # If the dragged path is the same as the target, ignore the event
+        if dragged_path == target_path:
+            event.ignore()
+            return
+
+        # Check if this is a valid drag target
+        source_basename = os.path.basename(dragged_path)
+        if source_basename in ['.humbug', 'conversations', 'metaphor']:
+            event.ignore()
+            return
+
+        print(f"Dragging {dragged_path} to {target_path}")
         event.acceptProposedAction()
 
     def dropEvent(self, event: QDropEvent) -> None:
@@ -160,6 +179,9 @@ class MindspaceFileTreeView(QTreeView):
             return
 
         target_path = file_model.filePath(source_index)
+        if not os.path.isdir(target_path):
+            event.ignore()
+            return
 
         # Get the dragged item path
         mime_data = event.mimeData().data("application/x-humbug-path").data()
@@ -170,45 +192,22 @@ class MindspaceFileTreeView(QTreeView):
 
         dragged_path = mime_data.decode()
 
-        # Validate the drop
-        if not self._is_valid_drop_target(dragged_path, target_path):
+        # Can't drop a parent folder into one of its children
+        if target_path.startswith(dragged_path + os.sep):
             event.ignore()
             return
 
-        # Emit a custom signal that the parent widget can handle
-        # We'll add this signal handling in the parent MindspaceFileTree
-        parent_widget = self.parent()
-        if hasattr(parent_widget, '_handle_file_drop'):
-            parent_widget._handle_file_drop(dragged_path, target_path)
+        # If the target is not a directory, ignore the event
+        if not os.path.isdir(target_path):
+            event.ignore()
+            return
+
+        # If the dragged path is the same as the target, ignore the event
+        if dragged_path == target_path:
+            event.ignore()
+            return
+
+        # Signal the drop event
+        self.file_dropped.emit(dragged_path, target_path)
 
         event.acceptProposedAction()
-
-    def _is_valid_drop_target(self, source_path: str, target_path: str) -> bool:
-        """
-        Check if a drop operation is valid.
-
-        Args:
-            source_path: Path of the item being dragged
-            target_path: Path of the drop target
-
-        Returns:
-            True if the drop is valid, False otherwise
-        """
-        # Can't drop on self
-        if source_path == target_path:
-            return False
-
-        # Can't drop a parent folder into one of its children
-        if target_path.startswith(source_path + os.sep):
-            return False
-
-        # Target must be a directory to accept drops
-        if not os.path.isdir(target_path):
-            return False
-
-        # Check if source is a protected folder
-        source_basename = os.path.basename(source_path)
-        if source_basename in ['.humbug', 'conversations', 'metaphor']:
-            return False
-
-        return True

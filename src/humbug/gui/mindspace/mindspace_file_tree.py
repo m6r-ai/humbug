@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QLabel, QSizePolicy
 )
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint
-from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -63,6 +63,7 @@ class MindspaceFileTree(QWidget):
         # Enable drop support on mindspace label
         self._mindspace_label.setAcceptDrops(True)
         self._mindspace_label.dragEnterEvent = self._mindspace_label_drag_enter
+        self._mindspace_label.dragLeaveEvent = self._mindspace_label_drag_leave
         self._mindspace_label.dragMoveEvent = self._mindspace_label_drag_move
         self._mindspace_label.dropEvent = self._mindspace_label_drop
 
@@ -80,6 +81,7 @@ class MindspaceFileTree(QWidget):
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
         self._tree_style = MindspaceFileTreeStyle()
         self._tree_view.setStyle(self._tree_style)
+        self._tree_view.file_dropped.connect(self._handle_file_drop)
 
         # Create file system model
         self._icon_provider = MindspaceFileTreeIconProvider()
@@ -125,13 +127,30 @@ class MindspaceFileTree(QWidget):
             event.ignore()
             return
 
+        # Add visual feedback - highlight the label
+        self._mindspace_label.setProperty("dragHover", True)
+        self._mindspace_label.style().polish(self._mindspace_label)
+
         event.acceptProposedAction()
+
+    def _mindspace_label_drag_leave(self, event: QDragLeaveEvent) -> None:
+        """Handle drag enter events on mindspace label."""
+        if not self._mindspace_path:
+            event.ignore()
+            return
+
+        # Remove visual feedback
+        self._mindspace_label.setProperty("dragHover", False)
+        self._mindspace_label.style().polish(self._mindspace_label)
+
+        event.accept()
 
     def _mindspace_label_drag_move(self, event: QDragMoveEvent) -> None:
         """Handle drag move events on mindspace label."""
         if not self._mindspace_path:
             event.ignore()
 
+        print("Drag move on mindspace label")
         event_data = event.mimeData()
         if not event_data.hasFormat("application/x-humbug-path"):
             event.ignore()
@@ -148,9 +167,6 @@ class MindspaceFileTree(QWidget):
         print(f"Dragging item: {dragged_path}")
 
         event.acceptProposedAction()
-        # Add visual feedback - highlight the label
-        self._mindspace_label.setProperty("dragHover", True)
-        self._mindspace_label.style().polish(self._mindspace_label)
 
     def _mindspace_label_drop(self, event: QDropEvent) -> None:
         """Handle drop events on mindspace label."""
