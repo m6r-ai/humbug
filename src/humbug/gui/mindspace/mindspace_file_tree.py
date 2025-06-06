@@ -6,7 +6,7 @@ import shutil
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
-    QLabel, QSizePolicy, QStyledItemDelegate, QStyleOptionViewItem
+    QLabel, QStyledItemDelegate, QStyleOptionViewItem
 )
 from PySide6.QtCore import Signal, QModelIndex, QPersistentModelIndex, Qt, QSize, QPoint
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QColor, QPen
@@ -24,6 +24,7 @@ from humbug.gui.mindspace.mindspace_file_tree_style import MindspaceFileTreeStyl
 from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class MindspaceDropTargetItemDelegate(QStyledItemDelegate):
@@ -94,6 +95,7 @@ class MindspaceFileTree(QWidget):
 
         self._style_manager = StyleManager()
         self._logger = logging.getLogger("MindspaceFileTree")
+        self._mindspace_manager = MindspaceManager()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -167,6 +169,27 @@ class MindspaceFileTree(QWidget):
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
+    def _is_direct_child_of_mindspace_root(self, path: str) -> bool:
+        """
+        Check if a path is a direct child of the mindspace root.
+
+        Args:
+            path: Path to check
+
+        Returns:
+            True if the path is a direct child of mindspace root
+        """
+        if not self._mindspace_path:
+            return False
+
+        normalized_path = os.path.normpath(path)
+        normalized_mindspace = os.path.normpath(self._mindspace_path)
+
+        # Get the parent directory of the path
+        parent_dir = os.path.dirname(normalized_path)
+
+        return parent_dir == normalized_mindspace
+
     def _handle_drop_target_changed(self, index: QModelIndex) -> None:
         """
         Handle changes to the drop target in the tree view.
@@ -210,6 +233,7 @@ class MindspaceFileTree(QWidget):
         """Handle drag move events on mindspace label."""
         if not self._mindspace_path:
             event.ignore()
+            return
 
         event_data = event.mimeData()
         if not event_data.hasFormat("application/x-humbug-path"):
@@ -224,6 +248,11 @@ class MindspaceFileTree(QWidget):
             mime_data = bytes(mime_data)
 
         dragged_path = mime_data.decode()
+
+        # Don't allow dropping items that are already direct children of mindspace root
+        if self._is_direct_child_of_mindspace_root(dragged_path):
+            event.ignore()
+            return
 
         event.acceptProposedAction()
 
@@ -249,6 +278,11 @@ class MindspaceFileTree(QWidget):
             mime_data = bytes(mime_data)
 
         dragged_path = mime_data.decode()
+
+        # Don't allow dropping items that are already direct children of mindspace root
+        if self._is_direct_child_of_mindspace_root(dragged_path):
+            event.ignore()
+            return
 
         # Handle the drop to mindspace root
         self._handle_file_drop(dragged_path, self._mindspace_path)

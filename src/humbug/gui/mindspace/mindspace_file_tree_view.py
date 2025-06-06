@@ -120,6 +120,26 @@ class MindspaceFileTreeView(QTreeView):
 
         return path_norm.startswith(ancestor_norm)
 
+    def _is_parent_directory(self, potential_parent: str, child_path: str) -> bool:
+        """
+        Check if one path is the direct parent of another.
+
+        Args:
+            potential_parent: Path that might be the parent
+            child_path: Path to check against
+
+        Returns:
+            True if potential_parent is the direct parent of child_path
+        """
+        if not potential_parent or not child_path:
+            return False
+
+        # Get the actual parent directory of the child path
+        actual_parent = os.path.dirname(os.path.normpath(child_path))
+        normalized_potential_parent = os.path.normpath(potential_parent)
+
+        return actual_parent == normalized_potential_parent
+
     def _start_auto_expand_timer(self, index: QModelIndex) -> None:
         """
         Start the auto-expand timer for the specified folder.
@@ -463,6 +483,13 @@ class MindspaceFileTreeView(QTreeView):
             self._stop_auto_expand_timer()
             return
 
+        # Can't drop into the parent directory (no-op move)
+        if self._is_parent_directory(target_path, dragged_path):
+            event.ignore()
+            self.clear_drop_target()
+            self._stop_auto_expand_timer()
+            return
+
         # If the target is not a directory, ignore the event
         if not os.path.isdir(target_path):
             event.ignore()
@@ -555,6 +582,11 @@ class MindspaceFileTreeView(QTreeView):
 
         # Can't drop a parent folder into one of its children
         if target_path.startswith(dragged_path + os.sep):
+            event.ignore()
+            return
+
+        # Can't drop into the parent directory (no-op move)
+        if self._is_parent_directory(target_path, dragged_path):
             event.ignore()
             return
 

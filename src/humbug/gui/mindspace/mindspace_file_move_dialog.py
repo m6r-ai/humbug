@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt
 
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class MindspaceFileMoveDialog(QDialog):
@@ -27,10 +28,15 @@ class MindspaceFileMoveDialog(QDialog):
         super().__init__(parent)
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
+        self._mindspace_manager = MindspaceManager()
         strings = self._language_manager.strings()
 
         self._source_path = source_path
         self._dest_path = dest_path
+
+        # Convert absolute paths to relative paths for display
+        self._display_source_path = self._get_display_path(source_path)
+        self._display_dest_path = self._get_display_path(dest_path)
 
         # Determine if moving a file or folder
         is_folder = os.path.isdir(source_path)
@@ -60,9 +66,10 @@ class MindspaceFileMoveDialog(QDialog):
         message_label.setWordWrap(True)
         layout.addWidget(message_label)
 
-        # Create details frame
+        # Create details frame without border
         details_frame = QFrame()
-        details_frame.setFrameStyle(QFrame.Shape.Box)
+        # Remove the frame style to eliminate the border
+        details_frame.setFrameStyle(QFrame.Shape.NoFrame)
         details_layout = QVBoxLayout(details_frame)
         details_layout.setContentsMargins(12, 12, 12, 12)
         details_layout.setSpacing(8)
@@ -72,7 +79,7 @@ class MindspaceFileMoveDialog(QDialog):
         source_label.setProperty("detailLabel", True)
         details_layout.addWidget(source_label)
 
-        source_path_label = QLabel(source_path)
+        source_path_label = QLabel(self._display_source_path)
         source_path_label.setWordWrap(True)
         source_path_label.setProperty("pathLabel", True)
         details_layout.addWidget(source_path_label)
@@ -82,7 +89,7 @@ class MindspaceFileMoveDialog(QDialog):
         dest_label.setProperty("detailLabel", True)
         details_layout.addWidget(dest_label)
 
-        dest_path_label = QLabel(dest_path)
+        dest_path_label = QLabel(self._display_dest_path)
         dest_path_label.setWordWrap(True)
         dest_path_label.setProperty("pathLabel", True)
         details_layout.addWidget(dest_path_label)
@@ -121,6 +128,26 @@ class MindspaceFileMoveDialog(QDialog):
 
         self._apply_styling()
 
+    def _get_display_path(self, path: str) -> str:
+        """
+        Get the display path for the dialog (relative to mindspace if possible).
+
+        Args:
+            path: Absolute path to convert
+
+        Returns:
+            Relative path if within mindspace, otherwise absolute path
+        """
+        try:
+            if self._mindspace_manager.has_mindspace():
+                return self._mindspace_manager.get_relative_path(path)
+
+        except Exception:
+            # If conversion fails, fall back to absolute path
+            pass
+
+        return path
+
     def _apply_styling(self) -> None:
         """Apply consistent styling to the dialog."""
         base_stylesheet = self._style_manager.get_dialog_stylesheet()
@@ -139,6 +166,7 @@ class MindspaceFileMoveDialog(QDialog):
             }
             QFrame {
                 background-color: rgba(128, 128, 128, 0.05);
+                border: none;
             }
         """
 
