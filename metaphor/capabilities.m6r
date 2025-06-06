@@ -182,6 +182,22 @@ Context: Capabilities
                 When the user changes the current active tab by selecting a new one, if the tab is associated with
                 an element in the tree view then that element will be selected too.
 
+            Context: Drag and drop movement of files/folders
+                The user can drag a file or folder in the mindspace tree view to a new location in the tree.  The
+                user may only drop the file or folder in another folder, or on the mindspace label (dropping on
+                the mindspace label will result in moving the file/folder to the top level).
+
+                Before moving the file/folder the user will be given a dialog box and asked to confirm the details
+                of the move are correct, and to give them chance to cancel the operation.
+
+                The "conversations", "metaphor", and ".humbug" directories cannot be moved this way.
+
+                The drag and drop will have a visual change in the background colour and draw a faint border around
+                any potential drop target as the user mouses over it.
+
+                If the user mouses over an unexpanded folder while dragging, the folder will auto-expand after 0.5
+                seconds.  If they user then moves on to a new folder the auto-expanded folder will auto-close.
+
         Context: Tab view
             The tabbed interface has tabs that correspond to either conversations being
             had with one or more AI backends, or files being edited.
