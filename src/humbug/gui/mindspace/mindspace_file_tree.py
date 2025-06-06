@@ -26,7 +26,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
 
-class DropTargetItemDelegate(QStyledItemDelegate):
+class MindspaceDropTargetItemDelegate(QStyledItemDelegate):
     """Custom item delegate that provides visual feedback for drop targets."""
 
     def __init__(self, tree_view: 'MindspaceFileTreeView', style_manager: StyleManager):
@@ -940,4 +940,4 @@ class MindspaceFileTree(QWidget):
         """)
 
         # Create/update the custom item delegate to handle drop target styling
-        self._tree_view.setItemDelegate(DropTargetItemDelegate(self._tree_view, self._style_manager))
+        self._tree_view.setItemDelegate(MindspaceDropTargetItemDelegate(self._tree_view, self._style_manager))
