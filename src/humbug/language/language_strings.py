@@ -241,3 +241,16 @@ class LanguageStrings:
 
     delete_from_here_title: str
     delete_from_here_message: str
+
+    # Move operation strings
+    move_file_title: str
+    move_folder_title: str
+    move_file_confirmation: str
+    move_folder_confirmation: str
+    move_from_label: str
+    move_to_label: str
+    move_button: str
+    move_error_title: str
+    move_error_exists: str
+    move_error_failed: str
+    move_error_protected: str

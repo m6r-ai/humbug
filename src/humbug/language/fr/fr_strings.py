@@ -250,5 +250,18 @@ def get_french_strings() -> LanguageStrings:
         delete_from_here_title="Supprimer les messages",
         delete_from_here_message=(
             "Êtes-vous sûr de vouloir supprimer ce message et tous les messages suivants ? Cette action ne peut pas être annulée."
-        )
+        ),
+
+        # Move operation strings
+        move_file_title="Déplacer le fichier",
+        move_folder_title="Déplacer le dossier",
+        move_file_confirmation="Êtes-vous sûr de vouloir déplacer le fichier '{0}' ?",
+        move_folder_confirmation="Êtes-vous sûr de vouloir déplacer le dossier '{0}' ?",
+        move_from_label="De :",
+        move_to_label="Vers :",
+        move_button="Déplacer",
+        move_error_title="Erreur de déplacement",
+        move_error_exists="Un fichier ou dossier avec ce nom existe déjà à la destination.",
+        move_error_failed="Impossible de déplacer l'élément : {0}",
+        move_error_protected="Impossible de déplacer les dossiers système (conversations, metaphor, .humbug)."
     )

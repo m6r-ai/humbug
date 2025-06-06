@@ -250,5 +250,18 @@ def get_english_strings() -> LanguageStrings:
         delete_from_here_title="Delete Messages",
         delete_from_here_message=(
             "Are you sure you want to delete this message and all subsequent messages? This action cannot be undone."
-        )
+        ),
+
+        # Move operation strings
+        move_file_title="Move File",
+        move_folder_title="Move Folder",
+        move_file_confirmation="Are you sure you want to move the file '{0}'?",
+        move_folder_confirmation="Are you sure you want to move the folder '{0}'?",
+        move_from_label="From:",
+        move_to_label="To:",
+        move_button="Move",
+        move_error_title="Move Error",
+        move_error_exists="A file or folder with this name already exists at the destination.",
+        move_error_failed="Could not move item: {0}",
+        move_error_protected="Cannot move system folders (conversations, metaphor, .humbug)."
     )

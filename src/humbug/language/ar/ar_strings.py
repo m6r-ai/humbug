@@ -248,5 +248,18 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_edit_file="تحرير هذا الملف",
 
         delete_from_here_title="حذف الرسائل",
-        delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء."
+        delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",
+
+        # Move operation strings
+        move_file_title="نقل الملف",
+        move_folder_title="نقل المجلد",
+        move_file_confirmation="هل أنت متأكد من أنك تريد نقل الملف '{0}'؟",
+        move_folder_confirmation="هل أنت متأكد من أنك تريد نقل المجلد '{0}'؟",
+        move_from_label="من:",
+        move_to_label="إلى:",
+        move_button="نقل",
+        move_error_title="خطأ في النقل",
+        move_error_exists="يوجد ملف أو مجلد بهذا الاسم بالفعل في الوجهة.",
+        move_error_failed="تعذر نقل العنصر: {0}",
+        move_error_protected="لا يمكن نقل مجلدات النظام (conversations, metaphor, .humbug)."
     )

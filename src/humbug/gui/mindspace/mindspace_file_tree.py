@@ -2,17 +2,20 @@
 
 import logging
 import os
+import shutil
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
     QLabel, QSizePolicy
 )
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint
+from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.gui.mindspace.mindspace_conversation_rename_dialog import MindspaceConversationRenameDialog
 from humbug.gui.mindspace.mindspace_file_model import MindspaceFileModel
+from humbug.gui.mindspace.mindspace_file_move_dialog import MindspaceFileMoveDialog
 from humbug.gui.mindspace.mindspace_file_rename_dialog import MindspaceFileRenameDialog
 from humbug.gui.mindspace.mindspace_new_folder_dialog import MindspaceNewFolderDialog
 from humbug.gui.mindspace.mindspace_new_file_dialog import MindspaceNewFileDialog
@@ -29,6 +32,7 @@ class MindspaceFileTree(QWidget):
     file_activated = Signal(str)  # Emits path when file is activated
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
+    file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str)  # Emits path when file is edited
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -50,11 +54,18 @@ class MindspaceFileTree(QWidget):
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
 
-        # Create mindspace label with context menu support
+        # Create mindspace label with context menu and drop support
         self._mindspace_label = QLabel()
         self._mindspace_label.setContentsMargins(0, 0, 0, 0)
         self._mindspace_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._mindspace_label.customContextMenuRequested.connect(self._show_mindspace_context_menu)
+
+        # Enable drop support on mindspace label
+        self._mindspace_label.setAcceptDrops(True)
+        self._mindspace_label.dragEnterEvent = self._mindspace_label_drag_enter
+        self._mindspace_label.dragMoveEvent = self._mindspace_label_drag_move
+        self._mindspace_label.dropEvent = self._mindspace_label_drop
+
         header_layout.addWidget(self._mindspace_label)
 
         # Create a spacer widget
@@ -103,6 +114,136 @@ class MindspaceFileTree(QWidget):
 
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
+
+    def _mindspace_label_drag_enter(self, event: QDragEnterEvent) -> None:
+        """Handle drag enter events on mindspace label."""
+        if not self._mindspace_path:
+            event.ignore()
+            return
+
+        if not event.mimeData().hasFormat("application/x-humbug-path"):
+            event.ignore()
+            return
+
+        event.acceptProposedAction()
+
+    def _mindspace_label_drag_move(self, event: QDragMoveEvent) -> None:
+        """Handle drag move events on mindspace label."""
+        if not self._mindspace_path:
+            event.ignore()
+
+        event_data = event.mimeData()
+        if not event_data.hasFormat("application/x-humbug-path"):
+            event.ignore()
+            return
+
+        # Get the dragged item path
+        mime_data = event_data.data("application/x-humbug-path").data()
+
+        # Convert to bytes first if it's not already bytes
+        if not isinstance(mime_data, bytes):
+            mime_data = bytes(mime_data)
+
+        dragged_path = mime_data.decode()
+        print(f"Dragging item: {dragged_path}")
+
+        event.acceptProposedAction()
+        # Add visual feedback - highlight the label
+        self._mindspace_label.setProperty("dragHover", True)
+        self._mindspace_label.style().polish(self._mindspace_label)
+
+    def _mindspace_label_drop(self, event: QDropEvent) -> None:
+        """Handle drop events on mindspace label."""
+        if not self._mindspace_path:
+            event.ignore()
+            return
+
+        # Remove visual feedback
+        self._mindspace_label.setProperty("dragHover", False)
+        self._mindspace_label.style().polish(self._mindspace_label)
+
+        event_data = event.mimeData()
+        if not event_data.hasFormat("application/x-humbug-path"):
+            event.ignore()
+            return
+
+        mime_data = event_data.data("application/x-humbug-path").data()
+
+        # Convert to bytes first if it's not already bytes
+        if not isinstance(mime_data, bytes):
+            mime_data = bytes(mime_data)
+
+        dragged_path = mime_data.decode()
+
+        # Handle the drop to mindspace root
+        self._handle_file_drop(dragged_path, self._mindspace_path)
+        event.acceptProposedAction()
+
+    def _handle_file_drop(self, source_path: str, target_path: str) -> None:
+        """
+        Handle a file/folder drop operation.
+
+        Args:
+            source_path: Path of the item being moved
+            target_path: Path of the drop target directory
+        """
+        try:
+            # Determine the destination path
+            item_name = os.path.basename(source_path)
+            destination_path = os.path.join(target_path, item_name)
+
+            # Check if destination already exists
+            if os.path.exists(destination_path):
+                strings = self._language_manager.strings()
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.WARNING,
+                    strings.move_error_title,
+                    strings.move_error_exists.format(item_name)
+                )
+                return
+
+            # Show confirmation dialog
+            dialog = MindspaceFileMoveDialog(source_path, destination_path, self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+
+            # Perform the move operation
+            self._perform_move_operation(source_path, destination_path)
+
+        except Exception as e:
+            self._logger.error("Error handling file drop from '%s' to '%s': %s", source_path, target_path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.move_error_title,
+                strings.move_error_failed.format(str(e))
+            )
+
+    def _perform_move_operation(self, source_path: str, destination_path: str) -> None:
+        """
+        Perform the actual file/folder move operation.
+
+        Args:
+            source_path: Source path of the item to move
+            destination_path: Destination path where the item will be moved
+
+        Raises:
+            OSError: If the move operation fails
+        """
+        try:
+            # Emit signal first so tabs can be updated
+            self.file_moved.emit(source_path, destination_path)
+
+            # Perform the actual move
+            shutil.move(source_path, destination_path)
+
+            self._logger.info("Successfully moved '%s' to '%s'", source_path, destination_path)
+
+        except OSError as e:
+            self._logger.error("Failed to move '%s' to '%s': %s", source_path, destination_path, str(e))
+            raise
 
     def reveal_and_select_file(self, file_path: str) -> None:
         """
@@ -635,6 +776,10 @@ class MindspaceFileTree(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
                 padding: 5px 6px 5px 6px;
+            }}
+            QLabel[dragHover="true"] {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                border: 2px dashed {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
