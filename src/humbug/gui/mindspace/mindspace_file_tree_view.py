@@ -68,6 +68,58 @@ class MindspaceFileTreeView(QTreeView):
             self._current_drop_target = index
             self.drop_target_changed.emit(index)
 
+    def _get_path_from_index(self, index: QModelIndex) -> str | None:
+        """
+        Get the file system path from a model index.
+
+        Args:
+            index: The model index to get the path for
+
+        Returns:
+            File system path if valid, None otherwise
+        """
+        if not index.isValid():
+            return None
+
+        source_model = cast(QSortFilterProxyModel, self.model())
+        if not source_model:
+            return None
+
+        source_index = source_model.mapToSource(index)
+        file_model = cast(QFileSystemModel, source_model.sourceModel())
+        if not file_model:
+            return None
+
+        return file_model.filePath(source_index)
+
+    def _is_ancestor_path(self, potential_ancestor: str, path: str) -> bool:
+        """
+        Check if one path is an ancestor of another.
+
+        Args:
+            potential_ancestor: Path that might be an ancestor
+            path: Path to check against
+
+        Returns:
+            True if potential_ancestor is an ancestor of path
+        """
+        if not potential_ancestor or not path:
+            return False
+
+        # Normalize paths to handle different separators and relative paths
+        ancestor_norm = os.path.normpath(potential_ancestor)
+        path_norm = os.path.normpath(path)
+
+        # Add trailing separator to ancestor to ensure we match complete directory names
+        if not ancestor_norm.endswith(os.sep):
+            ancestor_norm += os.sep
+
+        # Check if path starts with the ancestor path
+        if not path_norm.endswith(os.sep):
+            path_norm += os.sep
+
+        return path_norm.startswith(ancestor_norm)
+
     def _start_auto_expand_timer(self, index: QModelIndex) -> None:
         """
         Start the auto-expand timer for the specified folder.
@@ -89,29 +141,40 @@ class MindspaceFileTreeView(QTreeView):
 
         self._pending_expand_index = None
 
-    def _close_auto_opened_folders(self, except_index: QModelIndex | None = None) -> None:
+    def _close_auto_opened_folders(self, current_target_path: str | None = None) -> None:
         """
-        Close all auto-opened folders except the specified one.
+        Close auto-opened folders that are not ancestors of the current target.
 
         Args:
-            except_index: Optional index to keep open (typically the current drop target)
+            current_target_path: Current target directory path. Folders that are
+                               ancestors of this path will remain open.
         """
-        persistent_except = QPersistentModelIndex(except_index) if except_index and except_index.isValid() else None
-
         folders_to_close = []
-        for persistent_index in self._auto_opened_folders:
-            # Skip if this is the folder we want to keep open
-            if persistent_except and persistent_index == persistent_except:
-                continue
 
+        for persistent_index in self._auto_opened_folders:
             # Skip if the persistent index is no longer valid
             if not persistent_index.isValid():
                 folders_to_close.append(persistent_index)
                 continue
 
-            # Close the folder
-            self.collapse(QModelIndex(persistent_index))
-            folders_to_close.append(persistent_index)
+            # Get the path for this auto-opened folder
+            folder_path = self._get_path_from_index(QModelIndex(persistent_index))
+            if not folder_path:
+                folders_to_close.append(persistent_index)
+                continue
+
+            # If we have a current target, check if this folder is an ancestor
+            should_keep_open = False
+            if current_target_path:
+                # Keep the folder open if it's an ancestor of the current target
+                should_keep_open = self._is_ancestor_path(folder_path, current_target_path)
+                # Also keep it open if it's the current target itself
+                should_keep_open = should_keep_open or (folder_path == current_target_path)
+
+            if not should_keep_open:
+                # Close the folder
+                self.collapse(QModelIndex(persistent_index))
+                folders_to_close.append(persistent_index)
 
         # Remove closed folders from our tracking set
         for folder in folders_to_close:
@@ -127,16 +190,9 @@ class MindspaceFileTreeView(QTreeView):
             return
 
         # Verify the index is still a valid collapsed folder
-        source_model = cast(QSortFilterProxyModel, self.model())
-        if not source_model:
+        target_path = self._get_path_from_index(self._pending_expand_index)
+        if not target_path:
             return
-
-        source_index = source_model.mapToSource(self._pending_expand_index)
-        file_model = cast(QFileSystemModel, source_model.sourceModel())
-        if not file_model:
-            return
-
-        target_path = file_model.filePath(source_index)
 
         # Only expand if it's still a directory and not already expanded
         if os.path.isdir(target_path) and not self.isExpanded(self._pending_expand_index):
@@ -165,16 +221,10 @@ class MindspaceFileTreeView(QTreeView):
             return False
 
         # Check if it's a directory
-        source_model = cast(QSortFilterProxyModel, self.model())
-        if not source_model:
+        target_path = self._get_path_from_index(index)
+        if not target_path:
             return False
 
-        source_index = source_model.mapToSource(index)
-        file_model = cast(QFileSystemModel, source_model.sourceModel())
-        if not file_model:
-            return False
-
-        target_path = file_model.filePath(source_index)
         return os.path.isdir(target_path)
 
     def _get_scroll_direction_and_speed(self, pos: QPoint) -> tuple[int, int]:
@@ -275,20 +325,11 @@ class MindspaceFileTreeView(QTreeView):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Handle mouse move events."""
         # Get the file path from the source model
-        source_model = cast(QSortFilterProxyModel, self.model())
-        if not source_model:
-            return
-
         index = self.indexAt(event.pos())
-        source_index = source_model.mapToSource(index)
-        file_model = cast(QFileSystemModel, source_model.sourceModel())
-        if not file_model:
-            return
-
-        path = file_model.filePath(source_index)
+        path = self._get_path_from_index(index)
 
         # Get the item under the mouse to work out tool tips.
-        self.setToolTip(path if index.isValid() else "")
+        self.setToolTip(path if path else "")
 
         if not event.buttons() & Qt.MouseButton.LeftButton:
             return
@@ -305,9 +346,14 @@ class MindspaceFileTreeView(QTreeView):
         if not drag_index.isValid():
             return
 
+        # Get path for drag operation
+        drag_path = self._get_path_from_index(drag_index)
+        if not drag_path:
+            return
+
         # Create mime data with path
         mime_data = QMimeData()
-        mime_data.setData("application/x-humbug-path", path.encode())
+        mime_data.setData("application/x-humbug-path", drag_path.encode())
 
         # Create drag object
         drag = QDrag(self)
@@ -370,22 +416,12 @@ class MindspaceFileTreeView(QTreeView):
             return
 
         # Get the target path
-        source_model = cast(QSortFilterProxyModel, self.model())
-        if not source_model:
+        target_path = self._get_path_from_index(index)
+        if not target_path:
             event.ignore()
             self.clear_drop_target()
             self._stop_auto_expand_timer()
             return
-
-        source_index = source_model.mapToSource(index)
-        file_model = cast(QFileSystemModel, source_model.sourceModel())
-        if not file_model:
-            event.ignore()
-            self.clear_drop_target()
-            self._stop_auto_expand_timer()
-            return
-
-        target_path = file_model.filePath(source_index)
 
         # Get the dragged item path
         mime_data = event.mimeData().data("application/x-humbug-path").data()
@@ -432,15 +468,15 @@ class MindspaceFileTreeView(QTreeView):
         if self._should_auto_expand(index):
             # If we're hovering over a different folder than before, start a new timer
             if self._pending_expand_index != index:
-                # Close previously auto-opened folders except the current target
-                self._close_auto_opened_folders(index)
+                # Close auto-opened folders that are not ancestors of current target
+                self._close_auto_opened_folders(target_path)
                 self._start_auto_expand_timer(index)
         else:
             # Not a folder that should auto-expand, stop any existing timer
-            # and close auto-opened folders except current target (if it's a valid directory)
+            # and close auto-opened folders that are not ancestors of current target
             self._stop_auto_expand_timer()
             if os.path.isdir(target_path):
-                self._close_auto_opened_folders(index)
+                self._close_auto_opened_folders(target_path)
             else:
                 self._close_auto_opened_folders()
 
@@ -458,7 +494,8 @@ class MindspaceFileTreeView(QTreeView):
 
         # Keep the final drop target open but close other auto-opened folders
         if drop_target_index.isValid():
-            self._close_auto_opened_folders(drop_target_index)
+            target_path = self._get_path_from_index(drop_target_index)
+            self._close_auto_opened_folders(target_path)
         else:
             self._close_auto_opened_folders()
 
@@ -475,19 +512,8 @@ class MindspaceFileTreeView(QTreeView):
             event.ignore()
             return
 
-        source_model = cast(QSortFilterProxyModel, self.model())
-        if not source_model:
-            event.ignore()
-            return
-
-        source_index = source_model.mapToSource(index)
-        file_model = cast(QFileSystemModel, source_model.sourceModel())
-        if not file_model:
-            event.ignore()
-            return
-
-        target_path = file_model.filePath(source_index)
-        if not os.path.isdir(target_path):
+        target_path = self._get_path_from_index(index)
+        if not target_path or not os.path.isdir(target_path):
             event.ignore()
             return
 
@@ -502,11 +528,6 @@ class MindspaceFileTreeView(QTreeView):
 
         # Can't drop a parent folder into one of its children
         if target_path.startswith(dragged_path + os.sep):
-            event.ignore()
-            return
-
-        # If the target is not a directory, ignore the event
-        if not os.path.isdir(target_path):
             event.ignore()
             return
 
