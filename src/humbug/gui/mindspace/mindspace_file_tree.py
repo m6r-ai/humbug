@@ -104,7 +104,6 @@ class MindspaceFileTree(QWidget):
 
         # Create header container
         self._header_widget = QWidget()
-        self._header_widget.setObjectName("header_widget")
         header_layout = QHBoxLayout(self._header_widget)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
@@ -115,17 +114,17 @@ class MindspaceFileTree(QWidget):
         self._mindspace_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._mindspace_label.customContextMenuRequested.connect(self._show_mindspace_context_menu)
 
-        # Enable drop support on mindspace label
-        self._mindspace_label.setAcceptDrops(True)
-        self._mindspace_label.dragEnterEvent = self._mindspace_label_drag_enter
-        self._mindspace_label.dragLeaveEvent = self._mindspace_label_drag_leave
-        self._mindspace_label.dragMoveEvent = self._mindspace_label_drag_move
-        self._mindspace_label.dropEvent = self._mindspace_label_drop
-
         header_layout.addWidget(self._mindspace_label)
         header_layout.addStretch()
 
         layout.addWidget(self._header_widget)
+
+        # Enable drop support on the header widget
+        self._header_widget.setAcceptDrops(True)
+        self._header_widget.dragEnterEvent = self._mindspace_label_drag_enter
+        self._header_widget.dragLeaveEvent = self._mindspace_label_drag_leave
+        self._header_widget.dragMoveEvent = self._mindspace_label_drag_move
+        self._header_widget.dropEvent = self._mindspace_label_drop
 
         # Create tree view
         self._tree_view = MindspaceFileTreeView()
@@ -207,7 +206,22 @@ class MindspaceFileTree(QWidget):
             event.ignore()
             return
 
-        if not event.mimeData().hasFormat("application/x-humbug-path"):
+        event_data = event.mimeData()
+        if not event_data.hasFormat("application/x-humbug-path"):
+            event.ignore()
+            return
+
+        # Get the dragged item path
+        mime_data = event_data.data("application/x-humbug-path").data()
+
+        # Convert to bytes first if it's not already bytes
+        if not isinstance(mime_data, bytes):
+            mime_data = bytes(mime_data)
+
+        dragged_path = mime_data.decode()
+
+        # Don't allow dropping items that are already direct children of mindspace root
+        if self._is_direct_child_of_mindspace_root(dragged_path):
             event.ignore()
             return
 
