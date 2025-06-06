@@ -189,7 +189,6 @@ class MindspaceFileTreeView(QTreeView):
         # Set this index as the current drop target
         self._set_drop_target(index)
 
-        print(f"Dragging {dragged_path} to {target_path}")
         event.acceptProposedAction()
 
     def dropEvent(self, event: QDropEvent) -> None:

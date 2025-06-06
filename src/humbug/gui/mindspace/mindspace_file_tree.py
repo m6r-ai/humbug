@@ -68,8 +68,8 @@ class DropTargetItemDelegate(QStyledItemDelegate):
             # Draw drop target background
             painter.fillRect(option.rect, drop_target_bg)
 
-            # Draw drop target border - dashed line for clear indication
-            painter.setPen(QPen(drop_target_border, 2, Qt.PenStyle.DashLine))
+            # Draw drop target border - dotted line for clear indication
+            painter.setPen(QPen(drop_target_border, 1, Qt.PenStyle.SolidLine))
             painter.drawRect(option.rect.adjusted(1, 1, -1, -1))
 
             # Restore painter state
@@ -101,9 +101,9 @@ class MindspaceFileTree(QWidget):
         layout.setSpacing(0)
 
         # Create header container
-        header_widget = QWidget()
-        header_widget.setObjectName("header_widget")
-        header_layout = QHBoxLayout(header_widget)
+        self._header_widget = QWidget()
+        self._header_widget.setObjectName("header_widget")
+        header_layout = QHBoxLayout(self._header_widget)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
 
@@ -121,13 +121,9 @@ class MindspaceFileTree(QWidget):
         self._mindspace_label.dropEvent = self._mindspace_label_drop
 
         header_layout.addWidget(self._mindspace_label)
+        header_layout.addStretch()
 
-        # Create a spacer widget
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        header_layout.addWidget(spacer)
-
-        layout.addWidget(header_widget)
+        layout.addWidget(self._header_widget)
 
         # Create tree view
         self._tree_view = MindspaceFileTreeView()
@@ -193,8 +189,8 @@ class MindspaceFileTree(QWidget):
             return
 
         # Add visual feedback - highlight the label
-        self._mindspace_label.setProperty("dragHover", True)
-        self._mindspace_label.style().polish(self._mindspace_label)
+        self._header_widget.setProperty("dragHover", True)
+        self._header_widget.style().polish(self._header_widget)
 
         event.acceptProposedAction()
 
@@ -205,8 +201,8 @@ class MindspaceFileTree(QWidget):
             return
 
         # Remove visual feedback
-        self._mindspace_label.setProperty("dragHover", False)
-        self._mindspace_label.style().polish(self._mindspace_label)
+        self._header_widget.setProperty("dragHover", False)
+        self._header_widget.style().polish(self._header_widget)
 
         event.accept()
 
@@ -215,7 +211,6 @@ class MindspaceFileTree(QWidget):
         if not self._mindspace_path:
             event.ignore()
 
-        print("Drag move on mindspace label")
         event_data = event.mimeData()
         if not event_data.hasFormat("application/x-humbug-path"):
             event.ignore()
@@ -229,7 +224,6 @@ class MindspaceFileTree(QWidget):
             mime_data = bytes(mime_data)
 
         dragged_path = mime_data.decode()
-        print(f"Dragging item: {dragged_path}")
 
         event.acceptProposedAction()
 
@@ -240,8 +234,8 @@ class MindspaceFileTree(QWidget):
             return
 
         # Remove visual feedback
-        self._mindspace_label.setProperty("dragHover", False)
-        self._mindspace_label.style().polish(self._mindspace_label)
+        self._header_widget.setProperty("dragHover", False)
+        self._header_widget.style().polish(self._header_widget)
 
         event_data = event.mimeData()
         if not event_data.hasFormat("application/x-humbug-path"):
@@ -862,22 +856,28 @@ class MindspaceFileTree(QWidget):
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
 
         # Get colors for styling
-        drop_target_color = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
+        color = self._style_manager.get_color(ColorRole.BUTTON_BACKGROUND_HOVER)
+        color.setAlpha(128)
+        drop_target_bg_color = color.name(QColor.NameFormat.HexArgb)
 
-        self.setStyleSheet(f"""
-            QWidget#header_widget, QWidget#header_widget > QWidget {{
+        self._header_widget.setStyleSheet(f"""
+            QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                margin: 2px 0px 0px 0px;
+            }}
+            QWidget[dragHover="true"] {{
+                background-color: {drop_target_bg_color};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: transparent;
                 border: none;
-                padding: 5px 6px 5px 6px;
+                padding: 4px 0px 5px 7px;
             }}
-            QLabel[dragHover="true"] {{
-                background-color: {drop_target_color};
-                border: 2px dashed {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-            }}
+        """)
+
+        self.setStyleSheet(f"""
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
