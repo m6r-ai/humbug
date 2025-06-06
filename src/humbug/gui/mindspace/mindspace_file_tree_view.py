@@ -4,7 +4,7 @@ import os
 from typing import cast
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
-from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex
+from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer
 from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent
 
 
@@ -23,6 +23,13 @@ class MindspaceFileTreeView(QTreeView):
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
         self._drag_start_pos: QPoint | None = None
         self._current_drop_target: QModelIndex | None = None
+
+        # Auto-expand timer for drag operations
+        self._auto_expand_timer = QTimer()
+        self._auto_expand_timer.setSingleShot(True)
+        self._auto_expand_timer.timeout.connect(self._handle_auto_expand_timeout)
+        self._auto_expand_timer.setInterval(500)  # 0.5 seconds
+        self._pending_expand_index: QModelIndex | None = None
 
         self.setHeaderHidden(True)
         self.setAnimated(True)
@@ -47,6 +54,81 @@ class MindspaceFileTreeView(QTreeView):
         if self._current_drop_target != index:
             self._current_drop_target = index
             self.drop_target_changed.emit(index)
+
+    def _start_auto_expand_timer(self, index: QModelIndex) -> None:
+        """
+        Start the auto-expand timer for the specified folder.
+
+        Args:
+            index: The model index of the folder to potentially expand
+        """
+        # Stop any existing timer
+        self._stop_auto_expand_timer()
+
+        # Set the pending index and start timer
+        self._pending_expand_index = index
+        self._auto_expand_timer.start()
+
+    def _stop_auto_expand_timer(self) -> None:
+        """Stop the auto-expand timer and clear pending index."""
+        if self._auto_expand_timer.isActive():
+            self._auto_expand_timer.stop()
+
+        self._pending_expand_index = None
+
+    def _handle_auto_expand_timeout(self) -> None:
+        """Handle auto-expand timer timeout by expanding the pending folder."""
+        if not self._pending_expand_index or not self._pending_expand_index.isValid():
+            return
+
+        # Verify the index is still a valid collapsed folder
+        source_model = cast(QSortFilterProxyModel, self.model())
+        if not source_model:
+            return
+
+        source_index = source_model.mapToSource(self._pending_expand_index)
+        file_model = cast(QFileSystemModel, source_model.sourceModel())
+        if not file_model:
+            return
+
+        target_path = file_model.filePath(source_index)
+
+        # Only expand if it's still a directory and not already expanded
+        if os.path.isdir(target_path) and not self.isExpanded(self._pending_expand_index):
+            self.expand(self._pending_expand_index)
+
+        # Clear the pending index
+        self._pending_expand_index = None
+
+    def _should_auto_expand(self, index: QModelIndex) -> bool:
+        """
+        Check if the given index should trigger auto-expansion.
+
+        Args:
+            index: The model index to check
+
+        Returns:
+            True if this index represents a collapsed folder that should auto-expand
+        """
+        if not index.isValid():
+            return False
+
+        # Don't auto-expand if already expanded
+        if self.isExpanded(index):
+            return False
+
+        # Check if it's a directory
+        source_model = cast(QSortFilterProxyModel, self.model())
+        if not source_model:
+            return False
+
+        source_index = source_model.mapToSource(index)
+        file_model = cast(QFileSystemModel, source_model.sourceModel())
+        if not file_model:
+            return False
+
+        target_path = file_model.filePath(source_index)
+        return os.path.isdir(target_path)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events for drag initiation."""
@@ -104,8 +186,9 @@ class MindspaceFileTreeView(QTreeView):
         # Execute drag operation
         drag.exec_(Qt.DropAction.MoveAction | Qt.DropAction.CopyAction)
 
-        # Clear drop target when drag ends
+        # Clear drop target and stop auto-expand timer when drag ends
         self.clear_drop_target()
+        self._stop_auto_expand_timer()
         self._drag_start_pos = None
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
@@ -118,8 +201,9 @@ class MindspaceFileTreeView(QTreeView):
 
     def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
         """Handle drag leave events."""
-        # Clear drop target when drag leaves the tree view
+        # Clear drop target and stop auto-expand timer when drag leaves the tree view
         self.clear_drop_target()
+        self._stop_auto_expand_timer()
         super().dragLeaveEvent(event)
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
@@ -127,6 +211,7 @@ class MindspaceFileTreeView(QTreeView):
         if not event.mimeData().hasFormat("application/x-humbug-path"):
             event.ignore()
             self.clear_drop_target()
+            self._stop_auto_expand_timer()
             return
 
         # Get the index at the current position
@@ -134,6 +219,7 @@ class MindspaceFileTreeView(QTreeView):
         if not index.isValid():
             event.ignore()
             self.clear_drop_target()
+            self._stop_auto_expand_timer()
             return
 
         # Get the target path
@@ -141,6 +227,7 @@ class MindspaceFileTreeView(QTreeView):
         if not source_model:
             event.ignore()
             self.clear_drop_target()
+            self._stop_auto_expand_timer()
             return
 
         source_index = source_model.mapToSource(index)
@@ -148,6 +235,7 @@ class MindspaceFileTreeView(QTreeView):
         if not file_model:
             event.ignore()
             self.clear_drop_target()
+            self._stop_auto_expand_timer()
             return
 
         target_path = file_model.filePath(source_index)
@@ -165,18 +253,21 @@ class MindspaceFileTreeView(QTreeView):
         if target_path.startswith(dragged_path + os.sep):
             event.ignore()
             self.clear_drop_target()
+            self._stop_auto_expand_timer()
             return
 
         # If the target is not a directory, ignore the event
         if not os.path.isdir(target_path):
             event.ignore()
             self.clear_drop_target()
+            self._stop_auto_expand_timer()
             return
 
         # If the dragged path is the same as the target, ignore the event
         if dragged_path == target_path:
             event.ignore()
             self.clear_drop_target()
+            self._stop_auto_expand_timer()
             return
 
         # Check if this is a valid drag target
@@ -184,17 +275,28 @@ class MindspaceFileTreeView(QTreeView):
         if source_basename in ['.humbug', 'conversations', 'metaphor']:
             event.ignore()
             self.clear_drop_target()
+            self._stop_auto_expand_timer()
             return
 
         # Set this index as the current drop target
         self._set_drop_target(index)
 
+        # Handle auto-expansion for collapsed folders
+        if self._should_auto_expand(index):
+            # If we're hovering over a different folder than before, start a new timer
+            if self._pending_expand_index != index:
+                self._start_auto_expand_timer(index)
+        else:
+            # Not a folder that should auto-expand, stop any existing timer
+            self._stop_auto_expand_timer()
+
         event.acceptProposedAction()
 
     def dropEvent(self, event: QDropEvent) -> None:
         """Handle drop events."""
-        # Clear drop target when drop completes
+        # Clear drop target and stop auto-expand timer when drop completes
         self.clear_drop_target()
+        self._stop_auto_expand_timer()
 
         if not event.mimeData().hasFormat("application/x-humbug-path"):
             event.ignore()
