@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QLabel, QSizePolicy, QStyledItemDelegate, QStyleOptionViewItem
 )
 from PySide6.QtCore import Signal, QModelIndex, QPersistentModelIndex, Qt, QSize, QPoint
-from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QColor
+from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QColor, QPen
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -29,17 +29,17 @@ from humbug.language.language_manager import LanguageManager
 class DropTargetItemDelegate(QStyledItemDelegate):
     """Custom item delegate that provides visual feedback for drop targets."""
 
-    def __init__(self, tree_view: 'MindspaceFileTreeView', drop_target_color: str):
+    def __init__(self, tree_view: 'MindspaceFileTreeView', style_manager: StyleManager):
         """
         Initialize the delegate.
 
         Args:
             tree_view: The tree view this delegate is attached to
-            drop_target_color: The color to use for drop target highlighting
+            style_manager: Style manager for accessing theme colors
         """
         super().__init__()
         self._tree_view = tree_view
-        self._drop_target_color = QColor(drop_target_color)
+        self._style_manager = style_manager
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
         """
@@ -54,9 +54,28 @@ class DropTargetItemDelegate(QStyledItemDelegate):
         current_drop_target = self._tree_view.get_current_drop_target()
         is_drop_target = current_drop_target is not None and current_drop_target == index
 
-        print(f"Painting index {index} - is drop target: {is_drop_target}")
+        if is_drop_target:
+            # Save the painter state
+            painter.save()
 
-        # Call the parent paint method
+            # Get drop target colors from style manager
+            drop_target_bg = self._style_manager.get_color(ColorRole.BUTTON_BACKGROUND_HOVER)
+            drop_target_border = self._style_manager.get_color(ColorRole.TEXT_SELECTED)
+
+            # Make the background slightly more transparent for subtlety
+            drop_target_bg.setAlpha(128)
+
+            # Draw drop target background
+            painter.fillRect(option.rect, drop_target_bg)
+
+            # Draw drop target border - dashed line for clear indication
+            painter.setPen(QPen(drop_target_border, 2, Qt.PenStyle.DashLine))
+            painter.drawRect(option.rect.adjusted(1, 1, -1, -1))
+
+            # Restore painter state
+            painter.restore()
+
+        # Call the parent paint method to draw the normal item content
         super().paint(painter, option, index)
 
 
@@ -159,8 +178,9 @@ class MindspaceFileTree(QWidget):
         Args:
             index: The new drop target index (invalid index means no target)
         """
-        # Force a style update to refresh the visual state
-        self._tree_view.update(index)
+        # Force a repaint of the entire viewport to ensure proper visual updates
+        # This ensures both the old drop target and new drop target are repainted
+        self._tree_view.viewport().update()
 
     def _mindspace_label_drag_enter(self, event: QDragEnterEvent) -> None:
         """Handle drag enter events on mindspace label."""
@@ -919,5 +939,5 @@ class MindspaceFileTree(QWidget):
             }}
         """)
 
-        # Create a custom item delegate to handle drop target styling
-        self._tree_view.setItemDelegate(DropTargetItemDelegate(self._tree_view, drop_target_color))
+        # Create/update the custom item delegate to handle drop target styling
+        self._tree_view.setItemDelegate(DropTargetItemDelegate(self._tree_view, self._style_manager))
