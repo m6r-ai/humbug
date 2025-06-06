@@ -6,10 +6,10 @@ import shutil
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
-    QLabel, QSizePolicy
+    QLabel, QSizePolicy, QStyledItemDelegate, QStyleOptionViewItem
 )
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint
-from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent
+from PySide6.QtCore import Signal, QModelIndex, QPersistentModelIndex, Qt, QSize, QPoint
+from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QColor
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -24,6 +24,40 @@ from humbug.gui.mindspace.mindspace_file_tree_style import MindspaceFileTreeStyl
 from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+
+
+class DropTargetItemDelegate(QStyledItemDelegate):
+    """Custom item delegate that provides visual feedback for drop targets."""
+
+    def __init__(self, tree_view: 'MindspaceFileTreeView', drop_target_color: str):
+        """
+        Initialize the delegate.
+
+        Args:
+            tree_view: The tree view this delegate is attached to
+            drop_target_color: The color to use for drop target highlighting
+        """
+        super().__init__()
+        self._tree_view = tree_view
+        self._drop_target_color = QColor(drop_target_color)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
+        """
+        Paint the item with drop target highlighting if applicable.
+
+        Args:
+            painter: The painter to use for drawing
+            option: Style options for the item
+            index: The model index being painted
+        """
+        # Check if this is the current drop target
+        current_drop_target = self._tree_view.get_current_drop_target()
+        is_drop_target = current_drop_target is not None and current_drop_target == index
+
+        print(f"Painting index {index} - is drop target: {is_drop_target}")
+
+        # Call the parent paint method
+        super().paint(painter, option, index)
 
 
 class MindspaceFileTree(QWidget):
@@ -82,6 +116,7 @@ class MindspaceFileTree(QWidget):
         self._tree_style = MindspaceFileTreeStyle()
         self._tree_view.setStyle(self._tree_style)
         self._tree_view.file_dropped.connect(self._handle_file_drop)
+        self._tree_view.drop_target_changed.connect(self._handle_drop_target_changed)
 
         # Create file system model
         self._icon_provider = MindspaceFileTreeIconProvider()
@@ -116,6 +151,16 @@ class MindspaceFileTree(QWidget):
 
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
+
+    def _handle_drop_target_changed(self, index: QModelIndex) -> None:
+        """
+        Handle changes to the drop target in the tree view.
+
+        Args:
+            index: The new drop target index (invalid index means no target)
+        """
+        # Force a style update to refresh the visual state
+        self._tree_view.update(index)
 
     def _mindspace_label_drag_enter(self, event: QDragEnterEvent) -> None:
         """Handle drag enter events on mindspace label."""
@@ -761,6 +806,19 @@ class MindspaceFileTree(QWidget):
 
         self._handle_style_changed()
 
+    def _is_drop_target(self, index: QModelIndex) -> bool:
+        """
+        Check if the given index is the current drop target.
+
+        Args:
+            index: The index to check
+
+        Returns:
+            True if this index is the current drop target
+        """
+        current_target = self._tree_view.get_current_drop_target()
+        return current_target is not None and current_target == index
+
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
@@ -783,6 +841,9 @@ class MindspaceFileTree(QWidget):
         branch_icon_size = int(12 * zoom_factor)
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
 
+        # Get colors for styling
+        drop_target_color = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
+
         self.setStyleSheet(f"""
             QWidget#header_widget, QWidget#header_widget > QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
@@ -794,7 +855,7 @@ class MindspaceFileTree(QWidget):
                 padding: 5px 6px 5px 6px;
             }}
             QLabel[dragHover="true"] {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {drop_target_color};
                 border: 2px dashed {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
             QTreeView {{
@@ -857,3 +918,6 @@ class MindspaceFileTree(QWidget):
                 height: 16px;
             }}
         """)
+
+        # Create a custom item delegate to handle drop target styling
+        self._tree_view.setItemDelegate(DropTargetItemDelegate(self._tree_view, drop_target_color))
