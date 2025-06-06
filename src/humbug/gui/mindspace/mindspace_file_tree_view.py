@@ -30,6 +30,7 @@ class MindspaceFileTreeView(QTreeView):
         self._auto_expand_timer.timeout.connect(self._handle_auto_expand_timeout)
         self._auto_expand_timer.setInterval(500)  # 0.5 seconds
         self._pending_expand_index: QModelIndex | None = None
+        self._auto_opened_folders: set[QPersistentModelIndex] = set()
 
         self.setHeaderHidden(True)
         self.setAnimated(True)
@@ -76,6 +77,38 @@ class MindspaceFileTreeView(QTreeView):
 
         self._pending_expand_index = None
 
+    def _close_auto_opened_folders(self, except_index: QModelIndex | None = None) -> None:
+        """
+        Close all auto-opened folders except the specified one.
+
+        Args:
+            except_index: Optional index to keep open (typically the current drop target)
+        """
+        persistent_except = QPersistentModelIndex(except_index) if except_index and except_index.isValid() else None
+
+        folders_to_close = []
+        for persistent_index in self._auto_opened_folders:
+            # Skip if this is the folder we want to keep open
+            if persistent_except and persistent_index == persistent_except:
+                continue
+
+            # Skip if the persistent index is no longer valid
+            if not persistent_index.isValid():
+                folders_to_close.append(persistent_index)
+                continue
+
+            # Close the folder
+            self.collapse(QModelIndex(persistent_index))
+            folders_to_close.append(persistent_index)
+
+        # Remove closed folders from our tracking set
+        for folder in folders_to_close:
+            self._auto_opened_folders.discard(folder)
+
+    def _clear_auto_opened_folders(self) -> None:
+        """Clear the set of auto-opened folders without closing them."""
+        self._auto_opened_folders.clear()
+
     def _handle_auto_expand_timeout(self) -> None:
         """Handle auto-expand timer timeout by expanding the pending folder."""
         if not self._pending_expand_index or not self._pending_expand_index.isValid():
@@ -96,6 +129,8 @@ class MindspaceFileTreeView(QTreeView):
         # Only expand if it's still a directory and not already expanded
         if os.path.isdir(target_path) and not self.isExpanded(self._pending_expand_index):
             self.expand(self._pending_expand_index)
+            # Track this folder as auto-opened
+            self._auto_opened_folders.add(QPersistentModelIndex(self._pending_expand_index))
 
         # Clear the pending index
         self._pending_expand_index = None
@@ -186,9 +221,10 @@ class MindspaceFileTreeView(QTreeView):
         # Execute drag operation
         drag.exec_(Qt.DropAction.MoveAction | Qt.DropAction.CopyAction)
 
-        # Clear drop target and stop auto-expand timer when drag ends
+        # Clear drop target, stop auto-expand timer, and close auto-opened folders when drag ends
         self.clear_drop_target()
         self._stop_auto_expand_timer()
+        self._close_auto_opened_folders()  # Close all auto-opened folders
         self._drag_start_pos = None
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
@@ -201,9 +237,10 @@ class MindspaceFileTreeView(QTreeView):
 
     def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
         """Handle drag leave events."""
-        # Clear drop target and stop auto-expand timer when drag leaves the tree view
+        # Clear drop target, stop auto-expand timer, and close auto-opened folders when drag leaves the tree view
         self.clear_drop_target()
         self._stop_auto_expand_timer()
+        self._close_auto_opened_folders()  # Close all auto-opened folders
         super().dragLeaveEvent(event)
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
@@ -285,25 +322,44 @@ class MindspaceFileTreeView(QTreeView):
         if self._should_auto_expand(index):
             # If we're hovering over a different folder than before, start a new timer
             if self._pending_expand_index != index:
+                # Close previously auto-opened folders except the current target
+                self._close_auto_opened_folders(index)
                 self._start_auto_expand_timer(index)
         else:
             # Not a folder that should auto-expand, stop any existing timer
+            # and close auto-opened folders except current target (if it's a valid directory)
             self._stop_auto_expand_timer()
+            if os.path.isdir(target_path):
+                self._close_auto_opened_folders(index)
+            else:
+                self._close_auto_opened_folders()
 
         event.acceptProposedAction()
 
     def dropEvent(self, event: QDropEvent) -> None:
         """Handle drop events."""
+        # Get the target index before clearing state
+        drop_target_index = self.indexAt(event.pos())
+
         # Clear drop target and stop auto-expand timer when drop completes
         self.clear_drop_target()
         self._stop_auto_expand_timer()
+
+        # Keep the final drop target open but close other auto-opened folders
+        if drop_target_index.isValid():
+            self._close_auto_opened_folders(drop_target_index)
+        else:
+            self._close_auto_opened_folders()
+
+        # Clear our tracking since the drag operation is complete
+        self._clear_auto_opened_folders()
 
         if not event.mimeData().hasFormat("application/x-humbug-path"):
             event.ignore()
             return
 
         # Get the target index and path
-        index = self.indexAt(event.pos())
+        index = drop_target_index
         if not index.isValid():
             event.ignore()
             return
