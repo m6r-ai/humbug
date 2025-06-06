@@ -8,6 +8,8 @@ New features:
 - You can now create a new folder by right clicking in the mindspace tree.
 - You can now delete an empty folder by right clicking in the mindspace tree.
 - You can now edit the `.conv` conversation files by right clicking in the mindspace tree.
+- You can now move and non-protected (e.g. not "conversations", "metaphor", and ".humbug") files or folders by
+  dragging and dropping within the mindspace tree.
 
 Bug fixes:
 
