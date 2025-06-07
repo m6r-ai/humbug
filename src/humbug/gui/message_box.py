@@ -68,12 +68,12 @@ class MessageBox(QDialog):
 
         # Create layout with proper spacing
         layout = QVBoxLayout()
-        layout.setSpacing(12)
+        layout.setSpacing(20)
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Create header layout for icon and text
         header_layout = QHBoxLayout()
-        header_layout.setSpacing(12)
+        header_layout.setSpacing(16)
         header_layout.setContentsMargins(0, 0, 0, 0)
 
         # Add icon if appropriate

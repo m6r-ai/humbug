@@ -3,7 +3,7 @@
 import os
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton, QWidget, QFrame
+    QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton, QWidget
 )
 from PySide6.QtCore import Qt
 
@@ -44,6 +44,7 @@ class MindspaceFileMoveDialog(QDialog):
         # Set dialog properties
         if is_folder:
             self.setWindowTitle(strings.move_folder_title)
+
         else:
             self.setWindowTitle(strings.move_file_title)
 
@@ -57,7 +58,7 @@ class MindspaceFileMoveDialog(QDialog):
 
         # Create header layout for icon and message
         header_layout = QHBoxLayout()
-        header_layout.setSpacing(12)
+        header_layout.setSpacing(16)
         header_layout.setContentsMargins(0, 0, 0, 0)
 
         # Add icon (using question icon for move confirmation)
@@ -70,6 +71,7 @@ class MindspaceFileMoveDialog(QDialog):
         # Create confirmation message
         if is_folder:
             message = strings.move_folder_confirmation.format(item_name)
+
         else:
             message = strings.move_file_confirmation.format(item_name)
 
@@ -79,16 +81,10 @@ class MindspaceFileMoveDialog(QDialog):
 
         layout.addLayout(header_layout)
 
-        # Create details frame with grid layout
-        details_frame = QFrame()
-        details_frame.setFrameStyle(QFrame.Shape.NoFrame)
-        details_layout = QVBoxLayout(details_frame)
-        details_layout.setContentsMargins(12, 12, 12, 12)
-        details_layout.setSpacing(8)
-
-        # Create grid layout for path information
+        # Create grid layout for path information (directly in main layout)
         grid_layout = QGridLayout()
         grid_layout.setSpacing(8)
+        grid_layout.setContentsMargins(0, 0, 0, 0)
         grid_layout.setColumnStretch(1, 1)  # Make the path column expandable
 
         # Source path row
@@ -111,8 +107,7 @@ class MindspaceFileMoveDialog(QDialog):
         dest_path_label.setWordWrap(True)
         grid_layout.addWidget(dest_path_label, 1, 1)
 
-        details_layout.addLayout(grid_layout)
-        layout.addWidget(details_frame)
+        layout.addLayout(grid_layout)
 
         # Add spacing before buttons
         layout.addSpacing(16)
