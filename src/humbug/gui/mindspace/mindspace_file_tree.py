@@ -8,8 +8,8 @@ from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
     QLabel, QStyledItemDelegate, QStyleOptionViewItem
 )
-from PySide6.QtCore import Signal, QModelIndex, QPersistentModelIndex, Qt, QSize, QPoint
-from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QColor, QPen
+from PySide6.QtCore import Signal, QModelIndex, QPersistentModelIndex, Qt, QSize, QPoint, QTimer
+from PySide6.QtGui import QPainter, QPen
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -112,19 +112,12 @@ class MindspaceFileTree(QWidget):
         self._mindspace_label = QLabel()
         self._mindspace_label.setContentsMargins(0, 0, 0, 0)
         self._mindspace_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._mindspace_label.customContextMenuRequested.connect(self._show_mindspace_context_menu)
 
         header_layout.addWidget(self._mindspace_label)
         header_layout.addStretch()
 
         layout.addWidget(self._header_widget)
 
-        # Enable drop support on the header widget
-        self._header_widget.setAcceptDrops(True)
-        self._header_widget.dragEnterEvent = self._mindspace_label_drag_enter
-        self._header_widget.dragLeaveEvent = self._mindspace_label_drag_leave
-        self._header_widget.dragMoveEvent = self._mindspace_label_drag_move
-        self._header_widget.dropEvent = self._mindspace_label_drop
 
         # Create tree view
         self._tree_view = MindspaceFileTreeView()
@@ -168,26 +161,11 @@ class MindspaceFileTree(QWidget):
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
-    def _is_direct_child_of_mindspace_root(self, path: str) -> bool:
-        """
-        Check if a path is a direct child of the mindspace root.
-
-        Args:
-            path: Path to check
-
-        Returns:
-            True if the path is a direct child of mindspace root
-        """
-        if not self._mindspace_path:
-            return False
-
-        normalized_path = os.path.normpath(path)
-        normalized_mindspace = os.path.normpath(self._mindspace_path)
-
-        # Get the parent directory of the path
-        parent_dir = os.path.dirname(normalized_path)
-
-        return parent_dir == normalized_mindspace
+        # Timer for auto-expansion after model loads
+        self._expansion_timer = QTimer()
+        self._expansion_timer.setSingleShot(True)
+        self._expansion_timer.timeout.connect(self._auto_expand_first_level)
+        self._expansion_timer.setInterval(100)  # Small delay to ensure model is ready
 
     def _handle_drop_target_changed(self, index: QModelIndex) -> None:
         """
@@ -199,108 +177,6 @@ class MindspaceFileTree(QWidget):
         # Force a repaint of the entire viewport to ensure proper visual updates
         # This ensures both the old drop target and new drop target are repainted
         self._tree_view.viewport().update()
-
-    def _mindspace_label_drag_enter(self, event: QDragEnterEvent) -> None:
-        """Handle drag enter events on mindspace label."""
-        if not self._mindspace_path:
-            event.ignore()
-            return
-
-        event_data = event.mimeData()
-        if not event_data.hasFormat("application/x-humbug-path"):
-            event.ignore()
-            return
-
-        # Get the dragged item path
-        mime_data = event_data.data("application/x-humbug-path").data()
-
-        # Convert to bytes first if it's not already bytes
-        if not isinstance(mime_data, bytes):
-            mime_data = bytes(mime_data)
-
-        dragged_path = mime_data.decode()
-
-        # Don't allow dropping items that are already direct children of mindspace root
-        if self._is_direct_child_of_mindspace_root(dragged_path):
-            event.ignore()
-            return
-
-        # Add visual feedback - highlight the label
-        self._header_widget.setProperty("dragHover", True)
-        self._header_widget.style().polish(self._header_widget)
-
-        event.acceptProposedAction()
-
-    def _mindspace_label_drag_leave(self, event: QDragLeaveEvent) -> None:
-        """Handle drag enter events on mindspace label."""
-        if not self._mindspace_path:
-            event.ignore()
-            return
-
-        # Remove visual feedback
-        self._header_widget.setProperty("dragHover", False)
-        self._header_widget.style().polish(self._header_widget)
-
-        event.accept()
-
-    def _mindspace_label_drag_move(self, event: QDragMoveEvent) -> None:
-        """Handle drag move events on mindspace label."""
-        if not self._mindspace_path:
-            event.ignore()
-            return
-
-        event_data = event.mimeData()
-        if not event_data.hasFormat("application/x-humbug-path"):
-            event.ignore()
-            return
-
-        # Get the dragged item path
-        mime_data = event_data.data("application/x-humbug-path").data()
-
-        # Convert to bytes first if it's not already bytes
-        if not isinstance(mime_data, bytes):
-            mime_data = bytes(mime_data)
-
-        dragged_path = mime_data.decode()
-
-        # Don't allow dropping items that are already direct children of mindspace root
-        if self._is_direct_child_of_mindspace_root(dragged_path):
-            event.ignore()
-            return
-
-        event.acceptProposedAction()
-
-    def _mindspace_label_drop(self, event: QDropEvent) -> None:
-        """Handle drop events on mindspace label."""
-        if not self._mindspace_path:
-            event.ignore()
-            return
-
-        # Remove visual feedback
-        self._header_widget.setProperty("dragHover", False)
-        self._header_widget.style().polish(self._header_widget)
-
-        event_data = event.mimeData()
-        if not event_data.hasFormat("application/x-humbug-path"):
-            event.ignore()
-            return
-
-        mime_data = event_data.data("application/x-humbug-path").data()
-
-        # Convert to bytes first if it's not already bytes
-        if not isinstance(mime_data, bytes):
-            mime_data = bytes(mime_data)
-
-        dragged_path = mime_data.decode()
-
-        # Don't allow dropping items that are already direct children of mindspace root
-        if self._is_direct_child_of_mindspace_root(dragged_path):
-            event.ignore()
-            return
-
-        # Handle the drop to mindspace root
-        self._handle_file_drop(dragged_path, self._mindspace_path)
-        event.acceptProposedAction()
 
     def _handle_file_drop(self, source_path: str, target_path: str) -> None:
         """
@@ -456,31 +332,19 @@ class MindspaceFileTree(QWidget):
 
         return current_index
 
-    def _show_mindspace_context_menu(self, position: QPoint) -> None:
-        """Show context menu for the mindspace label."""
-        # Only show menu if a mindspace is active
+    def _auto_expand_first_level(self) -> None:
+        """Auto-expand the first level of directories in the mindspace."""
         if not self._mindspace_path:
             return
 
-        # Create context menu
-        menu = QMenu(self)
-        strings = self._language_manager.strings()
+        # Get the mindspace directory index and expand it to show its contents
+        mindspace_source_index = self._fs_model.index(self._mindspace_path)
+        if not mindspace_source_index.isValid():
+            return
 
-        # Create actions for mindspace root level
-        new_folder_action = menu.addAction(strings.new_folder)
-        new_file_action = menu.addAction(strings.new_file)
-
-        # Execute the menu
-        action = menu.exec_(self._mindspace_label.mapToGlobal(position))
-
-        if action:
-            if action == new_folder_action:
-                self._handle_new_folder(self._mindspace_path)
-                return
-
-            if action == new_file_action:
-                self._handle_new_file(self._mindspace_path)
-                return
+        mindspace_index = self._filter_model.mapFromSource(mindspace_source_index)
+        if mindspace_index.isValid():
+            self._tree_view.expand(mindspace_index)
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
@@ -836,20 +700,25 @@ class MindspaceFileTree(QWidget):
             self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
             return
 
-        self._fs_model.setRootPath(path)
+        # Set the file system model root to the parent of the mindspace
+        # so the mindspace directory itself is visible
+        parent_path = os.path.dirname(path)
+        self._fs_model.setRootPath(parent_path)
         self._filter_model.set_mindspace_root(path)
         self._mindspace_label.setText(os.path.basename(path))
 
-        # Set the root index through the proxy model
-        root_index = self._filter_model.mapFromSource(
-            self._fs_model.index(path)
-        )
+        # Set the root index to the parent directory so we can see the mindspace folder
+        parent_source_index = self._fs_model.index(parent_path)
+        root_index = self._filter_model.mapFromSource(parent_source_index)
         self._tree_view.setRootIndex(root_index)
 
         # Hide size, type, and date columns
         self._tree_view.header().hideSection(1)  # Size
         self._tree_view.header().hideSection(2)  # Type
         self._tree_view.header().hideSection(3)  # Date
+
+        # Auto-expand first level after a short delay
+        self._expansion_timer.start()
 
     def _handle_activation(self, index: QModelIndex) -> None:
         """Handle item activation (double-click or Enter)."""
@@ -867,19 +736,6 @@ class MindspaceFileTree(QWidget):
             self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
         self._handle_style_changed()
-
-    def _is_drop_target(self, index: QModelIndex) -> bool:
-        """
-        Check if the given index is the current drop target.
-
-        Args:
-            index: The index to check
-
-        Returns:
-            True if this index is the current drop target
-        """
-        current_target = self._tree_view.get_current_drop_target()
-        return current_target is not None and current_target == index
 
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
@@ -902,20 +758,10 @@ class MindspaceFileTree(QWidget):
 
         branch_icon_size = int(12 * zoom_factor)
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
-
-        # Get colors for styling
-        color = self._style_manager.get_color(ColorRole.BUTTON_BACKGROUND_HOVER)
-        color.setAlpha(128)
-        drop_target_bg_color = color.name(QColor.NameFormat.HexArgb)
-
         self._header_widget.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 margin: 2px 0px 0px 0px;
-            }}
-            QWidget[dragHover="true"] {{
-                background-color: {drop_target_bg_color};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
