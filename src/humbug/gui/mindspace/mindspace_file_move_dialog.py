@@ -3,8 +3,9 @@
 import os
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget, QFrame
+    QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton, QWidget, QFrame
 )
+from PySide6.QtCore import Qt
 
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
@@ -54,43 +55,63 @@ class MindspaceFileMoveDialog(QDialog):
         layout.setSpacing(16)
         layout.setContentsMargins(20, 20, 20, 20)
 
+        # Create header layout for icon and message
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(12)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Add icon (using question icon for move confirmation)
+        icon = self._create_icon()
+        if icon:
+            icon_label = QLabel()
+            icon_label.setPixmap(icon)
+            header_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignTop)
+
         # Create confirmation message
         if is_folder:
             message = strings.move_folder_confirmation.format(item_name)
-
         else:
             message = strings.move_file_confirmation.format(item_name)
 
         message_label = QLabel(message)
         message_label.setWordWrap(True)
-        layout.addWidget(message_label)
+        header_layout.addWidget(message_label, stretch=1)
 
-        # Create details frame without border
+        layout.addLayout(header_layout)
+
+        # Create details frame with grid layout
         details_frame = QFrame()
-        # Remove the frame style to eliminate the border
         details_frame.setFrameStyle(QFrame.Shape.NoFrame)
         details_layout = QVBoxLayout(details_frame)
         details_layout.setContentsMargins(12, 12, 12, 12)
         details_layout.setSpacing(8)
 
-        # Source path
+        # Create grid layout for path information
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(8)
+        grid_layout.setColumnStretch(1, 1)  # Make the path column expandable
+
+        # Source path row
         source_label = QLabel(strings.move_from_label)
         source_label.setProperty("detailLabel", True)
-        details_layout.addWidget(source_label)
+        source_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        grid_layout.addWidget(source_label, 0, 0)
 
         source_path_label = QLabel(self._display_source_path)
         source_path_label.setWordWrap(True)
-        details_layout.addWidget(source_path_label)
+        grid_layout.addWidget(source_path_label, 0, 1)
 
-        # Destination path
+        # Destination path row
         dest_label = QLabel(strings.move_to_label)
         dest_label.setProperty("detailLabel", True)
-        details_layout.addWidget(dest_label)
+        dest_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        grid_layout.addWidget(dest_label, 1, 0)
 
         dest_path_label = QLabel(self._display_dest_path)
         dest_path_label.setWordWrap(True)
-        details_layout.addWidget(dest_path_label)
+        grid_layout.addWidget(dest_path_label, 1, 1)
 
+        details_layout.addLayout(grid_layout)
         layout.addWidget(details_frame)
 
         # Add spacing before buttons
@@ -125,6 +146,22 @@ class MindspaceFileMoveDialog(QDialog):
 
         self._apply_styling()
 
+    def _create_icon(self):
+        """
+        Create appropriate icon for the move dialog.
+
+        Returns:
+            QPixmap icon or None if icon cannot be created
+        """
+        try:
+            # Use question icon for move confirmation
+            icon_path = self._style_manager.get_icon_path("question")
+            return self._style_manager.scale_icon(icon_path, 32)
+
+        except Exception:
+            # If icon creation fails, return None (no icon will be shown)
+            return None
+
     def _get_display_path(self, path: str) -> str:
         """
         Get the display path for the dialog (relative to mindspace if possible).
@@ -153,7 +190,6 @@ class MindspaceFileMoveDialog(QDialog):
         custom_styles = """
             QLabel[detailLabel="true"] {
                 font-weight: bold;
-                margin-top: 8px;
             }
         """
 
