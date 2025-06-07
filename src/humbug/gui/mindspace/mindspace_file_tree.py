@@ -285,7 +285,7 @@ class MindspaceFileTree(QWidget):
         if not self._pending_new_item:
             return
 
-        parent_path, is_folder, temp_path = self._pending_new_item
+        _parent_path, is_folder, temp_path = self._pending_new_item
         self._pending_new_item = None
 
         # Remove the temporary file/folder

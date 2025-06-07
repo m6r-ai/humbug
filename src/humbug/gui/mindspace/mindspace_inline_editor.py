@@ -9,6 +9,7 @@ from PySide6.QtGui import QFontMetrics, QKeyEvent
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 
 
 class MindspaceInlineEditor(QWidget):
@@ -36,7 +37,7 @@ class MindspaceInlineEditor(QWidget):
         self._language_manager = LanguageManager()
         self._is_conversation = is_conversation
         self._validation_callback = validation_callback
-        self._tree_view = None  # Will be set by delegate
+        self._tree_view: MindspaceFileTreeView | None = None  # Will be set by delegate
 
         # Create layout
         self._layout = QVBoxLayout(self)
