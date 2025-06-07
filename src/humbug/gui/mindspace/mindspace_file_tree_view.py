@@ -64,7 +64,7 @@ class MindspaceFileTreeView(QTreeView):
 
     def _set_drop_target(self, index: QModelIndex) -> None:
         """Set the current drop target and emit signal if changed."""
-        if self._current_drop_target != index:
+        if self._current_drop_target is None or self._current_drop_target != index:
             self._current_drop_target = index
             self.drop_target_changed.emit()
 
@@ -178,7 +178,7 @@ class MindspaceFileTreeView(QTreeView):
                 continue
 
             # Get the path for this auto-opened folder
-            folder_path = self._get_path_from_index(QModelIndex(persistent_index))  # type: ignore - another weird type issue
+            folder_path = self._get_path_from_index(QModelIndex(cast(QModelIndex, persistent_index)))
             if not folder_path:
                 folders_to_close.append(persistent_index)
                 continue
@@ -193,7 +193,7 @@ class MindspaceFileTreeView(QTreeView):
 
             if not should_keep_open:
                 # Close the folder
-                self.collapse(QModelIndex(persistent_index))  # type: ignore - another weird type issue
+                self.collapse(QModelIndex(cast(QModelIndex, persistent_index)))
                 folders_to_close.append(persistent_index)
 
         # Remove closed folders from our tracking set
@@ -518,7 +518,7 @@ class MindspaceFileTreeView(QTreeView):
         # Handle auto-expansion for collapsed folders
         if self._should_auto_expand(index):
             # If we're hovering over a different folder than before, start a new timer
-            if self._pending_expand_index != index:
+            if self._pending_expand_index is None or self._pending_expand_index != index:
                 # Close auto-opened folders that are not ancestors of current target
                 self._close_auto_opened_folders(target_path)
                 self._start_auto_expand_timer(index)

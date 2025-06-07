@@ -67,7 +67,7 @@ class MindspaceDropTargetItemDelegate(QStyledItemDelegate):
             # Make the background slightly more transparent for subtlety
             drop_target_bg.setAlpha(128)
 
-            rect = cast(QRect, option.rect)  # type: ignore[attr-defined] - weird type hinting issue with PySide6
+            rect = cast(QRect, getattr(option, 'rect'))  # Pyside6 does not support direct access to rect in QStyleOptionViewItem
 
             # Draw drop target background
             painter.fillRect(rect, drop_target_bg)
