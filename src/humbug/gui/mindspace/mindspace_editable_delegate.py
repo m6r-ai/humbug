@@ -49,12 +49,13 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         # Get the full visual rect (this already has correct positioning)
         full_rect = tree_view.visualRect(index)
 
-        # Get the icon size
+        # Get the icon size (already scaled by zoom factor)
         icon_size = tree_view.iconSize()
         icon_width = icon_size.width()
 
-        # Standard spacing between icon and text in Qt tree views
-        icon_text_spacing = 4
+        # Standard spacing between icon and text in Qt tree views (scale with zoom)
+        zoom_factor = self._style_manager.zoom_factor()
+        icon_text_spacing = int(4 * zoom_factor)
 
         # Calculate the offset needed to skip over the icon
         icon_offset = icon_width + icon_text_spacing
@@ -67,9 +68,10 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
             full_rect.height()
         )
 
-        # Ensure minimum width for editing
-        if text_rect.width() < 50:
-            text_rect.setWidth(50)
+        # Ensure minimum width for editing (scaled)
+        min_width = int(50 * zoom_factor)
+        if text_rect.width() < min_width:
+            text_rect.setWidth(min_width)
 
         return text_rect
 
@@ -118,7 +120,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         def validation_callback(new_name: str) -> tuple[bool, str]:
             return self._validate_new_name(index, new_name)
 
-        # Create the inline editor
+        # Create the inline editor - it will automatically connect to style manager
         editor = MindspaceInlineEditor(
             initial_text=current_text,
             validation_callback=validation_callback
@@ -262,6 +264,9 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
             self._current_editor.removeEventFilter(self)
             if self._tree_view and self._tree_view.viewport():
                 self._tree_view.viewport().removeEventFilter(self)
+
+            # Clean up style manager connections
+            self._current_editor.cleanup_connections()
 
             # Hide and delete the editor
             self._current_editor.hide()

@@ -4,7 +4,7 @@ from typing import Callable, cast
 
 from PySide6.QtWidgets import QLineEdit, QVBoxLayout, QLabel, QWidget
 from PySide6.QtCore import Signal, Qt, QTimer, QRect, QObject, QEvent
-from PySide6.QtGui import QFontMetrics, QKeyEvent
+from PySide6.QtGui import QFontMetrics, QKeyEvent, QFont
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
@@ -58,7 +58,10 @@ class MindspaceInlineEditor(QWidget):
         self._is_valid = True
         self._error_above = False  # Track if error is positioned above
 
-        # Apply initial styling
+        # Connect to style changes for zoom updates
+        self._style_manager.style_changed.connect(self._handle_style_changed)
+
+        # Apply initial styling with zoom
         self._apply_styling()
 
         # Perform initial validation
@@ -76,6 +79,32 @@ class MindspaceInlineEditor(QWidget):
         """
         self._tree_view = tree_view
 
+    def _handle_style_changed(self) -> None:
+        """Handle style/zoom changes by updating fonts and sizes."""
+        self._apply_styling()
+        # Recalculate geometry if editor is visible
+        if self.isVisible():
+            QTimer.singleShot(0, self._adjust_widget_size)
+
+    def _get_scaled_font(self) -> QFont:
+        """Get appropriately scaled font for current zoom level."""
+        zoom_factor = self._style_manager.zoom_factor()
+        base_font_size = self._style_manager.base_font_size()
+
+        font = QFont()
+        font.setPointSizeF(base_font_size * zoom_factor)
+        return font
+
+    def _get_scaled_error_font(self) -> QFont:
+        """Get appropriately scaled font for error label."""
+        zoom_factor = self._style_manager.zoom_factor()
+        base_font_size = self._style_manager.base_font_size()
+
+        font = QFont()
+        # Error font is slightly smaller than base font
+        font.setPointSizeF((base_font_size - 2) * zoom_factor)
+        return font
+
     def _calculate_required_height(self) -> int:
         """
         Calculate the total height needed for the editor and error message.
@@ -83,22 +112,24 @@ class MindspaceInlineEditor(QWidget):
         Returns:
             Required height in pixels
         """
+        # Use actual size hints which now include zoom scaling
         line_edit_height = self._line_edit.sizeHint().height()
 
         if self._error_label.isVisible():
-            # Calculate error label height based on text content
+            # Font metrics now use scaled font
             font_metrics = QFontMetrics(self._error_label.font())
             text = self._error_label.text()
 
-            # Get the width available for the error label (use current widget width)
-            available_width = max(150, self.width() - 8)  # Account for padding, minimum 150px
+            # Scale available width
+            zoom_factor = self._style_manager.zoom_factor()
+            available_width = max(int(150 * zoom_factor), self.width() - int(8 * zoom_factor))
 
             # Calculate required height for word-wrapped text
             text_rect = font_metrics.boundingRect(
                 0, 0, available_width, 0,
                 Qt.TextFlag.TextWordWrap, text
             )
-            error_height = text_rect.height() + 6  # Add padding
+            error_height = text_rect.height() + int(6 * zoom_factor)  # Add scaled padding
 
             layout_spacing = self._layout.spacing()
             return line_edit_height + error_height + layout_spacing
@@ -142,8 +173,10 @@ class MindspaceInlineEditor(QWidget):
         # This is especially important for text-only editing where width might be constrained
         if new_rect.right() > viewport_rect.right():
             # Adjust width to fit within viewport
+            zoom_factor = self._style_manager.zoom_factor()
+            min_width = int(100 * zoom_factor)  # Scale minimum width
             new_width = viewport_rect.right() - new_rect.left()
-            new_rect.setWidth(max(100, new_width))  # Minimum 100px width
+            new_rect.setWidth(max(min_width, new_width))
 
         self.setGeometry(new_rect)
 
@@ -175,6 +208,10 @@ class MindspaceInlineEditor(QWidget):
         viewport_rect = viewport.rect()
         editor_rect = self.geometry()
 
+        # Scale padding value
+        zoom_factor = self._style_manager.zoom_factor()
+        padding = int(5 * zoom_factor)
+
         # Check if editor extends beyond viewport vertically
         if editor_rect.bottom() > viewport_rect.bottom():
             # Calculate how much we need to scroll
@@ -184,7 +221,7 @@ class MindspaceInlineEditor(QWidget):
             scroll_bar = self._tree_view.verticalScrollBar()
             if scroll_bar:
                 current_value = scroll_bar.value()
-                new_value = min(scroll_bar.maximum(), current_value + scroll_delta + 5)  # +5 for padding
+                new_value = min(scroll_bar.maximum(), current_value + scroll_delta + padding)
                 scroll_bar.setValue(new_value)
 
         # Check if editor extends beyond viewport horizontally (less common but possible)
@@ -194,7 +231,7 @@ class MindspaceInlineEditor(QWidget):
             if h_scroll_bar and h_scroll_bar.isVisible():
                 scroll_delta = editor_rect.right() - viewport_rect.right()
                 current_value = h_scroll_bar.value()
-                new_value = min(h_scroll_bar.maximum(), current_value + scroll_delta + 5)
+                new_value = min(h_scroll_bar.maximum(), current_value + scroll_delta + padding)
                 h_scroll_bar.setValue(new_value)
 
     def _validate_input(self) -> None:
@@ -236,6 +273,8 @@ class MindspaceInlineEditor(QWidget):
             self._error_label.hide()
         else:
             self._error_label.setText(error_message)
+            # Ensure error label has scaled font
+            self._error_label.setFont(self._get_scaled_error_font())
             self._error_label.show()
 
         self._apply_styling()
@@ -245,7 +284,18 @@ class MindspaceInlineEditor(QWidget):
         QTimer.singleShot(0, self._adjust_widget_size)
 
     def _apply_styling(self) -> None:
-        """Apply styling based on validation state."""
+        """Apply styling based on validation state and current zoom."""
+        zoom_factor = self._style_manager.zoom_factor()
+        base_font_size = self._style_manager.base_font_size()
+
+        # Set scaled fonts
+        self._line_edit.setFont(self._get_scaled_font())
+        self._error_label.setFont(self._get_scaled_error_font())
+
+        # Scale padding and other dimensions
+        padding = int(4 * zoom_factor)
+        border_radius = int(2 * zoom_factor)
+
         if self._is_valid:
             # Normal styling with subtle background to distinguish from tree item
             line_edit_style = f"""
@@ -253,8 +303,9 @@ class MindspaceInlineEditor(QWidget):
                     background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                    padding: 2px 4px;
-                    border-radius: 2px;
+                    padding: {padding}px;
+                    border-radius: {border_radius}px;
+                    font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 }}
                 QLineEdit:focus {{
@@ -262,6 +313,7 @@ class MindspaceInlineEditor(QWidget):
                     background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 }}
             """
+
         else:
             # Error styling - red background
             error_color = "#ffebee"  # Light red background
@@ -271,8 +323,9 @@ class MindspaceInlineEditor(QWidget):
                     background-color: {error_color};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {error_border};
-                    padding: 2px 4px;
-                    border-radius: 2px;
+                    padding: {padding}px;
+                    border-radius: {border_radius}px;
+                    font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 }}
                 QLineEdit:focus {{
@@ -281,15 +334,20 @@ class MindspaceInlineEditor(QWidget):
                 }}
             """
 
-        # Enhanced error label styling with better visibility
+        # Enhanced error label styling with better visibility and scaled dimensions
+        error_padding_v = int(3 * zoom_factor)
+        error_padding_h = int(6 * zoom_factor)
+        error_border_radius = int(3 * zoom_factor)
+        error_font_size = (base_font_size - 2) * zoom_factor
+
         error_label_style = f"""
             QLabel {{
                 color: #f44336;
-                font-size: 11px;
-                padding: 3px 6px;
+                font-size: {error_font_size}pt;
+                padding: {error_padding_v}px {error_padding_h}px;
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 border: 1px solid #f44336;
-                border-radius: 3px;
+                border-radius: {error_border_radius}px;
                 margin: 0px;
             }}
         """
@@ -328,3 +386,11 @@ class MindspaceInlineEditor(QWidget):
         """Set focus to the line edit."""
         self._line_edit.setFocus()
         self._line_edit.selectAll()
+
+    def cleanup_connections(self) -> None:
+        """Clean up signal connections when editor is being destroyed."""
+        try:
+            self._style_manager.style_changed.disconnect(self._handle_style_changed)
+
+        except (AttributeError, TypeError):
+            pass  # Connection may not exist or may already be disconnected
