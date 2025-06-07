@@ -117,7 +117,8 @@ class MindspaceFileTree(QWidget):
         self._expansion_timer.setInterval(100)  # Small delay to ensure model is ready
 
         # Track pending new items for creation flow
-        self._pending_new_item: tuple[str, bool] | None = None  # (parent_path, is_folder)
+        # Format: (parent_path, is_folder, temp_path)
+        self._pending_new_item: tuple[str, bool, str] | None = None
 
     def _handle_drop_target_changed(self) -> None:
         """
@@ -229,11 +230,11 @@ class MindspaceFileTree(QWidget):
         """
         # If this was a pending new item, clean it up
         if self._pending_new_item:
-            self._cleanup_pending_new_item(index)
+            self._cleanup_pending_new_item()
 
     def _complete_new_item_creation(self, index: QModelIndex, new_name: str) -> None:
         """
-        Complete the creation of a new file or folder.
+        Complete the creation of a new file or folder by renaming the temporary item.
 
         Args:
             index: Model index where the new item should be created
@@ -242,26 +243,37 @@ class MindspaceFileTree(QWidget):
         if not self._pending_new_item:
             return
 
-        parent_path, is_folder = self._pending_new_item
+        parent_path, is_folder, temp_path = self._pending_new_item
         self._pending_new_item = None
 
-        # Create the full path
+        # Create the full path for the final item
         new_path = os.path.join(parent_path, new_name)
 
         try:
-            if is_folder:
-                # Create folder
-                os.makedirs(new_path)
-            else:
-                # Create file
-                with open(new_path, 'w', encoding='utf-8') as f:
-                    f.write("")  # Create empty file
+            # Rename the temporary item to the final name
+            os.rename(temp_path, new_path)
+            self._logger.info("Successfully renamed temporary %s from '%s' to '%s'",
+                            "folder" if is_folder else "file", temp_path, new_path)
 
-                # Signal that file should be opened for editing
+            # If it's a file, signal that it should be opened for editing
+            if not is_folder:
                 self.file_edited.emit(new_path)
 
         except OSError as e:
-            self._logger.error("Failed to create %s '%s': %s", "folder" if is_folder else "file", new_path, str(e))
+            self._logger.error("Failed to rename temporary %s from '%s' to '%s': %s",
+                             "folder" if is_folder else "file", temp_path, new_path, str(e))
+
+            # Clean up the temporary item on failure
+            try:
+                if is_folder:
+                    os.rmdir(temp_path)
+
+                else:
+                    os.remove(temp_path)
+
+            except OSError:
+                pass  # Best effort cleanup
+
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -270,15 +282,29 @@ class MindspaceFileTree(QWidget):
                 strings.error_creating_folder.format(str(e)) if is_folder else strings.file_creation_error.format(str(e))
             )
 
-    def _cleanup_pending_new_item(self, index: QModelIndex) -> None:
+    def _cleanup_pending_new_item(self) -> None:
         """
         Clean up a pending new item that was cancelled.
-
-        Args:
-            index: Model index of the cancelled item
         """
+        if not self._pending_new_item:
+            return
+
+        parent_path, is_folder, temp_path = self._pending_new_item
         self._pending_new_item = None
-        # The temporary item in the model will be cleaned up automatically
+
+        # Remove the temporary file/folder
+        try:
+            if is_folder:
+                os.rmdir(temp_path)
+
+            else:
+                os.remove(temp_path)
+
+            self._logger.info("Cleaned up cancelled temporary %s: '%s'",
+                            "folder" if is_folder else "file", temp_path)
+        except OSError as e:
+            self._logger.warning("Failed to clean up temporary %s '%s': %s",
+                               "folder" if is_folder else "file", temp_path, str(e))
 
     def _complete_rename_operation(self, index: QModelIndex, new_name: str) -> None:
         """
@@ -487,29 +513,29 @@ class MindspaceFileTree(QWidget):
         Args:
             parent_path: Path to the parent directory where folder will be created
         """
-        # Set up pending creation state
-        self._pending_new_item = (parent_path, True)  # True for folder
+        # Create a temporary folder with default name
+        default_name = self._get_default_folder_name(parent_path)
+        temp_folder_path = os.path.join(parent_path, default_name)
 
-        # Create a temporary item in the tree and start editing
-        # For now, we'll use the existing file system model which doesn't support
-        # temporary items. We'll need to find the parent index and start editing there.
-        parent_source_index = self._fs_model.index(parent_path)
-        parent_index = self._filter_model.mapFromSource(parent_source_index)
+        try:
+            os.makedirs(temp_folder_path)
+            self._logger.info("Created temporary folder: '%s'", temp_folder_path)
 
-        if parent_index.isValid():
-            # For now, we'll create a default folder and then rename it
-            default_name = self._get_default_folder_name(parent_path)
-            new_folder_path = os.path.join(parent_path, default_name)
+            # Set up pending creation state with the temporary path
+            self._pending_new_item = (parent_path, True, temp_folder_path)
 
-            try:
-                os.makedirs(new_folder_path)
+            # Find the new folder in the model and start editing
+            QTimer.singleShot(100, lambda: self._start_edit_new_item(temp_folder_path))
 
-                # Find the new folder in the model and start editing
-                QTimer.singleShot(100, lambda: self._start_edit_new_item(new_folder_path))
-
-            except OSError as e:
-                self._logger.error("Failed to create temporary folder '%s': %s", new_folder_path, str(e))
-                self._pending_new_item = None
+        except OSError as e:
+            self._logger.error("Failed to create temporary folder '%s': %s", temp_folder_path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.file_creation_error_title,
+                strings.error_creating_folder.format(str(e))
+            )
 
     def _start_new_file_creation(self, parent_path: str) -> None:
         """
@@ -518,23 +544,30 @@ class MindspaceFileTree(QWidget):
         Args:
             parent_path: Path to the parent directory where file will be created
         """
-        # Set up pending creation state
-        self._pending_new_item = (parent_path, False)  # False for file
-
-        # Create a temporary file and start editing
+        # Create a temporary file with default name
         default_name = self._get_default_file_name(parent_path)
-        new_file_path = os.path.join(parent_path, default_name)
+        temp_file_path = os.path.join(parent_path, default_name)
 
         try:
-            with open(new_file_path, 'w', encoding='utf-8') as f:
+            with open(temp_file_path, 'w', encoding='utf-8') as f:
                 f.write("")  # Create empty file
+            self._logger.info("Created temporary file: '%s'", temp_file_path)
+
+            # Set up pending creation state with the temporary path
+            self._pending_new_item = (parent_path, False, temp_file_path)
 
             # Find the new file in the model and start editing
-            QTimer.singleShot(100, lambda: self._start_edit_new_item(new_file_path))
+            QTimer.singleShot(100, lambda: self._start_edit_new_item(temp_file_path))
 
         except OSError as e:
-            self._logger.error("Failed to create temporary file '%s': %s", new_file_path, str(e))
-            self._pending_new_item = None
+            self._logger.error("Failed to create temporary file '%s': %s", temp_file_path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.file_creation_error_title,
+                strings.file_creation_error.format(str(e))
+            )
 
     def _start_edit_new_item(self, item_path: str) -> None:
         """
@@ -586,6 +619,7 @@ class MindspaceFileTree(QWidget):
         while True:
             if counter == 1:
                 name = base_name
+
             else:
                 name_part, ext = os.path.splitext(base_name)
                 name = f"{name_part} {counter}{ext}"
