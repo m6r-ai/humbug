@@ -3,12 +3,13 @@
 import logging
 import os
 import shutil
+from typing import cast
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
     QLabel, QStyledItemDelegate, QStyleOptionViewItem
 )
-from PySide6.QtCore import Signal, QModelIndex, QPersistentModelIndex, Qt, QSize, QPoint, QTimer
+from PySide6.QtCore import Signal, QModelIndex, QPersistentModelIndex, Qt, QSize, QPoint, QTimer, QRect
 from PySide6.QtGui import QPainter, QPen
 
 from humbug.gui.color_role import ColorRole
@@ -66,12 +67,14 @@ class MindspaceDropTargetItemDelegate(QStyledItemDelegate):
             # Make the background slightly more transparent for subtlety
             drop_target_bg.setAlpha(128)
 
+            rect = cast(QRect, option.rect)  # type: ignore[attr-defined] - weird type hinting issue with PySide6
+
             # Draw drop target background
-            painter.fillRect(option.rect, drop_target_bg)
+            painter.fillRect(rect, drop_target_bg)
 
             # Draw drop target border - dotted line for clear indication
             painter.setPen(QPen(drop_target_border, 1, Qt.PenStyle.SolidLine))
-            painter.drawRect(option.rect.adjusted(1, 1, -1, -1))
+            painter.drawRect(rect.adjusted(1, 1, -1, -1))
 
             # Restore painter state
             painter.restore()
@@ -167,7 +170,7 @@ class MindspaceFileTree(QWidget):
         self._expansion_timer.timeout.connect(self._auto_expand_first_level)
         self._expansion_timer.setInterval(100)  # Small delay to ensure model is ready
 
-    def _handle_drop_target_changed(self, index: QModelIndex) -> None:
+    def _handle_drop_target_changed(self) -> None:
         """
         Handle changes to the drop target in the tree view.
 

@@ -12,7 +12,7 @@ class MindspaceFileTreeView(QTreeView):
     """Custom tree view with drag and drop support including auto-scroll."""
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
-    drop_target_changed = Signal(QModelIndex)  # current drop target index
+    drop_target_changed = Signal()
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the tree view."""
@@ -60,13 +60,13 @@ class MindspaceFileTreeView(QTreeView):
         """Clear the current drop target and emit signal."""
         if self._current_drop_target is not None:
             self._current_drop_target = None
-            self.drop_target_changed.emit(QModelIndex())  # Invalid index signals clear
+            self.drop_target_changed.emit()
 
     def _set_drop_target(self, index: QModelIndex) -> None:
         """Set the current drop target and emit signal if changed."""
         if self._current_drop_target != index:
             self._current_drop_target = index
-            self.drop_target_changed.emit(index)
+            self.drop_target_changed.emit()
 
     def _get_path_from_index(self, index: QModelIndex) -> str | None:
         """
@@ -178,7 +178,7 @@ class MindspaceFileTreeView(QTreeView):
                 continue
 
             # Get the path for this auto-opened folder
-            folder_path = self._get_path_from_index(QModelIndex(persistent_index))
+            folder_path = self._get_path_from_index(QModelIndex(persistent_index))  # type: ignore - another weird type issue
             if not folder_path:
                 folders_to_close.append(persistent_index)
                 continue
@@ -193,7 +193,7 @@ class MindspaceFileTreeView(QTreeView):
 
             if not should_keep_open:
                 # Close the folder
-                self.collapse(QModelIndex(persistent_index))
+                self.collapse(QModelIndex(persistent_index))  # type: ignore - another weird type issue
                 folders_to_close.append(persistent_index)
 
         # Remove closed folders from our tracking set
