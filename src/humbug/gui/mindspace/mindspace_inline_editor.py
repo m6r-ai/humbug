@@ -1,10 +1,10 @@
 """Inline editor widget for mindspace file tree items."""
 
-from typing import Callable
+from typing import Callable, cast
 
 from PySide6.QtWidgets import QLineEdit, QVBoxLayout, QLabel, QWidget
-from PySide6.QtCore import Signal, Qt, QTimer, QRect
-from PySide6.QtGui import QFontMetrics
+from PySide6.QtCore import Signal, Qt, QTimer, QRect, QObject, QEvent
+from PySide6.QtGui import QFontMetrics, QKeyEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
@@ -39,22 +39,22 @@ class MindspaceInlineEditor(QWidget):
         self._tree_view = None  # Will be set by delegate
 
         # Create layout
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(2)
 
         # Create line edit
         self._line_edit = QLineEdit()
         self._line_edit.setText(initial_text)
         self._line_edit.selectAll()
         self._line_edit.textChanged.connect(self._validate_input)
-        layout.addWidget(self._line_edit)
+        self._layout.addWidget(self._line_edit)
 
         # Create error label (initially hidden)
         self._error_label = QLabel()
         self._error_label.setWordWrap(True)
         self._error_label.hide()
-        layout.addWidget(self._error_label)
+        self._layout.addWidget(self._error_label)
 
         # Track validation state
         self._is_valid = True
@@ -102,7 +102,7 @@ class MindspaceInlineEditor(QWidget):
             )
             error_height = text_rect.height() + 4  # Add padding
 
-            layout_spacing = self.layout().spacing()
+            layout_spacing = self._layout.spacing()
             return line_edit_height + error_height + layout_spacing
 
         return line_edit_height
@@ -116,8 +116,8 @@ class MindspaceInlineEditor(QWidget):
         current_rect = self.geometry()
 
         # Get parent viewport bounds
-        viewport = self.parent()
-        viewport_rect = viewport.rect()
+        parent = cast(QWidget, self.parent())
+        viewport_rect = parent.rect()
 
         # Calculate new geometry
         new_rect = QRect(current_rect)
@@ -132,6 +132,7 @@ class MindspaceInlineEditor(QWidget):
             if not self._error_above:
                 self._set_error_above_layout()
                 self._error_above = True
+
         else:
             # Position error message below the line edit (default)
             # Keep the top position the same
@@ -146,7 +147,7 @@ class MindspaceInlineEditor(QWidget):
 
     def _set_error_above_layout(self) -> None:
         """Rearrange layout to show error above line edit."""
-        layout = self.layout()
+        layout = self._layout
         layout.removeWidget(self._error_label)
         layout.removeWidget(self._line_edit)
         layout.addWidget(self._error_label)
@@ -154,7 +155,7 @@ class MindspaceInlineEditor(QWidget):
 
     def _set_error_below_layout(self) -> None:
         """Rearrange layout to show error below line edit."""
-        layout = self.layout()
+        layout = self._layout
         layout.removeWidget(self._line_edit)
         layout.removeWidget(self._error_label)
         layout.addWidget(self._line_edit)
@@ -287,10 +288,10 @@ class MindspaceInlineEditor(QWidget):
         self._error_label.setStyleSheet(error_label_style)
         self._error_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
-    def eventFilter(self, obj, event) -> bool:
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Handle key events for the line edit."""
-        if obj == self._line_edit and event.type() == event.Type.KeyPress:
-            key_event = event
+        if watched == self._line_edit and event.type() == event.Type.KeyPress:
+            key_event = cast(QKeyEvent, event)
 
             if key_event.key() == Qt.Key.Key_Return or key_event.key() == Qt.Key.Key_Enter:
                 # Only accept if validation passes
@@ -303,7 +304,7 @@ class MindspaceInlineEditor(QWidget):
                 self.edit_cancelled.emit()
                 return True
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(watched, event)
 
     def get_text(self) -> str:
         """Get the current text in the editor."""

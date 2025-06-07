@@ -3,7 +3,6 @@
 import logging
 import os
 import shutil
-from typing import cast
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
@@ -205,7 +204,7 @@ class MindspaceFileTree(QWidget):
         try:
             # Check if this is a pending new item creation
             if self._pending_new_item:
-                self._complete_new_item_creation(index, new_name)
+                self._complete_new_item_creation(new_name)
                 return
 
             # This is a rename operation
@@ -221,18 +220,15 @@ class MindspaceFileTree(QWidget):
                 str(e)
             )
 
-    def _handle_inline_edit_cancelled(self, index: QModelIndex) -> None:
+    def _handle_inline_edit_cancelled(self) -> None:
         """
         Handle when inline editing is cancelled.
-
-        Args:
-            index: Model index that was being edited
         """
         # If this was a pending new item, clean it up
         if self._pending_new_item:
             self._cleanup_pending_new_item()
 
-    def _complete_new_item_creation(self, index: QModelIndex, new_name: str) -> None:
+    def _complete_new_item_creation(self, new_name: str) -> None:
         """
         Complete the creation of a new file or folder by renaming the temporary item.
 

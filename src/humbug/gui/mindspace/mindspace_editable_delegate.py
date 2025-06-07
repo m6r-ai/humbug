@@ -3,7 +3,7 @@
 import os
 from typing import cast
 
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect
 from PySide6.QtGui import QPainter, QPen
 
@@ -17,7 +17,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
     """Custom item delegate that provides visual feedback for drop targets and handles inline editing."""
 
     edit_finished = Signal(QModelIndex, str)  # index, new_name
-    edit_cancelled = Signal(QModelIndex)      # index
+    edit_cancelled = Signal()
 
     def __init__(self, tree_view, style_manager: StyleManager):
         """
@@ -70,7 +70,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
 
         # Connect signals
         editor.edit_finished.connect(lambda name: self._handle_edit_finished(index, name))
-        editor.edit_cancelled.connect(lambda: self._handle_edit_cancelled(index))
+        editor.edit_cancelled.connect(self._handle_edit_cancelled)
 
         # Track the current editor
         self._current_editor = editor
@@ -196,15 +196,12 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         self._cleanup_editor()
         self.edit_finished.emit(index, new_name)
 
-    def _handle_edit_cancelled(self, index: QModelIndex) -> None:
+    def _handle_edit_cancelled(self) -> None:
         """
         Handle when editing is cancelled.
-
-        Args:
-            index: Model index that was being edited
         """
         self._cleanup_editor()
-        self.edit_cancelled.emit(index)
+        self.edit_cancelled.emit()
 
     def _cleanup_editor(self) -> None:
         """Clean up the current editor state."""
