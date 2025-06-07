@@ -293,8 +293,7 @@ class MindspaceInlineEditor(QWidget):
         self._error_label.setFont(self._get_scaled_error_font())
 
         # Scale padding and other dimensions
-        padding = int(4 * zoom_factor)
-        border_radius = int(2 * zoom_factor)
+        padding = int(2 * zoom_factor)
 
         if self._is_valid:
             # Normal styling with subtle background to distinguish from tree item
@@ -304,7 +303,6 @@ class MindspaceInlineEditor(QWidget):
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
                     padding: {padding}px;
-                    border-radius: {border_radius}px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 }}
@@ -324,7 +322,6 @@ class MindspaceInlineEditor(QWidget):
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {error_border};
                     padding: {padding}px;
-                    border-radius: {border_radius}px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 }}
@@ -347,7 +344,6 @@ class MindspaceInlineEditor(QWidget):
                 padding: {error_padding_v}px {error_padding_h}px;
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 border: 1px solid #f44336;
-                border-radius: {error_border_radius}px;
                 margin: 0px;
             }}
         """
