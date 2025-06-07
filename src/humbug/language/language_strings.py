@@ -80,11 +80,6 @@ class LanguageStrings:
     input_prompt: str  # Format: "Message for {model}... ({key} to submit)"
     command_prompt: str  # Format: "Command... (Enter or {key} to submit)"
 
-    # File tree messages
-    rename_conversation: str
-    conversation_name: str
-    delete_file: str
-
     # Dialog and settings
     cancel: str
     ok: str
@@ -179,7 +174,6 @@ class LanguageStrings:
     error_rename_exists: str
     error_rename_failed: str
     unsaved_changes: str
-    delete_file_warning: str
     mindspace_exists_error: str
     close_button: str
     confirm_close: str

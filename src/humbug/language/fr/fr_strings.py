@@ -85,11 +85,6 @@ def get_french_strings() -> LanguageStrings:
         input_prompt="Message pour {model}... ({key} pour envoyer)",
         command_prompt="Commande... (Entrée ou {key} pour envoyer)",
 
-        # File tree messages
-        rename_conversation="Renommer la conversation",
-        conversation_name="Nom de la conversation",
-        delete_file="Supprimer",
-
         # Dialog and settings
         cancel="Annuler",
         ok="OK",
@@ -184,7 +179,6 @@ def get_french_strings() -> LanguageStrings:
         error_rename_exists="Une conversation nommée '{0}' existe déjà.",
         error_rename_failed="Impossible de renommer la conversation : {0}",
         unsaved_changes="Voulez-vous enregistrer les modifications de {0} ?",
-        delete_file_warning="Êtes-vous sûr de vouloir supprimer ce fichier ?",
         mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné.",
         close_button="Fermer",
         confirm_close="Confirmer la fermeture",

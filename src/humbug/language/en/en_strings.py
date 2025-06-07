@@ -85,11 +85,6 @@ def get_english_strings() -> LanguageStrings:
         input_prompt="Message for {model}... ({key} to submit)",
         command_prompt="Command... (Enter or {key} to submit)",
 
-        # File tree messages
-        rename_conversation="Rename Conversation",
-        conversation_name="Conversation Name",
-        delete_file="Delete",
-
         # Dialog and settings
         cancel="Cancel",
         ok="OK",
@@ -184,7 +179,6 @@ def get_english_strings() -> LanguageStrings:
         error_rename_exists="A conversation named '{0}' already exists.",
         error_rename_failed="Could not rename conversation: {0}",
         unsaved_changes="Do you want to save changes to {0}?",
-        delete_file_warning="Are you sure you want to delete this file?",
         mindspace_exists_error="Mindspace already exists in selected directory.",
         close_button="Close",
         confirm_close="Confirm Close",

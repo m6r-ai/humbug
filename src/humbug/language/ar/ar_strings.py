@@ -85,11 +85,6 @@ def get_arabic_strings() -> LanguageStrings:
         input_prompt="رسالة لـ {model}... ({key} للإرسال)",
         command_prompt="الأمر... (Enter أو {key} للإرسال)",
 
-        # File tree messages
-        rename_conversation="إعادة تسمية المحادثة",
-        conversation_name="اسم المحادثة",
-        delete_file="حذف",
-
         # Dialog and settings
         cancel="إلغاء",
         ok="موافق",
@@ -184,7 +179,6 @@ def get_arabic_strings() -> LanguageStrings:
         error_rename_exists="توجد محادثة باسم '{0}' بالفعل.",
         error_rename_failed="تعذر إعادة تسمية المحادثة: {0}",
         unsaved_changes="هل تريد حفظ التغييرات في {0}؟",
-        delete_file_warning="هل أنت متأكد من حذف هذا الملف؟",
         mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد.",
         close_button="إغلاق",
         confirm_close="تأكيد الإغلاق",
