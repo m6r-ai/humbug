@@ -56,7 +56,7 @@ class MindspaceFileMoveDialog(QDialog):
         layout.setSpacing(16)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Create header layout for icon and message
+        # Create header layout for icon and content
         header_layout = QHBoxLayout()
         header_layout.setSpacing(16)
         header_layout.setContentsMargins(0, 0, 0, 0)
@@ -68,6 +68,11 @@ class MindspaceFileMoveDialog(QDialog):
             icon_label.setPixmap(icon)
             header_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignTop)
 
+        # Create vertical layout for message and path details
+        content_layout = QVBoxLayout()
+        content_layout.setSpacing(12)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+
         # Create confirmation message
         if is_folder:
             message = strings.move_folder_confirmation.format(item_name)
@@ -77,11 +82,9 @@ class MindspaceFileMoveDialog(QDialog):
 
         message_label = QLabel(message)
         message_label.setWordWrap(True)
-        header_layout.addWidget(message_label, stretch=1)
+        content_layout.addWidget(message_label)
 
-        layout.addLayout(header_layout)
-
-        # Create grid layout for path information (directly in main layout)
+        # Create grid layout for path information
         grid_layout = QGridLayout()
         grid_layout.setSpacing(8)
         grid_layout.setContentsMargins(0, 0, 0, 0)
@@ -107,7 +110,14 @@ class MindspaceFileMoveDialog(QDialog):
         dest_path_label.setWordWrap(True)
         grid_layout.addWidget(dest_path_label, 1, 1)
 
-        layout.addLayout(grid_layout)
+        # Add grid layout to content layout
+        content_layout.addLayout(grid_layout)
+
+        # Add content layout to header layout
+        header_layout.addLayout(content_layout, stretch=1)
+
+        # Add header layout to main layout
+        layout.addLayout(header_layout)
 
         # Add spacing before buttons
         layout.addSpacing(16)
