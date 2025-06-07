@@ -1,12 +1,10 @@
 """Dialog for confirming file/folder move operations in mindspace."""
 
 import os
-from typing import Optional
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget, QFrame
 )
-from PySide6.QtCore import Qt
 
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
@@ -59,6 +57,7 @@ class MindspaceFileMoveDialog(QDialog):
         # Create confirmation message
         if is_folder:
             message = strings.move_folder_confirmation.format(item_name)
+
         else:
             message = strings.move_file_confirmation.format(item_name)
 
@@ -81,7 +80,6 @@ class MindspaceFileMoveDialog(QDialog):
 
         source_path_label = QLabel(self._display_source_path)
         source_path_label.setWordWrap(True)
-        source_path_label.setProperty("pathLabel", True)
         details_layout.addWidget(source_path_label)
 
         # Destination path
@@ -91,7 +89,6 @@ class MindspaceFileMoveDialog(QDialog):
 
         dest_path_label = QLabel(self._display_dest_path)
         dest_path_label.setWordWrap(True)
-        dest_path_label.setProperty("pathLabel", True)
         details_layout.addWidget(dest_path_label)
 
         layout.addWidget(details_frame)
@@ -157,16 +154,6 @@ class MindspaceFileMoveDialog(QDialog):
             QLabel[detailLabel="true"] {
                 font-weight: bold;
                 margin-top: 8px;
-            }
-            QLabel[pathLabel="true"] {
-                background-color: rgba(128, 128, 128, 0.1);
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-family: monospace;
-            }
-            QFrame {
-                background-color: rgba(128, 128, 128, 0.05);
-                border: none;
             }
         """
 
