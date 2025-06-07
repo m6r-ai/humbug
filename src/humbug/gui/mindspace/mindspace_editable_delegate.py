@@ -46,26 +46,18 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         if not index.isValid() or self._current_editor is not None:
             return
 
-        # Get current text and determine if it's a conversation
+        # Get current text (full filename including extension)
         current_text = index.data(Qt.ItemDataRole.DisplayRole)
         if not current_text:
             current_text = ""
 
-        # Check if this is a conversation file
-        is_conversation = current_text.lower().endswith('.conv')
-
-        # For conversations, remove the .conv extension for editing
-        if is_conversation:
-            current_text = os.path.splitext(current_text)[0]
-
         # Create validation callback to check for existing files
         def validation_callback(new_name: str) -> tuple[bool, str]:
-            return self._validate_new_name(index, new_name, is_conversation)
+            return self._validate_new_name(index, new_name)
 
         # Create the inline editor
         editor = MindspaceInlineEditor(
             initial_text=current_text,
-            is_conversation=is_conversation,
             validation_callback=validation_callback
         )
 
@@ -152,14 +144,13 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         # Call the parent paint method to draw the normal item content
         super().paint(painter, option, index)
 
-    def _validate_new_name(self, index: QModelIndex, new_name: str, is_conversation: bool) -> tuple[bool, str]:
+    def _validate_new_name(self, index: QModelIndex, new_name: str) -> tuple[bool, str]:
         """
         Validate a new name for uniqueness.
 
         Args:
             index: Model index being edited
             new_name: Proposed new name
-            is_conversation: Whether this is a conversation file
 
         Returns:
             Tuple of (is_valid, error_message)
@@ -173,11 +164,8 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
             # Get the directory
             directory = os.path.dirname(file_path)
 
-            # Add extension for conversations
-            full_name = new_name + '.conv' if is_conversation else new_name
-
             # Check if a file with this name already exists
-            new_path = os.path.join(directory, full_name)
+            new_path = os.path.join(directory, new_name)
             if os.path.exists(new_path) and new_path != file_path:
                 return False, self._language_manager.strings().rename_error_exists
 

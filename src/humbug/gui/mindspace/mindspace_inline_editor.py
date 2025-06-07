@@ -21,7 +21,6 @@ class MindspaceInlineEditor(QWidget):
     def __init__(
         self,
         initial_text: str,
-        is_conversation: bool = False,
         validation_callback: Callable[[str], tuple[bool, str]] | None = None
     ):
         """
@@ -29,13 +28,11 @@ class MindspaceInlineEditor(QWidget):
 
         Args:
             initial_text: The initial text to show in the editor
-            is_conversation: Whether this is editing a conversation file
             validation_callback: Optional callback for additional validation
         """
         super().__init__()
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
-        self._is_conversation = is_conversation
         self._validation_callback = validation_callback
         self._tree_view: MindspaceFileTreeView | None = None  # Will be set by delegate
 
@@ -197,15 +194,6 @@ class MindspaceInlineEditor(QWidget):
         if any(c in invalid_chars for c in text):
             self._set_validation_state(False, self._language_manager.strings().error_invalid_characters)
             return
-
-        # For conversations, ensure .conv extension
-        if self._is_conversation and not text.endswith('.conv'):
-            text_with_ext = text + '.conv'
-            self._line_edit.setText(text_with_ext)
-            # Re-validate with the extension
-            if any(c in invalid_chars for c in text_with_ext):
-                self._set_validation_state(False, self._language_manager.strings().error_invalid_characters)
-                return
 
         # Call additional validation callback if provided
         if self._validation_callback:
