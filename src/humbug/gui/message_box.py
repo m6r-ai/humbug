@@ -217,13 +217,13 @@ class MessageBox(QDialog):
         self.result_button = self._button_results[button]
         self.accept()
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:
+    def keyPressEvent(self, arg__1: QKeyEvent) -> None:
         """Handle key events, specifically for Escape key."""
-        if event.key() == Qt.Key.Key_Escape and self._escape_button:
+        if arg__1.key() == Qt.Key.Key_Escape and self._escape_button:
             self.result_button = self._button_results[self._escape_button]
             self.reject()
 
-        return super().keyPressEvent(event)
+        return super().keyPressEvent(arg__1)
 
     def _handle_style_changed(self) -> None:
         """Update styling when application style changes."""
