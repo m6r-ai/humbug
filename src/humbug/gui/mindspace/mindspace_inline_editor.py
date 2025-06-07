@@ -90,15 +90,15 @@ class MindspaceInlineEditor(QWidget):
             font_metrics = QFontMetrics(self._error_label.font())
             text = self._error_label.text()
 
-            # Get the width available for the error label
-            available_width = max(200, self.width() - 8)  # Account for padding
+            # Get the width available for the error label (use current widget width)
+            available_width = max(150, self.width() - 8)  # Account for padding, minimum 150px
 
             # Calculate required height for word-wrapped text
             text_rect = font_metrics.boundingRect(
                 0, 0, available_width, 0,
                 Qt.TextFlag.TextWordWrap, text
             )
-            error_height = text_rect.height() + 4  # Add padding
+            error_height = text_rect.height() + 6  # Add padding
 
             layout_spacing = self._layout.spacing()
             return line_edit_height + error_height + layout_spacing
@@ -138,6 +138,13 @@ class MindspaceInlineEditor(QWidget):
                 self._set_error_below_layout()
                 self._error_above = False
 
+        # Ensure the editor doesn't extend beyond the viewport horizontally
+        # This is especially important for text-only editing where width might be constrained
+        if new_rect.right() > viewport_rect.right():
+            # Adjust width to fit within viewport
+            new_width = viewport_rect.right() - new_rect.left()
+            new_rect.setWidth(max(100, new_width))  # Minimum 100px width
+
         self.setGeometry(new_rect)
 
         # Ensure the editor stays visible in viewport
@@ -168,7 +175,7 @@ class MindspaceInlineEditor(QWidget):
         viewport_rect = viewport.rect()
         editor_rect = self.geometry()
 
-        # Check if editor extends beyond viewport
+        # Check if editor extends beyond viewport vertically
         if editor_rect.bottom() > viewport_rect.bottom():
             # Calculate how much we need to scroll
             scroll_delta = editor_rect.bottom() - viewport_rect.bottom()
@@ -179,6 +186,16 @@ class MindspaceInlineEditor(QWidget):
                 current_value = scroll_bar.value()
                 new_value = min(scroll_bar.maximum(), current_value + scroll_delta + 5)  # +5 for padding
                 scroll_bar.setValue(new_value)
+
+        # Check if editor extends beyond viewport horizontally (less common but possible)
+        if editor_rect.right() > viewport_rect.right():
+            # Get horizontal scroll bar and adjust if available
+            h_scroll_bar = self._tree_view.horizontalScrollBar()
+            if h_scroll_bar and h_scroll_bar.isVisible():
+                scroll_delta = editor_rect.right() - viewport_rect.right()
+                current_value = h_scroll_bar.value()
+                new_value = min(h_scroll_bar.maximum(), current_value + scroll_delta + 5)
+                h_scroll_bar.setValue(new_value)
 
     def _validate_input(self) -> None:
         """Validate the current input and update visual feedback."""
@@ -230,17 +247,19 @@ class MindspaceInlineEditor(QWidget):
     def _apply_styling(self) -> None:
         """Apply styling based on validation state."""
         if self._is_valid:
-            # Normal styling
+            # Normal styling with subtle background to distinguish from tree item
             line_edit_style = f"""
                 QLineEdit {{
                     background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                    padding: 2px;
+                    padding: 2px 4px;
                     border-radius: 2px;
+                    selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 }}
                 QLineEdit:focus {{
                     border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                    background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 }}
             """
         else:
@@ -252,11 +271,13 @@ class MindspaceInlineEditor(QWidget):
                     background-color: {error_color};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {error_border};
-                    padding: 2px;
+                    padding: 2px 4px;
                     border-radius: 2px;
+                    selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 }}
                 QLineEdit:focus {{
                     border: 1px solid {error_border};
+                    background-color: {error_color};
                 }}
             """
 
@@ -265,10 +286,10 @@ class MindspaceInlineEditor(QWidget):
             QLabel {{
                 color: #f44336;
                 font-size: 11px;
-                padding: 2px 4px;
+                padding: 3px 6px;
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 border: 1px solid #f44336;
-                border-radius: 2px;
+                border-radius: 3px;
                 margin: 0px;
             }}
         """

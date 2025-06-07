@@ -35,6 +35,69 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         self._current_editor: MindspaceInlineEditor | None = None
         self._editing_index: QModelIndex | None = None
 
+    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> QRect:
+        """
+        Calculate the rectangle that contains only the text portion of the item.
+
+        Args:
+            index: Model index of the item
+            tree_view: The tree view widget
+
+        Returns:
+            QRect covering only the text area (excluding icon)
+        """
+        # Get the full visual rect (this already has correct positioning)
+        full_rect = tree_view.visualRect(index)
+
+        # Get the icon size
+        icon_size = tree_view.iconSize()
+        icon_width = icon_size.width()
+
+        # Standard spacing between icon and text in Qt tree views
+        icon_text_spacing = 4
+
+        # Calculate the offset needed to skip over the icon
+        icon_offset = icon_width + icon_text_spacing
+
+        # Create text-only rectangle by adjusting the left edge
+        text_rect = QRect(
+            full_rect.left() + icon_offset,
+            full_rect.top(),
+            full_rect.width() - icon_offset,
+            full_rect.height()
+        )
+
+        # Ensure minimum width for editing
+        if text_rect.width() < 50:
+            text_rect.setWidth(50)
+
+        return text_rect
+
+    def _get_item_depth(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> int:
+        """
+        Calculate the depth of an item in the tree hierarchy relative to the root index.
+
+        Args:
+            index: Model index of the item
+            tree_view: The tree view widget
+
+        Returns:
+            Depth level (0 for items at root level)
+        """
+        if not index.isValid():
+            return 0
+
+        depth = 0
+        current = index
+        root_index = tree_view.rootIndex()
+
+        # Walk up the parent chain until we reach the root or an invalid index
+        while current.parent().isValid() and current.parent() != root_index:
+            depth += 1
+            current = current.parent()
+
+        return depth
+
     def start_custom_edit(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> None:
         """
         Start custom inline editing that bypasses the model's editing system.
@@ -75,8 +138,8 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         # Set reference to tree view for viewport calculations
         editor.set_tree_view(tree_view)
 
-        # Get the visual rect for the index
-        rect = tree_view.visualRect(index)
+        # Get the text-only rect instead of full visual rect
+        rect = self._calculate_text_rect(index, tree_view)
 
         # Set initial geometry (will be adjusted when error shows)
         editor.setGeometry(rect)
