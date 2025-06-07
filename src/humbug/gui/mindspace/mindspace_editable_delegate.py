@@ -79,8 +79,13 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         # Set up the editor geometry and parent
         editor.setParent(tree_view.viewport())
 
+        # Set reference to tree view for viewport calculations
+        editor.set_tree_view(tree_view)
+
         # Get the visual rect for the index
         rect = tree_view.visualRect(index)
+
+        # Set initial geometry (will be adjusted when error shows)
         editor.setGeometry(rect)
 
         # Show and focus the editor
