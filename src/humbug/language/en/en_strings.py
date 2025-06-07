@@ -263,5 +263,12 @@ def get_english_strings() -> LanguageStrings:
         move_error_title="Move Error",
         move_error_exists="A file or folder with this name already exists at the destination.",
         move_error_failed="Could not move item: {0}",
-        move_error_protected="Cannot move system folders (conversations, metaphor, .humbug)."
+        move_error_protected="Cannot move system folders (conversations, metaphor, .humbug).",
+
+        # Inline editor validation errors
+        error_empty_name="Name cannot be empty",
+        error_invalid_characters="Name contains invalid characters: \\ / : * ? \" < > |",
+        error_validation_failed="Unable to validate name",
+        error_invalid_path="Invalid file path",
+        error_title="Error",
     )

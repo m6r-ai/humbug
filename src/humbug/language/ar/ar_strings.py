@@ -261,5 +261,12 @@ def get_arabic_strings() -> LanguageStrings:
         move_error_title="خطأ في النقل",
         move_error_exists="يوجد ملف أو مجلد بهذا الاسم بالفعل في الوجهة.",
         move_error_failed="تعذر نقل العنصر: {0}",
-        move_error_protected="لا يمكن نقل مجلدات النظام (conversations, metaphor, .humbug)."
+        move_error_protected="لا يمكن نقل مجلدات النظام (conversations, metaphor, .humbug).",
+
+        # Inline editor validation errors
+        error_empty_name="لا يمكن أن يكون الاسم فارغاً",
+        error_invalid_characters="الاسم يحتوي على رموز غير صالحة: \\ / : * ? \" < > |",
+        error_validation_failed="تعذر التحقق من صحة الاسم",
+        error_invalid_path="مسار الملف غير صالح",
+        error_title="خطأ",
     )

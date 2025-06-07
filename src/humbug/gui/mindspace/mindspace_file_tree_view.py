@@ -1,4 +1,4 @@
-"""File tree view implementation for mindspace files with drag and drop support."""
+"""File tree view implementation for mindspace files with drag and drop support and inline editing."""
 
 import os
 from typing import cast
@@ -9,10 +9,11 @@ from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, Q
 
 
 class MindspaceFileTreeView(QTreeView):
-    """Custom tree view with drag and drop support including auto-scroll."""
+    """Custom tree view with drag and drop support, auto-scroll, and inline editing."""
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
+    rename_requested = Signal(QModelIndex, str)  # index, new_name
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the tree view."""
@@ -51,6 +52,21 @@ class MindspaceFileTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)
+
+    def start_inline_edit(self, index: QModelIndex) -> None:
+        """
+        Start inline editing for the given index using a custom approach.
+
+        Args:
+            index: Model index to start editing
+        """
+        if not index.isValid():
+            return
+
+        # Get the delegate and start custom editing
+        delegate = self.itemDelegate(index)
+        if hasattr(delegate, 'start_custom_edit'):
+            delegate.start_custom_edit(index, self)
 
     def get_current_drop_target(self) -> QModelIndex | None:
         """Get the current drop target index."""

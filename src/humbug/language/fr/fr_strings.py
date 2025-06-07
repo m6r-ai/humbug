@@ -263,5 +263,12 @@ def get_french_strings() -> LanguageStrings:
         move_error_title="Erreur de déplacement",
         move_error_exists="Un fichier ou dossier avec ce nom existe déjà à la destination.",
         move_error_failed="Impossible de déplacer l'élément : {0}",
-        move_error_protected="Impossible de déplacer les dossiers système (conversations, metaphor, .humbug)."
+        move_error_protected="Impossible de déplacer les dossiers système (conversations, metaphor, .humbug).",
+
+        # Inline editor validation errors
+        error_empty_name="Le nom ne peut pas être vide",
+        error_invalid_characters="Le nom contient des caractères invalides : \\ / : * ? \" < > |",
+        error_validation_failed="Impossible de valider le nom",
+        error_invalid_path="Chemin de fichier invalide",
+        error_title="Erreur",
     )

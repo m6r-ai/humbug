@@ -254,3 +254,10 @@ class LanguageStrings:
     move_error_exists: str
     move_error_failed: str
     move_error_protected: str
+
+    # Inline editor validation errors
+    error_empty_name: str
+    error_invalid_characters: str
+    error_validation_failed: str
+    error_invalid_path: str
+    error_title: str

@@ -7,80 +7,21 @@ from typing import cast
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
-    QLabel, QStyledItemDelegate, QStyleOptionViewItem
+    QLabel
 )
-from PySide6.QtCore import Signal, QModelIndex, QPersistentModelIndex, Qt, QSize, QPoint, QTimer, QRect
-from PySide6.QtGui import QPainter, QPen
+from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
-from humbug.gui.mindspace.mindspace_conversation_rename_dialog import MindspaceConversationRenameDialog
+from humbug.gui.mindspace.mindspace_editable_delegate import MindspaceEditableDelegate
 from humbug.gui.mindspace.mindspace_file_model import MindspaceFileModel
 from humbug.gui.mindspace.mindspace_file_move_dialog import MindspaceFileMoveDialog
-from humbug.gui.mindspace.mindspace_file_rename_dialog import MindspaceFileRenameDialog
-from humbug.gui.mindspace.mindspace_new_folder_dialog import MindspaceNewFolderDialog
-from humbug.gui.mindspace.mindspace_new_file_dialog import MindspaceNewFileDialog
 from humbug.gui.mindspace.mindspace_file_tree_icon_provider import MindspaceFileTreeIconProvider
 from humbug.gui.mindspace.mindspace_file_tree_style import MindspaceFileTreeStyle
 from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-
-
-class MindspaceDropTargetItemDelegate(QStyledItemDelegate):
-    """Custom item delegate that provides visual feedback for drop targets."""
-
-    def __init__(self, tree_view: 'MindspaceFileTreeView', style_manager: StyleManager):
-        """
-        Initialize the delegate.
-
-        Args:
-            tree_view: The tree view this delegate is attached to
-            style_manager: Style manager for accessing theme colors
-        """
-        super().__init__()
-        self._tree_view = tree_view
-        self._style_manager = style_manager
-
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
-        """
-        Paint the item with drop target highlighting if applicable.
-
-        Args:
-            painter: The painter to use for drawing
-            option: Style options for the item
-            index: The model index being painted
-        """
-        # Check if this is the current drop target
-        current_drop_target = self._tree_view.get_current_drop_target()
-        is_drop_target = current_drop_target is not None and current_drop_target == index
-
-        if is_drop_target:
-            # Save the painter state
-            painter.save()
-
-            # Get drop target colors from style manager
-            drop_target_bg = self._style_manager.get_color(ColorRole.BUTTON_BACKGROUND_HOVER)
-            drop_target_border = self._style_manager.get_color(ColorRole.TEXT_SELECTED)
-
-            # Make the background slightly more transparent for subtlety
-            drop_target_bg.setAlpha(128)
-
-            rect = cast(QRect, getattr(option, 'rect'))  # Pyside6 does not support direct access to rect in QStyleOptionViewItem
-
-            # Draw drop target background
-            painter.fillRect(rect, drop_target_bg)
-
-            # Draw drop target border - dotted line for clear indication
-            painter.setPen(QPen(drop_target_border, 1, Qt.PenStyle.SolidLine))
-            painter.drawRect(rect.adjusted(1, 1, -1, -1))
-
-            # Restore painter state
-            painter.restore()
-
-        # Call the parent paint method to draw the normal item content
-        super().paint(painter, option, index)
 
 
 class MindspaceFileTree(QWidget):
@@ -121,7 +62,6 @@ class MindspaceFileTree(QWidget):
 
         layout.addWidget(self._header_widget)
 
-
         # Create tree view
         self._tree_view = MindspaceFileTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
@@ -138,6 +78,12 @@ class MindspaceFileTree(QWidget):
         # Create filter model
         self._filter_model = MindspaceFileModel()
         self._filter_model.setSourceModel(self._fs_model)
+
+        # Create and set the editable delegate
+        self._delegate = MindspaceEditableDelegate(self._tree_view, self._style_manager)
+        self._delegate.edit_finished.connect(self._handle_inline_edit_finished)
+        self._delegate.edit_cancelled.connect(self._handle_inline_edit_cancelled)
+        self._tree_view.setItemDelegate(self._delegate)
 
         # Set model on tree view
         self._tree_view.setModel(self._filter_model)
@@ -170,12 +116,12 @@ class MindspaceFileTree(QWidget):
         self._expansion_timer.timeout.connect(self._auto_expand_first_level)
         self._expansion_timer.setInterval(100)  # Small delay to ensure model is ready
 
+        # Track pending new items for creation flow
+        self._pending_new_item: tuple[str, bool] | None = None  # (parent_path, is_folder)
+
     def _handle_drop_target_changed(self) -> None:
         """
         Handle changes to the drop target in the tree view.
-
-        Args:
-            index: The new drop target index (invalid index means no target)
         """
         # Force a repaint of the entire viewport to ensure proper visual updates
         # This ensures both the old drop target and new drop target are repainted
@@ -246,6 +192,124 @@ class MindspaceFileTree(QWidget):
         except OSError as e:
             self._logger.error("Failed to move '%s' to '%s': %s", source_path, destination_path, str(e))
             raise
+
+    def _handle_inline_edit_finished(self, index: QModelIndex, new_name: str) -> None:
+        """
+        Handle when inline editing is finished.
+
+        Args:
+            index: Model index that was edited
+            new_name: The new name entered by the user
+        """
+        try:
+            # Check if this is a pending new item creation
+            if self._pending_new_item:
+                self._complete_new_item_creation(index, new_name)
+                return
+
+            # This is a rename operation
+            self._complete_rename_operation(index, new_name)
+
+        except Exception as e:
+            self._logger.error("Error completing inline edit: %s", str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_title,
+                str(e)
+            )
+
+    def _handle_inline_edit_cancelled(self, index: QModelIndex) -> None:
+        """
+        Handle when inline editing is cancelled.
+
+        Args:
+            index: Model index that was being edited
+        """
+        # If this was a pending new item, clean it up
+        if self._pending_new_item:
+            self._cleanup_pending_new_item(index)
+
+    def _complete_new_item_creation(self, index: QModelIndex, new_name: str) -> None:
+        """
+        Complete the creation of a new file or folder.
+
+        Args:
+            index: Model index where the new item should be created
+            new_name: Name for the new item
+        """
+        if not self._pending_new_item:
+            return
+
+        parent_path, is_folder = self._pending_new_item
+        self._pending_new_item = None
+
+        # Create the full path
+        new_path = os.path.join(parent_path, new_name)
+
+        try:
+            if is_folder:
+                # Create folder
+                os.makedirs(new_path)
+            else:
+                # Create file
+                with open(new_path, 'w', encoding='utf-8') as f:
+                    f.write("")  # Create empty file
+
+                # Signal that file should be opened for editing
+                self.file_edited.emit(new_path)
+
+        except OSError as e:
+            self._logger.error("Failed to create %s '%s': %s", "folder" if is_folder else "file", new_path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.file_creation_error_title,
+                strings.error_creating_folder.format(str(e)) if is_folder else strings.file_creation_error.format(str(e))
+            )
+
+    def _cleanup_pending_new_item(self, index: QModelIndex) -> None:
+        """
+        Clean up a pending new item that was cancelled.
+
+        Args:
+            index: Model index of the cancelled item
+        """
+        self._pending_new_item = None
+        # The temporary item in the model will be cleaned up automatically
+
+    def _complete_rename_operation(self, index: QModelIndex, new_name: str) -> None:
+        """
+        Complete a rename operation.
+
+        Args:
+            index: Model index being renamed
+            new_name: New name for the item
+        """
+        # Get the current file path
+        current_path = self._tree_view._get_path_from_index(index)
+        if not current_path:
+            raise ValueError(self._language_manager.strings().error_invalid_path)
+
+        # Calculate the new path
+        directory = os.path.dirname(current_path)
+        new_path = os.path.join(directory, new_name)
+
+        try:
+            # Emit signal first so tabs can be updated
+            self.file_renamed.emit(current_path, new_path)
+
+            # Perform the rename
+            os.rename(current_path, new_path)
+
+            self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
+
+        except OSError as e:
+            self._logger.error("Failed to rename '%s' to '%s': %s", current_path, new_path, str(e))
+            strings = self._language_manager.strings()
+            raise OSError(strings.rename_error_generic.format(str(e))) from e
 
     def reveal_and_select_file(self, file_path: str) -> None:
         """
@@ -364,7 +428,6 @@ class MindspaceFileTree(QWidget):
             source_index = self._filter_model.mapToSource(index)
             path = self._fs_model.filePath(source_index)
             is_dir = os.path.isdir(path)
-            is_conv = path.lower().endswith('.conv')
 
             # Create actions based on item type
             if is_dir:
@@ -389,15 +452,15 @@ class MindspaceFileTree(QWidget):
             if action:
                 if is_dir:
                     if action == new_folder_action:
-                        self._handle_new_folder(path)
+                        self._start_new_folder_creation(path)
                         return
 
                     if action == new_file_action:
-                        self._handle_new_file(path)
+                        self._start_new_file_creation(path)
                         return
 
                     if action == rename_action:
-                        self._handle_rename_file(path)
+                        self._start_rename(index)
                         return
 
                     if action == delete_action:
@@ -410,198 +473,142 @@ class MindspaceFileTree(QWidget):
                         return
 
                     if action == rename_action:
-                        if is_conv:
-                            self._handle_rename_conversation(path)
-
-                        else:
-                            self._handle_rename_file(path)
+                        self._start_rename(index)
                         return
 
                     if action == delete_action:
                         self._handle_delete_file(path)
                         return
 
-    def _handle_new_folder(self, parent_path: str) -> None:
-        """Handle request to create a new folder.
+    def _start_new_folder_creation(self, parent_path: str) -> None:
+        """
+        Start the creation of a new folder using inline editing.
 
         Args:
             parent_path: Path to the parent directory where folder will be created
         """
-        dialog = MindspaceNewFolderDialog(self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
+        # Set up pending creation state
+        self._pending_new_item = (parent_path, True)  # True for folder
 
-        folder_name = dialog.get_name()
-        if not folder_name:
-            return
+        # Create a temporary item in the tree and start editing
+        # For now, we'll use the existing file system model which doesn't support
+        # temporary items. We'll need to find the parent index and start editing there.
+        parent_source_index = self._fs_model.index(parent_path)
+        parent_index = self._filter_model.mapFromSource(parent_source_index)
 
-        new_folder_path = os.path.join(parent_path, folder_name)
+        if parent_index.isValid():
+            # For now, we'll create a default folder and then rename it
+            default_name = self._get_default_folder_name(parent_path)
+            new_folder_path = os.path.join(parent_path, default_name)
 
-        try:
-            # Check if folder already exists
-            if os.path.exists(new_folder_path):
-                strings = self._language_manager.strings()
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.WARNING,
-                    strings.file_creation_error_title,
-                    strings.rename_error_exists
-                )
-                return
+            try:
+                os.makedirs(new_folder_path)
 
-            # Create the folder
-            os.makedirs(new_folder_path)
+                # Find the new folder in the model and start editing
+                QTimer.singleShot(100, lambda: self._start_edit_new_item(new_folder_path))
 
-        except OSError as e:
-            self._logger.error("Failed to create folder '%s': %s", new_folder_path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.file_creation_error_title,
-                strings.error_creating_folder.format(str(e))
-            )
+            except OSError as e:
+                self._logger.error("Failed to create temporary folder '%s': %s", new_folder_path, str(e))
+                self._pending_new_item = None
 
-    def _handle_new_file(self, parent_path: str) -> None:
-        """Handle request to create a new file.
+    def _start_new_file_creation(self, parent_path: str) -> None:
+        """
+        Start the creation of a new file using inline editing.
 
         Args:
             parent_path: Path to the parent directory where file will be created
         """
-        dialog = MindspaceNewFileDialog(self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
+        # Set up pending creation state
+        self._pending_new_item = (parent_path, False)  # False for file
 
-        file_name = dialog.get_name()
-        if not file_name:
-            return
-
-        new_file_path = os.path.join(parent_path, file_name)
+        # Create a temporary file and start editing
+        default_name = self._get_default_file_name(parent_path)
+        new_file_path = os.path.join(parent_path, default_name)
 
         try:
-            # Check if file already exists
-            if os.path.exists(new_file_path):
-                strings = self._language_manager.strings()
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.WARNING,
-                    strings.file_creation_error_title,
-                    strings.rename_error_exists
-                )
-                return
-
-            # Create the file
             with open(new_file_path, 'w', encoding='utf-8') as f:
                 f.write("")  # Create empty file
 
-            self.file_edited.emit(new_file_path)
+            # Find the new file in the model and start editing
+            QTimer.singleShot(100, lambda: self._start_edit_new_item(new_file_path))
 
         except OSError as e:
-            self._logger.error("Failed to create file '%s': %s", new_file_path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.file_creation_error_title,
-                strings.file_creation_error.format(str(e))
-            )
+            self._logger.error("Failed to create temporary file '%s': %s", new_file_path, str(e))
+            self._pending_new_item = None
+
+    def _start_edit_new_item(self, item_path: str) -> None:
+        """
+        Start editing a newly created item.
+
+        Args:
+            item_path: Path to the newly created item
+        """
+        # Find the item in the model
+        source_index = self._fs_model.index(item_path)
+        if source_index.isValid():
+            filter_index = self._filter_model.mapFromSource(source_index)
+            if filter_index.isValid():
+                self._tree_view.start_inline_edit(filter_index)
+
+    def _get_default_folder_name(self, parent_path: str) -> str:
+        """
+        Get a default name for a new folder.
+
+        Args:
+            parent_path: Parent directory path
+
+        Returns:
+            Default folder name that doesn't conflict with existing items
+        """
+        base_name = "New Folder"
+        counter = 1
+
+        while True:
+            name = base_name if counter == 1 else f"{base_name} {counter}"
+            full_path = os.path.join(parent_path, name)
+            if not os.path.exists(full_path):
+                return name
+            counter += 1
+
+    def _get_default_file_name(self, parent_path: str) -> str:
+        """
+        Get a default name for a new file.
+
+        Args:
+            parent_path: Parent directory path
+
+        Returns:
+            Default file name that doesn't conflict with existing items
+        """
+        base_name = "New File.txt"
+        counter = 1
+
+        while True:
+            if counter == 1:
+                name = base_name
+            else:
+                name_part, ext = os.path.splitext(base_name)
+                name = f"{name_part} {counter}{ext}"
+
+            full_path = os.path.join(parent_path, name)
+            if not os.path.exists(full_path):
+                return name
+
+            counter += 1
+
+    def _start_rename(self, index: QModelIndex) -> None:
+        """
+        Start inline editing to rename an item.
+
+        Args:
+            index: Model index of the item to rename
+        """
+        if index.isValid():
+            self._tree_view.start_inline_edit(index)
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""
         self.file_edited.emit(path)
-
-    def _handle_rename_file(self, path: str) -> None:
-        """Prompt user to rename a file and handle renaming."""
-        strings = self._language_manager.strings()
-        old_name = os.path.basename(path)
-        dialog = MindspaceFileRenameDialog(old_name, self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
-
-        new_name = dialog.get_name()
-        if not new_name:
-            return
-
-        if new_name != old_name:
-            directory = os.path.dirname(path)
-            new_path = os.path.normpath(os.path.join(directory, new_name))
-
-            try:
-                # Check if file already exists
-                if os.path.exists(new_path):
-                    MessageBox.show_message(
-                        self,
-                        MessageBoxType.WARNING,
-                        strings.rename_error_title,
-                        strings.rename_error_exists
-                    )
-                    return
-
-                os.rename(path, new_path)
-                self.file_renamed.emit(path, new_path)
-
-            except OSError as e:
-                self._logger.error("Failed to rename '%s' to '%s': %s", path, new_path, str(e))
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.WARNING,
-                    strings.rename_error_title,
-                    strings.rename_error_generic.format(str(e))
-                )
-
-    def _handle_rename_conversation(self, path: str) -> None:
-        """Handle request to rename a conversation file.
-
-        Args:
-            path: Path to the conversation file to rename
-        """
-        # Show dialog to get new name
-        old_name = os.path.splitext(os.path.basename(path))[0]
-        dialog = MindspaceConversationRenameDialog(old_name, self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
-
-        new_name = dialog.get_name()
-        if not new_name:
-            return
-
-        # Ensure name ends with .conv
-        if not new_name.endswith('.conv'):
-            new_name += '.conv'
-
-        # Get paths
-        old_dir = os.path.dirname(path)
-        new_path = os.path.join(old_dir, new_name)
-
-        # Check if target already exists
-        if os.path.exists(new_path):
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.WARNING,
-                strings.error_title_rename,
-                strings.error_rename_exists.format(new_name),
-                [MessageBoxButton.OK]
-            )
-            return
-
-        try:
-            # First emit signal so tabs can be updated
-            self.file_renamed.emit(path, new_path)
-
-            # Then rename the file
-            os.rename(path, new_path)
-
-        except OSError as e:
-            self._logger.error("Failed to rename conversation '%s' to '%s': %s", path, new_path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.error_title_rename,
-                strings.error_rename_failed.format(str(e)),
-                [MessageBoxButton.OK]
-            )
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
@@ -835,6 +842,3 @@ class MindspaceFileTree(QWidget):
                 height: 16px;
             }}
         """)
-
-        # Create/update the custom item delegate to handle drop target styling
-        self._tree_view.setItemDelegate(MindspaceDropTargetItemDelegate(self._tree_view, self._style_manager))
