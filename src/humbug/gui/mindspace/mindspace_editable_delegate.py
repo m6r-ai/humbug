@@ -3,12 +3,13 @@
 import os
 from typing import cast
 
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
-from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
+from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect, QEvent, QObject
 from PySide6.QtGui import QPainter, QPen
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.mindspace.mindspace_inline_editor import MindspaceInlineEditor
+from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
@@ -19,7 +20,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
     edit_finished = Signal(QModelIndex, str)  # index, new_name
     edit_cancelled = Signal()
 
-    def __init__(self, tree_view, style_manager: StyleManager):
+    def __init__(self, tree_view: MindspaceFileTreeView, style_manager: StyleManager):
         """
         Initialize the delegate.
 
@@ -34,7 +35,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         self._current_editor: MindspaceInlineEditor | None = None
         self._editing_index: QModelIndex | None = None
 
-    def start_custom_edit(self, index: QModelIndex, tree_view) -> None:
+    def start_custom_edit(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> None:
         """
         Start custom inline editing that bypasses the model's editing system.
 
@@ -96,11 +97,11 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         editor.installEventFilter(self)
         tree_view.viewport().installEventFilter(self)
 
-    def eventFilter(self, obj, event) -> bool:
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # type: ignore[override]
         """Handle events to close editor when clicking outside."""
         if self._current_editor and event.type() == event.Type.MouseButtonPress:
             # Check if the click was outside the editor
-            if obj != self._current_editor and not self._current_editor.isAncestorOf(obj):
+            if isinstance(obj, QWidget) and obj != self._current_editor and not self._current_editor.isAncestorOf(obj):
                 # Click outside editor - commit if valid, otherwise cancel
                 if self._current_editor.is_valid():
                     self._current_editor.edit_finished.emit(self._current_editor.get_text())

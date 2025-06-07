@@ -30,7 +30,7 @@ class SystemWidgetEventFilter(QObject):
         """Initialize the event filter."""
         super().__init__(parent)
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # type: ignore[override]
         """
         Filter events to detect widget activation.
 

@@ -5,6 +5,7 @@ import os
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton, QWidget
 )
+from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
 from humbug.gui.style_manager import StyleManager
@@ -151,7 +152,7 @@ class MindspaceFileMoveDialog(QDialog):
 
         self._apply_styling()
 
-    def _create_icon(self):
+    def _create_icon(self) -> QPixmap | None:
         """
         Create appropriate icon for the move dialog.
 

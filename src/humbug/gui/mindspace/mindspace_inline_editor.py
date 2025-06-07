@@ -7,9 +7,9 @@ from PySide6.QtCore import Signal, Qt, QTimer, QRect, QObject, QEvent
 from PySide6.QtGui import QFontMetrics, QKeyEvent
 
 from humbug.gui.color_role import ColorRole
+from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
-from humbug.gui.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 
 
 class MindspaceInlineEditor(QWidget):
@@ -70,7 +70,7 @@ class MindspaceInlineEditor(QWidget):
         # Install event filter to handle key events
         self._line_edit.installEventFilter(self)
 
-    def set_tree_view(self, tree_view) -> None:
+    def set_tree_view(self, tree_view: MindspaceFileTreeView) -> None:
         """
         Set reference to tree view for viewport calculations.
 
