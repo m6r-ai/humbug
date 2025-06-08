@@ -816,6 +816,10 @@ class MindspaceFileTree(QWidget):
 
         branch_icon_size = int(12 * zoom_factor)
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
+
+        # Adjust tree indentation
+        self._tree_view.setIndentation(file_icon_size)
+
         self._header_widget.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
@@ -833,7 +837,7 @@ class MindspaceFileTree(QWidget):
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border: none;
-                padding: 0 0 0 4px;
+                padding: 0 0 0 8px;
             }}
             QTreeView::item {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
