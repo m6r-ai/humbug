@@ -292,9 +292,6 @@ class MindspaceInlineEditor(QWidget):
         self._line_edit.setFont(self._get_scaled_font())
         self._error_label.setFont(self._get_scaled_error_font())
 
-        # Scale padding and other dimensions
-        padding = int(2 * zoom_factor)
-
         if self._is_valid:
             # Normal styling with subtle background to distinguish from tree item
             line_edit_style = f"""
@@ -302,7 +299,7 @@ class MindspaceInlineEditor(QWidget):
                     background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                    padding: {padding}px;
+                    padding: 2px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 }}
@@ -321,7 +318,7 @@ class MindspaceInlineEditor(QWidget):
                     background-color: {error_color};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {error_border};
-                    padding: {padding}px;
+                    padding: 2px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 }}
@@ -334,7 +331,6 @@ class MindspaceInlineEditor(QWidget):
         # Enhanced error label styling with better visibility and scaled dimensions
         error_padding_v = int(3 * zoom_factor)
         error_padding_h = int(6 * zoom_factor)
-        error_border_radius = int(3 * zoom_factor)
         error_font_size = (base_font_size - 2) * zoom_factor
 
         error_label_style = f"""
