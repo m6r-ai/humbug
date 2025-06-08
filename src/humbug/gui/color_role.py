@@ -23,6 +23,11 @@ class ColorRole(Enum):
     TEXT_RECOMMENDED = auto()           # Recommended text color
     TEXT_LINK = auto()                  # Link text color
 
+    # Edit box colours
+    EDIT_BOX_BORDER = auto()            # Edit box border
+    EDIT_BOX_BACKGROUND = auto()        # Edit box background
+    EDIT_BOX_ERROR = auto()             # Edit box error
+
     # Tab colours
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background
     TAB_INACTIVE = auto()               # Inactive tab text colour

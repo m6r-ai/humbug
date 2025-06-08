@@ -96,16 +96,6 @@ class MindspaceInlineEditor(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         return font
 
-    def _get_scaled_error_font(self) -> QFont:
-        """Get appropriately scaled font for error label."""
-        zoom_factor = self._style_manager.zoom_factor()
-        base_font_size = self._style_manager.base_font_size()
-
-        font = QFont()
-        # Error font is slightly smaller than base font
-        font.setPointSizeF((base_font_size - 2) * zoom_factor)
-        return font
-
     def _calculate_optimal_error_width(self) -> int:
         """
         Calculate optimal width for error message display.
@@ -129,6 +119,7 @@ class MindspaceInlineEditor(QWidget):
             parent = cast(QWidget, self.parent())
             viewport_rect = parent.rect()
             current_rect = self.geometry()
+
             # Calculate remaining width in viewport from current position
             remaining_width = viewport_rect.right() - current_rect.left()
             available_viewport_width = max(int(100 * zoom_factor), remaining_width)
@@ -166,7 +157,7 @@ class MindspaceInlineEditor(QWidget):
             zoom_factor = self._style_manager.zoom_factor()
 
             # Account for padding in width calculation
-            available_text_width = optimal_width - int(16 * zoom_factor)
+            available_text_width = optimal_width - 4  # Subtract padding (2px left + 2px right)
 
             font_metrics = QFontMetrics(self._error_label.font())
             text = self._error_label.text()
@@ -329,8 +320,6 @@ class MindspaceInlineEditor(QWidget):
 
         else:
             self._error_label.setText(error_message)
-            # Ensure error label has scaled font
-            self._error_label.setFont(self._get_scaled_error_font())
             self._error_label.show()
 
         self._apply_styling()
@@ -346,53 +335,41 @@ class MindspaceInlineEditor(QWidget):
 
         # Set scaled fonts
         self._line_edit.setFont(self._get_scaled_font())
-        self._error_label.setFont(self._get_scaled_error_font())
+        self._error_label.setFont(self._get_scaled_font())
 
         if self._is_valid:
             # Normal styling with subtle background to distinguish from tree item
             line_edit_style = f"""
                 QLineEdit {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                    background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                    border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                    border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
                     padding: 2px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                }}
-                QLineEdit:focus {{
-                    border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                    background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 }}
             """
 
         else:
             # Error styling - red background
-            error_color = "#ffebee"  # Light red background
-            error_border = "#f44336"  # Red border
             line_edit_style = f"""
                 QLineEdit {{
-                    background-color: {error_color};
+                    background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                    border: 1px solid {error_border};
-                    margin: 0px;
+                    border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
                     padding: 2px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                }}
-                QLineEdit:focus {{
-                    border: 1px solid {error_border};
-                    background-color: {error_color};
                 }}
             """
 
         error_label_style = f"""
             QLabel {{
-                color: #f44336;
-                font-size: {base_font_size * zoom_factor}pt;
-                padding: 2px;
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-                border: 1px solid #f44336;
-                margin: 0px;
+                color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
+                padding: 2px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
         """
 
