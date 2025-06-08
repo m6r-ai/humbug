@@ -55,7 +55,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
 
         # Standard spacing between icon and text in Qt tree views (scale with zoom)
         zoom_factor = self._style_manager.zoom_factor()
-        icon_text_spacing = int(6 * zoom_factor)
+        icon_text_spacing = int(10 * zoom_factor)
 
         # Calculate the offset needed to skip over the icon
         icon_offset = icon_width + icon_text_spacing
