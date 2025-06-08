@@ -4,7 +4,7 @@ import os
 from typing import cast
 
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
-from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect, QEvent, QObject
+from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect, QEvent, QObject, QTimer
 from PySide6.QtGui import QPainter, QPen
 
 from humbug.gui.color_role import ColorRole
@@ -34,6 +34,23 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         self._language_manager = LanguageManager()
         self._current_editor: MindspaceInlineEditor | None = None
         self._editing_index: QModelIndex | None = None
+
+        # Connect to tree view's style update signal to handle zoom updates during editing
+        # This ensures the tree view has processed the style change before we reposition the editor
+        self._tree_view.style_updated.connect(self._handle_tree_style_updated)
+
+    def _handle_tree_style_updated(self) -> None:
+        """Handle tree view style updates by repositioning active editor."""
+        if self._current_editor and self._editing_index:
+            # Recalculate the text rect with new zoom factor
+            rect = self._calculate_text_rect(self._editing_index, self._tree_view)
+
+            # Update the editor's initial geometry
+            self._current_editor.setGeometry(rect)
+
+            # Trigger the editor's size adjustment after geometry change
+            # Use QTimer to ensure the geometry change has been processed
+            QTimer.singleShot(0, self._current_editor._adjust_widget_size)
 
     def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> QRect:
         """

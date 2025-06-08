@@ -894,3 +894,8 @@ class MindspaceFileTree(QWidget):
                 height: 16px;
             }}
         """)
+
+        # Notify the tree view that it has finished processing style updates
+        # This ensures that any delegates or other components that depend on the tree view's
+        # updated layout can now safely reposition themselves
+        self._tree_view.notify_style_updated()

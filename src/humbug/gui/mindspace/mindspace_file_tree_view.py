@@ -14,6 +14,7 @@ class MindspaceFileTreeView(QTreeView):
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
     rename_requested = Signal(QModelIndex, str)  # index, new_name
+    style_updated = Signal()  # Emitted after the tree view has processed style changes
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the tree view."""
@@ -52,6 +53,13 @@ class MindspaceFileTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)
+
+    def notify_style_updated(self) -> None:
+        """
+        Notify that this tree view has finished processing style updates.
+        This should be called after the tree view has updated its layout, icon sizes, etc.
+        """
+        self.style_updated.emit()
 
     def get_current_drop_target(self) -> QModelIndex | None:
         """Get the current drop target index."""
