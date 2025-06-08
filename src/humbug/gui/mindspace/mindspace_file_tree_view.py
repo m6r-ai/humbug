@@ -84,7 +84,7 @@ class MindspaceFileTreeView(QTreeView):
             self._current_drop_target = index
             self.drop_target_changed.emit()
 
-    def _get_path_from_index(self, index: QModelIndex) -> str | None:
+    def get_path_from_index(self, index: QModelIndex) -> str | None:
         """
         Get the file system path from a model index.
 
@@ -194,7 +194,7 @@ class MindspaceFileTreeView(QTreeView):
                 continue
 
             # Get the path for this auto-opened folder
-            folder_path = self._get_path_from_index(QModelIndex(cast(QModelIndex, persistent_index)))
+            folder_path = self.get_path_from_index(QModelIndex(cast(QModelIndex, persistent_index)))
             if not folder_path:
                 folders_to_close.append(persistent_index)
                 continue
@@ -226,7 +226,7 @@ class MindspaceFileTreeView(QTreeView):
             return
 
         # Verify the index is still a valid collapsed folder
-        target_path = self._get_path_from_index(self._pending_expand_index)
+        target_path = self.get_path_from_index(self._pending_expand_index)
         if not target_path:
             return
 
@@ -257,7 +257,7 @@ class MindspaceFileTreeView(QTreeView):
             return False
 
         # Check if it's a directory
-        target_path = self._get_path_from_index(index)
+        target_path = self.get_path_from_index(index)
         if not target_path:
             return False
 
@@ -385,7 +385,7 @@ class MindspaceFileTreeView(QTreeView):
         """Handle mouse move events."""
         # Get the file path from the source model
         index = self.indexAt(event.pos())
-        path = self._get_path_from_index(index)
+        path = self.get_path_from_index(index)
 
         # Get the item under the mouse to work out tool tips.
         self.setToolTip(path if path else "")
@@ -406,7 +406,7 @@ class MindspaceFileTreeView(QTreeView):
             return
 
         # Get path for drag operation
-        drag_path = self._get_path_from_index(drag_index)
+        drag_path = self.get_path_from_index(drag_index)
         if not drag_path:
             return
 
@@ -476,7 +476,7 @@ class MindspaceFileTreeView(QTreeView):
             return
 
         # Get the target path
-        target_path = self._get_path_from_index(index)
+        target_path = self.get_path_from_index(index)
         if not target_path:
             event.ignore()
             self.clear_drop_target()
@@ -563,7 +563,7 @@ class MindspaceFileTreeView(QTreeView):
 
         # Keep the final drop target open but close other auto-opened folders
         if drop_target_index.isValid():
-            target_path = self._get_path_from_index(drop_target_index)
+            target_path = self.get_path_from_index(drop_target_index)
             self._close_auto_opened_folders(target_path)
 
         else:
@@ -582,7 +582,7 @@ class MindspaceFileTreeView(QTreeView):
             event.ignore()
             return
 
-        target_path = self._get_path_from_index(index)
+        target_path = self.get_path_from_index(index)
         if not target_path or not os.path.isdir(target_path):
             event.ignore()
             return

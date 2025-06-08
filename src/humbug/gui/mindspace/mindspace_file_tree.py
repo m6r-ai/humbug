@@ -311,7 +311,7 @@ class MindspaceFileTree(QWidget):
             new_name: New name for the item
         """
         # Get the current file path
-        current_path = self._tree_view._get_path_from_index(index)
+        current_path = self._tree_view.get_path_from_index(index)
         if not current_path:
             raise ValueError(self._language_manager.strings().error_invalid_path)
 

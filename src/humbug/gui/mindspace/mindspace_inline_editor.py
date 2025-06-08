@@ -271,6 +271,7 @@ class MindspaceInlineEditor(QWidget):
 
         if is_valid:
             self._error_label.hide()
+
         else:
             self._error_label.setText(error_message)
             # Ensure error label has scaled font

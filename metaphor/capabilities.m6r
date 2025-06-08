@@ -104,19 +104,6 @@ Context: Capabilities
                 If the user mouses over a file or directory item then this will pop open a tooltip that
                 will display the full path name of the item moused-over.
 
-            Context: Mindspace label pop-up menu
-                If the user clicks the right mouse button while pointing at the mindspace label then they
-                will be given a pop-up menu.
-
-                Context: New folder
-                    Clicking "New Folder" will pop up a dialog prompting the user for a folder name.  On
-                    doing this and click OK a matching new folder will be created at the root of the mindspace.
-
-                Context: New file
-                    Clicking "New File" will pop up a dialog prompting the user for a file name.  On
-                    doing this and click OK a matching new file will be created at the root of the mindspace,
-                    and it will also be opened in an editor tab.
-
             Context: File pop-up menu
                 If the user clicks the right mouse button while a file is highlighted then they will be
                 given a pop-up menu.
@@ -125,7 +112,7 @@ Context: Capabilities
                     If the user selects "Edit" then the system will open the file in an editor tab.
 
                 Context: Rename
-                    If the user selects "Rename" then the system will pop up a dialog box
+                    If the user selects "Rename" then the system will create an edit control in-situ in the tree
                     that allows them to rename the file to any name that is not already used.
 
                 Context: Delete
@@ -140,16 +127,20 @@ Context: Capabilities
                 will be given a pop-up menu.
 
                 Context: New folder
-                    Clicking "New Folder" will pop up a dialog prompting the user for a folder name.  On
-                    doing this and click OK a matching new folder will be created.
+                    Clicking "New Folder" will create a temporary new folder called "New Folder" and will
+                    open an edit control to allow this name to be changed to any name that is not already used
+                    within the directory.
 
                 Context: New file
-                    Clicking "New File" will pop up a dialog prompting the user for a file name.  On
-                    doing this and click OK a matching new file will be created and it will also be opened
-                    in an editor tab.
+                    Clicking "New File" will create a temporary new folder called "New File.txt" and will
+                    open an edit control to allow this name to be changed to any name that is not already used
+                    within the directory.
+
+                    On the user hitting return on a valid name the new file will automatically be opened in an
+                    editor tab.
 
                 Context: Rename
-                    If the user selects "Rename" then the system will pop up a dialog box
+                    If the user selects "Rename" then the system will create an edit control in-situ in the tree
                     that allows them to rename the folder to any name that is not already used.
 
                 Context: Delete
@@ -160,6 +151,12 @@ Context: Capabilities
                     agree then the action will be cancelled.
 
                     Only empty folders may be deleted.
+
+            Content: Name validation
+                Only valid file/folder names can be entered by the user.  If there is a problem with the current
+                name then a message will appear below the edit control to indicate what the problem is.  If the
+                edit control is at the bottom of the mindspace tree then the message will appear above the edit
+                control.
 
             Context: File tree styling
                 The file tree view must maintain consistent styling:
@@ -184,8 +181,7 @@ Context: Capabilities
 
             Context: Drag and drop movement of files/folders
                 The user can drag a file or folder in the mindspace tree view to a new location in the tree.  The
-                user may only drop the file or folder in another folder, or on the mindspace label (dropping on
-                the mindspace label will result in moving the file/folder to the top level).
+                user may only drop the file or folder in another folder.
 
                 Before moving the file/folder the user will be given a dialog box and asked to confirm the details
                 of the move are correct, and to give them chance to cancel the operation.

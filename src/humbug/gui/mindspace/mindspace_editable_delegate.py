@@ -222,7 +222,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         """
         try:
             # Get the file path from the tree view
-            file_path = self._tree_view._get_path_from_index(index)
+            file_path = self._tree_view.get_path_from_index(index)
             if not file_path:
                 return False, self._language_manager.strings().error_validation_failed
 
