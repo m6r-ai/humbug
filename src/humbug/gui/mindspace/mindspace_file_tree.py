@@ -565,6 +565,24 @@ class MindspaceFileTree(QWidget):
                 strings.file_creation_error.format(str(e))
             )
 
+    def _start_inline_edit(self, index: QModelIndex) -> None:
+        """
+        Start inline editing for the given index using a custom approach.
+
+        Args:
+            index: Model index to start editing
+        """
+        if not index.isValid():
+            return
+
+        # Get the delegate and start custom editing
+        delegate = self._tree_view.itemDelegate(index)
+        if not isinstance(delegate, MindspaceEditableDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceEditableDelegate")
+            return
+
+        delegate.start_custom_edit(index, self._tree_view)
+
     def _start_edit_new_item(self, item_path: str) -> None:
         """
         Start editing a newly created item.
@@ -577,7 +595,7 @@ class MindspaceFileTree(QWidget):
         if source_index.isValid():
             filter_index = self._filter_model.mapFromSource(source_index)
             if filter_index.isValid():
-                self._tree_view.start_inline_edit(filter_index)
+                self._start_inline_edit(filter_index)
 
     def _get_default_folder_name(self, parent_path: str) -> str:
         """
@@ -634,7 +652,7 @@ class MindspaceFileTree(QWidget):
             index: Model index of the item to rename
         """
         if index.isValid():
-            self._tree_view.start_inline_edit(index)
+            self._start_inline_edit(index)
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""

@@ -53,21 +53,6 @@ class MindspaceFileTreeView(QTreeView):
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)
 
-    def start_inline_edit(self, index: QModelIndex) -> None:
-        """
-        Start inline editing for the given index using a custom approach.
-
-        Args:
-            index: Model index to start editing
-        """
-        if not index.isValid():
-            return
-
-        # Get the delegate and start custom editing
-        delegate = self.itemDelegate(index)
-        if hasattr(delegate, 'start_custom_edit'):
-            delegate.start_custom_edit(index, self)
-
     def get_current_drop_target(self) -> QModelIndex | None:
         """Get the current drop target index."""
         return self._current_drop_target

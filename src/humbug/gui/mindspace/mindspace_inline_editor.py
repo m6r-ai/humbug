@@ -361,7 +361,7 @@ class MindspaceInlineEditor(QWidget):
 
                 return True
 
-            elif key_event.key() == Qt.Key.Key_Escape:
+            if key_event.key() == Qt.Key.Key_Escape:
                 self.edit_cancelled.emit()
                 return True
 
