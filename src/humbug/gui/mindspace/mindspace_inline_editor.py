@@ -39,7 +39,7 @@ class MindspaceInlineEditor(QWidget):
         # Create layout
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
-        self._layout.setSpacing(2)
+        self._layout.setSpacing(0)
 
         # Create line edit
         self._line_edit = QLineEdit()
@@ -96,50 +96,18 @@ class MindspaceInlineEditor(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         return font
 
-    def _calculate_optimal_error_width(self) -> int:
+    def edit_width(self) -> int:
         """
-        Calculate optimal width for error message display.
+        Get the width of the edit control.
 
         Returns:
-            Optimal width in pixels
+            Width in pixels, or 0 if no parent is set
         """
-        if not self._error_label.isVisible():
-            return self.width()
+        if not self._tree_view or not self._tree_view.viewport():
+            return 0
 
-        text = self._error_label.text()
-        if not text:
-            return self.width()
-
-        font_metrics = QFontMetrics(self._error_label.font())
-        zoom_factor = self._style_manager.zoom_factor()
-
-        # Get available width from tree viewport
-        available_viewport_width = self.width()  # Start with current width
-        if self.parent():
-            parent = cast(QWidget, self.parent())
-            viewport_rect = parent.rect()
-            current_rect = self.geometry()
-
-            # Calculate remaining width in viewport from current position
-            remaining_width = viewport_rect.right() - current_rect.left()
-            available_viewport_width = max(int(100 * zoom_factor), remaining_width)
-
-        # Calculate width needed for single line
-        single_line_width = font_metrics.horizontalAdvance(text)
-
-        # Add padding (accounting for label styling)
-        padding = int(16 * zoom_factor)  # Left + right padding
-        total_single_line = single_line_width + padding
-
-        # Set reasonable limits
-        min_width = int(150 * zoom_factor)
-
-        # If single line fits in available viewport width, use it
-        if total_single_line <= available_viewport_width:
-            return max(min_width, total_single_line)
-
-        # Otherwise, use available viewport width for multi-line display
-        return max(min_width, available_viewport_width)
+        print(f"Viewport width: {self._tree_view.viewport().width()}, Editor rect x: {self.geometry().left()}")
+        return self._tree_view.viewport().width() - self.geometry().left()
 
     def _calculate_required_height(self) -> int:
         """
@@ -153,7 +121,7 @@ class MindspaceInlineEditor(QWidget):
 
         if self._error_label.isVisible():
             # Use the actual width that will be set
-            optimal_width = self._calculate_optimal_error_width()
+            optimal_width = self.edit_width() - 1
             zoom_factor = self._style_manager.zoom_factor()
 
             # Account for padding in width calculation
@@ -167,11 +135,9 @@ class MindspaceInlineEditor(QWidget):
                 0, 0, available_text_width, 0,
                 Qt.TextFlag.TextWordWrap, text
             )
-            print(f"Text Rect: {text_rect}, Width: {available_text_width}")
             error_height = text_rect.height() + int(8 * zoom_factor)  # Add padding
 
-            layout_spacing = self._layout.spacing()
-            return line_edit_height + error_height + layout_spacing
+            return line_edit_height + error_height
 
         return line_edit_height
 
@@ -195,15 +161,9 @@ class MindspaceInlineEditor(QWidget):
         zoom_factor = self._style_manager.zoom_factor()
         min_width = int(100 * zoom_factor)
 
-        if self._error_label.isVisible() and self._error_label.text():
-            # Use optimal width that considers viewport constraints
-            optimal_width = self._calculate_optimal_error_width()
-            new_rect.setWidth(max(min_width, optimal_width))
-
-        else:
-            # For line edit only, ensure it fits within reasonable bounds
-            max_reasonable_width = viewport_rect.width() - current_rect.left()
-            new_rect.setWidth(max(min_width, max_reasonable_width))
+        # Use optimal width that considers viewport constraints
+        optimal_width = self.edit_width() - 1
+        new_rect.setWidth(max(min_width, optimal_width))
 
         # Determine if error should be above or below
         error_below_would_fit = new_rect.bottom() <= viewport_rect.bottom()
@@ -365,9 +325,10 @@ class MindspaceInlineEditor(QWidget):
 
         error_label_style = f"""
             QLabel {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
                 border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
+                border-top: none;
                 padding: 2px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
