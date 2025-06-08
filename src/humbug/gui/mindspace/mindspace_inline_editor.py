@@ -157,9 +157,9 @@ class MindspaceInlineEditor(QWidget):
         new_rect = QRect(current_rect)
         new_rect.setHeight(required_height)
 
-        # For width calculation
+        # Set a minimum width
         zoom_factor = self._style_manager.zoom_factor()
-        min_width = int(100 * zoom_factor)
+        min_width = int(64 * zoom_factor)
 
         # Use optimal width that considers viewport constraints
         optimal_width = self.edit_width() - 1
