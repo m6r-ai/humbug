@@ -82,6 +82,7 @@ class MindspaceInlineEditor(QWidget):
     def _handle_style_changed(self) -> None:
         """Handle style/zoom changes by updating fonts and sizes."""
         self._apply_styling()
+
         # Recalculate geometry if editor is visible
         if self.isVisible():
             QTimer.singleShot(0, self._adjust_widget_size)
@@ -105,6 +106,50 @@ class MindspaceInlineEditor(QWidget):
         font.setPointSizeF((base_font_size - 2) * zoom_factor)
         return font
 
+    def _calculate_optimal_error_width(self) -> int:
+        """
+        Calculate optimal width for error message display.
+
+        Returns:
+            Optimal width in pixels
+        """
+        if not self._error_label.isVisible():
+            return self.width()
+
+        text = self._error_label.text()
+        if not text:
+            return self.width()
+
+        font_metrics = QFontMetrics(self._error_label.font())
+        zoom_factor = self._style_manager.zoom_factor()
+
+        # Get available width from tree viewport
+        available_viewport_width = self.width()  # Start with current width
+        if self.parent():
+            parent = cast(QWidget, self.parent())
+            viewport_rect = parent.rect()
+            current_rect = self.geometry()
+            # Calculate remaining width in viewport from current position
+            remaining_width = viewport_rect.right() - current_rect.left()
+            available_viewport_width = max(int(100 * zoom_factor), remaining_width)
+
+        # Calculate width needed for single line
+        single_line_width = font_metrics.horizontalAdvance(text)
+
+        # Add padding (accounting for label styling)
+        padding = int(16 * zoom_factor)  # Left + right padding
+        total_single_line = single_line_width + padding
+
+        # Set reasonable limits
+        min_width = int(150 * zoom_factor)
+
+        # If single line fits in available viewport width, use it
+        if total_single_line <= available_viewport_width:
+            return max(min_width, total_single_line)
+
+        # Otherwise, use available viewport width for multi-line display
+        return max(min_width, available_viewport_width)
+
     def _calculate_required_height(self) -> int:
         """
         Calculate the total height needed for the editor and error message.
@@ -116,20 +161,23 @@ class MindspaceInlineEditor(QWidget):
         line_edit_height = self._line_edit.sizeHint().height()
 
         if self._error_label.isVisible():
-            # Font metrics now use scaled font
+            # Use the actual width that will be set
+            optimal_width = self._calculate_optimal_error_width()
+            zoom_factor = self._style_manager.zoom_factor()
+
+            # Account for padding in width calculation
+            available_text_width = optimal_width - int(16 * zoom_factor)
+
             font_metrics = QFontMetrics(self._error_label.font())
             text = self._error_label.text()
 
-            # Scale available width
-            zoom_factor = self._style_manager.zoom_factor()
-            available_width = max(int(150 * zoom_factor), self.width() - int(8 * zoom_factor))
-
             # Calculate required height for word-wrapped text
             text_rect = font_metrics.boundingRect(
-                0, 0, available_width, 0,
+                0, 0, available_text_width, 0,
                 Qt.TextFlag.TextWordWrap, text
             )
-            error_height = text_rect.height() + int(6 * zoom_factor)  # Add scaled padding
+            print(f"Text Rect: {text_rect}, Width: {available_text_width}")
+            error_height = text_rect.height() + int(8 * zoom_factor)  # Add padding
 
             layout_spacing = self._layout.spacing()
             return line_edit_height + error_height + layout_spacing
@@ -152,6 +200,20 @@ class MindspaceInlineEditor(QWidget):
         new_rect = QRect(current_rect)
         new_rect.setHeight(required_height)
 
+        # For width calculation
+        zoom_factor = self._style_manager.zoom_factor()
+        min_width = int(100 * zoom_factor)
+
+        if self._error_label.isVisible() and self._error_label.text():
+            # Use optimal width that considers viewport constraints
+            optimal_width = self._calculate_optimal_error_width()
+            new_rect.setWidth(max(min_width, optimal_width))
+
+        else:
+            # For line edit only, ensure it fits within reasonable bounds
+            max_reasonable_width = viewport_rect.width() - current_rect.left()
+            new_rect.setWidth(max(min_width, max_reasonable_width))
+
         # Determine if error should be above or below
         error_below_would_fit = new_rect.bottom() <= viewport_rect.bottom()
 
@@ -164,23 +226,11 @@ class MindspaceInlineEditor(QWidget):
 
         else:
             # Position error message below the line edit (default)
-            # Keep the top position the same
             if self._error_above:
                 self._set_error_below_layout()
                 self._error_above = False
 
-        # Ensure the editor doesn't extend beyond the viewport horizontally
-        # This is especially important for text-only editing where width might be constrained
-        if new_rect.right() > viewport_rect.right():
-            # Adjust width to fit within viewport
-            zoom_factor = self._style_manager.zoom_factor()
-            min_width = int(100 * zoom_factor)  # Scale minimum width
-            new_width = viewport_rect.right() - new_rect.left()
-            new_rect.setWidth(max(min_width, new_width))
-
         self.setGeometry(new_rect)
-
-        # Ensure the editor stays visible in viewport
         self._ensure_editor_visible()
 
     def _set_error_above_layout(self) -> None:
@@ -224,12 +274,17 @@ class MindspaceInlineEditor(QWidget):
                 new_value = min(scroll_bar.maximum(), current_value + scroll_delta + padding)
                 scroll_bar.setValue(new_value)
 
-        # Check if editor extends beyond viewport horizontally (less common but possible)
-        if editor_rect.right() > viewport_rect.right():
+        # For horizontal scrolling, only scroll if the line edit itself is not visible
+        # Don't force horizontal scrolling for error message overflow
+        line_edit_rect = self._line_edit.geometry()
+        line_edit_global = self.mapToParent(line_edit_rect.topLeft())
+        line_edit_in_parent = QRect(line_edit_global, line_edit_rect.size())
+
+        if line_edit_in_parent.right() > viewport_rect.right():
             # Get horizontal scroll bar and adjust if available
             h_scroll_bar = self._tree_view.horizontalScrollBar()
             if h_scroll_bar and h_scroll_bar.isVisible():
-                scroll_delta = editor_rect.right() - viewport_rect.right()
+                scroll_delta = line_edit_in_parent.right() - viewport_rect.right()
                 current_value = h_scroll_bar.value()
                 new_value = min(h_scroll_bar.maximum(), current_value + scroll_delta + padding)
                 h_scroll_bar.setValue(new_value)
@@ -319,6 +374,7 @@ class MindspaceInlineEditor(QWidget):
                     background-color: {error_color};
                     color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     border: 1px solid {error_border};
+                    margin: 0px;
                     padding: 2px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
@@ -329,16 +385,11 @@ class MindspaceInlineEditor(QWidget):
                 }}
             """
 
-        # Enhanced error label styling with better visibility and scaled dimensions
-        error_padding_v = int(3 * zoom_factor)
-        error_padding_h = int(6 * zoom_factor)
-        error_font_size = (base_font_size - 2) * zoom_factor
-
         error_label_style = f"""
             QLabel {{
                 color: #f44336;
-                font-size: {error_font_size}pt;
-                padding: {error_padding_v}px {error_padding_h}px;
+                font-size: {base_font_size * zoom_factor}pt;
+                padding: 2px;
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 border: 1px solid #f44336;
                 margin: 0px;
