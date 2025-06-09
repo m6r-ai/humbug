@@ -96,7 +96,7 @@ class MindspaceInlineEditor(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         return font
 
-    def edit_width(self) -> int:
+    def _edit_width(self) -> int:
         """
         Get the width of the edit control.
 
@@ -106,7 +106,6 @@ class MindspaceInlineEditor(QWidget):
         if not self._tree_view or not self._tree_view.viewport():
             return 0
 
-        print(f"Viewport width: {self._tree_view.viewport().width()}, Editor rect x: {self.geometry().left()}")
         return self._tree_view.viewport().width() - self.geometry().left()
 
     def _calculate_required_height(self) -> int:
@@ -121,7 +120,7 @@ class MindspaceInlineEditor(QWidget):
 
         if self._error_label.isVisible():
             # Use the actual width that will be set
-            optimal_width = self.edit_width() - 1
+            optimal_width = self._edit_width() - 1
             zoom_factor = self._style_manager.zoom_factor()
 
             # Account for padding in width calculation
@@ -153,34 +152,39 @@ class MindspaceInlineEditor(QWidget):
         parent = cast(QWidget, self.parent())
         viewport_rect = parent.rect()
 
-        # Calculate new geometry
-        new_rect = QRect(current_rect)
-        new_rect.setHeight(required_height)
-
-        # Set a minimum width
+        # Calculate optimal width
         zoom_factor = self._style_manager.zoom_factor()
         min_width = int(64 * zoom_factor)
+        optimal_width = self._edit_width() - 1
+        widget_width = max(min_width, optimal_width)
 
-        # Use optimal width that considers viewport constraints
-        optimal_width = self.edit_width() - 1
-        new_rect.setWidth(max(min_width, optimal_width))
+        # Get line edit height
+        line_edit_height = self._line_edit.sizeHint().height()
+        error_height = required_height - line_edit_height
 
-        # Determine if error should be above or below
-        error_below_would_fit = new_rect.bottom() <= viewport_rect.bottom()
+        # Error goes above if there's no room below AND there's room above
+        error_below_would_fit = (current_rect.top() + required_height) <= viewport_rect.bottom()
+        error_above_would_fit = (current_rect.top() - error_height) >= viewport_rect.top()
 
-        if not error_below_would_fit and current_rect.top() > viewport_rect.top():
-            # Position error message above the line edit
-            new_rect.moveBottom(current_rect.bottom())
-            if not self._error_above:
-                self._set_error_above_layout()
-                self._error_above = True
+        if self._error_above and not error_above_would_fit:
+            self._set_error_below_layout()
+            self._error_above = False
+
+        elif not self._error_above and not error_below_would_fit:
+            self._set_error_above_layout()
+            self._error_above = True
+
+        # Calculate widget position based on where error should go
+        if self._error_above:
+            # Error above: widget top moves up, line edit stays at current_rect.top()
+            new_widget_top = current_rect.top() - error_height
 
         else:
-            # Position error message below the line edit (default)
-            if self._error_above:
-                self._set_error_below_layout()
-                self._error_above = False
+            # Error below: widget top stays at current position, line edit at current_rect.top()
+            new_widget_top = current_rect.top()
 
+        # Set the final geometry
+        new_rect = QRect(current_rect.left(), new_widget_top, widget_width, required_height)
         self.setGeometry(new_rect)
         self._ensure_editor_visible()
 
@@ -323,13 +327,15 @@ class MindspaceInlineEditor(QWidget):
                 }}
             """
 
+        print(f"error above: {self._error_above}")
         error_label_style = f"""
             QLabel {{
                 background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
                 border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
-                border-top: none;
-                padding: 2px;
+                border-top: {"1px" if self._error_above else "0px"};
+                border-bottom: {"0px" if self._error_above else "1px"};
+                padding: {"2px" if self._error_above else "1px"} 2px 2px 2px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
         """
