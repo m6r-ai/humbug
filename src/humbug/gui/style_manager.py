@@ -131,8 +131,8 @@ class StyleManager(QObject):
 
             # Edit box colours
             ColorRole.EDIT_BOX_BORDER: {
-                ColorMode.DARK: "#c0c040",
-                ColorMode.LIGHT: "#808020"
+                ColorMode.DARK: "#6060c0",
+                ColorMode.LIGHT: "#404080"
             },
             ColorRole.EDIT_BOX_BACKGROUND: {
                 ColorMode.DARK: "#242454",
