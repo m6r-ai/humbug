@@ -91,7 +91,7 @@ class MindspaceInlineEditor(QWidget):
 
     def _handle_style_changed(self) -> None:
         """Handle style/zoom changes by updating fonts and sizes."""
-        self._adjust_widget_size()
+        self.adjust_widget_size()
         self._apply_styling()
 
     def _get_scaled_font(self) -> QFont:
@@ -204,7 +204,7 @@ class MindspaceInlineEditor(QWidget):
 
         return line_edit_height
 
-    def _adjust_widget_size(self) -> None:
+    def adjust_widget_size(self) -> None:
         """Adjust the widget size and position to accommodate error message."""
         if not self.parent():
             return
@@ -369,7 +369,7 @@ class MindspaceInlineEditor(QWidget):
             self._error_label.setText(error_message)
             self._error_label.show()
 
-        self._adjust_widget_size()
+        self.adjust_widget_size()
         self._apply_styling()
 
     def _apply_styling(self) -> None:

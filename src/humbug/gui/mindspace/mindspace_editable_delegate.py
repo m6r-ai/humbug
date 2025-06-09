@@ -50,7 +50,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
 
             # Trigger the editor's size adjustment after geometry change
             # Use QTimer to ensure the geometry change has been processed
-            QTimer.singleShot(0, self._current_editor._adjust_widget_size)
+            QTimer.singleShot(0, self._current_editor.adjust_widget_size)
 
     def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> QRect:
         """
