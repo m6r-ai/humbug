@@ -251,7 +251,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
 
             # Check if a file with this name already exists
             new_path = os.path.join(directory, new_name)
-            if os.path.exists(new_path) and new_path != file_path:
+            if os.path.exists(new_path) and not os.path.samefile(new_path, file_path):
                 return False, self._language_manager.strings().rename_error_exists
 
             return True, ""
