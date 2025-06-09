@@ -391,6 +391,7 @@ class MindspaceInlineEditor(QWidget):
                     padding: 2px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                    selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 }}
             """
 
@@ -404,6 +405,7 @@ class MindspaceInlineEditor(QWidget):
                     padding: 2px;
                     font-size: {base_font_size * zoom_factor}pt;
                     selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                    selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 }}
             """
 

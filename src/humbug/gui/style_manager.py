@@ -136,7 +136,7 @@ class StyleManager(QObject):
             },
             ColorRole.EDIT_BOX_BACKGROUND: {
                 ColorMode.DARK: "#242454",
-                ColorMode.LIGHT: "#c8c8f8"
+                ColorMode.LIGHT: "#b8b8f8"
             },
             ColorRole.EDIT_BOX_ERROR: {
                 ColorMode.DARK: "#c03020",
@@ -158,7 +158,7 @@ class StyleManager(QObject):
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#242454",
-                ColorMode.LIGHT: "#c8c8f8"
+                ColorMode.LIGHT: "#b8b8f8"
             },
             ColorRole.TAB_BORDER_ACTIVE: {
                 ColorMode.DARK: "#8080ff",
