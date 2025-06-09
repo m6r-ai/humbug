@@ -215,6 +215,7 @@ def get_french_strings() -> LanguageStrings:
         rename="Renommer",
         delete="Supprimer",
         edit="Modifier",
+        duplicate="Dupliquer",
         rename_file_title="Renommer le fichier",
         file_name="Nom du fichier",
         rename_error_title="Erreur de renommage",
@@ -265,4 +266,7 @@ def get_french_strings() -> LanguageStrings:
         error_validation_failed="Impossible de valider le nom",
         error_invalid_path="Chemin de fichier invalide",
         error_title="Erreur",
+
+        # File duplication errors
+        error_duplicating_file="Impossible de dupliquer le fichier : {0}",
     )

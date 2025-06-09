@@ -207,6 +207,7 @@ class LanguageStrings:
     rename: str
     delete: str
     edit: str
+    duplicate: str
     rename_file_title: str
     file_name: str
     rename_error_title: str
@@ -255,3 +256,6 @@ class LanguageStrings:
     error_validation_failed: str
     error_invalid_path: str
     error_title: str
+
+    # File duplication errors
+    error_duplicating_file: str

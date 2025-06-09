@@ -215,6 +215,7 @@ def get_english_strings() -> LanguageStrings:
         rename="Rename",
         delete="Delete",
         edit="Edit",
+        duplicate="Duplicate",
         rename_file_title="Rename File",
         file_name="File name",
         rename_error_title="Rename Error",
@@ -265,4 +266,7 @@ def get_english_strings() -> LanguageStrings:
         error_validation_failed="Unable to validate name",
         error_invalid_path="Invalid file path",
         error_title="Error",
+
+        # File duplication errors
+        error_duplicating_file="Could not duplicate file: {0}",
     )

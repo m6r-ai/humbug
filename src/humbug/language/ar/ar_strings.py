@@ -215,6 +215,7 @@ def get_arabic_strings() -> LanguageStrings:
         rename="إعادة التسمية",
         delete="حذف",
         edit="تحرير",
+        duplicate="تكرار",
         rename_file_title="إعادة تسمية الملف",
         file_name="اسم الملف",
         rename_error_title="خطأ في إعادة التسمية",
@@ -263,4 +264,7 @@ def get_arabic_strings() -> LanguageStrings:
         error_validation_failed="تعذر التحقق من صحة الاسم",
         error_invalid_path="مسار الملف غير صالح",
         error_title="خطأ",
+
+        # File duplication errors
+        error_duplicating_file="تعذر تكرار الملف: {0}",
     )

@@ -333,6 +333,74 @@ class MindspaceFileTree(QWidget):
             strings = self._language_manager.strings()
             raise OSError(strings.rename_error_generic.format(str(e))) from e
 
+    def _start_duplicate_file(self, source_path: str) -> None:
+        """
+        Start the duplication of a file using inline editing.
+
+        Args:
+            source_path: Path to the file to duplicate
+        """
+        # Get the parent directory
+        parent_path = os.path.dirname(source_path)
+
+        # Generate the default duplicate name
+        duplicate_name = self._get_duplicate_file_name(source_path)
+        duplicate_path = os.path.join(parent_path, duplicate_name)
+
+        try:
+            # Copy the source file to the duplicate location
+            shutil.copy2(source_path, duplicate_path)
+            self._logger.info("Created duplicate file: '%s'", duplicate_path)
+
+            # Set up pending creation state with the duplicate path
+            self._pending_new_item = (parent_path, False, duplicate_path)
+
+            # Find the duplicate file in the model and start editing
+            QTimer.singleShot(100, lambda: self._start_edit_new_item(duplicate_path))
+
+        except (OSError, shutil.Error) as e:
+            self._logger.error("Failed to duplicate file '%s': %s", source_path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.file_creation_error_title,
+                strings.error_duplicating_file.format(str(e))
+            )
+
+    def _get_duplicate_file_name(self, source_path: str) -> str:
+        """
+        Generate a unique name for a duplicate file.
+
+        Args:
+            source_path: Path to the original file
+
+        Returns:
+            New filename with " - copy" suffix that doesn't conflict
+        """
+        parent_path = os.path.dirname(source_path)
+        original_filename = os.path.basename(source_path)
+
+        # Split filename and extension
+        name, ext = os.path.splitext(original_filename)
+
+        # Start with "filename - copy.ext"
+        base_name = f"{name} - copy"
+        counter = 1
+
+        while True:
+            if counter == 1:
+                candidate_name = f"{base_name}{ext}"
+
+            else:
+                candidate_name = f"{base_name} ({counter}){ext}"
+
+            full_path = os.path.join(parent_path, candidate_name)
+            if not os.path.exists(full_path):
+                return candidate_name
+
+            counter += 1
+
     def reveal_and_select_file(self, file_path: str) -> None:
         """
         Expand the tree to show the given file and select it.
@@ -459,10 +527,12 @@ class MindspaceFileTree(QWidget):
                 rename_action = menu.addAction(strings.rename)
                 delete_action = menu.addAction(strings.delete)
                 edit_action = None
+                duplicate_action = None
 
             else:
                 # File context menu
                 edit_action = menu.addAction(strings.edit)
+                duplicate_action = menu.addAction(strings.duplicate)
                 rename_action = menu.addAction(strings.rename)
                 delete_action = menu.addAction(strings.delete)
                 new_file_action = None
@@ -492,6 +562,10 @@ class MindspaceFileTree(QWidget):
                 else:
                     if action == edit_action:
                         self._handle_edit_file(path)
+                        return
+
+                    if action == duplicate_action:
+                        self._start_duplicate_file(path)
                         return
 
                     if action == rename_action:
@@ -547,6 +621,7 @@ class MindspaceFileTree(QWidget):
         try:
             with open(temp_file_path, 'w', encoding='utf-8') as f:
                 f.write("")  # Create empty file
+
             self._logger.info("Created temporary file: '%s'", temp_file_path)
 
             # Set up pending creation state with the temporary path

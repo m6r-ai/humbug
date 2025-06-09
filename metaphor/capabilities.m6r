@@ -111,6 +111,12 @@ Context: Capabilities
                 Context: Edit
                     If the user selects "Edit" then the system will open the file in an editor tab.
 
+                Context: Duplicate
+                    If the user selects "Duplicate" then the system will create a duplicate of the current file
+                    using the suffix "- copy" and an option numeric suffix if a copy already exists.
+
+                    On creating the duplicate file, the file label will be made editable.
+
                 Context: Rename
                     If the user selects "Rename" then the system will create an edit control in-situ in the tree
                     that allows them to rename the file to any name that is not already used.
