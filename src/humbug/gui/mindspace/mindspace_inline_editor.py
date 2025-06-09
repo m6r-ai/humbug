@@ -3,7 +3,7 @@
 from typing import Callable, cast
 
 from PySide6.QtWidgets import QLineEdit, QVBoxLayout, QLabel, QWidget
-from PySide6.QtCore import Signal, Qt, QTimer, QRect, QObject, QEvent
+from PySide6.QtCore import Signal, Qt, QRect, QObject, QEvent, QModelIndex
 from PySide6.QtGui import QFontMetrics, QKeyEvent, QFont
 
 from humbug.gui.color_role import ColorRole
@@ -35,6 +35,7 @@ class MindspaceInlineEditor(QWidget):
         self._language_manager = LanguageManager()
         self._validation_callback = validation_callback
         self._tree_view: MindspaceFileTreeView | None = None  # Will be set by delegate
+        self._editing_index: QModelIndex | None = None  # Will be set by delegate
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -54,7 +55,7 @@ class MindspaceInlineEditor(QWidget):
         self._error_label.hide()
         self._layout.addWidget(self._error_label)
 
-        # Track validation state
+        # Track validation state and positioning
         self._is_valid = True
         self._error_above = False  # Track if error is positioned above
 
@@ -79,13 +80,19 @@ class MindspaceInlineEditor(QWidget):
         """
         self._tree_view = tree_view
 
+    def set_editing_index(self, index: QModelIndex) -> None:
+        """
+        Set the model index being edited for position calculations.
+
+        Args:
+            index: The model index of the item being edited
+        """
+        self._editing_index = index
+
     def _handle_style_changed(self) -> None:
         """Handle style/zoom changes by updating fonts and sizes."""
+        self._adjust_widget_size()
         self._apply_styling()
-
-        # Recalculate geometry if editor is visible
-        if self.isVisible():
-            QTimer.singleShot(0, self._adjust_widget_size)
 
     def _get_scaled_font(self) -> QFont:
         """Get appropriately scaled font for current zoom level."""
@@ -95,6 +102,63 @@ class MindspaceInlineEditor(QWidget):
         font = QFont()
         font.setPointSizeF(base_font_size * zoom_factor)
         return font
+
+    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> QRect:
+        """
+        Calculate the rectangle that contains only the text portion of the item.
+        This is duplicated from the delegate to avoid circular imports.
+
+        Args:
+            index: Model index of the item
+            tree_view: The tree view widget
+
+        Returns:
+            QRect covering only the text area (excluding icon)
+        """
+        # Get the full visual rect (this already has correct positioning)
+        full_rect = tree_view.visualRect(index)
+
+        # Get the icon size (already scaled by zoom factor)
+        icon_size = tree_view.iconSize()
+        icon_width = icon_size.width()
+
+        # Standard spacing between icon and text in Qt tree views (scale with zoom)
+        zoom_factor = self._style_manager.zoom_factor()
+        icon_text_spacing = int(10 * zoom_factor)
+
+        # Calculate the offset needed to skip over the icon
+        icon_offset = icon_width + icon_text_spacing
+
+        # Create text-only rectangle by adjusting the left edge
+        text_rect = QRect(
+            full_rect.left() + icon_offset,
+            full_rect.top(),
+            full_rect.width() - icon_offset,
+            full_rect.height()
+        )
+
+        # Ensure minimum width for editing (scaled)
+        min_width = int(50 * zoom_factor)
+        if text_rect.width() < min_width:
+            text_rect.setWidth(min_width)
+
+        return text_rect
+
+    def _get_current_line_edit_position(self) -> int:
+        """
+        Get the current position where the line edit should be placed.
+        This recalculates based on the current tree view item position.
+
+        Returns:
+            Top position for the line edit in viewport coordinates
+        """
+        if not self._tree_view or not self._editing_index or not self._editing_index.isValid():
+            # Fallback to current geometry if we can't calculate from tree view
+            return self.geometry().top()
+
+        # Calculate the text rect for the current index (this handles zoom changes)
+        text_rect = self._calculate_text_rect(self._editing_index, self._tree_view)
+        return text_rect.top()
 
     def _edit_width(self) -> int:
         """
@@ -145,8 +209,13 @@ class MindspaceInlineEditor(QWidget):
         if not self.parent():
             return
 
-        required_height = self._calculate_required_height()
         current_rect = self.geometry()
+
+        # Get the current position where the line edit should be placed
+        # This recalculates based on current zoom and tree view layout
+        current_line_edit_top = self._get_current_line_edit_position()
+
+        required_height = self._calculate_required_height()
 
         # Get parent viewport bounds
         parent = cast(QWidget, self.parent())
@@ -158,30 +227,36 @@ class MindspaceInlineEditor(QWidget):
         optimal_width = self._edit_width() - 1
         widget_width = max(min_width, optimal_width)
 
-        # Get line edit height
+        # Get line edit height and error height
         line_edit_height = self._line_edit.sizeHint().height()
         error_height = required_height - line_edit_height
 
-        # Error goes above if there's no room below AND there's room above
-        error_below_would_fit = (current_rect.top() + required_height) <= viewport_rect.bottom()
-        error_above_would_fit = (current_rect.top() - error_height) >= viewport_rect.top()
+        # Determine error positioning if error is visible
+        if self._error_label.isVisible():
+            # Check if error should go above or below based on available space
+            error_below_would_fit = (current_line_edit_top + required_height) <= viewport_rect.bottom()
+            error_above_would_fit = (current_line_edit_top - error_height) >= viewport_rect.top()
 
-        if self._error_above and not error_above_would_fit:
-            self._set_error_below_layout()
-            self._error_above = False
+            # Prefer below unless it doesn't fit and above does fit
+            should_put_error_above = not error_below_would_fit and error_above_would_fit
 
-        elif not self._error_above and not error_below_would_fit:
-            self._set_error_above_layout()
-            self._error_above = True
+            # Update layout if error position needs to change
+            if should_put_error_above != self._error_above:
+                self._error_above = should_put_error_above
+                if self._error_above:
+                    self._set_error_above_layout()
 
-        # Calculate widget position based on where error should go
-        if self._error_above:
-            # Error above: widget top moves up, line edit stays at current_rect.top()
-            new_widget_top = current_rect.top() - error_height
+                else:
+                    self._set_error_below_layout()
+
+        # Calculate final widget position
+        if self._error_label.isVisible() and self._error_above:
+            # Error above: widget top moves up so line edit stays at current position
+            new_widget_top = current_line_edit_top - error_height
 
         else:
-            # Error below: widget top stays at current position, line edit at current_rect.top()
-            new_widget_top = current_rect.top()
+            # Error below or no error: widget top stays at current line edit position
+            new_widget_top = current_line_edit_top
 
         # Set the final geometry
         new_rect = QRect(current_rect.left(), new_widget_top, widget_width, required_height)
@@ -277,20 +352,25 @@ class MindspaceInlineEditor(QWidget):
             is_valid: Whether the current input is valid
             error_message: Error message to display (empty if valid)
         """
+        was_showing_error = not self._is_valid
         self._is_valid = is_valid
 
         if is_valid:
-            self._error_label.hide()
+            # If we were showing an error and now we're not, we need to handle the transition
+            if was_showing_error:
+                self._error_label.hide()
+                self._error_above = False
+                self._set_error_below_layout()
+
+            else:
+                self._error_label.hide()
 
         else:
             self._error_label.setText(error_message)
             self._error_label.show()
 
+        self._adjust_widget_size()
         self._apply_styling()
-
-        # Adjust widget size to accommodate error message
-        # Use QTimer to ensure layout has been updated
-        QTimer.singleShot(0, self._adjust_widget_size)
 
     def _apply_styling(self) -> None:
         """Apply styling based on validation state and current zoom."""
@@ -327,14 +407,14 @@ class MindspaceInlineEditor(QWidget):
                 }}
             """
 
-        print(f"error above: {self._error_above}")
+        error_color = self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)
         error_label_style = f"""
             QLabel {{
                 background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
-                border-top: {"1px" if self._error_above else "0px"};
-                border-bottom: {"0px" if self._error_above else "1px"};
+                border: 1px solid {error_color};
+                border-top: {"1px" if self._error_above else "0px"} solid {error_color};
+                border-bottom: {"0px" if self._error_above else "1px"} solid {error_color};
                 padding: {"2px" if self._error_above else "1px"} 2px 2px 2px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}

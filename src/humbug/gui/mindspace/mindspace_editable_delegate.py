@@ -157,6 +157,9 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         # Set reference to tree view for viewport calculations
         editor.set_tree_view(tree_view)
 
+        # Set the editing index for position calculations
+        editor.set_editing_index(index)
+
         # Get the text-only rect instead of full visual rect
         rect = self._calculate_text_rect(index, tree_view)
 
