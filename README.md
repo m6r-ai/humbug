@@ -84,6 +84,7 @@ can be used to refine the Metaphor context.
 
 - When you click any non-conversation file in the mindspace tree it now opens it in the dynamic wiki view (just as drag
   and drop does).  Conversations open in a conversation tab.  If you double-click a file it opens in an editor.
+- All "hidden" files except for ".humbug" are now shown in the mindspace tree.
 
 ## Features
 

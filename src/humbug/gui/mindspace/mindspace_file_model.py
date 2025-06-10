@@ -21,7 +21,7 @@ class MindspaceFileModel(QSortFilterProxyModel):
         self.invalidateFilter()
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
-        """Filter out .humbug directory and other hidden files."""
+        """Filter out .humbug directory."""
         # If no mindspace is open, don't show any files
         if not self._mindspace_root:
             return False

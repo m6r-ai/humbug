@@ -2,6 +2,12 @@
 
 ## v0.16 (2025-06-xx)
 
+New features:
+
+- When you click any non-conversation file in the mindspace tree it now opens it in the dynamic wiki view (just as drag
+  and drop does).  Conversations open in a conversation tab.  If you double-click a file it opens in an editor.
+- All "hidden" files except for ".humbug" are now shown in the mindspace tree.
+
 Bug fixes:
 
 - When renaming or duplicating files, the file extension is no longer automatically selected, so the user does not

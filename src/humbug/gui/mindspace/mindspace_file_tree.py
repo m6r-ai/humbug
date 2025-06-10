@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
     QLabel
 )
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer
+from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer, QDir
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -75,6 +75,7 @@ class MindspaceFileTree(QWidget):
         self._icon_provider = MindspaceFileTreeIconProvider()
         self._fs_model = QFileSystemModel()
         self._fs_model.setReadOnly(True)
+        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.NoDotAndDotDot | QDir.Filter.Hidden)
 
         # Create filter model
         self._filter_model = MindspaceFileModel()
