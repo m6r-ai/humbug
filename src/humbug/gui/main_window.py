@@ -349,6 +349,13 @@ class MainWindow(QMainWindow):
         self._menu_timer.timeout.connect(self._update_menu_state)
         self._menu_timer.start()
 
+        # Handle single clicks with a delay to distinguish from double clicks
+        self._single_click_timer = QTimer()
+        self._single_click_timer.setSingleShot(True)
+        self._single_click_timer.timeout.connect(self._process_delayed_single_click)
+        self._single_click_timer.setInterval(QApplication.doubleClickInterval())
+        self._pending_single_click_path: str | None = None
+
         # Create status bar with left and right widgets
         self._status_bar = QStatusBar()
         self._status_left = QWidget()
@@ -806,6 +813,16 @@ class MainWindow(QMainWindow):
 
     def _handle_file_single_click(self, path: str) -> None:
         """Handle single click from the file tree."""
+        # We don't process single clicks immediately to allow for double clicks
+        self._pending_single_click_path = path
+        self._single_click_timer.start()
+
+    def _process_delayed_single_click(self) -> None:
+        """Process the delayed single-click action."""
+        path = self._pending_single_click_path
+        if not path:
+            return
+
         # Are we opening a conversation or a wiki page?
         if os.path.isfile(path):
             ext = os.path.splitext(path)[1].lower()
@@ -817,6 +834,10 @@ class MainWindow(QMainWindow):
 
     def _handle_file_double_click(self, path: str) -> None:
         """Handle double click from the file tree."""
+        # We will have started a single click timer, so stop it
+        self._single_click_timer.stop()
+        self._pending_single_click_path = None
+
         # Are we opening an editor file?
         if not os.path.isfile(path):
             return

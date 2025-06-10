@@ -1,4 +1,4 @@
-# Humbug v0.15
+# Humbug v0.16
 
 Humbug is an extensible open-source tool designed to help you design, build and maintain software using AI.
 
@@ -82,7 +82,8 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.16
 
-TBD
+- When you click any non-conversation file in the mindspace tree it now opens it in the dynamic wiki view (just as drag
+  and drop does).  Conversations open in a conversation tab.  If you double-click a file it opens in an editor.
 
 ## Features
 
