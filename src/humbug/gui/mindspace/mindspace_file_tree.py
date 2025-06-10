@@ -27,7 +27,8 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 class MindspaceFileTree(QWidget):
     """Tree view widget for displaying mindspace files."""
 
-    file_activated = Signal(str)  # Emits path when file is activated
+    file_single_clicked = Signal(str)  # Emits path when any file is single-clicked
+    file_double_clicked = Signal(str)  # Emits path when any file is double-clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
@@ -89,7 +90,8 @@ class MindspaceFileTree(QWidget):
         self._tree_view.setModel(self._filter_model)
 
         # Connect signals
-        self._tree_view.activated.connect(self._handle_activation)
+        self._tree_view.clicked.connect(self._handle_single_click)
+        self._tree_view.doubleClicked.connect(self._handle_double_click)
 
         # Add to layout
         layout.addWidget(self._tree_view)
@@ -909,15 +911,25 @@ class MindspaceFileTree(QWidget):
         # Auto-expand first level after a short delay
         self._expansion_timer.start()
 
-    def _handle_activation(self, index: QModelIndex) -> None:
-        """Handle item activation (double-click or Enter)."""
+    def _handle_single_click(self, index: QModelIndex) -> None:
+        """Handle single-click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = self._fs_model.filePath(source_index)
+        if not path:
+            return
 
-        # Only emit for files, not directories
-        if os.path.isfile(path):
-            self.file_activated.emit(path)
+        self.file_single_clicked.emit(path)
+
+    def _handle_double_click(self, index: QModelIndex) -> None:
+        """Handle double-click events."""
+        # Get the file path from the source model
+        source_index = self._filter_model.mapToSource(index)
+        path = self._fs_model.filePath(source_index)
+        if not path:
+            return
+
+        self.file_double_clicked.emit(path)
 
     def _handle_language_changed(self) -> None:
         """Update when the language changes."""
