@@ -3,6 +3,7 @@
 import logging
 import os
 import shutil
+from typing import Callable
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
@@ -118,6 +119,16 @@ class MindspaceFileTree(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
+
+        # Timer for ensuring new items are visible after model updates
+        self._visibility_timer = QTimer()
+        self._visibility_timer.setSingleShot(True)
+        self._visibility_timer.timeout.connect(self._handle_visibility_timeout)
+        self._visibility_timer.setInterval(150)  # Wait for model to update
+
+        # Track items that need to be made visible
+        self._pending_visibility_path: str | None = None
+        self._pending_visibility_callback: Callable | None = None
 
     def _handle_drop_target_changed(self) -> None:
         """
@@ -354,8 +365,8 @@ class MindspaceFileTree(QWidget):
             # Set up pending creation state with the duplicate path
             self._pending_new_item = (parent_path, False, duplicate_path)
 
-            # Find the duplicate file in the model and start editing
-            QTimer.singleShot(100, lambda: self._start_edit_new_item(duplicate_path, select_extension=False))
+            # Ensure the duplicate file is visible and start editing
+            self._ensure_item_visible_and_edit(duplicate_path, select_extension=False)
 
         except (OSError, shutil.Error) as e:
             self._logger.error("Failed to duplicate file '%s': %s", source_path, str(e))
@@ -502,6 +513,62 @@ class MindspaceFileTree(QWidget):
         if mindspace_index.isValid():
             self._tree_view.expand(mindspace_index)
 
+    def _ensure_item_visible_and_edit(self, item_path: str, select_extension: bool = True) -> None:
+        """
+        Ensure an item is visible in the tree view and start editing it.
+
+        Args:
+            item_path: Path to the item to make visible and edit
+            select_extension: Whether to select the file extension in addition to the name
+        """
+        # Store the callback parameters for the visibility timer
+        self._pending_visibility_path = item_path
+        self._pending_visibility_callback = lambda: self._start_edit_for_path(item_path, select_extension)
+
+        # Start the visibility timer to allow the model to update
+        self._visibility_timer.start()
+
+    def _handle_visibility_timeout(self) -> None:
+        """
+        Handle the visibility timer timeout by ensuring the item is visible and starting edit.
+        """
+        if not self._pending_visibility_path or not self._pending_visibility_callback:
+            return
+
+        item_path = self._pending_visibility_path
+        callback = self._pending_visibility_callback
+
+        # Clear the pending state
+        self._pending_visibility_path = None
+        self._pending_visibility_callback = None
+
+        # Mmake the item visible and start editing
+        success = self._tree_view.ensure_path_visible_for_editing(item_path, callback)
+        if not success:
+            self._logger.warning("Failed to make item visible for editing: '%s'", item_path)
+
+            # If we couldn't make it visible through the tree view, try direct approach
+            callback()
+
+    def _start_edit_for_path(self, item_path: str, select_extension: bool = True) -> None:
+        """
+        Start editing for a specific file path.
+
+        Args:
+            item_path: Path to the item to start editing
+            select_extension: Whether to select the file extension in addition to the name
+        """
+        # Find the item in the model
+        source_index = self._fs_model.index(item_path)
+        if source_index.isValid():
+            filter_index = self._filter_model.mapFromSource(source_index)
+            if filter_index.isValid():
+                self._start_inline_edit(filter_index, select_extension)
+            else:
+                self._logger.warning("Filter index not valid for path: '%s'", item_path)
+        else:
+            self._logger.warning("Source index not valid for path: '%s'", item_path)
+
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
         # Get the index at the clicked position
@@ -593,8 +660,8 @@ class MindspaceFileTree(QWidget):
             # Set up pending creation state with the temporary path
             self._pending_new_item = (parent_path, True, temp_folder_path)
 
-            # Find the new folder in the model and start editing
-            QTimer.singleShot(100, lambda: self._start_edit_new_item(temp_folder_path, select_extension=True))
+            # Ensure the new folder is visible and start editing
+            self._ensure_item_visible_and_edit(temp_folder_path, select_extension=True)
 
         except OSError as e:
             self._logger.error("Failed to create temporary folder '%s': %s", temp_folder_path, str(e))
@@ -626,8 +693,8 @@ class MindspaceFileTree(QWidget):
             # Set up pending creation state with the temporary path
             self._pending_new_item = (parent_path, False, temp_file_path)
 
-            # Find the new file in the model and start editing
-            QTimer.singleShot(100, lambda: self._start_edit_new_item(temp_file_path, select_extension=True))
+            # Ensure the new file is visible and start editing
+            self._ensure_item_visible_and_edit(temp_file_path, select_extension=True)
 
         except OSError as e:
             self._logger.error("Failed to create temporary file '%s': %s", temp_file_path, str(e))
@@ -657,21 +724,6 @@ class MindspaceFileTree(QWidget):
             return
 
         delegate.start_custom_edit(index, self._tree_view, select_extension)
-
-    def _start_edit_new_item(self, item_path: str, select_extension: bool = True) -> None:
-        """
-        Start editing a newly created item.
-
-        Args:
-            item_path: Path to the newly created item
-            select_extension: Whether to select the file extension in addition to the name
-        """
-        # Find the item in the model
-        source_index = self._fs_model.index(item_path)
-        if source_index.isValid():
-            filter_index = self._filter_model.mapFromSource(source_index)
-            if filter_index.isValid():
-                self._start_inline_edit(filter_index, select_extension)
 
     def _get_default_folder_name(self, parent_path: str) -> str:
         """

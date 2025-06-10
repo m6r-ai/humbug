@@ -1,7 +1,7 @@
 """File tree view implementation for mindspace files with drag and drop support and inline editing."""
 
 import os
-from typing import cast
+from typing import cast, Callable
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer
@@ -100,6 +100,108 @@ class MindspaceFileTreeView(QTreeView):
             return None
 
         return file_model.filePath(source_index)
+
+    def scroll_to_and_ensure_visible(self, index: QModelIndex, callback: Callable) -> bool:
+        """
+        Scroll to the specified index and ensure it's optimally positioned for editing.
+
+        Args:
+            index: The model index to scroll to
+            callback: Callback to execute after scrolling is complete
+
+        Returns:
+            True if the index is valid and scrolling was initiated, False otherwise
+
+        Raises:
+            ValueError: If the index is invalid
+        """
+        if not index.isValid():
+            raise ValueError("Cannot scroll to invalid index")
+
+        # Get the current viewport rect to determine optimal positioning
+        viewport_rect = self.viewport().rect()
+        item_rect = self.visualRect(index)
+
+        # Check if item is already optimally visible (not at edges and fully visible).  If it is, we can
+        # execute the callback immediately without scrolling.
+        margin = 40  # Minimum margin from viewport edges
+        is_optimally_visible = (
+            item_rect.top() >= margin and
+            item_rect.bottom() <= viewport_rect.height() - margin and
+            item_rect.left() >= 0 and
+            item_rect.right() <= viewport_rect.width()
+        )
+        if is_optimally_visible:
+            callback()
+            return True
+
+        # Scroll to position the item optimally in the viewport
+        # Use PositionAtCenter to ensure good visibility for editing
+        self.scrollTo(index, QTreeView.ScrollHint.PositionAtCenter)
+
+        # If we have a callback, execute it after a short delay to allow scrolling to complete
+        QTimer.singleShot(50, callback)
+
+        return True
+
+    def ensure_path_visible_for_editing(self, file_path: str, callback: Callable) -> bool:
+        """
+        Ensure the specified file path is visible and optimally positioned for editing.
+
+        Args:
+            file_path: Absolute path to the file to make visible
+            callback: Optional callback to execute after the item is visible
+
+        Returns:
+            True if the path was found and made visible, False otherwise
+        """
+        # Find the index for this path
+        source_model = cast(QSortFilterProxyModel, self.model())
+        if not source_model:
+            return False
+
+        # Get the source file system model
+        file_model = cast(QFileSystemModel, source_model.sourceModel())
+        if not file_model:
+            return False
+
+        # Get the source index for the file path
+        source_index = file_model.index(file_path)
+        if not source_index.isValid():
+            return False
+
+        # Map to the filter model
+        filter_index = source_model.mapFromSource(source_index)
+        if not filter_index.isValid():
+            return False
+
+        # Ensure parent directories are expanded
+        self._ensure_parents_expanded(filter_index)
+
+        # Scroll to make the item visible
+        return self.scroll_to_and_ensure_visible(filter_index, callback)
+
+    def _ensure_parents_expanded(self, index: QModelIndex) -> None:
+        """
+        Ensure all parent directories of the given index are expanded.
+
+        Args:
+            index: The model index whose parents should be expanded
+        """
+        if not index.isValid():
+            return
+
+        # Collect all parent indexes
+        parents = []
+        current = index.parent()
+        while current.isValid():
+            parents.append(current)
+            current = current.parent()
+
+        # Expand parents from root to leaf
+        for parent in reversed(parents):
+            if not self.isExpanded(parent):
+                self.expand(parent)
 
     def _is_ancestor_path(self, potential_ancestor: str, path: str) -> bool:
         """
