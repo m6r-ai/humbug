@@ -2,7 +2,10 @@
 
 ## v0.16 (2025-06-xx)
 
-TBD
+Bug fixes:
+
+- When renaming or duplicating files, the file extension is no longer automatically selected, so the user does not
+  accidently remove the file extension when typing a new file name.
 
 ## v0.15 (2025-06-10)
 

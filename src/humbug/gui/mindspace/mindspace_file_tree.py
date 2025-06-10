@@ -233,7 +233,6 @@ class MindspaceFileTree(QWidget):
         Complete the creation of a new file or folder by renaming the temporary item.
 
         Args:
-            index: Model index where the new item should be created
             new_name: Name for the new item
         """
         if not self._pending_new_item:
@@ -356,7 +355,7 @@ class MindspaceFileTree(QWidget):
             self._pending_new_item = (parent_path, False, duplicate_path)
 
             # Find the duplicate file in the model and start editing
-            QTimer.singleShot(100, lambda: self._start_edit_new_item(duplicate_path))
+            QTimer.singleShot(100, lambda: self._start_edit_new_item(duplicate_path, select_extension=False))
 
         except (OSError, shutil.Error) as e:
             self._logger.error("Failed to duplicate file '%s': %s", source_path, str(e))
@@ -595,7 +594,7 @@ class MindspaceFileTree(QWidget):
             self._pending_new_item = (parent_path, True, temp_folder_path)
 
             # Find the new folder in the model and start editing
-            QTimer.singleShot(100, lambda: self._start_edit_new_item(temp_folder_path))
+            QTimer.singleShot(100, lambda: self._start_edit_new_item(temp_folder_path, select_extension=True))
 
         except OSError as e:
             self._logger.error("Failed to create temporary folder '%s': %s", temp_folder_path, str(e))
@@ -628,7 +627,7 @@ class MindspaceFileTree(QWidget):
             self._pending_new_item = (parent_path, False, temp_file_path)
 
             # Find the new file in the model and start editing
-            QTimer.singleShot(100, lambda: self._start_edit_new_item(temp_file_path))
+            QTimer.singleShot(100, lambda: self._start_edit_new_item(temp_file_path, select_extension=True))
 
         except OSError as e:
             self._logger.error("Failed to create temporary file '%s': %s", temp_file_path, str(e))
@@ -640,12 +639,13 @@ class MindspaceFileTree(QWidget):
                 strings.file_creation_error.format(str(e))
             )
 
-    def _start_inline_edit(self, index: QModelIndex) -> None:
+    def _start_inline_edit(self, index: QModelIndex, select_extension: bool = True) -> None:
         """
         Start inline editing for the given index using a custom approach.
 
         Args:
             index: Model index to start editing
+            select_extension: Whether to select the file extension in addition to the name
         """
         if not index.isValid():
             return
@@ -656,21 +656,22 @@ class MindspaceFileTree(QWidget):
             self._logger.error("Delegate is not an instance of MindspaceEditableDelegate")
             return
 
-        delegate.start_custom_edit(index, self._tree_view)
+        delegate.start_custom_edit(index, self._tree_view, select_extension)
 
-    def _start_edit_new_item(self, item_path: str) -> None:
+    def _start_edit_new_item(self, item_path: str, select_extension: bool = True) -> None:
         """
         Start editing a newly created item.
 
         Args:
             item_path: Path to the newly created item
+            select_extension: Whether to select the file extension in addition to the name
         """
         # Find the item in the model
         source_index = self._fs_model.index(item_path)
         if source_index.isValid():
             filter_index = self._filter_model.mapFromSource(source_index)
             if filter_index.isValid():
-                self._start_inline_edit(filter_index)
+                self._start_inline_edit(filter_index, select_extension)
 
     def _get_default_folder_name(self, parent_path: str) -> str:
         """
@@ -727,7 +728,10 @@ class MindspaceFileTree(QWidget):
             index: Model index of the item to rename
         """
         if index.isValid():
-            self._start_inline_edit(index)
+            # Get the delegate and start rename editing (excludes extension from selection)
+            delegate = self._tree_view.itemDelegate(index)
+            if isinstance(delegate, MindspaceEditableDelegate):
+                delegate.start_custom_edit(index, self._tree_view, select_extension=False)
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""

@@ -117,9 +117,15 @@ Context: Capabilities
 
                     On creating the duplicate file, the file label will be made editable.
 
+                    On creating the name edit control, any file extension should not be selected, while the name
+                    of the file should be.  This means the user can overtype the name without losign the file type.
+
                 Context: Rename
                     If the user selects "Rename" then the system will create an edit control in-situ in the tree
                     that allows them to rename the file to any name that is not already used.
+
+                    On creating the name edit control, any file extension should not be selected, while the name
+                    of the file should be.  This means the user can overtype the name without losign the file type.
 
                 Context: Delete
                     If the user selects "Delete" then the system will confirm they want to delete the file

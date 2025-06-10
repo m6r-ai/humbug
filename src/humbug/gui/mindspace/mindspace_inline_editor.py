@@ -1,5 +1,6 @@
 """Inline editor widget for mindspace file tree items."""
 
+import os
 from typing import Callable, cast
 
 from PySide6.QtWidgets import QLineEdit, QVBoxLayout, QLabel, QWidget
@@ -21,7 +22,8 @@ class MindspaceInlineEditor(QWidget):
     def __init__(
         self,
         initial_text: str,
-        validation_callback: Callable[[str], tuple[bool, str]] | None = None
+        validation_callback: Callable[[str], tuple[bool, str]] | None = None,
+        select_extension: bool = True
     ):
         """
         Initialize the inline editor.
@@ -29,11 +31,13 @@ class MindspaceInlineEditor(QWidget):
         Args:
             initial_text: The initial text to show in the editor
             validation_callback: Optional callback for additional validation
+            select_extension: Whether to select the file extension in addition to the name
         """
         super().__init__()
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self._validation_callback = validation_callback
+        self._select_extension = select_extension
         self._tree_view: MindspaceFileTreeView | None = None  # Will be set by delegate
         self._editing_index: QModelIndex | None = None  # Will be set by delegate
 
@@ -45,7 +49,7 @@ class MindspaceInlineEditor(QWidget):
         # Create line edit
         self._line_edit = QLineEdit()
         self._line_edit.setText(initial_text)
-        self._line_edit.selectAll()
+        self._apply_initial_selection(initial_text, select_extension)
         self._line_edit.textChanged.connect(self._validate_input)
         self._layout.addWidget(self._line_edit)
 
@@ -70,6 +74,28 @@ class MindspaceInlineEditor(QWidget):
 
         # Install event filter to handle key events
         self._line_edit.installEventFilter(self)
+
+    def _apply_initial_selection(self, text: str, select_extension: bool) -> None:
+        """
+        Apply appropriate text selection based on the selection mode.
+
+        Args:
+            text: The text to apply selection to
+            select_extension: Whether to include extension in selection
+        """
+        if select_extension:
+            # Select all text (for new files)
+            self._line_edit.selectAll()
+            return
+
+        # Select only the filename part (for rename/duplicate)
+        name_part, ext = os.path.splitext(text)
+        if ext and name_part:  # Has extension
+            self._line_edit.setSelection(0, len(name_part))
+            return
+
+        # No extension or empty name, select all
+        self._line_edit.selectAll()
 
     def set_tree_view(self, tree_view: MindspaceFileTreeView) -> None:
         """
@@ -426,9 +452,9 @@ class MindspaceInlineEditor(QWidget):
         self._error_label.setStyleSheet(error_label_style)
         self._error_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Handle key events for the line edit."""
-        if watched == self._line_edit and event.type() == event.Type.KeyPress:
+        if obj == self._line_edit and event.type() == event.Type.KeyPress:
             key_event = cast(QKeyEvent, event)
 
             if key_event.key() == Qt.Key.Key_Return or key_event.key() == Qt.Key.Key_Enter:
@@ -442,7 +468,7 @@ class MindspaceInlineEditor(QWidget):
                 self.edit_cancelled.emit()
                 return True
 
-        return super().eventFilter(watched, event)
+        return super().eventFilter(obj, event)
 
     def get_text(self) -> str:
         """Get the current text in the editor."""
@@ -455,7 +481,7 @@ class MindspaceInlineEditor(QWidget):
     def focus_editor(self) -> None:
         """Set focus to the line edit."""
         self._line_edit.setFocus()
-        self._line_edit.selectAll()
+        # Don't call selectAll() here as selection was already applied in constructor
 
     def cleanup_connections(self) -> None:
         """Clean up signal connections when editor is being destroyed."""

@@ -117,13 +117,14 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
 
         return depth
 
-    def start_custom_edit(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> None:
+    def start_custom_edit(self, index: QModelIndex, tree_view: MindspaceFileTreeView, select_extension: bool = True) -> None:
         """
         Start custom inline editing that bypasses the model's editing system.
 
         Args:
             index: Model index to edit
             tree_view: The tree view widget
+            select_extension: Whether to select the file extension in addition to the name
         """
         if not index.isValid() or self._current_editor is not None:
             return
@@ -140,7 +141,8 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         # Create the inline editor - it will automatically connect to style manager
         editor = MindspaceInlineEditor(
             initial_text=current_text,
-            validation_callback=validation_callback
+            validation_callback=validation_callback,
+            select_extension=select_extension
         )
 
         # Connect signals
