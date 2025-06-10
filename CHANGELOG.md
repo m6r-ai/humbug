@@ -6,6 +6,8 @@ Bug fixes:
 
 - When renaming or duplicating files, the file extension is no longer automatically selected, so the user does not
   accidently remove the file extension when typing a new file name.
+- When creating a new file or folder, ensure the mindspace tree is scrolled to the new file/folder before
+  attempting to edit the label.
 
 ## v0.15 (2025-06-10)
 
