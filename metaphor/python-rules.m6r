@@ -50,6 +50,8 @@ Context: Python implementation rules
             next_statement()
         ```
 
+        The first version avoids the unecessary else statement.
+
     Context: Handle error and exception paths early
         If it is possible to detect errors and exceptions early then do so.  Always prefer to do this as early
         as possible within the code so we have the fewest possible conditional checks by the time we reach the
@@ -57,6 +59,28 @@ Context: Python implementation rules
 
         This is sometimes known as "flattening the code to the left" as there is generally less indentation required
         when we do this.  This makes the code easier to read.
+
+        For example do this:
+
+        ```python
+        if error_condition:
+            return
+
+        if another_error_condition:
+            return
+
+        handle_happy_path()
+        ```
+
+        instead of this:
+
+        ```python
+        if not error_condition:
+            if not another_error_condition:
+                handle_happy_path()
+        ```
+
+        While the latter has slightly fewer lines of code, it is far more difficult to understand when reading.
 
     Context: Exception handling philosophy
         Context: Exception documentation
