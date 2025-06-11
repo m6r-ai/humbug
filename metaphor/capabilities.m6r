@@ -90,10 +90,11 @@ Context: Capabilities
             - Directories are shown before files in the tree
             - Files and directories are sorted alphabetically within their sections
             - The tree supports keyboard navigation using arrow keys
-            - Double-clicking or pressing Enter on a file opens it in a new wiki tab, unless the file
+            - Clicking on a file or folder opens it in a new wiki tab, unless the file
               is a conversation file ("*.conv") in which case it is opened as a new conversation.
-            - Dragging a file into the tab column view opens it in a new wiki tab, unless the file is
+            - Dragging a file or folder into the tab column view opens it in a new wiki tab, unless the file is
               a conversation file ("*.conv") in which case it is opened as a new conversation.
+            - Double-clicking on a file opens it in a new editor tab.
             - If the file is already open, its tab becomes active instead
             - Directory nodes can be expanded/collapsed using arrow keys or mouse
             - Initial view is set to 30% of the window width, but can be resized
@@ -256,6 +257,10 @@ Context: Capabilities
                 - Hidden by default on non-selected tabs, appearing only when the tab is hovered over.
                 - Use a transparent background when not hovered
                 - Highlighted in red when the mouse hovers over the close button itself.
+
+                If the user mouses over any tab label except the current active one in the current active column,
+                the tab label will be highlighted with a hover colour to indicate that clicking will move the
+                active tab to the one being moused-over.
 
             Context: Tab ordering
                 The order of use of each tab in a column will be tracked in an MRU list per column.  When the current

@@ -20,4 +20,9 @@ Context: Wiki tabs
         The file/directory information is rendered as a list.  Each entry contains details of permissions, size,
         last modification date, and path.
 
-    Each wiki tab will be named with the path being viewed.
+        Each wiki tab will be named with the path being viewed.
+
+    Context: Tab label
+        If the user is not actively watching a tab and a file used to render the wiki page is modified, then the
+        tab label background will turn purple to indicate to the user that they should look at the tab.
+
