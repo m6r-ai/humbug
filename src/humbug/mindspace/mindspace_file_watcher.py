@@ -37,7 +37,7 @@ class MindspaceFileWatcher(QObject):
 
         return cls._instance
 
-    def __init__(self, poll_interval: int = 3000) -> None:
+    def __init__(self, poll_interval: int = 1000) -> None:
         """
         Initialize the file watcher if not already initialized.
 
