@@ -78,6 +78,7 @@ class ConversationTab(TabBase):
         self._conversation_widget.forkFromIndexRequested.connect(self.forkFromIndexRequested)
         self._conversation_widget.status_updated.connect(self.update_status)
         self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
+        self._conversation_widget.message_finished.connect(self.handle_message_finished)
         layout.addWidget(self._conversation_widget)
 
         # Install activation tracking
@@ -268,6 +269,13 @@ class ConversationTab(TabBase):
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
+
+    def handle_message_finished(self) -> None:
+        """
+        Handle when a message finishes processing.
+        """
+        # Update the tab bar to indicate content has changed
+        self.set_updated(True)
 
     def update_status(self) -> None:
         """Update status bar with token counts and settings."""

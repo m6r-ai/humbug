@@ -99,6 +99,9 @@ class ConversationWidget(QWidget):
     # Emits when parent should be activated by user interaction
     activated = Signal()
 
+    # Emits when a message has finished processing
+    message_finished = Signal()
+
     def __init__(
         self,
         path: str,
@@ -313,6 +316,7 @@ class ConversationWidget(QWidget):
         if retries_exhausted:
             self._is_streaming = False
             self._input.set_streaming(False)
+            self.message_finished.emit()
             self.status_updated.emit()
 
             if self._last_submitted_message:
@@ -424,6 +428,7 @@ class ConversationWidget(QWidget):
         if self._update_timer.isActive():
             self._update_timer.stop()
 
+        self.message_finished.emit()
         self.status_updated.emit()
 
     def _handle_language_changed(self) -> None:

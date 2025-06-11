@@ -9,8 +9,10 @@ New features:
 - All "hidden" files except for ".humbug" are now shown in the mindspace tree.
 - There are new icons on message boxes.
 - The conversation input box now has a submit icon.
-- If the content of any non-active wiki tabs changes the tab label will now turn purple to notify you that things have
+- If the content of a non-active wiki tab changes, the tab label will now turn purple to notify you that things have
   been updated while you weren't looking.
+- If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you
+  that things have been updated while you weren't looking.
 
 Bug fixes:
 
