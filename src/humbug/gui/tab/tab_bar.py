@@ -38,6 +38,40 @@ class TabBar(QTabBar):
         }
         self.setTabData(index, tab_state)
 
+    def _get_current_tab_index(self) -> int:
+        """
+        Find the index of the currently active tab.
+
+        Returns:
+            Index of the current tab, or -1 if no tab is current
+        """
+        for index in range(self.count()):
+            tab_state = self.tabData(index)
+            if isinstance(tab_state, dict) and tab_state.get('is_current', False):
+                return index
+        return -1
+
+    def _should_draw_left_border(self, index: int, current_tab_index: int) -> bool:
+        """
+        Determine if a left border should be drawn for the given tab.
+
+        Args:
+            index: Tab index to check
+            current_tab_index: Index of the currently active tab
+
+        Returns:
+            True if a left border should be drawn
+        """
+        # Don't draw border on the leftmost tab
+        if index == 0:
+            return False
+
+        # Don't draw border if this tab is immediately to the right of the current tab
+        if current_tab_index != -1 and index == current_tab_index + 1:
+            return False
+
+        return True
+
     def _get_tab_background_color(self, is_current: bool, is_updated: bool, is_hovered: bool) -> ColorRole:
         """
         Get the appropriate background color for a tab based on its state.
@@ -72,6 +106,9 @@ class TabBar(QTabBar):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
+        # Find the currently active tab once for all border calculations
+        current_tab_index = self._get_current_tab_index()
+
         # Paint each tab's background
         for index in range(self.count()):
             tab_rect = self.tabRect(index)
@@ -95,6 +132,12 @@ class TabBar(QTabBar):
             # Fill the tab background
             painter.fillRect(tab_rect, color)
 
+            # Draw left border if conditions are met
+            if self._should_draw_left_border(index, current_tab_index):
+                left_border_color = self._style_manager.get_color(ColorRole.TAB_BAR_BACKGROUND)
+                left_border_rect = tab_rect.adjusted(0, 0, -tab_rect.width() + 1, 0)
+                painter.fillRect(left_border_rect, left_border_color)
+
             # Draw top border for current tabs
             if is_current:
                 border_color_role = ColorRole.TAB_BORDER_ACTIVE if is_active_column else ColorRole.TAB_BACKGROUND_ACTIVE
@@ -105,7 +148,7 @@ class TabBar(QTabBar):
                 painter.fillRect(border_rect, border_color)
 
             # Draw bottom border for all tabs
-            bottom_border_color = self._style_manager.get_color(ColorRole.BACKGROUND_PRIMARY)
+            bottom_border_color = self._style_manager.get_color(ColorRole.TAB_BAR_BACKGROUND)
             if not is_current:  # Only non-current tabs get bottom border
                 bottom_border_rect = tab_rect.adjusted(0, tab_rect.height() - 1, 0, 0)
                 painter.fillRect(bottom_border_rect, bottom_border_color)

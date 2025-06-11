@@ -29,6 +29,7 @@ class ColorRole(Enum):
     EDIT_BOX_ERROR = auto()             # Edit box error
 
     # Tab colours
+    TAB_BAR_BACKGROUND = auto()         # Tab bar background
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background
     TAB_INACTIVE = auto()               # Inactive tab text colour
     TAB_BACKGROUND_INACTIVE = auto()    # Inactive tab background
