@@ -298,7 +298,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         return f"\x1b[M{chr(cb)}{chr(cx)}{chr(cy)}"
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # type: ignore[override]
         """Handle mouse press for both tracking and selection."""
         if event.button() & Qt.MouseButton.LeftButton:
             # Handle text selection
@@ -1073,13 +1073,13 @@ class TerminalWidget(QAbstractScrollArea):
         self.viewport().update()
         self._update_scrollbar()
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
         """Handle resize events."""
         super().resizeEvent(event)
         self.update_dimensions()
         self.viewport().update()
 
-    def focusNextPrevChild(self, _next: bool) -> bool:
+    def focusNextPrevChild(self, _next: bool) -> bool:  # type: ignore[override]
         """Override to prevent tab from changing focus."""
         return False
 

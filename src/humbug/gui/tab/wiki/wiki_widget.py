@@ -78,9 +78,6 @@ class WikiWidget(QWidget):
     # Emits when content has been refreshed due to file changes
     content_refreshed = Signal()
 
-    # Emits when the underlying file/directory has been deleted
-    file_deleted = Signal(str)
-
     def __init__(
         self,
         path: str,
@@ -221,7 +218,6 @@ class WikiWidget(QWidget):
         # Check if the main path still exists
         if not os.path.exists(self._path):
             self._logger.info("Main path no longer exists: %s", self._path)
-            self.file_deleted.emit(self._path)
             return
 
         # Refresh content while preserving UI state

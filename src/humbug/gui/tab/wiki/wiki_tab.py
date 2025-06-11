@@ -74,7 +74,6 @@ class WikiTab(TabBase):
 
         # Connect new signals for file watching
         self._wiki_content_widget.content_refreshed.connect(self._handle_content_refreshed)
-        self._wiki_content_widget.file_deleted.connect(self._handle_file_deleted)
 
         layout.addWidget(self._wiki_content_widget)
 
@@ -94,27 +93,6 @@ class WikiTab(TabBase):
         self._logger.debug("Wiki content refreshed for path: %s", self._path)
         self.set_updated(True)
         self.update_status()
-
-    def _handle_file_deleted(self, deleted_path: str) -> None:
-        """
-        Handle when the underlying file or directory has been deleted.
-
-        Args:
-            deleted_path: Path of the deleted file/directory
-        """
-        self._logger.info("File deleted, requesting tab closure: %s", deleted_path)
-
-        # Show a brief message to the user before closing
-        strings = self._language_manager.strings()
-        MessageBox.show_message(
-            self,
-            MessageBoxType.INFORMATION,
-            "File Deleted",
-            f"The file or directory '{deleted_path}' has been deleted. This tab will be closed.",
-        )
-
-        # Request that the parent close this tab
-        self.close_requested.emit(self._tab_id)
 
     def scroll_to_anchor(self, anchor: str) -> None:
         """
