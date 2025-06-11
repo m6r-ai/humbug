@@ -162,7 +162,7 @@ class MindspaceFileMoveDialog(QDialog):
         try:
             # Use question icon for move confirmation
             icon_path = self._style_manager.get_icon_path("question")
-            return self._style_manager.scale_icon(icon_path, 32)
+            return self._style_manager.scale_icon(icon_path, 64)
 
         except Exception:
             # If icon creation fails, return None (no icon will be shown)

@@ -829,36 +829,55 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
-            # Message box icons
+            # Bulb on icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
             self._write_icon(f'info-{suffix}.svg', f'''
-                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
-                    <text x="32" y="40" text-anchor="middle"
-                        font-size="36" fill="{color}" font-family="sans-serif">i</text>
+                <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 7C9.23858 7 7 9.23858 7 12C7 13.3613 7.54402 14.5955 8.42651 15.4972C8.77025 15.8484 9.05281 16.2663
+                        9.14923 16.7482L9.67833 19.3924C9.86537 20.3272 10.6862 21 11.6395 21H12.3605C13.3138 21 14.1346 20.3272
+                        14.3217 19.3924L14.8508 16.7482C14.9472 16.2663 15.2297 15.8484 15.5735 15.4972C16.456 14.5955 17
+                        13.3613 17 12C17 9.23858 14.7614 7 12 7Z" stroke="{color}" stroke-width="2"/>
+                    <path d="M12 4V3" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18 6L19 5" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M20 12H21" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 12H3" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 5L6 6" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 17H14" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             ''')
 
+            # Alert triangle icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
             self._write_icon(f'warning-{suffix}.svg', f'''
-                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M32 4 L60 56 L4 56 Z" stroke="{color}" stroke-width="4" fill="none"/>
-                    <text x="32" y="48" text-anchor="middle"
-                        font-size="36" fill="{color}" font-family="sans-serif">!</text>
+                <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 10V13" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M12 16V15.9888" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M10.2518 5.147L3.6508 17.0287C2.91021 18.3618 3.87415 20 5.39912 20H18.6011C20.126 20 21.09
+                        18.3618 20.3494 17.0287L13.7484 5.147C12.9864 3.77538 11.0138 3.77538 10.2518 5.147Z"
+                        stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             ''')
 
+            # Alert hexagon icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
             self._write_icon(f'critical-{suffix}.svg', f'''
-                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
-                    <path stroke="{color}" stroke-width="4" fill="none"
-                        d="M20,20 L44,44 M44,20 L20,44"/>
+                <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 9.22843V14.7716C3 15.302 3.21071 15.8107 3.58579 16.1858L7.81421 20.4142C8.18929 20.7893 8.69799
+                        21 9.22843 21H14.7716C15.302 21 15.8107 20.7893 16.1858 20.4142L20.4142 16.1858C20.7893 15.8107 21
+                        15.302 21 14.7716V9.22843C21 8.69799 20.7893 8.18929 20.4142 7.81421L16.1858 3.58579C15.8107 3.21071
+                        15.302 3 14.7716 3H9.22843C8.69799 3 8.18929 3.21071 7.81421 3.58579L3.58579 7.81421C3.21071 8.18929
+                        3 8.69799 3 9.22843Z" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 8V13" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M12 16V15.9888" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
                 </svg>
             ''')
 
+            # Help circle icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
             self._write_icon(f'question-{suffix}.svg', f'''
-                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="28" stroke="{color}" stroke-width="4" fill="none"/>
-                    <text x="32" y="44" text-anchor="middle"
-                        font-size="36" fill="{color}" font-family="sans-serif">?</text>
+                <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12
+                        3C16.9706 3 21 7.02944 21 12Z" stroke="{color}" stroke-width="2"/>
+                    <path d="M10.5 8.67709C10.8665 8.26188 11.4027 8 12 8C13.1046 8 14 8.89543 14 10C14 10.9337
+                        13.3601 11.718 12.4949 11.9383C12.2273 12.0064 12 12.2239 12 12.5V12.5V13"
+                        stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 16H12.01" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             ''')
 

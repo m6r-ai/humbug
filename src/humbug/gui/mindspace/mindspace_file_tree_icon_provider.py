@@ -173,7 +173,7 @@ class MindspaceFileTreeIconProvider(QFileIconProvider):
         """Update icons when theme or zoom changes."""
         self._clear_cache()
 
-    def icon(self, arg: QFileIconProvider.IconType | QFileInfo) -> QIcon:
+    def icon(self, arg: QFileIconProvider.IconType | QFileInfo) -> QIcon:  # type: ignore[override]
         """Get the appropriate icon for a file or standard type.
 
         Args:
