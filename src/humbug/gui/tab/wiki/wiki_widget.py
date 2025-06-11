@@ -1,6 +1,7 @@
-"""Wiki content widget implementation."""
+"""Wiki content widget implementation with file change detection."""
 
 import logging
+import os
 import re
 from typing import Dict, List, Any, Set, Tuple, cast
 
@@ -19,6 +20,7 @@ from humbug.gui.tab.wiki.wiki_markdown_preview_content import WikiMarkdownPrevie
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_wiki import MindspaceWiki, MindspaceWikiContentType
 from humbug.mindspace.mindspace_wiki_error import MindspaceWikiIOError
+from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 
 
 class WikiWidgetEventFilter(QObject):
@@ -56,7 +58,7 @@ class WikiWidgetEventFilter(QObject):
 
 
 class WikiWidget(QWidget):
-    """Widget for displaying wiki content."""
+    """Widget for displaying wiki content with automatic refresh capability."""
 
     # Signal to notify tab of status changes
     status_updated = Signal()
@@ -72,6 +74,12 @@ class WikiWidget(QWidget):
 
     # Emits when a file edit button is clicked
     edit_file = Signal(str)
+
+    # Emits when content has been refreshed due to file changes
+    content_refreshed = Signal()
+
+    # Emits when the underlying file/directory has been deleted
+    file_deleted = Signal(str)
 
     def __init__(
         self,
@@ -90,6 +98,10 @@ class WikiWidget(QWidget):
         self._path = path
 
         self._mindspace_wiki = MindspaceWiki()
+
+        # File watching integration
+        self._file_watcher = MindspaceFileWatcher()
+        self._watched_paths: Set[str] = set()
 
         # Widget tracking
         self._content_blocks: List[WikiContent] = []
@@ -172,16 +184,129 @@ class WikiWidget(QWidget):
         self._event_filter.widget_activated.connect(self._handle_widget_activation)
         self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
 
+    def __del__(self) -> None:
+        """Clean up file watching when widget is destroyed."""
+        self._unregister_file_watching()
+
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update status if needed
         self.status_updated.emit()
+
+    def _register_file_watching(self) -> None:
+        """Register current path and any dependencies for file watching."""
+        try:
+            # Get all dependencies for the current path
+            dependencies = self._mindspace_wiki.get_content_dependencies(self._path)
+
+            # Register each dependency with the file watcher
+            for dep_path in dependencies:
+                if dep_path not in self._watched_paths:
+                    self._file_watcher.watch_file(dep_path, self._handle_file_changed)
+                    self._watched_paths.add(dep_path)
+                    self._logger.debug("Watching file: %s", dep_path)
+
+        except MindspaceWikiIOError as e:
+            self._logger.warning("Failed to register file watching for %s: %s", self._path, str(e))
+
+    def _unregister_file_watching(self) -> None:
+        """Unregister all file watching for this widget."""
+        for watched_path in self._watched_paths.copy():
+            self._file_watcher.unwatch_file(watched_path, self._handle_file_changed)
+            self._watched_paths.remove(watched_path)
+            self._logger.debug("Stopped watching file: %s", watched_path)
+
+    def _handle_file_changed(self, changed_path: str) -> None:
+        """
+        Handle notification that a watched file has changed.
+
+        Args:
+            changed_path: Path of the file that changed
+        """
+        self._logger.debug("File changed: %s", changed_path)
+
+        # Check if the main path still exists
+        if not os.path.exists(self._path):
+            self._logger.info("Main path no longer exists: %s", self._path)
+            self.file_deleted.emit(self._path)
+            return
+
+        # Refresh content while preserving UI state
+        self.refresh_content()
+
+    def refresh_content(self) -> None:
+        """Refresh content from disk, preserving scroll position and other UI state."""
+        try:
+            # Save current state
+            saved_scroll_pos = self._scroll_area.verticalScrollBar().value()
+            saved_selection = None
+            saved_find_state = {
+                'matches': self._matches.copy(),
+                'current_widget_index': self._current_widget_index,
+                'current_match_index': self._current_match_index,
+                'last_search': self._last_search
+            }
+
+            if self._content_with_selection:
+                saved_selection = self._content_with_selection.get_selected_text()
+
+            # Unregister old file watching
+            self._unregister_file_watching()
+
+            # Reload content
+            self.load_content()
+
+            # Restore state
+            QTimer.singleShot(0, lambda: self._restore_ui_state(
+                saved_scroll_pos, saved_selection, saved_find_state
+            ))
+
+            # Emit refresh signal
+            self.content_refreshed.emit()
+
+        except Exception as e:
+            self._logger.error("Failed to refresh content: %s", str(e))
+
+    def _restore_ui_state(self, scroll_pos: int, selection: str | None, find_state: Dict) -> None:
+        """
+        Restore UI state after content refresh.
+
+        Args:
+            scroll_pos: Saved scroll position
+            selection: Saved text selection
+            find_state: Saved find/search state
+        """
+        # Restore scroll position
+        self._scroll_area.verticalScrollBar().setValue(scroll_pos)
+
+        # Restore selection if possible
+        if selection:
+            # Try to find and restore the same text selection
+            for content_block in self._content_blocks:
+                if selection in content_block.get_selected_text():
+                    break
+
+        # Restore find state if there was an active search
+        if find_state['last_search']:
+            # Re-run the search to restore highlights
+            self._last_search = ""  # Reset to force re-search
+            current, total = self.find_text(find_state['last_search'], True)
+
+            # Try to restore the current match position
+            if (find_state['current_widget_index'] >= 0 and
+                find_state['current_match_index'] >= 0):
+                # Navigate to approximately the same match position
+                target_match = (find_state['current_widget_index'] *
+                              (find_state['current_match_index'] + 1))
+                for _ in range(min(target_match, total)):
+                    self.find_text(find_state['last_search'], True)
 
     def _add_content_block(self, content_type: MindspaceWikiContentType, content: str) -> WikiContent:
         """
         Add a new content block to the wiki view.
 
         Args:
+            content_type: Type of content to create
             content: The content text
 
         Returns:
@@ -284,15 +409,18 @@ class WikiWidget(QWidget):
     def load_content(self) -> None:
         """Load content from the mindspace wiki."""
         try:
-            # Use MindspaceWiki to get content
-            contents = self._mindspace_wiki.get_wiki_content(self._path)
+            # Use MindspaceWiki to get content and dependencies
+            content_list, dependencies = self._mindspace_wiki.get_wiki_content(self._path)
 
             # Clear existing content blocks
             self.clear_content()
 
             # Add content blocks
-            for content_type, content in contents:
+            for content_type, content in content_list:
                 self._add_content_block(content_type, content)
+
+            # Register file watching for all dependencies
+            self._register_file_watching()
 
             # Ensure we're scrolled to the top
             self._auto_scroll = True
@@ -317,6 +445,9 @@ class WikiWidget(QWidget):
         Args:
             new_path: New path for the wiki file
         """
+        # Unregister old file watching
+        self._unregister_file_watching()
+
         self._path = new_path
         self.load_content()
 

@@ -1,11 +1,11 @@
-"""Mindspace wiki functionality."""
+"""Mindspace wiki functionality with dependency tracking."""
 
 from enum import Enum, auto
 import logging
 import os
 import stat
 from datetime import datetime
-from typing import List, Tuple, cast
+from typing import List, Tuple, Set, cast
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_wiki_error import MindspaceWikiIOError
@@ -31,7 +31,7 @@ class MindspaceWiki:
         self._logger = logging.getLogger("MindspaceWiki")
         self._mindspace_manager = MindspaceManager()
 
-    def get_wiki_content(self, path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
+    def get_wiki_content(self, path: str) -> Tuple[List[Tuple[MindspaceWikiContentType, str]], Set[str]]:
         """
         Get wiki content for a path, generating it dynamically based on file type.
 
@@ -39,28 +39,52 @@ class MindspaceWiki:
             path: Path to the wiki file or virtual wiki path
 
         Returns:
-            Tuple of (content, timestamp)
+            Tuple of (content_list, dependency_paths)
 
         Raises:
             MindspaceWikiIOError: If the path cannot be read or does not exist
         """
         try:
+            # Track dependencies - always include the main path
+            dependencies: Set[str] = {os.path.abspath(path)}
+
             # Get file info
             if not os.path.exists(path):
                 raise MindspaceWikiIOError(f"Path does not exist: {path}")
 
             if os.path.isdir(path):
                 # Generate directory listing
-                content = self._generate_directory_content(path)
+                content, dir_dependencies = self._generate_directory_content(path)
+                dependencies.update(dir_dependencies)
 
             else:
                 # Source code or other file
-                content = self._generate_file_content(path)
+                content, file_dependencies = self._generate_file_content(path)
+                dependencies.update(file_dependencies)
 
-            return content
+            return content, dependencies
 
         except Exception as e:
             raise MindspaceWikiIOError(f"Failed to read wiki content: {str(e)}") from e
+
+    def get_content_dependencies(self, path: str) -> Set[str]:
+        """
+        Get all file dependencies for a given path without generating content.
+
+        Args:
+            path: Path to analyze for dependencies
+
+        Returns:
+            Set of absolute paths that this wiki page depends on
+
+        Raises:
+            MindspaceWikiIOError: If the path cannot be accessed
+        """
+        try:
+            _, dependencies = self.get_wiki_content(path)
+            return dependencies
+        except Exception as e:
+            raise MindspaceWikiIOError(f"Failed to get dependencies for {path}: {str(e)}") from e
 
     def _get_file_size_bytes(self, file_path: str) -> int:
         """
@@ -187,7 +211,7 @@ class MindspaceWiki:
 
         return max_width
 
-    def _generate_directory_content(self, directory_path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
+    def _generate_directory_content(self, directory_path: str) -> Tuple[List[Tuple[MindspaceWikiContentType, str]], Set[str]]:
         """
         Generate wiki content for a directory.
 
@@ -195,13 +219,20 @@ class MindspaceWiki:
             directory_path: Path to the directory
 
         Returns:
-            Markdown content with directory listing
+            Tuple of (markdown content with directory listing, dependency paths)
         """
         try:
+            # Track dependencies - include the directory itself and all its entries
+            dependencies: Set[str] = {os.path.abspath(directory_path)}
+
             rel_path = self._mindspace_manager.get_relative_path(directory_path)
             dir_name = os.path.basename(cast(str, directory_path))
             entries = os.listdir(directory_path)
-            print(f"Generating directory content for: {directory_path} (relative path: {rel_path})")
+
+            # Add all directory entries as dependencies (for change detection)
+            for entry in entries:
+                entry_path = os.path.join(directory_path, entry)
+                dependencies.add(os.path.abspath(entry_path))
 
             if rel_path in (".", ""):
                 dir_name = f"Mindspace home: {os.path.basename(self._mindspace_manager.mindspace_path())}"
@@ -291,11 +322,12 @@ class MindspaceWiki:
 
                 contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
 
-            return contents
+            return contents, dependencies
 
         except Exception as e:
             self._logger.error("Error generating directory content: %s", str(e))
-            return [(MindspaceWikiContentType.MARKDOWN, f"# Error\n\nFailed to generate directory content: {str(e)}")]
+            dependencies = {os.path.abspath(directory_path)}
+            return [(MindspaceWikiContentType.MARKDOWN, f"# Error\n\nFailed to generate directory content: {str(e)}")], dependencies
 
     def get_file_type(self, file_path: str) -> str:
         """
@@ -319,7 +351,7 @@ class MindspaceWiki:
 
         return 'other'
 
-    def _generate_file_content(self, file_path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
+    def _generate_file_content(self, file_path: str) -> Tuple[List[Tuple[MindspaceWikiContentType, str]], Set[str]]:
         """
         Generate wiki content for a file.
 
@@ -327,9 +359,12 @@ class MindspaceWiki:
             file_path: Path to the file
 
         Returns:
-            Markdown content with file contents
+            Tuple of (markdown content with file contents, dependency paths)
         """
         try:
+            # Track dependencies - just the file itself for regular files
+            dependencies: Set[str] = {os.path.abspath(file_path)}
+
             rel_path = self._mindspace_manager.get_relative_path(file_path)
             file_name = os.path.basename(file_path)
 
@@ -371,7 +406,7 @@ class MindspaceWiki:
                     f"![{file_name}]({file_path})"
                 ]
                 contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
-                return contents
+                return contents, dependencies
 
             with open(file_path, 'r', encoding='utf-8') as f:
                 file_content = f.read()
@@ -397,11 +432,13 @@ class MindspaceWiki:
             ]
             contents.append((MindspaceWikiContentType.FILE, "\n".join(source_lines2)))
 
-            return contents
+            return contents, dependencies
 
         except Exception as e:
             self._logger.error("Error generating file content: %s", str(e))
-            return [(MindspaceWikiContentType.MARKDOWN, f"# Error\n\nFailed to generate content for {file_path}: {str(e)}")]
+            dependencies = {os.path.abspath(file_path)}
+            return [(MindspaceWikiContentType.MARKDOWN,
+                        f"# Error\n\nFailed to generate content for {file_path}: {str(e)}")], dependencies
 
     def resolve_link(self, current_path: str, target_path: str) -> str | None:
         """

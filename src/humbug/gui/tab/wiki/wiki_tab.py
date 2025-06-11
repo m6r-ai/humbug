@@ -1,4 +1,4 @@
-"""Wiki tab implementation."""
+"""Wiki tab implementation with file change detection."""
 
 import logging
 from typing import cast
@@ -29,6 +29,9 @@ class WikiTab(TabBase):
     # Signal to request editing a file
     edit_file = Signal(str)
 
+    # Signal to request closing this tab (e.g., when file is deleted)
+    close_requested = Signal(str)  # tab_id
+
     def __init__(
         self,
         tab_id: str,
@@ -47,7 +50,7 @@ class WikiTab(TabBase):
         self._logger = logging.getLogger("WikiTab")
         self._path = path
 
-        # Get or create mindspace wiki manage
+        # Get or create mindspace wiki manager
         self._wiki_manager = MindspaceWiki()
 
         # Create layout
@@ -68,6 +71,11 @@ class WikiTab(TabBase):
         self._wiki_content_widget.status_updated.connect(self.update_status)
         self._wiki_content_widget.open_link.connect(self._handle_link)
         self._wiki_content_widget.edit_file.connect(self.edit_file)
+
+        # Connect new signals for file watching
+        self._wiki_content_widget.content_refreshed.connect(self._handle_content_refreshed)
+        self._wiki_content_widget.file_deleted.connect(self._handle_file_deleted)
+
         layout.addWidget(self._wiki_content_widget)
 
         # Install activation tracking
@@ -80,6 +88,34 @@ class WikiTab(TabBase):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
+
+    def _handle_content_refreshed(self) -> None:
+        """Handle when wiki content has been refreshed due to file changes."""
+        self._logger.debug("Wiki content refreshed for path: %s", self._path)
+        # Update status bar to reflect any changes
+        self.update_status()
+        # Could add visual feedback here in the future (brief highlight, etc.)
+
+    def _handle_file_deleted(self, deleted_path: str) -> None:
+        """
+        Handle when the underlying file or directory has been deleted.
+
+        Args:
+            deleted_path: Path of the deleted file/directory
+        """
+        self._logger.info("File deleted, requesting tab closure: %s", deleted_path)
+
+        # Show a brief message to the user before closing
+        strings = self._language_manager.strings()
+        MessageBox.show_message(
+            self,
+            MessageBoxType.INFORMATION,
+            "File Deleted",
+            f"The file or directory '{deleted_path}' has been deleted. This tab will be closed.",
+        )
+
+        # Request that the parent close this tab
+        self.close_requested.emit(self._tab_id)
 
     def scroll_to_anchor(self, anchor: str) -> None:
         """
