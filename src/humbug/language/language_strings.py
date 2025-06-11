@@ -153,7 +153,6 @@ class LanguageStrings:
     file_filter_all: str
     file_filter_metaphor: str
     file_filter_conversation: str
-    file_filter_text: str
 
     # Dialog titles
     mindspace_error_title: str
@@ -208,9 +207,7 @@ class LanguageStrings:
     delete: str
     edit: str
     duplicate: str
-    rename_file_title: str
     file_name: str
-    rename_error_title: str
     rename_error_exists: str
     rename_error_generic: str
     file_creation_error_title: str

@@ -158,7 +158,6 @@ def get_arabic_strings() -> LanguageStrings:
         file_filter_all="كل الملفات (*.*)",
         file_filter_metaphor="ملفات ميتافور (*.m6r)",
         file_filter_conversation="ملفات المحادثة (*.conv)",
-        file_filter_text="الملفات النصية (*.txt)",
 
         # Dialog titles
         mindspace_error_title="خطأ في المساحة الذهنية",
@@ -216,9 +215,7 @@ def get_arabic_strings() -> LanguageStrings:
         delete="حذف",
         edit="تحرير",
         duplicate="تكرار",
-        rename_file_title="إعادة تسمية الملف",
         file_name="اسم الملف",
-        rename_error_title="خطأ في إعادة التسمية",
         rename_error_exists="يوجد ملف بهذا الاسم بالفعل.",
         rename_error_generic="تعذر إعادة تسمية الملف: ",
         file_creation_error_title="خطأ في إنشاء الملف",

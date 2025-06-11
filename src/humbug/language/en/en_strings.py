@@ -158,7 +158,6 @@ def get_english_strings() -> LanguageStrings:
         file_filter_all="All Files (*.*)",
         file_filter_metaphor="Metaphor Files (*.m6r)",
         file_filter_conversation="Conversation Files (*.conv)",
-        file_filter_text="Text Files (*.txt)",
 
         # Dialog titles
         mindspace_error_title="Mindspace Error",
@@ -216,9 +215,7 @@ def get_english_strings() -> LanguageStrings:
         delete="Delete",
         edit="Edit",
         duplicate="Duplicate",
-        rename_file_title="Rename File",
         file_name="File name",
-        rename_error_title="Rename Error",
         rename_error_exists="A file with this name already exists.",
         rename_error_generic="Could not rename file: ",
         file_creation_error_title="File Creation Error",

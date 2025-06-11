@@ -158,7 +158,6 @@ def get_french_strings() -> LanguageStrings:
         file_filter_all="Tous les fichiers (*.*)",
         file_filter_metaphor="Fichiers Metaphor (*.m6r)",
         file_filter_conversation="Fichiers de conversation (*.conv)",
-        file_filter_text="Fichiers texte (*.txt)",
 
         # Dialog titles
         mindspace_error_title="Erreur d'espace mental",
@@ -216,9 +215,7 @@ def get_french_strings() -> LanguageStrings:
         delete="Supprimer",
         edit="Modifier",
         duplicate="Dupliquer",
-        rename_file_title="Renommer le fichier",
         file_name="Nom du fichier",
-        rename_error_title="Erreur de renommage",
         rename_error_exists="Un fichier avec ce nom existe déjà.",
         rename_error_generic="Impossible de renommer le fichier : ",
         file_creation_error_title="Erreur de création de fichier",
