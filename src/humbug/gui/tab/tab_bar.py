@@ -38,11 +38,18 @@ class TabBar(QTabBar):
         }
         self.setTabData(index, tab_state)
 
-    def _get_tab_background_color(self, is_current: bool, is_updated: bool, is_hovered: bool) -> ColorRole:
+    def _get_tab_background_color(
+        self,
+        is_active_column: bool,
+        is_current: bool,
+        is_updated: bool,
+        is_hovered: bool
+    ) -> ColorRole:
         """
         Get the appropriate background color for a tab based on its state.
 
         Args:
+            is_active_column: Whether this tab is in the active column
             is_current: Whether this tab is currently selected
             is_updated: Whether this tab has updated content
             is_hovered: Whether this tab is currently hovered
@@ -50,7 +57,7 @@ class TabBar(QTabBar):
         Returns:
             ColorRole for the appropriate background color
         """
-        if is_hovered:
+        if is_hovered and (not is_current or not is_active_column):
             return ColorRole.TAB_BACKGROUND_HOVER
 
         if is_current:
@@ -89,7 +96,7 @@ class TabBar(QTabBar):
             is_hovered = index == self.current_hovered_tab
 
             # Get background color
-            background_color = self._get_tab_background_color(is_current, is_updated, is_hovered)
+            background_color = self._get_tab_background_color(is_active_column, is_current, is_updated, is_hovered)
             color = self._style_manager.get_color(background_color)
 
             # Fill the tab background
@@ -117,27 +124,7 @@ class TabBar(QTabBar):
                 painter.fillRect(bottom_border_rect, bottom_border_color)
 
         # Let Qt paint the text and other tab elements on top
-        # We need to temporarily disable our custom painting to avoid infinite recursion
-        try:
-            # Call the parent paint method with a modified style that makes backgrounds transparent
-            original_style = self.styleSheet()
-            transparent_style = original_style + """
-                QTabBar::tab {
-                    background: transparent;
-                    border: none;
-                }
-            """
-            self.setStyleSheet(transparent_style)
-
-            # Paint the text and other elements
-            super().paintEvent(event)
-
-            # Restore original style
-            self.setStyleSheet(original_style)
-
-        except Exception:
-            # If anything goes wrong, just call the parent paint event
-            super().paintEvent(event)
+        super().paintEvent(event)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """

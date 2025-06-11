@@ -219,7 +219,7 @@ class TabLabel(QWidget):
 
     def _get_background_color(self) -> ColorRole:
         """Get the appropriate background color based on current state."""
-        if self._is_hovered:
+        if self._is_hovered and (not self._is_current or not self._is_active_column):
             return ColorRole.TAB_BACKGROUND_HOVER
 
         if self._is_current:
