@@ -1467,7 +1467,7 @@ class ColumnManager(QWidget):
                 }}
                 QTabBar::tab {{
                     border: none;
-                    margin: 0px;
+                    margin: 1px;
                     padding: 0px;
                 }}
                 QTabBar::scroller {{

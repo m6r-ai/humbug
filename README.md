@@ -87,6 +87,8 @@ can be used to refine the Metaphor context.
 - All "hidden" files except for ".humbug" are now shown in the mindspace tree.
 - There are new icons on message boxes.
 - The conversation input box now has a submit icon.
+- If the content of any non-active wiki tabs changes the tab label will now turn purple to notify you that things have
+  been updated while you weren't looking.
 
 ## Features
 
