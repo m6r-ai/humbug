@@ -33,6 +33,7 @@ class ColorRole(Enum):
     TAB_INACTIVE = auto()               # Inactive tab text colour
     TAB_BACKGROUND_INACTIVE = auto()    # Inactive tab background
     TAB_BACKGROUND_HOVER = auto()       # Tab hover background
+    TAB_BACKGROUND_UPDATED = auto()     # Tab background when content updated
     TAB_BORDER_ACTIVE = auto()          # Active tab border
 
     # Button colours

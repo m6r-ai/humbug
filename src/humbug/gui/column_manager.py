@@ -189,7 +189,6 @@ class ColumnManager(QWidget):
         Args:
             tab: The tab widget to add
             title: Initial title for the tab
-            tool_tip: Tooltip text for the tab
 
         Returns:
             TabData instance for the tab
@@ -201,7 +200,21 @@ class ColumnManager(QWidget):
         data = TabData(tab, title, tool_tip)
         data.label.close_clicked.connect(lambda: self._close_tab_by_id(data.tab_id))
         tab.activated.connect(lambda: self._handle_tab_activated(tab))
+        tab.updated_state_changed.connect(self._handle_tab_updated)
+        tab.modified_state_changed.connect(self._handle_tab_modified)
         return data
+
+    def _handle_tab_updated(self, tab_id: str, is_updated: bool) -> None:
+        """
+        Update a tab's updated state.
+
+        Args:
+            tab_id: ID of the tab to update
+            is_updated: Whether the tab has updated content
+        """
+        label = self._tab_labels.get(tab_id)
+        if label:
+            label.set_updated(is_updated)
 
     def _remove_tab_from_column(self, tab: TabBase, column: ColumnWidget) -> None:
         """
@@ -516,7 +529,15 @@ class ColumnManager(QWidget):
 
             column_index = column.currentIndex()
             is_current = column_index != -1 and tab == column.widget(column_index)
-            label.set_current(is_current, is_current and column == self._active_column)
+            is_active_column = column == self._active_column
+            is_updated = tab.is_updated()
+
+            # If tab becomes current, clear its updated state
+            if is_current and is_updated:
+                tab.set_updated(False)
+                is_updated = False
+
+            label.set_current(is_current, is_active_column, is_updated)
 
         # Force style refresh to show active state
         self._handle_style_changed()

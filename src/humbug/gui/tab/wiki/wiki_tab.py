@@ -92,9 +92,8 @@ class WikiTab(TabBase):
     def _handle_content_refreshed(self) -> None:
         """Handle when wiki content has been refreshed due to file changes."""
         self._logger.debug("Wiki content refreshed for path: %s", self._path)
-        # Update status bar to reflect any changes
+        self.set_updated(True)
         self.update_status()
-        # Could add visual feedback here in the future (brief highlight, etc.)
 
     def _handle_file_deleted(self, deleted_path: str) -> None:
         """

@@ -31,6 +31,7 @@ class TabBase(QFrame):
 
     # Common signals that both conversation and editor tabs will need
     modified_state_changed = Signal(str, bool)  # Emits (tab_id, is_modified)
+    updated_state_changed = Signal(str, bool)   # Emits (tab_id, is_updated)
     status_message = Signal(StatusMessage)
     activated = Signal()  # Emits when tab is activated by user interaction
 
@@ -48,6 +49,7 @@ class TabBase(QFrame):
 
         self._tab_id = tab_id
         self._is_modified = False
+        self._is_updated = False
         self._path: str = ""
 
         # Set up activation tracking
@@ -82,6 +84,21 @@ class TabBase(QFrame):
         if modified != self._is_modified:
             self._is_modified = modified
             self.modified_state_changed.emit(self._tab_id, modified)
+
+    def is_updated(self) -> bool:
+        """Check if the tab's content has been updated since last viewed."""
+        return self._is_updated
+
+    def set_updated(self, updated: bool) -> None:
+        """
+        Update the updated state and emit signal if changed.
+
+        Args:
+            updated: Whether the tab content has been updated
+        """
+        if updated != self._is_updated:
+            self._is_updated = updated
+            self.updated_state_changed.emit(self._tab_id, updated)
 
     def path(self) -> str:
         """

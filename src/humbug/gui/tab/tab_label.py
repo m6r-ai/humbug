@@ -34,6 +34,7 @@ class TabLabel(QWidget):
         self._icon_name = icon_name
         self._is_current = False
         self._is_active_column = False
+        self._is_updated = False
         self._is_hovered = False
         self._style_manager = StyleManager()
         self._drag_start_pos: QPoint | None = None
@@ -216,22 +217,36 @@ class TabLabel(QWidget):
         self._is_hovered = is_hovered
         self._update_buttons()
 
+    def _get_background_color(self) -> ColorRole:
+        """Get the appropriate background color based on current state."""
+        if self._is_hovered:
+            return ColorRole.TAB_BACKGROUND_HOVER
+
+        if self._is_current:
+            return ColorRole.TAB_BACKGROUND_ACTIVE
+
+        if self._is_updated:
+            return ColorRole.TAB_BACKGROUND_UPDATED
+
+        return ColorRole.TAB_BACKGROUND_INACTIVE
+
     def _update_buttons(self) -> None:
-        """Update close button appearance based on current state."""
+        """Update tab type and close button appearance based on current state."""
         visible = self._is_current or self._is_hovered
 
         style_manager = StyleManager()
+        base_color = self._get_background_color()
+
+        type_style = f"""
+            QToolButton {{
+                border: none;
+                outline: none;
+                padding: 0px;
+                background: {style_manager.get_color_str(base_color)};
+            }}
+        """
+
         if visible:
-            base_color = (ColorRole.TAB_BACKGROUND_ACTIVE if self._is_current and not self._is_hovered
-                        else ColorRole.TAB_BACKGROUND_HOVER)
-            type_style = f"""
-                QToolButton {{
-                    border: none;
-                    outline: none;
-                    padding: 0px;
-                    background: {style_manager.get_color_str(base_color)};
-                }}
-            """
             close_style = f"""
                 QToolButton {{
                     border: none;
@@ -251,14 +266,6 @@ class TabLabel(QWidget):
             self._close_button.setToolTip("Close Tab")
 
         else:
-            type_style = f"""
-                QToolButton {{
-                    border: none;
-                    outline: none;
-                    padding: 0px;
-                    background: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                }}
-            """
             close_style = type_style
             self._type_button.setIcon(self._inactive_type_icon)
             self._close_button.setIcon(self._invisible_close_icon)
@@ -268,11 +275,36 @@ class TabLabel(QWidget):
         self._type_button.setStyleSheet(type_style)
         self._close_button.setStyleSheet(close_style)
 
-    def set_current(self, is_current: bool, is_active_column: bool) -> None:
-        """Update the current state of the tab."""
+    def set_current(self, is_current: bool, is_active_column: bool, is_updated: bool = False) -> None:
+        """
+        Update the current state of the tab.
+
+        Args:
+            is_current: Whether this tab is currently selected
+            is_active_column: Whether this tab is in the active column
+            is_updated: Whether this tab has updated content
+        """
         self._is_current = is_current
         self._is_active_column = is_active_column
+        self._is_updated = is_updated
+
+        # If tab becomes current, clear the updated state
+        if is_current:
+            self._is_updated = False
+
         self._update_buttons()
+
+    def set_updated(self, is_updated: bool) -> None:
+        """
+        Set the updated state of the tab.
+
+        Args:
+            is_updated: Whether this tab has updated content
+        """
+        # Don't show updated state if tab is currently selected
+        if not self._is_current:
+            self._is_updated = is_updated
+            self._update_buttons()
 
     def text(self) -> str:
         """
