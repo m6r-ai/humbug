@@ -19,6 +19,7 @@ from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.tab.editor.editor_tab import EditorTab
 from humbug.gui.tab.system.system_tab import SystemTab
 from humbug.gui.tab.wiki.wiki_tab import WikiTab
+from humbug.gui.tab.tab_bar import TabBar
 from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_label import TabLabel
 from humbug.gui.tab.tab_state import TabState
@@ -215,6 +216,8 @@ class ColumnManager(QWidget):
         label = self._tab_labels.get(tab_id)
         if label:
             label.set_updated(is_updated)
+
+        self._update_tabs()
 
     def _remove_tab_from_column(self, tab: TabBase, column: ColumnWidget) -> None:
         """
@@ -538,6 +541,12 @@ class ColumnManager(QWidget):
                 is_updated = False
 
             label.set_current(is_current, is_active_column, is_updated)
+
+            # Update the tab bar state for background painting
+            tab_index = column.indexOf(tab)
+            if tab_index != -1 and isinstance(column.tabBar(), TabBar):
+                tab_bar = cast(TabBar, column.tabBar())
+                tab_bar.set_tab_state(tab_index, is_current, is_updated, is_active_column)
 
         # Force style refresh to show active state
         self._handle_style_changed()
@@ -1448,24 +1457,17 @@ class ColumnManager(QWidget):
         """
         Handle style changes from StyleManager.
         """
+        # Apply simplified stylesheet since custom painting handles backgrounds
         for column in self._tab_columns:
-            selected_border = ColorRole.TAB_BORDER_ACTIVE if column == self._active_column else ColorRole.TAB_BACKGROUND_ACTIVE
-
             style = f"""
-                QTabBar::tab {{
-                    background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+                QTabBar {{
                     border: none;
                     margin: 0px;
-                    border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-                    border-bottom: 1px solid {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 }}
-                QTabBar::tab:selected {{
-                    background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                    border-top: 2px solid {self._style_manager.get_color_str(selected_border)};
-                    border-bottom: none;
-                }}
-                QTabBar::tab:hover {{
-                    background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
+                QTabBar::tab {{
+                    border: none;
+                    margin: 0px;
+                    padding: 0px;
                 }}
                 QTabBar::scroller {{
                     width: 20px;
@@ -1486,6 +1488,10 @@ class ColumnManager(QWidget):
                 }}
             """
             column.setStyleSheet(style)
+
+            # Trigger repaint of the tab bar to show updated colors
+            if isinstance(column.tabBar(), TabBar):
+                column.tabBar().update()
 
         # Update all tab labels, setting active state only for the current active tab.
         for tab_id, label in self._tab_labels.items():
