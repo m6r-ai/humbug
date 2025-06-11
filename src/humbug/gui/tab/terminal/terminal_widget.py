@@ -324,7 +324,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         super().mousePressEvent(event)
 
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # type: ignore[override]
         """Handle mouse release for both tracking and selection."""
         if event.button() & Qt.MouseButton.LeftButton:
             self._selecting = False
@@ -342,7 +342,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         super().mouseReleaseEvent(event)
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # type: ignore[override]
         """Handle mouse movement for selection and tracking."""
         # Handle text selection
         if self._selecting and self._selection is not None:
@@ -385,7 +385,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         super().mouseMoveEvent(event)
 
-    def wheelEvent(self, event: QWheelEvent) -> None:
+    def wheelEvent(self, event: QWheelEvent) -> None:  # type: ignore[override]
         """Handle mouse wheel scrolling."""
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Let parent handle if Control is pressed (e.g., for zoom)
@@ -402,7 +402,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         event.accept()
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # type: ignore[override]
         """Handle key press events including control sequences."""
         text = event.text()
         key = event.key()
@@ -551,6 +551,7 @@ class TerminalWidget(QAbstractScrollArea):
                 Qt.Key.Key_Home: b'\x1bOH',
                 Qt.Key.Key_End: b'\x1bOF',
             }
+
         else:
             cursor_map = {
                 Qt.Key.Key_Up: b'\x1b[A',
@@ -567,17 +568,25 @@ class TerminalWidget(QAbstractScrollArea):
             if modifiers & Qt.KeyboardModifier.ControlModifier:
                 if b'O' in base_seq:
                     mod_seq = base_seq.replace(b'O', b'[1;5')
+
                 else:
                     mod_seq = base_seq[:-1] + b';5' + base_seq[-1:]
+
                 self.data_ready.emit(mod_seq)
+
             elif modifiers & Qt.KeyboardModifier.ShiftModifier:
                 if b'O' in base_seq:
                     mod_seq = base_seq.replace(b'O', b'[1;2')
+
                 else:
                     mod_seq = base_seq[:-1] + b';2' + base_seq[-1:]
+
                 self.data_ready.emit(mod_seq)
+
             else:
+
                 self.data_ready.emit(base_seq)
+
             event.accept()
             return
 
@@ -605,7 +614,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         event.accept()
 
-    def paintEvent(self, event: QPaintEvent) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
         """Handle paint events efficiently with proper floating-point character metrics."""
         painter = QPainter(self.viewport())
         buffer = self._state.current_buffer()
