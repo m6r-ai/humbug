@@ -4,7 +4,7 @@ import sys
 from typing import cast, Dict
 
 from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize
-from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument, QIcon
+from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
 from PySide6.QtWidgets import QWidget, QToolButton
 
 from humbug.gui.color_role import ColorRole
