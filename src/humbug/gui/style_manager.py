@@ -161,8 +161,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#b8b8f8"
             },
             ColorRole.TAB_BACKGROUND_UPDATED: {
-                ColorMode.DARK: "#1a4a1a",
-                ColorMode.LIGHT: "#e8f5e8"
+                ColorMode.DARK: "#245424",
+                ColorMode.LIGHT: "#b8f8b8"
             },
             ColorRole.TAB_BORDER_ACTIVE: {
                 ColorMode.DARK: "#8080ff",

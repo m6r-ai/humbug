@@ -193,21 +193,14 @@ class WikiWidget(QWidget):
         # Update status if needed
         self.status_updated.emit()
 
-    def _register_file_watching(self) -> None:
+    def _register_file_watching(self, dependencies: Set[str]) -> None:
         """Register current path and any dependencies for file watching."""
-        try:
-            # Get all dependencies for the current path
-            dependencies = self._mindspace_wiki.get_content_dependencies(self._path)
-
-            # Register each dependency with the file watcher
-            for dep_path in dependencies:
-                if dep_path not in self._watched_paths:
-                    self._file_watcher.watch_file(dep_path, self._handle_file_changed)
-                    self._watched_paths.add(dep_path)
-                    self._logger.debug("Watching file: %s", dep_path)
-
-        except MindspaceWikiIOError as e:
-            self._logger.warning("Failed to register file watching for %s: %s", self._path, str(e))
+        # Register each dependency with the file watcher
+        for dep_path in dependencies:
+            if dep_path not in self._watched_paths:
+                self._file_watcher.watch_file(dep_path, self._handle_file_changed)
+                self._watched_paths.add(dep_path)
+                self._logger.debug("Watching file: %s", dep_path)
 
     def _unregister_file_watching(self) -> None:
         """Unregister all file watching for this widget."""
@@ -290,7 +283,7 @@ class WikiWidget(QWidget):
         if find_state['last_search']:
             # Re-run the search to restore highlights
             self._last_search = ""  # Reset to force re-search
-            current, total = self.find_text(find_state['last_search'], True)
+            _current, total = self.find_text(find_state['last_search'], True)
 
             # Try to restore the current match position
             if (find_state['current_widget_index'] >= 0 and
@@ -420,7 +413,7 @@ class WikiWidget(QWidget):
                 self._add_content_block(content_type, content)
 
             # Register file watching for all dependencies
-            self._register_file_watching()
+            self._register_file_watching(dependencies)
 
             # Ensure we're scrolled to the top
             self._auto_scroll = True

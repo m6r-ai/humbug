@@ -44,47 +44,25 @@ class MindspaceWiki:
         Raises:
             MindspaceWikiIOError: If the path cannot be read or does not exist
         """
-        try:
-            # Track dependencies - always include the main path
-            dependencies: Set[str] = {os.path.abspath(path)}
+        # Track dependencies - always include the main path
+        dependencies: Set[str] = {os.path.abspath(path)}
 
-            # Get file info
-            if not os.path.exists(path):
-                raise MindspaceWikiIOError(f"Path does not exist: {path}")
+        # Get file info
+        if not os.path.exists(path):
+            self._logger.error("Path does not exist: %s", path)
+            raise MindspaceWikiIOError(f"Path does not exist: {path}")
 
-            if os.path.isdir(path):
-                # Generate directory listing
-                content, dir_dependencies = self._generate_directory_content(path)
-                dependencies.update(dir_dependencies)
+        if os.path.isdir(path):
+            # Generate directory listing
+            content, dir_dependencies = self._generate_directory_content(path)
+            dependencies.update(dir_dependencies)
 
-            else:
-                # Source code or other file
-                content, file_dependencies = self._generate_file_content(path)
-                dependencies.update(file_dependencies)
+        else:
+            # Source code or other file
+            content, file_dependencies = self._generate_file_content(path)
+            dependencies.update(file_dependencies)
 
-            return content, dependencies
-
-        except Exception as e:
-            raise MindspaceWikiIOError(f"Failed to read wiki content: {str(e)}") from e
-
-    def get_content_dependencies(self, path: str) -> Set[str]:
-        """
-        Get all file dependencies for a given path without generating content.
-
-        Args:
-            path: Path to analyze for dependencies
-
-        Returns:
-            Set of absolute paths that this wiki page depends on
-
-        Raises:
-            MindspaceWikiIOError: If the path cannot be accessed
-        """
-        try:
-            _, dependencies = self.get_wiki_content(path)
-            return dependencies
-        except Exception as e:
-            raise MindspaceWikiIOError(f"Failed to get dependencies for {path}: {str(e)}") from e
+        return content, dependencies
 
     def _get_file_size_bytes(self, file_path: str) -> int:
         """
