@@ -923,6 +923,13 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'submit-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M8,32 L32,8 L56,32"/>
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M32,56 L32,8"/>
+                </svg>
+            ''')
+
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
 

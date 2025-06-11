@@ -1,15 +1,14 @@
 """Input widget that matches history message styling."""
 
 import sys
-from typing import Dict
+from typing import cast, Dict
 
-from PySide6.QtCore import Signal, Qt, QMimeData, QRect
-from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize
+from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument, QIcon
+from PySide6.QtWidgets import QWidget, QToolButton
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.tab.conversation.conversation_message import ConversationMessage
-from humbug.language.language_manager import LanguageManager
 
 
 class ConversationInput(ConversationMessage):
@@ -18,11 +17,13 @@ class ConversationInput(ConversationMessage):
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
     page_key_scroll_requested = Signal()
+    submit_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
         self._is_streaming = False
         self._current_model = ""
+        self._submit_button: QToolButton | None = None
         super().__init__(parent, is_input=True)
 
         # Connect text cursor signals
@@ -31,10 +32,17 @@ class ConversationInput(ConversationMessage):
         self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
-        self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        # Create submit button
+        self._submit_button = QToolButton(self)
+        self._submit_button.clicked.connect(self._submit_message)
+        self._header_layout.addWidget(self._submit_button)
+
+        # Connect text changes to update button state
+        self._text_area.textChanged.connect(self._update_submit_button_state)
 
         self._update_header_text()
+        self._handle_style_changed()
+        self._update_submit_button_state()
 
     def set_model(self, model: str) -> None:
         """Set the model name for the input prompt."""
@@ -45,10 +53,19 @@ class ConversationInput(ConversationMessage):
         """Handle language change event."""
         self._update_header_text()
 
+        # Update submit button tooltip
+        strings = self._language_manager.strings()
+        if self._submit_button is None:
+            return
+
+        submit_button = cast(QToolButton, self._submit_button)
+        submit_button.setToolTip(strings.tooltip_submit_message)
+
     def set_streaming(self, streaming: bool) -> None:
         """Update the streaming state and header text."""
         self._is_streaming = streaming
         self._update_header_text()
+        self._update_submit_button_state()
 
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
@@ -61,6 +78,42 @@ class ConversationInput(ConversationMessage):
         """Handle the style changing."""
         super()._handle_style_changed()
         self._set_role_style()
+
+        # Use the same button style pattern as other message action buttons
+        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
+        button_style = f"""
+            QToolButton {{
+                background-color: {background_color};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 0px;
+            }}
+            QToolButton:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QToolButton:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+            QToolButton:disabled {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: {background_color};
+            }}
+        """
+
+        # Apply icon and styling
+        icon_base_size = 14
+        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+
+        if self._submit_button is None:
+            return
+
+        submit_button = cast(QToolButton, self._submit_button)
+        submit_button.setIcon(QIcon(self._style_manager.scale_icon(
+            self._style_manager.get_icon_path("submit"), icon_base_size
+        )))
+        submit_button.setIconSize(icon_size)
+        submit_button.setStyleSheet(button_style)
 
     def _update_header_text(self) -> None:
         """Update the header text based on current state."""
@@ -88,23 +141,22 @@ class ConversationInput(ConversationMessage):
             }}
         """)
 
+    def _update_submit_button_state(self) -> None:
+        """Update submit button enabled state based on content and streaming status."""
+        has_content = bool(self.to_plain_text().strip())
+        can_submit = has_content and not self._is_streaming
+        submit_button = cast(QToolButton, self._submit_button)
+        submit_button.setEnabled(can_submit)
+
+    def _submit_message(self) -> None:
+        """Submit the current message via button click."""
+        self.submit_requested.emit()
+
     def _insert_from_mime_data(self, source: QMimeData) -> None:
         """Override default paste behavior to insert only plain text."""
         if source.hasText():
             cursor = self._text_area.textCursor()
             cursor.insertText(source.text())
-
-    def keyPressEvent(self, event: QKeyEvent) -> None:
-        """Handle special key events."""
-        if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            if not self._is_streaming:
-                text = self._text_area.toPlainText().strip()
-                if text:
-                    self.clear()
-
-                return
-
-        super().keyPressEvent(event)
 
     def clear(self) -> None:
         """Clear the input area."""

@@ -179,6 +179,7 @@ class ConversationWidget(QWidget):
         self._input.scrollRequested.connect(self._handle_selection_scroll)
         self._input.mouseReleased.connect(self._stop_scroll)
         self._input.forkRequested.connect(self._fork_from_message)
+        self._input.submit_requested.connect(self.submit)
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)

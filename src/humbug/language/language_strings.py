@@ -230,6 +230,7 @@ class LanguageStrings:
     tooltip_fork_message: str
     tooltip_delete_from_message: str
     tooltip_edit_file: str
+    tooltip_submit_message: str
 
     delete_from_here_title: str
     delete_from_here_message: str
