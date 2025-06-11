@@ -2,7 +2,6 @@
 
 import logging
 import os
-from datetime import datetime
 from typing import Dict, Set, Callable
 from dataclasses import dataclass
 
@@ -185,7 +184,7 @@ class MindspaceFileWatcher(QObject):
                         self._logger.debug("File modified: %s", file_path)
 
                     # Check if directory contents changed (for directories)
-                    elif (current_info.exists and current_info.is_dir and 
+                    elif (current_info.exists and current_info.is_dir and
                           current_info.dir_contents != old_info.dir_contents):
                         changed = True
                         self._logger.debug("Directory contents changed: %s", file_path)
@@ -203,14 +202,14 @@ class MindspaceFileWatcher(QObject):
                                 callback(file_path)
 
                             except Exception as e:
-                                self._logger.error("Error in file change callback for %s: %s", 
+                                self._logger.error("Error in file change callback for %s: %s",
                                                  file_path, str(e), exc_info=True)
 
                 except OSError as e:
                     self._logger.warning("Error checking file %s: %s", file_path, str(e))
 
                 except Exception as e:
-                    self._logger.error("Unexpected error checking file %s: %s", 
+                    self._logger.error("Unexpected error checking file %s: %s",
                                      file_path, str(e), exc_info=True)
 
         except Exception as e:
