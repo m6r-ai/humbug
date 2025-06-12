@@ -101,6 +101,11 @@ Context: Conversation tabs
             - Ctrl+End: Moves cursor to end of message
             - Page Up/Down: Scroll by viewport height
 
+        The input box has a button in the top right corner, next to the header label.  When the
+        user has typed a message but not yet submitted it, this button is a "submit" button that
+        will send the message to the AI.  When streaming a response back from the AI, this changes
+        to a stop icon that allows the message to be cancelled.
+
     Context: Selection behaviour
         Selection of text is limited to within a single message - it cannot span across multiple
         messages or between the input area and message history.
