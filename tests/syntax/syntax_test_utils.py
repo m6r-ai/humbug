@@ -33,6 +33,10 @@ def load_source_file(file_path: str) -> str:
 
     Returns:
         The contents of the source file
+
+    Raises:
+        FileNotFoundError: If the source file cannot be found
+        UnicodeDecodeError: If the file cannot be decoded as UTF-8
     """
     with open(file_path, 'r', encoding='utf-8') as f:
         return f.read()
@@ -122,10 +126,19 @@ def parse_and_compare(
     if parser is None:
         return False, f"No parser available for language: {language.name}"
 
-    # Load and parse the source
+    # Load and parse the source incrementally
     try:
         source_text = load_source_file(source_path)
-        parser_state = parser.parse(None, source_text)
+        lines = source_text.splitlines()
+
+        # Parse incrementally, line by line, maintaining state between calls
+        parser_state = None
+        for line_number, line in enumerate(lines, start=1):
+            try:
+                parser_state = parser.parse(parser_state, line)
+
+            except Exception as e:
+                return False, f"Error parsing line {line_number} in {source_path}: {str(e)}"
 
         # Extract tokens
         tokens = []
@@ -148,5 +161,12 @@ def parse_and_compare(
 
         return compare_token_data(actual_comparison, expected_comparison)
 
+    except FileNotFoundError as e:
+        return False, f"File not found: {source_path}"
+
+    except UnicodeDecodeError as e:
+        return False, f"Could not decode file as UTF-8: {source_path}"
+
     except Exception as e:
         return False, f"Error parsing {source_path}: {str(e)}"
+

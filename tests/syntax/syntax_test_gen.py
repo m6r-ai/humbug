@@ -15,7 +15,12 @@ from tests.syntax.syntax_test_serializer import save_tokens_to_json
 
 
 def main():
-    """Main entry point for the script."""
+    """
+    Main entry point for the script.
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
     parser = argparse.ArgumentParser(description='Generate test fixtures from source code files.')
     parser.add_argument('source_file', help='Path to the source code file')
     parser.add_argument('--output', '-o', help='Output JSON file (defaults to <source_file>.json)')
@@ -43,23 +48,30 @@ def main():
     try:
         with open(args.source_file, 'r', encoding='utf-8') as f:
             source_text = f.read()
-
     except FileNotFoundError:
         print(f"Error: File not found: {args.source_file}")
         return 1
-
     except UnicodeDecodeError:
         print(f"Error: Could not decode file as UTF-8: {args.source_file}")
         return 1
 
-    # Create parser and parse the source
+    # Create parser and parse the source incrementally
     parser_instance = ParserRegistry.create_parser(language)
     if parser_instance is None:
         print(f"Error: No parser available for language: {language.name}")
         return 1
 
     try:
-        parser_state = parser_instance.parse(None, source_text)
+        lines = source_text.splitlines()
+
+        # Parse incrementally, line by line, maintaining state between calls
+        parser_state = None
+        for line_number, line in enumerate(lines, start=1):
+            try:
+                parser_state = parser_instance.parse(parser_state, line)
+            except Exception as e:
+                print(f"Error parsing line {line_number} in {args.source_file}: {e}")
+                return 1
 
         # Extract tokens from parser
         tokens = []
@@ -76,7 +88,7 @@ def main():
         return 0
 
     except Exception as e:
-        print(f"Error parsing {args.source_file}: {e}")
+        print(f"Error processing {args.source_file}: {e}")
         return 1
 
 
