@@ -8,7 +8,8 @@ New features:
   and drop does).  Conversations open in a conversation tab.  If you double-click a file it opens in an editor.
 - All "hidden" files except for ".humbug" are now shown in the mindspace tree.
 - There are new icons on message boxes.
-- The conversation input box now has a submit icon.
+- The conversation input box now has a submit icon to submit new messages, and a stop icon to stop any current
+  message that is being sent by the AI
 - If the content of a non-active wiki tab changes, the tab label will now turn purple to notify you that things have
   been updated while you weren't looking.
 - If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you
