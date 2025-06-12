@@ -59,7 +59,7 @@ class EditorWidget(QPlainTextEdit):
         self._last_search = ""
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
-    def focusInEvent(self, event: QFocusEvent) -> None:
+    def focusInEvent(self, event: QFocusEvent) -> None:  # type: ignore[override]
         """Handle focus in event."""
         super().focusInEvent(event)
 
@@ -105,7 +105,7 @@ class EditorWidget(QPlainTextEdit):
         if rect.contains(self.viewport().rect()):
             self.update_line_number_area_width()
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
         """Handle resize events."""
         super().resizeEvent(event)
         cr = self.contentsRect()
@@ -380,7 +380,7 @@ class EditorWidget(QPlainTextEdit):
         cursor.setPosition(start if not reverse else end)
         cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # type: ignore[override]
         """
         Handle special key events.
 
