@@ -14,6 +14,7 @@ New features:
   been updated while you weren't looking.
 - If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you
   that things have been updated while you weren't looking.
+- Zooming now has finer-grained steps.
 
 Bug fixes:
 
