@@ -93,6 +93,7 @@ can be used to refine the Metaphor context.
 - If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you
   that things have been updated while you weren't looking.
 - Zooming now has finer-grained steps.
+- JSON syntax highlighting now differentiates keys from values.
 
 ## Features
 

@@ -36,6 +36,7 @@ class TokenType(IntEnum):
     GENERIC_METHOD = auto()
     GENERIC_START = auto()
     GENERIC_TYPE = auto()
+    JSON_KEY = auto()
     HASH = auto()
     HEADING = auto()
     HEX = auto()

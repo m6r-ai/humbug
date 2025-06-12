@@ -523,6 +523,7 @@ class StyleManager(QObject):
             TokenType.ITALIC: ColorRole.SYNTAX_09,
             TokenType.ITALIC_END: ColorRole.SYNTAX_07,
             TokenType.ITALIC_START: ColorRole.SYNTAX_07,
+            TokenType.JSON_KEY: ColorRole.SYNTAX_07,
             TokenType.KEYWORD: ColorRole.SYNTAX_13,
             TokenType.LANGUAGE: ColorRole.SYNTAX_14,
             TokenType.LIFETIME: ColorRole.SYNTAX_17,
