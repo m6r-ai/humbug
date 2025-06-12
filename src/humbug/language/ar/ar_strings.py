@@ -239,6 +239,7 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_delete_from_message="حذف المحادثة من هذه النقطة",
         tooltip_edit_file="تحرير هذا الملف",
         tooltip_submit_message="إرسال الرسالة",
+        tooltip_stop_message="إيقاف المعالجة الحالية",
 
         delete_from_here_title="حذف الرسائل",
         delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",

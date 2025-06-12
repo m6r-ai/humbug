@@ -239,6 +239,7 @@ def get_english_strings() -> LanguageStrings:
         tooltip_delete_from_message="Delete conversation from this point",
         tooltip_edit_file="Edit this file",
         tooltip_submit_message="Submit message",
+        tooltip_stop_message="Stop processing message",
 
         delete_from_here_title="Delete Messages",
         delete_from_here_message=(

@@ -938,6 +938,13 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'stop-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="28" fill="none" stroke="{color}" stroke-width="6"/>
+                    <rect x="20" y="20" width="24" height="24" fill="{color}" stroke="none"/>
+                </svg>
+            ''')
+
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
 

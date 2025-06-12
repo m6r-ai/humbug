@@ -183,6 +183,7 @@ class ConversationWidget(QWidget):
         self._input.mouseReleased.connect(self._stop_scroll)
         self._input.forkRequested.connect(self._fork_from_message)
         self._input.submit_requested.connect(self.submit)
+        self._input.stop_requested.connect(self._handle_stop_request)
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
@@ -1230,6 +1231,10 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop.create_task(ai_conversation.submit_message(message))
         loop.create_task(self.write_transcript(message))
+
+    def _handle_stop_request(self) -> None:
+        """Handle stop request from input widget."""
+        self.cancel_current_tasks()
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""
