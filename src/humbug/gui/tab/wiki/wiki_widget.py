@@ -738,6 +738,7 @@ class WikiWidget(QWidget):
             if forward:
                 self._current_widget_index = 0
                 self._current_match_index = 0
+
             else:
                 self._current_widget_index = len(self._matches) - 1
                 self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
@@ -752,6 +753,7 @@ class WikiWidget(QWidget):
                     # If we've reached the end of widgets, wrap around
                     if self._current_widget_index >= len(self._matches):
                         self._current_widget_index = 0
+
                     self._current_match_index = 0
 
             else:
@@ -762,23 +764,16 @@ class WikiWidget(QWidget):
                     # If we've reached the start of widgets, wrap around
                     if self._current_widget_index < 0:
                         self._current_widget_index = len(self._matches) - 1
+
                     self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
 
-        # Highlight all matches
         self._highlight_matches()
-
-        # Scroll to current match
         self._scroll_to_current_match()
-
-        # Return current match status
         return self.get_match_status()
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
         self._clear_highlights()
-
-        if not self._matches:
-            return
 
         # Get colors from style manager
         highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND)
@@ -800,18 +795,7 @@ class WikiWidget(QWidget):
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
 
-    def _scroll_to_current_match(self) -> None:
-        """Request scroll to ensure the current match is visible."""
-        if not self._matches:
-            return
-
-        widget, matches = self._matches[self._current_widget_index]
-        section_num, start, _ = matches[self._current_match_index]
-
-        # Trigger scrolling to this position
-        self.handle_find_scroll(widget, section_num, start)
-
-    def handle_find_scroll(self, widget: WikiContent, section_num: int, position: int) -> None:
+    def _handle_find_scroll(self, widget: WikiContent, section_num: int, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
@@ -838,6 +822,14 @@ class WikiWidget(QWidget):
             50   # ymargin - provide some context around the match
         )
 
+    def _scroll_to_current_match(self) -> None:
+        """Request scroll to ensure the current match is visible."""
+        widget, matches = self._matches[self._current_widget_index]
+        section_num, start, _ = matches[self._current_match_index]
+
+        # Trigger scrolling to this position
+        self._handle_find_scroll(widget, section_num, start)
+
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
         # Clear highlights from all tracked widgets
@@ -853,9 +845,6 @@ class WikiWidget(QWidget):
         Returns:
             Tuple of (current_match, total_matches)
         """
-        if not self._matches:
-            return 0, 0
-
         total_matches = sum(len(matches) for _, matches in self._matches)
         if self._current_widget_index == -1:
             return 0, total_matches

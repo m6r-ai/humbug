@@ -831,33 +831,6 @@ class ConversationWidget(QWidget):
             50
         )
 
-    def handle_find_scroll(self, widget: ConversationMessage, section_num: int, position: int) -> None:
-        """
-        Handle scroll requests from find operations.
-
-        Args:
-            widget: Widget to scroll to
-            section_num: Section number within the widget
-            position: Text position within the section
-        """
-        # Get position relative to the message widget
-        pos_in_message = widget.select_and_scroll_to_position(section_num, position)
-        if pos_in_message == QPoint(0, 0) and section_num > 0:
-            # Handle case where position wasn't found
-            return
-
-        # Map position from message widget to the scroll area's coordinate system
-        # This is safe because we know the relationship between these widgets
-        pos_in_scroll_area = widget.mapTo(self._scroll_area.widget(), pos_in_message)
-
-        # Ensure the point is visible in the scroll area
-        self._scroll_area.ensureVisible(
-            pos_in_scroll_area.x(),  # x
-            pos_in_scroll_area.y(),  # y
-            10,  # xmargin
-            50   # ymargin - provide some context around the match
-        )
-
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._input.set_plain_text(text)
@@ -1462,21 +1435,13 @@ class ConversationWidget(QWidget):
 
                     self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
 
-        # Highlight all matches
         self._highlight_matches()
-
-        # Scroll to current match
         self._scroll_to_current_match()
-
-        # Return current match status
         return self.get_match_status()
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
         self._clear_highlights()
-
-        if not self._matches:
-            return
 
         # Get colors from style manager
         highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND)
@@ -1498,16 +1463,40 @@ class ConversationWidget(QWidget):
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
 
-    def _scroll_to_current_match(self) -> None:
-        """Request scroll to ensure the current match is visible."""
-        if not self._matches:
+    def _handle_find_scroll(self, widget: ConversationMessage, section_num: int, position: int) -> None:
+        """
+        Handle scroll requests from find operations.
+
+        Args:
+            widget: Widget to scroll to
+            section_num: Section number within the widget
+            position: Text position within the section
+        """
+        # Get position relative to the message widget
+        pos_in_message = widget.select_and_scroll_to_position(section_num, position)
+        if pos_in_message == QPoint(0, 0) and section_num > 0:
+            # Handle case where position wasn't found
             return
 
+        # Map position from message widget to the scroll area's coordinate system
+        # This is safe because we know the relationship between these widgets
+        pos_in_scroll_area = widget.mapTo(self._scroll_area.widget(), pos_in_message)
+
+        # Ensure the point is visible in the scroll area
+        self._scroll_area.ensureVisible(
+            pos_in_scroll_area.x(),  # x
+            pos_in_scroll_area.y(),  # y
+            10,  # xmargin
+            50   # ymargin - provide some context around the match
+        )
+
+    def _scroll_to_current_match(self) -> None:
+        """Request scroll to ensure the current match is visible."""
         widget, matches = self._matches[self._current_widget_index]
         section_num, start, _ = matches[self._current_match_index]
 
         # Trigger scrolling to this position
-        self.handle_find_scroll(widget, section_num, start)
+        self._handle_find_scroll(widget, section_num, start)
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
@@ -1524,9 +1513,6 @@ class ConversationWidget(QWidget):
         Returns:
             Tuple of (current_match, total_matches)
         """
-        if not self._matches:
-            return 0, 0
-
         total_matches = sum(len(matches) for _, matches in self._matches)
         if self._current_widget_index == -1:
             return 0, total_matches

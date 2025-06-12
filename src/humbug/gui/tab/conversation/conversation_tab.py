@@ -420,6 +420,7 @@ class ConversationTab(TabBase):
             selected_text = self._conversation_widget.get_selected_text()
             if selected_text:
                 self._find_widget.set_search_text(selected_text)
+
             else:
                 self._find_widget.set_search_text("")
 

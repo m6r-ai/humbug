@@ -1205,20 +1205,17 @@ class TerminalWidget(QAbstractScrollArea):
         if self._current_match == -1:
             # First search - start at beginning or end depending on direction
             self._current_match = 0 if forward else len(self._matches) - 1
+
         else:
             # Move to next/previous match
             if forward:
                 self._current_match = (self._current_match + 1) % len(self._matches)
+
             else:
                 self._current_match = (self._current_match - 1) if self._current_match > 0 else len(self._matches) - 1
 
-        # Update current match status
         self._update_current_match()
-
-        # Update highlights
         self._update_highlights()
-
-        # Ensure current match is visible
         self._scroll_to_match()
 
     def _update_current_match(self) -> None:
@@ -1258,9 +1255,6 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _scroll_to_match(self) -> None:
         """Scroll to ensure the current match is visible."""
-        if not self._matches or self._current_match == -1:
-            return
-
         match = self._matches[self._current_match]
         self.scroll_to_match(match.row)
 

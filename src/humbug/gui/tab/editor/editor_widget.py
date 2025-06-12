@@ -583,9 +583,6 @@ class EditorWidget(QPlainTextEdit):
         Returns:
             Tuple of (current_match, total_matches)
         """
-        if not self._matches:
-            return 0, 0
-
         return self._current_match + 1, len(self._matches)
 
     def clear_find(self) -> None:

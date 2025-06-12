@@ -146,7 +146,7 @@ class FindWidget(QWidget):
         super().closeEvent(event)
         self.closed.emit()
 
-    def focusInEvent(self, _event: QFocusEvent) -> None:
+    def focusInEvent(self, _event: QFocusEvent) -> None:  # type: ignore[override]
         """Handle focus events."""
         self._search_input.setFocus()
         self._search_input.selectAll()
@@ -160,10 +160,11 @@ class FindWidget(QWidget):
                 current=self._current_match,
                 total=self._matches
             ))
-            self._status_label.show()
+
         else:
             self._status_label.setText(strings.find_no_matches)
-            self._status_label.show()
+
+        self._status_label.show()
 
         # Update button states
         self._prev_button.setEnabled(self._matches > 0)

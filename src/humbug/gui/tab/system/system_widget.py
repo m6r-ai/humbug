@@ -686,29 +686,6 @@ class SystemWidget(QWidget):
             50
         )
 
-    def handle_find_scroll(self, widget: SystemMessage, position: int) -> None:
-        """
-        Handle scroll requests from find operations.
-
-        Args:
-            widget: Widget to scroll to
-            position: Text position within the section
-        """
-        # Get position relative to the message widget
-        pos_in_message = widget.select_and_scroll_to_position(position)
-
-        # Map position from message widget to the scroll area's coordinate system
-        # This is safe because we know the relationship between these widgets
-        pos_in_scroll_area = widget.mapTo(self._scroll_area.widget(), pos_in_message)
-
-        # Ensure the point is visible in the scroll area
-        self._scroll_area.ensureVisible(
-            pos_in_scroll_area.x(),  # x
-            pos_in_scroll_area.y(),  # y
-            10,  # xmargin
-            50   # ymargin - provide some context around the match
-        )
-
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._input.set_plain_text(text)
@@ -959,21 +936,13 @@ class SystemWidget(QWidget):
 
                     self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
 
-        # Highlight all matches
         self._highlight_matches()
-
-        # Scroll to current match
         self._scroll_to_current_match()
-
-        # Return current match status
         return self.get_match_status()
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
         self._clear_highlights()
-
-        if not self._matches:
-            return
 
         # Highlight matches in each widget
         for widget_idx, (widget, matches) in enumerate(self._matches):
@@ -986,16 +955,36 @@ class SystemWidget(QWidget):
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
 
+    def _handle_find_scroll(self, widget: SystemMessage, position: int) -> None:
+        """
+        Handle scroll requests from find operations.
+
+        Args:
+            widget: Widget to scroll to
+            position: Text position within the section
+        """
+        # Get position relative to the message widget
+        pos_in_message = widget.select_and_scroll_to_position(position)
+
+        # Map position from message widget to the scroll area's coordinate system
+        # This is safe because we know the relationship between these widgets
+        pos_in_scroll_area = widget.mapTo(self._scroll_area.widget(), pos_in_message)
+
+        # Ensure the point is visible in the scroll area
+        self._scroll_area.ensureVisible(
+            pos_in_scroll_area.x(),  # x
+            pos_in_scroll_area.y(),  # y
+            10,  # xmargin
+            50   # ymargin - provide some context around the match
+        )
+
     def _scroll_to_current_match(self) -> None:
         """Request scroll to ensure the current match is visible."""
-        if not self._matches:
-            return
-
         widget, matches = self._matches[self._current_widget_index]
         start, _ = matches[self._current_match_index]
 
         # Trigger scrolling to this position
-        self.handle_find_scroll(widget, start)
+        self._handle_find_scroll(widget, start)
 
     def _clear_highlights(self) -> None:
         """Clear all highlights from all widgets."""
@@ -1019,9 +1008,6 @@ class SystemWidget(QWidget):
         Returns:
             Tuple of (current_match, total_matches)
         """
-        if not self._matches:
-            return 0, 0
-
         # Calculate total matches
         total_matches = sum(len(m[1]) for m in self._matches)
 
