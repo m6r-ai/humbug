@@ -174,11 +174,11 @@ class MainWindow(QMainWindow):
 
         self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
-        self._zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.189027))
+        self._zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.0800597))
 
         self._zoom_out_action = QAction(strings.zoom_out, self)
         self._zoom_out_action.setShortcut(QKeySequence("Ctrl+-"))
-        self._zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.189027))
+        self._zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.0800597))
 
         self._reset_zoom_action = QAction(strings.reset_zoom, self)
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
