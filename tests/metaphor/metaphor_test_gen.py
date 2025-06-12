@@ -4,9 +4,7 @@ Utility script to generate test fixtures from Metaphor files.
 """
 
 import argparse
-import os
 import sys
-from pathlib import Path
 
 from humbug.metaphor.metaphor_ast_builder import MetaphorASTBuilder
 from humbug.metaphor.metaphor_ast_node import MetaphorRootNode
@@ -36,7 +34,7 @@ def main():
     # Determine output file
     output_file = args.output
     if not output_file:
-        output_file = os.path.splitext(args.metaphor_file)[0] + '.json'
+        output_file = args.metaphor_file + '.json'
 
     # Parse the Metaphor file
     try:

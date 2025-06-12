@@ -8,9 +8,10 @@ import difflib
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
+from metaphor_ast_serializer import serialize_ast, load_ast_from_json
+
 from humbug.metaphor.metaphor_ast_builder import MetaphorASTBuilder
 from humbug.metaphor.metaphor_ast_node import MetaphorRootNode
-from metaphor_ast_serializer import serialize_ast, load_ast_from_json
 
 
 def get_test_fixtures_dir() -> Path:
@@ -52,10 +53,8 @@ def find_test_files() -> List[Tuple[str, str]]:
         for file in files:
             if file.endswith('.m6r'):
                 metaphor_path = os.path.join(root, file)
-                json_path = metaphor_path.replace('.m6r', '.json')
-
-                if os.path.exists(json_path):
-                    test_files.append((metaphor_path, json_path))
+                json_path = metaphor_path + '.json'
+                test_files.append((metaphor_path, json_path))
 
     return test_files
 

@@ -7,9 +7,10 @@ import difflib
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
+from syntax_test_serializer import serialize_tokens_and_state, load_tokens_from_json
+
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
-from syntax_test_serializer import serialize_tokens_and_state, load_tokens_from_json
 
 
 def get_test_fixtures_dir() -> Path:
@@ -58,7 +59,6 @@ def find_test_files() -> List[Tuple[str, str]]:
             _, ext = os.path.splitext(file)
             if ext.lower() in supported_extensions:
                 json_path = file_path + '.json'
-
                 if os.path.exists(json_path):
                     test_files.append((file_path, json_path))
 

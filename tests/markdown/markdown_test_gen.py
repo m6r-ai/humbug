@@ -3,9 +3,6 @@
 Utility script to generate test fixtures from markdown files.
 """
 import argparse
-import os
-import sys
-from pathlib import Path
 
 from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
 
@@ -29,7 +26,7 @@ def main():
     # Determine output file
     output_file = args.output
     if not output_file:
-        output_file = os.path.splitext(args.markdown_file)[0] + '.json'
+        output_file = args.markdown_file + '.json'
 
     # Parse the markdown
     with open(args.markdown_file, 'r', encoding='utf-8') as f:

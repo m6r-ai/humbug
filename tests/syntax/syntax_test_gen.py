@@ -3,8 +3,6 @@
 Utility script to generate test fixtures from source code files using the parser registry.
 """
 import argparse
-import os
-from pathlib import Path
 
 from humbug.syntax.parser_registry import ParserRegistry
 from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils

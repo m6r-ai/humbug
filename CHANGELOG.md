@@ -23,6 +23,10 @@ Bug fixes:
 - When creating a new file or folder, ensure the mindspace tree is scrolled to the new file/folder before
   attempting to edit the label.
 
+Internal structure changes:
+
+- Start to add syntax parser tests.
+
 ## v0.15 (2025-06-10)
 
 New features:

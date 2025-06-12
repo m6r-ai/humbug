@@ -7,8 +7,9 @@ from pathlib import Path
 import difflib
 from typing import Dict, Any, List, Tuple, Optional
 
-from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
 from markdown_ast_serializer import serialize_ast, load_ast_from_json
+
+from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
 
 
 def get_test_fixtures_dir() -> Path:
@@ -50,10 +51,8 @@ def find_test_files() -> List[Tuple[str, str]]:
         for file in files:
             if file.endswith('.md'):
                 md_path = os.path.join(root, file)
-                json_path = md_path.replace('.md', '.json')
-
-                if os.path.exists(json_path):
-                    test_files.append((md_path, json_path))
+                json_path = md_path + '.json'
+                test_files.append((md_path, json_path))
 
     return test_files
 
