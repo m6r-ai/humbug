@@ -311,6 +311,7 @@ class MindspaceFileTree(QWidget):
 
             self._logger.info("Cleaned up cancelled temporary %s: '%s'",
                             "folder" if is_folder else "file", temp_path)
+
         except OSError as e:
             self._logger.warning("Failed to clean up temporary %s '%s': %s",
                                "folder" if is_folder else "file", temp_path, str(e))
@@ -563,14 +564,16 @@ class MindspaceFileTree(QWidget):
         """
         # Find the item in the model
         source_index = self._fs_model.index(item_path)
-        if source_index.isValid():
-            filter_index = self._filter_model.mapFromSource(source_index)
-            if filter_index.isValid():
-                self._start_inline_edit(filter_index, select_extension)
-            else:
-                self._logger.warning("Filter index not valid for path: '%s'", item_path)
-        else:
+        if not source_index.isValid():
             self._logger.warning("Source index not valid for path: '%s'", item_path)
+            return
+
+        filter_index = self._filter_model.mapFromSource(source_index)
+        if not filter_index.isValid():
+            self._logger.warning("Filter index not valid for path: '%s'", item_path)
+            return
+
+        self._start_inline_edit(filter_index, select_extension)
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
@@ -846,6 +849,7 @@ class MindspaceFileTree(QWidget):
                     [MessageBoxButton.OK]
                 )
                 return
+
         except OSError as e:
             self._logger.error("Failed to check if folder '%s' is empty: %s", path, str(e))
             MessageBox.show_message(
@@ -884,6 +888,7 @@ class MindspaceFileTree(QWidget):
 
     def set_mindspace(self, path: str) -> None:
         """Set the mindspace root directory."""
+        self._tree_view.clear_directory_monitoring()
         self._mindspace_path = path
 
         if not path:
