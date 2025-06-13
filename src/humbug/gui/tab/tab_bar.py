@@ -21,6 +21,13 @@ class TabBar(QTabBar):
         self.installEventFilter(self)
         self._style_manager = StyleManager()
 
+    def update_tab_size(self) -> None:
+        """
+        Efficiently update the layout after a tab label is changed.
+        """
+        self.adjustSize()
+        self.updateGeometry()
+
     def set_tab_state(self, index: int, is_current: bool, is_updated: bool, is_active_column: bool) -> None:
         """
         Set the state for a tab to control its background painting.

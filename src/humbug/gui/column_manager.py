@@ -435,6 +435,24 @@ class ColumnManager(QWidget):
         except (ConversationError, OSError) as e:
             self._logger.exception("Failed to open dropped file '%s': %s", path, str(e))
 
+    def _update_tab_bar_for_label_change(self, tab_id: str) -> None:
+        """
+        Efficiently update the tab bar after a label text change.
+
+        Args:
+            tab_id: ID of the tab whose label changed
+        """
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return
+
+        column = self._find_column_for_tab(tab)
+        if column is None:
+            return
+
+        tab_bar = cast(TabBar, column.tabBar())
+        tab_bar.update_tab_size()
+
     def handle_file_rename(self, old_path: str, new_path: str) -> None:
         """Handle renaming of files by updating any open tabs.
 
@@ -456,9 +474,10 @@ class ColumnManager(QWidget):
 
                 # Update tab label text
                 new_title = os.path.splitext(os.path.basename(new_path))[0]
-                label = self._tab_labels[conversation_tab.tab_id()]
+                tab_id = conversation_tab.tab_id()
+                label = self._tab_labels[tab_id]
                 label.set_text(new_title)
-#                self.adjustSize()
+                self._update_tab_bar_for_label_change(tab_id)
 
         # Update any wiki tab for this file
         wiki_tab = self._find_wiki_tab_by_path(old_path)
@@ -467,9 +486,10 @@ class ColumnManager(QWidget):
 
             # Update tab label text
             new_title = os.path.basename(new_path)
-            label = self._tab_labels[wiki_tab.tab_id()]
+            tab_id = wiki_tab.tab_id()
+            label = self._tab_labels[tab_id]
             label.set_text(new_title)
-#            self.adjustSize()
+            self._update_tab_bar_for_label_change(tab_id)
 
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
@@ -812,7 +832,7 @@ class ColumnManager(QWidget):
             elif not modified and current_text.endswith('*'):
                 label.set_text(current_text[:-1])
 
-#            self.adjustSize()
+            self._update_tab_bar_for_label_change(tab_id)
 
     def current_tab_path(self) -> str:
         """
@@ -1729,11 +1749,10 @@ class ColumnManager(QWidget):
         if tab.is_modified():
             title += "*"
 
-        label = self._tab_labels.get(tab.tab_id())
+        tab_id = tab.tab_id()
+        label = self._tab_labels.get(tab_id)
         cast(TabLabel, label).set_text(title)
-
-        # Adjust size to fit new label text
-#        self.adjustSize()
+        self._update_tab_bar_for_label_change(tab_id)
 
     def can_show_all_columns(self) -> bool:
         """Check if all columns can be shown."""
