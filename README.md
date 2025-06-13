@@ -83,7 +83,10 @@ can be used to refine the Metaphor context.
 ## What's new in v0.16
 
 - When you click any non-conversation file in the mindspace tree it now opens it in the dynamic wiki view (just as drag
-  and drop does).  Conversations open in a conversation tab.  If you double-click a file it opens in an editor.
+  and drop does).  Conversations open in a conversation tab.  Tabs opened by a single click are ephemeral and will have
+  a different label colour and an italics tab label.  Ephemeral tabs will be replaced by the next new tab that is
+  opened, unless the user interacts with the tab (e.g. adding to a conversation).  Such interactions make the tab
+  become permanent.
 - All "hidden" files except for ".humbug" are now shown in the mindspace tree.
 - There are new icons on message boxes.
 - The conversation input box now has a submit icon to submit new messages, and a stop icon to stop any current

@@ -42,6 +42,7 @@ class TabData:
             tab: The tab widget
             title: Initial title for the tab
             tool_tip: Tooltip text for the tab
+            ephemeral: Whether the tab is ephemeral (temporary)
         """
         icon = ""
         if isinstance(tab, ConversationTab):
@@ -183,6 +184,22 @@ class ColumnManager(QWidget):
 
         return None
 
+    def _close_ephemeral_tab_in_column(self, column: ColumnWidget) -> None:
+        """Close any ephemeral tab in the specified column."""
+        for i in range(column.count()):
+            tab = cast(TabBase, column.widget(i))
+            if tab.is_ephemeral():
+                self._close_tab_by_id(tab.tab_id(), force_close=True)
+                break  # Only one ephemeral tab per column
+
+    def _make_tab_permanent(self, tab: TabBase) -> None:
+        """Convert an ephemeral tab to permanent."""
+        print("Making tab permanent:", tab.tab_id())
+        tab.set_ephemeral(False)
+        label = self._tab_labels.get(tab.tab_id())
+        if label:
+            label.set_ephemeral(False)
+
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
         Create TabData instance and connect signals.
@@ -252,6 +269,10 @@ class ColumnManager(QWidget):
         self._tabs[tab_data.tab_id] = tab_data.tab
         self._tab_labels[tab_data.tab_id] = tab_data.label
 
+        # Set ephemeral state on label if tab is ephemeral
+        if tab_data.tab.is_ephemeral():
+            tab_data.label.set_ephemeral(True)
+
         index = column.addTab(tab_data.tab, "")
         column.tabBar().setTabButton(index, QTabBar.ButtonPosition.LeftSide, tab_data.label)
         column.setCurrentWidget(tab_data.tab)
@@ -306,14 +327,15 @@ class ColumnManager(QWidget):
         # Handle the file drop
         ext = os.path.splitext(path)[1].lower()
         if ext == '.conv':
-            conversation_tab = self.open_conversation(path)
-            if conversation_tab:
-                self._stack.setCurrentWidget(self._columns_widget)
+            tab = self.open_conversation(path, False)
 
         else:
-            wiki_tab = self.open_wiki_page(path)
-            if wiki_tab:
-                self._stack.setCurrentWidget(self._columns_widget)
+            tab = self.open_wiki_page(path, False)
+
+        if tab is None:
+            return
+
+        self._stack.setCurrentWidget(self._columns_widget)
 
     def _handle_splitter_moved(self, _pos: int, _index: int) -> None:
         """Handle splitter movement and potential column merging."""
@@ -397,20 +419,18 @@ class ColumnManager(QWidget):
         try:
             if ext == '.conv':
                 # Open conversation file
-                conversation_tab = self.open_conversation(path)
-                if conversation_tab:
-                    # Move the tab to the target position if not already there
-                    current_index = target_column.indexOf(conversation_tab)
-                    if current_index != target_index:
-                        target_column.tabBar().moveTab(current_index, target_index)
+                tab = self.open_conversation(path, False)
 
             else:
-                wiki_tab = self.open_wiki_page(path)
-                if wiki_tab:
-                    # Move the tab to the target position if not already there
-                    current_index = target_column.indexOf(wiki_tab)
-                    if current_index != target_index:
-                        target_column.tabBar().moveTab(current_index, target_index)
+                tab = self.open_wiki_page(path, False)
+
+            if tab is None:
+                return
+
+            # Move the tab to the target position if not already there
+            current_index = target_column.indexOf(tab)
+            if current_index != target_index:
+                target_column.tabBar().moveTab(current_index, target_index)
 
         except (ConversationError, OSError) as e:
             self._logger.exception("Failed to open dropped file '%s': %s", path, str(e))
@@ -438,7 +458,7 @@ class ColumnManager(QWidget):
                 new_title = os.path.splitext(os.path.basename(new_path))[0]
                 label = self._tab_labels[conversation_tab.tab_id()]
                 label.set_text(new_title)
-                self.adjustSize()
+#                self.adjustSize()
 
         # Update any wiki tab for this file
         wiki_tab = self._find_wiki_tab_by_path(old_path)
@@ -449,7 +469,7 @@ class ColumnManager(QWidget):
             new_title = os.path.basename(new_path)
             label = self._tab_labels[wiki_tab.tab_id()]
             label.set_text(new_title)
-            self.adjustSize()
+#            self.adjustSize()
 
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
@@ -667,10 +687,13 @@ class ColumnManager(QWidget):
             tab: The tab widget to add
             title: Initial title for the tab
         """
-        tab_data = self._create_tab_data(tab, title)
-
         # Determine target column
         target_column = self._get_target_column_for_new_tab()
+
+        # Close ephemeral tab in target column before adding new tab
+        self._close_ephemeral_tab_in_column(target_column)
+
+        tab_data = self._create_tab_data(tab, title)
         self._add_tab_to_column(tab_data, target_column)
 
         # Set initial state
@@ -789,7 +812,7 @@ class ColumnManager(QWidget):
             elif not modified and current_text.endswith('*'):
                 label.set_text(current_text[:-1])
 
-            self.adjustSize()
+#            self.adjustSize()
 
     def current_tab_path(self) -> str:
         """
@@ -1047,7 +1070,6 @@ class ColumnManager(QWidget):
         """Create a new empty editor tab."""
         self._untitled_count += 1
         editor = EditorTab("", "", self._untitled_count, self)
-        editor.modified_state_changed.connect(self._handle_tab_modified)
         self._add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
 
@@ -1062,7 +1084,6 @@ class ColumnManager(QWidget):
             return existing_tab
 
         editor = EditorTab("", path, None, self)
-        editor.modified_state_changed.connect(self._handle_tab_modified)
         self._add_tab(editor, os.path.basename(path))
         return editor
 
@@ -1099,7 +1120,7 @@ class ColumnManager(QWidget):
         self._add_tab(conversation_tab, conversation_title)
         return conversation_tab.tab_id()
 
-    def open_conversation(self, path: str) -> ConversationTab | None:
+    def open_conversation(self, path: str, ephemeral: bool) -> ConversationTab | None:
         """Open an existing conversation file."""
         assert os.path.isabs(path), "Path must be absolute"
 
@@ -1115,6 +1136,7 @@ class ColumnManager(QWidget):
             conversation_tab.forkRequested.connect(self._fork_conversation)
             conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
+            conversation_tab.set_ephemeral(ephemeral)
             self._add_tab(conversation_tab, conversation_title)
             return conversation_tab
 
@@ -1223,7 +1245,18 @@ class ColumnManager(QWidget):
         self._add_tab(terminal, title)
         return terminal
 
-    def open_wiki_page(self, path: str) -> WikiTab:
+    def handle_wiki_link(self, path: str) -> WikiTab:
+        """
+        Handle a wiki link click.
+
+        Args:
+            path: Path to the wiki page
+        Returns:
+            The opened WikiTab
+        """
+        return self.open_wiki_page(path, True)
+
+    def open_wiki_page(self, path: str, ephemeral: bool) -> WikiTab:
         """Open a wiki page."""
         assert os.path.isabs(path), "Path must be absolute"
 
@@ -1245,8 +1278,9 @@ class ColumnManager(QWidget):
 
         try:
             wiki_tab = WikiTab.create_from_path(path_minus_anchor, self)
-            wiki_tab.open_wiki_path.connect(self.open_wiki_page)
+            wiki_tab.open_wiki_path.connect(self.handle_wiki_link)
             wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
+            wiki_tab.set_ephemeral(ephemeral)
             self._add_tab(wiki_tab, os.path.basename(path_minus_anchor))
 
             # If there's an anchor, scroll to it
@@ -1320,7 +1354,6 @@ class ColumnManager(QWidget):
 
             case TabType.EDITOR:
                 editor_tab = EditorTab.restore_from_state(state, self)
-                editor_tab.modified_state_changed.connect(self._handle_tab_modified)
                 return editor_tab
 
             case TabType.SYSTEM:
@@ -1331,7 +1364,7 @@ class ColumnManager(QWidget):
 
             case TabType.WIKI:
                 wiki_tab = WikiTab.restore_from_state(state, self)
-                wiki_tab.open_wiki_path.connect(self.open_wiki_page)
+                wiki_tab.open_wiki_path.connect(self.handle_wiki_link)
                 wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
                 return wiki_tab
 
@@ -1375,6 +1408,9 @@ class ColumnManager(QWidget):
                 tab = self._restore_tab_from_state(state)
                 if not tab:
                     continue
+
+                # Restore ephemeral state
+                tab.set_ephemeral(state.is_ephemeral)
 
                 self._active_column = self._tab_columns[column_index]
                 title = self._get_tab_title(tab, state)
@@ -1501,8 +1537,8 @@ class ColumnManager(QWidget):
             if tab_column is None:
                 continue
 
-            is_label_active = tab_column == self._active_column and tab == tab_column.currentWidget()
-            label.handle_style_changed(is_label_active)
+#            is_label_active = tab_column == self._active_column and tab == tab_column.currentWidget()
+            label.handle_style_changed()
 
         self._column_splitter.setStyleSheet(f"""
             QSplitter::handle {{
@@ -1697,7 +1733,7 @@ class ColumnManager(QWidget):
         cast(TabLabel, label).set_text(title)
 
         # Adjust size to fit new label text
-        self.adjustSize()
+#        self.adjustSize()
 
     def can_show_all_columns(self) -> bool:
         """Check if all columns can be shown."""

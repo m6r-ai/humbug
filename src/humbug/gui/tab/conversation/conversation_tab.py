@@ -187,7 +187,8 @@ class ConversationTab(TabBase):
             type=TabType.CONVERSATION,
             tab_id=self._tab_id,
             path=self._path,
-            metadata=metadata
+            metadata=metadata,
+            is_ephemeral=self._is_ephemeral
         )
 
     @classmethod
@@ -231,6 +232,8 @@ class ConversationTab(TabBase):
 
         use_existing_ai_conversation = bool(state.metadata and state.metadata.get('is_ephemeral'))
         tab = cls(state.tab_id, state.path, parent, use_existing_ai_conversation)
+        if state.is_ephemeral:
+            tab._is_ephemeral = True
 
         # Load conversation from transcript
         try:

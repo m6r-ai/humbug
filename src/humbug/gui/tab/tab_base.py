@@ -50,6 +50,7 @@ class TabBase(QFrame):
         self._tab_id = tab_id
         self._is_modified = False
         self._is_updated = False
+        self._is_ephemeral = False
         self._path: str = ""
 
         # Set up activation tracking
@@ -99,6 +100,14 @@ class TabBase(QFrame):
         if updated != self._is_updated:
             self._is_updated = updated
             self.updated_state_changed.emit(self._tab_id, updated)
+
+    def is_ephemeral(self) -> bool:
+        """Check if this tab is ephemeral (will be auto-closed)."""
+        return self._is_ephemeral
+
+    def set_ephemeral(self, ephemeral: bool) -> None:
+        """Set the ephemeral state of this tab."""
+        self._is_ephemeral = ephemeral
 
     def path(self) -> str:
         """

@@ -827,10 +827,10 @@ class MainWindow(QMainWindow):
         if os.path.isfile(path):
             ext = os.path.splitext(path)[1].lower()
             if ext == ".conv":
-                self._open_conversation_path(path)
+                self._open_conversation_path(path, True)
                 return
 
-        self._column_manager.open_wiki_page(path)
+        self._column_manager.open_wiki_page(path, True)
 
     def _handle_file_double_click(self, path: str) -> None:
         """Handle double click from the file tree."""
@@ -905,7 +905,7 @@ class MainWindow(QMainWindow):
 
     def _open_wiki(self) -> None:
         """Open the wiki page in a new tab."""
-        self._column_manager.open_wiki_page(self._mindspace_manager.get_absolute_path("."))
+        self._column_manager.open_wiki_page(self._mindspace_manager.get_absolute_path("."), False)
 
     def _show_system_shell(self) -> None:
         """Show the system tab."""
@@ -1084,13 +1084,14 @@ class MainWindow(QMainWindow):
             return
 
         self._mindspace_manager.update_conversations_directory(file_path)
-        self._open_conversation_path(file_path)
+        self._open_conversation_path(file_path, False)
 
-    def _open_conversation_path(self, path: str) -> None:
+    def _open_conversation_path(self, path: str, ephemeral: bool) -> ConversationTab | None:
         """Open an existing conversation file."""
         try:
-            self._column_manager.open_conversation(path)
+            tab = self._column_manager.open_conversation(path, ephemeral)
             self._file_tree.reveal_and_select_file(path)
+            return tab
 
         except ConversationError as e:
             self._logger.error("Error opening conversation: %s: %s", path, str(e))
@@ -1101,6 +1102,7 @@ class MainWindow(QMainWindow):
                 strings.conversation_error_title,
                 strings.error_opening_conversation.format(path, str(e))
             )
+            return None
 
     async def _fork_conversation_async(self) -> None:
         """Async helper for forking."""
@@ -1359,7 +1361,7 @@ class MainWindow(QMainWindow):
         self._column_manager.protect_current_tab(True)
 
         try:
-            self._column_manager.open_wiki_page(path)
+            self._column_manager.open_wiki_page(path, False)
             self._file_tree.reveal_and_select_file(path)
 
         finally:

@@ -36,6 +36,7 @@ class TabLabel(QWidget):
         self._is_active_column = False
         self._is_updated = False
         self._is_hovered = False
+        self._is_ephemeral = False
         self._style_manager = StyleManager()
         self._drag_start_pos: QPoint | None = None
 
@@ -49,7 +50,6 @@ class TabLabel(QWidget):
         self._layout.addWidget(self._type_button)
 
         self._label = QLabel(text)
-        self._label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._layout.addWidget(self._label)
 
         self._close_button = QToolButton()
@@ -58,8 +58,7 @@ class TabLabel(QWidget):
         self._close_button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._layout.addWidget(self._close_button)
 
-        self.handle_style_changed(False)
-
+        self.handle_style_changed()
         self.setMouseTracking(True)
 
     def _create_type_icon(self) -> QIcon:
@@ -103,17 +102,11 @@ class TabLabel(QWidget):
         transparent_pixmap.fill(Qt.GlobalColor.transparent)
         return QIcon(transparent_pixmap)
 
-    def handle_style_changed(self, is_active: bool) -> None:
+    def handle_style_changed(self) -> None:
         """
         Handle style changes from StyleManager.
-
-        Args:
-            is_active: Is this an active tab's label?
         """
-        colour = ColorRole.TEXT_PRIMARY if is_active else ColorRole.TAB_INACTIVE
-        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(colour)}")
-
-        self._update_font_size()
+        self._update_label()
 
         # Update close button size
         factor = self._style_manager.zoom_factor()
@@ -144,12 +137,21 @@ class TabLabel(QWidget):
 
         self.adjustSize()
 
-    def _update_font_size(self) -> None:
-        """Update the label font size based on current zoom factor."""
+    def _update_label(self) -> None:
+        """Update the label based on current zoom factor and whether it's for an ephemeral tab."""
+        show_active = self._is_current and self._is_active_column
+        if self._is_ephemeral:
+            colour = ColorRole.TEXT_EPHEMERAL if show_active else ColorRole.TEXT_EPHEMERAL_INACTIVE
+
+        else:
+            colour = ColorRole.TEXT_PRIMARY if show_active else ColorRole.TEXT_INACTIVE
+
+        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(colour)}")
         font = self._label.font()
         base_size = self._style_manager.base_font_size()
         scaled_size = base_size * self._style_manager.zoom_factor()
         font.setPointSizeF(scaled_size)
+        font.setItalic(self._is_ephemeral)
         self._label.setFont(font)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -216,6 +218,7 @@ class TabLabel(QWidget):
         """Handle updates to the hover state for the label."""
         self._is_hovered = is_hovered
         self._update_buttons()
+        self._update_label()
 
     def _get_background_color(self) -> ColorRole:
         """Get the appropriate background color based on current state."""
@@ -258,9 +261,10 @@ class TabLabel(QWidget):
                     background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
                 }}
             """
-            type_icon = self._type_icon if self._is_active_column else self._inactive_type_icon
+            show_active = self._is_current and self._is_active_column
+            type_icon = self._type_icon if show_active else self._inactive_type_icon
             self._type_button.setIcon(type_icon)
-            close_icon = self._visible_close_icon if self._is_active_column else self._visible_inactive_close_icon
+            close_icon = self._visible_close_icon if show_active else self._visible_inactive_close_icon
             self._close_button.setIcon(close_icon)
             self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self._close_button.setToolTip("Close Tab")
@@ -305,6 +309,16 @@ class TabLabel(QWidget):
         if not self._is_current:
             self._is_updated = is_updated
             self._update_buttons()
+
+    def set_ephemeral(self, is_ephemeral: bool) -> None:
+        """
+        Set the ephemeral state and update font styling.
+
+        Args:
+            is_ephemeral: Whether this tab is ephemeral
+        """
+        self._is_ephemeral = is_ephemeral
+        self._update_label()
 
     def text(self) -> str:
         """

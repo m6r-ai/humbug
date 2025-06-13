@@ -22,6 +22,9 @@ class ColorRole(Enum):
     TEXT_FOUND_DIM = auto()             # Dimmed found text background
     TEXT_RECOMMENDED = auto()           # Recommended text color
     TEXT_LINK = auto()                  # Link text color
+    TEXT_INACTIVE = auto()              # Inactive text colour
+    TEXT_EPHEMERAL = auto()             # Ephemeral text color
+    TEXT_EPHEMERAL_INACTIVE = auto()    # Inactive ephemeral text color
 
     # Edit box colours
     EDIT_BOX_BORDER = auto()            # Edit box border
@@ -31,7 +34,6 @@ class ColorRole(Enum):
     # Tab colours
     TAB_BAR_BACKGROUND = auto()         # Tab bar background
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background
-    TAB_INACTIVE = auto()               # Inactive tab text colour
     TAB_BACKGROUND_INACTIVE = auto()    # Inactive tab background
     TAB_BACKGROUND_HOVER = auto()       # Tab hover background
     TAB_BACKGROUND_UPDATED = auto()     # Tab background when content updated

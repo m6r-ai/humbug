@@ -189,7 +189,8 @@ class WikiTab(TabBase):
             type=TabType.WIKI,
             tab_id=self._tab_id,
             path=self._path,
-            metadata=metadata
+            metadata=metadata,
+            is_ephemeral=self._is_ephemeral
         )
 
     @classmethod
@@ -219,6 +220,8 @@ class WikiTab(TabBase):
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'WikiTab':
         """Create and restore a wiki tab from serialized state."""
         tab = cls(state.tab_id, state.path, parent)
+        if state.is_ephemeral:
+            tab._is_ephemeral = True
 
         # Load wiki content
         try:

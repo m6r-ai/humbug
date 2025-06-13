@@ -128,6 +128,18 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#80a0ff",
                 ColorMode.LIGHT: "#0000ff"
             },
+            ColorRole.TEXT_INACTIVE: {
+                ColorMode.DARK: "#909090",
+                ColorMode.LIGHT: "#707070"
+            },
+            ColorRole.TEXT_EPHEMERAL: {
+                ColorMode.DARK: "#e0a080",
+                ColorMode.LIGHT: "#a0785c"
+            },
+            ColorRole.TEXT_EPHEMERAL_INACTIVE: {
+                ColorMode.DARK: "#a06040",
+                ColorMode.LIGHT: "#c09070"
+            },
 
             # Edit box colours
             ColorRole.EDIT_BOX_BORDER: {
@@ -151,10 +163,6 @@ class StyleManager(QObject):
             ColorRole.TAB_BACKGROUND_ACTIVE: {
                 ColorMode.DARK: "#1e1e1e",
                 ColorMode.LIGHT: "#ffffff"
-            },
-            ColorRole.TAB_INACTIVE: {
-                ColorMode.DARK: "#909090",
-                ColorMode.LIGHT: "#707070"
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
                 ColorMode.DARK: "#141414",
@@ -791,7 +799,7 @@ class StyleManager(QObject):
         # Create collapsed and expanded arrows for both themes
         for mode in ColorMode:
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
-            inactive_color = self._colors[ColorRole.TEXT_DISABLED][mode]
+            inactive_color = self._colors[ColorRole.TEXT_INACTIVE][mode]
             suffix = mode.name.lower()
 
             # Right-pointing arrow

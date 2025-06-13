@@ -14,6 +14,7 @@ class TabState:
     horizontal_scroll: int | None = None
     vertical_scroll: int | None = None
     metadata: Dict[str, Any] | None = None
+    is_ephemeral: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the TabState to a JSON-serializable dictionary.

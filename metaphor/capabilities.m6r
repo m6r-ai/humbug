@@ -91,7 +91,9 @@ Context: Capabilities
             - Files and directories are sorted alphabetically within their sections
             - The tree supports keyboard navigation using arrow keys
             - Clicking on a file or folder opens it in a new wiki tab, unless the file
-              is a conversation file ("*.conv") in which case it is opened as a new conversation.
+              is a conversation file ("*.conv") in which case it is opened as a new conversation.  A tab
+              opened this way is marked "ephemeral" and has a different coloured label, plus text in
+              italics.  An ephemeral tab will be overwritten by the next new tab to be opened.
             - Dragging a file or folder into the tab column view opens it in a new wiki tab, unless the file is
               a conversation file ("*.conv") in which case it is opened as a new conversation.
             - Double-clicking on a file opens it in a new editor tab.
