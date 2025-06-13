@@ -79,6 +79,7 @@ class ConversationTab(TabBase):
         self._conversation_widget.status_updated.connect(self.update_status)
         self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
         self._conversation_widget.message_finished.connect(self.handle_message_finished)
+        self._conversation_widget.conversation_modified.connect(self.handle_conversation_modified)
         layout.addWidget(self._conversation_widget)
 
         # Install activation tracking
@@ -91,6 +92,10 @@ class ConversationTab(TabBase):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
+
+    def handle_conversation_modified(self) -> None:
+        """Handle when the conversation is modified."""
+        self._set_modified(True)
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""

@@ -18,7 +18,8 @@ class ConversationInput(ConversationMessage):
     cursorPositionChanged = Signal()
     page_key_scroll_requested = Signal()
     submit_requested = Signal()
-    stop_requested = Signal()  # NEW: Signal for stop button
+    stop_requested = Signal()
+    modified = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
@@ -39,7 +40,7 @@ class ConversationInput(ConversationMessage):
         self._header_layout.addWidget(self._submit_button)
 
         # Connect text changes to update button state
-        self._text_area.textChanged.connect(self._update_submit_button_state)
+        self._text_area.textChanged.connect(self._handle_text_changed)
 
         self._update_header_text()
         self._handle_style_changed()
@@ -156,6 +157,11 @@ class ConversationInput(ConversationMessage):
                 background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
         """)
+
+    def _handle_text_changed(self) -> None:
+        """Handle text changes in the input area."""
+        self._update_submit_button_state()
+        self.modified.emit()
 
     def _update_submit_button_state(self) -> None:
         """Update submit button enabled state, functionality, and tooltip based on content and streaming status."""

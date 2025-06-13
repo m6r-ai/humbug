@@ -102,6 +102,9 @@ class ConversationWidget(QWidget):
     # Emits when a message has finished processing
     message_finished = Signal()
 
+    # Emits when the conversation is modified by the user
+    conversation_modified = Signal()
+
     def __init__(
         self,
         path: str,
@@ -184,6 +187,7 @@ class ConversationWidget(QWidget):
         self._input.forkRequested.connect(self._fork_from_message)
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._handle_stop_request)
+        self._input.modified.connect(self.conversation_modified.emit)
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)

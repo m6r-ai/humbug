@@ -192,14 +192,6 @@ class ColumnManager(QWidget):
                 self._close_tab_by_id(tab.tab_id(), force_close=True)
                 break  # Only one ephemeral tab per column
 
-    def _make_tab_permanent(self, tab: TabBase) -> None:
-        """Convert an ephemeral tab to permanent."""
-        print("Making tab permanent:", tab.tab_id())
-        tab.set_ephemeral(False)
-        label = self._tab_labels.get(tab.tab_id())
-        if label:
-            label.set_ephemeral(False)
-
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
         """
         Create TabData instance and connect signals.
@@ -811,6 +803,14 @@ class ColumnManager(QWidget):
         self._update_mru_order(tab, column)
         self._update_tabs()
 
+    def _make_tab_permanent(self, tab: TabBase) -> None:
+        """Convert an ephemeral tab to permanent."""
+        print("Making tab permanent:", tab.tab_id())
+        tab.set_ephemeral(False)
+        label = self._tab_labels.get(tab.tab_id())
+        if label:
+            label.set_ephemeral(False)
+
     def _handle_tab_modified(self, tab_id: str, modified: bool) -> None:
         """
         Update a tab's modified state.
@@ -823,16 +823,23 @@ class ColumnManager(QWidget):
         if not tab:
             return
 
-        label = self._tab_labels.get(tab_id)
-        if label:
-            current_text = label.text()
-            if modified and not current_text.endswith('*'):
-                label.set_text(f"{current_text}*")
+        if isinstance(tab, ConversationTab):
+            if modified:
+                self._make_tab_permanent(tab)
 
-            elif not modified and current_text.endswith('*'):
-                label.set_text(current_text[:-1])
+            return
 
-            self._update_tab_bar_for_label_change(tab_id)
+        if isinstance(tab, EditorTab):
+            label = self._tab_labels.get(tab_id)
+            if label:
+                current_text = label.text()
+                if modified and not current_text.endswith('*'):
+                    label.set_text(f"{current_text}*")
+
+                elif not modified and current_text.endswith('*'):
+                    label.set_text(current_text[:-1])
+
+                self._update_tab_bar_for_label_change(tab_id)
 
     def current_tab_path(self) -> str:
         """
@@ -1429,7 +1436,6 @@ class ColumnManager(QWidget):
                 if not tab:
                     continue
 
-                # Restore ephemeral state
                 tab.set_ephemeral(state.is_ephemeral)
 
                 self._active_column = self._tab_columns[column_index]
