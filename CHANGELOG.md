@@ -27,6 +27,7 @@ Bug fixes:
   accidently remove the file extension when typing a new file name.
 - When creating a new file or folder, ensure the mindspace tree is scrolled to the new file/folder before
   attempting to edit the label.
+- Changing a tab label could cause a temporary glitch in the display.
 
 Internal structure changes:
 
