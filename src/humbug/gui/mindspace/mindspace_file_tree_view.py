@@ -7,8 +7,6 @@ from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer
 from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor
 
-from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
-
 
 class MindspaceFileTreeView(QTreeView):
     """Custom tree view with drag and drop support, auto-scroll, and inline editing."""
@@ -48,10 +46,6 @@ class MindspaceFileTreeView(QTreeView):
         self._min_scroll_speed = 2   # Minimum scroll speed
         self._max_scroll_speed = 10  # Maximum scroll speed
 
-        # Use file watcher for network filesystem support
-        self._file_watcher = MindspaceFileWatcher()
-        self._monitored_directories: set[str] = set()
-
         self.setHeaderHidden(True)
         self.setAnimated(True)
         self.header().setSortIndicator(0, Qt.SortOrder.AscendingOrder)
@@ -59,57 +53,6 @@ class MindspaceFileTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)
-
-        # Connect to expansion/collapse events
-        self.expanded.connect(self._handle_item_expanded)
-        self.collapsed.connect(self._handle_item_collapsed)
-
-    def _handle_item_expanded(self, index: QModelIndex) -> None:
-        """Handle when a directory is expanded - start monitoring it."""
-        dir_path = self.get_path_from_index(index)
-        if dir_path and os.path.isdir(dir_path) and dir_path not in self._monitored_directories:
-            self._file_watcher.watch_file(dir_path, self._handle_directory_changed)
-            self._monitored_directories.add(dir_path)
-
-    def _handle_item_collapsed(self, index: QModelIndex) -> None:
-        """Handle when a directory is collapsed - stop monitoring it."""
-        dir_path = self.get_path_from_index(index)
-        if dir_path and dir_path in self._monitored_directories:
-            self._file_watcher.unwatch_file(dir_path, self._handle_directory_changed)
-            self._monitored_directories.discard(dir_path)
-
-    def _handle_directory_changed(self, dir_path: str) -> None:
-        """Handle directory content changes by refreshing the model."""
-        source_model = cast(QSortFilterProxyModel, self.model())
-        if not source_model:
-            return
-
-        file_model = cast(QFileSystemModel, source_model.sourceModel())
-        if not file_model:
-            return
-
-        # Get the source index for the changed directory
-        source_index = file_model.index(dir_path)
-        if not source_index.isValid():
-            return
-
-        # Emit dataChanged signal to notify that this directory may have changed
-        bottom_right = file_model.index(
-            source_index.row(),
-            file_model.columnCount(source_index.parent()) - 1,
-            source_index.parent()
-        )
-        file_model.dataChanged.emit(source_index, bottom_right)
-
-        # Invalidate the filter model to ensure it updates
-        source_model.invalidateFilter()
-
-    def clear_directory_monitoring(self) -> None:
-        """Clear all directory monitoring when mindspace changes."""
-        for dir_path in self._monitored_directories.copy():
-            self._file_watcher.unwatch_file(dir_path, self._handle_directory_changed)
-
-        self._monitored_directories.clear()
 
     def notify_style_updated(self) -> None:
         """
