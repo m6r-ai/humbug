@@ -346,6 +346,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Create a new format based on the current one but with a monospace font
         code_format = QTextCharFormat(orig_char_format)
         code_format.setFontFamilies(self._style_manager.monospace_font_families())
+        code_format.setFontFixedPitch(True)
 
         # If we are inside a link, then keep the link color, otherwise set the code color
         if not node.parent or not isinstance(node.parent, MarkdownLinkNode):
@@ -599,6 +600,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Apply code formatting and insert text
         code_format = QTextCharFormat(orig_char_format)
         code_format.setFontFamilies(self._style_manager.monospace_font_families())
+        code_format.setFontFixedPitch(True)
         self._cursor.setCharFormat(code_format)
 
         # Split content by lines and add each in its own block
