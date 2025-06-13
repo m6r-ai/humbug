@@ -1,0 +1,11519 @@
+{
+  "source_file": "tests/syntax/fixtures/2025-06-13-002/test.ts",
+  "language": "TYPESCRIPT",
+  "tokens": [
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Various different namespaces that can be used in the DOM.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "svg",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "STRING",
+      "value": "'http://www.w3.org/2000/svg'",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "html",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 8
+    },
+    {
+      "type": "STRING",
+      "value": "'http://www.w3.org/1999/xhtml'",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "xml",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "STRING",
+      "value": "'http://www.w3.org/XML/1998/namespace'",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "xlink",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "STRING",
+      "value": "'http://www.w3.org/1999/xlink'",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "xmlns",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "STRING",
+      "value": "'http://www.w3.org/2000/xmlns/'",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Interface representing the attributes of a virtual DOM node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "interface",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Attributes",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "any",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Interface representing the attributes of an HTML virtual DOM node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "interface",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLAttributes",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Data attributes.",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "alt",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "'aria-label'",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "className",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "datetime",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "href",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "id",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "src",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "target",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "title",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Event attributes.",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "onclick",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "MouseEvent",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 35
+    },
+    {
+      "type": "KEYWORD",
+      "value": "void",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Interface representing the attributes of an SVG virtual DOM node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "interface",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "SVGAttributes",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Data attributes.",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cx",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cy",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "d",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 6
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fill",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "points",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 6
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "rx",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ry",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "stroke",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "STRING",
+      "value": "'stroke-linecap'",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 21
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "STRING",
+      "value": "'stroke-linejoin'",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "STRING",
+      "value": "'stroke-width'",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "viewBox",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "x",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 6
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "x1",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "x2",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "y",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 6
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "y1",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "y2",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "number",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "xmlns",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Class representing a virtual DOM node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "class",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parentVNode",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * Create a VNode node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     */",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "constructor",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 18
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "parentVNode",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Asserts that a given parameter is of type VNode.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * This function throws an error if the provided parameter is not an instance of VNode,",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * ensuring that it can be safely treated as a VNode in subsequent code.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {V} any - The parameter to check.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @throws {Error} Throws an error if the parameter is not a VNode.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "any",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 37
+    },
+    {
+      "type": "KEYWORD",
+      "value": "asserts",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 47
+    },
+    {
+      "type": "KEYWORD",
+      "value": "is",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 58
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "instanceof",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "throw",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "Error",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "STRING",
+      "value": "`Not a VNode: ${v}`",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Class representing a virtual DOM text node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "class",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VText",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "extends",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * Create a VText node",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param text - The text represented by the node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     */",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "constructor",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "super",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "text",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Type guard function to check if a given VNode is of type VText.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {VNode} vNode - The VNode to check.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @returns {vNode is VText} - Returns true if the vNode is an instance of VText, otherwise false.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 39
+    },
+    {
+      "type": "KEYWORD",
+      "value": "is",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VText",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 54
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "instanceof",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VText",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Asserts that a given VNode is of type VText.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * This function throws an error if the provided VNode is not an instance of VText,",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * ensuring that the VNode can be safely treated as a VText in subsequent code.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {VNode} vNode - The VNode to check.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @throws {Error} Throws an error if the VNode is not a VText.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVText",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 43
+    },
+    {
+      "type": "KEYWORD",
+      "value": "asserts",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 53
+    },
+    {
+      "type": "KEYWORD",
+      "value": "is",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VText",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 68
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "instanceof",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VText",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 35
+    },
+    {
+      "type": "KEYWORD",
+      "value": "throw",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "Error",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "STRING",
+      "value": "`Not a VText ${vNode}`",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Class representing a virtual DOM element node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "class",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VElement",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "extends",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 36
+    },
+    {
+      "type": "KEYWORD",
+      "value": "namespace",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Attributes",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 28
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "isMounted",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "boolean",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "mountCallback",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "void",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "unmountCallback",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "void",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 40
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * Create a VElement node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param namespace - The namespace for the matching DOM element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param type - The type of the node (e.g., 'div').",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param attrs - The attributes of the node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param childNodes - The child nodes of this node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     */",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "constructor",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "namespace",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 39
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 54
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Attributes",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 71
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 73
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 83
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 85
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 91
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 93
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 95
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 96
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 97
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 99
+    },
+    {
+      "type": "KEYWORD",
+      "value": "super",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "namespace",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "namespace",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "type",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "attrs",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 36
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "isMounted",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "false",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "mountCallback",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "unmountCallback",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * Append a child node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param vElement - The child node to append.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     */",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "appendChild",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "push",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "ELEMENT",
+      "value": "parentVNode",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * Remove a child node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param vNode - The child node to remove.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     */",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "removeChild",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "index",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 37
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "indexOf",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 52
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 30
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 41
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "slice",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 47
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "index",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 57
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "concat",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 64
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 69
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 80
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "slice",
+      "start": 81
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 86
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "index",
+      "start": 87
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 93
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 95
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 96
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 97
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 98
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "ELEMENT",
+      "value": "parentVNode",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * Replace an old child node with a new one.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param newVNode - The new child node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     * @param oldVNode - The old child node to replace.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "     */",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "replaceChild",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newVNode",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldVNode",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 51
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "index",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 37
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "indexOf",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldVNode",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 55
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "index",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newVNode",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newVNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "parentVNode",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldVNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "parentVNode",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Type guard function to check if a given VNode is of type VElement.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {VNode} vNode - The VNode to check.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @returns {vNode is VElement} - Returns true if the vNode is an instance of VElement, otherwise false.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVElement",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 42
+    },
+    {
+      "type": "KEYWORD",
+      "value": "is",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VElement",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 60
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "instanceof",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VElement",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Asserts that a given VNode is of type VElement.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * This function throws an error if the provided VNode is not an instance of VElement,",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * ensuring that the VNode can be safely treated as a VElement in subsequent code.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {VNode} vNode - The VNode to check.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @throws {Error} Throws an error if the VNode is not a VElement.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 46
+    },
+    {
+      "type": "KEYWORD",
+      "value": "asserts",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 56
+    },
+    {
+      "type": "KEYWORD",
+      "value": "is",
+      "start": 62
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VElement",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 74
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "instanceof",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VElement",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 38
+    },
+    {
+      "type": "KEYWORD",
+      "value": "throw",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "Error",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "STRING",
+      "value": "`Not a VElement ${vNode}`",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Mount a virtual DOM node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mountVNode",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 14
+    },
+    {
+      "type": "ELEMENT",
+      "value": "mountCallback",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 29
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "&&",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 48
+    },
+    {
+      "type": "ELEMENT",
+      "value": "isMounted",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mountCallback",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 9
+    },
+    {
+      "type": "ELEMENT",
+      "value": "isMounted",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "true",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "of",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 36
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mountVNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Unmount a virtual DOM node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unmountVNode",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 36
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 14
+    },
+    {
+      "type": "ELEMENT",
+      "value": "unmountCallback",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "&&",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 49
+    },
+    {
+      "type": "ELEMENT",
+      "value": "isMounted",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 61
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unmountCallback",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 9
+    },
+    {
+      "type": "ELEMENT",
+      "value": "isMounted",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "false",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "of",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 36
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unmountVNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Add an attribute to a DOM element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "newAttribute",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 50
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "value",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 65
+    },
+    {
+      "type": "KEYWORD",
+      "value": "any",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 72
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 11
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "startsWith",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 22
+    },
+    {
+      "type": "STRING",
+      "value": "'on'",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "addEventListener",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 39
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "substring",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 49
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "value",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 60
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "===",
+      "start": 12
+    },
+    {
+      "type": "STRING",
+      "value": "'className'",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "ELEMENT",
+      "value": "className",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "value",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 36
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "prefix",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "...",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "unqualifiedName",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 44
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "split",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 50
+    },
+    {
+      "type": "STRING",
+      "value": "':'",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 55
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ns",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "prefix",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "===",
+      "start": 15
+    },
+    {
+      "type": "STRING",
+      "value": "'xmlns'",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "||",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "unqualifiedName",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 45
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "&&",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 66
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "prefix",
+      "start": 67
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 74
+    },
+    {
+      "type": "KEYWORD",
+      "value": "keyof",
+      "start": 77
+    },
+    {
+      "type": "KEYWORD",
+      "value": "typeof",
+      "start": 83
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 100
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 101
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 103
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ns",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "prefix",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "keyof",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "typeof",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "setAttributeNS",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ns",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 37
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "String",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "value",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Remove an attribute from a DOM element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "deleteAttribute",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 53
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 61
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "value",
+      "start": 63
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 68
+    },
+    {
+      "type": "KEYWORD",
+      "value": "any",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 73
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 75
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 11
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "startsWith",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 22
+    },
+    {
+      "type": "STRING",
+      "value": "'on'",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "removeEventListener",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 42
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "substring",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 52
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "value",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 63
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 12
+    },
+    {
+      "type": "STRING",
+      "value": "'className'",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "ELEMENT",
+      "value": "className",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "STRING",
+      "value": "''",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "prefix",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "...",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "unqualifiedName",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 44
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "split",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 50
+    },
+    {
+      "type": "STRING",
+      "value": "':'",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 55
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ns",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "prefix",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "===",
+      "start": 15
+    },
+    {
+      "type": "STRING",
+      "value": "'xmlns'",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "||",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "unqualifiedName",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 45
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "&&",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 66
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "prefix",
+      "start": 67
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 74
+    },
+    {
+      "type": "KEYWORD",
+      "value": "keyof",
+      "start": 77
+    },
+    {
+      "type": "KEYWORD",
+      "value": "typeof",
+      "start": 83
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 100
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 101
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 103
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ns",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "prefix",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "keyof",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "typeof",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "removeAttributeNS",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ns",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Render a virtual DOM node into a real DOM node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "render",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Node",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 36
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "document",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 35
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "createTextNode",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 50
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 56
+    },
+    {
+      "type": "ELEMENT",
+      "value": "text",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 62
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "namespace",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 54
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "document",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 31
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "createElementNS",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 58
+    },
+    {
+      "type": "KEYWORD",
+      "value": "namespace",
+      "start": 59
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 69
+    },
+    {
+      "type": "KEYWORD",
+      "value": "keyof",
+      "start": 72
+    },
+    {
+      "type": "KEYWORD",
+      "value": "typeof",
+      "start": 78
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "namespaces",
+      "start": 85
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 95
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 96
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 98
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 102
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 104
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 107
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 118
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 9
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "newAttribute",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "len",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "len",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vn",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "appendChild",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 30
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "render",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vn",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Unrender a virtual DOM node.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unrender",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 49
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "len",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "len",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 21
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">=",
+      "start": 28
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "--",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 39
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vn",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "removeChild",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vn",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unrender",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vn",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "deleteAttribute",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 54
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 61
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 9
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Check if two virtual DOM nodes are different.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "changed",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode1",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode2",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 46
+    },
+    {
+      "type": "KEYWORD",
+      "value": "boolean",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 56
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Are our nodes of different types?",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode1",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 24
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode2",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 45
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "true",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Do we have 2 strings?  If we do then just compare them",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode1",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVText",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode2",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode1",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "ELEMENT",
+      "value": "text",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode2",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 37
+    },
+    {
+      "type": "ELEMENT",
+      "value": "text",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// We have two elements.",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode1",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode2",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode1",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 14
+    },
+    {
+      "type": "ELEMENT",
+      "value": "namespace",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode2",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 35
+    },
+    {
+      "type": "ELEMENT",
+      "value": "namespace",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 47
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "true",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode1",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 17
+    },
+    {
+      "type": "ELEMENT",
+      "value": "type",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vNode2",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 33
+    },
+    {
+      "type": "ELEMENT",
+      "value": "type",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Update the attributes of a DOM element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "updateAttributes",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldAttrs",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Attributes",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 71
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newAttrs",
+      "start": 73
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 81
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Attributes",
+      "start": 83
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 93
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 95
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Iterate over all the old attributes and remove any that are not in the new attributes.",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldAttrs",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 14
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newAttrs",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "||",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldAttrs",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newAttrs",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 61
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 69
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "deleteAttribute",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldAttrs",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Iterate over all the new attributes and add any that are not in the old attributes.",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newAttrs",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 14
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldAttrs",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "||",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldAttrs",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newAttrs",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 61
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 69
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "newAttribute",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "domElement",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newAttrs",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 50
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "key",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Update a DOM element based on differences between virtual DOM nodes.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "updateElement",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parent",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "child",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 56
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Node",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 63
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 69
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parentVNode",
+      "start": 71
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 82
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VElement",
+      "start": 84
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 93
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 95
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 99
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 101
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 114
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 116
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 122
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 124
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 128
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 130
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 143
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 145
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 151
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 153
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 157
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 159
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Did we add a new node?",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "===",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "&&",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 51
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 62
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parentVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parentVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "appendChild",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parent",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "appendChild",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 26
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "render",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 49
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mountVNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Did we remove an old node?",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!==",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "&&",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "===",
+      "start": 51
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 62
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unmountVNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unrender",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parentVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parentVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "removeChild",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parent",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "removeChild",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "child",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Node",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 41
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Did our node change?",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVNode",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVNode",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "changed",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 47
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unmountVNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "unrender",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parentVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parentVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "replaceChild",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 50
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parent",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "replaceChild",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "render",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "child",
+      "start": 51
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 57
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Node",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 64
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 65
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mountVNode",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// If this is a string VNode we can't have anything else to do.",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "isVText",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Our new VDOM node is the same as our old VDOM node we need to scan the children",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// and update them.  To keep things sane, don't forget we need to record DOM element",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// in the new VDOM node.",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "assertIsVElement",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 17
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 44
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 55
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "updateAttributes",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 34
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 35
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 75
+    },
+    {
+      "type": "ELEMENT",
+      "value": "attrs",
+      "start": 76
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 81
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 83
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 96
+    },
+    {
+      "type": "ELEMENT",
+      "value": "attrs",
+      "start": 97
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 102
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 103
+    },
+    {
+      "type": "COMMENT",
+      "value": "// We iterate backwards to remove any nodes to keep the child lists correct.",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldLen",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 30
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 41
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 48
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newLen",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 30
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 41
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 48
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldLen",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 24
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newLen",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 41
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "--",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 52
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 40
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 41
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 66
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "updateElement",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 44
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 73
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 88
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 89
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 99
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 100
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 101
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 102
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 104
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 108
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 109
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// We iterate forwards to update and add nodes.  At this point we already know our list of child nodes",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// cannot be longer than our list of new nodes (although they can be the same length).",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldLen",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newLen",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldLen",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newLen",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldLen",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 37
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 40
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 41
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 66
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "updateElement",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 25
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 25
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "COMMENT",
+      "value": "// We iterate forwards to update and add nodes.",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldLen",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newLen",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 42
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 40
+    },
+    {
+      "type": "ELEMENT",
+      "value": "domElement",
+      "start": 41
+    },
+    {
+      "type": "KEYWORD",
+      "value": "as",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLElement",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 66
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "updateElement",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "nextParent",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 44
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldChildVNode",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 73
+    },
+    {
+      "type": "KEYWORD",
+      "value": "null",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 79
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newChildVNode",
+      "start": 81
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 94
+    },
+    {
+      "type": "ELEMENT",
+      "value": "childNodes",
+      "start": 95
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 105
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 106
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 107
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 108
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 109
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Creates an HTML virtual DOM element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param type The element type.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param attrs The attributes of the element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param childNodes The child elements or strings.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @returns A virtual DOM element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "h",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "HTMLAttributes",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "...",
+      "start": 56
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 71
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 72
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 78
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 80
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 86
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 87
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 88
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 89
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 90
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VElement",
+      "start": 92
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 101
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "VElement",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "STRING",
+      "value": "'html'",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "||",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "of",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "typeof",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "===",
+      "start": 21
+    },
+    {
+      "type": "STRING",
+      "value": "'string'",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "appendChild",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 26
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "VText",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "appendChild",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Creates an SVG virtual DOM element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param type The element type.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param attrs The attributes of the element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param childNodes The child elements or strings.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @returns A virtual DOM element.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "export",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "svg",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "?",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "SVGAttributes",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": "...",
+      "start": 57
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 72
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VNode",
+      "start": 73
+    },
+    {
+      "type": "OPERATOR",
+      "value": "|",
+      "start": 79
+    },
+    {
+      "type": "KEYWORD",
+      "value": "string",
+      "start": 81
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 87
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 88
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 89
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 91
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "VElement",
+      "start": 93
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 102
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "VElement",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "STRING",
+      "value": "'svg'",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "type",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attrs",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "||",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 53
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "of",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "childNodes",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "typeof",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "===",
+      "start": 21
+    },
+    {
+      "type": "STRING",
+      "value": "'string'",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "appendChild",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 26
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "VText",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "appendChild",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "v",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "test",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "void",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 11
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "log",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "0x34fb3",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 23
+    },
+    {
+      "type": "NUMBER",
+      "value": "23n",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 28
+    },
+    {
+      "type": "NUMBER",
+      "value": "4.4431",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "NUMBER",
+      "value": "0b001111",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 46
+    },
+    {
+      "type": "NUMBER",
+      "value": "0o37623",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    }
+  ],
+  "parser_state": {
+    "parsing_continuation": false,
+    "continuation_state": 0,
+    "lexer_state": {
+      "in_block_comment": false
+    },
+    "in_element": false
+  }
+}

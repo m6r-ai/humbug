@@ -1,0 +1,2230 @@
+{
+  "source_file": "tests/syntax/fixtures/2025-06-13-001/test.html",
+  "language": "HTML",
+  "tokens": [
+    {
+      "type": "DOCTYPE",
+      "value": "<!DOCTYPE html>",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 0
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "html",
+      "start": 1
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "lang",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "STRING",
+      "value": "\"en\"",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 0
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "head",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "meta",
+      "start": 5
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "charset",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 17
+    },
+    {
+      "type": "STRING",
+      "value": "\"UTF-8\"",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "meta",
+      "start": 5
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "name",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "STRING",
+      "value": "\"viewport\"",
+      "start": 15
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "content",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 33
+    },
+    {
+      "type": "STRING",
+      "value": "\"width=device-width, initial-scale=1.0\"",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 73
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "title",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 10
+    },
+    {
+      "type": "TEXT",
+      "value": "Sample HTML Page",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 27
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/title",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "style",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "body ",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Arial",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sans-serif",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 28
+    },
+    {
+      "type": "HEX",
+      "value": "#f0f0f0",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "header",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "footer ",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 28
+    },
+    {
+      "type": "HEX",
+      "value": "#333",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "white",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-align",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "center",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "DIMENSION",
+      "value": "10px",
+      "start": 21
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "main ",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "DIMENSION",
+      "value": "20px",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".content ",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "white",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "DIMENSION",
+      "value": "20px",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-radius",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 25
+    },
+    {
+      "type": "DIMENSION",
+      "value": "5px",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "box-shadow",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 24
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 26
+    },
+    {
+      "type": "DIMENSION",
+      "value": "10px",
+      "start": 28
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "rgba",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 37
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 39
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 42
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 45
+    },
+    {
+      "type": "NUMBER",
+      "value": "0.1",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/style",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 0
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/head",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 0
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "body",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "header",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 8
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "h1",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 11
+    },
+    {
+      "type": "TEXT",
+      "value": "Welcome to My Sample Page",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 37
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/h1",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/header",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "hr/",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "bar",
+      "start": 5
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "axb",
+      "start": 9
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "sdc",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "kfd-f",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 23
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/bar",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "main",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 8
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "div",
+      "start": 9
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "class",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "STRING",
+      "value": "\"content\"",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 12
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "h2",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 15
+    },
+    {
+      "type": "TEXT",
+      "value": "About This Page",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 31
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/h2",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 12
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "p",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 14
+    },
+    {
+      "type": "TEXT",
+      "value": "This is a sample HTML page created to demonstrate basic HTML structure and embedded JavaScript.",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 110
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/p",
+      "start": 111
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 113
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 12
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "p",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 14
+    },
+    {
+      "type": "TEXT",
+      "value": "Below is a simple JavaScript example that interacts with this HTML page.",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 87
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/p",
+      "start": 88
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 12
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "button",
+      "start": 13
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "id",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "STRING",
+      "value": "\"myButton\"",
+      "start": 23
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "class",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 39
+    },
+    {
+      "type": "STRING",
+      "value": "\"btn\"",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 45
+    },
+    {
+      "type": "TEXT",
+      "value": "Click Me!",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 55
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/button",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 63
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 12
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "p",
+      "start": 13
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "id",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 17
+    },
+    {
+      "type": "STRING",
+      "value": "\"message\"",
+      "start": 18
+    },
+    {
+      "type": "HTML_ATTRIBUTE",
+      "value": "style",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 33
+    },
+    {
+      "type": "STRING",
+      "value": "\"color: green;\"",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 50
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/p",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 8
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/div",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/main",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "footer",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 8
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "p",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 10
+    },
+    {
+      "type": "TEXT",
+      "value": "&copy; 2024 Sample Page",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 34
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/p",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/footer",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "script",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "document",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "addEventListener",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 33
+    },
+    {
+      "type": "STRING",
+      "value": "'DOMContentLoaded'",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 52
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 63
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 65
+    },
+    {
+      "type": "KEYWORD",
+      "value": "var",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "document",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 33
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "getElementById",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 48
+    },
+    {
+      "type": "STRING",
+      "value": "'myButton'",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 60
+    },
+    {
+      "type": "KEYWORD",
+      "value": "var",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "message",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "document",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 34
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "getElementById",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 49
+    },
+    {
+      "type": "STRING",
+      "value": "'message'",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "addEventListener",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "STRING",
+      "value": "'click'",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 43
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 56
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "message",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "ELEMENT",
+      "value": "textContent",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 36
+    },
+    {
+      "type": "STRING",
+      "value": "'Button was clicked!'",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "ELEMENT",
+      "value": "style",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 28
+    },
+    {
+      "type": "ELEMENT",
+      "value": "backgroundColor",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 45
+    },
+    {
+      "type": "STRING",
+      "value": "'#4CAF50'",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 56
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "ELEMENT",
+      "value": "style",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 28
+    },
+    {
+      "type": "ELEMENT",
+      "value": "color",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 35
+    },
+    {
+      "type": "STRING",
+      "value": "'white'",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "updateTime",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "var",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "now",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 26
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "Date",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 36
+    },
+    {
+      "type": "KEYWORD",
+      "value": "var",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "timeString",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "now",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 36
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "getHours",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 48
+    },
+    {
+      "type": "STRING",
+      "value": "':'",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 54
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "now",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 59
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "getMinutes",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 71
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 73
+    },
+    {
+      "type": "STRING",
+      "value": "':'",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 79
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "now",
+      "start": 81
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 84
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "getSeconds",
+      "start": 85
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 95
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 96
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 97
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "message",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "ELEMENT",
+      "value": "textContent",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 36
+    },
+    {
+      "type": "STRING",
+      "value": "'Current time: '",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "timeString",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "setInterval",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "updateTime",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 34
+    },
+    {
+      "type": "NUMBER",
+      "value": "1000",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 41
+    },
+    {
+      "type": "KEYWORD",
+      "value": "var",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colors",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 25
+    },
+    {
+      "type": "STRING",
+      "value": "'red'",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "STRING",
+      "value": "'blue'",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 39
+    },
+    {
+      "type": "STRING",
+      "value": "'green'",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 48
+    },
+    {
+      "type": "STRING",
+      "value": "'yellow'",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 58
+    },
+    {
+      "type": "STRING",
+      "value": "'purple'",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 68
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 69
+    },
+    {
+      "type": "KEYWORD",
+      "value": "var",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "currentColorIndex",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 34
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "addEventListener",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "STRING",
+      "value": "'mouseover'",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 47
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "ELEMENT",
+      "value": "style",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 28
+    },
+    {
+      "type": "ELEMENT",
+      "value": "backgroundColor",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colors",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "currentColorIndex",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 71
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 72
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "currentColorIndex",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "currentColorIndex",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 55
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": "%",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colors",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 68
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "addEventListener",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "STRING",
+      "value": "'mouseout'",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 46
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "ELEMENT",
+      "value": "style",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 28
+    },
+    {
+      "type": "ELEMENT",
+      "value": "backgroundColor",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 45
+    },
+    {
+      "type": "STRING",
+      "value": "''",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "ELEMENT",
+      "value": "style",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 28
+    },
+    {
+      "type": "ELEMENT",
+      "value": "color",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 35
+    },
+    {
+      "type": "STRING",
+      "value": "''",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 4
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/script",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 0
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/body",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 0
+    },
+    {
+      "type": "HTML_TAG",
+      "value": "/html",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 6
+    }
+  ],
+  "parser_state": {
+    "parsing_continuation": false,
+    "continuation_state": 0
+  }
+}

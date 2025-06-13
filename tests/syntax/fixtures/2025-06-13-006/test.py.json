@@ -1,0 +1,6891 @@
+{
+  "source_file": "tests/syntax/fixtures/2025-06-13-006/test.py",
+  "language": "PYTHON",
+  "tokens": [
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "abc",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "abstractmethod",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "math",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "PySide6",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtGui",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtWidgets",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtCore",
+      "start": 38
+    },
+    {
+      "type": "KEYWORD",
+      "value": "class",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "SunburstOrgWidget",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtWidgets",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 33
+    },
+    {
+      "type": "ELEMENT",
+      "value": "QWidget",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 42
+    },
+    {
+      "type": "STRING",
+      "value": "\"\"\"",
+      "start": 4
+    },
+    {
+      "type": "STRING",
+      "value": "    A widget base class used to draw sunburst org charts.",
+      "start": 0
+    },
+    {
+      "type": "STRING",
+      "value": "    \"\"\"",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person_clicked",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtCore",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 27
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "Signal",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "int",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 38
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "__init__",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "->",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "None",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 30
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "super",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "__init__",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_locations",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_top_level_uen",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 28
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_uen",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_width",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_height",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "NUMBER",
+      "value": "20",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_zoom_factor",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "NUMBER",
+      "value": "1.0",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_unknown_colour",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 31
+    },
+    {
+      "type": "NUMBER",
+      "value": "0x40",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "NUMBER",
+      "value": "0x40",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 42
+    },
+    {
+      "type": "NUMBER",
+      "value": "0x40",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_highlighted_person",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 33
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "setMouseTracking",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "KEYWORD",
+      "value": "True",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_recurse_find_person",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "target_depth",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "target_angle",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 61
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_uen",
+      "start": 63
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 77
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "depth",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "start_angle",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "start_arc",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 59
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Work out which person corresponds to a specific depth in the org",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "# and an angle from the centre of the sunburst.",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "# If we've hit our target depth then we've found our person.",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "target_depth",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "depth",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_uen",
+      "start": 19
+    },
+    {
+      "type": "COMMENT",
+      "value": "# We need to traverse deeper, so work out which one of the current",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "# supervisor's direct reports covers the target angle we have.",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_person",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 32
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_uen",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "start_angle",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_person",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 34
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "get_direct_reports",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 58
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 67
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "p",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 20
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sf",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "p",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "get_supervisor_fraction",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 47
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sf",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "start_arc",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "target_angle",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">=",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "KEYWORD",
+      "value": "and",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "target_angle",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 66
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 68
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 71
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 72
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 73
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 27
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_recurse_find_person",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "target_depth",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "target_angle",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "depth",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 57
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 67
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 21
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_find_person_in_widget",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 41
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Given a pixel position, work out which person is shown at that location.",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "x",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "x",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "x",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 13
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "y",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "y",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 27
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "y",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 13
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Work out a position relative to the centre of the sunburst",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "w",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "x",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 20
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_width",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_height",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "y",
+      "start": 31
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Work out the depth of the org to which this click corresponds.",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "mag",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "math",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "sqrt",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "w",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "w",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "depth",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "int",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "mag",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 30
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 42
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Work out the angle of the click, relative to the centre of the",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "# sunburst.",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "#",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "# We have to jump through a few hoops to get the angle associated with",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "# the mouse position.",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 13
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "w",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">=",
+      "start": 17
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "NUMBER",
+      "value": "90",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 24
+    },
+    {
+      "type": "NUMBER",
+      "value": "90",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "math",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 24
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "atan",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "w",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 37
+    },
+    {
+      "type": "NUMBER",
+      "value": "180",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "math",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 49
+    },
+    {
+      "type": "ELEMENT",
+      "value": "pi",
+      "start": 50
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "w",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">=",
+      "start": 13
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 17
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "NUMBER",
+      "value": "180",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">=",
+      "start": 17
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "NUMBER",
+      "value": "360",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "NUMBER",
+      "value": "180",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 30
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Once we know where we're looking, go and find the person who was",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "# clicked.  If we don't find one then do nothing.",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_recurse_find_person",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "depth",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 59
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_uen",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 64
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 67
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 70
+    },
+    {
+      "type": "NUMBER",
+      "value": "360",
+      "start": 72
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 75
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_get_tool_tip",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 32
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "get_name",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 42
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_handle_tool_tip_event",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pos",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_find_person_in_widget",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 44
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtWidgets",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "ELEMENT",
+      "value": "QToolTip",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 30
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "hideText",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtWidgets",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "ELEMENT",
+      "value": "QToolTip",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 30
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "showText",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 45
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "globalPos",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 57
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 63
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_get_tool_tip",
+      "start": 64
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 77
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 78
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 84
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 85
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 87
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 91
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "True",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "event",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "e",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "e",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "type",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtCore",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 29
+    },
+    {
+      "type": "ELEMENT",
+      "value": "QEvent",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 36
+    },
+    {
+      "type": "ELEMENT",
+      "value": "Type",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 41
+    },
+    {
+      "type": "ELEMENT",
+      "value": "ToolTip",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 49
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_handle_tool_tip_event",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "e",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "super",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "event",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "e",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mousePressEvent",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtGui",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 42
+    },
+    {
+      "type": "ELEMENT",
+      "value": "QMouseEvent",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "->",
+      "start": 56
+    },
+    {
+      "type": "KEYWORD",
+      "value": "None",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 63
+    },
+    {
+      "type": "COMMENT",
+      "value": "# If this is anything but a left click then ignore it and let our",
+      "start": 8
+    },
+    {
+      "type": "COMMENT",
+      "value": "# parent window deal with it.",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "button",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!=",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtCore",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 35
+    },
+    {
+      "type": "ELEMENT",
+      "value": "Qt",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 38
+    },
+    {
+      "type": "ELEMENT",
+      "value": "LeftButton",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 17
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "ignore",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "accept",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "position",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_find_person_in_widget",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 44
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Generate a signal indidating that a specific person was clicked.",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "person_clicked",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 27
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "emit",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mouseMoveEvent",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtGui",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 41
+    },
+    {
+      "type": "ELEMENT",
+      "value": "QMouseEvent",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "->",
+      "start": 55
+    },
+    {
+      "type": "KEYWORD",
+      "value": "None",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 62
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pos",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_find_person_in_widget",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 44
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pos",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 25
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_highlighted_person",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_highlighted_person",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "person",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "update",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "super",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mouseMoveEvent",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 43
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "leaveEvent",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtCore",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 38
+    },
+    {
+      "type": "ELEMENT",
+      "value": "QEvent",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "->",
+      "start": 47
+    },
+    {
+      "type": "KEYWORD",
+      "value": "None",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 54
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_highlighted_person",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!=",
+      "start": 36
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_highlighted_person",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 37
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "update",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "super",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "leaveEvent",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "event",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_scan_depth",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "org_depth",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 24
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 44
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "get_org_depth",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 63
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 64
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 71
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 41
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "get_direct_reports",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 65
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 73
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 74
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "d",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 20
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_scan_depth",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "d",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "org_depth",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "org_depth",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "d",
+      "start": 28
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "org_depth",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "@",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "abstractmethod",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_get_brush_colour",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 36
+    },
+    {
+      "type": "KEYWORD",
+      "value": "pass",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_setup_brush",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colour",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_get_brush_colour",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 43
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_highlighted_person",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 42
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_unknown_colour",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 35
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 45
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_unknown_colour",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 61
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 63
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">=",
+      "start": 65
+    },
+    {
+      "type": "NUMBER",
+      "value": "0xc0",
+      "start": 68
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 72
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colour",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 25
+    },
+    {
+      "type": "NUMBER",
+      "value": "0xff",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "NUMBER",
+      "value": "0xff",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "NUMBER",
+      "value": "0xff",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 42
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colour",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 25
+    },
+    {
+      "type": "NUMBER",
+      "value": "0x30",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "NUMBER",
+      "value": "0x30",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "NUMBER",
+      "value": "0x30",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "brush",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtGui",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "QBrush",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtGui",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 34
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "QColor",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colour",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 48
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 51
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colour",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 59
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 62
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colour",
+      "start": 64
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 70
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 71
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 72
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 73
+    },
+    {
+      "type": "NUMBER",
+      "value": "0xff",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 79
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 80
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "setBrush",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "brush",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_recurse_draw_widget",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_uen",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "depth",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 65
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "start_angle",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 78
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "start_arc",
+      "start": 80
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 89
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 90
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_person",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 32
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_uen",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "start_angle",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "in",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "supervisor_person",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 34
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "get_direct_reports",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 58
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 67
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "depth",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 28
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 39
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "p",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 20
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sf",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "p",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "get_supervisor_fraction",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 47
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sf",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "start_arc",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_recurse_draw_widget",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "depth",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 56
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 66
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 68
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 71
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_setup_brush",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "COMMENT",
+      "value": "# If our arc is less than a full circle then we're drawing a pie",
+      "start": 12
+    },
+    {
+      "type": "COMMENT",
+      "value": "# segment, but if it's a full circle then draw it as an ellipse",
+      "start": 12
+    },
+    {
+      "type": "COMMENT",
+      "value": "# so we don't end up drawing a chord.",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 19
+    },
+    {
+      "type": "NUMBER",
+      "value": "359.9999",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "drawPie",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 36
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 52
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_width",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 64
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 72
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 36
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 52
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_height",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 65
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 73
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 39
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 51
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "NUMBER",
+      "value": "90",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 45
+    },
+    {
+      "type": "NUMBER",
+      "value": "16",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 51
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 56
+    },
+    {
+      "type": "NUMBER",
+      "value": "16",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 60
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "drawEllipse",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 40
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 50
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 56
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_width",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 68
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 76
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 40
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 50
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 56
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_height",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 69
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 71
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 77
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 43
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "radius",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 55
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "angle",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arc",
+      "start": 21
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_draw_widget",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 35
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "len",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 29
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Recursively draw the outer layers of the org chart.",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_recurse_draw_widget",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 47
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_uen",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 52
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 55
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 58
+    },
+    {
+      "type": "NUMBER",
+      "value": "360",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 63
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Then draw the inner-most node.",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_setup_brush",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 39
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_uen",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 44
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "painter",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "drawEllipse",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 32
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_width",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 44
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 50
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 62
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 32
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_height",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 51
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 63
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 29
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 38
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 51
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "paintEvent",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "_",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "qp",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "QtGui",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "QPainter",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "qp",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 10
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "begin",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_draw_widget",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "qp",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "qp",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 10
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "end",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "set_locations",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "locations",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_locations",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "locations",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "set_people",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "people",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "top_level_uen",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "people",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_top_level_uen",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "top_level_uen",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_set_sizing",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_uen",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen_org_depth",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 28
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 41
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "get_org_depth",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 60
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_people",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 68
+    },
+    {
+      "type": "COMMENT",
+      "value": "# Work out how many layers deep the org goes.",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max_org_depth",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 28
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_scan_depth",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 45
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_top_level_uen",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "view_depth",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 25
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_scan_depth",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "int",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 30
+    },
+    {
+      "type": "NUMBER",
+      "value": "60",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 40
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_zoom_factor",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_width",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 30
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max_org_depth",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 60
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 63
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_height",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 31
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_ring_width",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "view_depth",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen_org_depth",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 74
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 76
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 77
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "setMinimumSize",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 21
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 37
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_width",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 50
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 53
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 64
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_spacing",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 74
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 76
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 80
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_max_height",
+      "start": 81
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 92
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 94
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 96
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "update",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "set_uen",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_uen",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "uen",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_set_sizing",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "set_zoom",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "zoom_factor",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_zoom_factor",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "zoom_factor",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "_set_sizing",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "def",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "set_unknown_colour",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colour",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "self",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "_unknown_colour",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "colour",
+      "start": 31
+    }
+  ],
+  "parser_state": {
+    "parsing_continuation": false,
+    "continuation_state": 0,
+    "in_element": false
+  }
+}

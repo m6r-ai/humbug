@@ -1,0 +1,8360 @@
+{
+  "source_file": "tests/syntax/fixtures/2025-06-13-004/test.css",
+  "language": "CSS",
+  "tokens": [
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Correct the line height in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Prevent adjustments of font size after orientation changes in iOS.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "html ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "line-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "1.15",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-text-size-adjust",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 28
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Remove the margin in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "body ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Render the `main` element consistently in IE.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "main ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Correct the font size and margin on `h1` elements within `section` and",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * `article` contexts in Chrome, Firefox, and Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h1 ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "2em",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.67em",
+      "start": 12
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Add the correct box sizing in Firefox.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Show the overflow in Edge and IE.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "hr ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "box-sizing",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "content-box",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "overflow",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "visible",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Correct the inheritance and scaling of font size in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Correct the odd `em` font sizing in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pre ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "monospace",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "monospace",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 37
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1em",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* Text-level semantics",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "   ========================================================================== */",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Remove the gray background on active links in IE 10.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "a ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "transparent",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Remove the bottom border in Chrome 57-",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Add the correct text decoration in Chrome, Edge, IE, Opera, and Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "abbr[title] ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-bottom",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-decoration",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "underline",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-decoration",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "underline dotted",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 37
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Add the correct font weight in Chrome, Edge, and Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "strong ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-weight",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bolder",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Correct the inheritance and scaling of font size in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Correct the odd `em` font sizing in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "code",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "kbd",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "samp ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "monospace",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "monospace",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 37
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1em",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Add the correct font size in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "small ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "80%",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Prevent `sub` and `sup` elements from affecting the line height in",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sub",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sup ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "75%",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "line-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "position",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "relative",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vertical-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "baseline",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sub ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bottom",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "-0.25em",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sup ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "DIMENSION",
+      "value": "-0.5em",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Remove the border on images inside links in IE 10.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "img ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-style",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Change the font styles in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Remove the margin in Firefox and Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "input",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "optgroup",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "select",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "textarea ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "inherit",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "line-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "1.15",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Show the overflow in IE.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Show the overflow in Edge.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "input ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 6
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "overflow",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "visible",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Remove the inheritance of text transform in Edge, Firefox, and IE.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Remove the inheritance of text transform in Firefox.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "select ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 7
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-transform",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Correct the inability to style clickable types in iOS and Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"button\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"reset\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"submit\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-appearance",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Remove the inner border and padding in Firefox.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-moz-focus-inner",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"button\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-moz-focus-inner",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"reset\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-moz-focus-inner",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"submit\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-moz-focus-inner ",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-style",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Restore the focus styles unset by the previous rule.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-moz-focusring",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"button\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-moz-focusring",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"reset\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-moz-focusring",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"submit\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-moz-focusring ",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outline",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "dotted ButtonText",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Correct the padding in Firefox.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fieldset ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.35em",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.75em",
+      "start": 20
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.625em",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Correct the text wrapping in Edge and IE.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Correct the color inheritance from `fieldset` elements in IE.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 3. Remove the padding so developers are not caught out when they zero out",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *    `fieldset` elements in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "legend ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "box-sizing",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-box",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "inherit",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "table",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 3 */",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "white-space",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "normal",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Add the correct vertical alignment in Chrome, Firefox, and Opera.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "progress ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "vertical-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "baseline",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Remove the default vertical scrollbar in IE 10+.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "textarea ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "overflow",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "auto",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Add the correct box sizing in IE 10.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Remove the padding in IE 10.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"checkbox\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"radio\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "box-sizing",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-box",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Correct the cursor style of increment and decrement buttons in Chrome.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"number\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-inner-spin-button",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"number\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-outer-spin-button ",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "auto",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Correct the odd appearance in Chrome and Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Correct the outline style in Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"search\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-appearance",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "textfield",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outline-offset",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 18
+    },
+    {
+      "type": "DIMENSION",
+      "value": "-2px",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Remove the inner padding in Chrome and Safari on macOS.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type=",
+      "start": 1
+    },
+    {
+      "type": "STRING",
+      "value": "\"search\"",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-search-decoration ",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-appearance",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 1. Correct the inability to style clickable types in iOS and Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * 2. Change font properties to `inherit` in Safari.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-file-upload-button ",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "-webkit-appearance",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "button",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 1 */",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "inherit",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* 2 */",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/* Interactive",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "   ========================================================================== */",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Add the correct display in Edge, IE 10+, and Firefox.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "details ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Add the correct display in all browsers.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "summary ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "list-item",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Add the correct display in IE 10+.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "template ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Add the correct display in IE 10.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "hidden] ",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Dave's CSS.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "CSS_AT_RULE",
+      "value": "@font-face",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "STRING",
+      "value": "'Lalezar'",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "src",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "url",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'/fonts/Lalezar-Regular.woff2'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 42
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "format",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 50
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "woff2",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 57
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "url",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'/fonts/Lalezar-Regular.woff'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 41
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "format",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "woff",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 55
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "url",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'/fonts/Lalezar-Regular.ttf'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "format",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ttf",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "swap",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "CSS_AT_RULE",
+      "value": "@font-face",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "STRING",
+      "value": "'Open Sans'",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "src",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "url",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'/fonts/OpenSans-VariableFont.woff2'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "format",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 56
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "woff2",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 63
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "url",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'/fonts/OpenSans-VariableFont.woff'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 47
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "format",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "woff",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 61
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "url",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'/fonts/OpenSans-VariableFont.ttf'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 46
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "format",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 54
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ttf",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "swap",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "html ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-left",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "calc",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100vw",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 28
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-right",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-size-adjust",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "body ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "HEX",
+      "value": "#f4f4f4",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Open Sans",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sans-serif",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-weight",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "400",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#0c0c0c",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "line-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "1.5",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "15px",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "30px",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "10px",
+      "start": 18
+    },
+    {
+      "type": "DIMENSION",
+      "value": "30px",
+      "start": 23
+    },
+    {
+      "type": "DIMENSION",
+      "value": "10px",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "800px",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "auto",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "a ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#5060e0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-decoration",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "a",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "hover ",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#ff748c",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-decoration",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "underline",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "a img ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "blockquote ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-left",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1rem",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-style",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "italic",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1.4rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Georgia",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bitstream charter",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "serif",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 50
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-left",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "DIMENSION",
+      "value": "3px",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "solid",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "HEX",
+      "value": "#5060e0",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding-left",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "DIMENSION",
+      "value": "20px",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "blockquote cite ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "70%",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "opacity",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": ".8",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "blockquote em ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-weight",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "600",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "figure ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "center",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "13px",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-weight",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "400",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-style",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "italic",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "figure figcaption ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-bottom",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1.5rem",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h1",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h2",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h3",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h4",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h5",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h6 ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Lalezar",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sans-serif",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "line-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-weight",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "300",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-bottom",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h1 ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "2rem",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "2.75rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h2 ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "2rem",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "2rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h3 ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1.6rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h4 ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1.2rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h5 ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h6 ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": ".9rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-bottom",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "DIMENSION",
+      "value": "30px",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "hr ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "solid #bbb",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1.5rem",
+      "start": 12
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 19
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1rem",
+      "start": 21
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "img ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "25px",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "auto 25px auto",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "auto",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pre ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "overflow-x",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "auto",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-title ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-spacing",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-title .home-link ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "2rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "inline-block",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Lalezar",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sans-serif",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "line-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-weight",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "300",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-title .icon ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "6px",
+      "start": 12
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 16
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "float",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "right",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-left",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "DIMENSION",
+      "value": "7px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-title .icon svg ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "18px",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "18px",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-menu ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "10px",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.6rem",
+      "start": 13
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.6rem",
+      "start": 22
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "solid #bbb",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-bottom",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "solid #bbb",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-menu .menu ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "inline-block",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-right",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "DIMENSION",
+      "value": "15px",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-menu button ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-style",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding-block",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding-inline",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#5060e0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "transparent",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-menu button",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "hover ",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#ff748c",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-menu .icon ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "float",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "right",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-left",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "DIMENSION",
+      "value": "7px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "DIMENSION",
+      "value": "2px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".header .site-menu .icon svg ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "18px",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "18px",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .meta ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.725rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#a55",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-bottom",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1.5rem",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main code ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-family",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "SFMono-Regular",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Consolas",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Liberation Mono",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "Menlo",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 65
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "monospace",
+      "start": 67
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 76
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": ".95em",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main p code ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#a81818",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "HEX",
+      "value": "#ececec",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "8px",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .comment ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#008000",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .element ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#4ca4c0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .error ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "HEX",
+      "value": "#ff0000",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#f0f0f0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .function ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#a09040",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .html-attribute ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#4ca4c0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .html-doctype ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#a0a0a0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .html-tag ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#c040c0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .identifier ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#4058d0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .keyword ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#c040c0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .number ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#c06a20",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .operator ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#404040",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .preprocessor ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#a0a0a0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .regexp ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#d86628",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main pre code .string ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#f06030",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".mainn pre code .text ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#0e0e0e",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main table ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "25px",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "auto 25px auto",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-spacing",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-collapse",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "collapse",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main table th ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "HEX",
+      "value": "#bbb",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "5px",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "10px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "solid #777",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-weight",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "600",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main table td ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "5px",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "10px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "solid #777",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .pink-note ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "HEX",
+      "value": "#ececec",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#c040c0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "8px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .blue-note ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background-color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "HEX",
+      "value": "#ececec",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#4058d0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "8px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .blog-posts .blog-post ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "table",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .blog-posts .blog-post .meta ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "display",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "table-cell",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "right",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.725rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#a55",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-left",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "DIMENSION",
+      "value": "5px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "DIMENSION",
+      "value": "30px",
+      "start": 12
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 17
+    },
+    {
+      "type": "DIMENSION",
+      "value": "30px",
+      "start": 19
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "solid #bbb",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next .meta-nav ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "15px",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "DIMENSION",
+      "value": "100%",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next .meta-nav td ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 13
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 17
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next .meta-nav .prev ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "left",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "DIMENSION",
+      "value": "30px",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "DIMENSION",
+      "value": "5px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next .meta-nav .prev svg ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "15px",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "15px",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next .meta-nav .prev-text ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "left",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding-right",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 17
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next .meta-nav .next-text ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "right",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding-left",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next .meta-nav .next ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "right",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "none",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "DIMENSION",
+      "value": "30px",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "DIMENSION",
+      "value": "5px",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".main .prev-next .meta-nav .next svg ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-width",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "15px",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "max-height",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "15px",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".footer ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "text-align",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "right",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "font-size",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "DIMENSION",
+      "value": "0.75rem",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "HEX",
+      "value": "#555",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "border-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "1px",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "solid #bbb",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "padding",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 11
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "30px",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": ".footer .copyright ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "margin-top",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "DIMENSION",
+      "value": "15px",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "class",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "^=",
+      "start": 6
+    },
+    {
+      "type": "STRING",
+      "value": "\"str\"",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "background",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "green",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "white",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "h2 #this-id .fred ",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "color",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "blue",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    }
+  ],
+  "parser_state": {
+    "parsing_continuation": false,
+    "continuation_state": 0
+  }
+}

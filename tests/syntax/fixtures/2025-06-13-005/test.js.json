@@ -1,0 +1,4869 @@
+{
+  "source_file": "tests/syntax/fixtures/2025-06-13-005/test.js",
+  "language": "JAVASCRIPT",
+  "tokens": [
+    {
+      "type": "COMMENT",
+      "value": "// prerender.js",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fs",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 10
+    },
+    {
+      "type": "STRING",
+      "value": "'fs/promises'",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "path",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 12
+    },
+    {
+      "type": "STRING",
+      "value": "'path'",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "URL",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 13
+    },
+    {
+      "type": "STRING",
+      "value": "'url'",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "puppeteer",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 17
+    },
+    {
+      "type": "STRING",
+      "value": "'puppeteer'",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "yargs",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 13
+    },
+    {
+      "type": "STRING",
+      "value": "'yargs'",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "hideBin",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 17
+    },
+    {
+      "type": "STRING",
+      "value": "'yargs/helpers'",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 37
+    },
+    {
+      "type": "KEYWORD",
+      "value": "import",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "os",
+      "start": 7
+    },
+    {
+      "type": "KEYWORD",
+      "value": "from",
+      "start": 10
+    },
+    {
+      "type": "STRING",
+      "value": "'os'",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "yargs",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "hideBin",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "process",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 34
+    },
+    {
+      "type": "ELEMENT",
+      "value": "argv",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "option",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'sitemap'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "alias",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "STRING",
+      "value": "'s'",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "describe",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "'Path to the sitemap.xml file'",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "STRING",
+      "value": "'string'",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "demandOption",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "true",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "option",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'output'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "alias",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "STRING",
+      "value": "'o'",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "describe",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "'Directory to save rendered pages'",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "STRING",
+      "value": "'string'",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "demandOption",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "true",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "option",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'replace-url'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "alias",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "STRING",
+      "value": "'r'",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "describe",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "'Replace URL in the form <new-url-prefix>=<old-url-prefix>'",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 77
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "STRING",
+      "value": "'string'",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "coerce",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arg",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "match",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "arg",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 29
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "match",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "REGEXP",
+      "value": "/^(.+?)=(.+)$/",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 51
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "match",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "throw",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "Error",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 31
+    },
+    {
+      "type": "STRING",
+      "value": "'Invalid format for --replace-url. Expected <new-url-prefix>=<old-url-prefix>'",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 110
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 111
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "newUrl",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "match",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 33
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "oldUrl",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 44
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "match",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 51
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "option",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'parallel-renders'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "alias",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "STRING",
+      "value": "'p'",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "describe",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "'Number of parallel renders'",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "STRING",
+      "value": "'number'",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "default",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "os",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "cpus",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "length",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "option",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "STRING",
+      "value": "'max-retries'",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "alias",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 13
+    },
+    {
+      "type": "STRING",
+      "value": "'m'",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "describe",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "'Maximum number of retries for failed renders'",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 64
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "type",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 12
+    },
+    {
+      "type": "STRING",
+      "value": "'number'",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "default",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 15
+    },
+    {
+      "type": "NUMBER",
+      "value": "3",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "help",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 9
+    },
+    {
+      "type": "STRING",
+      "value": "'h'",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "alias",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 10
+    },
+    {
+      "type": "STRING",
+      "value": "'h'",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 14
+    },
+    {
+      "type": "STRING",
+      "value": "'help'",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 9
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Read and parse the sitemap XML file.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {string} sitemapPath - Path to the sitemap file.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @returns {Promise<string[]>} List of URLs from the sitemap.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "async",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 6
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "parseSitemap",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sitemapPath",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 41
+    },
+    {
+      "type": "KEYWORD",
+      "value": "try",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "content",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fs",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 32
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "readFile",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "sitemapPath",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 53
+    },
+    {
+      "type": "STRING",
+      "value": "'utf-8'",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 63
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urls",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "...",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "content",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 32
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "matchAll",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 41
+    },
+    {
+      "type": "REGEXP",
+      "value": "/<loc>(.*?)<\\/loc>/g",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 63
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 64
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "map",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 68
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "match",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 76
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "match",
+      "start": 78
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 83
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 84
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 85
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 86
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 87
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urls",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "catch",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "error",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "error",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "STRING",
+      "value": "`Failed to read sitemap file: ${error.message}`",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 70
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "process",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "exit",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Create the directory structure based on URL.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {string} outputDir - Base output directory.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {string} urlPath - URL path to create directories for.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "async",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 6
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "createDirectories",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputDir",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urlPath",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 53
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fullPath",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "path",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 25
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "join",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputDir",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urlPath",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 50
+    },
+    {
+      "type": "KEYWORD",
+      "value": "try",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fs",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mkdir",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fullPath",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "recursive",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 43
+    },
+    {
+      "type": "KEYWORD",
+      "value": "true",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "catch",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "error",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "error",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "STRING",
+      "value": "`Failed to create directory for ${urlPath}: ${error.message}`",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 83
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 84
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "process",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "exit",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Render a single page and save it to the file system.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {object} browser - Puppeteer browser instance.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {string} url - URL to render.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {string} outputPath - Path to save the rendered file.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * @param {number} retries - Number of retries allowed.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "async",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 6
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "renderPage",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "browser",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "url",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputPath",
+      "start": 40
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 50
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "retries",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 61
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "page",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "browser",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 30
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "newPage",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 40
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "let",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attempt",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attempt",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<=",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "retries",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 44
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attempt",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 57
+    },
+    {
+      "type": "KEYWORD",
+      "value": "try",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "page",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "goto",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "url",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "waitUntil",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 43
+    },
+    {
+      "type": "STRING",
+      "value": "'networkidle2'",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 59
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "timeout",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 68
+    },
+    {
+      "type": "NUMBER",
+      "value": "60000",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 76
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 77
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "content",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "page",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 38
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "content",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 48
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fs",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 20
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "writeFile",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputPath",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "content",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 50
+    },
+    {
+      "type": "STRING",
+      "value": "'utf-8'",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 19
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "log",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "STRING",
+      "value": "`Rendered: ${url}`",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 43
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "page",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "close",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "catch",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "error",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "attempt",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "retries",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "log",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "STRING",
+      "value": "`Retrying (${attempt}/${retries}): ${url}`",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 71
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "Promise",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "resolve",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 43
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "setTimeout",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "resolve",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 63
+    },
+    {
+      "type": "NUMBER",
+      "value": "1000",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 71
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "else",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "error",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "STRING",
+      "value": "`Failed: ${url}: ${error.message}`",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 64
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 65
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "page",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "close",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "process",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "exit",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Task queue to control the number of parallel renders.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "class",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "TaskQueue",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "constructor",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "maxConcurrent",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "maxConcurrent",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "maxConcurrent",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 42
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "running",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "queue",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "addTask",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "task",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 18
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "queue",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "push",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "task",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "runNext",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "async",
+      "start": 4
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "runNext",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "ELEMENT",
+      "value": "running",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">=",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 32
+    },
+    {
+      "type": "ELEMENT",
+      "value": "maxConcurrent",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "||",
+      "start": 47
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 54
+    },
+    {
+      "type": "ELEMENT",
+      "value": "queue",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 60
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": "===",
+      "start": 68
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 72
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 73
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 75
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "task",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 25
+    },
+    {
+      "type": "ELEMENT",
+      "value": "queue",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 31
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "shift",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 39
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "running",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 8
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "task",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "ELEMENT",
+      "value": "running",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "--",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "this",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "runNext",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/**",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Main function to pre-render pages from the sitemap.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "async",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "function",
+      "start": 6
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "main",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urls",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 17
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "parseSitemap",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 40
+    },
+    {
+      "type": "ELEMENT",
+      "value": "sitemap",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 49
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputDir",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 26
+    },
+    {
+      "type": "ELEMENT",
+      "value": "output",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 33
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "replaceUrl",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 27
+    },
+    {
+      "type": "STRING",
+      "value": "'replace-url'",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 42
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parallelRenders",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 32
+    },
+    {
+      "type": "STRING",
+      "value": "'parallel-renders'",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 52
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "maxRetries",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 27
+    },
+    {
+      "type": "STRING",
+      "value": "'max-retries'",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 42
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "replaceUrl",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urls",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "forEach",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "url",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "index",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urls",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "index",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "url",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 29
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "replace",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 37
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "replaceUrl",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 48
+    },
+    {
+      "type": "ELEMENT",
+      "value": "oldUrl",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 55
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "replaceUrl",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 67
+    },
+    {
+      "type": "ELEMENT",
+      "value": "newUrl",
+      "start": 68
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 74
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "try",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fs",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mkdir",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputDir",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "recursive",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 44
+    },
+    {
+      "type": "KEYWORD",
+      "value": "true",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "catch",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "error",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "error",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "STRING",
+      "value": "`Failed to create output directory: ${error.message}`",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 75
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 76
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "process",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 15
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "exit",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "browser",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "puppeteer",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 35
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "launch",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 44
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "taskQueue",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "TaskQueue",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "parallelRenders",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urls",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 8
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "forEach",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "url",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 24
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urlPath",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 24
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "URL",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "url",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "pathname",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 45
+    },
+    {
+      "type": "KEYWORD",
+      "value": "const",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputPath",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "path",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 31
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "join",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputDir",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 46
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urlPath",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 55
+    },
+    {
+      "type": "STRING",
+      "value": "'index.html'",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 70
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "taskQueue",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 17
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "addTask",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "KEYWORD",
+      "value": "async",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 38
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "createDirectories",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputDir",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "urlPath",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 55
+    },
+    {
+      "type": "KEYWORD",
+      "value": "try",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 16
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "fs",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 24
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "rm",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputPath",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "force",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": ":",
+      "start": 46
+    },
+    {
+      "type": "KEYWORD",
+      "value": "true",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "catch",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "error",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "error",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "STRING",
+      "value": "`Failed to delete existing file ${outputPath}: ${error.message}`",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 94
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 95
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "process",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "exit",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "renderPage",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "browser",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "url",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 41
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "outputPath",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "maxRetries",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 6
+    },
+    {
+      "type": "COMMENT",
+      "value": "// Wait for all tasks to complete",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "while",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "taskQueue",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 20
+    },
+    {
+      "type": "ELEMENT",
+      "value": "running",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 29
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "||",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "taskQueue",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 45
+    },
+    {
+      "type": "ELEMENT",
+      "value": "queue",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 51
+    },
+    {
+      "type": "ELEMENT",
+      "value": "length",
+      "start": 52
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 59
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 64
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "new",
+      "start": 14
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "Promise",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "resolve",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 35
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "setTimeout",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "resolve",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 55
+    },
+    {
+      "type": "NUMBER",
+      "value": "100",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 4
+    },
+    {
+      "type": "KEYWORD",
+      "value": "await",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "browser",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 17
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "close",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "console",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 11
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "log",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "STRING",
+      "value": "'All pages rendered successfully.'",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 51
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "process",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ".",
+      "start": 11
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "exit",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "main",
+      "start": 0
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 6
+    }
+  ],
+  "parser_state": {
+    "parsing_continuation": false,
+    "continuation_state": 0,
+    "lexer_state": {
+      "in_block_comment": false
+    },
+    "in_element": false
+  }
+}
