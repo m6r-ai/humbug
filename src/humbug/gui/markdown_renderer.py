@@ -500,12 +500,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
                 logger.warning("Invalid image dimensions: %s", path)
                 return self._create_placeholder_image(), False
 
-            # Resize the image if it's too large for displaying in the document
-#            max_width = 800  # Maximum width for displayed images
-#            if image.width() > max_width:
-#                image = image.scaledToWidth(max_width, Qt.TransformationMode.SmoothTransformation)
-# TODO: HANDLE IMAGE SCALING
-
             return image, True
 
         except Exception:
