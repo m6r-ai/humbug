@@ -1072,15 +1072,18 @@ class MarkdownASTBuilder:
             # Get the indentation of the current line
             current_indent = len(text) - len(text.lstrip())
 
-            if self._close_lists_at_indent(current_indent, True):
-                # We closed one or more lists, we should treat it as if a blank line was encountered
-                # This will ensure proper formatting when returning to an outer list
-                if self._list_stack:
-                    self._last_processed_line_type = 'blank'
-                    self._blank_line_count = 1
+            # If the indent is zero and we weren't preceded by a blank line, we have a continuation of the previous list item.
+            # Anything else and we need to consider closing the list.
+            if current_indent > 0 or self._last_processed_line_type == 'blank':
+                if self._close_lists_at_indent(current_indent, True):
+                    # We closed one or more lists, we should treat it as if a blank line was encountered
+                    # This will ensure proper formatting when returning to an outer list
+                    if self._list_stack:
+                        self._last_processed_line_type = 'blank'
+                        self._blank_line_count = 1
 
-                # Reset the paragraph continuity as well
-                self._last_paragraph = None
+                    # Reset the paragraph continuity as well
+                    self._last_paragraph = None
 
             # If we're continuing a list item and we've seen a blank line, mark the list as loose
             if self._list_stack and self._blank_line_count > 0:

@@ -264,6 +264,63 @@ def test_nested_list3(ast_builder):
     assert len(second_nested_list.children) == 2
 
 
+def test_list_with_continuation1(ast_builder):
+    """Test parsing a list with continuation."""
+    markdown = """
+- Item 1
+  continues on this line
+- Item 2
+- Item 3
+"""
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert len(list_node.children) == 3
+    first_item = list_node.children[0]
+    assert first_item.__class__.__name__ == "MarkdownListItemNode"
+    paragraph = first_item.children[0]
+    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert len(paragraph.children) == 3
+
+
+def test_list_with_continuation2(ast_builder):
+    """Test parsing a list with continuation."""
+    markdown = """
+- Item 1
+- Item 2
+    continues on this line
+- Item 3
+"""
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert len(list_node.children) == 3
+    second_item = list_node.children[1]
+    assert second_item.__class__.__name__ == "MarkdownListItemNode"
+    paragraph = second_item.children[0]
+    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert len(paragraph.children) == 3
+
+
+def test_list_with_continuation3(ast_builder):
+    """Test parsing a list with continuation."""
+    markdown = """
+- Item 1
+- Item 2
+continues on this line
+- Item 3
+"""
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert len(list_node.children) == 3
+    second_item = list_node.children[1]
+    assert second_item.__class__.__name__ == "MarkdownListItemNode"
+    paragraph = second_item.children[0]
+    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert len(paragraph.children) == 3
+
+
 def test_code_block(ast_builder):
     """Test parsing a code block."""
     markdown = """```python
@@ -993,6 +1050,7 @@ and continues on next line
 - List item
   continues here
   
+
 Another paragraph
 continues normally"""
 

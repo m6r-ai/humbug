@@ -1,0 +1,15 @@
+Role:
+    You are an expert software architect.
+
+Context:
+    I am looking to understand how I can build both MCP (model context protocol) client support into my Humbug AI
+    development tooling.  Humbug also has a number of capabilities that I would like to look at supporting as
+    MCP servers too (e.g. being able to use the terminal emulator and to compile prompts with the `m6rc`
+    Metaphor compiler (Metaphor is a prompt creation language).
+
+    Here is the spec for MCP:
+
+    Embed: ../../anthropic/mcp/llms-full.txt
+
+Action:
+    Please review the above and prepare for me to ask you questions.
