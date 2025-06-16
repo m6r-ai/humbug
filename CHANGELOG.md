@@ -22,6 +22,7 @@ New features:
 - JSON syntax highlighting now differentiates keys from values.
 - The conversations folder now defaults to sorting by the conversation start date.  You can select sorting alphabetically
   by right clicking the changing the "Sort By".
+- Wiki views will render any "README.md" file for folder pages that contain one, and "file.ext.md" for any file "file.ext"
 
 Bug fixes:
 
