@@ -477,7 +477,12 @@ class MarkdownRenderer(MarkdownASTVisitor):
         try:
             # If the path is relative, resolve it against the source path
             if not os.path.isabs(path) and self._source_path:
-                source_dir = os.path.dirname(self._source_path)
+                if os.path.isdir(self._source_path):
+                    source_dir = self._source_path
+
+                else:
+                    source_dir = os.path.dirname(self._source_path)
+
                 path = os.path.normpath(os.path.join(source_dir, path))
 
             elif not os.path.isabs(path):

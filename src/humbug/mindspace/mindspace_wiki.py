@@ -64,6 +64,55 @@ class MindspaceWiki:
 
         return content, dependencies
 
+    def _check_for_readme(self, directory_path: str) -> str | None:
+        """
+        Check for README.md in directory, return path if found.
+
+        Args:
+            directory_path: Path to the directory to check
+
+        Returns:
+            Path to README.md if found, None otherwise
+        """
+        readme_path = os.path.join(directory_path, "README.md")
+        return readme_path if os.path.exists(readme_path) else None
+
+    def _check_for_companion_md(self, file_path: str) -> str | None:
+        """
+        Check for companion .md file (e.g., foo.txt.md for foo.txt).
+
+        Args:
+            file_path: Path to the original file
+
+        Returns:
+            Path to companion .md file if found, None otherwise
+        """
+        companion_path = file_path + ".md"
+        return companion_path if os.path.exists(companion_path) else None
+
+    def _read_markdown_file(self, md_path: str) -> List[Tuple[MindspaceWikiContentType, str]]:
+        """
+        Read and prepare markdown file content for rendering.
+
+        Args:
+            md_path: Path to the markdown file to read
+
+        Returns:
+            List of content tuples ready for rendering
+        """
+        try:
+            with open(md_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            if content.strip():  # Only add content if file is not empty
+                return [(MindspaceWikiContentType.MARKDOWN_PREVIEW, content)]
+
+            return []
+
+        except OSError as e:
+            self._logger.warning("Failed to read markdown file %s: %s", md_path, str(e))
+            return []
+
     def _get_file_size_bytes(self, file_path: str) -> int:
         """
         Get file size in bytes.
@@ -175,6 +224,7 @@ class MindspaceWiki:
             parent_path = os.path.dirname(directory_path)
             size = self._get_file_size_bytes(parent_path)
             max_width = max(max_width, len(str(size)))
+
         except MindspaceWikiIOError:
             pass
 
@@ -184,6 +234,7 @@ class MindspaceWiki:
             try:
                 size = self._get_file_size_bytes(full_path)
                 max_width = max(max_width, len(str(size)))
+
             except MindspaceWikiIOError:
                 pass
 
@@ -300,6 +351,14 @@ class MindspaceWiki:
 
                 contents.append((MindspaceWikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
 
+            # Check for README.md and render it if found
+            readme_path = self._check_for_readme(directory_path)
+            if readme_path:
+                dependencies.add(os.path.abspath(readme_path))
+                readme_content = self._read_markdown_file(readme_path)
+                contents.append((MindspaceWikiContentType.MARKDOWN, f"  \n## {os.path.basename(readme_path)}"))
+                contents.extend(readme_content)
+
             return contents, dependencies
 
         except Exception as e:
@@ -371,6 +430,14 @@ class MindspaceWiki:
                 self._logger.warning("Could not retrieve metadata for %s: %s", file_path, str(e))
 
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
+
+            # Check for companion .md file and render it if found
+            companion_md_path = self._check_for_companion_md(file_path)
+            if companion_md_path:
+                dependencies.add(os.path.abspath(companion_md_path))
+                contents.append((MindspaceWikiContentType.MARKDOWN, f"  \n## Notes from {os.path.basename(companion_md_path)}"))
+                companion_content = self._read_markdown_file(companion_md_path)
+                contents.extend(companion_content)
 
             file_type = self.get_file_type(file_path)
             print(f"Generating file content for: {file_path} (type: {file_type})")
