@@ -1,0 +1,5239 @@
+{
+  "source_file": "tests/syntax/fixtures/2025-06-16-001/wfb.c",
+  "language": "C",
+  "tokens": [
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * wfb.c",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *\tSimulation used for the hashingit.com article \"Waiting For Blocks",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *\t(Revised)\" and the earlier \"Waiting For Blocks\".",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Copyright (C) 2015 David Hudson",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * Permission is hereby granted, free of charge, to any person obtaining a copy",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * of this software and associated documentation files (the \"Software\"), to deal",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * in the Software without restriction, including without limitation the rights",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * copies of the Software, and to permit persons to whom the Software is",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * furnished to do so, subject to the following conditions:",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * The above copyright notice and this permission notice shall be included in",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * all copies or substantial portions of the Software.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * THE SOFTWARE.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#include <stdio.h>",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#include <stdbool.h>",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#include <string.h>",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#include <stdlib.h>",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#include <math.h>",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#define NEGATIVE_ORDERS 1",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#define POSITIVE_ORDERS 10",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#define NUM_BUCKETS_PER_ORDER 1000",
+      "start": 0
+    },
+    {
+      "type": "PREPROCESSOR",
+      "value": "#define NUM_BUCKETS (NUM_BUCKETS_PER_ORDER * (POSITIVE_ORDERS + NEGATIVE_ORDERS))",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "buckets1",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "smallest_bucket1",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "largest_bucket1",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_results1",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 27
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "LL",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "buckets6",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "smallest_bucket6",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "largest_bucket6",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_results6",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 27
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "LL",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * sim_pp()",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *\tSimulate one time period of a Poisson process.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "static",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "sim_pp",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 20
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "rate",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * rand() isn't an ideal function here but if we go out of our way to fold in",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * some entropy we're ok.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 12
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 19
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "rand",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 38
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "RAND_MAX",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 49
+    },
+    {
+      "type": "NUMBER",
+      "value": "1.0",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 55
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 17
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "log",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 21
+    },
+    {
+      "type": "NUMBER",
+      "value": "1.0",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "rate",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * mine()",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *\tSimulate a set of blocks being mined.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "static",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mine",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 18
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "init_hash_rate_ratio",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 46
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 48
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "daily_hash_rate_ratio",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 76
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "FILE",
+      "start": 78
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 83
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "f",
+      "start": 84
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 85
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_time",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "NUMBER",
+      "value": "0.0",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 13
+    },
+    {
+      "type": "NUMBER",
+      "value": "6",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6_duration",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "NUMBER",
+      "value": "0.0",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 19
+    },
+    {
+      "type": "NUMBER",
+      "value": "2016",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 32
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 2
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t * Randomize!",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "unsigned",
+      "start": 2
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "seed",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "fread",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "&",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "seed",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "sizeof",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "seed",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "f",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!=",
+      "start": 39
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 45
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "fclose",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "f",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 12
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "exit",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 8
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 2
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "srand",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "seed",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "days",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_time",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "NUMBER",
+      "value": "24.0",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 40
+    },
+    {
+      "type": "NUMBER",
+      "value": "60.0",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 47
+    },
+    {
+      "type": "NUMBER",
+      "value": "60.0",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 54
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "hash_rate_ratio",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "init_hash_rate_ratio",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 48
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pow",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 53
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "daily_hash_rate_ratio",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 75
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "days",
+      "start": 77
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 81
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 82
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 2
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t * Find the next block.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block_duration",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 24
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "sim_pp",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "hash_rate_ratio",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 49
+    },
+    {
+      "type": "NUMBER",
+      "value": "600.0",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 57
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_time",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block_duration",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 35
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 2
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t * Bucketize the block duration.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "log_block_duration",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 28
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "log10",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 35
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block_duration",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 51
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "log_block_duration_bucket",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 37
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 38
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 44
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 67
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "log_block_duration",
+      "start": 69
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 87
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 2
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 25
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "ceil",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "log_block_duration_bucket",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 56
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 57
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+=",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NEGATIVE_ORDERS",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 49
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 9
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 6
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "buckets1",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "largest_bucket1",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 22
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "largest_bucket1",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 2
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "smallest_bucket1",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "smallest_bucket1",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b1",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_results1",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 16
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 2
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t * Track the last 6 block durations.  Note that we can't do anything until we",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t * have 6 blocks.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6_duration",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+=",
+      "start": 17
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block_duration",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">=",
+      "start": 8
+    },
+    {
+      "type": "NUMBER",
+      "value": "6",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6_duration",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-=",
+      "start": 18
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 26
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 3
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t\t * Bucketize the last 6 blocks duration.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "log_last6_duration",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "log10",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 36
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6_duration",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 52
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "log_last6_duration_bucket",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 36
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 38
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 68
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "log_last6_duration",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 88
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 3
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 8
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "long",
+      "start": 18
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "ceil",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 31
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "log_last6_duration_bucket",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 58
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+=",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NEGATIVE_ORDERS",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 50
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 7
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "buckets6",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "largest_bucket6",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 23
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "largest_bucket6",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 3
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "smallest_bucket6",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": ">",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "smallest_bucket6",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "b6",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 3
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_results6",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 7
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 7
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 7
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "3",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 7
+    },
+    {
+      "type": "NUMBER",
+      "value": "3",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "4",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 7
+    },
+    {
+      "type": "NUMBER",
+      "value": "4",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 18
+    },
+    {
+      "type": "NUMBER",
+      "value": "5",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 21
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "last6",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 7
+    },
+    {
+      "type": "NUMBER",
+      "value": "5",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "block_duration",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 1
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_time",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * output_results()",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *\tGenerate the output results.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "static",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "void",
+      "start": 7
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "output_results",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 26
+    },
+    {
+      "type": "KEYWORD",
+      "value": "void",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_res1",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_results1",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 39
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_ratio1",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "NUMBER",
+      "value": "0.0",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "printf",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "STRING",
+      "value": "\"-- single blocks --\\n\"",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "smallest_bucket1",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<=",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "largest_bucket1",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 59
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "buckets1",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_res1",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 43
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_start",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pow",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "NUMBER",
+      "value": "10.0",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NEGATIVE_ORDERS",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 64
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 87
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 88
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 92
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 93
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 99
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 100
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 121
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 122
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_end",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pow",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "NUMBER",
+      "value": "10.0",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 43
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NEGATIVE_ORDERS",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 66
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 68
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 89
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 92
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 94
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 95
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 101
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 102
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 123
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 124
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_ratio1",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+=",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "printf",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "STRING",
+      "value": "\"%d | %.6f | %.6f | %.6f | %.6f\\n\"",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_start",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_end",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_start",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_ratio1",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 79
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 80
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 1
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_res6",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 26
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_results6",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 39
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_ratio6",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 26
+    },
+    {
+      "type": "NUMBER",
+      "value": "0.0",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "printf",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "STRING",
+      "value": "\"\\n-- six blocks --\\n\"",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 31
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "smallest_bucket6",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 30
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<=",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "largest_bucket6",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 54
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 55
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 57
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 59
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 13
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "buckets6",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_res6",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 43
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_start",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 22
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pow",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "NUMBER",
+      "value": "10.0",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 42
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NEGATIVE_ORDERS",
+      "start": 48
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 64
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 87
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 88
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 92
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 93
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 99
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 100
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 121
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 122
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_end",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 20
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pow",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 25
+    },
+    {
+      "type": "NUMBER",
+      "value": "10.0",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 32
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 39
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 41
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+",
+      "start": 43
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 45
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 49
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NEGATIVE_ORDERS",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 66
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 68
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 89
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 90
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 92
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 94
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 95
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 101
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "NUM_BUCKETS_PER_ORDER",
+      "start": 102
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 123
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 124
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_ratio6",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "+=",
+      "start": 20
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 24
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "printf",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "STRING",
+      "value": "\"%d | %.6f | %.6f | %.6f | %.6f\\n\"",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 43
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "i",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_start",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 27
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "r",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 33
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_end",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "bucket_start",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 60
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "cumulative_ratio6",
+      "start": 62
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 79
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 80
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " * sim()",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " *\tSimulate mining.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": " */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "void",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "sim",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "daily_hash_rate_ratio",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 37
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 39
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_sims",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 51
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * We want some real randomness in our results.  Go and open a can of it!",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t */",
+      "start": 0
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "FILE",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "f",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 9
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "fopen",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "\"/dev/urandom\"",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 31
+    },
+    {
+      "type": "STRING",
+      "value": "\"rb\"",
+      "start": 33
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 37
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 38
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!",
+      "start": 5
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "f",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 9
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "fprintf",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "stderr",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 16
+    },
+    {
+      "type": "STRING",
+      "value": "\"Failed to open /dev/urandom\\n\"",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 49
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 50
+    },
+    {
+      "type": "KEYWORD",
+      "value": "return",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 1
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "divisor",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 13
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_sims",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 24
+    },
+    {
+      "type": "NUMBER",
+      "value": "100",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "divisor",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 13
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "divisor",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 12
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * We need to estimate our initial hash rate ratio based on the daily increment rate.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * This is tricky because the higher that rate the shorter the total period.  We need",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * to seed this so we go with a default assumption.  Afterwards we use the results",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * from the preceding simulation instead.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "init_hash_rate_ratio",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 29
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pow",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 34
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "daily_hash_rate_ratio",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 56
+    },
+    {
+      "type": "NUMBER",
+      "value": "7.0",
+      "start": 58
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 61
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 62
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * Simulate many runs.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "for",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "j",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 12
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 15
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "j",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "<",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "num_sims",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 29
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "j",
+      "start": 31
+    },
+    {
+      "type": "OPERATOR",
+      "value": "++",
+      "start": 32
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 34
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 36
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "duration",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 18
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "mine",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 24
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "init_hash_rate_ratio",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 45
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "daily_hash_rate_ratio",
+      "start": 47
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 68
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "f",
+      "start": 70
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 71
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 72
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 6
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "j",
+      "start": 7
+    },
+    {
+      "type": "OPERATOR",
+      "value": "%",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "divisor",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 18
+    },
+    {
+      "type": "OPERATOR",
+      "value": "==",
+      "start": 20
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 23
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 26
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "fprintf",
+      "start": 3
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 10
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "stderr",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 17
+    },
+    {
+      "type": "STRING",
+      "value": "\"Sim: %d completed\\n\"",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 40
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "j",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 43
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 44
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 2
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 2
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t * Calculate the next initial hash rate ratio.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 2
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "days",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "duration",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 27
+    },
+    {
+      "type": "NUMBER",
+      "value": "60.0",
+      "start": 28
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 33
+    },
+    {
+      "type": "NUMBER",
+      "value": "60.0",
+      "start": 35
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 40
+    },
+    {
+      "type": "NUMBER",
+      "value": "24.0",
+      "start": 42
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 46
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 47
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "init_hash_rate_ratio",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "pow",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 28
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "daily_hash_rate_ratio",
+      "start": 29
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 50
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 52
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "days",
+      "start": 53
+    },
+    {
+      "type": "OPERATOR",
+      "value": "/",
+      "start": 58
+    },
+    {
+      "type": "NUMBER",
+      "value": "2.0",
+      "start": 60
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 63
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 64
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 1
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "fclose",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 7
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "f",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 10
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * Produce output data.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t */",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "output_results",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 16
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 17
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 0
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "main",
+      "start": 4
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argc",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 17
+    },
+    {
+      "type": "KEYWORD",
+      "value": "char",
+      "start": 19
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 24
+    },
+    {
+      "type": "OPERATOR",
+      "value": "*",
+      "start": 25
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 30
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "if",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argc",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "!=",
+      "start": 10
+    },
+    {
+      "type": "NUMBER",
+      "value": "3",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "{",
+      "start": 16
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "printf",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 8
+    },
+    {
+      "type": "STRING",
+      "value": "\"usage: %s <daily-hash-rate-ratio> <num-sims>\\n\"",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 57
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 59
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 63
+    },
+    {
+      "type": "NUMBER",
+      "value": "0",
+      "start": 64
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 65
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 66
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 67
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "exit",
+      "start": 2
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 6
+    },
+    {
+      "type": "OPERATOR",
+      "value": "-",
+      "start": 7
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 9
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * Number of blocks that we wish to model per simulation run.  If, say, this is 1008",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * then this corresponds to a nominal week of mining as we're not modelling the",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * network capacity expanding or contracting.",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "double",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "dhrr",
+      "start": 8
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 13
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "atof",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 19
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 24
+    },
+    {
+      "type": "NUMBER",
+      "value": "1",
+      "start": 25
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 26
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 27
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 28
+    },
+    {
+      "type": "COMMENT",
+      "value": "/*",
+      "start": 1
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * Number of simulation runs.  Larger is better here.  100k simulations should give",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t * pretty consistent results; 1M is better :-)",
+      "start": 0
+    },
+    {
+      "type": "COMMENT",
+      "value": "\t */",
+      "start": 0
+    },
+    {
+      "type": "KEYWORD",
+      "value": "int",
+      "start": 1
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ns",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": "=",
+      "start": 8
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "atoi",
+      "start": 10
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 14
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "argv",
+      "start": 15
+    },
+    {
+      "type": "OPERATOR",
+      "value": "[",
+      "start": 19
+    },
+    {
+      "type": "NUMBER",
+      "value": "2",
+      "start": 20
+    },
+    {
+      "type": "OPERATOR",
+      "value": "]",
+      "start": 21
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 22
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 23
+    },
+    {
+      "type": "FUNCTION_OR_METHOD",
+      "value": "sim",
+      "start": 1
+    },
+    {
+      "type": "OPERATOR",
+      "value": "(",
+      "start": 4
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "dhrr",
+      "start": 5
+    },
+    {
+      "type": "OPERATOR",
+      "value": ",",
+      "start": 9
+    },
+    {
+      "type": "IDENTIFIER",
+      "value": "ns",
+      "start": 11
+    },
+    {
+      "type": "OPERATOR",
+      "value": ")",
+      "start": 13
+    },
+    {
+      "type": "OPERATOR",
+      "value": ";",
+      "start": 14
+    },
+    {
+      "type": "OPERATOR",
+      "value": "}",
+      "start": 0
+    }
+  ],
+  "parser_state": {
+    "parsing_continuation": false,
+    "continuation_state": 0,
+    "lexer_state": {
+      "in_block_comment": false
+    },
+    "in_element": false
+  }
+}
