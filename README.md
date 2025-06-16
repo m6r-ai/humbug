@@ -99,7 +99,7 @@ can be used to refine the Metaphor context.
 
 ![Humbug in action](./docs/humbug-v0.12-4.webp)
 
-![Humbug in action](./docs/humbug-v0.12-5.webp)
+![Humbug in action](./docs/humbug-v0.16-1.webp)
 
 ## Features
 
