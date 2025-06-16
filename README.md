@@ -6,16 +6,15 @@ Whether you're a human or an AI, the most important things in software developme
 problem you're trying to solve and the software you've building with to solve it.  Humbug is designed to
 help you with both.
 
-For human developers, Humbug gives you a dynamic wiki-like view into your software and lets you to
-discuss any aspect of it with an AI.  You can also preview files, edit files, and run commands in the
-terminal.
-
-For AIs, Humbug lets you create complex prompts that capture all the context required to do complex design and
-implementation work.
+Humbug seeks to bring all your sources of information into one framework.  It integrates a dynamic wiki-like
+view, a powerful conversation interface that supports multiple simultaneous chats with one or more AIs, integrated
+terminal emulation, file editing, and a powerful system shell that makes it easy to create detailed structured prompts
+that will allow your AIs to do their best work.
 
 Humbug supports large language models (LLMs) from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI,
 and you have total flexibility over which one you use at any time.  You can use 2 or more at
-the same time, so if you want multiple opinions then it's easy to get them.
+the same time, so if you want multiple opinions then it's easy to get them.  It's your choice whether these are
+local models, or cloud-hosted.
 
 While Humbug lets you use cloud-based tools, it runs locally on your computer.  Everything it does is captured
 in local files so you always retain complete control over your projects.  It's up to you how you structure them,
@@ -39,16 +38,6 @@ While Metaphor is designed to help start your conversations with AI, and Humbug 
 those conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into
 your software and documentation.  The built-in editor and terminal also lets you update and test anything you get back from
 the AI, and provides you access to any command line tools you might want to use.
-
-![Humbug in action](./docs/humbug-v0.12-1.webp)
-
-![Humbug in action](./docs/humbug-v0.12-2.webp)
-
-![Humbug in action](./docs/humbug-v0.12-3.webp)
-
-![Humbug in action](./docs/humbug-v0.12-4.webp)
-
-![Humbug in action](./docs/humbug-v0.12-5.webp)
 
 ## What does that mean in practice?
 
@@ -100,6 +89,18 @@ can be used to refine the Metaphor context.
 - The conversations folder now defaults to sorting by the conversation start date.  You can select sorting alphabetically
   by right clicking the changing the "Sort By".
 
+## Humbug in action
+
+![Humbug in action](./docs/humbug-v0.12-1.webp)
+
+![Humbug in action](./docs/humbug-v0.12-2.webp)
+
+![Humbug in action](./docs/humbug-v0.12-3.webp)
+
+![Humbug in action](./docs/humbug-v0.12-4.webp)
+
+![Humbug in action](./docs/humbug-v0.12-5.webp)
+
 ## Features
 
 ### Cross-platform support
@@ -117,15 +118,30 @@ Compatible with MacOS X, Linux, and Windows 10/11.
 
 ### Conversation features
 
-- Markdown-style code formatting in input and history.
 - Message history with distinct cards for user, AI reasoning, AI response, and system messages.
 - Code blocks are broken into sections and it's easy to copy a whole section or save it as a file.
 - Copy or save whole messages as Markdown.
 - Full text search across all parts of a conversation.
-- Bookmarks messages for rapid navigation.
 - Syntax highlighting for various languages and file formats, including nested systax highlighting where code for
   one language appears inside a different one.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
   JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Solidity, Swift, and TypeScript.
+- Change AIs within a conversation, or fork (duplicate) conversations at any point.
+- Use Markdown-style code formatting in input messages (with syntax highlighting for code blocks).
+- Bookmarks messages for rapid navigation.
+
+### Wiki views
+
+- Wiki views (single click in the mindspace tree, drag and drop from the mindspace tree, or use the system shell's
+  `wiki` command) give you multiple sources of information about files and folders.
+- Edit actions are available to make it easy to update any part of your documentation or code.
+- Hyperlinks will take you to other docs or open your computer's default web browswer for external references.
+- Full text search across all parts of a wiki page.
+
+### File editing
+
+- Full file editing with syntax highlighting (double click in the mindspace tree, or use the system shell's `edit`
+  command).
+- Auto-backup functionality for unsaved changes.
 
 ### System shell
 
@@ -134,11 +150,6 @@ Compatible with MacOS X, Linux, and Windows 10/11.
   successfully.
 - Shell commands support context-aware command line completions using the tab key.
 - For more information, open select "Show System Shell" from the View menu and enter the command `help`.
-
-### File editing
-
-- Full file editing with syntax highlighting.
-- Auto-backup functionality for unsaved changes.
 
 ### Terminal emulator
 
