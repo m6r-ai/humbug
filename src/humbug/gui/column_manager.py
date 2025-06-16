@@ -319,7 +319,7 @@ class ColumnManager(QWidget):
         # Handle the file drop
         ext = os.path.splitext(path)[1].lower()
         if ext == '.conv':
-            tab = self.open_conversation(path, False)
+            tab: TabBase | None = self.open_conversation(path, False)
 
         else:
             tab = self.open_wiki_page(path, False)
@@ -411,7 +411,7 @@ class ColumnManager(QWidget):
         try:
             if ext == '.conv':
                 # Open conversation file
-                tab = self.open_conversation(path, False)
+                tab: TabBase | None = self.open_conversation(path, False)
 
             else:
                 tab = self.open_wiki_page(path, False)
