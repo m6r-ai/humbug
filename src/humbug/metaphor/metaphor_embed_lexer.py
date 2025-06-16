@@ -41,7 +41,7 @@ class MetaphorEmbedLexer:
             Lowercase language name suitable for code block formatting
         """
         detected_language = ProgrammingLanguageUtils.from_file_extension(filename)
-        return ProgrammingLanguageUtils.get_display_name(detected_language)
+        return ProgrammingLanguageUtils.get_name(detected_language)
 
     def _tokenize(self) -> None:
         """Tokenizes the input file and handles embedded content."""

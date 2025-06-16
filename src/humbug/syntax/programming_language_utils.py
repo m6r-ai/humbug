@@ -53,8 +53,8 @@ class ProgrammingLanguageUtils:
         "rs": ProgrammingLanguage.RUST,
         "scheme": ProgrammingLanguage.SCHEME,
         "scm": ProgrammingLanguage.SCHEME,
-        'sol': ProgrammingLanguage.SOLIDITY,
-        'solidity': ProgrammingLanguage.SOLIDITY,
+        "sol": ProgrammingLanguage.SOLIDITY,
+        "solidity": ProgrammingLanguage.SOLIDITY,
         "swift": ProgrammingLanguage.SWIFT,
         "typescript": ProgrammingLanguage.TYPESCRIPT,
         "ts": ProgrammingLanguage.TYPESCRIPT,
@@ -63,6 +63,31 @@ class ProgrammingLanguageUtils:
         "txt": ProgrammingLanguage.TEXT,
         # Empty string defaults to text
         "": ProgrammingLanguage.TEXT
+    }
+
+    # Mapping from enum members to lowercase language names
+    _LANGUAGE_TO_NAME: Dict[ProgrammingLanguage, str] = {
+        ProgrammingLanguage.C: "c",
+        ProgrammingLanguage.CPP: "cpp",
+        ProgrammingLanguage.CSHARP: "csharp",
+        ProgrammingLanguage.CSS: "css",
+        ProgrammingLanguage.GO: "go",
+        ProgrammingLanguage.HTML: "html",
+        ProgrammingLanguage.JAVA: "java",
+        ProgrammingLanguage.JAVASCRIPT: "javascript",
+        ProgrammingLanguage.JSON: "json",
+        ProgrammingLanguage.KOTLIN: "kotlin",
+        ProgrammingLanguage.MARKDOWN: "markdown",
+        ProgrammingLanguage.METAPHOR: "metaphor",
+        ProgrammingLanguage.MOVE: "move",
+        ProgrammingLanguage.PYTHON: "python",
+        ProgrammingLanguage.RUST: "rust",
+        ProgrammingLanguage.SCHEME: "scheme",
+        ProgrammingLanguage.SOLIDITY: "solidity",
+        ProgrammingLanguage.SWIFT: "swift",
+        ProgrammingLanguage.TYPESCRIPT: "typescript",
+        ProgrammingLanguage.TEXT: "plaintext",
+        ProgrammingLanguage.UNKNOWN: ""
     }
 
     # Mapping from file extensions to programming languages
@@ -207,6 +232,19 @@ class ProgrammingLanguageUtils:
 
         ext = os.path.splitext(filename)[1].lower()
         return cls._EXTENSION_TO_LANGUAGE.get(ext, ProgrammingLanguage.TEXT)
+
+    @classmethod
+    def get_name(cls, language: ProgrammingLanguage) -> str:
+        """
+        Get the human-readable lower-case name for a programming language.
+
+        Args:
+            language: The programming language enum value
+
+        Returns:
+            Human-readable name
+        """
+        return cls._LANGUAGE_TO_NAME.get(language, "")
 
     @classmethod
     def get_display_name(cls, language: ProgrammingLanguage) -> str:
