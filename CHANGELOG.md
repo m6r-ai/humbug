@@ -20,6 +20,8 @@ New features:
   that things have been updated while you weren't looking.
 - Zooming now has finer-grained steps.
 - JSON syntax highlighting now differentiates keys from values.
+- The conversations folder now defaults to sorting by the conversation start date.  You can select sorting alphabetically
+  by right clicking the changing the "Sort By".
 
 Bug fixes:
 

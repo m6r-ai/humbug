@@ -414,6 +414,21 @@ class MindspaceFileTree(QWidget):
 
             counter += 1
 
+    def _is_conversations_folder(self, path: str) -> bool:
+        """
+        Check if the given path is the conversations folder.
+
+        Args:
+            path: Directory path to check
+
+        Returns:
+            True if this is the conversations folder, False otherwise
+        """
+        if not self._mindspace_path or not path:
+            return False
+
+        return (os.path.basename(path) == "conversations" and os.path.dirname(path) == self._mindspace_path)
+
     def reveal_and_select_file(self, file_path: str) -> None:
         """
         Expand the tree to show the given file and select it.
@@ -588,11 +603,31 @@ class MindspaceFileTree(QWidget):
             path = self._fs_model.filePath(source_index)
             is_dir = os.path.isdir(path)
 
+            # Check if this is the conversations folder
+            is_conversations_folder = is_dir and self._is_conversations_folder(path)
+
             # Create actions based on item type
             if is_dir:
                 # Directory context menu
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_file_action = menu.addAction(strings.new_file)
+                sort_by_name = None
+                sort_by_creation = None
+
+                # Add sorting options for conversations folder
+                if is_conversations_folder:
+                    sort_menu = menu.addMenu(strings.sort_by)
+
+                    current_mode = self._filter_model.get_conversation_sort_mode()
+
+                    sort_by_name = sort_menu.addAction(strings.sort_by_name)
+                    sort_by_name.setCheckable(True)
+                    sort_by_name.setChecked(current_mode == MindspaceFileModel.SortMode.NAME)
+
+                    sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
+                    sort_by_creation.setCheckable(True)
+                    sort_by_creation.setChecked(current_mode == MindspaceFileModel.SortMode.CREATION_TIME)
+
                 rename_action = menu.addAction(strings.rename)
                 delete_action = menu.addAction(strings.delete)
                 edit_action = None
@@ -606,12 +641,15 @@ class MindspaceFileTree(QWidget):
                 delete_action = menu.addAction(strings.delete)
                 new_file_action = None
                 new_folder_action = None
+                sort_by_name = None
+                sort_by_creation = None
 
             # Execute the menu
             action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
             if action:
                 if is_dir:
+                    # Handle directory actions
                     if action == new_folder_action:
                         self._start_new_folder_creation(path)
                         return
@@ -628,7 +666,18 @@ class MindspaceFileTree(QWidget):
                         self._handle_delete_folder(path)
                         return
 
+                    # Handle conversations folder sorting actions
+                    if is_conversations_folder:
+                        if action == sort_by_name:
+                            self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.NAME)
+                            return
+
+                        if action == sort_by_creation:
+                            self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.CREATION_TIME)
+                            return
+
                 else:
+                    # Handle file actions
                     if action == edit_action:
                         self._handle_edit_file(path)
                         return
@@ -1034,6 +1083,11 @@ class MindspaceFileTree(QWidget):
             }}
             QMenu::right-arrow {{
                 image: url({self._style_manager.get_icon_path('arrow-right')});
+                width: 16px;
+                height: 16px;
+            }}
+            QMenu::left-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-left')});
                 width: 16px;
                 height: 16px;
             }}

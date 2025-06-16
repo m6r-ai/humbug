@@ -207,6 +207,9 @@ class LanguageStrings:
     delete: str
     edit: str
     duplicate: str
+    sort_by: str
+    sort_by_name: str
+    sort_by_creation_time: str
     file_name: str
     rename_error_exists: str
     rename_error_generic: str
