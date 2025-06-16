@@ -414,20 +414,24 @@ class MindspaceFileTree(QWidget):
 
             counter += 1
 
-    def _is_conversations_folder(self, path: str) -> bool:
+    def _is_in_conversations_hierarchy(self, path: str) -> bool:
         """
-        Check if the given path is the conversations folder.
+        Check if the given path is anywhere within the conversations folder hierarchy.
 
         Args:
-            path: Directory path to check
+            path: Path to check
 
         Returns:
-            True if this is the conversations folder, False otherwise
+            True if this path is within the conversations folder hierarchy, False otherwise
         """
         if not self._mindspace_path or not path:
             return False
 
-        return (os.path.basename(path) == "conversations" and os.path.dirname(path) == self._mindspace_path)
+        conversations_path = os.path.join(self._mindspace_path, "conversations")
+        normalized_path = os.path.normpath(path)
+        normalized_conversations = os.path.normpath(conversations_path)
+
+        return normalized_path.startswith(normalized_conversations + os.sep) or normalized_path == normalized_conversations
 
     def reveal_and_select_file(self, file_path: str) -> None:
         """
@@ -603,46 +607,41 @@ class MindspaceFileTree(QWidget):
             path = self._fs_model.filePath(source_index)
             is_dir = os.path.isdir(path)
 
-            # Check if this is the conversations folder
-            is_conversations_folder = is_dir and self._is_conversations_folder(path)
-
             # Create actions based on item type
             if is_dir:
                 # Directory context menu
-                new_folder_action = menu.addAction(strings.new_folder)
-                new_file_action = menu.addAction(strings.new_file)
-                sort_by_name = None
-                sort_by_creation = None
-
-                # Add sorting options for conversations folder
-                if is_conversations_folder:
-                    sort_menu = menu.addMenu(strings.sort_by)
-
-                    current_mode = self._filter_model.get_conversation_sort_mode()
-
-                    sort_by_name = sort_menu.addAction(strings.sort_by_name)
-                    sort_by_name.setCheckable(True)
-                    sort_by_name.setChecked(current_mode == MindspaceFileModel.SortMode.NAME)
-
-                    sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
-                    sort_by_creation.setCheckable(True)
-                    sort_by_creation.setChecked(current_mode == MindspaceFileModel.SortMode.CREATION_TIME)
-
-                rename_action = menu.addAction(strings.rename)
-                delete_action = menu.addAction(strings.delete)
                 edit_action = None
                 duplicate_action = None
+                new_folder_action = menu.addAction(strings.new_folder)
+                new_file_action = menu.addAction(strings.new_file)
 
             else:
                 # File context menu
                 edit_action = menu.addAction(strings.edit)
                 duplicate_action = menu.addAction(strings.duplicate)
-                rename_action = menu.addAction(strings.rename)
-                delete_action = menu.addAction(strings.delete)
                 new_file_action = None
                 new_folder_action = None
-                sort_by_name = None
-                sort_by_creation = None
+
+            rename_action = menu.addAction(strings.rename)
+            delete_action = menu.addAction(strings.delete)
+            sort_by_name = None
+            sort_by_creation = None
+
+            # Check if this is in the conversations hierarchy
+            is_in_conversations_hierarchy = self._is_in_conversations_hierarchy(path)
+            if is_in_conversations_hierarchy:
+                menu.addSeparator()
+                sort_menu = menu.addMenu(strings.sort_by)
+
+                current_mode = self._filter_model.get_conversation_sort_mode()
+
+                sort_by_name = sort_menu.addAction(strings.sort_by_name)
+                sort_by_name.setCheckable(True)
+                sort_by_name.setChecked(current_mode == MindspaceFileModel.SortMode.NAME)
+
+                sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
+                sort_by_creation.setCheckable(True)
+                sort_by_creation.setChecked(current_mode == MindspaceFileModel.SortMode.CREATION_TIME)
 
             # Execute the menu
             action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
@@ -666,8 +665,8 @@ class MindspaceFileTree(QWidget):
                         self._handle_delete_folder(path)
                         return
 
-                    # Handle conversations folder sorting actions
-                    if is_conversations_folder:
+                    # Handle conversations hierarchy sorting actions
+                    if is_in_conversations_hierarchy:
                         if action == sort_by_name:
                             self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.NAME)
                             return
@@ -693,6 +692,16 @@ class MindspaceFileTree(QWidget):
                     if action == delete_action:
                         self._handle_delete_file(path)
                         return
+
+                    # Handle sorting actions for files in conversations hierarchy
+                    if is_in_conversations_hierarchy:
+                        if action == sort_by_name:
+                            self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.NAME)
+                            return
+
+                        if action == sort_by_creation:
+                            self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.CREATION_TIME)
+                            return
 
     def _start_new_folder_creation(self, parent_path: str) -> None:
         """
