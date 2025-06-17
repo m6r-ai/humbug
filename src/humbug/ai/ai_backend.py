@@ -13,10 +13,11 @@ import aiohttp
 from aiohttp import ClientConnectorError, ClientError
 import certifi
 
-from humbug.ai.ai_response import AIResponse, AIError
-from humbug.ai.ai_stream_response import AIStreamResponse
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_rate_limiter import AIRateLimiter
+from humbug.ai.ai_response import AIResponse, AIError
+from humbug.ai.ai_stream_response import AIStreamResponse
+from humbug.ai.ai_tool_manager import AIToolManager
 
 
 class AIBackend(ABC):
@@ -40,10 +41,12 @@ class AIBackend(ABC):
         self._max_retries = 6
         self._base_delay = 2
         self._rate_limiter = AIRateLimiter()
-        self._logger = logging.getLogger(self.__class__.__name__) # Logger based on class name
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._tool_manager = AIToolManager()
 
-        if getattr(sys, "frozen", False) and hasattr(sys, '_MEIPASS'):  # Check if running as a bundled app
+        if getattr(sys, "frozen", False) and hasattr(sys, '_MEIPASS'):
             cert_path = os.path.join(sys._MEIPASS, "certifi", "cacert.pem")
+
         else:
             cert_path = certifi.where()
 
@@ -65,6 +68,46 @@ class AIBackend(ABC):
     def _get_headers(self) -> dict:
         """Abstract method to get the API headers."""
 
+    def _supports_tools(self, settings: AIConversationSettings) -> bool:
+        """
+        Check if the current model supports tool calling.
+
+        Args:
+            settings: Current conversation settings
+
+        Returns:
+            True if the model supports tools
+        """
+        model_config = AIConversationSettings.MODELS.get(settings.model)
+        if not model_config:
+            return False
+
+        return model_config.supports_tools()
+
+    def _add_tools_to_request(self, data: dict, settings: AIConversationSettings) -> None:
+        """
+        Add tool definitions to request data if the model supports it.
+
+        Args:
+            data: Request data dictionary to modify
+            settings: Current conversation settings
+        """
+        if not self._supports_tools(settings) or not self._tool_manager.has_tools():
+            return
+
+        provider = AIConversationSettings.get_provider(settings.model)
+        tool_definitions = self._tool_manager.get_tool_definitions_for_provider(provider)
+
+        if tool_definitions:
+            if provider in ("openai", "xai", "deepseek"):
+                data["tools"] = tool_definitions
+                data["tool_choice"] = "auto"
+
+            elif provider == "anthropic":
+                data["tools"] = tool_definitions
+
+            self._logger.debug("Added %d tool definitions for %s", len(tool_definitions), provider)
+
     async def stream_message(
         self,
         conversation_history: List[Dict[str, str]],
@@ -74,6 +117,9 @@ class AIBackend(ABC):
         url = self._get_api_url(conversation_settings)
         data = self._build_request_data(conversation_history, conversation_settings)
         headers = self._get_headers()
+
+        # Add tools to request if supported
+        self._add_tools_to_request(data, conversation_settings)
 
         attempt = 0
         while attempt < self._max_retries:
@@ -90,6 +136,8 @@ class AIBackend(ABC):
                 url = url.replace("localhost", "127.0.0.1")
 
                 async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self._ssl_context)) as session:
+                    print("************************************************")
+                    print(f"Sending request to {url} with headers: {headers} and data: {data}")
                     async with session.post(
                         url,
                         headers=headers,
@@ -140,7 +188,7 @@ class AIBackend(ABC):
                                         content="",
                                         error=AIError(
                                             code="overloaded",
-                                            message=f"Servers is overloaded.  Retrying in {delay} seconds...",
+                                            message=f"Server is overloaded.  Retrying in {delay} seconds...",
                                             retries_exhausted=False,
                                             details=error_data
                                         )
@@ -181,6 +229,7 @@ class AIBackend(ABC):
 
                                 chunk = json.loads(decoded_line)
                                 response_handler.update_from_chunk(chunk)
+
                                 if response_handler.error:
                                     yield AIResponse(
                                         reasoning="",
@@ -192,7 +241,8 @@ class AIBackend(ABC):
                                 yield AIResponse(
                                     reasoning=response_handler.reasoning,
                                     content=response_handler.content,
-                                    usage=response_handler.usage
+                                    usage=response_handler.usage,
+                                    tool_calls=response_handler.tool_calls
                                 )
 
                             except json.JSONDecodeError as e:
@@ -200,7 +250,7 @@ class AIBackend(ABC):
                                 continue
 
                             except Exception as e:
-                                self._logger.exception("unexpected exception: %s", e)
+                                self._logger.exception("Unexpected exception: %s", e)
                                 break
 
                         # Successfully processed response, exit retry loop

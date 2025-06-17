@@ -1,10 +1,11 @@
 """Main window implementation for Humbug application."""
 
 import asyncio
+from datetime import datetime
 import json
 import logging
 import os
-from typing import cast, Dict, List
+from typing import cast, Dict, List, Any
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
+from humbug.ai.ai_tool_manager import AIToolManager, ToolDefinition, ToolParameter, AITool, ToolExecutionError
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
@@ -46,6 +48,114 @@ from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
 
+class GetCurrentTimeTool(AITool):
+    """Tool that returns the current time."""
+
+    def get_definition(self) -> ToolDefinition:
+        """Get the tool definition."""
+        return ToolDefinition(
+            name="get_current_time",
+            description="Get the current date and time",
+            parameters=[
+                ToolParameter(
+                    name="format",
+                    type="string",
+                    description="Time format ('iso', 'human', or 'timestamp')",
+                    required=False,
+                    enum=["iso", "human", "timestamp"]
+                ),
+                ToolParameter(
+                    name="timezone",
+                    type="string",
+                    description="Timezone (e.g., 'UTC', 'America/New_York')",
+                    required=False
+                )
+            ]
+        )
+
+    async def execute(self, arguments: Dict[str, Any]) -> str:
+        """Execute the get current time tool."""
+        try:
+            format_type = arguments.get("format", "iso")
+
+            now = datetime.utcnow()
+
+            if format_type == "iso":
+                return now.isoformat() + "Z"
+
+            elif format_type == "human":
+                return now.strftime("%Y-%m-%d %H:%M:%S UTC")
+
+            elif format_type == "timestamp":
+                return str(int(now.timestamp()))
+
+            else:
+                return now.isoformat() + "Z"
+
+        except Exception as e:
+            raise ToolExecutionError(
+                f"Failed to get current time: {str(e)}",
+                "get_current_time",
+                arguments
+            ) from e
+
+
+class CalculatorTool(AITool):
+    """Tool that performs basic mathematical calculations."""
+
+    def get_definition(self) -> ToolDefinition:
+        """Get the tool definition."""
+        return ToolDefinition(
+            name="calculate",
+            description="Perform basic mathematical calculations (addition, subtraction, multiplication, division)",
+            parameters=[
+                ToolParameter(
+                    name="expression",
+                    type="string",
+                    description="Mathematical expression to evaluate (e.g., '2 + 3 * 4')",
+                    required=True
+                )
+            ]
+        )
+
+    async def execute(self, arguments: Dict[str, Any]) -> str:
+        """Execute the calculator tool."""
+        try:
+            expression = arguments.get("expression", "")
+            if not expression:
+                raise ToolExecutionError(
+                    "Expression is required",
+                    "calculate", 
+                    arguments
+                )
+
+            # Basic safety: only allow numbers, operators, parentheses, and whitespace
+            allowed_chars = set("0123456789+-*/().% ")
+            if not all(c in allowed_chars for c in expression):
+                raise ToolExecutionError(
+                    "Expression contains invalid characters",
+                    "calculate",
+                    arguments
+                )
+
+            # Evaluate the expression safely
+            result = eval(expression)
+            return str(result)
+
+        except ZeroDivisionError:
+            raise ToolExecutionError(
+                "Division by zero",
+                "calculate",
+                arguments
+            )
+        except Exception as e:
+            raise ToolExecutionError(
+                f"Failed to calculate expression: {str(e)}",
+                "calculate",
+                arguments
+            ) from e
+
+
 class MainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
@@ -58,6 +168,10 @@ class MainWindow(QMainWindow):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings()
+
+        self._ai_tool_manager = AIToolManager()
+        self._ai_tool_manager.register_tool(GetCurrentTimeTool())
+        self._ai_tool_manager.register_tool(CalculatorTool())
 
         # Humbug menu actions
         self._about_action = QAction(strings.about_humbug, self)

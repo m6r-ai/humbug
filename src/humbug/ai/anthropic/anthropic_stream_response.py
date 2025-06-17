@@ -1,8 +1,11 @@
-"""Handles streaming response from Anthropic API."""
+"""Enhanced Anthropic streaming response handler with tool support."""
+
+import json
 
 from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
+from humbug.ai.ai_tool_manager import ToolCall
 
 
 class AnthropicStreamResponse(AIStreamResponse):
@@ -16,6 +19,10 @@ class AnthropicStreamResponse(AIStreamResponse):
         self._input_tokens = 0
         self._output_tokens = 0
 
+        # Tool call tracking
+        self._current_tool_call: Dict | None = None
+        self._current_tool_arguments = ""
+
     def update_from_chunk(self, chunk: Dict) -> None:
         """
         Update from a response chunk and return new content if any.
@@ -23,6 +30,8 @@ class AnthropicStreamResponse(AIStreamResponse):
         Args:
             chunk: Response chunk from Anthropic API
         """
+        print("-------------------------------------------------------")
+        print("Received chunk:", chunk)
         if "error" in chunk:
             error_data = chunk["error"]
             self._handle_error(
@@ -39,21 +48,68 @@ class AnthropicStreamResponse(AIStreamResponse):
                 usage = chunk["message"]["usage"]
                 self._input_tokens = usage.get("input_tokens", 0)
 
-        elif event_type == "content_block_delta":
-            delta = chunk.get("delta", {})
-            if delta.get("type") == "text_delta":
-                self.content += delta.get("text", "")
-
-            elif delta.get("type") == "thinking_delta":
-                self.reasoning += delta.get("thinking", "")
-
-            elif delta.get("type") == "signature_delta":
-                self.reasoning += "\n\nSignature: " + delta.get("signature", "") + "\n"
-
         elif event_type == "content_block_start":
             content_block = chunk.get("content_block", {})
-            if content_block.get("type") == "redacted_thinking":
+            block_type = content_block.get("type")
+
+            if block_type == "tool_use":
+                # Start of a tool call
+                self._current_tool_call = {
+                    "id": content_block.get("id", ""),
+                    "name": content_block.get("name", ""),
+                    "input": {}
+                }
+                self._current_tool_arguments = ""
+
+            elif block_type == "redacted_thinking":
                 self.reasoning += "\n\nRedacted: " + content_block.get("data", "") + "\n"
+
+        elif event_type == "content_block_delta":
+            delta = chunk.get("delta", {})
+            delta_type = delta.get("type")
+
+            if delta_type == "text_delta":
+                # Regular text content
+                self.content += delta.get("text", "")
+
+            elif delta_type == "thinking_delta":
+                # Reasoning content
+                self.reasoning += delta.get("thinking", "")
+
+            elif delta_type == "signature_delta":
+                # Signature content (part of reasoning)
+                self.reasoning += "\n\nSignature: " + delta.get("signature", "") + "\n"
+
+            elif delta_type == "input_json_delta":
+                # Tool arguments being streamed
+                if self._current_tool_call is not None:
+                    partial_json = delta.get("partial_json", "")
+                    self._current_tool_arguments += partial_json
+
+        elif event_type == "content_block_stop":
+            # End of a content block
+            if self._current_tool_call is not None:
+                # Complete the tool call
+                try:
+                    # Parse the accumulated arguments
+                    arguments = json.loads(self._current_tool_arguments) if self._current_tool_arguments else {}
+
+                    # Create the tool call
+                    tool_call = ToolCall(
+                        id=self._current_tool_call["id"],
+                        name=self._current_tool_call["name"],
+                        arguments=arguments
+                    )
+
+                    # Add to our tool calls list
+                    self._add_tool_call(tool_call)
+
+                except json.JSONDecodeError as e:
+                    self._logger.warning("Failed to parse tool arguments: %s", e)
+
+                # Reset tool call tracking
+                self._current_tool_call = None
+                self._current_tool_arguments = ""
 
         elif event_type == "message_delta":
             # Track output tokens but don't expose them yet

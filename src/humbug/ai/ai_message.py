@@ -1,11 +1,12 @@
-"""Conversation state management for the Humbug application."""
+"""Conversation message support."""
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 import uuid
 
 from humbug.ai.ai_message_source import AIMessageSource
+from humbug.ai.ai_tool_manager import ToolCall, ToolResult
 from humbug.ai.ai_usage import AIUsage
 
 
@@ -21,13 +22,17 @@ class AIMessage:
     model: str | None = None
     temperature: float | None = None
     completed: bool = True
+    tool_calls: List[ToolCall] | None = None
+    tool_results: List[ToolResult] | None = None
 
     # Map between AIMessageSource enum and transcript type strings
     _SOURCE_TYPE_MAP = {
         AIMessageSource.USER: "user_message",
         AIMessageSource.AI: "ai_response",
         AIMessageSource.REASONING: "ai_reasoning",
-        AIMessageSource.SYSTEM: "system_message"
+        AIMessageSource.SYSTEM: "system_message",
+        AIMessageSource.TOOL_CALL: "tool_call",
+        AIMessageSource.TOOL_RESULT: "tool_result"
     }
     _TYPE_SOURCE_MAP = {v: k for k, v in _SOURCE_TYPE_MAP.items()}
 
@@ -41,7 +46,9 @@ class AIMessage:
         model: str | None = None,
         temperature: float | None = None,
         completed: bool = True,
-        timestamp: datetime | None = None
+        timestamp: datetime | None = None,
+        tool_calls: List[ToolCall] | None = None,
+        tool_results: List[ToolResult] | None = None
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
@@ -56,7 +63,50 @@ class AIMessage:
             error=error,
             model=model,
             temperature=temperature,
-            completed=completed
+            completed=completed,
+            tool_calls=tool_calls,
+            tool_results=tool_results
+        )
+
+    @classmethod
+    def create_tool_call_message(
+        cls,
+        tool_calls: List[ToolCall],
+        model: str | None = None,
+        temperature: float | None = None,
+        timestamp: datetime | None = None
+    ) -> 'AIMessage':
+        """Create a tool call message."""
+        # Generate content summary for logging/debugging
+        tool_names = [call.name for call in tool_calls]
+        content = f"Tool calls: {', '.join(tool_names)}"
+
+        return cls.create(
+            source=AIMessageSource.TOOL_CALL,
+            content=content,
+            model=model,
+            temperature=temperature,
+            timestamp=timestamp,
+            tool_calls=tool_calls,
+            completed=True
+        )
+
+    @classmethod
+    def create_tool_result_message(
+        cls,
+        tool_results: List[ToolResult],
+        timestamp: datetime | None = None
+    ) -> 'AIMessage':
+        """Create a tool result message."""
+        # Generate content summary for logging/debugging
+        content = f"Tool results: {len(tool_results)} tool(s) executed"
+
+        return cls.create(
+            source=AIMessageSource.TOOL_RESULT,
+            content=content,
+            timestamp=timestamp,
+            tool_results=tool_results,
+            completed=True
         )
 
     def copy(self) -> 'AIMessage':
@@ -70,8 +120,14 @@ class AIMessage:
             error=self.error.copy() if self.error else None,
             model=self.model,
             temperature=self.temperature,
-            completed=self.completed
+            completed=self.completed,
+            tool_calls=self.tool_calls.copy() if self.tool_calls else None,
+            tool_results=self.tool_results.copy() if self.tool_results else None
         )
+
+    def is_hidden_from_user(self) -> bool:
+        """Check if this message should be hidden from the user interface."""
+        return self.source in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
 
     def to_transcript_dict(self) -> Dict:
         """Convert message to transcript format."""
@@ -88,6 +144,28 @@ class AIMessage:
         message["error"] = self.error
         message["model"] = self.model
         message["temperature"] = self.temperature
+
+        # Add tool-specific fields
+        if self.tool_calls:
+            message["tool_calls"] = [
+                {
+                    "id": call.id,
+                    "name": call.name,
+                    "arguments": call.arguments
+                }
+                for call in self.tool_calls
+            ]
+
+        if self.tool_results:
+            message["tool_results"] = [
+                {
+                    "tool_call_id": result.tool_call_id,
+                    "name": result.name,
+                    "content": result.content,
+                    "error": result.error
+                }
+                for result in self.tool_results
+            ]
 
         return message
 
@@ -135,6 +213,39 @@ class AIMessage:
             except (KeyError, TypeError) as e:
                 raise ValueError(f"Invalid usage data format: {data['usage']}") from e
 
+        # Parse tool calls if present
+        tool_calls = None
+        if data.get("tool_calls"):
+            try:
+                tool_calls = [
+                    ToolCall(
+                        id=call_data["id"],
+                        name=call_data["name"],
+                        arguments=call_data["arguments"]
+                    )
+                    for call_data in data["tool_calls"]
+                ]
+
+            except (KeyError, TypeError) as e:
+                raise ValueError(f"Invalid tool_calls data format: {data['tool_calls']}") from e
+
+        # Parse tool results if present
+        tool_results = None
+        if data.get("tool_results"):
+            try:
+                tool_results = [
+                    ToolResult(
+                        tool_call_id=result_data["tool_call_id"],
+                        name=result_data["name"],
+                        content=result_data["content"],
+                        error=result_data.get("error")
+                    )
+                    for result_data in data["tool_results"]
+                ]
+
+            except (KeyError, TypeError) as e:
+                raise ValueError(f"Invalid tool_results data format: {data['tool_results']}") from e
+
         return cls(
             id=data["id"],
             source=source,
@@ -144,5 +255,7 @@ class AIMessage:
             error=data.get("error"),
             model=data.get("model"),
             temperature=data.get("temperature"),
-            completed=data.get("completed", True)
+            completed=data.get("completed", True),
+            tool_calls=tool_calls,
+            tool_results=tool_results
         )

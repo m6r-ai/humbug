@@ -1,4 +1,4 @@
-"""Conversation state management for the Humbug application."""
+"""Enhanced conversation state management with tool support."""
 
 from enum import Enum
 
@@ -9,3 +9,5 @@ class AIMessageSource(Enum):
     AI = "ai"
     REASONING = "reasoning"
     SYSTEM = "system"
+    TOOL_CALL = "tool_call"
+    TOOL_RESULT = "tool_result"

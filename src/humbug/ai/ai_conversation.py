@@ -1,4 +1,4 @@
-"""Class to handle AI conversation separate from the GUI."""
+"""Enhanced AI conversation class with tool calling support."""
 
 import asyncio
 import logging
@@ -10,6 +10,7 @@ from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_response import AIError
+from humbug.ai.ai_tool_manager import AIToolManager, ToolCall
 from humbug.ai.ai_usage import AIUsage
 from humbug.user.user_manager import UserManager
 
@@ -25,22 +26,18 @@ class AIConversationEvent(Enum):
 
 
 class AIConversation:
-    """Handles AI conversation logic separate from the GUI.
+    """
+    Handles AI conversation logic separate from the GUI.
 
     This class manages the communication with AI backends, maintains conversation
     history, and provides methods to start and cancel conversations.
     """
 
-    def __init__(
-        self
-    ) -> None:
-        """Initialize the AIConversation.
-
-        Args:
-            ai_backends: Dictionary of available AI backends
-        """
+    def __init__(self) -> None:
+        """Initialize the AIConversation."""
         self._logger = logging.getLogger("AIConversation")
         self._user_manager = UserManager()
+        self._tool_manager = AIToolManager()
         self._settings = AIConversationSettings()
         self._conversation = AIConversationHistory()
         self._current_tasks: List[asyncio.Task] = []
@@ -143,7 +140,6 @@ class AIConversation:
         """
         self._conversation.clear()
 
-        # Iterate over the messages
         for message in messages:
             self._conversation.add_message(message)
 
@@ -178,6 +174,7 @@ class AIConversation:
         def task_done_callback(task: asyncio.Task) -> None:
             try:
                 self._current_tasks.remove(task)
+
             except ValueError:
                 self._logger.debug("Task already removed")
 
@@ -207,24 +204,40 @@ class AIConversation:
                 self._is_streaming = False
                 return
 
-            stream = backend.stream_message(
-                self._conversation.get_messages_for_context(),
-                self._settings
-            )
-
-            async for response in stream:
-                await self._update_streaming_response(
-                    reasoning=response.reasoning,
-                    content=response.content,
-                    usage=response.usage,
-                    error=response.error
+            # Keep processing until we get a complete response without tool calls
+            while True:
+                stream = backend.stream_message(
+                    self._conversation.get_messages_for_context(),
+                    self._settings
                 )
-                if response.error:
-                    if response.error.retries_exhausted:
-                        return
 
-                    # We're retrying - continue to the next attempt
-                    continue
+                tool_calls_pending = False
+
+                async for response in stream:
+                    await self._update_streaming_response(
+                        reasoning=response.reasoning,
+                        content=response.content,
+                        usage=response.usage,
+                        error=response.error,
+                        tool_calls=response.tool_calls
+                    )
+
+                    if response.error:
+                        if response.error.retries_exhausted:
+                            return
+
+                        continue
+
+                    # Check if we have tool calls to process
+                    if response.tool_calls and len(response.tool_calls) > 0:
+                        tool_calls_pending = True
+
+                # If no tool calls are pending, we're done
+                if not tool_calls_pending:
+                    break
+
+                # Process any pending tool calls from the last AI message
+                await self._process_pending_tool_calls()
 
             # If we get here and are still marked as streaming then we failed to get a
             # complete response before giving up. This is a failure and should be handled as such.
@@ -279,16 +292,47 @@ class AIConversation:
             if stream is not None:
                 try:
                     await stream.aclose()
+
                 except Exception as e:
                     # Log but don't propagate generator cleanup errors
                     self._logger.debug("Error during generator cleanup: %s", e)
+
+    async def _process_pending_tool_calls(self) -> None:
+        """Process any tool calls from the current AI message."""
+        if not self._current_ai_message or not self._current_ai_message.tool_calls:
+            return
+
+        tool_calls = self._current_ai_message.tool_calls
+
+        # Create and add tool call message (hidden from user)
+        tool_call_message = AIMessage.create_tool_call_message(
+            tool_calls=tool_calls,
+            model=self._current_ai_message.model,
+            temperature=self._current_ai_message.temperature
+        )
+        self._conversation.add_message(tool_call_message)
+
+        # Execute all tool calls
+        tool_results = []
+        for tool_call in tool_calls:
+            self._logger.debug("Executing tool call: %s", tool_call.name)
+            tool_result = await self._tool_manager.execute_tool(tool_call)
+            tool_results.append(tool_result)
+
+        # Create and add tool result message (hidden from user)
+        tool_result_message = AIMessage.create_tool_result_message(tool_results=tool_results)
+        self._conversation.add_message(tool_result_message)
+
+        # Clear tool calls from current AI message since they've been processed
+        self._current_ai_message.tool_calls = None
 
     async def _update_streaming_response(
         self,
         reasoning: str,
         content: str,
         usage: AIUsage | None = None,
-        error: AIError | None = None
+        error: AIError | None = None,
+        tool_calls: List[ToolCall] | None = None
     ) -> None:
         """
         Update the current AI response in the conversation.
@@ -298,6 +342,7 @@ class AIConversation:
             content: AI response content
             usage: Optional token usage information
             error: Optional error information
+            tool_calls: Optional list of tool calls made by the AI
         """
         if error:
             # Only stop streaming if retries are exhausted
@@ -347,57 +392,10 @@ class AIConversation:
         if not self._is_streaming:
             self._is_streaming = True
 
-        # Is our message an AI response or is it the AI reasoning?
-        if content:
+        # Handle reasoning content
+        if reasoning:
             message = None
 
-            # We're handling a response. Is this the first time we're seeing it?
-            if not self._current_ai_message:
-                # If we previously had reasoning from the AI then close that out
-                if self._current_reasoning_message:
-                    message = self._conversation.update_message(
-                        self._current_reasoning_message.id,
-                        reasoning,
-                        usage=usage,
-                        completed=True
-                    )
-                    await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
-                    self._current_reasoning_message = None
-
-                # Create and add initial AI response message
-                settings = self.conversation_settings()
-                message = AIMessage.create(
-                    AIMessageSource.AI,
-                    content,
-                    model=settings.model,
-                    temperature=settings.temperature,
-                    completed=(usage is not None)
-                )
-                self._conversation.add_message(message)
-                await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
-                self._current_ai_message = message
-            else:
-                # Update existing message
-                message = self._conversation.update_message(
-                    self._current_ai_message.id,
-                    content,
-                    usage=usage,
-                    completed=(usage is not None)
-                )
-                if message:
-                    await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
-
-            if usage:
-                self._is_streaming = False
-                await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
-                await self._trigger_event(AIConversationEvent.COMPLETED)
-                self._current_reasoning_message = None
-                self._current_ai_message = None
-                return
-
-            return
-
-        if reasoning:
             # We're handling reasoning from our AI. Is it the first time we're seeing this?
             if not self._current_reasoning_message:
                 # Create and add initial message
@@ -423,6 +421,59 @@ class AIConversation:
             )
             if message:
                 await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
+
+        # Handle main content
+        if content or tool_calls:
+            message = None
+
+            # We're handling a response. Is this the first time we're seeing it?
+            if not self._current_ai_message:
+                # If we previously had reasoning from the AI then close that out
+                if self._current_reasoning_message:
+                    message = self._conversation.update_message(
+                        self._current_reasoning_message.id,
+                        reasoning,
+                        usage=usage,
+                        completed=True
+                    )
+                    await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
+                    self._current_reasoning_message = None
+
+                # Create and add initial AI response message
+                settings = self.conversation_settings()
+                message = AIMessage.create(
+                    AIMessageSource.AI,
+                    content,
+                    model=settings.model,
+                    temperature=settings.temperature,
+                    completed=(usage is not None and not tool_calls),
+                    tool_calls=tool_calls
+                )
+                self._conversation.add_message(message)
+                await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
+                self._current_ai_message = message
+
+            else:
+                # Update existing message
+                if tool_calls:
+                    self._current_ai_message.tool_calls = tool_calls
+
+                message = self._conversation.update_message(
+                    self._current_ai_message.id,
+                    content,
+                    usage=usage,
+                    completed=(usage is not None and not tool_calls)
+                )
+                if message:
+                    await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
+
+            # Check if we're done (have usage and no pending tool calls)
+            if usage and not tool_calls:
+                self._is_streaming = False
+                await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
+                await self._trigger_event(AIConversationEvent.COMPLETED)
+                self._current_reasoning_message = None
+                self._current_ai_message = None
 
     def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""

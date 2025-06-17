@@ -1,10 +1,12 @@
 """AI conversation state management."""
 
+import json
 from typing import Dict, List
 
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_usage import AIUsage
+
 
 class AIConversationHistory:
     """Manages the conversation history and state."""
@@ -51,67 +53,109 @@ class AIConversationHistory:
         return None
 
     def get_messages(self) -> List[AIMessage]:
-        """Get a copy of all messages in the conversation history.
+        """
+        Get a copy of all messages in the conversation history.
 
         Returns:
             List[AIMessage]: Copy of all messages
         """
         return self._messages.copy()
 
+    def get_visible_messages(self) -> List[AIMessage]:
+        """Get messages that should be visible to the user (excludes tool calls/results)."""
+        return [msg for msg in self._messages if not msg.is_hidden_from_user()]
+
     def get_messages_for_context(self) -> List[Dict[str, str]]:
         """
         Get messages formatted for AI context.
 
-        We only return pairs of messages where we saw a user message and the matching completed
-        AI response.
-
         Returns:
-            List of message dictionaries with role and content.
+            Pairs of user messages with completed AI responses, including
+            any tool interactions that occurred during the AI's processing.
         """
         result = []
         i = 0
 
+        print("==============================================")
+        print(f"self._messages: {self._messages}")
+        print("==============================================")
         # We must see at least 2 messages so there's no point starting with the last one.
         while i < (len(self._messages) - 1):
+            # Look for user message
             user_msg = self._messages[i]
             i += 1
 
             if user_msg.source != AIMessageSource.USER:
                 continue
 
-            # Found a user message, look for corresponding AI response
-            ai_msg = self._messages[i]
-            if ai_msg.source == AIMessageSource.REASONING:
-                # We're always safe to pick up this message because we always have one left
-                # after we complete this loop, so the worst that will happen is we'll pick
-                # up that user message.
+            # Collect all messages until we find a completed AI response or reach the end
+            message_sequence = []
+
+            while i < len(self._messages):
+                current_msg = self._messages[i]
+
+                if current_msg.source != AIMessageSource.AI:
+                    print(f"Skipping non-AI message: {current_msg.source}")
+                    message_sequence.append(current_msg)
+                    i += 1
+                    continue
+
+                # Found AI response - check if it's completed and error-free
+                if not current_msg.completed or current_msg.error:
+                    print(f"Skipping incomplete or errored AI message: {current_msg.id}")
+                    break
+
+                # Add user message
+                result.append({
+                    "role": "user",
+                    "content": user_msg.content
+                })
+
+                # Add any tool calls/results that happened during this exchange
+                for seq_msg in message_sequence:
+                    print(f"Processing message: {seq_msg.id} from {seq_msg.source}")
+                    if seq_msg.source == AIMessageSource.TOOL_CALL and seq_msg.tool_calls:
+                        # Add tool calls to context (format depends on provider)
+                        result.append({
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "id": call.id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": call.name,
+                                        "arguments": json.dumps(call.arguments)
+                                    }
+                                }
+                                for call in seq_msg.tool_calls
+                            ]
+                        })
+
+                    elif seq_msg.source == AIMessageSource.TOOL_RESULT and seq_msg.tool_results:
+                        # Add tool results
+                        for tool_result in seq_msg.tool_results:
+                            result.append({
+                                "role": "tool",
+                                "content": tool_result.content,
+                                "tool_call_id": tool_result.tool_call_id
+                            })
+
+                # Add final AI response
+                result.append({
+                    "role": "assistant",
+                    "content": current_msg.content
+                })
+
                 i += 1
-                ai_msg = self._messages[i]
+                break
 
-            if ai_msg.source != AIMessageSource.AI:
-                continue
-
-            # If we didn't complete or there were errors then we skip this
-            if not ai_msg.completed or ai_msg.error:
-                continue
-
+        # Add the final user message if we're at the end
+        if self._messages and self._messages[-1].source == AIMessageSource.USER:
             result.append({
                 "role": "user",
-                "content": user_msg.content
+                "content": self._messages[-1].content
             })
-            result.append({
-                "role": "assistant",
-                "content": ai_msg.content
-            })
-
-            i += 1
-
-        # The last message should be our user's message.
-        user_msg = self._messages[-1]
-        result.append({
-            "role": "user",
-            "content": user_msg.content
-        })
 
         return result
 
@@ -120,7 +164,8 @@ class AIConversationHistory:
         return self._last_response_tokens
 
     def update_last_tokens(self, input_tokens: int, output_tokens: int) -> None:
-        """Update token counts for the last response.
+        """
+        Update token counts for the last response.
 
         Args:
             input_tokens: Number of input tokens

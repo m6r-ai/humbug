@@ -1,11 +1,12 @@
-"""Base class for handling streaming responses from AI APIs."""
+"""Base class for handling streaming responses."""
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, List
 
-from humbug.ai.ai_usage import AIUsage
 from humbug.ai.ai_response import AIError
+from humbug.ai.ai_tool_manager import ToolCall
+from humbug.ai.ai_usage import AIUsage
 
 
 class AIStreamResponse(ABC):
@@ -22,6 +23,7 @@ class AIStreamResponse(ABC):
         self.content = ""
         self.usage: AIUsage | None = None
         self.error: AIError | None = None
+        self.tool_calls: List[ToolCall] = []
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
@@ -54,6 +56,7 @@ class AIStreamResponse(ABC):
         if isinstance(error_data, dict):
             if "message" in error_data:
                 error_message = error_data["message"]
+
             elif isinstance(error_data.get("error"), dict) and "message" in error_data["error"]:
                 error_message = error_data["error"]["message"]
 
@@ -78,3 +81,17 @@ class AIStreamResponse(ABC):
             completion_tokens=completion_tokens,
             total_tokens=total_tokens
         )
+
+    def _add_tool_call(self, tool_call: ToolCall) -> None:
+        """
+        Add a tool call to the response.
+
+        Args:
+            tool_call: The tool call to add
+        """
+        self.tool_calls.append(tool_call)
+        self._logger.debug("Added tool call: %s", tool_call.name)
+
+    def has_tool_calls(self) -> bool:
+        """Check if this response contains any tool calls."""
+        return len(self.tool_calls) > 0
