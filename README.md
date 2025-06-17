@@ -1,4 +1,4 @@
-# Humbug v0.16
+# Humbug v0.17
 
 Humbug is an extensible open-source tool designed to help you design, build and maintain software using AI.
 
@@ -69,26 +69,9 @@ explore interactively, update the context and iterate.  You can go further than 
 have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
 can be used to refine the Metaphor context.
 
-## What's new in v0.16
+## What's new in v0.17
 
-- When you click any non-conversation file in the mindspace tree it now opens it in the dynamic wiki view (just as drag
-  and drop does).  Conversations open in a conversation tab.  Tabs opened by a single click are ephemeral and will have
-  a different label colour and an italics tab label.  Ephemeral tabs will be replaced by the next new tab that is
-  opened, unless the user interacts with the tab (e.g. adding to a conversation).  Such interactions make the tab
-  become permanent.
-- All "hidden" files except for ".humbug" are now shown in the mindspace tree.
-- There are new icons on message boxes.
-- The conversation input box now has a submit icon to submit new messages, and a stop icon to stop any current
-  message that is being sent by the AI
-- If the content of a non-active wiki tab changes, the tab label will now turn purple to notify you that things have
-  been updated while you weren't looking.
-- If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you
-  that things have been updated while you weren't looking.
-- Zooming now has finer-grained steps.
-- JSON syntax highlighting now differentiates keys from values.
-- The conversations folder now defaults to sorting by the conversation start date.  You can select sorting alphabetically
-  by right clicking the changing the "Sort By".
-- Wiki views will render any "README.md" file for folder pages that contain one, and "file.ext.md" for any file "file.ext"
+- TBD
 
 ## Humbug in action
 
