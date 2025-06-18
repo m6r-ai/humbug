@@ -286,6 +286,9 @@ class ConversationWidget(QWidget):
             AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
         )
         ai_conversation.unregister_callback(
+            AIConversationEvent.TOOL_USED, self._on_tool_used
+        )
+        ai_conversation.unregister_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
         )
 
@@ -303,6 +306,9 @@ class ConversationWidget(QWidget):
         )
         ai_conversation.register_callback(
             AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
+        )
+        ai_conversation.register_callback(
+            AIConversationEvent.TOOL_USED, self._on_tool_used
         )
         ai_conversation.register_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
@@ -332,6 +338,16 @@ class ConversationWidget(QWidget):
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
         self._scroll_to_bottom()
+
+    async def _on_tool_used(self, message: AIMessage) -> None:
+        """
+        Handle a tool being used in the conversation.
+
+        Args:
+            message: The tool call message
+        """
+        # Write the tool call to the transcript
+        await self.write_transcript(message)
 
     async def _on_message_added(self, message: AIMessage) -> None:
         """
@@ -873,7 +889,8 @@ class ConversationWidget(QWidget):
         # Add messages to this widget.
         loop = asyncio.get_event_loop()
         for message in messages:
-            loop.create_task(self.add_message(message))
+            if message.source not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT):
+                loop.create_task(self.add_message(message))
 
         # Ensure we're scrolled to the end
         self._auto_scroll = True

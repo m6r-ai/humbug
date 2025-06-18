@@ -70,7 +70,7 @@ class AIConversationHistory:
         Get messages formatted for AI context.
 
         Returns:
-            Pairs of user messages with completed AI responses, including
+            Sets of user messages with completed AI responses, including
             any tool interactions that occurred during the AI's processing.
         """
         result = []

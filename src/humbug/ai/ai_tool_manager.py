@@ -3,7 +3,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -13,8 +13,8 @@ class ToolParameter:
     type: str  # "string", "number", "boolean", "array", "object"
     description: str
     required: bool = True
-    enum: Optional[List[str]] = None
-    properties: Optional[Dict[str, 'ToolParameter']] = None  # For object types
+    enum: List[str] | None = None
+    properties: Dict[str, 'ToolParameter'] | None = None  # For object types
 
 
 @dataclass
@@ -102,7 +102,7 @@ class ToolResult:
     tool_call_id: str
     name: str
     content: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class AITool(ABC):
@@ -153,7 +153,7 @@ class ToolExecutionError(Exception):
 class AIToolManager:
     """Singleton manager for AI tools."""
 
-    _instance: Optional['AIToolManager'] = None
+    _instance: 'AIToolManager | None' = None
 
     def __new__(cls) -> 'AIToolManager':
         if cls._instance is None:
