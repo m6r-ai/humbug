@@ -7,7 +7,7 @@ import logging
 import os
 import ssl
 import sys
-from typing import List, AsyncGenerator, Dict
+from typing import List, AsyncGenerator, Dict, Any
 
 import aiohttp
 from aiohttp import ClientConnectorError, ClientError
@@ -68,6 +68,14 @@ class AIBackend(ABC):
     def _get_headers(self) -> dict:
         """Abstract method to get the API headers."""
 
+    @abstractmethod
+    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format conversation history for this provider's API format."""
+
+    @abstractmethod
+    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
+        """Add tool definitions to request data in provider-specific format."""
+
     def _supports_tools(self, settings: AIConversationSettings) -> bool:
         """
         Check if the current model supports tool calling.
@@ -84,30 +92,6 @@ class AIBackend(ABC):
 
         return model_config.supports_tools()
 
-    def _add_tools_to_request(self, data: dict, settings: AIConversationSettings) -> None:
-        """
-        Add tool definitions to request data if the model supports it.
-
-        Args:
-            data: Request data dictionary to modify
-            settings: Current conversation settings
-        """
-        if not self._supports_tools(settings) or not self._tool_manager.has_tools():
-            return
-
-        provider = AIConversationSettings.get_provider(settings.model)
-        tool_definitions = self._tool_manager.get_tool_definitions_for_provider(provider)
-
-        if tool_definitions:
-            if provider in ("openai", "xai", "deepseek"):
-                data["tools"] = tool_definitions
-                data["tool_choice"] = "auto"
-
-            elif provider == "anthropic":
-                data["tools"] = tool_definitions
-
-            self._logger.debug("Added %d tool definitions for %s", len(tool_definitions), provider)
-
     async def stream_message(
         self,
         conversation_history: List[Dict[str, str]],
@@ -115,11 +99,12 @@ class AIBackend(ABC):
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""
         url = self._get_api_url(conversation_settings)
-        data = self._build_request_data(conversation_history, conversation_settings)
+        formatted_history = self._format_messages_for_context(conversation_history)
+        data = self._build_request_data(formatted_history, conversation_settings)
         headers = self._get_headers()
 
         # Add tools to request if supported
-        self._add_tools_to_request(data, conversation_settings)
+        self._add_tools_to_request_data(data, conversation_settings)
 
         attempt = 0
         while attempt < self._max_retries:

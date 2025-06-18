@@ -1,5 +1,5 @@
 """Ollama backend implementation."""
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_conversation_settings import AIConversationSettings
@@ -50,7 +50,7 @@ class OllamaBackend(AIBackend):
         """Create an Ollama-specific stream response handler."""
         return OllamaStreamResponse()
 
-    def _get_api_url(self, _settings: AIConversationSettings) -> str:
+    def _get_api_url(self, settings: AIConversationSettings) -> str:
         """Get the Ollama API URL."""
         return self._api_url
 
@@ -59,3 +59,10 @@ class OllamaBackend(AIBackend):
         return {
             "Content-Type": "application/json"
         }
+
+    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format conversation history."""
+        return conversation_history
+
+    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
+        """Add tool definitions to request data."""

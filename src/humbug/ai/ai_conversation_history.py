@@ -1,6 +1,6 @@
 """AI conversation state management."""
 
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
@@ -69,9 +69,8 @@ class AIConversationHistory:
         Get messages formatted for AI context.
 
         Returns:
-            Sets of user and assistant messages, excluding hidden tool audit messages.
-            Tool calls are included with the AI message that made them.
-            Tool results are included with the user message that contains them.
+            Basic role/content format that backends can then transform as needed.
+            Tool calls and results are preserved as separate fields for backend processing.
         """
         result = []
 
@@ -82,26 +81,22 @@ class AIConversationHistory:
 
             # Handle user messages
             if message.source == AIMessageSource.USER:
-                msg_dict = {
+                msg_dict: Dict[str, Any] = {
                     "role": "user",
                     "content": message.content
                 }
 
                 # Add tool results if this user message contains them
                 if message.tool_results:
-                    # For Anthropic, tool results are structured content
-                    tool_result_content = []
-                    if message.content:
-                        tool_result_content.append({"type": "text", "text": message.content})
-
-                    for tool_result in message.tool_results:
-                        tool_result_content.append({
-                            "type": "tool_result",
-                            "tool_use_id": tool_result.tool_call_id,
-                            "content": tool_result.content
-                        })
-
-                    msg_dict["content"] = tool_result_content
+                    msg_dict["tool_results"] = [
+                        {
+                            "tool_call_id": result.tool_call_id,
+                            "name": result.name,
+                            "content": result.content,
+                            "error": result.error
+                        }
+                        for result in message.tool_results
+                    ]
 
                 result.append(msg_dict)
 
@@ -118,20 +113,14 @@ class AIConversationHistory:
 
                 # Add tool calls if this AI message made them
                 if message.tool_calls:
-                    # For Anthropic, tool calls are structured content
-                    tool_call_content = []
-                    if message.content:
-                        tool_call_content.append({"type": "text", "text": message.content})
-
-                    for tool_call in message.tool_calls:
-                        tool_call_content.append({
-                            "type": "tool_use",
-                            "id": tool_call.id,
-                            "name": tool_call.name,
-                            "input": tool_call.arguments
-                        })
-
-                    msg_dict["content"] = tool_call_content
+                    msg_dict["tool_calls"] = [
+                        {
+                            "id": call.id,
+                            "name": call.name,
+                            "arguments": call.arguments
+                        }
+                        for call in message.tool_calls
+                    ]
 
                 result.append(msg_dict)
 

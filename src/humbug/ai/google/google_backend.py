@@ -1,5 +1,5 @@
 """Google Google backend implementation."""
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from humbug.ai.ai_backend import AIBackend
 from humbug.ai.ai_conversation_settings import AIConversationSettings
@@ -69,3 +69,10 @@ class GoogleBackend(AIBackend):
         return {
             "Content-Type": "application/json"
         }
+
+    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format conversation history."""
+        return conversation_history
+
+    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
+        """Add tool definitions to request data."""

@@ -2,7 +2,7 @@
 
 import json
 
-from typing import Dict
+from typing import Dict, List
 
 from humbug.ai.ai_stream_response import AIStreamResponse
 from humbug.ai.ai_tool_manager import ToolCall
