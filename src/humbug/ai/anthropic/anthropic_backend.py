@@ -19,14 +19,71 @@ class AnthropicBackend(AIBackend):
         """
         return "https://api.anthropic.com/v1/messages"
 
+    def _format_messages_for_provider(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format conversation history for Anthropic's structured content format."""
+        result = []
+
+        for message in conversation_history:
+            role = message["role"]
+            content = message["content"]
+
+            # Handle user messages with tool results
+            if role == "user" and "tool_results" in message:
+                # For Anthropic, tool results are structured content
+                tool_result_content = []
+                if content:
+                    tool_result_content.append({"type": "text", "text": content})
+
+                for tool_result in message["tool_results"]:
+                    tool_result_content.append({
+                        "type": "tool_result",
+                        "tool_use_id": tool_result["tool_call_id"],
+                        "content": tool_result["content"]
+                    })
+
+                result.append({
+                    "role": role,
+                    "content": tool_result_content
+                })
+
+            # Handle assistant messages with tool calls
+            elif role == "assistant" and "tool_calls" in message:
+                # For Anthropic, tool calls are structured content
+                tool_call_content = []
+                if content:
+                    tool_call_content.append({"type": "text", "text": content})
+
+                tool_call: Dict[str, Any]
+                for tool_call in message["tool_calls"]:
+                    tool_call_content.append({
+                        "type": "tool_use",
+                        "id": tool_call["id"],
+                        "name": tool_call["name"],
+                        "input": tool_call["arguments"]
+                    })
+
+                result.append({
+                    "role": role,
+                    "content": tool_call_content
+                })
+
+            # Handle regular messages
+            else:
+                result.append({
+                    "role": role,
+                    "content": content
+                })
+
+        return result
+
     def _build_request_config(
         self,
-        conversation_history: List[Dict[str, str]],
+        formatted_messages: List[Dict[str, Any]],
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for Anthropic."""
-        # Format messages for Anthropic's structured content format
-        messages = self._format_messages_for_anthropic(conversation_history)
+        # Use the pre-formatted messages directly
+        messages = formatted_messages
 
         # Build request data
         data = {
@@ -68,63 +125,6 @@ class AnthropicBackend(AIBackend):
             headers=headers,
             data=data
         )
-
-    def _format_messages_for_anthropic(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Format conversation history for Anthropic's structured content format."""
-        result = []
-
-        for message in conversation_history:
-            role = message["role"]
-            content = message["content"]
-
-            # Handle user messages with tool results
-            if role == "user" and "tool_results" in message:
-                # For Anthropic, tool results are structured content
-                tool_result_content = []
-                if content:
-                    tool_result_content.append({"type": "text", "text": content})
-
-                for tool_result in message["tool_results"]:
-                    tool_result_content.append({
-                        "type": "tool_result",
-                        "tool_use_id": tool_result["tool_call_id"],
-                        "content": tool_result["content"]
-                    })
-
-                result.append({
-                    "role": role,
-                    "content": tool_result_content
-                })
-
-            # Handle assistant messages with tool calls
-            elif role == "assistant" and "tool_calls" in message:
-                # For Anthropic, tool calls are structured content
-                tool_call_content = []
-                if content:
-                    tool_call_content.append({"type": "text", "text": content})
-
-                tool_call: Dict[str, str]
-                for tool_call in message["tool_calls"]:
-                    tool_call_content.append({
-                        "type": "tool_use",
-                        "id": tool_call["id"],
-                        "name": tool_call["name"],
-                        "input": tool_call["arguments"]
-                    })
-
-                result.append({
-                    "role": role,
-                    "content": tool_call_content
-                })
-
-            # Handle regular messages
-            else:
-                result.append({
-                    "role": role,
-                    "content": content
-                })
-
-        return result
 
     def _create_stream_response_handler(self) -> AnthropicStreamResponse:
         """Create an Anthropic-specific stream response handler."""

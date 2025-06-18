@@ -19,14 +19,33 @@ class GoogleBackend(AIBackend):
         """
         return "https://generativelanguage.googleapis.com/v1beta/models"
 
+    def _format_messages_for_provider(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format conversation history for Google's API format."""
+        contents = []
+
+        for msg in conversation_history:
+            # Skip tool-related messages since Google doesn't support them
+            if "tool_calls" in msg or "tool_results" in msg:
+                continue
+
+            role = "model" if msg["role"] == "assistant" else "user"
+            contents.append({
+                "role": role,
+                "parts": [{
+                    "text": msg["content"]
+                }]
+            })
+
+        return contents
+
     def _build_request_config(
         self,
-        conversation_history: List[Dict[str, str]],
+        formatted_messages: List[Dict[str, Any]],
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for Google."""
-        # Format messages for Google format
-        contents = self._format_messages_for_google(conversation_history)
+        # Use the pre-formatted messages directly
+        contents = formatted_messages
 
         # Build generation config
         generation_config = {
@@ -64,21 +83,6 @@ class GoogleBackend(AIBackend):
             headers=headers,
             data=data
         )
-
-    def _format_messages_for_google(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Convert history format to Google format."""
-        contents = []
-
-        for msg in conversation_history:
-            role = "model" if msg["role"] == "assistant" else "user"
-            contents.append({
-                "role": role,
-                "parts": [{
-                    "text": msg["content"]
-                }]
-            })
-
-        return contents
 
     def _create_stream_response_handler(self) -> GoogleStreamResponse:
         """Create a Google-specific stream response handler."""

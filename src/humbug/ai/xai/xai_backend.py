@@ -1,5 +1,5 @@
 """xAI backend implementation."""
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
@@ -19,14 +19,61 @@ class XAIBackend(AIBackend):
         """
         return "https://api.x.ai/v1/chat/completions"
 
+    def _format_messages_for_provider(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format conversation history for xAI's API format (OpenAI-compatible)."""
+        result = []
+
+        for message in conversation_history:
+            role = message["role"]
+            content = message["content"]
+
+            msg_dict = {
+                "role": role,
+                "content": content
+            }
+
+            # Handle assistant messages with tool calls
+            if role == "assistant" and "tool_calls" in message:
+                # For xAI, tool calls are added as a separate field (OpenAI-compatible)
+                msg_dict["tool_calls"] = [
+                    {
+                        "id": tool_call["id"],
+                        "type": "function",
+                        "function": {
+                            "name": tool_call["name"],
+                            "arguments": tool_call["arguments"]
+                        }
+                    }
+                    for tool_call in message["tool_calls"]
+                ]
+
+            # Handle user messages with tool results
+            elif role == "user" and "tool_results" in message:
+                # For xAI, tool results come as separate tool messages (OpenAI-compatible)
+                if content:
+                    result.append(msg_dict)
+
+                for tool_result in message["tool_results"]:
+                    result.append({
+                        "role": "tool",
+                        "tool_call_id": tool_result["tool_call_id"],
+                        "content": tool_result["content"]
+                    })
+
+                continue
+
+            result.append(msg_dict)
+
+        return result
+
     def _build_request_config(
         self,
-        conversation_history: List[Dict[str, str]],
+        formatted_messages: List[Dict[str, Any]],
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for xAI."""
-        # Format messages for xAI (no special formatting needed)
-        messages = conversation_history.copy()
+        # Use the pre-formatted messages directly
+        messages = formatted_messages
 
         # Build request data
         data = {

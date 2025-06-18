@@ -62,16 +62,28 @@ class AIBackend(ABC):
         self._ssl_context = ssl.create_default_context(cafile=cert_path)
 
     @abstractmethod
+    def _format_messages_for_provider(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Format conversation history for this provider's specific API format.
+
+        Args:
+            conversation_history: Raw conversation history from AIConversationHistory
+
+        Returns:
+            List of messages formatted for this provider's API
+        """
+
+    @abstractmethod
     def _build_request_config(
         self,
-        conversation_history: List[Dict[str, str]],
+        formatted_messages: List[Dict[str, Any]],
         settings: AIConversationSettings
     ) -> RequestConfig:
         """
         Build complete request configuration for this backend.
 
         Args:
-            conversation_history: List of conversation messages
+            formatted_messages: List of formatted conversation messages
             settings: Conversation settings
 
         Returns:
@@ -100,11 +112,13 @@ class AIBackend(ABC):
 
     async def stream_message(
         self,
-        conversation_history: List[Dict[str, str]],
+        conversation_history: List[Dict[str, Any]],
         conversation_settings: AIConversationSettings
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""
-        config = self._build_request_config(conversation_history, conversation_settings)
+        # Format messages for this specific provider
+        formatted_messages = self._format_messages_for_provider(conversation_history)
+        config = self._build_request_config(formatted_messages, conversation_settings)
 
         attempt = 0
         while attempt < self._max_retries:

@@ -1,5 +1,5 @@
 """M6R backend implementation."""
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
@@ -19,14 +19,30 @@ class M6RBackend(AIBackend):
         """
         return "http://localhost:8080/v1/chat"
 
+    def _format_messages_for_provider(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format conversation history for M6R's API format."""
+        result = []
+
+        for message in conversation_history:
+            # Skip tool-related messages since M6R doesn't support them in this implementation
+            if "tool_calls" in message or "tool_results" in message:
+                continue
+
+            result.append({
+                "role": message["role"],
+                "content": message["content"]
+            })
+
+        return result
+
     def _build_request_config(
         self,
-        conversation_history: List[Dict[str, str]],
+        formatted_messages: List[Dict[str, Any]],
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for M6R."""
-        # Format messages for M6R (no special formatting needed)
-        messages = conversation_history.copy()
+        # Use the pre-formatted messages directly
+        messages = formatted_messages
 
         # Build request data
         data = {

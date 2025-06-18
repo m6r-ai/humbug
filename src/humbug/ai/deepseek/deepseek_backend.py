@@ -19,50 +19,7 @@ class DeepseekBackend(AIBackend):
         """
         return "https://api.deepseek.com/chat/completions"
 
-    def _build_request_config(
-        self,
-        conversation_history: List[Dict[str, str]],
-        settings: AIConversationSettings
-    ) -> RequestConfig:
-        """Build complete request configuration for Deepseek."""
-        # Format messages for Deepseek's API format (OpenAI-compatible)
-        messages = self._format_messages_for_deepseek(conversation_history)
-
-        # Build request data
-        data = {
-            "model": AIConversationSettings.get_name(settings.model),
-            "messages": messages,
-            "stream": True,
-            "stream_options": {"include_usage": True}
-        }
-
-        # Only include temperature if supported by model
-        if AIConversationSettings.supports_temperature(settings.model):
-            data["temperature"] = settings.temperature
-
-        # Add tools if supported
-        if self._supports_tools(settings) and self._tool_manager.has_tools():
-            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("deepseek")
-            if tool_definitions:
-                data["tools"] = tool_definitions
-                data["tool_choice"] = "auto"
-                self._logger.debug("Added %d tool definitions for deepseek", len(tool_definitions))
-
-        self._logger.debug("stream message %r", data)
-
-        # Build headers
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._api_key}"
-        }
-
-        return RequestConfig(
-            url=self._api_url,
-            headers=headers,
-            data=data
-        )
-
-    def _format_messages_for_deepseek(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _format_messages_for_provider(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Format conversation history for Deepseek's API format (OpenAI-compatible)."""
         result = []
 
@@ -108,6 +65,49 @@ class DeepseekBackend(AIBackend):
             result.append(msg_dict)
 
         return result
+
+    def _build_request_config(
+        self,
+        formatted_messages: List[Dict[str, Any]],
+        settings: AIConversationSettings
+    ) -> RequestConfig:
+        """Build complete request configuration for Deepseek."""
+        # Use the pre-formatted messages directly
+        messages = formatted_messages
+
+        # Build request data
+        data = {
+            "model": AIConversationSettings.get_name(settings.model),
+            "messages": messages,
+            "stream": True,
+            "stream_options": {"include_usage": True}
+        }
+
+        # Only include temperature if supported by model
+        if AIConversationSettings.supports_temperature(settings.model):
+            data["temperature"] = settings.temperature
+
+        # Add tools if supported
+        if self._supports_tools(settings) and self._tool_manager.has_tools():
+            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("deepseek")
+            if tool_definitions:
+                data["tools"] = tool_definitions
+                data["tool_choice"] = "auto"
+                self._logger.debug("Added %d tool definitions for deepseek", len(tool_definitions))
+
+        self._logger.debug("stream message %r", data)
+
+        # Build headers
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self._api_key}"
+        }
+
+        return RequestConfig(
+            url=self._api_url,
+            headers=headers,
+            data=data
+        )
 
     def _create_stream_response_handler(self) -> DeepseekStreamResponse:
         """Create an Deepseek-specific stream response handler."""

@@ -1,5 +1,6 @@
 """Handles streaming response from Deepseek API."""
 
+import json
 from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
@@ -13,7 +14,8 @@ class DeepseekStreamResponse(AIStreamResponse):
         """Initialize stream response handler."""
         super().__init__()
 
-        self._tool_call = ""
+        # Track streaming tool calls
+        self._current_tool_calls: Dict[str, Dict] = {}
 
     def update_from_chunk(self, chunk: Dict) -> None:
         """
@@ -58,19 +60,51 @@ class DeepseekStreamResponse(AIStreamResponse):
 
         if "tool_calls" in delta:
             tool_calls = delta["tool_calls"]
-            for tool_call in tool_calls:
-                function = tool_call.get("function", {})
-                if not function:
+            for tool_call_delta in tool_calls:
+                tool_call_id = tool_call_delta.get("id", "")
+                if not tool_call_id:
                     continue
 
-                print("Processing tool call:", tool_call)
-                # Create the tool call
-                new_tool_call = ToolCall(
-                    id=tool_call.get("id", ""),
-                    name=function.get("name", ""),
-                    arguments=function.get("arguments", "")
-                )
+                # Initialize tool call if we haven't seen it before
+                if tool_call_id not in self._current_tool_calls:
+                    self._current_tool_calls[tool_call_id] = {
+                        "id": tool_call_id,
+                        "name": "",
+                        "arguments": ""
+                    }
 
-                # Add to our tool calls list
-                self._add_tool_call(new_tool_call)
-                print("Tool call added:", new_tool_call)
+                current_call = self._current_tool_calls[tool_call_id]
+
+                # Update function name if provided
+                function = tool_call_delta.get("function", {})
+                if "name" in function:
+                    current_call["name"] = function["name"]
+
+                # Accumulate arguments if provided
+                if "arguments" in function:
+                    current_call["arguments"] += function["arguments"]
+
+        # Check if we have usage (indicating completion) and pending tool calls
+        if "usage" in chunk and self._current_tool_calls:
+            # Process all accumulated tool calls
+            for call_data in self._current_tool_calls.values():
+                try:
+                    # Parse the accumulated arguments
+                    arguments = json.loads(call_data["arguments"]) if call_data["arguments"] else {}
+
+                    # Create the tool call
+                    tool_call = ToolCall(
+                        id=call_data["id"],
+                        name=call_data["name"],
+                        arguments=arguments
+                    )
+
+                    # Add to our tool calls list
+                    self._add_tool_call(tool_call)
+                    print("Tool call added:", tool_call)
+
+                except json.JSONDecodeError as e:
+                    self._logger.warning("Failed to parse tool arguments for %s: %s", call_data["id"], e)
+
+            # Clear the accumulated tool calls
+            self._current_tool_calls.clear()

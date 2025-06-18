@@ -64,12 +64,12 @@ class AIConversationHistory:
         """Get messages that should be visible to the user (excludes tool calls/results)."""
         return [msg for msg in self._messages if not msg.is_hidden_from_user()]
 
-    def get_messages_for_context(self) -> List[Dict[str, str]]:
+    def get_messages_for_context(self) -> List[Dict[str, Any]]:
         """
-        Get messages formatted for AI context.
+        Get messages formatted for AI context - raw format for backend processing.
 
         Returns:
-            Basic role/content format that backends can then transform as needed.
+            Raw message format that backends can transform as needed.
             Tool calls and results are preserved as separate fields for backend processing.
         """
         result = []
@@ -86,7 +86,7 @@ class AIConversationHistory:
                     "content": message.content
                 }
 
-                # Add tool results if this user message contains them
+                # Add tool results if this user message contains them (raw format)
                 if message.tool_results:
                     msg_dict["tool_results"] = [
                         {
@@ -111,7 +111,7 @@ class AIConversationHistory:
                     "content": message.content
                 }
 
-                # Add tool calls if this AI message made them
+                # Add tool calls if this AI message made them (raw format)
                 if message.tool_calls:
                     msg_dict["tool_calls"] = [
                         {
