@@ -3,10 +3,17 @@
 from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
+from humbug.ai.ai_tool_manager import ToolCall
 
 
 class DeepseekStreamResponse(AIStreamResponse):
     """Handles streaming response from Deepseek API."""
+
+    def __init__(self) -> None:
+        """Initialize stream response handler."""
+        super().__init__()
+
+        self._tool_call = ""
 
     def update_from_chunk(self, chunk: Dict) -> None:
         """
@@ -15,6 +22,8 @@ class DeepseekStreamResponse(AIStreamResponse):
         Args:
             chunk: Response chunk from Deepseek API
         """
+        print("-------------------------------------------------------")
+        print("Received chunk:", chunk)
         if "error" in chunk:
             self._handle_error(chunk["error"])
             return
@@ -46,3 +55,22 @@ class DeepseekStreamResponse(AIStreamResponse):
             new_content = delta["content"]
             if new_content:
                 self.content += new_content
+
+        if "tool_calls" in delta:
+            tool_calls = delta["tool_calls"]
+            for tool_call in tool_calls:
+                function = tool_call.get("function", {})
+                if not function:
+                    continue
+
+                print("Processing tool call:", tool_call)
+                # Create the tool call
+                new_tool_call = ToolCall(
+                    id=tool_call.get("id", ""),
+                    name=function.get("name", ""),
+                    arguments=function.get("arguments", "")
+                )
+
+                # Add to our tool calls list
+                self._add_tool_call(new_tool_call)
+                print("Tool call added:", new_tool_call)

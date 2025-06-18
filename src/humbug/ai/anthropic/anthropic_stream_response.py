@@ -2,7 +2,7 @@
 
 import json
 
-from typing import Dict, List
+from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
 from humbug.ai.ai_tool_manager import ToolCall
@@ -30,8 +30,6 @@ class AnthropicStreamResponse(AIStreamResponse):
         Args:
             chunk: Response chunk from Anthropic API
         """
-        print("-------------------------------------------------------")
-        print("Received chunk:", chunk)
         if "error" in chunk:
             error_data = chunk["error"]
             self._handle_error(
@@ -56,8 +54,7 @@ class AnthropicStreamResponse(AIStreamResponse):
                 # Start of a tool call
                 self._current_tool_call = {
                     "id": content_block.get("id", ""),
-                    "name": content_block.get("name", ""),
-                    "input": {}
+                    "name": content_block.get("name", "")
                 }
                 self._current_tool_arguments = ""
 

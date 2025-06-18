@@ -122,7 +122,7 @@ class AIBackend(ABC):
 
                 async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self._ssl_context)) as session:
                     print("************************************************")
-                    print(f"Sending request to {url} with headers: {config.headers} and data: {config.data}")
+                    print(f"Sending request to {url} with headers: {config.headers} and data: {json.dumps(config.data, indent=2)}")
                     async with session.post(
                         url,
                         headers=config.headers,
