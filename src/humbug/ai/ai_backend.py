@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 import asyncio
+from dataclasses import dataclass
 import json
 import logging
 import os
@@ -18,6 +19,14 @@ from humbug.ai.ai_rate_limiter import AIRateLimiter
 from humbug.ai.ai_response import AIResponse, AIError
 from humbug.ai.ai_stream_response import AIStreamResponse
 from humbug.ai.ai_tool_manager import AIToolManager
+
+
+@dataclass
+class RequestConfig:
+    """Complete configuration for an API request."""
+    url: str
+    headers: Dict[str, str]
+    data: Dict[str, Any]
 
 
 class AIBackend(ABC):
@@ -53,28 +62,25 @@ class AIBackend(ABC):
         self._ssl_context = ssl.create_default_context(cafile=cert_path)
 
     @abstractmethod
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
-        """Abstract method to build backend-specific request data."""
+    def _build_request_config(
+        self,
+        conversation_history: List[Dict[str, str]],
+        settings: AIConversationSettings
+    ) -> RequestConfig:
+        """
+        Build complete request configuration for this backend.
+
+        Args:
+            conversation_history: List of conversation messages
+            settings: Conversation settings
+
+        Returns:
+            RequestConfig containing URL, headers, and request data
+        """
 
     @abstractmethod
     def _create_stream_response_handler(self) -> AIStreamResponse:
         """Abstract method to create a backend-specific stream response handler."""
-
-    @abstractmethod
-    def _get_api_url(self, settings: AIConversationSettings) -> str:
-        """Abstract method to get the API URL."""
-
-    @abstractmethod
-    def _get_headers(self) -> dict:
-        """Abstract method to get the API headers."""
-
-    @abstractmethod
-    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Format conversation history for this provider's API format."""
-
-    @abstractmethod
-    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
-        """Add tool definitions to request data in provider-specific format."""
 
     def _supports_tools(self, settings: AIConversationSettings) -> bool:
         """
@@ -98,13 +104,7 @@ class AIBackend(ABC):
         conversation_settings: AIConversationSettings
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""
-        url = self._get_api_url(conversation_settings)
-        formatted_history = self._format_messages_for_context(conversation_history)
-        data = self._build_request_data(formatted_history, conversation_settings)
-        headers = self._get_headers()
-
-        # Add tools to request if supported
-        self._add_tools_to_request_data(data, conversation_settings)
+        config = self._build_request_config(conversation_history, conversation_settings)
 
         attempt = 0
         while attempt < self._max_retries:
@@ -118,15 +118,15 @@ class AIBackend(ABC):
                 )
 
                 # Use explicit IPv4 for local connections as localhost can cause SSL issues!
-                url = url.replace("localhost", "127.0.0.1")
+                url = config.url.replace("localhost", "127.0.0.1")
 
                 async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self._ssl_context)) as session:
                     print("************************************************")
-                    print(f"Sending request to {url} with headers: {headers} and data: {data}")
+                    print(f"Sending request to {url} with headers: {config.headers} and data: {config.data}")
                     async with session.post(
                         url,
-                        headers=headers,
-                        json=data,
+                        headers=config.headers,
+                        json=config.data,
                         timeout=post_timeout
                     ) as response:
                         # Did we get an error response?  If yes, then deal with it.

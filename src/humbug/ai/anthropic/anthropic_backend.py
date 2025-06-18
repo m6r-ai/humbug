@@ -1,7 +1,7 @@
 """Anthropic backend implementation."""
 from typing import Dict, List, Any
 
-from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.ai.anthropic.anthropic_stream_response import AnthropicStreamResponse
 
@@ -19,11 +19,16 @@ class AnthropicBackend(AIBackend):
         """
         return "https://api.anthropic.com/v1/messages"
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
-        """Build Anthropic-specific request data."""
-        # Take existing messages in correct format
-        messages = conversation_history.copy()
+    def _build_request_config(
+        self,
+        conversation_history: List[Dict[str, str]],
+        settings: AIConversationSettings
+    ) -> RequestConfig:
+        """Build complete request configuration for Anthropic."""
+        # Format messages for Anthropic's structured content format
+        messages = self._format_messages_for_anthropic(conversation_history)
 
+        # Build request data
         data = {
             "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
@@ -44,25 +49,27 @@ class AnthropicBackend(AIBackend):
         if not thinking and AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
-        return data
+        # Add tools if supported
+        if self._supports_tools(settings) and self._tool_manager.has_tools():
+            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("anthropic")
+            if tool_definitions:
+                data["tools"] = tool_definitions
+                self._logger.debug("Added %d tool definitions for anthropic", len(tool_definitions))
 
-    def _create_stream_response_handler(self) -> AnthropicStreamResponse:
-        """Create an Anthropic-specific stream response handler."""
-        return AnthropicStreamResponse()
-
-    def _get_api_url(self, settings: AIConversationSettings) -> str:
-        """Get the Anthropic API URL."""
-        return self._api_url
-
-    def _get_headers(self) -> dict:
-        """Get the Anthropic API headers."""
-        return {
+        # Build headers
+        headers = {
             "content-type": "application/json",
             "x-api-key": self._api_key,
             "anthropic-version": "2023-06-01"
         }
 
-    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        return RequestConfig(
+            url=self._api_url,
+            headers=headers,
+            data=data
+        )
+
+    def _format_messages_for_anthropic(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Format conversation history for Anthropic's structured content format."""
         result = []
 
@@ -119,13 +126,6 @@ class AnthropicBackend(AIBackend):
 
         return result
 
-    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
-        """Add tool definitions to request data in Anthropic format."""
-        if not self._supports_tools(settings) or not self._tool_manager.has_tools():
-            return
-
-        tool_definitions = self._tool_manager.get_tool_definitions_for_provider("anthropic")
-
-        if tool_definitions:
-            data["tools"] = tool_definitions
-            self._logger.debug("Added %d tool definitions for anthropic", len(tool_definitions))
+    def _create_stream_response_handler(self) -> AnthropicStreamResponse:
+        """Create an Anthropic-specific stream response handler."""
+        return AnthropicStreamResponse()

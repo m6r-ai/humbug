@@ -1,7 +1,7 @@
 """Google Google backend implementation."""
 from typing import Dict, List, Any
 
-from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.google.google_stream_response import GoogleStreamResponse
 
@@ -19,20 +19,16 @@ class GoogleBackend(AIBackend):
         """
         return "https://generativelanguage.googleapis.com/v1beta/models"
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
-        """Build Google-specific request data."""
-        contents = []
+    def _build_request_config(
+        self,
+        conversation_history: List[Dict[str, str]],
+        settings: AIConversationSettings
+    ) -> RequestConfig:
+        """Build complete request configuration for Google."""
+        # Format messages for Google format
+        contents = self._format_messages_for_google(conversation_history)
 
-        # Convert history format to Google format
-        for msg in conversation_history:
-            role = "model" if msg["role"] == "assistant" else "user"
-            contents.append({
-                "role": role,
-                "parts": [{
-                    "text": msg["content"]
-                }]
-            })
-
+        # Build generation config
         generation_config = {
             "topP": 0.8,
             "topK": 10
@@ -42,6 +38,7 @@ class GoogleBackend(AIBackend):
         if AIConversationSettings.supports_temperature(settings.model):
             generation_config["temperature"] = settings.temperature
 
+        # Build request data
         data = {
             "contents": contents,
             "safetySettings": [
@@ -53,26 +50,36 @@ class GoogleBackend(AIBackend):
             "generationConfig": generation_config
         }
 
-        return data
+        # Build URL with model and API key
+        model_path = AIConversationSettings.get_name(settings.model)
+        url = f"{self._api_url}/{model_path}:streamGenerateContent?alt=sse&key={self._api_key}"
+
+        # Build headers
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        return RequestConfig(
+            url=url,
+            headers=headers,
+            data=data
+        )
+
+    def _format_messages_for_google(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Convert history format to Google format."""
+        contents = []
+
+        for msg in conversation_history:
+            role = "model" if msg["role"] == "assistant" else "user"
+            contents.append({
+                "role": role,
+                "parts": [{
+                    "text": msg["content"]
+                }]
+            })
+
+        return contents
 
     def _create_stream_response_handler(self) -> GoogleStreamResponse:
         """Create a Google-specific stream response handler."""
         return GoogleStreamResponse()
-
-    def _get_api_url(self, settings: AIConversationSettings) -> str:
-        """Get the Google API URL."""
-        model_path = AIConversationSettings.get_name(settings.model)
-        return f"{self._api_url}/{model_path}:streamGenerateContent?alt=sse&key={self._api_key}"
-
-    def _get_headers(self) -> dict:
-        """Get the Google API headers."""
-        return {
-            "Content-Type": "application/json"
-        }
-
-    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Format conversation history."""
-        return conversation_history
-
-    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
-        """Add tool definitions to request data."""

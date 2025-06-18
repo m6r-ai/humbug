@@ -1,7 +1,7 @@
 """Deepseek backend implementation."""
 from typing import Dict, List, Any
 
-from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.deepseek.deepseek_stream_response import DeepseekStreamResponse
 
@@ -19,11 +19,16 @@ class DeepseekBackend(AIBackend):
         """
         return "https://api.deepseek.com/chat/completions"
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
-        """Build Deepseek-specific request data."""
-        # conversation_history already contains properly formatted messages
-        messages = conversation_history.copy()
+    def _build_request_config(
+        self,
+        conversation_history: List[Dict[str, str]],
+        settings: AIConversationSettings
+    ) -> RequestConfig:
+        """Build complete request configuration for Deepseek."""
+        # Format messages for Deepseek's API format (OpenAI-compatible)
+        messages = self._format_messages_for_deepseek(conversation_history)
 
+        # Build request data
         data = {
             "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
@@ -35,25 +40,29 @@ class DeepseekBackend(AIBackend):
         if AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
+        # Add tools if supported
+        if self._supports_tools(settings) and self._tool_manager.has_tools():
+            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("deepseek")
+            if tool_definitions:
+                data["tools"] = tool_definitions
+                data["tool_choice"] = "auto"
+                self._logger.debug("Added %d tool definitions for deepseek", len(tool_definitions))
+
         self._logger.debug("stream message %r", data)
-        return data
 
-    def _create_stream_response_handler(self) -> DeepseekStreamResponse:
-        """Create an Deepseek-specific stream response handler."""
-        return DeepseekStreamResponse()
-
-    def _get_api_url(self, settings: AIConversationSettings) -> str:
-        """Get the Deepseek API URL."""
-        return self._api_url
-
-    def _get_headers(self) -> dict:
-        """Get the Deepseek API headers."""
-        return {
+        # Build headers
+        headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}"
         }
 
-    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        return RequestConfig(
+            url=self._api_url,
+            headers=headers,
+            data=data
+        )
+
+    def _format_messages_for_deepseek(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Format conversation history for Deepseek's API format (OpenAI-compatible)."""
         result = []
 
@@ -100,14 +109,6 @@ class DeepseekBackend(AIBackend):
 
         return result
 
-    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
-        """Add tool definitions to request data in Deepseek format (OpenAI-compatible)."""
-        if not self._supports_tools(settings) or not self._tool_manager.has_tools():
-            return
-
-        tool_definitions = self._tool_manager.get_tool_definitions_for_provider("deepseek")
-
-        if tool_definitions:
-            data["tools"] = tool_definitions
-            data["tool_choice"] = "auto"
-            self._logger.debug("Added %d tool definitions for deepseek", len(tool_definitions))
+    def _create_stream_response_handler(self) -> DeepseekStreamResponse:
+        """Create an Deepseek-specific stream response handler."""
+        return DeepseekStreamResponse()

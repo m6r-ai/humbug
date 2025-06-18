@@ -1,7 +1,7 @@
 """M6R backend implementation."""
-from typing import Dict, List, Any
+from typing import Dict, List
 
-from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.m6r.m6r_stream_response import M6RStreamResponse
 
@@ -19,37 +19,34 @@ class M6RBackend(AIBackend):
         """
         return "http://localhost:8080/v1/chat"
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
-        """Build M6R-specific request data."""
-        # Take existing messages and include current message
+    def _build_request_config(
+        self,
+        conversation_history: List[Dict[str, str]],
+        settings: AIConversationSettings
+    ) -> RequestConfig:
+        """Build complete request configuration for M6R."""
+        # Format messages for M6R (no special formatting needed)
         messages = conversation_history.copy()
 
+        # Build request data
         data = {
             "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
             "stream": True
         }
 
-        return data
-
-    def _create_stream_response_handler(self) -> M6RStreamResponse:
-        """Create a M6R-specific stream response handler."""
-        return M6RStreamResponse()
-
-    def _get_api_url(self, settings: AIConversationSettings) -> str:
-        """Get the M6R API URL."""
-        return self._api_url
-
-    def _get_headers(self) -> dict:
-        """Get the M6R API headers."""
-        return {
+        # Build headers
+        headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}"
         }
 
-    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Format conversation history."""
-        return conversation_history
+        return RequestConfig(
+            url=self._api_url,
+            headers=headers,
+            data=data
+        )
 
-    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
-        """Add tool definitions to request data."""
+    def _create_stream_response_handler(self) -> M6RStreamResponse:
+        """Create a M6R-specific stream response handler."""
+        return M6RStreamResponse()

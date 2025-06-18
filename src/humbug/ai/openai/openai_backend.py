@@ -1,7 +1,7 @@
 """OpenAI backend implementation."""
-from typing import Dict, List, Any
+from typing import Dict, List
 
-from humbug.ai.ai_backend import AIBackend
+from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.openai.openai_stream_response import OpenAIStreamResponse
 
@@ -19,11 +19,16 @@ class OpenAIBackend(AIBackend):
         """
         return "https://api.openai.com/v1/chat/completions"
 
-    def _build_request_data(self, conversation_history: List[Dict[str, str]], settings: AIConversationSettings) -> dict:
-        """Build OpenAI-specific request data."""
-        # conversation_history already contains properly formatted messages
+    def _build_request_config(
+        self,
+        conversation_history: List[Dict[str, str]],
+        settings: AIConversationSettings
+    ) -> RequestConfig:
+        """Build complete request configuration for OpenAI."""
+        # Format messages for OpenAI (no special formatting needed)
         messages = conversation_history.copy()
 
+        # Build request data
         data = {
             "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
@@ -35,27 +40,27 @@ class OpenAIBackend(AIBackend):
         if AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
+        # Add tools if supported
+        if self._supports_tools(settings) and self._tool_manager.has_tools():
+            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("openai")
+            if tool_definitions:
+                data["tools"] = tool_definitions
+                self._logger.debug("Added %d tool definitions for openai", len(tool_definitions))
+
         self._logger.debug("stream message %r", data)
-        return data
 
-    def _create_stream_response_handler(self) -> OpenAIStreamResponse:
-        """Create an OpenAI-specific stream response handler."""
-        return OpenAIStreamResponse()
-
-    def _get_api_url(self, settings: AIConversationSettings) -> str:
-        """Get the OpenAI API URL."""
-        return self._api_url
-
-    def _get_headers(self) -> dict:
-        """Get the OpenAI API headers."""
-        return {
+        # Build headers
+        headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}"
         }
 
-    def _format_messages_for_context(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Format conversation history."""
-        return conversation_history
+        return RequestConfig(
+            url=self._api_url,
+            headers=headers,
+            data=data
+        )
 
-    def _add_tools_to_request_data(self, data: dict, settings: AIConversationSettings) -> None:
-        """Add tool definitions to request data."""
+    def _create_stream_response_handler(self) -> OpenAIStreamResponse:
+        """Create an OpenAI-specific stream response handler."""
+        return OpenAIStreamResponse()
