@@ -92,7 +92,7 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "deepseek-reasoner": AIModel(
             name="deepseek-reasoner",
@@ -101,7 +101,7 @@ class AIConversationSettings:
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
         # Google models
