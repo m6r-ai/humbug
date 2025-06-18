@@ -26,7 +26,3 @@ class AIResponse:
     model: str | None = None
     temperature: float | None = None
     tool_calls: List[ToolCall] | None = None
-
-    def has_tool_calls(self) -> bool:
-        """Check if this response contains tool calls."""
-        return self.tool_calls is not None and len(self.tool_calls) > 0

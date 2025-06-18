@@ -91,7 +91,3 @@ class AIStreamResponse(ABC):
         """
         self.tool_calls.append(tool_call)
         self._logger.debug("Added tool call: %s", tool_call.name)
-
-    def has_tool_calls(self) -> bool:
-        """Check if this response contains any tool calls."""
-        return len(self.tool_calls) > 0
