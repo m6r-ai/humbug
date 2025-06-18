@@ -284,14 +284,8 @@ class AIConversation:
 
     async def _process_pending_tool_calls(self, tool_calls: List[ToolCall]) -> None:
         """Process any tool calls from the current AI message."""
-        assert self._current_ai_message, "No current AI message to process tool calls from"
-
-        # Create and add tool call message (hidden from user)
-        tool_call_message = AIMessage.create_tool_call_message(
-            tool_calls=tool_calls,
-            model=self._current_ai_message.model,
-            temperature=self._current_ai_message.temperature
-        )
+        # Create and add tool call message (hidden from user, for audit trail)
+        tool_call_message = AIMessage.create_tool_call_message(tool_calls=tool_calls)
         self._conversation.add_message(tool_call_message)
         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_call_message)
 
@@ -302,13 +296,76 @@ class AIConversation:
             tool_result = await self._tool_manager.execute_tool(tool_call)
             tool_results.append(tool_result)
 
-        # Create and add tool result message (hidden from user)
+        # Create and add tool result message (hidden from user, for audit trail)
         tool_result_message = AIMessage.create_tool_result_message(tool_results=tool_results)
         self._conversation.add_message(tool_result_message)
         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
 
-        # Clear tool calls from current AI message since they've been processed
-        self._current_ai_message.tool_calls = None
+        # Create an explicit user message with tool results
+        tool_response_message = AIMessage.create(
+            AIMessageSource.USER,
+            content="",
+            tool_results=tool_results
+        )
+        self._conversation.add_message(tool_response_message)
+        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
+
+        # Automatically continue the conversation with tool results
+        await self._continue_after_tool_execution()
+
+    async def _continue_after_tool_execution(self) -> None:
+        """Continue the AI conversation after tool execution with results."""
+        try:
+            self._logger.debug("Continuing conversation after tool execution")
+
+            # Get appropriate backend for conversation
+            settings = self.conversation_settings()
+            provider = AIConversationSettings.get_provider(settings.model)
+            backend = self._user_manager.get_ai_backends().get(provider)
+
+            if not backend:
+                error_msg = f"No backend available for provider: {provider}"
+                self._logger.error(error_msg)
+                error_message = AIMessage.create(
+                    AIMessageSource.SYSTEM,
+                    error_msg,
+                    error={"code": "backend_error", "message": error_msg}
+                )
+                self._conversation.add_message(error_message)
+                await self._trigger_event(AIConversationEvent.ERROR, True, error_message)
+                self._is_streaming = False
+                return
+
+            # Continue streaming with the updated conversation history (including tool results)
+            stream = backend.stream_message(
+                self._conversation.get_messages_for_context(),
+                self._settings
+            )
+
+            async for response in stream:
+                await self._update_streaming_response(
+                    reasoning=response.reasoning,
+                    content=response.content,
+                    usage=response.usage,
+                    error=response.error,
+                    tool_calls=response.tool_calls
+                )
+
+                if response.error and response.error.retries_exhausted:
+                    return
+
+        except Exception as e:
+            self._logger.exception("Error continuing conversation after tool execution")
+            await self._update_streaming_response(
+                reasoning="",
+                content="",
+                error=AIError(
+                    code="tool_continuation_error",
+                    message=f"Failed to continue after tool execution: {str(e)}",
+                    retries_exhausted=True,
+                    details={"type": type(e).__name__}
+                )
+            )
 
     async def _update_streaming_response(
         self,
@@ -409,6 +466,10 @@ class AIConversation:
                 self._current_ai_message = message
 
             else:
+                # Update existing message with new tool calls if provided
+                if tool_calls:
+                    self._current_ai_message.tool_calls = tool_calls
+
                 # Update existing message
                 message = self._conversation.update_message(
                     self._current_ai_message.id,
@@ -423,14 +484,17 @@ class AIConversation:
             if usage:
                 self._is_streaming = False
                 await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
-                await self._trigger_event(AIConversationEvent.COMPLETED)
                 self._current_reasoning_message = None
+                self._current_ai_message = None
 
+                # Check for tool calls BEFORE marking conversation as completed
                 if tool_calls:
+                    # Don't emit COMPLETED event yet - we need to process tools first
                     await self._process_pending_tool_calls(tool_calls)
 
-                print(f"AI response completed successfully: {self._is_streaming}")
-                self._current_ai_message = None
+                else:
+                    # Only emit completed if no tool calls to process
+                    await self._trigger_event(AIConversationEvent.COMPLETED)
 
             return
 
@@ -465,6 +529,18 @@ class AIConversation:
                 await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
 
         if tool_calls and usage:
+            settings = self.conversation_settings()
+            message = AIMessage.create(
+                AIMessageSource.AI,
+                content="",
+                model=settings.model,
+                temperature=settings.temperature,
+                completed=True,
+                tool_calls=tool_calls
+            )
+            self._conversation.add_message(message)
+            await self._trigger_event(AIConversationEvent.TOOL_USED, message)
+
             await self._process_pending_tool_calls(tool_calls)
 
     def cancel_current_tasks(self) -> None:

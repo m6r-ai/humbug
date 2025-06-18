@@ -1,6 +1,5 @@
 """AI conversation state management."""
 
-import json
 from typing import Dict, List
 
 from humbug.ai.ai_message import AIMessage
@@ -70,92 +69,74 @@ class AIConversationHistory:
         Get messages formatted for AI context.
 
         Returns:
-            Sets of user messages with completed AI responses, including
-            any tool interactions that occurred during the AI's processing.
+            Sets of user and assistant messages, excluding hidden tool audit messages.
+            Tool calls are included with the AI message that made them.
+            Tool results are included with the user message that contains them.
         """
         result = []
-        i = 0
 
-        print("==============================================")
-        print(f"self._messages: {self._messages}")
-        print("==============================================")
-        # We must see at least 2 messages so there's no point starting with the last one.
-        while i < (len(self._messages) - 1):
-            # Look for user message
-            user_msg = self._messages[i]
-            i += 1
-
-            if user_msg.source != AIMessageSource.USER:
+        for message in self._messages:
+            # Skip hidden audit trail messages (TOOL_CALL and TOOL_RESULT)
+            if message.source in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT):
                 continue
 
-            # Collect all messages until we find a completed AI response or reach the end
-            message_sequence = []
-
-            while i < len(self._messages):
-                current_msg = self._messages[i]
-
-                if current_msg.source != AIMessageSource.AI:
-                    print(f"Skipping non-AI message: {current_msg.source}")
-                    message_sequence.append(current_msg)
-                    i += 1
-                    continue
-
-                # Found AI response - check if it's completed and error-free
-                if not current_msg.completed or current_msg.error:
-                    print(f"Skipping incomplete or errored AI message: {current_msg.id}")
-                    break
-
-                # Add user message
-                result.append({
+            # Handle user messages
+            if message.source == AIMessageSource.USER:
+                msg_dict = {
                     "role": "user",
-                    "content": user_msg.content
-                })
+                    "content": message.content
+                }
 
-                # Add any tool calls/results that happened during this exchange
-                for seq_msg in message_sequence:
-                    print(f"Processing message: {seq_msg.id} from {seq_msg.source}")
-                    if seq_msg.source == AIMessageSource.TOOL_CALL and seq_msg.tool_calls:
-                        # Add tool calls to context (format depends on provider)
-                        result.append({
-                            "role": "assistant",
-                            "content": "",
-                            "tool_calls": [
-                                {
-                                    "id": call.id,
-                                    "type": "function",
-                                    "function": {
-                                        "name": call.name,
-                                        "arguments": json.dumps(call.arguments)
-                                    }
-                                }
-                                for call in seq_msg.tool_calls
-                            ]
+                # Add tool results if this user message contains them
+                if message.tool_results:
+                    # For Anthropic, tool results are structured content
+                    tool_result_content = []
+                    if message.content:
+                        tool_result_content.append({"type": "text", "text": message.content})
+
+                    for tool_result in message.tool_results:
+                        tool_result_content.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_result.tool_call_id,
+                            "content": tool_result.content
                         })
 
-                    elif seq_msg.source == AIMessageSource.TOOL_RESULT and seq_msg.tool_results:
-                        # Add tool results
-                        for tool_result in seq_msg.tool_results:
-                            result.append({
-                                "role": "tool",
-                                "content": tool_result.content,
-                                "tool_call_id": tool_result.tool_call_id
-                            })
+                    msg_dict["content"] = tool_result_content
 
-                # Add final AI response
-                result.append({
+                result.append(msg_dict)
+
+            # Handle AI messages
+            elif message.source == AIMessageSource.AI:
+                # Only include completed AI messages in context
+                if not message.completed or message.error:
+                    continue
+
+                msg_dict = {
                     "role": "assistant",
-                    "content": current_msg.content
-                })
+                    "content": message.content
+                }
 
-                i += 1
-                break
+                # Add tool calls if this AI message made them
+                if message.tool_calls:
+                    # For Anthropic, tool calls are structured content
+                    tool_call_content = []
+                    if message.content:
+                        tool_call_content.append({"type": "text", "text": message.content})
 
-        # Add the final user message if we're at the end
-        if self._messages and self._messages[-1].source == AIMessageSource.USER:
-            result.append({
-                "role": "user",
-                "content": self._messages[-1].content
-            })
+                    for tool_call in message.tool_calls:
+                        tool_call_content.append({
+                            "type": "tool_use",
+                            "id": tool_call.id,
+                            "name": tool_call.name,
+                            "input": tool_call.arguments
+                        })
+
+                    msg_dict["content"] = tool_call_content
+
+                result.append(msg_dict)
+
+            # Skip reasoning messages for now (they're not part of the conversation context)
+            # Skip system messages (they're handled separately)
 
         return result
 
