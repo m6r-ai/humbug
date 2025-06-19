@@ -16,47 +16,17 @@ class DeepseekStreamResponse(AIStreamResponse):
         # Track streaming tool calls
         self._current_tool_calls: Dict[str, Dict] = {}
 
-    def update_from_chunk(self, chunk: Dict) -> None:
+    def _handle_choices(self, choices: Dict) -> None:
         """
-        Update from a response chunk and return new content if any.
+        Handle choices from the Deepseek API response.
 
         Args:
-            chunk: Response chunk from Deepseek API
+            choices: Choices from Deepseek API response
         """
-        if "error" in chunk:
-            self._handle_error(chunk["error"])
-            return
-
-        if "usage" in chunk:
-            usage = chunk["usage"]
-            if usage:
-                self._update_usage(
-                    prompt_tokens=usage.get("prompt_tokens", 0),
-                    completion_tokens=usage.get("completion_tokens", 0),
-                    total_tokens=usage.get("total_tokens", 0)
-                )
-
-                # Process all accumulated tool calls
-                for call_data in self._current_tool_calls.values():
-                    # Create the tool call
-                    tool_call = ToolCall(
-                        id=call_data["id"],
-                        name=call_data["name"],
-                        arguments=call_data["arguments"]
-                    )
-
-                    # Add to our tool calls list
-                    self._add_tool_call(tool_call)
-
-        if "choices" not in chunk:
-            return
-
-        choices = chunk["choices"]
         if not choices:
             return
 
         delta = choices[0].get("delta", {})
-
         if "reasoning_content" in delta:
             new_reasoning = delta["reasoning_content"]
             if new_reasoning:
@@ -95,3 +65,48 @@ class DeepseekStreamResponse(AIStreamResponse):
                 # Accumulate arguments if provided
                 if "arguments" in function:
                     current_call["arguments"] += function["arguments"]
+
+    def _handle_usage(self, usage: Dict) -> None:
+        """
+        Handle usage data from the Deepseek API response.
+
+        Args:
+            usage: Usage data from Deepseek API response
+        """
+        if not usage:
+            return
+
+        self._update_usage(
+            prompt_tokens=usage.get("prompt_tokens", 0),
+            completion_tokens=usage.get("completion_tokens", 0),
+            total_tokens=usage.get("total_tokens", 0)
+        )
+
+        # Process all accumulated tool calls
+        for call_data in self._current_tool_calls.values():
+            # Create the tool call
+            tool_call = ToolCall(
+                id=call_data["id"],
+                name=call_data["name"],
+                arguments=call_data["arguments"]
+            )
+
+            # Add to our tool calls list
+            self._add_tool_call(tool_call)
+
+    def update_from_chunk(self, chunk: Dict) -> None:
+        """
+        Update from a response chunk and return new content if any.
+
+        Args:
+            chunk: Response chunk from Deepseek API
+        """
+        if "error" in chunk:
+            self._handle_error(chunk["error"])
+            return
+
+        if "choices" in chunk:
+            self._handle_choices(chunk["choices"])
+
+        if "usage" in chunk:
+            self._handle_usage(chunk["usage"])
