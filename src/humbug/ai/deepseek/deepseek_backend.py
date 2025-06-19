@@ -20,7 +20,7 @@ class DeepseekBackend(AIBackend):
         return "https://api.deepseek.com/chat/completions"
 
     def _format_messages_for_provider(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Format conversation history for Deepseek's API format (OpenAI-compatible)."""
+        """Format conversation history for Deepseek's API format."""
         result = []
 
         for message in conversation_history:
@@ -34,7 +34,6 @@ class DeepseekBackend(AIBackend):
 
             # Handle assistant messages with tool calls
             if role == "assistant" and "tool_calls" in message:
-                # For Deepseek, tool calls are added as a separate field (OpenAI-compatible)
                 msg_dict["tool_calls"] = [
                     {
                         "id": tool_call["id"],
@@ -49,7 +48,6 @@ class DeepseekBackend(AIBackend):
 
             # Handle user messages with tool results
             elif role == "user" and "tool_results" in message:
-                # For Deepseek, tool results come as separate tool messages (OpenAI-compatible)
                 if content:
                     result.append(msg_dict)
 

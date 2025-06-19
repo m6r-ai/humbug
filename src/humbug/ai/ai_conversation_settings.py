@@ -170,7 +170,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "devstral-small-2505": AIModel(
             name="devstral-small-2505",
@@ -179,7 +179,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "mistral-large-latest": AIModel(
             name="mistral-large-latest",
@@ -188,7 +188,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "mistral-small-latest": AIModel(
             name="mistral-small-latest",
@@ -197,7 +197,7 @@ class AIConversationSettings:
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
         # Ollama models

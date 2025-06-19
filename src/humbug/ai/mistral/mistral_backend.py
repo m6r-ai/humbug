@@ -24,14 +24,44 @@ class MistralBackend(AIBackend):
         result = []
 
         for message in conversation_history:
-            # Skip tool-related messages since Mistral doesn't support them in this implementation
-            if "tool_calls" in message or "tool_results" in message:
+            role = message["role"]
+            content = message["content"]
+
+            msg_dict = {
+                "role": role,
+                "content": content
+            }
+
+            # Handle assistant messages with tool calls
+            if role == "assistant" and "tool_calls" in message:
+                msg_dict["tool_calls"] = [
+                    {
+                        "id": tool_call["id"],
+                        "type": "function",
+                        "function": {
+                            "name": tool_call["name"],
+                            "arguments": tool_call["arguments"]
+                        }
+                    }
+                    for tool_call in message["tool_calls"]
+                ]
+
+            # Handle user messages with tool results
+            elif role == "user" and "tool_results" in message:
+                if content:
+                    result.append(msg_dict)
+
+                for tool_result in message["tool_results"]:
+                    result.append({
+                        "role": "tool",
+                        "name": tool_result["name"],
+                        "tool_call_id": tool_result["tool_call_id"],
+                        "content": tool_result["content"]
+                    })
+
                 continue
 
-            result.append({
-                "role": message["role"],
-                "content": message["content"]
-            })
+            result.append(msg_dict)
 
         return result
 
@@ -55,6 +85,14 @@ class MistralBackend(AIBackend):
         # Only include temperature if supported by model
         if AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
+
+        # Add tools if supported
+        if self._supports_tools(settings) and self._tool_manager.has_tools():
+            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("mistral")
+            if tool_definitions:
+                data["tools"] = tool_definitions
+                data["tool_choice"] = "auto"
+                self._logger.debug("Added %d tool definitions for mistral", len(tool_definitions))
 
         self._logger.debug("stream message %r", data)
 

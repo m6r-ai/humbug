@@ -34,7 +34,6 @@ class OpenAIBackend(AIBackend):
 
             # Handle assistant messages with tool calls
             if role == "assistant" and "tool_calls" in message:
-                # For OpenAI, tool calls are added as a separate field
                 msg_dict["tool_calls"] = [
                     {
                         "id": tool_call["id"],
@@ -49,7 +48,6 @@ class OpenAIBackend(AIBackend):
 
             # Handle user messages with tool results
             elif role == "user" and "tool_results" in message:
-                # For OpenAI, tool results come as separate tool messages
                 if content:
                     result.append(msg_dict)
 

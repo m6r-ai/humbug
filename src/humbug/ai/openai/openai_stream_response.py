@@ -57,11 +57,6 @@ class OpenAIStreamResponse(AIStreamResponse):
 
         delta = choices[0].get("delta", {})
 
-        if "reasoning_content" in delta:
-            new_reasoning = delta["reasoning_content"]
-            if new_reasoning:
-                self.reasoning += new_reasoning
-
         if "content" in delta:
             new_content = delta["content"]
             if new_content:
