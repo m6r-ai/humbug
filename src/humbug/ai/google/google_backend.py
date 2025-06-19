@@ -40,12 +40,12 @@ class GoogleBackend(AIBackend):
 
     def _build_request_config(
         self,
-        formatted_messages: List[Dict[str, Any]],
+        conversation_history: List[Dict[str, Any]],
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for Google."""
         # Use the pre-formatted messages directly
-        contents = formatted_messages
+        messages = self._format_messages_for_provider(conversation_history)
 
         # Build generation config
         generation_config = {
@@ -59,7 +59,7 @@ class GoogleBackend(AIBackend):
 
         # Build request data
         data = {
-            "contents": contents,
+            "contents": messages,
             "safetySettings": [
                 {
                     "category": "HARM_CATEGORY_DANGEROUS_CONTENT",

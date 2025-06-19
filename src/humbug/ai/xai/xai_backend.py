@@ -68,12 +68,12 @@ class XAIBackend(AIBackend):
 
     def _build_request_config(
         self,
-        formatted_messages: List[Dict[str, Any]],
+        conversation_history: List[Dict[str, Any]],
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for xAI."""
         # Use the pre-formatted messages directly
-        messages = formatted_messages
+        messages = self._format_messages_for_provider(conversation_history)
 
         # Build request data
         data = {
